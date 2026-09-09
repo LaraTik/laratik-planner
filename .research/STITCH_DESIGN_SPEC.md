@@ -359,7 +359,7 @@ The "Recent activity" stream is a filtered view of `ai_usage_events` with the mo
 
 ### 7.3 Onboarding (`12_…-ai-capability-disabled.html`)
 
-First-run 4-step onboarding triggered when the agency has `AI_FEATURE_ENABLED=true` but no capabilities configured. The 4 steps are: (1) Pick capabilities, (2) Configure providers, (3) Set up Brand Kit references, (4) Set monthly budget. Skippable.
+First-run 4-step onboarding triggered when the agency master switch is on but no capabilities are configured. The 4 steps are: (1) Pick capabilities, (2) Configure providers, (3) Set up Brand Kit references, (4) Set monthly budget. Skippable.
 
 After onboarding, the planner sees the same 4 "disabled / permission" states when:
 

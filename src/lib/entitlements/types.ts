@@ -62,7 +62,8 @@ export type AiCapability =
   | "platform_adaptation"
   | "related_format_ideas"
   | "completeness_check"
-  | "trend_radar";
+  | "trend_radar"
+  | "monthly_planning_copilot";
 
 /**
  * The default capability set. Used when neither the plan default
@@ -78,6 +79,7 @@ export const ALL_AI_CAPABILITIES: ReadonlyArray<AiCapability> = [
   "related_format_ideas",
   "completeness_check",
   "trend_radar",
+  "monthly_planning_copilot",
 ] as const;
 
 /**
@@ -93,6 +95,7 @@ const AI_CAPABILITY_VALUES = [
   "related_format_ideas",
   "completeness_check",
   "trend_radar",
+  "monthly_planning_copilot",
 ] as const;
 
 const GRACE_POLICY_VALUES = ["block", "allow_grace"] as const;

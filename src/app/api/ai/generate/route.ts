@@ -14,7 +14,6 @@ import {
   generateFieldDraft,
   getActiveApiKey,
   improveBrief,
-  isAiEnabled,
   platformAdapt,
   relatedFormatIdeas,
   splitVariants,
@@ -31,7 +30,6 @@ import { captureError } from "@/lib/observability/sentry";
 import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { recordUsage } from "@/lib/usage";
 import { enforceAiBudget, reconcileAiBudget } from "@/lib/ai/governance";
-import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
 
 /**
  * POST /api/ai/generate
@@ -145,20 +143,6 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  // M3.4 — key resolution is per-agency. We resolve it after the
-  // agency context is known so a managed secret in the DB takes
-  // priority over the env key. The 503 here is the "neither
-  // configured" path; the 200 paths exercise the resolved key.
-  if (!isAiEnabled() && !(await hasAnyManagedSecretConfigured())) {
-    return NextResponse.json(
-      {
-        error:
-          "AI features are disabled. Set a managed secret at /app/agency-settings/ai or set AI_FEATURE_ENABLED=true and MINIMAX_API_KEY in the environment.",
-      },
-      { status: 503, headers: mutatingApiHeaders() },
-    );
-  }
-
   const session = await auth();
   if (!session?.user?.id)
     return NextResponse.json(
@@ -311,13 +295,14 @@ export async function POST(req: NextRequest) {
     const usageRequestId = requestId ?? randomUUID();
     // M3.4 — resolve the active API key for this agency. A
     // managed secret in the DB takes priority; the env key is
-    // the fallback. The 503 above covers the "neither" case.
+    // the fallback. A missing key is reported as a provider
+    // configuration problem after the agency checks.
     const apiKey = await getActiveApiKey(agencyId);
     if (!apiKey) {
       return NextResponse.json(
         {
           error:
-            "No AI API key configured for this agency. Set a managed secret at /app/agency-settings/ai or set MINIMAX_API_KEY in the environment.",
+            "No AI provider key configured for this agency. Set a managed secret at /app/agency-settings/ai or configure MINIMAX_API_KEY as the deployment fallback.",
         },
         { status: 503, headers: mutatingApiHeaders() },
       );

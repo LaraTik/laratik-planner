@@ -3,12 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const envValues: {
-  AI_FEATURE_ENABLED: boolean;
   MINIMAX_API_KEY: string;
   MINIMAX_BASE_URL: string;
   MINIMAX_MODEL: string;
 } = {
-  AI_FEATURE_ENABLED: true,
   MINIMAX_API_KEY: "test-key",
   MINIMAX_BASE_URL: "https://api.example.com",
   MINIMAX_MODEL: "MiniMax-M3-test",

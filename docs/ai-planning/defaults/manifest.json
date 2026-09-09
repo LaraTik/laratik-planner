@@ -1,0 +1,87 @@
+{
+  "manifestVersion": 1,
+  "packId": "studioflow-monthly-planning-defaults",
+  "packVersion": 1,
+  "sourceDocuments": [
+    { "file": "01-core-rules.md", "mode": "global", "stage": "all" },
+    { "file": "02-brand-profile.md", "mode": "discovery", "stage": "inputs" },
+    { "file": "03-monthly-session.md", "mode": "discovery", "stage": "inputs" },
+    { "file": "04-last-month-review.md", "mode": "discovery", "stage": "review" },
+    { "file": "05-modes-and-transitions.md", "mode": "global", "stage": "all" },
+    { "file": "06-discovery-mode.md", "mode": "discovery", "stage": "questions" },
+    { "file": "07-strategy-mode.md", "mode": "strategy", "stage": "directions" },
+    { "file": "08-execution-mode.md", "mode": "execution", "stage": "structure" },
+    { "file": "09-content-mix-rules.md", "mode": "execution", "stage": "content_mix" },
+    { "file": "10-calendar-structure.md", "mode": "execution", "stage": "calendar" },
+    { "file": "11-creative-production.md", "mode": "execution", "stage": "production" },
+    { "file": "12-ai-video-prompts-google-flow.md", "mode": "execution", "stage": "production" },
+    { "file": "13-boosting-and-paid-logic.md", "mode": "execution", "stage": "paid" },
+    { "file": "14-language-and-audience-text.md", "mode": "global", "stage": "copy" },
+    { "file": "15-evaluation-and-scoring.md", "mode": "global", "stage": "quality" },
+    { "file": "16-quality-control.md", "mode": "global", "stage": "quality" },
+    { "file": "17-open-questions-risks-conflicts.md", "mode": "global", "stage": "governance" },
+    { "file": "18-output-format.md", "mode": "global", "stage": "output" },
+    { "file": "19-things-to-avoid.md", "mode": "global", "stage": "quality" }
+  ],
+  "requiredInputs": [
+    "targetMonth",
+    "monthlyObjective",
+    "audience",
+    "offerOrMainPush",
+    "productionReality",
+    "contentLanguage"
+  ],
+  "blockingQuestions": [
+    "What is the primary business objective for the month?",
+    "Who is the priority audience and what should they do next?",
+    "What offer, event, or business priority must the month support?",
+    "What production capacity and paid/organic balance should the plan respect?"
+  ],
+  "decisionRules": {
+    "discoveryThreshold": ["objective", "audience", "offerOrMainPush", "productionReality"],
+    "strategyOrder": ["objective", "campaign", "pillars"],
+    "defaultStrategicDirections": 2,
+    "maximumStrategicDirections": 3,
+    "importantContentSignals": ["core_campaign", "boost_worthy", "ai_suitable", "high_conversion"],
+    "repetitionClassification": ["reuse", "refresh", "avoid"]
+  },
+  "outputSchema": {
+    "layers": ["strategicSummary", "executionRows", "creativeProductionBlocks"],
+    "rowFields": [
+      "title",
+      "format",
+      "plannedPublishAt",
+      "brief",
+      "channelIds",
+      "formatPayload",
+      "objective",
+      "paidRecommendation",
+      "productionMethod",
+      "approvalNotes"
+    ],
+    "governanceFields": ["assumptions", "missingInformation", "risks", "qualitySummary"]
+  },
+  "qualityChecks": [
+    "repetitionRisk",
+    "ctaClarity",
+    "aiSuitabilityAccuracy",
+    "productionRealism",
+    "strategicConsistency",
+    "audienceLanguageFit",
+    "salesAndBrandBalance",
+    "executionClarity"
+  ],
+  "riskHandling": {
+    "conflictAction": "pause_affected_decision",
+    "missingInformationAction": "ask_prioritized_question",
+    "weakMetricsAction": "use_descriptive_observations_and_label_the_limit",
+    "unrealisticProductionAction": "offer_real_shoot_and_ai_alternative_when_suitable"
+  },
+  "languageBehavior": {
+    "interface": "active_user_locale",
+    "internalConversation": "active_user_locale",
+    "audienceFacingCopy": "monthly_content_language",
+    "implicitTranslation": false,
+    "direction": "content_driven"
+  }
+}

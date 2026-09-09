@@ -18,6 +18,7 @@ import { db } from "@/lib/db";
 import {
   agencies,
   agencyMemberships,
+  aiFeatureSettings,
   workspaceMembershipRoles,
   workspaceMemberships,
 } from "@/lib/db/schema";
@@ -93,9 +94,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
-  const canAccessTrendRadar = agencyId
-    ? serverEnv.AI_FEATURE_ENABLED && (await loadEnabledCapabilities(agencyId)).has("trend_radar")
-    : false;
+  const [aiFeature] = agencyId
+    ? await db
+        .select({ enabled: aiFeatureSettings.enabled })
+        .from(aiFeatureSettings)
+        .where(eq(aiFeatureSettings.agencyId, agencyId))
+        .limit(1)
+    : [];
+  const canAccessTrendRadar = Boolean(
+    aiFeature?.enabled && agencyId && (await loadEnabledCapabilities(agencyId)).has("trend_radar"),
+  );
   // R9 — the bell's two reads are wrapped in `unstable_cache` so
   // a single `revalidateTag("notifications:user:<id>")` call from
   // the mark-read action or the outbox dispatcher invalidates
@@ -285,6 +293,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "planning-list": t("sidebar.planningList"),
       "planning-board": t("sidebar.planningBoard"),
       "planning-calendar": t("sidebar.planningCalendar"),
+      "planning-monthly": t("sidebar.planningMonthly"),
       trends: t("sidebar.trends"),
       approvals: t("sidebar.approvals"),
       "design-queue": t("sidebar.designQueue"),
@@ -296,6 +305,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       brand: t("sidebar.brand"),
       "brand-kit": t("sidebar.brandKit"),
       "brand-overview": t("sidebar.brandOverview"),
+      "brand-kit-profile": t("sidebar.brandProfile"),
       identity: t("sidebar.brandIdentity"),
       logos: t("sidebar.brandLogos"),
       colors: t("sidebar.brandColors"),
@@ -329,6 +339,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "agency-settings-general": t("sidebar.settingsGeneral"),
       "agency-settings-plan": t("sidebar.settingsPlan"),
       "agency-settings-ai": t("sidebar.settingsAiConfiguration"),
+      "agency-settings-planning-packs": t("sidebar.settingsPlanningPacks"),
       "agency-settings-trend-sources": t("sidebar.settingsTrendSources"),
       "agency-settings-social": t("sidebar.settingsSocialAnalytics"),
       "agency-settings-social-providers": t("sidebar.settingsSocialProviders"),

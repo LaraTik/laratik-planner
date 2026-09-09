@@ -44,7 +44,6 @@ vi.mock("@/lib/validation/env", () => ({
     MINIMAX_API_KEY: "",
     MINIMAX_BASE_URL: "https://api.minimax.io/anthropic",
     MINIMAX_MODEL: "MiniMax-M3",
-    AI_FEATURE_ENABLED: false,
     SENTRY_DSN: "",
     SENTRY_AUTH_TOKEN: "",
     SENTRY_ORG: "",

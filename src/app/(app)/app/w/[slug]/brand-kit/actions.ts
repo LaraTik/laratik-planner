@@ -35,7 +35,6 @@ import {
 import { suggestVoiceRules } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
-import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
 import {
   colorTemplates,
   pillarTemplates,
@@ -558,9 +557,7 @@ export async function suggestVoiceRulesAction(
     };
   }
   const apiKey = await getActiveApiKey(agencyId);
-  if (!apiKey && !hasAnyManagedSecretConfigured()) {
-    return { ok: false, error: "AI features are disabled." };
-  }
+  if (!apiKey) return { ok: false, error: "AI provider key is not configured." };
 
   // Pull the existing rules for the prompt's "do not duplicate" guard.
   const rows = await db

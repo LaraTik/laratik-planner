@@ -3,11 +3,13 @@ import { and, asc, eq, gte, inArray, isNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
+  campaigns,
   approvalDecisions,
   approvalRequests,
   contentAssignments,
   contentItemChannels,
   contentItems,
+  contentPillars,
   outboxEvents,
   socialChannels,
   workspaceMembershipRoles,
@@ -668,7 +670,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
     hasWorkspaceRole(actor, parsed.workspaceId, ["workspace_manager", "content_planner"]),
     "batch_create_content",
   );
-  const [channels, settingsRows] = await Promise.all([
+  const [channels, settingsRows, campaignRows, pillarRows] = await Promise.all([
     db
       .select({ id: socialChannels.id })
       .from(socialChannels)
@@ -684,14 +686,57 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
       .from(workspaceSettings)
       .where(eq(workspaceSettings.workspaceId, parsed.workspaceId))
       .limit(1),
+    db
+      .select({ id: campaigns.id })
+      .from(campaigns)
+      .where(
+        and(
+          eq(campaigns.workspaceId, parsed.workspaceId),
+          inArray(
+            campaigns.id,
+            parsed.items.flatMap((item) => (item.campaignId ? [item.campaignId] : [])),
+          ),
+        ),
+      ),
+    db
+      .select({ id: contentPillars.id })
+      .from(contentPillars)
+      .where(
+        and(
+          eq(contentPillars.workspaceId, parsed.workspaceId),
+          inArray(
+            contentPillars.id,
+            parsed.items.flatMap((item) => (item.contentPillarId ? [item.contentPillarId] : [])),
+          ),
+        ),
+      ),
   ]);
   const settings = settingsRows[0];
   const activeChannelIds = new Set(channels.map((channel) => channel.id));
+  const campaignIds = new Set(campaignRows.map((row) => row.id));
+  const pillarIds = new Set(pillarRows.map((row) => row.id));
   for (const item of parsed.items) {
     const selectedChannelIds = item.channelIds ?? channels.map((channel) => channel.id);
     const invalidChannel = selectedChannelIds.find((channelId) => !activeChannelIds.has(channelId));
     if (invalidChannel) {
       throw new Error(`Row "${item.title}" has an invalid or inactive channel selection.`);
+    }
+    if (item.contentOwnerId) {
+      await requirePolicy(
+        hasWorkspaceRole({ id: item.contentOwnerId }, parsed.workspaceId, [
+          "workspace_manager",
+          "content_planner",
+          "designer",
+          "internal_reviewer",
+        ]),
+        "assign_batch_content_owner",
+      );
+    }
+    if (item.campaignId && !campaignIds.has(item.campaignId)) {
+      throw new Error(`Row "${item.title}" has an invalid campaign selection.`);
+    }
+    if (item.contentPillarId && !pillarIds.has(item.contentPillarId)) {
+      throw new Error(`Row "${item.title}" has an invalid content pillar selection.`);
     }
   }
   return db.transaction(async (tx) => {
@@ -706,6 +751,18 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
       // prompt §17. The result is always the canonical
       // shape the editor + mapper expect.
       let formatPayload: Record<string, unknown> = { schemaVersion: 1 };
+      if (item.formatPayload) {
+        try {
+          formatPayload = parseFormatPayload(item.format, item.formatPayload) as Record<
+            string,
+            unknown
+          >;
+        } catch (err) {
+          throw new Error(
+            `Row "${item.title}" (${item.format}) has invalid format payload: ${(err as Error).message}`,
+          );
+        }
+      }
       if (item.extensions) {
         try {
           formatPayload = parseFormatPayload(item.format, {
@@ -722,12 +779,14 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
         .insert(contentItems)
         .values({
           workspaceId: parsed.workspaceId,
+          ...(item.campaignId ? { campaignId: item.campaignId } : {}),
+          ...(item.contentPillarId ? { contentPillarId: item.contentPillarId } : {}),
           title: item.title,
           format: item.format,
           brief: item.brief,
           formatPayload,
           plannedPublishAt: item.plannedPublishAt,
-          contentOwnerId: actor.id,
+          contentOwnerId: item.contentOwnerId ?? actor.id,
           createdBy: actor.id,
           ...(settings?.defaultDesignerId ? { designerId: settings.defaultDesignerId } : {}),
           ...(settings?.defaultContentReviewerId
@@ -754,7 +813,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
       await tx.insert(contentAssignments).values({
         contentItemId: created.id,
         assignmentType: "owner",
-        userId: actor.id,
+        userId: item.contentOwnerId ?? actor.id,
         active: true,
       });
       if (settings?.defaultDesignerId)

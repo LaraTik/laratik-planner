@@ -26,11 +26,13 @@ describe("batch spreadsheet template", () => {
   it("builds paste-ready TSV with the workspace's channel account names", () => {
     const tsv = buildBatchTemplateTsv(["Instagram Brand", "Facebook Brand"]);
     const lines = tsv.split("\n");
-    expect(lines[0]).toBe("Title\tFormat\tDate & time\tShort brief\tChannels");
+    expect(lines[0]).toBe(
+      "Title\tFormat\tDate & time\tShort brief\tChannels\tContent language\tHook\tMain message\tCTA\tCaption\tHashtags\tFirst comment\tVisual direction\tFormat payload JSON",
+    );
     expect(lines).toHaveLength(9);
     expect(lines[1]).toContain("static_post");
     expect(lines[2]).toContain("carousel");
     expect(lines[2]).toContain("Instagram Brand, Facebook Brand");
-    expect(lines.every((line) => line.split("\t").length === 5)).toBe(true);
+    expect(lines.every((line) => line.split("\t").length === 14)).toBe(true);
   });
 });

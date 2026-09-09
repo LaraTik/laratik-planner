@@ -20,11 +20,13 @@ import formatEditor from "./formatEditor.json";
 import languageSwitcher from "./languageSwitcher.json";
 import myWork from "./myWork.json";
 import media from "./media.json";
+import monthlyPlanning from "./monthlyPlanning.json";
 import navigation from "./navigation.json";
 import notifications from "./notifications.json";
 import operational from "./operational.json";
 import planning from "./planning.json";
 import planningFilters from "./planningFilters.json";
+import planningPacks from "./planningPacks.json";
 import platform from "./platform.json";
 import quickCreate from "./quickCreate.json";
 import reviews from "./reviews.json";
@@ -62,11 +64,13 @@ export default {
   languageSwitcher,
   myWork,
   media,
+  monthlyPlanning,
   navigation,
   notifications,
   operational,
   planning,
   planningFilters,
+  planningPacks,
   platform,
   quickCreate,
   reviews,

@@ -14,10 +14,10 @@ import {
   trendFeedbacks,
   workspaceSourceOptouts,
   trendSources,
+  aiFeatureSettings,
 } from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
-import { serverEnv } from "@/lib/validation/env";
 import { TrendsSettingsClient } from "./_components/trends-settings-client";
 import { DeleteTrendDataSection } from "./delete-trend-data-section";
 import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
@@ -45,8 +45,6 @@ export default async function TrendsSettingsPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  if (!serverEnv.AI_FEATURE_ENABLED) redirect("/app");
-
   const { slug } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -56,6 +54,12 @@ export default async function TrendsSettingsPage({
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const [feature] = await db
+    .select({ enabled: aiFeatureSettings.enabled })
+    .from(aiFeatureSettings)
+    .where(eq(aiFeatureSettings.agencyId, agencyId))
+    .limit(1);
+  if (!feature?.enabled) redirect(`/app/w/${slug}/settings`);
   if (!(await loadEnabledCapabilities(agencyId)).has("trend_radar"))
     redirect(`/app/w/${slug}/settings`);
 

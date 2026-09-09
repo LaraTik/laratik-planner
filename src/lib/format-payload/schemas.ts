@@ -33,6 +33,7 @@ import { z } from "zod";
 import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
 
 const SCHEMA_VERSION = 1 as const;
+const ContentLanguageSchema = z.enum(["en", "ar"]);
 
 /**
  * A *localised* mirror of the format payload. The keys are
@@ -69,6 +70,7 @@ const ShortText = z.string().trim().max(220);
  */
 export const StaticPostPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   objective: z.enum(["awareness", "consideration", "conversion", "retention"]).optional(),
   audience: z.string().trim().max(200).optional(),
   hook: ShortText.optional(),
@@ -111,6 +113,7 @@ export type StaticPostPayload = z.infer<typeof StaticPostPayloadSchema>;
 /** `carousel` — 2-10 slides. */
 export const CarouselPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   slideCount: z.number().int().min(2).max(10).optional(),
   objective: z.enum(["awareness", "consideration", "conversion", "retention"]).optional(),
   audience: z.string().trim().max(200).optional(),
@@ -145,6 +148,7 @@ export type CarouselPayload = z.infer<typeof CarouselPayloadSchema>;
 /** `story` — 1-5 vertical frames. */
 export const StoryPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   frameCount: z.number().int().min(1).max(5).optional(),
   objective: z.enum(["awareness", "consideration", "conversion", "retention"]).optional(),
   audience: z.string().trim().max(200).optional(),
@@ -161,6 +165,7 @@ export type StoryPayload = z.infer<typeof StoryPayloadSchema>;
 /** `short_form_video` — Reels / TikTok / Shorts. */
 export const ShortFormVideoPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   ratio: z.enum(["9:16", "1:1", "4:5"]).optional(),
   durationSeconds: z.number().int().min(5).max(90).optional(),
   hook: ShortText.optional(),
@@ -197,6 +202,7 @@ export type ShortFormVideoPayload = z.infer<typeof ShortFormVideoPayloadSchema>;
 /** `long_form_video` — YouTube / LinkedIn video / IGTV. */
 export const LongFormVideoPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   ratio: z.enum(["16:9", "9:16", "1:1"]).optional(),
   durationSeconds: z.number().int().min(30).max(3_600).optional(),
   hook: ShortText.optional(),
@@ -224,6 +230,7 @@ export type LongFormVideoPayload = z.infer<typeof LongFormVideoPayloadSchema>;
 /** `live_content` — live streams / rooms. */
 export const LiveContentPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   platform: z.enum(["instagram", "tiktok", "youtube", "linkedin", "facebook", "other"]).optional(),
   hook: ShortText.optional(),
   mainMessage: ShortText.optional(),
@@ -256,6 +263,7 @@ export type LiveContentPayload = z.infer<typeof LiveContentPayloadSchema>;
 /** `article` — long-form written content. */
 export const ArticlePayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   wordCount: z.number().int().min(100).max(20_000).optional(),
   objective: z.enum(["awareness", "consideration", "conversion", "retention"]).optional(),
   audience: z.string().trim().max(200).optional(),
@@ -284,6 +292,7 @@ export type ArticlePayload = z.infer<typeof ArticlePayloadSchema>;
  *  the dedicated formats where possible. */
 export const OtherPayloadSchema = z.object({
   schemaVersion: z.literal(SCHEMA_VERSION),
+  contentLanguage: ContentLanguageSchema.optional(),
   notes: z.string().trim().max(2_000).optional(),
   caption: z.string().trim().max(2_200).optional(),
   hashtags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),

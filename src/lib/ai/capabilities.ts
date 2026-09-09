@@ -37,7 +37,8 @@ export type AiCapabilityId =
   | "platform_adaptation"
   | "related_format_ideas"
   | "completeness_check"
-  | "trend_radar";
+  | "trend_radar"
+  | "monthly_planning_copilot";
 
 export interface AiCapabilityMetadata {
   /** Server-side identifier — matches the §15 enum and the `aiFeatureSettings.enabledCapabilities` allowlist. */
@@ -183,6 +184,22 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     hint: "12+ sources, 5-tuple Fit score, 4 tabs (Explore, For You, Boards, Briefs).",
     willUpdate: [],
     willNotChange: [],
+  },
+  {
+    id: "monthly_planning_copilot",
+    label: "Monthly planning copilot",
+    adminLabel: "Monthly planning copilot",
+    description:
+      "Guide monthly discovery, strategy, and execution planning with reviewable proposals.",
+    enabledOnContentDetail: false,
+    hint: "Persistent planning session with explicit approval before changes.",
+    willUpdate: ["monthly planning session proposals"],
+    willNotChange: [
+      "published content",
+      "approvals",
+      "delivery",
+      "Brand Kit without manager approval",
+    ],
   },
 ] as const;
 

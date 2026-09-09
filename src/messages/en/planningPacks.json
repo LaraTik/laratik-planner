@@ -1,0 +1,21 @@
+{
+  "title": "Planning instruction packs",
+  "description": "Edit the structured planning rules used by the copilot. Drafts stay out of AI context until published.",
+  "newTitle": "Create a planning pack",
+  "editTitle": "Edit planning pack",
+  "formDescription": "Keep the human-readable Markdown and its validated manifest together. Publish only after review.",
+  "name": "Pack name",
+  "sourceMarkdown": "Markdown source",
+  "sourceHint": "Use Markdown for the complete human-readable guidance.",
+  "manifest": "Structured manifest JSON",
+  "manifestHint": "Must include mode, required inputs, blocking questions, decision rules, output schema, quality checks, risks, and language behavior.",
+  "save": "Save draft",
+  "saving": "Saving…",
+  "saved": "Planning pack saved as a draft.",
+  "existingTitle": "Saved packs",
+  "existingDescription": "Only published packs are injected into planning sessions.",
+  "revision": "Revision {revision}",
+  "edit": "Edit",
+  "export": "Export Markdown",
+  "empty": "No agency planning packs yet."
+}

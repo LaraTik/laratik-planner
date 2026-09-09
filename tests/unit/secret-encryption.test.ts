@@ -32,7 +32,6 @@ const envMock = vi.hoisted(() => ({
   MINIMAX_API_KEY: "sk-test",
   MINIMAX_BASE_URL: "https://api.example.com",
   MINIMAX_MODEL: "MiniMax-M3",
-  AI_FEATURE_ENABLED: false,
   AUTH_SECRET: "x".repeat(32),
   AGENCY_COOKIE_SECRET: "x".repeat(64),
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",

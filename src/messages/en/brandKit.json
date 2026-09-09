@@ -11,7 +11,8 @@
     "templates": "Templates",
     "publishing": "Publishing",
     "linked": "Linked accounts",
-    "activity": "Activity"
+    "activity": "Activity",
+    "profile": "Brand Profile"
   },
   "voiceEyebrow": "Voice",
   "voiceTitle": "Voice & tone",
@@ -176,5 +177,34 @@
   "pickColorAria": "Pick a color",
   "livePreviewAria": "Live preview",
   "addToBrandKitAria": "Add to the brand kit",
-  "recentUpdatesAria": "Recent updates"
+  "recentUpdatesAria": "Recent updates",
+  "profile": {
+    "title": "Brand Profile",
+    "description": "A structured, versioned source of truth for the business, audience, goals, offers, and production context behind monthly planning.",
+    "identityTitle": "Business identity",
+    "identityDescription": "Give the planning team and copilot a reliable picture of the business behind the content.",
+    "businessName": "Business name",
+    "industry": "Industry",
+    "location": "Location or market",
+    "primaryLanguage": "Primary content language",
+    "secondaryLanguage": "Secondary content language",
+    "none": "None",
+    "audience": "Audience",
+    "strategyTitle": "Audience and strategy",
+    "listHint": "Separate list values with commas. Keep these inputs specific enough to guide a monthly plan.",
+    "goals": "Goals",
+    "offers": "Offers",
+    "competitors": "Competitors",
+    "tone": "Tone",
+    "strengths": "Strengths",
+    "constraints": "Constraints",
+    "monthlyPriority": "Current monthly priority",
+    "operationsTitle": "Production context",
+    "operationsDescription": "Capture the practical limits and paid/organic balance the copilot should respect.",
+    "productionCapacity": "Production capacity",
+    "paidOrganicMix": "Paid / organic mix",
+    "save": "Save Brand Profile",
+    "saving": "Saving…",
+    "saved": "Brand Profile saved."
+  }
 }

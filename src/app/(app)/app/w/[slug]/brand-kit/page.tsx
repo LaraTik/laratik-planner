@@ -11,6 +11,7 @@ import {
   BookOpen,
   History,
   Sparkles,
+  UserRound,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
@@ -30,6 +31,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { BrandIdentityHero } from "./brand-identity-hero";
 import { RecentUpdatesTable } from "./recent-updates-table";
+import { getBrandProfile } from "@/lib/brand/profile";
 
 /**
  * Brand Kit overview — the workspace landing for `/app/w/[slug]/brand-kit`.
@@ -79,22 +81,24 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
   ]);
   void canEditBrand;
 
-  const [assets, rules, pillars, recent, publishingRules, linkedResources] = await Promise.all([
-    db
-      .select()
-      .from(brandAssets)
-      .where(and(eq(brandAssets.workspaceId, workspace.id), isNull(brandAssets.archivedAt))),
-    db
-      .select()
-      .from(brandVoiceRules)
-      .where(
-        and(eq(brandVoiceRules.workspaceId, workspace.id), isNull(brandVoiceRules.archivedAt)),
-      ),
-    listContentPillars(workspace.id),
-    listRecentBrandUpdates(workspace.id),
-    listBrandPublishingRules(workspace.id),
-    listBrandLinkedResources(workspace.id),
-  ]);
+  const [assets, rules, pillars, recent, publishingRules, linkedResources, brandProfile] =
+    await Promise.all([
+      db
+        .select()
+        .from(brandAssets)
+        .where(and(eq(brandAssets.workspaceId, workspace.id), isNull(brandAssets.archivedAt))),
+      db
+        .select()
+        .from(brandVoiceRules)
+        .where(
+          and(eq(brandVoiceRules.workspaceId, workspace.id), isNull(brandVoiceRules.archivedAt)),
+        ),
+      listContentPillars(workspace.id),
+      listRecentBrandUpdates(workspace.id),
+      listBrandPublishingRules(workspace.id),
+      listBrandLinkedResources(workspace.id),
+      getBrandProfile(workspace.id),
+    ]);
 
   const assetsByKind = {
     logo: assets.filter((a) => a.kind === "logo"),
@@ -173,6 +177,13 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
         className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
         data-testid="brand-kit-kpi-grid"
       >
+        <KpiCard
+          href={`${wsBase}/profile`}
+          icon={UserRound}
+          label={t("brandKit.section.profile")}
+          count={brandProfile ? 1 : 0}
+          testId="brand-kit-kpi-profile"
+        />
         <KpiCard
           href={`${wsBase}/logos`}
           icon={ImageIcon}

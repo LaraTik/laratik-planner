@@ -18,7 +18,7 @@ import { Badge } from "@/components/ui/badge";
  * reference four badges to understand why their "Run" button was
  * disabled.
  *
- * This panel lists the 3 prerequisites for AI to be live, the
+ * This panel lists the 3 agency/runtime prerequisites for AI to be live, the
  * current state of each, and a one-line "fix" for any unmet
  * prerequisite. It also links to the operator runbook so a
  * non-engineer admin can hand it to the operator.
@@ -33,8 +33,6 @@ import { Badge } from "@/components/ui/badge";
 export type AiPrerequisiteState = "ok" | "missing" | "off";
 
 export type AiDiagnosticPanelProps = {
-  /** Whether `AI_FEATURE_ENABLED=true` in the deployment env. */
-  envKillSwitch: boolean;
   /** Whether `MINIMAX_API_KEY` is set in the deployment env. */
   envHasKey: boolean;
   /** Whether the agency has a stored (managed) AI provider key. */
@@ -57,57 +55,62 @@ export function AiDiagnosticPanel(props: AiDiagnosticPanelProps) {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     props.t ? props.t(key, params) : interpolate(fallback, params);
   const prereqs: ReadonlyArray<{
-    id: "kill-switch" | "env-key" | "managed-secret";
+    id: "provider-key" | "master-switch" | "capabilities";
     label: string;
     state: AiPrerequisiteState;
     detail: string;
     fix: string;
   }> = [
     {
-      id: "kill-switch",
-      label: tr("agencyAi.diagnostic.killSwitchLabel", "AI feature enabled in the deployment"),
-      state: props.envKillSwitch ? "ok" : "off",
-      detail: props.envKillSwitch
-        ? tr("agencyAi.diagnostic.killSwitchSet", "Set in the deployment environment.")
-        : tr(
-            "agencyAi.diagnostic.killSwitchMissing",
-            "Not set. The AI_FEATURE_ENABLED env var is the operator-level kill switch.",
-          ),
+      id: "provider-key",
+      label: tr("agencyAi.diagnostic.providerKeyLabel", "Provider key available to this agency"),
+      state: props.envHasKey || props.hasManagedSecret ? "ok" : "missing",
+      detail:
+        props.envHasKey && props.hasManagedSecret
+          ? tr(
+              "agencyAi.diagnostic.providerKeyBothSet",
+              "A managed agency key is active; MINIMAX_API_KEY is available as the fallback.",
+            )
+          : props.hasManagedSecret
+            ? tr("agencyAi.diagnostic.managedSecretSet", "Managed secret ends in …{suffix}", {
+                suffix: props.managedSecretSuffix ?? "????",
+              })
+            : props.envHasKey
+              ? tr(
+                  "agencyAi.diagnostic.envKeySet",
+                  "MINIMAX_API_KEY is set. The key is never displayed after the initial paste.",
+                )
+              : tr(
+                  "agencyAi.diagnostic.providerKeyMissing",
+                  "No provider key is available for this agency.",
+                ),
       fix: tr(
-        "agencyAi.diagnostic.killSwitchFix",
-        "Set AI_FEATURE_ENABLED=true in the deployment .env and restart the container.",
+        "agencyAi.diagnostic.providerKeyFix",
+        "Set a managed provider key in the form above or configure MINIMAX_API_KEY as the deployment fallback.",
       ),
     },
     {
-      id: "env-key",
-      label: tr("agencyAi.diagnostic.envKeyLabel", "Provider key in the deployment environment"),
-      state: props.envHasKey ? "ok" : "missing",
-      detail: props.envHasKey
-        ? tr(
-            "agencyAi.diagnostic.envKeySet",
-            "MINIMAX_API_KEY is set. The key is never displayed after the initial paste.",
-          )
-        : tr("agencyAi.diagnostic.envKeyMissing", "MINIMAX_API_KEY is empty."),
+      id: "master-switch",
+      label: tr("agencyAi.diagnostic.masterSwitchLabel", "Agency AI master switch"),
+      state: props.masterSwitch ? "ok" : "off",
+      detail: props.masterSwitch
+        ? tr("agencyAi.diagnostic.masterSwitchSet", "Enabled in Agency Settings.")
+        : tr("agencyAi.diagnostic.masterSwitchMissing", "Disabled in Agency Settings."),
       fix: tr(
-        "agencyAi.diagnostic.envKeyFix",
-        "Set MINIMAX_API_KEY=<your-key> in the deployment .env and restart the container.",
+        "agencyAi.diagnostic.masterSwitchFix",
+        "Turn on the AI master switch in Feature settings and save.",
       ),
     },
     {
-      id: "managed-secret",
-      label: tr("agencyAi.diagnostic.managedSecretLabel", "Provider key stored for this agency"),
-      state: props.hasManagedSecret ? "ok" : "missing",
-      detail: props.hasManagedSecret
-        ? tr("agencyAi.diagnostic.managedSecretSet", "Managed secret ends in …{suffix}", {
-            suffix: props.managedSecretSuffix ?? "????",
-          })
-        : tr(
-            "agencyAi.diagnostic.managedSecretMissing",
-            "No managed secret. Add one in the form above to override the env key on a per-agency basis.",
-          ),
+      id: "capabilities",
+      label: tr("agencyAi.diagnostic.capabilitiesLabel", "AI capabilities enabled"),
+      state: props.anyCapabilityOn ? "ok" : "off",
+      detail: props.anyCapabilityOn
+        ? tr("agencyAi.diagnostic.capabilitiesSet", "At least one capability is enabled.")
+        : tr("agencyAi.diagnostic.capabilitiesMissing", "No AI capability is enabled."),
       fix: tr(
-        "agencyAi.diagnostic.managedSecretFix",
-        "Paste your provider key in the form above. Only the last 4 characters are stored.",
+        "agencyAi.diagnostic.capabilitiesFix",
+        "Enable at least one capability below and save.",
       ),
     },
   ];
@@ -129,7 +132,7 @@ export function AiDiagnosticPanel(props: AiDiagnosticPanelProps) {
       <CardDescription>
         {tr(
           "agencyAi.diagnostic.description",
-          "AI is live when all three prerequisites are satisfied, the agency master switch is on, and at least one capability is enabled. Otherwise, in-app AI buttons stay disabled. A read-only status link next to each content-page section header shows planners where to look.",
+          "AI is live when a provider key is available, the agency master switch is on, and at least one capability is enabled. Otherwise, in-app AI buttons stay disabled. A read-only status link next to each content-page section header shows planners where to look.",
         )}
       </CardDescription>
 

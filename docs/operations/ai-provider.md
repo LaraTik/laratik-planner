@@ -34,7 +34,7 @@ The global env-var path is the default for new agencies and the fallback for age
 | `MINIMAX_BASE_URL` | optional  | `https://api.minimax.io/anthropic` | The provider's API base URL.                        |
 | `MINIMAX_MODEL`    | optional  | `MiniMax-M3`                       | The default model identifier sent on every request. |
 
-The variables are optional because the agency-managed secret is the preferred surface. If both are missing, `/api/ai/generate` returns `503` (the `AI_FEATURE_ENABLED` flag is independent — it gates the route, not the key).
+The variables are optional because the agency-managed secret is the preferred surface. If both are missing, `/api/ai/generate` returns `503`. The agency master switch and capability allowlist in Agency Settings control product enablement; provider environment variables do not enable or disable an agency.
 
 ### Rotation cadence
 
@@ -100,7 +100,7 @@ A non-OpenAI-compatible provider (e.g. a provider that uses a different streamin
 - **Pasting the plaintext key into a commit, a screenshot, or a Slack message** — the audit row records the `lastFour`; the plaintext is never recoverable from the database. If the plaintext is exposed, rotate the key immediately.
 - **Forgetting to restart the app after an env-var change** — the boot-time env validation catches missing vars; a successful restart confirms the new value is in effect. The `MINIMAX_*` vars are read on every request, but the validated schema is enforced only at boot.
 - **Switching providers without updating the Sentry dashboard** — the 5xx rate, latency p95, and capability-denied alerts are provider-agnostic at the surface, but the token-budget-exhausted alert may need a different metric name in the new provider.
-- **Setting `AI_FEATURE_ENABLED=false` after a provider switch** — the `AI_FEATURE_ENABLED` flag is independent of the provider. The flag gates the route; the provider is the upstream. A provider switch with the flag off is a no-op for end users until the flag flips.
+- **Expecting a provider environment variable to enable AI** — configure the provider key/base/model in the deployment, then enable the agency master switch and desired capabilities in `/app/agency-settings/ai`. The provider configuration alone never exposes AI to an agency.
 
 ## 8. Cross-references
 

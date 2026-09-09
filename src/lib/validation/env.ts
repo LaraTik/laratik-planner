@@ -117,11 +117,6 @@ const serverSchema = z.object({
   MINIMAX_API_KEY: stringOrEmpty,
   MINIMAX_BASE_URL: z.string().url().default("https://api.minimax.io/anthropic"),
   MINIMAX_MODEL: z.string().default("MiniMax-M3"),
-  AI_FEATURE_ENABLED: z
-    .string()
-    .optional()
-    .transform((v) => v === "true" || v === "1"),
-
   // AI provider secret encryption (M3.4 — AI in-DB secret).
   // Server-only AES-256-GCM key. The env var is optional at module
   // load — when it is missing AND the agency tries to set a managed
@@ -226,7 +221,6 @@ if (!skipValidation) {
     smtpUser: serverEnv.SMTP_USER,
     smtpPassword: serverEnv.SMTP_PASSWORD,
     smtpFrom: serverEnv.SMTP_FROM,
-    aiEnabled: serverEnv.AI_FEATURE_ENABLED,
     minimaxApiKey: serverEnv.MINIMAX_API_KEY,
   });
   if (providerIssues.length > 0) {

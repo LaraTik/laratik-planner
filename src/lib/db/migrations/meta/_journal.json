@@ -288,6 +288,27 @@
       "when": 1790020000003,
       "tag": "0040_ensure_trend_radar_capability",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1790030000000,
+      "tag": "0041_handy_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1790030000001,
+      "tag": "0042_tired_vindicator",
+      "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1790030000002,
+      "tag": "0043_cynical_hercules",
+      "breakpoints": true
     }
   ]
 }

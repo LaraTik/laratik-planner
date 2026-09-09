@@ -50,7 +50,6 @@ const env: NodeJS.ProcessEnv = {
   // Trend Radar is intentionally off by default in production. Isolated E2E
   // runs opt into the capability so the gated Trend Radar journeys are
   // exercised without changing the production configuration.
-  AI_FEATURE_ENABLED: process.env.AI_FEATURE_ENABLED ?? "true",
   // The readiness probe verifies the upload volume as well as Postgres.
   // Give isolated browser runs a disposable writable volume so the probe
   // exercises the real contract without touching /data/uploads.

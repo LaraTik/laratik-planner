@@ -29,6 +29,7 @@ import {
   ShieldCheck,
   Sparkles,
   Tag,
+  UserRound,
   Users,
   Gauge,
 } from "lucide-react";
@@ -191,6 +192,14 @@ export function buildWorkspaceNavigation(input: {
               labelKey: "sidebar.planningCalendar",
               icon: CalendarDays,
             },
+            {
+              kind: "link",
+              key: "planning-monthly",
+              href: `${wsBase}/planning/monthly`,
+              label: "Monthly planning",
+              labelKey: "sidebar.planningMonthly",
+              icon: Sparkles,
+            },
           ],
         },
         ...(canAccessTrendRadar
@@ -290,6 +299,14 @@ export function buildWorkspaceNavigation(input: {
               label: "Overview",
               labelKey: "sidebar.workspaceOverview",
               icon: Sparkles,
+            },
+            {
+              kind: "link",
+              key: "brand-kit-profile",
+              href: `${wsBase}/brand-kit/profile`,
+              label: "Brand Profile",
+              labelKey: "sidebar.brandProfile",
+              icon: UserRound,
             },
             {
               kind: "nested-group",
@@ -613,6 +630,14 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               label: "AI configuration",
               labelKey: "sidebar.settingsAiConfiguration",
               icon: Bot,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-planning-packs",
+              href: "/app/agency-settings/planning-packs",
+              label: "Planning packs",
+              labelKey: "sidebar.settingsPlanningPacks",
+              icon: Sparkles,
             },
             ...(canAccessTrendRadar
               ? [

@@ -12,7 +12,6 @@ import {
 import { suggestLeadTimes, suggestMonthlyTarget } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
-import { hasAnyManagedSecretConfigured } from "@/lib/ai/provider-secret";
 import { aiFeatureSettings } from "@/lib/db/schema";
 
 /**
@@ -68,9 +67,7 @@ export async function suggestLeadTimesAction(
     };
   }
   const apiKey = await getActiveApiKey(agencyId);
-  if (!apiKey && !hasAnyManagedSecretConfigured()) {
-    return { ok: false, error: "AI features are disabled." };
-  }
+  if (!apiKey) return { ok: false, error: "AI provider key is not configured." };
 
   // Pull a few signals the model can lean on (team size, current
   // target, current approval mode, content cadence hints) and
@@ -144,9 +141,7 @@ export async function suggestMonthlyTargetAction(
     };
   }
   const apiKey = await getActiveApiKey(agencyId);
-  if (!apiKey && !hasAnyManagedSecretConfigured()) {
-    return { ok: false, error: "AI features are disabled." };
-  }
+  if (!apiKey) return { ok: false, error: "AI provider key is not configured." };
 
   const [settings] = await db
     .select()

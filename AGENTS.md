@@ -92,18 +92,18 @@ it before re-capturing. Key reminders:
 
 ## Stack
 
-| Layer     | Choice                                          | Why                                                        |
-| --------- | ----------------------------------------------- | ---------------------------------------------------------- |
-| Framework | Next.js 16.3 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                            |
-| UI        | Tailwind 4 + shadcn/ui + Radix                  | Per master prompt §4, §17                                  |
-| DB        | Postgres 16 (sidecar container)                 | Dedicated, isolated, Drizzle-first-class                   |
-| ORM       | Drizzle                                         | Type-safe, no codegen daemon, SQL-flavored migrations      |
-| Auth      | NextAuth v5 (Auth.js) + Drizzle adapter         | Google OAuth + email magic link, JWT sessions              |
-| Email     | Nodemailer → Mailcow SMTP                       | No new vendor, free, `mail.laratik.com` already running    |
-| AI        | MiniMax (`MiniMax-M3`, Anthropic-compat)        | Goal 11 only, optional, `AI_FEATURE_ENABLED=false` default |
-| Tests     | Vitest (unit) + Playwright (E2E + a11y)         | Per master prompt §4, §20                                  |
-| CI        | GitHub Actions → GHCR                           | Free, public-image-friendly                                |
-| Deploy    | GHCR → `docker compose pull` on VPS via Traefik | Matches `mavis-trader` / `laratik-social-platform` pattern |
+| Layer     | Choice                                          | Why                                                                                       |
+| --------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Framework | Next.js 16.3 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                                                           |
+| UI        | Tailwind 4 + shadcn/ui + Radix                  | Per master prompt §4, §17                                                                 |
+| DB        | Postgres 16 (sidecar container)                 | Dedicated, isolated, Drizzle-first-class                                                  |
+| ORM       | Drizzle                                         | Type-safe, no codegen daemon, SQL-flavored migrations                                     |
+| Auth      | NextAuth v5 (Auth.js) + Drizzle adapter         | Google OAuth + email magic link, JWT sessions                                             |
+| Email     | Nodemailer → Mailcow SMTP                       | No new vendor, free, `mail.laratik.com` already running                                   |
+| AI        | MiniMax (`MiniMax-M3`, Anthropic-compat)        | Goal 11 only; provider config is env-backed, agency enablement/capabilities are DB-backed |
+| Tests     | Vitest (unit) + Playwright (E2E + a11y)         | Per master prompt §4, §20                                                                 |
+| CI        | GitHub Actions → GHCR                           | Free, public-image-friendly                                                               |
+| Deploy    | GHCR → `docker compose pull` on VPS via Traefik | Matches `mavis-trader` / `laratik-social-platform` pattern                                |
 
 ## Repo layout
 
@@ -364,7 +364,7 @@ Per StudioFlow §15:
 | 8   | Discussion, mentions, attachments, notifications            | ✅     | `CommentItem` + `CommentForm` extracted (`ca7ea77`)                                                                                                                                            |
 | 9   | Delivery versions and two-stage creative review             | ✅     | Immutable versions, FOR UPDATE                                                                                                                                                                 |
 | 10  | Manual publishing, partial completion, failure recovery     | ✅     | `derivePublicationAggregate` + status guard                                                                                                                                                    |
-| 11  | Optional MiniMax assistance                                 | ✅     | Gated by `AI_FEATURE_ENABLED`; capability entry points on content detail (`b4e210b`)                                                                                                           |
+| 11  | Optional MiniMax assistance                                 | ✅     | Gated by the agency `ai_feature_setting` master switch and capability allowlist; provider connection config remains env-backed                                                                 |
 | 12  | Responsive completion, accessibility, visual fidelity, perf | ✅     | 23 route surfaces use the scoped visual contract: 19 non-planning × 3 viewports plus four planning × 4 viewports = 73 responsive baselines; 39 exact-reference captures (`a9fa300`, `3d40183`) |
 | 13  | Security hardening, observability, CI, staging, recovery    | ✅     | Sentry + restic offsite + visual-test deploy gate                                                                                                                                              |
 | 14  | UAT, production deployment, final proof                     | ⏳     | Verdict: `READY FOR INDEPENDENT REVIEW` (2026-08-24, post-M3 merge `4a999fe`)                                                                                                                  |
@@ -374,8 +374,9 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 > **2026-09-09 navigation follow-up** — Trend Radar v1 is now discoverable
 > through the capability-aware desktop and mobile shell: Trend Radar in
 > workspace Content, Trend settings for workspace managers, and Trend sources
-> for agency admins. These links remain gated by `AI_FEATURE_ENABLED` and the
-> agency `trend_radar` capability.
+> for agency admins. These links remain gated by the agency database master
+> switch and the `trend_radar` capability, while provider configuration remains
+> deployment-scoped.
 
 **Release verdict (2026-08-24):** `READY FOR INDEPENDENT REVIEW` (shared across
 `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).

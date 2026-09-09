@@ -25,18 +25,33 @@
 
 ## Goal-by-goal port map
 
-| Goal     | Files / sections affected                                                         | Port action                                                                                                                                                          |
-| -------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **0**    | §5, §6, §7, §8 (env only), §17 (tokens), §20 (test config), §25 (response format) | Direct port with the env changes above                                                                                                                               |
-| **1**    | §8 (schema), §9 (RLS)                                                             | Port schema to Drizzle; replace `auth.users(id)` FKs with our own `users(id)`; replace RLS with Drizzle policies + app-level guards                                  |
-| **2**    | §13 (auth)                                                                        | Replace `supabase.auth.*` with NextAuth v5; bootstrap is a server-rendered form with `BOOTSTRAP_SETUP_TOKEN`; reset is email magic link via Mailcow                  |
-| **3**    | §3 (Workspace Overview screen)                                                    | Direct port — no Supabase coupling in the UI layer                                                                                                                   |
-| **4**    | §8 (channels, brand_assets, brand_voice_rules) + §14 (admin commands)             | Direct port                                                                                                                                                          |
-| **5–10** | All content / planning / workflow / discussion / delivery / publishing logic      | Direct port. Storage references (§9) resolve through the agency-scoped R2 adapter and `storage_object`; local paths remain a compatibility fallback during migration |
-| **11**   | §15 (MiniMax integration)                                                         | Replace `vercel-minimax-ai-provider` with raw OpenAI-compat HTTP; gate by `AI_FEATURE_ENABLED` env                                                                   |
-| **12**   | §18 (a11y, perf)                                                                  | Direct port                                                                                                                                                          |
-| **13**   | §19 (observability) + §20 (CI)                                                    | Direct port; Sentry wiring is straightforward                                                                                                                        |
-| **14**   | §23, §24, §25 (acceptance, release gates, response format)                        | Direct port; "Vercel" becomes "GHCR + laratik-vps"                                                                                                                   |
+| Goal     | Files / sections affected                                                         | Port action                                                                                                                                                                  |
+| -------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **0**    | §5, §6, §7, §8 (env only), §17 (tokens), §20 (test config), §25 (response format) | Direct port with the env changes above                                                                                                                                       |
+| **1**    | §8 (schema), §9 (RLS)                                                             | Port schema to Drizzle; replace `auth.users(id)` FKs with our own `users(id)`; replace RLS with Drizzle policies + app-level guards                                          |
+| **2**    | §13 (auth)                                                                        | Replace `supabase.auth.*` with NextAuth v5; bootstrap is a server-rendered form with `BOOTSTRAP_SETUP_TOKEN`; reset is email magic link via Mailcow                          |
+| **3**    | §3 (Workspace Overview screen)                                                    | Direct port — no Supabase coupling in the UI layer                                                                                                                           |
+| **4**    | §8 (channels, brand_assets, brand_voice_rules) + §14 (admin commands)             | Direct port                                                                                                                                                                  |
+| **5–10** | All content / planning / workflow / discussion / delivery / publishing logic      | Direct port. Storage references (§9) resolve through the agency-scoped R2 adapter and `storage_object`; local paths remain a compatibility fallback during migration         |
+| **11**   | §15 (MiniMax integration)                                                         | Replace `vercel-minimax-ai-provider` with raw OpenAI-compat HTTP; provider connection values come from env, while agency enablement and capability gates are database-backed |
+
+### 2026-09-09 — AI enablement moved from deployment env to agency settings
+
+The product decision is that AI must be enabled or disabled per agency from
+`/app/agency-settings/ai`. `MINIMAX_API_KEY`, `MINIMAX_BASE_URL`, and
+`MINIMAX_MODEL` remain deployment/provider configuration only; there is no
+`AI_FEATURE_ENABLED` environment switch. The API still fails closed when the
+agency master switch or capability allowlist denies access, and returns a
+provider-configuration error when neither a managed nor fallback key exists.
+
+Impact: operators can configure a provider without enabling AI for every
+agency, and agency admins can independently control the master switch and
+capabilities. Security is unchanged: authorization, capability allowlists,
+plan limits, rate limits, and the provider-key resolution path remain
+server-enforced. Approval: product owner request in the 2026-09-09 task.
+| **12** | §18 (a11y, perf) | Direct port |
+| **13** | §19 (observability) + §20 (CI) | Direct port; Sentry wiring is straightforward |
+| **14** | §23, §24, §25 (acceptance, release gates, response format) | Direct port; "Vercel" becomes "GHCR + laratik-vps" |
 
 ## What is NOT ported
 

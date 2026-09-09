@@ -6,10 +6,14 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { isAgencyAdmin, hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { trendSignals, workspaceSourceOptouts, trendSourceHealth } from "@/lib/db/schema";
+import {
+  aiFeatureSettings,
+  trendSignals,
+  workspaceSourceOptouts,
+  trendSourceHealth,
+} from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
-import { serverEnv } from "@/lib/validation/env";
 import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
 import { TrendsPageClient } from "./_components/trends-page-client";
@@ -22,9 +26,9 @@ import { TrendsPageClient } from "./_components/trends-page-client";
  * the Explore tab as the only live surface; the others are stable
  * shells that will fill in over the next sprints.
  *
- * When `AI_FEATURE_ENABLED=false` the page redirects to the
- * workspace overview — the planner surfaces only exist when the
- * flag is on.
+ * The agency's database-backed AI master switch and capability
+ * allowlist control visibility. Provider configuration is checked
+ * by the generation routes, not by an environment feature flag.
  */
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -32,10 +36,6 @@ export async function generateMetadata() {
 }
 
 export default async function TrendsPage({ params }: { params: Promise<{ slug: string }> }) {
-  if (!serverEnv.AI_FEATURE_ENABLED) {
-    redirect("/app");
-  }
-
   const { slug } = await params;
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -45,6 +45,12 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
+  const [feature] = await db
+    .select({ enabled: aiFeatureSettings.enabled })
+    .from(aiFeatureSettings)
+    .where(eq(aiFeatureSettings.agencyId, agencyId))
+    .limit(1);
+  if (!feature?.enabled) redirect("/app");
   const capabilities = await loadEnabledCapabilities(agencyId);
   if (!capabilities.has("trend_radar")) redirect("/app");
 

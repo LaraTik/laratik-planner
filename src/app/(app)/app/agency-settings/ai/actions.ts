@@ -5,7 +5,6 @@ import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
-import { serverEnv } from "@/lib/validation/env";
 import {
   AI_CAPABILITIES,
   UpdateAiSettingsSchema,
@@ -87,9 +86,8 @@ export async function testAiConnectionAction(): Promise<AiSettingsActionState> {
           result.latencyMs != null ? `Connection OK · ${result.latencyMs} ms` : "Connection OK",
       };
     }
-    const reason = serverEnv.AI_FEATURE_ENABLED
-      ? "Provider did not return a 2xx response — check the API key and base URL."
-      : "AI_FEATURE_ENABLED is false or MINIMAX_API_KEY is not set in the environment.";
+    const reason =
+      "Provider did not return a 2xx response — check the configured provider key and base URL.";
     return { error: reason };
   } catch (e) {
     return { error: (e as Error).message };

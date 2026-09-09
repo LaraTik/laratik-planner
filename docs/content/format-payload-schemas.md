@@ -183,6 +183,11 @@ payload shape — only the fields the translator filled in
 need to be present. Unknown locale codes are rejected by
 Zod so a typo can't sneak untranslated content in.
 
+Each payload may also carry an explicit `contentLanguage` (`en` or
+`ar`). This is planning metadata used by the batch canvas and publish
+pre-fill; it does not translate content or replace the per-field
+`translations` map.
+
 Example:
 
 ```jsonc

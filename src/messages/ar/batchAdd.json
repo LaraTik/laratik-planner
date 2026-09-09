@@ -75,7 +75,9 @@
       "location_invalid": "تحقق من قيمة الموقع.",
       "brief_empty": "يساعد الملخص الفريق على فهم الفكرة.",
       "duplicate_date": "يستخدم صف آخر التاريخ والوقت نفسيهما.",
-      "channel_unknown": "تعذر مطابقة قناة واحدة أو أكثر."
+      "channel_unknown": "تعذر مطابقة قناة واحدة أو أكثر.",
+      "format_payload_invalid": "تحقق من JSON الخاص بالصيغة والحقول الخاصة بالمحتوى.",
+      "format_payload_conflict": "تتعارض قيمة الحقل المختصر مع JSON الخاص بالصيغة في {key}."
     },
     "formats": {
       "static_post": {
@@ -113,6 +115,31 @@
     },
     "createDrafts": "حفظ الكل كمسودات",
     "creating": "جارٍ حفظ المسودات…",
-    "cancel": "إلغاء"
+    "cancel": "إلغاء",
+    "monthlyCanvasEyebrow": "لوحة الشهر",
+    "monthlyCanvasTitle": "شكّل الشهر قبل الحفظ",
+    "monthlyCanvasDescription": "حدّد الإعدادات الافتراضية مرة واحدة، ثم أكمل التفاصيل الإبداعية التي يحتاجها فريقك للإنتاج والمراجعة.",
+    "month": "شهر التخطيط",
+    "applyDefaults": "تطبيق على الصفوف الفارغة",
+    "campaign": "الحملة",
+    "pillar": "محور المحتوى",
+    "owner": "المسؤول",
+    "template": "القالب",
+    "contentLanguage": "لغة المحتوى",
+    "contentLanguageEnglish": "الإنجليزية",
+    "contentLanguageArabic": "العربية",
+    "contentLanguageWorkspaceDefault": "إعدادات مساحة العمل",
+    "noCampaign": "بدون حملة",
+    "noPillar": "بدون محور",
+    "noOwner": "بدون مسؤول",
+    "noTemplate": "بدون قالب",
+    "allChannels": "كل القنوات النشطة",
+    "defaultsEmptyHint": "اختر الإعدادات الافتراضية لتسريع إنشاء الصفوف. سيبقى المحتوى الحالي دون تغيير.",
+    "details": "التفاصيل",
+    "detailsForRow": "التفاصيل الإبداعية لـ {row}",
+    "doneWithDetails": "تمت التفاصيل",
+    "untitledRow": "صف بلا عنوان",
+    "detailsGuidance": "أكمل الحقول اللازمة لتسليم المسودة إلى الإنتاج. تبقى التغييرات في هذا الصف حتى تحفظ الدفعة.",
+    "advancedDetails": "تفاصيل متقدمة للصيغة"
   }
 }

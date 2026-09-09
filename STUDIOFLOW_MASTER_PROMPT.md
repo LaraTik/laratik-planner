@@ -516,7 +516,6 @@ BOOTSTRAP_SETUP_TOKEN=
 MINIMAX_API_KEY=
 MINIMAX_MODEL=MiniMax-M2.7
 MINIMAX_BASE_URL=https://api.minimax.io/anthropic
-AI_FEATURE_ENABLED=false
 RESEND_API_KEY=
 EMAIL_FROM=
 CRON_SECRET=
@@ -1532,7 +1531,10 @@ Return only fields needed by the route and permitted to the user. Never return a
 
 ## 15. MiniMax AI integration
 
-AI is optional. The entire product must work when AI_FEATURE_ENABLED is false, the provider is unavailable, or the key is missing.
+AI is optional. The entire product must work when the agency AI master switch
+is disabled, the provider is unavailable, or the key is missing. Provider
+connection values are deployment configuration; product enablement and
+capabilities are controlled per agency in `ai_feature_setting`.
 
 Use MiniMax M2.7 through the compatible AI SDK provider. The official international base is https://api.minimax.io/anthropic. Keep provider access in src/features/ai/provider.ts behind this interface:
 
@@ -2648,7 +2650,7 @@ Expected: Published is impossible while any channel remains pending/failed; inva
 **Verification:**
 
 ```bash
-AI_FEATURE_ENABLED=false pnpm test:unit -- ai
+pnpm test:unit -- ai
 pnpm test:e2e --grep "workflow works without AI"
 pnpm build
 ```

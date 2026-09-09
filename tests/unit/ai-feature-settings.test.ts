@@ -109,7 +109,6 @@ const envMock = vi.hoisted(() => ({
   MINIMAX_API_KEY: "sk-test",
   MINIMAX_BASE_URL: "https://api.example.com",
   MINIMAX_MODEL: "MiniMax-M3",
-  AI_FEATURE_ENABLED: true,
   NODE_ENV: "test" as const,
   AUTH_SECRET: "x".repeat(32),
   NEXT_PUBLIC_APP_URL: "http://localhost:3000",
@@ -196,7 +195,6 @@ beforeEach(() => {
   dbMock.update.mockClear();
   policyOverrides.resolverResult = { agencyId, source: "fallback-single-agency" };
   policyOverrides.isAgencyAdminResult = true;
-  envMock.AI_FEATURE_ENABLED = true;
   envMock.MINIMAX_API_KEY = "sk-test";
   envMock.MINIMAX_BASE_URL = "https://api.example.com";
   envMock.MINIMAX_MODEL = "MiniMax-M3";
@@ -393,7 +391,6 @@ describe("testAiConnection", () => {
   });
 
   it("records a failure and returns {ok:false, latencyMs:null} when AI is disabled AND the env key is missing", async () => {
-    envMock.AI_FEATURE_ENABLED = false;
     envMock.MINIMAX_API_KEY = "";
     // recordConnectionTest: initial select (no row) → insert path
     dbMock.state.selectResults.push([]);
@@ -409,7 +406,6 @@ describe("testAiConnection", () => {
   });
 
   it("records a failure and returns {ok:false, latencyMs:null} when the API key is missing", async () => {
-    envMock.AI_FEATURE_ENABLED = true;
     envMock.MINIMAX_API_KEY = "";
     dbMock.state.selectResults.push([]);
     const result = await testAiConnection(actor);

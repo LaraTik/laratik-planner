@@ -3,12 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 
 const envValues: {
-  AI_FEATURE_ENABLED: boolean;
   MINIMAX_API_KEY: string;
   MINIMAX_BASE_URL: string;
   MINIMAX_MODEL: string;
 } = {
-  AI_FEATURE_ENABLED: false,
   MINIMAX_API_KEY: "",
   MINIMAX_BASE_URL: "https://api.example.com",
   MINIMAX_MODEL: "MiniMax-M3-test",
@@ -30,40 +28,10 @@ async function loadAi() {
   return await import("@/lib/ai");
 }
 
-describe("isAiEnabled", () => {
-  beforeEach(() => {
-    vi.resetModules();
-    envValues.AI_FEATURE_ENABLED = false;
-    envValues.MINIMAX_API_KEY = "";
-  });
-
-  it("returns false when the feature flag is off", async () => {
-    const ai = await loadAi();
-    envValues.AI_FEATURE_ENABLED = false;
-    envValues.MINIMAX_API_KEY = "sk-1234";
-    expect(ai.isAiEnabled()).toBe(false);
-  });
-
-  it("returns false when the API key is missing", async () => {
-    const ai = await loadAi();
-    envValues.AI_FEATURE_ENABLED = true;
-    envValues.MINIMAX_API_KEY = "";
-    expect(ai.isAiEnabled()).toBe(false);
-  });
-
-  it("returns true only when both flag and key are present", async () => {
-    const ai = await loadAi();
-    envValues.AI_FEATURE_ENABLED = true;
-    envValues.MINIMAX_API_KEY = "sk-1234";
-    expect(ai.isAiEnabled()).toBe(true);
-  });
-});
-
 describe("chat", () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
-    envValues.AI_FEATURE_ENABLED = true;
     envValues.MINIMAX_API_KEY = "sk-1234";
     envValues.MINIMAX_BASE_URL = "https://api.example.com/";
     envValues.MINIMAX_MODEL = "MiniMax-M3-test";
@@ -73,8 +41,7 @@ describe("chat", () => {
     fetchMock.mockReset();
   });
 
-  it("returns null without calling fetch when AI is disabled", async () => {
-    envValues.AI_FEATURE_ENABLED = false;
+  it("returns null without calling fetch when no provider key is supplied", async () => {
     const ai = await loadAi();
     const result = await ai.chat({ messages: [{ role: "user", content: "hi" }] });
     expect(result).toBeNull();
@@ -177,12 +144,10 @@ describe("draftCaption", () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
-    envValues.AI_FEATURE_ENABLED = true;
     envValues.MINIMAX_API_KEY = "sk-1234";
   });
 
-  it("returns null when AI is disabled", async () => {
-    envValues.AI_FEATURE_ENABLED = false;
+  it("returns null when no provider key is supplied", async () => {
     const ai = await loadAi();
     const result = await ai.draftCaption({ title: "Drop teaser", brief: "", format: "reel" });
     expect(result).toBeNull();
@@ -265,12 +230,10 @@ describe("improveBrief", () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
-    envValues.AI_FEATURE_ENABLED = true;
     envValues.MINIMAX_API_KEY = "sk-1234";
   });
 
-  it("returns null when AI is disabled", async () => {
-    envValues.AI_FEATURE_ENABLED = false;
+  it("returns null when no provider key is supplied", async () => {
     const ai = await loadAi();
     const result = await ai.improveBrief({ title: "Drop", brief: "x", format: "reel" });
     expect(result).toBeNull();
@@ -329,12 +292,10 @@ describe("checkCompleteness", () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
-    envValues.AI_FEATURE_ENABLED = true;
     envValues.MINIMAX_API_KEY = "sk-1234";
   });
 
-  it("returns null when AI is disabled", async () => {
-    envValues.AI_FEATURE_ENABLED = false;
+  it("returns null when no provider key is supplied", async () => {
     const ai = await loadAi();
     const result = await ai.checkCompleteness({ title: "Drop", brief: "x", format: "reel" });
     expect(result).toBeNull();

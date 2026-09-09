@@ -75,7 +75,9 @@
       "location_invalid": "Check the location value.",
       "brief_empty": "A brief helps the team understand the idea.",
       "duplicate_date": "Another row uses this date and time.",
-      "channel_unknown": "One or more channels could not be matched."
+      "channel_unknown": "One or more channels could not be matched.",
+      "format_payload_invalid": "Check the format payload JSON and format-specific fields.",
+      "format_payload_conflict": "The convenience value conflicts with Format payload JSON for {key}."
     },
     "formats": {
       "static_post": {
@@ -113,6 +115,31 @@
     },
     "createDrafts": "Save all as drafts",
     "creating": "Saving drafts…",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "monthlyCanvasEyebrow": "Monthly canvas",
+    "monthlyCanvasTitle": "Shape the month before you save",
+    "monthlyCanvasDescription": "Set defaults once, then fill each row with the creative details your team needs to produce and approve it.",
+    "month": "Planning month",
+    "applyDefaults": "Apply to empty rows",
+    "campaign": "Campaign",
+    "pillar": "Content pillar",
+    "owner": "Owner",
+    "template": "Template",
+    "contentLanguage": "Content language",
+    "contentLanguageEnglish": "English",
+    "contentLanguageArabic": "Arabic",
+    "contentLanguageWorkspaceDefault": "Workspace default",
+    "noCampaign": "No campaign",
+    "noPillar": "No pillar",
+    "noOwner": "No owner",
+    "noTemplate": "No template",
+    "allChannels": "All active channels",
+    "defaultsEmptyHint": "Choose defaults to make new rows faster. Existing content stays unchanged.",
+    "details": "Details",
+    "detailsForRow": "Creative details for {row}",
+    "doneWithDetails": "Done with details",
+    "untitledRow": "Untitled row",
+    "detailsGuidance": "Complete the fields needed to hand this draft to production. Changes stay in this row until you save the batch.",
+    "advancedDetails": "Advanced format details"
   }
 }

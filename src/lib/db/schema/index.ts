@@ -10,6 +10,7 @@ export * from "./identity";
 export * from "./workspaces";
 export * from "./channels";
 export * from "./planning";
+export * from "./monthly-planning";
 export * from "./content";
 export * from "./discussions";
 export * from "./deliveries";

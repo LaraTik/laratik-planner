@@ -3,8 +3,8 @@
 > Deep-research report. Target product: **laratik-planner** — a self-hosted
 > Next.js 16 + Drizzle + Postgres + NextAuth v5 multi-agency social media
 > planning SaaS with approval workflow, role capability matrix, scheduling,
-> and content-item state machine. AI feature is opt-in (`AI_FEATURE_ENABLED`,
-> default off), driven by MiniMax (`MiniMax-M3`, Anthropic-compatible).
+> and content-item state machine. AI feature is opt-in via the agency database
+> master switch (default off), driven by MiniMax (`MiniMax-M3`, Anthropic-compatible).
 > Source spec: `STUDIOFLOW_MASTER_PROMPT.md` §0, §2, §11, §13, §24.
 
 ## 1. Executive summary
@@ -118,13 +118,13 @@ multi-platform, 🎯 laratik-planner fit (5 = ship-shape, 0 = mismatch).
 
 ### 2.6 AI content QA (brand-safety, fact-check, plagiarism)
 
-| Repo                                                  | ⭐   | 📜     | 🐳  | 🎯                                                              |
-| ----------------------------------------------------- | ---- | ------ | --- | --------------------------------------------------------------- |
-| `microsoft/presidio`                                  | 4.5k | MIT    | yes | 4 — PII detection, brand-guardrail candidate                    |
-| `Kaeru-CT/Style-Bert-VITS2` etc. (plagiarism/voice)   | <2k  | varies | n/a | 1 — niche                                                       |
-| `salesforce/lavis` (BLIP for image QA)                | ~3k  | BSD-3  | yes | 3 — caption compare vs brand brief                              |
-| `openai/whisper` (transcription for video caption QA) | 75k  | MIT    | yes | 4 — caption-level moderation, supports 99 languages             |
-| Custom: prompt-only checks via MiniMax                | n/a  | n/a    | n/a | 5 — ships with `AI_FEATURE_ENABLED=true` already, cheapest path |
+| Repo                                                  | ⭐   | 📜     | 🐳  | 🎯                                                             |
+| ----------------------------------------------------- | ---- | ------ | --- | -------------------------------------------------------------- |
+| `microsoft/presidio`                                  | 4.5k | MIT    | yes | 4 — PII detection, brand-guardrail candidate                   |
+| `Kaeru-CT/Style-Bert-VITS2` etc. (plagiarism/voice)   | <2k  | varies | n/a | 1 — niche                                                      |
+| `salesforce/lavis` (BLIP for image QA)                | ~3k  | BSD-3  | yes | 3 — caption compare vs brand brief                             |
+| `openai/whisper` (transcription for video caption QA) | 75k  | MIT    | yes | 4 — caption-level moderation, supports 99 languages            |
+| Custom: prompt-only checks via MiniMax                | n/a  | n/a    | n/a | 5 — ships with the agency master switch enabled, cheapest path |
 
 > **Verdict:** ship MiniMax-prompt checks first (brand-voice classifier,
 > fact-check, banned-words list). Add Presidio when the agency has
@@ -531,7 +531,7 @@ AI/heavy-lift, fully self-hosted** — which matches the master prompt's
   especially §0 (operating contract), §2.2 (v1 scope exclusions),
   §13 (AI assistance), §22 (KPIs), §24 (release gates)
 - `AGENTS.md` — stack: Next.js 16.3, Drizzle ORM, Postgres 16,
-  NextAuth v5, MiniMax-M3 (`AI_FEATURE_ENABLED=false` default),
+  NextAuth v5, MiniMax-M3 (agency master switch disabled by default),
   Vitest + Playwright + Sentry, self-hosted on LaraTik VPS
   (`217.154.124.83`, `planner.laratik.com`)
 - `package.json` — pinned versions: `next@16.3.1`, `react@19.2.8`,

@@ -66,34 +66,12 @@ export default async function AgencyAiSettingsPage() {
     getManagedSecretStatus(agencyId),
     getKekStatus(),
   ]);
-  const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
   const envModel = serverEnv.MINIMAX_MODEL || "MiniMax-M3";
   const envHasKey = !!serverEnv.MINIMAX_API_KEY;
-  // The master switch + test connection should be available whenever the
-  // agency has ANY working key source (M3.4 — managed secret counts).
-  // The backend already allows a managed secret to bypass the env
-  // kill-switch (`/api/ai/generate`, `testAiConnection`, `chat` all
-  // short-circuit on "no env key AND no managed secret" rather than
-  // on `AI_FEATURE_ENABLED` alone), so the form must match. Dropping
-  // `serverEnv.AI_FEATURE_ENABLED` here lets an agency admin enable
-  // AI from the UI on a deployment where the operator left the env
-  // kill-switch off — the managed secret IS the operator's
-  // permission. `envEnabled` stays env-only because it is a display
-  // of the env state for the "Provider environment" badge, not a
-  // gate on the feature.
   const hasManagedSecret = secretStatus.keySource === "managed_secret";
-  const featureIsEnabled = envHasKey || hasManagedSecret;
-  // 2026-08-27 — added the diagnostic panel so the admin can see,
-  // at a glance, *which* of the 3 prerequisites is blocking AI
-  // when the in-DB toggle reads "On" but the runtime is blocked.
-  // `effectiveLive` is the union of all 3 prerequisites + the
-  // agency master switch (the toggle in the form) + at least one
-  // capability. If the user has toggled no capability on, AI is
-  // technically reachable but no button renders; we still report
-  // "live" so they don't get a false alarm, and the capability
-  // list below is the actual surface.
+  const providerKeyAvailable = envHasKey || hasManagedSecret;
   const anyCapabilityOn = (feature?.enabledCapabilities ?? []).length > 0;
-  const effectiveLive = featureIsEnabled && (feature?.enabled ?? true) && anyCapabilityOn;
+  const effectiveLive = providerKeyAvailable && (feature?.enabled ?? false) && anyCapabilityOn;
 
   return (
     <div className="space-y-6" data-testid="agency-ai-settings">
@@ -115,9 +93,8 @@ export default async function AgencyAiSettingsPage() {
       <ManagedSecretForm
         keySource={secretStatus.keySource}
         lastFour={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
-        enabled={secretStatus.keySource === "missing" ? true : secretStatus.enabled}
+        enabled={secretStatus.keySource === "missing" ? false : secretStatus.enabled}
         envHasKey={envHasKey}
-        envEnabled={envEnabled}
         kekStatus={kekStatus}
       />
 
@@ -139,11 +116,10 @@ export default async function AgencyAiSettingsPage() {
       </div>
 
       <AiDiagnosticPanel
-        envKillSwitch={serverEnv.AI_FEATURE_ENABLED}
         envHasKey={envHasKey}
         hasManagedSecret={hasManagedSecret}
         managedSecretSuffix={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
-        masterSwitch={feature?.enabled ?? true}
+        masterSwitch={feature?.enabled ?? false}
         anyCapabilityOn={anyCapabilityOn}
         effectiveLive={effectiveLive}
         aiEntryHref="/app"
@@ -151,13 +127,13 @@ export default async function AgencyAiSettingsPage() {
       />
 
       <AiSettingsForm
-        initialEnabled={feature?.enabled ?? true}
+        initialEnabled={feature?.enabled ?? false}
         initialModel={feature?.model ?? envModel}
         initialCapabilities={[...(feature?.enabledCapabilities ?? [])]}
-        envEnabled={envEnabled}
+        envConfigured={envHasKey}
         envModel={envModel}
         envHasKey={envHasKey}
-        featureIsEnabled={featureIsEnabled}
+        providerKeyAvailable={providerKeyAvailable}
         lastTestAt={
           feature?.lastConnectionTestAt ? feature.lastConnectionTestAt.toISOString() : null
         }

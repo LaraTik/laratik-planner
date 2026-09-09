@@ -11,17 +11,13 @@ import { join } from "node:path";
  *   - it exports `metadata` and a default async function
  *   - it renders both the "Provider key" card and the "Feature
  *     settings" card with stable data-testid hooks
- *   - it computes `featureIsEnabled` so that a managed secret alone
- *     enables the master switch, matching the backend
- *     (`/api/ai/generate`, `testAiConnection`, `chat` all bypass
- *     `AI_FEATURE_ENABLED` when a managed secret exists)
+ *   - it keeps provider-key availability separate from the agency
+ *     database master switch, so the switch remains editable even
+ *     before a provider key is configured
  *   - it does not use any emoji icons (only Lucide)
  *
- * The `featureIsEnabled` check is the regression target — the
- * previous fix (commit 0e7732d) still required `AI_FEATURE_ENABLED`
- * to be true, which left the master switch disabled on deployments
- * where the operator had not flipped the env kill-switch but an
- * agency had configured a managed secret.
+ * The provider-key check only controls the connection test. The
+ * database-backed agency setting controls product availability.
  */
 describe("agency-ai-settings page structure", () => {
   const source = readFileSync(
@@ -47,7 +43,7 @@ describe("agency-ai-settings page structure", () => {
     // child components.
     expect(source).toMatch(/ManagedSecretForm/);
     expect(source).toMatch(/AiSettingsForm/);
-    expect(source).toMatch(/featureIsEnabled=\{featureIsEnabled\}/);
+    expect(source).toMatch(/providerKeyAvailable=\{providerKeyAvailable\}/);
   });
 
   it("renders a forbidden fallback with a back link for non-admin actors", () => {
@@ -60,34 +56,30 @@ describe("agency-ai-settings page structure", () => {
     expect(emojiRe.test(source)).toBe(false);
   });
 
-  it("computes featureIsEnabled so a managed secret bypasses AI_FEATURE_ENABLED", () => {
+  it("computes provider-key availability without an environment feature flag", () => {
     // Regression target: the master switch + Test connection should
     // be enabled when EITHER an env key OR a managed secret is
-    // configured, regardless of `serverEnv.AI_FEATURE_ENABLED`. The
+    // configured, regardless of deployment environment flags. The
     // backend (`/api/ai/generate`, `testAiConnection`, `chat`)
     // already short-circuits on "no key at all" rather than on
-    // `AI_FEATURE_ENABLED` alone, so the UI must match.
+    // environment feature switch, so the UI must match.
     //
     // We pin the assignment so any future refactor that re-introduces
-    // the `AI_FEATURE_ENABLED` gate (the bug fixed by 0e7732d + the
-    // follow-up) trips this test loudly.
+    // old deployment gate trips this test loudly.
     expect(source).toMatch(
-      /const\s+featureIsEnabled\s*=\s*envHasKey\s*\|\|\s*hasManagedSecret\s*;/,
+      /const\s+providerKeyAvailable\s*=\s*envHasKey\s*\|\|\s*hasManagedSecret\s*;/,
     );
     // And the comment must explain WHY the env kill-switch is no
     // longer in this expression, so a future reader does not
     // re-add it.
-    expect(source).toMatch(/backend already allows a managed secret to bypass/);
+    expect(source).not.toContain("AI_FEATURE_ENABLED");
   });
 
-  it("keeps envEnabled as an env-only display badge", () => {
+  it("uses the database master switch for effective runtime", () => {
     // The "Provider environment" card is a display of env state, not
-    // a gate on feature availability. `envEnabled` must still include
-    // the `AI_FEATURE_ENABLED` check so the badge correctly reads
-    // "Not configured" when the env is off.
-    expect(source).toMatch(
-      /const\s+envEnabled\s*=\s*serverEnv\.AI_FEATURE_ENABLED\s*&&\s*!!serverEnv\.MINIMAX_API_KEY\s*;/,
-    );
+    // a gate on feature availability. The provider environment badge
+    // only reports whether the fallback key exists.
+    expect(source).toMatch(/const\s+effectiveLive\s*=\s*providerKeyAvailable/);
   });
 });
 
@@ -97,17 +89,16 @@ describe("workspace-ai-settings page structure", () => {
     "utf8",
   );
 
-  it("computes effectiveEnabled so a managed secret bypasses AI_FEATURE_ENABLED", () => {
+  it("computes effectiveEnabled from the database switch and active key", () => {
     // Same regression target as the agency page: the workspace status
     // card must reflect what the runtime will actually do. Since
     // `/api/ai/generate` allows managed-secret requests through
-    // regardless of `AI_FEATURE_ENABLED`, the "Enabled/Disabled"
+    // regardless of deployment environment flags, the "Enabled/Disabled"
     // badge here must not gate on the env kill-switch.
     expect(source).toMatch(
-      /const\s+effectiveEnabled\s*=\s*hasAnyKey\s*&&\s*\(\s*feature\?\.enabled\s*\?\?\s*true\s*\)\s*;/,
+      /const\s+effectiveEnabled\s*=\s*!!activeAiKey\s*&&\s*feature\?\.enabled\s*===\s*true\s*;/,
     );
-    // No reference to AI_FEATURE_ENABLED in the same expression
-    // (it's a display of env state, not a feature gate).
+    // The environment key is a provider fallback, not a feature flag.
     const match = source.match(/const\s+effectiveEnabled\s*=\s*([^;]+);/);
     expect(match?.[1] ?? "").not.toMatch(/AI_FEATURE_ENABLED/);
   });

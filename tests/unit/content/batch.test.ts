@@ -56,6 +56,42 @@ describe("content/batch", () => {
     expect(out[0]?.lineNumber).toBe(2);
   });
 
+  it("imports common creative columns and a validated format payload", () => {
+    const out = parseSpreadsheetRows(
+      'Title\tFormat\tDate & time\tShort brief\tChannels\tHook\tCTA\tCaption\tHashtags\tFormat payload JSON\nLaunch\tstatic_post\t2026-09-05 09:00\tAnnounce\tInstagram\tA clear hook\tShop now\tThe full caption\t#launch #offer\t{"mainMessage":"Save this"}',
+    );
+    expect(out[0]?.formatPayload).toMatchObject({
+      hook: "A clear hook",
+      callToAction: "Shop now",
+      caption: "The full caption",
+      hashtags: ["#launch", "#offer"],
+      mainMessage: "Save this",
+    });
+  });
+
+  it("merges the explicit content language into the format payload", () => {
+    const [row] = parseSpreadsheetRows(
+      "Title\tFormat\tDate\tBrief\tContent language\nLaunch\tstatic_post\t2026-09-05\tAnnounce\tar",
+    );
+    expect(row?.formatPayload).toMatchObject({ contentLanguage: "ar" });
+  });
+
+  it("keeps legacy rows valid without a payload", () => {
+    const [row] = parseBatchRows("Legacy | story | 2026-09-05 | Keep this syntax");
+    expect(row?.formatPayload).toBeUndefined();
+  });
+
+  it("flags a conflict between convenience columns and payload JSON", () => {
+    const [row] = parseSpreadsheetRows(
+      'Title\tFormat\tDate\tBrief\tCaption\tFormat payload JSON\nLaunch\tstatic_post\t2026-09-05\tAnnounce\tConvenience caption\t{"caption":"JSON caption"}',
+    );
+    expect(row?.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: "format_payload_conflict", field: "formatPayload" }),
+      ]),
+    );
+  });
+
   it("converts workspace-local time to UTC and back across Berlin DST", () => {
     const instant = parseBatchDateTime("2026-09-05 09:00", "Europe/Berlin");
     expect(instant?.toISOString()).toBe("2026-09-05T07:00:00.000Z");

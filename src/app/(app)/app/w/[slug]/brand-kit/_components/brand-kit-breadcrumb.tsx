@@ -29,6 +29,7 @@ const BRAND_KIT_SECTION_KEYS: Record<string, string> = {
   publishing: "brandKit.section.publishing",
   linked: "brandKit.section.linked",
   activity: "brandKit.section.activity",
+  profile: "brandKit.section.profile",
 };
 
 export function BrandKitBreadcrumb({

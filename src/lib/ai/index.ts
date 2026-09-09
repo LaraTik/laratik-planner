@@ -37,9 +37,6 @@ export type { AiBudgetReservation } from "./governance";
  *    reviews (master prompt §0.13 "AI never bypasses human control")
  */
 
-export const isAiEnabled = (): boolean =>
-  serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
-
 const MODEL = serverEnv.MINIMAX_MODEL;
 
 /**
@@ -213,14 +210,14 @@ export interface ChatOptions {
   temperature?: number;
   /**
    * The API key to use. The route layer is expected to pass the
-   * resolved key (managed secret or env). When omitted and
-   * `isAiEnabled()` is false, the function returns `null` (the
-   * AI feature is unavailable). The optional typing preserves
-   * the pre-M3.4 call site behaviour for tests that exercise the
-   * "AI disabled" path.
+   * resolved key (managed secret or env). When omitted, the function
+   * returns `null` because there is no
+   * provider key to use. Agency enablement and capability checks
+   * happen in the route layer, not in this provider client.
    */
   apiKey?: string | undefined;
   baseUrl?: string | undefined;
+  signal?: AbortSignal | undefined;
 }
 
 export interface ChatResult {
@@ -253,7 +250,6 @@ export async function getActiveApiKey(agencyId: string): Promise<string | null> 
 }
 
 export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
-  if (!isAiEnabled() && !opts.apiKey) return null;
   if (!opts.apiKey) return null;
 
   const url = `${(opts.baseUrl ?? serverEnv.MINIMAX_BASE_URL).replace(/\/$/, "")}/v1/messages`;
@@ -271,6 +267,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
       messages: opts.messages.filter((m) => m.role !== "system"),
       system: opts.messages.find((m) => m.role === "system")?.content,
     }),
+    ...(opts.signal ? { signal: opts.signal } : {}),
   });
 
   if (!res.ok) {
@@ -312,7 +309,7 @@ export async function draftCaption(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.8,
@@ -371,7 +368,7 @@ export async function improveBrief(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.7,
@@ -416,7 +413,7 @@ export async function checkCompleteness(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.3,
@@ -477,7 +474,7 @@ export async function platformAdapt(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.7,
@@ -529,7 +526,7 @@ export async function campaignIdeas(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.8,
@@ -579,7 +576,7 @@ export async function relatedFormatIdeas(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
   const result = await chat({
     temperature: 0.7,
@@ -636,7 +633,7 @@ export async function suggestVoiceRules(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
 }): Promise<string[]> {
-  if (!isAiEnabled() && !input.apiKey) return [];
+  if (!input.apiKey) return [];
   const contextBlock = buildContextBlock(input.context);
   const maxChars = input.ruleType === "tone" ? 60 : 280;
   const bucket = input.ruleType === "tone" ? "tone" : input.ruleType === "do" ? "do" : "don't";
@@ -709,7 +706,7 @@ export async function suggestLeadTimes(input: {
   creativeApprovalLeadDays: number;
   readyToPublishLeadDays: number;
 } | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const totalNow =
     input.currentLeadTimes.contentApprovalLeadDays +
     input.currentLeadTimes.designCompleteLeadDays +
@@ -786,7 +783,7 @@ export async function suggestMonthlyTarget(input: {
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
 }): Promise<number | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const system = [
     "You are a senior social media operations strategist.",
     "Suggest a sensible monthly content target (an integer 1-200 posts per month) for a content team.",
@@ -962,7 +959,7 @@ const FIELD_PROMPTS: Record<
 export async function generateFieldDraft(
   input: GenerateFieldDraftInput,
 ): Promise<GenerateFieldDraftResult | null> {
-  if (!isAiEnabled() && !input.apiKey) return null;
+  if (!input.apiKey) return null;
   const spec = FIELD_PROMPTS[input.field];
   const contextBlock = buildContextBlock(input.context);
 

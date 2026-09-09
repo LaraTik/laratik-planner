@@ -42,6 +42,7 @@ const serviceMock = vi.hoisted(() => ({
   listRecentBrandUpdates: vi.fn(),
   listBrandPublishingRules: vi.fn(),
   listBrandLinkedResources: vi.fn(),
+  getBrandProfile: vi.fn(),
 }));
 
 const storageMock = vi.hoisted(() => ({
@@ -118,6 +119,7 @@ vi.mock("@/lib/brand/service", () => ({
   listBrandPublishingRules: serviceMock.listBrandPublishingRules,
   listBrandLinkedResources: serviceMock.listBrandLinkedResources,
 }));
+vi.mock("@/lib/brand/profile", () => ({ getBrandProfile: serviceMock.getBrandProfile }));
 vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: storageMock.getSignedDownloadUrl }));
 vi.mock("@/lib/i18n/t-for-active", () => ({ tForActive: tForActiveMock }));
 
@@ -147,10 +149,12 @@ beforeEach(() => {
   serviceMock.listRecentBrandUpdates.mockReset();
   serviceMock.listBrandPublishingRules.mockReset();
   serviceMock.listBrandLinkedResources.mockReset();
+  serviceMock.getBrandProfile.mockReset();
   serviceMock.listContentPillars.mockResolvedValue([]);
   serviceMock.listRecentBrandUpdates.mockResolvedValue([]);
   serviceMock.listBrandPublishingRules.mockResolvedValue([]);
   serviceMock.listBrandLinkedResources.mockResolvedValue([]);
+  serviceMock.getBrandProfile.mockResolvedValue(null);
   storageMock.getSignedDownloadUrl.mockReset();
   tForActiveMock.mockClear();
 });

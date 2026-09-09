@@ -228,7 +228,7 @@ The "library" category is dominated by `agency-agents`. The next-closest competi
 
 **Why:** Smallest blast radius, highest direct-match. Three skills that exactly mirror three §15 capabilities. MIT-licensed. MCP-friendly (laratik already uses MCP-style architectures via Next.js server actions). Has an active maintainer (last commit within the same week as of this report).
 
-**Concrete action:** Vendor _the prompt content_ of `post-writer-sms` into `src/lib/ai/prompts/caption-drafts.ts` and `caption-writer-sms` into `src/lib/ai/prompts/platform-adaptation.ts`. Test against existing fixtures; gate behind `AI_FEATURE_ENABLED`. The skill's "fallback to advisory mode" is exactly the contract laratik already has (the route returns a `text` field, the user decides Insert/Replace/Copy).
+**Concrete action:** Vendor _the prompt content_ of `post-writer-sms` into `src/lib/ai/prompts/caption-drafts.ts` and `caption-writer-sms` into `src/lib/ai/prompts/platform-adaptation.ts`. Test against existing fixtures; gate behind the agency database master switch and capability allowlist. The skill's "fallback to advisory mode" is exactly the contract laratik already has (the route returns a `text` field, the user decides Insert/Replace/Copy).
 
 ### Pick 3 — `ZJU-REAL/Easel`
 

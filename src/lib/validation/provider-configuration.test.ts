@@ -19,7 +19,6 @@ const baseConfig: ProviderConfiguration = {
   smtpUser: "",
   smtpPassword: "",
   smtpFrom: "",
-  aiEnabled: false,
   minimaxApiKey: "",
 };
 
@@ -52,17 +51,6 @@ describe("validateProviderConfiguration", () => {
   it("flags a production deployment with no auth provider", () => {
     const issues = validateProviderConfiguration(baseConfig);
     expect(issues).toContain("At least one complete authentication provider is required");
-  });
-
-  it("flags AI-enabled without an API key in production", () => {
-    const issues = validateProviderConfiguration({
-      ...baseConfig,
-      googleClientId: "id",
-      googleClientSecret: "secret",
-      aiEnabled: true,
-      minimaxApiKey: "",
-    });
-    expect(issues).toContain("AI is enabled but MINIMAX_API_KEY is missing");
   });
 
   it("returns [] when a complete Google OAuth is configured", () => {

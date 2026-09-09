@@ -60,6 +60,13 @@ export const jsonb = (name: string) =>
 export const jsonbNullable = (name: string) =>
   drizzleJsonb(name).$type<Record<string, unknown> | null>();
 
+/** JSONB array with a typed empty-array default. */
+export const jsonbArray = (name: string) =>
+  drizzleJsonb(name)
+    .$type<string[]>()
+    .notNull()
+    .default(sql`'[]'::jsonb`);
+
 /**
  * `now()` in UTC, as a `date` (Drizzle's preferred type for time fields).
  * Use this for default timestamps instead of relying on the column default

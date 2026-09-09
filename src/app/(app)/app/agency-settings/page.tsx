@@ -7,7 +7,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agencies, agencyMemberships, workspaces } from "@/lib/db/schema";
+import { agencies, agencyMemberships, aiFeatureSettings, workspaces } from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { EditAgencyForm } from "@/components/forms/edit-agency-form";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { getSocialStatus } from "@/lib/social/service";
+import { getActiveApiKey } from "@/lib/ai";
 
 /**
  * Agency-level identity and operational configuration (M3.4 — agency CRUD).
@@ -85,11 +86,17 @@ export default async function AgencySettingsPage() {
   // Pre-compute the managed-services status (read-only display). These
   // two services are database-backed, so the overview must reflect the
   // agency's actual runtime state rather than a deployment-env guess.
-  const envEnabled = serverEnv.AI_FEATURE_ENABLED && !!serverEnv.MINIMAX_API_KEY;
-  const [storageSummary, socialStatus] = await Promise.all([
+  const [[aiFeature], activeAiKey, storageSummary, socialStatus] = await Promise.all([
+    db
+      .select({ enabled: aiFeatureSettings.enabled })
+      .from(aiFeatureSettings)
+      .where(eq(aiFeatureSettings.agencyId, agencyId))
+      .limit(1),
+    getActiveApiKey(agencyId),
     getAgencyStorageSummary(agencyId),
     getSocialStatus(actor, agencyId),
   ]);
+  const aiEnabled = aiFeature?.enabled === true && !!activeAiKey;
   const storageProviderReady =
     storageSummary.providerConfigured &&
     storageSummary.providerEnabled &&
@@ -163,7 +170,7 @@ export default async function AgencySettingsPage() {
             />
             <Service
               label={t("agencySettings.serviceAi")}
-              enabled={envEnabled}
+              enabled={aiEnabled}
               testId="agency-service-minimax-ai"
               href="/app/agency-settings/ai"
               t={t}

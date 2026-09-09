@@ -46,6 +46,7 @@ export const AI_CAPABILITIES = [
   "related_format_ideas",
   "completeness_check",
   "trend_radar",
+  "monthly_planning_copilot",
 ] as const;
 export type AiCapability = (typeof AI_CAPABILITIES)[number];
 
@@ -185,9 +186,10 @@ export async function updateAiFeatureSettings(
  * and success on the feature-settings row so the UI can show a
  * status badge. Never throws; failures are captured in the row.
  *
- * The test is a cheap, token-light call: a single Haiku-class request
- * asking for an empty completion. We refuse to record a successful
- * test if the AI is disabled in the environment.
+ * The test is a cheap, token-light call: a single provider request
+ * asking for an empty completion. Provider availability is separate
+ * from the agency master switch, so an admin can test a configured key
+ * before deciding whether to enable the feature.
  */
 export async function testAiConnection(
   actor: Actor,
@@ -204,10 +206,6 @@ export async function testAiConnection(
   const managed = useManaged ? await loadManagedAiSecret(agencyId) : null;
   const apiKey = managed?.apiKey ?? serverEnv.MINIMAX_API_KEY;
 
-  if (!serverEnv.AI_FEATURE_ENABLED && !apiKey) {
-    await recordConnectionTest(agencyId, actor.id, false);
-    return { ok: false, latencyMs: null };
-  }
   if (!apiKey) {
     await recordConnectionTest(agencyId, actor.id, false);
     return { ok: false, latencyMs: null };

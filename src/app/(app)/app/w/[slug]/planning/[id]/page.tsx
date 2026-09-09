@@ -63,8 +63,7 @@ import { db } from "@/lib/db";
 import { aiFeatureSettings, agencies, socialChannels, users } from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { EditDetailsDrawer } from "@/components/planning/edit-details-drawer";
-import { isAiEnabled } from "@/lib/ai";
-import { AI_CAPABILITY_METADATA } from "@/lib/ai/capabilities";
+import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
@@ -217,14 +216,15 @@ export default async function ContentDetailPage({
   ]);
 
   const agencyId = ws.agencyId;
-  const aiLive = isAiEnabled();
-  const [feature] = agencyId
-    ? await db
-        .select()
-        .from(aiFeatureSettings)
-        .where(eq(aiFeatureSettings.agencyId, agencyId))
-        .limit(1)
-    : [];
+  const [feature, activeApiKey] = await Promise.all([
+    db
+      .select()
+      .from(aiFeatureSettings)
+      .where(eq(aiFeatureSettings.agencyId, agencyId))
+      .limit(1)
+      .then((rows) => rows[0]),
+    getActiveApiKey(agencyId),
+  ]);
   const [agencyRow] = agencyId
     ? await db
         .select({ locale: agencies.locale })
@@ -233,17 +233,19 @@ export default async function ContentDetailPage({
         .limit(1)
     : [];
   const activeLocale = agencyRow?.locale ?? "en";
+  const contentLocale = (() => {
+    const payload = (item as { formatPayload?: unknown }).formatPayload;
+    if (!payload || typeof payload !== "object") return activeLocale;
+    const language = (payload as { contentLanguage?: unknown }).contentLanguage;
+    return language === "en" || language === "ar" ? language : activeLocale;
+  })();
   const captionDraftsEnabled = Boolean(
-    feature?.enabled &&
-    (feature.enabledCapabilities.length === 0 ||
-      feature.enabledCapabilities.includes("caption_drafts")),
+    feature?.enabled === true && feature.enabledCapabilities.includes("caption_drafts"),
   );
-  const enabledCapabilities: string[] =
-    feature?.enabledCapabilities && feature.enabledCapabilities.length > 0
-      ? feature.enabledCapabilities
-      : AI_CAPABILITY_METADATA.map((c) => c.id);
-  const agencyEnabled = feature?.enabled ?? true;
-  const hasKey = aiLive || feature?.keySource === "managed_secret";
+  const enabledCapabilities: string[] = feature?.enabledCapabilities ?? [];
+  const agencyEnabled = feature?.enabled === true;
+  const hasKey = Boolean(activeApiKey);
+  const aiLive = agencyEnabled && hasKey;
 
   const [ownerRow] = item.contentOwnerId
     ? await db
@@ -954,7 +956,7 @@ export default async function ContentDetailPage({
                       return { schemaVersion: 1 };
                     }
                   })()}
-                  contentLocale={activeLocale}
+                  contentLocale={contentLocale}
                   channels={item.channels.map((ch) => ({
                     id: ch.id,
                     socialChannelId: ch.socialChannelId,
@@ -1118,7 +1120,7 @@ export default async function ContentDetailPage({
                       contentItemId={item.id}
                       itemTitle={item.title}
                       itemFormat={item.format}
-                      contentLocale={activeLocale}
+                      contentLocale={contentLocale}
                       audienceCopy={buildAudienceCopyViewModel({
                         format: item.format,
                         formatPayload: (item as { formatPayload?: unknown }).formatPayload,

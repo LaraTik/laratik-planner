@@ -224,7 +224,11 @@ export async function batchCreateAction(
     brief: string;
     plannedPublishAt: Date;
     channelIds?: string[];
+    campaignId?: string;
+    contentPillarId?: string;
+    contentOwnerId?: string;
     extensions?: Record<string, unknown>;
+    formatPayload?: Record<string, unknown>;
   }>;
 
   if (rawRows.trim().startsWith("[")) {
@@ -250,9 +254,13 @@ export async function batchCreateAction(
         title: row.title,
         format: row.format,
         plannedPublishAt: row.plannedPublishAt,
+        ...(row.campaignId ? { campaignId: row.campaignId } : {}),
+        ...(row.contentPillarId ? { contentPillarId: row.contentPillarId } : {}),
+        ...(row.contentOwnerId ? { contentOwnerId: row.contentOwnerId } : {}),
         brief: row.brief,
         timeZone: workspace.timezone,
         ...(row.extensions ? { extensions: row.extensions } : {}),
+        ...(row.formatPayload ? { formatPayload: row.formatPayload } : {}),
       });
       const plannedPublishAt = parseBatchDateTime(row.plannedPublishAt, workspace.timezone);
       if (issues.some((issue) => issue.severity === "error") || !plannedPublishAt)
@@ -263,7 +271,11 @@ export async function batchCreateAction(
         brief: row.brief,
         plannedPublishAt: plannedPublishAt ?? new Date(NaN),
         channelIds: row.channelIds,
+        ...(row.campaignId ? { campaignId: row.campaignId } : {}),
+        ...(row.contentPillarId ? { contentPillarId: row.contentPillarId } : {}),
+        ...(row.contentOwnerId ? { contentOwnerId: row.contentOwnerId } : {}),
         ...(row.extensions ? { extensions: row.extensions } : {}),
+        ...(row.formatPayload ? { formatPayload: row.formatPayload } : {}),
       };
     });
     if (invalidRows.length > 0) {
@@ -285,9 +297,13 @@ export async function batchCreateAction(
       title: row.title,
       format: row.format,
       brief: row.brief,
+      ...(row.campaignId ? { campaignId: row.campaignId } : {}),
+      ...(row.contentPillarId ? { contentPillarId: row.contentPillarId } : {}),
+      ...(row.contentOwnerId ? { contentOwnerId: row.contentOwnerId } : {}),
       plannedPublishAt:
         parseBatchDateTime(row.plannedPublishAt, workspace.timezone) ?? new Date(NaN),
       ...(Object.keys(row.extensions).length > 0 ? { extensions: row.extensions } : {}),
+      ...(row.formatPayload ? { formatPayload: row.formatPayload } : {}),
     }));
   }
 

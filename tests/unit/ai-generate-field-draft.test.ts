@@ -31,7 +31,6 @@ describe("ai/generateFieldDraft", () => {
   let fetchStub: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
-    envMock.AI_FEATURE_ENABLED = true;
     envMock.MINIMAX_API_KEY = "test-key";
     envMock.MINIMAX_BASE_URL = "https://api.example.com/anthropic";
     envMock.MINIMAX_MODEL = "MiniMax-M3";
@@ -70,7 +69,6 @@ describe("ai/generateFieldDraft", () => {
 
   it("returns null when AI is disabled and no apiKey is supplied", async () => {
     envMock.MINIMAX_API_KEY = "";
-    envMock.AI_FEATURE_ENABLED = false;
     const out = await generateFieldDraft({
       field: "caption",
       currentValue: "",

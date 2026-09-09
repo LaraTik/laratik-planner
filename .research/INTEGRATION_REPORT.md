@@ -23,7 +23,7 @@ and gives a sequenced implementation plan with effort estimates.
 
 1. **The two repos that matter most are `msitarzewski/agency-agents` (150.8k★, MIT) and the official Meta `facebook-nodejs-business-sdk` (616★).** Everything else is a wrapper, a complementary tool, or a vendor-locked option.
 2. **laratik's existing §15 capability matrix is the right shape; the gap is in the prompts and the context, not the framework.** Most of the integration work is "port persona text, add brand voice, hook up the MCP/SDK plumbing."
-3. **Three new product features are worth shipping in v1:** **Trend Radar** (real-time trend ingestion → campaign ideas), **Brand-aware Image Generation** (Replicate router + IP-Adapter), and **Reel Generator** (Pexels + Suno + ElevenLabs + faster-whisper via Replicate). Each is bounded, ships behind the existing `AI_FEATURE_ENABLED` flag, and reuses the §15 governance (capability allow-list, daily + monthly budget, contract-style replace/insert).
+3. **Three new product features are worth shipping in v1:** **Trend Radar** (real-time trend ingestion → campaign ideas), **Brand-aware Image Generation** (Replicate router + IP-Adapter), and **Reel Generator** (Pexels + Suno + ElevenLabs + faster-whisper via Replicate). Each is bounded, ships behind the agency database master switch and capability allow-list, and reuses the §15 governance (capability allow-list, daily + monthly budget, contract-style replace/insert).
 4. **Two existing features get materially better with one small change each:** `caption_drafts` should produce 3 variants, not 1; `brief_improvement` should inject the Brand Kit voice rules into the system block.
 5. **All recommendations respect master-prompt §2.2 (no autonomous publishing, no OAuth, no live follower analytics, no autonomous status changes).** Every AI feature is **read-by-default, draft-only, human-confirmed** — exactly the contract the route already enforces.
 
@@ -176,7 +176,7 @@ Next.js 16 (App Router)
 **Implementation plan:**
 
 1. **Schema** (0.5 d): new `image_generations` table — `(id, content_item_id, agency_id, provider, model, prompt, brand_ref_ids, aspect_ratio, status, asset_id, created_at)`. New `brand_reference_sets` table — `(id, agency_id, name, hero_asset_ids, provider_meta jsonb, created_at)`. RLS by `agency_id`.
-2. **Capability registration** (0.5 d): add `"image_generation"` to `AI_CAPABILITIES` in `src/lib/ai/governance.ts:19-26` and the metadata in `src/lib/ai/capabilities.ts:104-174`. Add it to the `enabledCapabilities` allowlist for the relevant plan templates. Default to **off** in the agency admin form (gated behind `AI_FEATURE_ENABLED`).
+2. **Capability registration** (0.5 d): add `"image_generation"` to `AI_CAPABILITIES` in `src/lib/ai/governance.ts:19-26` and the metadata in `src/lib/ai/capabilities.ts:104-174`. Add it to the `enabledCapabilities` allowlist for the relevant plan templates. Default to **off** in the agency admin form (gated behind the agency master switch).
 3. **Provider abstraction** (1.5 d): `src/lib/ai/image.ts` exposing `generateImage(input)` using `vercel/ai`'s `generateImage`. Provider-agnostic interface; provider-specific options via `providerOptions`. Token estimation: input=prompt+brand-refs (estimate 1k tokens per call), output=provider-reported.
 4. **API route** (1.5 d): `POST /api/ai/image/generate`. Auth + entitlement + budget (reuse `enforceAiBudget` with the new capability). Reuses `enforceAiBudget` + `reconcileAiBudget` from `src/lib/ai/governance.ts:256-394`. On success, downloads the result, uploads to S3 via existing `@aws-sdk/client-s3`, writes the `image_generations` row + `media_assets` row, returns the asset id. Streaming not supported for image (binary). On provider error, redact and return public error.
 5. **UI** (2 d): new "Generate image" button on the content detail page (sits beside the existing §15 buttons). Client component, modal with form. Loading state with cancel. Result state with Insert / Replace / Copy / Try-again (mirrors the §15 pattern). Empty state when no Brand Kit exists.
@@ -377,7 +377,7 @@ This is already the §15 contract. Extend it to the three new capabilities. The 
 
 **Total dev-days:** ~38 dev-days (combining both engineers).
 
-**All features ship behind `AI_FEATURE_ENABLED` — defaults to off.** No customer is forced onto the new features.
+**All features ship behind the agency database master switch — defaults to off.** No customer is forced onto the new features.
 
 ---
 
@@ -410,7 +410,7 @@ This is already the §15 contract. Extend it to the three new capabilities. The 
 - **% of paid agencies that enable the new AI features** — target 40% (gated features, opt-in).
 - **AI generations per active planner per week** — target ≥ 8 (a Reel + 3 captions + 2 image drafts + 2 trend-driven ideas).
 - **AI generation cost per agency per month** — target ≤ $30 (cheap tier). The §15 budget caps this server-side.
-- **Time from brief → first AI draft** — target ≤ 30 seconds (today, with `AI_FEATURE_ENABLED=true` and a working draft, it's about 8s; with the new capabilities it's the same + 90s for a Reel).
+- **Time from brief → first AI draft** — target ≤ 30 seconds (today, with the agency master switch on and a working draft, it's about 8s; with the new capabilities it's the same + 90s for a Reel).
 - **% of AI drafts the planner edits before publishing** — target ≥ 70% (lower means AI is auto-accepted, which would mean the human-in-the-loop guardrail is broken).
 - **% of agency plans that allow all 9 capabilities** (6 §15 + 3 new) — target 25% (most plans will gate Reels + Image Gen behind a higher tier).
 

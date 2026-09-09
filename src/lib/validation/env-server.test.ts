@@ -36,7 +36,6 @@ const ENV_KEYS_TO_RESTORE = [
   "MINIMAX_API_KEY",
   "MINIMAX_BASE_URL",
   "MINIMAX_MODEL",
-  "AI_FEATURE_ENABLED",
   "GOOGLE_CLIENT_ID",
   "GOOGLE_CLIENT_SECRET",
   "NEXT_PUBLIC_APP_URL",
@@ -132,28 +131,6 @@ describe("env server schema (coercion branches)", () => {
     vi.resetModules();
     const c = await importFreshEnv();
     expect(c.serverEnv.AUTH_TRUST_HOST).toBe(false);
-  });
-
-  it("coerces AI_FEATURE_ENABLED to a boolean (true / false / unset)", async () => {
-    setEnv("AI_FEATURE_ENABLED", "true");
-    vi.resetModules();
-    const a = await importFreshEnv();
-    expect(a.serverEnv.AI_FEATURE_ENABLED).toBe(true);
-
-    setEnv("AI_FEATURE_ENABLED", "1");
-    vi.resetModules();
-    const b = await importFreshEnv();
-    expect(b.serverEnv.AI_FEATURE_ENABLED).toBe(true);
-
-    setEnv("AI_FEATURE_ENABLED", "false");
-    vi.resetModules();
-    const c = await importFreshEnv();
-    expect(c.serverEnv.AI_FEATURE_ENABLED).toBe(false);
-
-    unsetEnv("AI_FEATURE_ENABLED");
-    vi.resetModules();
-    const d = await importFreshEnv();
-    expect(d.serverEnv.AI_FEATURE_ENABLED).toBe(false);
   });
 
   it("uses default MINIMAX_BASE_URL when unset", async () => {

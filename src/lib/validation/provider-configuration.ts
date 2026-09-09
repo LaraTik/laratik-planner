@@ -6,7 +6,6 @@ export type ProviderConfiguration = {
   smtpUser: string;
   smtpPassword: string;
   smtpFrom: string;
-  aiEnabled: boolean;
   minimaxApiKey: string;
 };
 
@@ -31,9 +30,6 @@ export function validateProviderConfiguration(config: ProviderConfiguration): st
   }
   if (!googleComplete && !smtpComplete && !anyGoogle && !anySmtp) {
     issues.push("At least one complete authentication provider is required");
-  }
-  if (config.aiEnabled && !config.minimaxApiKey) {
-    issues.push("AI is enabled but MINIMAX_API_KEY is missing");
   }
   return issues;
 }

@@ -13,6 +13,7 @@ import {
   Download,
   FileSpreadsheet,
   Info,
+  SlidersHorizontal,
   Plus,
   Trash2,
   TriangleAlert,
@@ -48,6 +49,9 @@ import {
 } from "@/lib/content/batch";
 import { CONTENT_FORMAT_DEFINITIONS, formatDefinitionFor } from "@/lib/content/format-catalog";
 import { BATCH_TEMPLATE_ROWS, buildBatchTemplateTsv } from "@/lib/content/batch-template";
+import { BatchFormatPayloadFields } from "@/components/forms/batch-format-payload-fields";
+import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
+import type { LocaleCode } from "@/lib/i18n/locales";
 
 export interface BatchChannel {
   id: string;
@@ -55,16 +59,52 @@ export interface BatchChannel {
   accountName: string;
 }
 
+export interface BatchOption {
+  id: string;
+  name: string;
+}
+
+export interface BatchTemplateOption extends BatchOption {
+  format: ContentFormat;
+  briefTemplate: string;
+  defaultChannelIds: string[];
+  formatPayload: Record<string, unknown>;
+}
+
+export interface BatchDefaults {
+  campaignId?: string;
+  contentPillarId?: string;
+  contentOwnerId?: string;
+  defaultDesignerId?: string;
+  templateId?: string;
+  defaultChannelIds?: string[];
+  contentLanguage?: LocaleCode;
+}
+
 const EMPTY_STATE: { error?: string; fieldErrors?: Record<string, string> } = {};
 
-function newRow(id: string, channelIds: string[]): BatchRowDraft {
+function newRow(
+  id: string,
+  channelIds: string[],
+  seed: BatchDefaults & Partial<BatchRowDraft> = {},
+): BatchRowDraft {
+  const formatPayload = seed.formatPayload
+    ? { ...seed.formatPayload }
+    : seed.contentLanguage
+      ? { schemaVersion: 1, contentLanguage: seed.contentLanguage }
+      : undefined;
+  if (formatPayload && seed.contentLanguage) formatPayload.contentLanguage = seed.contentLanguage;
   return {
     id,
-    title: "",
-    format: "",
+    title: seed.title ?? "",
+    format: seed.format ?? "",
     plannedPublishAt: "",
-    brief: "",
-    channelIds: [...channelIds],
+    brief: seed.brief ?? "",
+    channelIds: [...(seed.defaultChannelIds ?? channelIds)],
+    ...(seed.campaignId ? { campaignId: seed.campaignId } : {}),
+    ...(seed.contentPillarId ? { contentPillarId: seed.contentPillarId } : {}),
+    ...(seed.contentOwnerId ? { contentOwnerId: seed.contentOwnerId } : {}),
+    ...(formatPayload ? { formatPayload } : {}),
   };
 }
 
@@ -85,6 +125,8 @@ function issueText(t: ReturnType<typeof useLocaleT>, issue: BatchRowIssue): stri
     brief_empty: "A brief helps the team understand the idea.",
     duplicate_date: "Another row uses this date and time.",
     channel_unknown: "One or more channels could not be matched.",
+    format_payload_invalid: "Check the format payload JSON and format-specific fields.",
+    format_payload_conflict: "The convenience value conflicts with the format payload JSON.",
   };
   const value = t(key, issue.params);
   return value === key ? fallback[issue.code] : value;
@@ -128,30 +170,101 @@ function SaveButton({
   );
 }
 
+function DefaultSelect({
+  id,
+  label,
+  value,
+  options,
+  emptyLabel,
+  onChange,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  options: BatchOption[];
+  emptyLabel: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <label htmlFor={id} className="text-label text-fg-secondary block font-semibold">
+        {label}
+      </label>
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-11 w-full min-w-0 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        <option value="">{emptyLabel}</option>
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export function BatchForm({
   slug,
   workspaceTimezone = "UTC",
   channels = [],
+  campaigns = [],
+  pillars = [],
+  templates = [],
+  defaults = {},
+  ownerOptions = [],
 }: {
   slug: string;
   workspaceTimezone?: string;
   channels?: BatchChannel[];
+  campaigns?: BatchOption[];
+  pillars?: BatchOption[];
+  templates?: BatchTemplateOption[];
+  defaults?: BatchDefaults;
+  ownerOptions?: BatchOption[];
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
   const formId = React.useId().replace(/:/g, "");
   const formRef = React.useRef<HTMLFormElement>(null);
   const [state, action] = useActionState(batchCreateAction.bind(null, slug), EMPTY_STATE);
+  const [globalDefaults, setGlobalDefaults] = useState<BatchDefaults>(defaults);
+  const seedForNewRow = React.useCallback(
+    (seed: BatchDefaults = globalDefaults): BatchDefaults & Partial<BatchRowDraft> => {
+      const template = templates.find((candidate) => candidate.id === seed.templateId);
+      return {
+        ...seed,
+        ...(template
+          ? {
+              format: template.format,
+              brief: template.briefTemplate,
+              formatPayload: template.formatPayload,
+              defaultChannelIds:
+                template.defaultChannelIds.length > 0
+                  ? template.defaultChannelIds
+                  : seed.defaultChannelIds,
+            }
+          : {}),
+      };
+    },
+    [globalDefaults, templates],
+  );
   const [rows, setRows] = useState<BatchRowDraft[]>(() => [
     newRow(
       `${formId}-row-1`,
       channels.map((channel) => channel.id),
+      seedForNewRow(defaults),
     ),
   ]);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [paste, setPaste] = useState("");
   const [saved, setSaved] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
+  const [detailsRowId, setDetailsRowId] = useState<string | null>(null);
+  const [planningMonth, setPlanningMonth] = useState(() => new Date().toISOString().slice(0, 7));
   const templateChannelNames = useMemo(
     () => channels.map((channel) => channel.accountName || channel.platform),
     [channels],
@@ -221,6 +334,35 @@ export function BatchForm({
     setSaved(false);
   }
 
+  function applyDefaultsToEmptyRows() {
+    const seed = seedForNewRow(globalDefaults);
+    setRows((current) =>
+      current.map((row) =>
+        row.title.trim() || row.brief.trim() || row.format
+          ? row
+          : {
+              ...row,
+              ...(seed.format ? { format: seed.format } : {}),
+              ...(seed.brief ? { brief: seed.brief } : {}),
+              ...(seed.campaignId ? { campaignId: seed.campaignId } : {}),
+              ...(seed.contentPillarId ? { contentPillarId: seed.contentPillarId } : {}),
+              ...(seed.contentOwnerId ? { contentOwnerId: seed.contentOwnerId } : {}),
+              ...(seed.formatPayload ? { formatPayload: seed.formatPayload } : {}),
+              ...(seed.contentLanguage
+                ? {
+                    formatPayload: {
+                      ...(seed.formatPayload ?? { schemaVersion: 1 }),
+                      contentLanguage: seed.contentLanguage,
+                    },
+                  }
+                : {}),
+              channelIds: [...(seed.defaultChannelIds ?? row.channelIds)],
+            },
+      ),
+    );
+    setSaved(false);
+  }
+
   function importRows() {
     const parsed = paste.includes("\t") ? parseSpreadsheetRows(paste) : parseBatchRows(paste);
     const imported = parsed.map((item) => {
@@ -237,6 +379,7 @@ export function BatchForm({
           : item.plannedPublishAt,
         brief: item.brief,
         channelIds: matched.ids,
+        ...(item.formatPayload ? { formatPayload: item.formatPayload } : {}),
         ...(Object.keys(item.extensions).length ? { extensions: item.extensions } : {}),
         ...(matched.issues.length ? { sourceIssues: matched.issues } : {}),
         ...(item.lineNumber ? { sourceLine: item.lineNumber } : {}),
@@ -249,6 +392,7 @@ export function BatchForm({
             newRow(
               `${formId}-row-1`,
               channels.map((channel) => channel.id),
+              seedForNewRow(globalDefaults),
             ),
           ],
     );
@@ -300,6 +444,145 @@ export function BatchForm({
         )}
         readOnly
       />
+
+      <Card className="border-primary/20 bg-primary-subtle/30" data-testid="batch-planning-canvas">
+        <CardHeader className="gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-label text-primary font-semibold tracking-[0.08em] uppercase">
+                {t("batchAdd.form.monthlyCanvasEyebrow")}
+              </p>
+              <CardTitle className="mt-1">{t("batchAdd.form.monthlyCanvasTitle")}</CardTitle>
+              <p className="text-label text-fg-secondary mt-1 max-w-2xl">
+                {t("batchAdd.form.monthlyCanvasDescription")}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="space-y-1">
+                <label htmlFor="batch-planning-month" className="text-label font-semibold">
+                  {t("batchAdd.form.month")}
+                </label>
+                <Input
+                  id="batch-planning-month"
+                  type="month"
+                  value={planningMonth}
+                  onChange={(event) => setPlanningMonth(event.target.value)}
+                  className="bg-surface min-h-11 w-40"
+                />
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                size="lg"
+                onClick={applyDefaultsToEmptyRows}
+              >
+                {t("batchAdd.form.applyDefaults")}
+              </Button>
+            </div>
+          </div>
+          <div className="border-border bg-surface grid gap-3 rounded-[var(--radius-control)] border p-3 sm:grid-cols-2 lg:grid-cols-5">
+            <DefaultSelect
+              id="batch-default-campaign"
+              label={t("batchAdd.form.campaign")}
+              value={globalDefaults.campaignId ?? ""}
+              options={campaigns}
+              emptyLabel={t("batchAdd.form.noCampaign")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value) next.campaignId = value;
+                  else delete next.campaignId;
+                  return next;
+                })
+              }
+            />
+            <DefaultSelect
+              id="batch-default-pillar"
+              label={t("batchAdd.form.pillar")}
+              value={globalDefaults.contentPillarId ?? ""}
+              options={pillars}
+              emptyLabel={t("batchAdd.form.noPillar")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value) next.contentPillarId = value;
+                  else delete next.contentPillarId;
+                  return next;
+                })
+              }
+            />
+            <DefaultSelect
+              id="batch-default-owner"
+              label={t("batchAdd.form.owner")}
+              value={globalDefaults.contentOwnerId ?? ""}
+              options={ownerOptions}
+              emptyLabel={t("batchAdd.form.noOwner")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value) next.contentOwnerId = value;
+                  else delete next.contentOwnerId;
+                  return next;
+                })
+              }
+            />
+            <DefaultSelect
+              id="batch-default-template"
+              label={t("batchAdd.form.template")}
+              value={globalDefaults.templateId ?? ""}
+              options={templates}
+              emptyLabel={t("batchAdd.form.noTemplate")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value) next.templateId = value;
+                  else delete next.templateId;
+                  return next;
+                })
+              }
+            />
+            <DefaultSelect
+              id="batch-default-content-language"
+              label={t("batchAdd.form.contentLanguage")}
+              value={globalDefaults.contentLanguage ?? ""}
+              options={[
+                { id: "en", name: t("batchAdd.form.contentLanguageEnglish") },
+                { id: "ar", name: t("batchAdd.form.contentLanguageArabic") },
+              ]}
+              emptyLabel={t("batchAdd.form.contentLanguageWorkspaceDefault")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value === "en" || value === "ar") next.contentLanguage = value;
+                  else delete next.contentLanguage;
+                  return next;
+                })
+              }
+            />
+            <DefaultSelect
+              id="batch-default-channel"
+              label={t("batchAdd.form.channels")}
+              value={globalDefaults.defaultChannelIds?.[0] ?? ""}
+              options={channels.map((channel) => ({
+                id: channel.id,
+                name: channel.accountName || channel.platform,
+              }))}
+              emptyLabel={t("batchAdd.form.allChannels")}
+              onChange={(value) =>
+                setGlobalDefaults((current) => {
+                  const next = { ...current };
+                  if (value) next.defaultChannelIds = [value];
+                  else delete next.defaultChannelIds;
+                  return next;
+                })
+              }
+            />
+          </div>
+          {!campaigns.length && !pillars.length && !templates.length ? (
+            <p className="text-label text-fg-muted">{t("batchAdd.form.defaultsEmptyHint")}</p>
+          ) : null}
+        </CardHeader>
+      </Card>
 
       <Card>
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -491,7 +774,7 @@ export function BatchForm({
           aria-label={t("batchAdd.form.gridCaption")}
         >
           <div className="min-w-[1040px]">
-            <div className="border-border bg-surface-subtle text-label text-fg-secondary sticky top-0 z-10 grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_2rem] gap-2 border-b p-3 font-semibold">
+            <div className="border-border bg-surface-subtle text-label text-fg-secondary sticky top-0 z-10 grid grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_7rem] gap-2 border-b p-3 font-semibold">
               <span>#</span>
               <span>{t("batchAdd.form.title")}</span>
               <span>{t("batchAdd.form.format")}</span>
@@ -512,6 +795,7 @@ export function BatchForm({
                   locale={locale}
                   t={t}
                   onChange={(patch) => updateRow(row.id, patch)}
+                  onDetails={() => setDetailsRowId(row.id)}
                   onRemove={() =>
                     setRows((current) =>
                       current.length === 1 ? current : current.filter((item) => item.id !== row.id),
@@ -533,6 +817,7 @@ export function BatchForm({
               locale={locale}
               t={t}
               onChange={(patch) => updateRow(row.id, patch)}
+              onDetails={() => setDetailsRowId(row.id)}
               onRemove={() =>
                 setRows((current) =>
                   current.length === 1 ? current : current.filter((item) => item.id !== row.id),
@@ -584,6 +869,7 @@ export function BatchForm({
             newRow(
               `${formId}-row-${current.length + 1}`,
               channels.map((channel) => channel.id),
+              seedForNewRow(globalDefaults),
             ),
           ])
         }
@@ -607,6 +893,42 @@ export function BatchForm({
           pendingLabel={t("batchAdd.form.creating")}
         />
       </div>
+
+      <Dialog open={detailsRowId !== null} onOpenChange={(open) => !open && setDetailsRowId(null)}>
+        <DialogContent
+          className="max-h-[90vh] max-w-3xl overflow-y-auto sm:max-w-3xl"
+          closeAriaLabel={t("batchAdd.form.closeDialog")}
+        >
+          {(() => {
+            const detailRow = rows.find((row) => row.id === detailsRowId);
+            if (!detailRow || !formatDefinitionFor(detailRow.format)) return null;
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>
+                    {t("batchAdd.form.detailsForRow", { row: rows.indexOf(detailRow) + 1 })}
+                  </DialogTitle>
+                  <DialogDescription dir="auto">
+                    {detailRow.title || t("batchAdd.form.untitledRow")}
+                  </DialogDescription>
+                </DialogHeader>
+                <BatchFormatPayloadFields
+                  format={detailRow.format as ContentFormat}
+                  value={detailRow.formatPayload ?? { schemaVersion: 1 }}
+                  locale={locale}
+                  t={t}
+                  onChange={(formatPayload) => updateRow(detailRow.id, { formatPayload })}
+                />
+                <DialogFooter>
+                  <Button type="button" onClick={() => setDetailsRowId(null)}>
+                    {t("batchAdd.form.doneWithDetails")}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
         <DialogContent
@@ -694,6 +1016,14 @@ function validateRow(row: BatchRowDraft, timeZone: string): BatchRowIssue[] {
     (!row.extensions.location.name || row.extensions.location.name.length > 120)
   )
     issues.push({ code: "location_invalid", field: "extensions", severity: "error" });
+  if (row.formatPayload) {
+    try {
+      if (definition) parseFormatPayload(row.format as ContentFormat, row.formatPayload);
+      else throw new Error("unknown format");
+    } catch {
+      issues.push({ code: "format_invalid", field: "formatPayload", severity: "error" });
+    }
+  }
   return issues;
 }
 
@@ -705,6 +1035,7 @@ type RowProps = {
   locale: string;
   t: ReturnType<typeof useLocaleT>;
   onChange: (patch: Partial<BatchRowDraft>) => void;
+  onDetails: () => void;
   onRemove: () => void;
 };
 
@@ -719,7 +1050,12 @@ function FormatSelect({
       id={`batch-format-${row.id}`}
       aria-label={t("batchAdd.form.formatForRow", { row: rowNumber })}
       value={row.format}
-      onChange={(event) => onChange({ format: event.target.value })}
+      onChange={(event) =>
+        onChange({
+          format: event.target.value,
+          formatPayload: { schemaVersion: 1 },
+        })
+      }
       className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-11 w-full rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none"
       aria-invalid={!row.format ? true : undefined}
     >
@@ -834,9 +1170,19 @@ function FieldErrors({
   ) : null;
 }
 
-function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onRemove }: RowProps) {
+function DesktopRow({
+  row,
+  rowNumber,
+  channels,
+  issues,
+  locale,
+  t,
+  onChange,
+  onDetails,
+  onRemove,
+}: RowProps) {
   return (
-    <div className="odd:bg-surface-subtle/30 grid min-w-0 grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_2rem] items-start gap-2 p-3">
+    <div className="odd:bg-surface-subtle/30 grid min-w-0 grid-cols-[2rem_minmax(10rem,1.2fr)_minmax(9rem,0.9fr)_minmax(10rem,1fr)_minmax(14rem,1.4fr)_minmax(9.5rem,1fr)_8rem_7rem] items-start gap-2 p-3">
       <div className="text-label text-fg-muted pt-3">{rowNumber}</div>
       <div>
         <DirAwareInput
@@ -892,7 +1238,18 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
       <div className="flex min-h-11 items-center justify-center">
         <ValidationStatus issues={issues} t={t} />
       </div>
-      <div className="flex min-h-11 items-center justify-center">
+      <div className="flex min-h-11 items-center justify-end gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={onDetails}
+          aria-label={t("batchAdd.form.detailsForRow", { row: rowNumber })}
+          title={t("batchAdd.form.details")}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="hidden xl:inline">{t("batchAdd.form.details")}</span>
+        </Button>
         <button
           type="button"
           className="focus-visible:ring-focus-ring ms-1 flex min-h-11 min-w-11 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
@@ -906,7 +1263,17 @@ function DesktopRow({ row, rowNumber, channels, issues, locale, t, onChange, onR
   );
 }
 
-function MobileRow({ row, rowNumber, channels, issues, locale, t, onChange, onRemove }: RowProps) {
+function MobileRow({
+  row,
+  rowNumber,
+  channels,
+  issues,
+  locale,
+  t,
+  onChange,
+  onDetails,
+  onRemove,
+}: RowProps) {
   return (
     <article className="border-border bg-surface-subtle space-y-3 rounded-[var(--radius-control)] border p-3">
       <div className="flex items-center justify-between">
@@ -915,6 +1282,16 @@ function MobileRow({ row, rowNumber, channels, issues, locale, t, onChange, onRe
         </span>
         <div className="flex items-center gap-2">
           <ValidationStatus issues={issues} t={t} />
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onDetails}
+            aria-label={t("batchAdd.form.detailsForRow", { row: rowNumber })}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("batchAdd.form.details")}
+          </Button>
           <button
             type="button"
             className="focus-visible:ring-focus-ring flex min-h-11 min-w-11 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"

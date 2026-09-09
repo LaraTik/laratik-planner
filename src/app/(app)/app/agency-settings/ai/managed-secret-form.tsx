@@ -30,7 +30,7 @@ const initial: ManagedSecretActionState = {};
  *      no managed secret. A "Set managed secret" form is shown.
  *   3. "Not configured" — when neither is set. Same form as (2)
  *      with an additional warning that AI features will be
- *      disabled until a key is provided.
+ *      unavailable until a key is provided.
  *
  * When the KEK is auto-managed (no env var, file in data dir),
  * a yellow "back this up" banner is rendered above the form
@@ -47,14 +47,12 @@ export function ManagedSecretForm({
   lastFour,
   enabled,
   envHasKey,
-  envEnabled,
   kekStatus,
 }: {
   keySource: "managed_secret" | "environment" | "missing";
   lastFour: string | null;
   enabled: boolean;
   envHasKey: boolean;
-  envEnabled: boolean;
   kekStatus: KekStatus;
 }) {
   const t = useLocaleT();
@@ -165,7 +163,7 @@ export function ManagedSecretForm({
                 ? t("agencyAi.managedSecret.replaceWithManaged")
                 : t("agencyAi.managedSecret.setManaged")}
             </Button>
-            {!envHasKey && !envEnabled ? (
+            {!envHasKey ? (
               <span className="text-label text-warning inline-flex items-center gap-1">
                 <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 {t("agencyAi.managedSecret.disabledUntilKey")}

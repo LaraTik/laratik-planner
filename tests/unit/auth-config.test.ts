@@ -66,7 +66,6 @@ const envValues: Record<string, unknown> = {
   MINIMAX_API_KEY: "",
   MINIMAX_BASE_URL: "",
   MINIMAX_MODEL: "",
-  AI_FEATURE_ENABLED: false,
   SENTRY_DSN: "",
   SENTRY_AUTH_TOKEN: "",
   SENTRY_ORG: "",

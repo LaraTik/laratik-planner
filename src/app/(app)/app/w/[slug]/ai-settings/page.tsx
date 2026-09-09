@@ -14,6 +14,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AI_PROVIDER, PLANNER_FACING_CAPABILITIES } from "@/lib/ai/capabilities";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { getActiveApiKey } from "@/lib/ai";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -50,25 +51,20 @@ export default async function AiSettingsPage({ params }: { params: Promise<{ slu
   const since = new Date();
   since.setUTCDate(since.getUTCDate() - 30);
 
-  const [[feature], [usage], admin] = await Promise.all([
+  const [[feature], [usage], admin, activeAiKey] = await Promise.all([
     db.select().from(aiFeatureSettings).where(eq(aiFeatureSettings.agencyId, agencyId)).limit(1),
     db
       .select({ value: count() })
       .from(aiUsageEvents)
       .where(and(eq(aiUsageEvents.workspaceId, workspace.id), gte(aiUsageEvents.createdAt, since))),
     isAgencyAdmin(actor, agencyId),
+    getActiveApiKey(agencyId),
   ]);
 
-  // M3.4 — the workspace status card reflects the effective runtime
-  // state, which counts a managed secret as a key source. The
-  // backend (`/api/ai/generate`, `testAiConnection`, `chat`) allows
-  // a managed secret to bypass `AI_FEATURE_ENABLED`, so the UI
-  // gate must match: any working key source + the agency's
-  // master switch = the workspace is live. `AI_FEATURE_ENABLED`
-  // only matters for the env path (no key at all).
-  const hasManagedSecret = feature?.keySource === "managed_secret" && !!feature.maskedKeySuffix;
-  const hasAnyKey = !!serverEnv.MINIMAX_API_KEY || hasManagedSecret;
-  const effectiveEnabled = hasAnyKey && (feature?.enabled ?? true);
+  // Provider key availability and agency enablement are separate concerns.
+  // The database master switch is the product control; the active key only
+  // determines whether the enabled feature can reach its provider.
+  const effectiveEnabled = !!activeAiKey && feature?.enabled === true;
   const enabledCapabilities = new Set(feature?.enabledCapabilities ?? []);
   const requestCount = usage?.value ?? 0;
   const { t } = await tForActive();

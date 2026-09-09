@@ -8,8 +8,7 @@ import { makeTranslator } from "@/messages";
  *
  * The user's report was "AI is enabled but still not". The root
  * cause was that the admin toggle in the database reads "On" while
- * three separate runtime prerequisites (env kill-switch, env key,
- * managed secret) are unmet. The fix is this panel, which makes
+ * provider availability or agency controls are unmet. The fix is this panel, which makes
  * the state of every prerequisite explicit. This test pins the
  * "every prerequisite is shown, with the right state" contract so
  * a future tweak can't accidentally hide one of them.
@@ -19,7 +18,6 @@ describe("AiDiagnosticPanel", () => {
   it("marks every prereq as 'missing/off' and shows a fix when all are unmet", () => {
     const html = renderToStaticMarkup(
       <AiDiagnosticPanel
-        envKillSwitch={false}
         envHasKey={false}
         hasManagedSecret={false}
         managedSecretSuffix={null}
@@ -30,9 +28,9 @@ describe("AiDiagnosticPanel", () => {
       />,
     );
     // Three prerequisite items, all in the warning state.
-    expect(html).toContain("ai-prereq-kill-switch");
-    expect(html).toContain("ai-prereq-env-key");
-    expect(html).toContain("ai-prereq-managed-secret");
+    expect(html).toContain("ai-prereq-provider-key");
+    expect(html).toContain("ai-prereq-master-switch");
+    expect(html).toContain("ai-prereq-capabilities");
     // "Effective runtime: Blocked" + a "blocked" banner.
     expect(html).toContain("Blocked");
     expect(html).toContain("ai-diagnostic-blocked-banner");
@@ -48,7 +46,6 @@ describe("AiDiagnosticPanel", () => {
   it("flips to 'AI is live' when the prerequisites + toggle + capabilities are all set", () => {
     const html = renderToStaticMarkup(
       <AiDiagnosticPanel
-        envKillSwitch
         envHasKey
         hasManagedSecret={false}
         managedSecretSuffix={null}
@@ -67,7 +64,6 @@ describe("AiDiagnosticPanel", () => {
   it("uses the managed secret suffix in the detail line when one exists", () => {
     const html = renderToStaticMarkup(
       <AiDiagnosticPanel
-        envKillSwitch={false}
         envHasKey={false}
         hasManagedSecret
         managedSecretSuffix="ab12"
@@ -77,7 +73,7 @@ describe("AiDiagnosticPanel", () => {
         aiEntryHref="/app"
       />,
     );
-    // The detail line for the managed-secret prereq shows the
+    // The detail line for the provider-key prereq shows the
     // masked suffix when the secret is present.
     expect(html).toContain("ends in");
     expect(html).toContain("ab12");
@@ -86,7 +82,6 @@ describe("AiDiagnosticPanel", () => {
   it("hides the fix line on a prereq that is already satisfied", () => {
     const html = renderToStaticMarkup(
       <AiDiagnosticPanel
-        envKillSwitch
         envHasKey
         hasManagedSecret={false}
         managedSecretSuffix={null}
@@ -96,18 +91,16 @@ describe("AiDiagnosticPanel", () => {
         aiEntryHref="/app"
       />,
     );
-    // kill-switch and env-key are OK — their fix lines should not
-    // be rendered. The managed-secret prereq is still missing, so
-    // its fix line IS rendered.
-    expect(html).not.toContain("ai-prereq-kill-switch-fix");
-    expect(html).not.toContain("ai-prereq-env-key-fix");
-    expect(html).toContain("ai-prereq-managed-secret-fix");
+    // The provider key is OK; the agency controls are off and expose
+    // actionable fix lines.
+    expect(html).not.toContain("ai-prereq-provider-key-fix");
+    expect(html).toContain("ai-prereq-master-switch-fix");
+    expect(html).toContain("ai-prereq-capabilities-fix");
   });
 
   it("renders the diagnostic from the Arabic catalog", () => {
     const html = renderToStaticMarkup(
       <AiDiagnosticPanel
-        envKillSwitch={false}
         envHasKey={false}
         hasManagedSecret
         managedSecretSuffix="ab12"

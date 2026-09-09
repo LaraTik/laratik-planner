@@ -49,6 +49,10 @@
     "completeness_check": {
       "label": "Check completeness",
       "description": "Score how ready a brief is for creative handoff and flag the missing pieces."
+    },
+    "monthly_planning_copilot": {
+      "label": "Monthly planning copilot",
+      "description": "Guide discovery, strategy, execution, and review for a complete monthly plan."
     }
   }
 }

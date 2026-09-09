@@ -59,6 +59,7 @@ const ICON_BY_ID = {
   // requires the index to exist for the full `AiCapabilityId`
   // union. The icon is referenced only as a safety net.
   trend_radar: Radar,
+  monthly_planning_copilot: Sparkles,
 } as const;
 
 // The planner-detail surface lists AI capabilities that

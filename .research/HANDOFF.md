@@ -8,7 +8,7 @@
 
 ## 5-second summary
 
-Three new product features and five existing-feature improvements, all behind the existing `AI_FEATURE_ENABLED` flag, all respecting master-prompt §2.2 (no autonomous publishing, no OAuth, no live follower analytics, no autonomous status changes). 5 sprints, 2 engineers, ~38 dev-days wall-clock, ~71.5 dev-days combined. 9 §15 capabilities total (6 existing + 3 new). 6 questions below are the only blocking decisions.
+Three new product features and five existing-feature improvements, all behind the agency database master switch and capability allowlist, all respecting master-prompt §2.2 (no autonomous publishing, no OAuth, no live follower analytics, no autonomous status changes). 5 sprints, 2 engineers, ~38 dev-days wall-clock, ~71.5 dev-days combined. 9 §15 capabilities total (6 existing + 3 new). 6 questions below are the only blocking decisions.
 
 ---
 

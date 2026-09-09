@@ -37,10 +37,10 @@ export function AiSettingsForm({
   initialEnabled,
   initialModel,
   initialCapabilities,
-  envEnabled,
+  envConfigured,
   envModel,
   envHasKey,
-  featureIsEnabled,
+  providerKeyAvailable,
   lastTestAt,
   lastTestOk,
   usage,
@@ -48,13 +48,12 @@ export function AiSettingsForm({
   initialEnabled: boolean;
   initialModel: string;
   initialCapabilities: string[];
-  envEnabled: boolean;
+  envConfigured: boolean;
   envModel: string;
   envHasKey: boolean;
-  // True when AI can run: the env kill-switch is on AND a key exists
-  // (env or managed). The form uses this to enable the master switch
-  // and the Test connection button.
-  featureIsEnabled: boolean;
+  // True when a provider key is available. This only gates the connection
+  // test; the agency master switch remains editable without a key.
+  providerKeyAvailable: boolean;
   lastTestAt: string | null;
   lastTestOk: boolean | null;
   usage: MonthlyUsage;
@@ -88,8 +87,8 @@ export function AiSettingsForm({
             <Bot className="text-primary h-5 w-5" aria-hidden="true" />
             <CardTitle>{tr("agencyAi.providerEnvTitle", "Provider environment")}</CardTitle>
           </div>
-          <Badge variant={envEnabled && envHasKey ? "success" : "outline"}>
-            {envEnabled && envHasKey
+          <Badge variant={envConfigured && envHasKey ? "success" : "outline"}>
+            {envConfigured && envHasKey
               ? t("agencyAi.form.configured")
               : t("agencyAi.form.notConfigured")}
           </Badge>
@@ -137,17 +136,14 @@ export function AiSettingsForm({
                   id="ai-enabled-toggle"
                   name="enabled"
                   value="on"
-                  defaultChecked={initialEnabled && featureIsEnabled}
-                  disabled={!featureIsEnabled}
+                  defaultChecked={initialEnabled}
                   data-testid="ai-enabled-toggle"
                 />
                 <label
                   htmlFor="ai-enabled-toggle"
                   className="text-label text-fg-primary cursor-pointer font-semibold"
                 >
-                  {initialEnabled && featureIsEnabled
-                    ? t("agencyAi.form.on")
-                    : t("agencyAi.form.off")}
+                  {initialEnabled ? t("agencyAi.form.on") : t("agencyAi.form.off")}
                 </label>
               </div>
             </div>
@@ -253,7 +249,7 @@ export function AiSettingsForm({
             variant="outline"
             size="sm"
             onClick={onTest}
-            disabled={testing || !featureIsEnabled}
+            disabled={testing || !providerKeyAvailable}
             data-testid="ai-test-connection"
           >
             <RefreshCw

@@ -24,6 +24,7 @@ export const AI_CAPABILITIES = [
   "related_format_ideas",
   "completeness_check",
   "trend_radar",
+  "monthly_planning_copilot",
 ] as const;
 
 /**

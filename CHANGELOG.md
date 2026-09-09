@@ -15,7 +15,7 @@ copied from `git log <prev>..<tag>` at tag time.
 ### Added — Trend Radar v1 (2026-09-08)
 
 Multi-platform trend intelligence ships behind the new `trend_radar` capability
-flag and the existing `AI_FEATURE_ENABLED` gate. The Python sidecar
+flag and the agency database master-switch gate. The Python sidecar
 `services/trends/` owns extraction, scoring, and analysis; the Next.js app
 owns the planner UI and the admin Sources page.
 
@@ -84,7 +84,7 @@ calculator, monitoring + alerts, common operations, on-call runbook) plus
 **Planner UI (Next.js) — ship-ready in v1**:
 
 - `src/app/(app)/app/w/[slug]/trends/page.tsx` — server component, gated
-  on `AI_FEATURE_ENABLED`. Renders 4 planner tabs (Explore / For You /
+  on the agency AI master switch and `trend_radar` capability. Renders 4 planner tabs (Explore / For You /
   Boards / Briefs) over a single feed component, a degraded-source
   banner that surfaces `circuit_state=open` rows, and the first-run
   onboarding wizard.

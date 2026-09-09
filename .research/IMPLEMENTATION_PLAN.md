@@ -3,7 +3,7 @@
 > **Status:** Draft for review and approval. No code has been written yet.
 > **Companion docs:** `.research/INTEGRATION_REPORT.md` (the why), this file (the how), `.research/HANDOFF.md` (the approval gate), `.research/designs/` (the UI).
 > **Date:** 2026-09-07
-> **Scope:** 3 new features (Trend Radar, Brand-aware Image Gen, Reel Generator + AI Subtitle) + 5 existing-feature improvements, all shipped behind `AI_FEATURE_ENABLED`.
+> **Scope:** 3 new features (Trend Radar, Brand-aware Image Gen, Reel Generator + AI Subtitle) + 5 existing-feature improvements, all shipped behind the agency database master switch and capability allowlist.
 
 ---
 
@@ -14,7 +14,7 @@ A feature is "done" when **every** box in its section is checked. A sprint is "d
 Per-feature definition of done (all 8 must hold):
 
 - [ ] Schema migration is forward + backward compatible, with a rollback tested
-- [ ] Code is behind the `AI_FEATURE_ENABLED` flag (default off) AND a per-agency capability allow-list
+- [ ] Code is behind the per-agency database master switch (default off) AND a per-agency capability allow-list
 - [ ] Daily + monthly budget enforcement wired via `enforceAiBudget` + `reconcileAiBudget`
 - [ ] Unit tests pass (`pnpm test:unit`)
 - [ ] Integration tests pass (`pnpm test:integration`) with `TEST_DATABASE_URL=planner_test`
@@ -287,7 +287,7 @@ trends:
 
 ### 1.9 Rollout + rollback
 
-- **Phase 0 (dev):** merged to `main` behind `AI_FEATURE_ENABLED=false`. Manual QA on a single workspace.
+- **Phase 0 (dev):** merged to `main` with the agency database master switch disabled. Manual QA on a single workspace.
 - **Phase 1 (canary):** 5% of agencies get a one-time email offering the feature, with a feature flag `trend_radar` in `aiFeatureSettings` defaulted to `false` (agency opts in).
 - **Phase 2 (GA):** `trend_radar` toggle in the agency admin form, default off, documented in release notes.
 - **Rollback:** `ALTER TABLE trend_signal DISABLE ROW LEVEL SECURITY;` (instant) + the feature flag at the route layer. The sidecar can be down indefinitely without breaking the app.

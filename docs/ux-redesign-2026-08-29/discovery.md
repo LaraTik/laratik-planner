@@ -120,7 +120,7 @@ Server: page.tsx (RSC)
   ├─ listWorkspaceDesigners()         (for assignment)
   ├─ evaluateReadiness()              (readiness + per-channel)
   ├─ readAllChannelPayloads()         (per-channel publish package)
-  └─ isAiEnabled() / aiFeatureSettings / agency locale
+  └─ aiFeatureSettings / agency locale
 
 Server → Client:
   PlanningHeader              (RSC → children are server-rendered buttons)

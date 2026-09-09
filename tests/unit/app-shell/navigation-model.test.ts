@@ -193,6 +193,7 @@ describe("buildAgencyNavigation", () => {
         "agency-settings-general",
         "agency-settings-plan",
         "agency-settings-ai",
+        "agency-settings-planning-packs",
         "agency-settings-trend-sources",
         "agency-settings-social",
         "agency-settings-social-providers",

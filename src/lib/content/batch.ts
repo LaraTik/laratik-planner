@@ -1,6 +1,7 @@
 import { fromZonedTime } from "date-fns-tz";
 import { z } from "zod";
 import { normalizeBatchFormat } from "@/lib/content/format-catalog";
+import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 
 /**
  * Per-row extended fields (caption, hashtags, location).
@@ -26,6 +27,15 @@ const BatchRowExtensionsSchema = z.object({
 
 export type BatchRowExtensions = z.infer<typeof BatchRowExtensionsSchema>;
 
+/**
+ * Full creative details for a batch row. The payload is validated again
+ * against the selected format at the service boundary; keeping this as a
+ * record here lets the import surface carry every current and future
+ * format-specific field without adding columns to `content_item`.
+ */
+export const BatchFormatPayloadSchema = z.record(z.unknown());
+export type BatchFormatPayload = z.infer<typeof BatchFormatPayloadSchema>;
+
 export type BatchIssueSeverity = "error" | "warning";
 export type BatchIssueCode =
   | "title_required"
@@ -41,11 +51,14 @@ export type BatchIssueCode =
   | "location_invalid"
   | "brief_empty"
   | "duplicate_date"
-  | "channel_unknown";
+  | "channel_unknown"
+  | "format_payload_invalid"
+  | "format_payload_conflict";
 
 export interface BatchRowIssue {
   code: BatchIssueCode;
-  field: "title" | "format" | "plannedPublishAt" | "brief" | "extensions" | "channels";
+  field:
+    "title" | "format" | "plannedPublishAt" | "brief" | "extensions" | "formatPayload" | "channels";
   severity: BatchIssueSeverity;
   params?: Record<string, string | number>;
 }
@@ -64,6 +77,9 @@ export const BatchItemSchema = z.object({
   ]),
   brief: z.string().max(2000).optional().default(""),
   plannedPublishAt: z.coerce.date(),
+  campaignId: z.string().uuid().optional(),
+  contentPillarId: z.string().uuid().optional(),
+  contentOwnerId: z.string().uuid().optional(),
   /** Omitted means all active channels; [] means intentionally none. */
   channelIds: z
     .array(z.string().uuid())
@@ -81,6 +97,8 @@ export const BatchItemSchema = z.object({
    * extensions stay compatible with the v1 batch shape.
    */
   extensions: BatchRowExtensionsSchema.optional(),
+  /** Full format-specific payload. Prefer this for new clients/imports. */
+  formatPayload: BatchFormatPayloadSchema.optional(),
 });
 
 export const BatchCreateSchema = z.object({
@@ -96,7 +114,11 @@ export const BatchClientRowSchema = z.object({
   plannedPublishAt: z.string(),
   brief: z.string(),
   channelIds: z.array(z.string().uuid()),
+  campaignId: z.string().uuid().optional(),
+  contentPillarId: z.string().uuid().optional(),
+  contentOwnerId: z.string().uuid().optional(),
   extensions: BatchRowExtensionsSchema.optional(),
+  formatPayload: BatchFormatPayloadSchema.optional(),
 });
 
 export interface ParsedBatchRow {
@@ -105,7 +127,11 @@ export interface ParsedBatchRow {
   format: string;
   plannedPublishAt: string;
   brief: string;
+  campaignId?: string;
+  contentPillarId?: string;
+  contentOwnerId?: string;
   extensions: BatchRowExtensions;
+  formatPayload?: BatchFormatPayload;
   channelNames: string[];
   issues: BatchRowIssue[];
 }
@@ -117,7 +143,11 @@ export interface BatchRowDraft {
   plannedPublishAt: string;
   brief: string;
   channelIds: string[];
+  campaignId?: string;
+  contentPillarId?: string;
+  contentOwnerId?: string;
   extensions?: BatchRowExtensions;
+  formatPayload?: BatchFormatPayload;
   sourceLine?: number;
   sourceIssues?: BatchRowIssue[];
 }
@@ -187,6 +217,7 @@ export function validateBatchRow(input: {
   plannedPublishAt: string;
   brief: string;
   extensions?: BatchRowExtensions;
+  formatPayload?: BatchFormatPayload;
   channelNames?: string[];
   timeZone?: string;
 }): BatchRowIssue[] {
@@ -241,6 +272,21 @@ export function validateBatchRow(input: {
     issues.push({ code: "location_invalid", field: "extensions", severity: "error" });
 
   void input.channelNames;
+  if (input.formatPayload) {
+    const normalizedFormat = normalizeBatchFormat(input.format) as ContentFormat | undefined;
+    let valid = false;
+    if (normalizedFormat) {
+      try {
+        parseFormatPayload(normalizedFormat, input.formatPayload);
+        valid = true;
+      } catch {
+        valid = false;
+      }
+    }
+    if (!valid) {
+      issues.push({ code: "format_payload_invalid", field: "formatPayload", severity: "error" });
+    }
+  }
   return issues;
 }
 
@@ -269,6 +315,10 @@ export function parseBatchRow(line: string, lineNumber = 1): ParsedBatchRow {
   const [title = "", rawFormat = "", date = "", brief = ""] = parts;
   const format = normalizeBatchFormat(rawFormat) ?? rawFormat;
   const ext: BatchRowExtensions = {};
+  let formatPayload: BatchFormatPayload | undefined;
+  const payloadIndex = parts.findIndex(
+    (part, index) => index >= 6 && part.startsWith("{") && part.endsWith("}"),
+  );
   if (parts[4]) ext.caption = parts[4];
   if (parts[5]) {
     ext.hashtags = parts[5]
@@ -284,9 +334,21 @@ export function parseBatchRow(line: string, lineNumber = 1): ParsedBatchRow {
     // | #tag1 #tag2 | Dubai Mall | fb-123` (8 cells, last
     // two joined) OR `... | Dubai Mall|fb-123` (7 cells, last
     // one carries the internal `|`).
-    const locationCell = parts.slice(6).join("|");
+    const locationCell = parts.slice(6, payloadIndex >= 0 ? payloadIndex : parts.length).join("|");
     const [name, externalId] = locationCell.split("|").map((s) => s.trim());
     if (name) ext.location = { name, ...(externalId ? { externalId } : {}) };
+  }
+  // Optional eighth cell: a JSON format payload. The JSON cell is parsed
+  // last so legacy location values remain fully compatible.
+  const payloadCell = payloadIndex >= 0 ? parts.slice(payloadIndex).join("|") : "";
+  if (payloadCell) {
+    try {
+      const decoded: unknown = JSON.parse(payloadCell);
+      const result = BatchFormatPayloadSchema.safeParse(decoded);
+      if (result.success) formatPayload = result.data;
+    } catch {
+      // The row-level validation below reports the malformed payload.
+    }
   }
   // Validate the extension bundle — the rest of the row goes
   // through BatchItemSchema on the way to the action.
@@ -297,6 +359,7 @@ export function parseBatchRow(line: string, lineNumber = 1): ParsedBatchRow {
     plannedPublishAt: date,
     brief,
     extensions: ext,
+    ...(formatPayload ? { formatPayload } : {}),
     timeZone: "UTC",
   });
   if (!extensionsResult.success) {
@@ -309,6 +372,7 @@ export function parseBatchRow(line: string, lineNumber = 1): ParsedBatchRow {
     plannedPublishAt: date,
     brief,
     extensions: ext,
+    ...(formatPayload ? { formatPayload } : {}),
     channelNames: [],
     issues,
   };
@@ -359,8 +423,93 @@ export function parseSpreadsheetRows(raw: string): ParsedBatchRow[] {
       index + 1,
     );
     const channels = at(cells, ["channels"], 4);
+    const conveniencePayload: Record<string, unknown> = {};
+    const contentLanguage = at(cells, ["content language", "language"], -1).toLowerCase();
+    if (contentLanguage) conveniencePayload.contentLanguage = contentLanguage;
+    const textFields = [
+      "hook",
+      "main message",
+      "mainmessage",
+      "cta",
+      "call to action",
+      "calltoaction",
+      "caption",
+      "first comment",
+      "firstcomment",
+      "description",
+      "visual direction",
+      "visualdirection",
+      "additional notes",
+      "additionalnotes",
+    ] as const;
+    for (const name of textFields) {
+      const value = at(cells, [name], -1);
+      if (!value) continue;
+      const key =
+        name === "main message" || name === "mainmessage"
+          ? "mainMessage"
+          : name === "cta" || name === "call to action" || name === "calltoaction"
+            ? "callToAction"
+            : name === "first comment" || name === "firstcomment"
+              ? "firstComment"
+              : name === "visual direction" || name === "visualdirection"
+                ? "visualDirection"
+                : name === "additional notes" || name === "additionalnotes"
+                  ? "additionalNotes"
+                  : name;
+      conveniencePayload[key] = value;
+    }
+    const hashtags = at(cells, ["hashtags", "hash tags"], -1);
+    if (hashtags) {
+      conveniencePayload.hashtags = hashtags
+        .split(/[\s,]+/)
+        .map((value) => value.trim())
+        .filter(Boolean);
+    }
+    const payloadJson = at(cells, ["format payload json", "format payload", "content json"], -1);
+    let formatPayload: BatchFormatPayload | undefined;
+    let payloadIssue: BatchRowIssue | undefined;
+    if (payloadJson) {
+      try {
+        const decoded = BatchFormatPayloadSchema.safeParse(JSON.parse(payloadJson));
+        if (decoded.success) formatPayload = decoded.data;
+        else
+          payloadIssue = {
+            code: "format_payload_invalid",
+            field: "formatPayload",
+            severity: "error",
+          };
+      } catch {
+        payloadIssue = {
+          code: "format_payload_invalid",
+          field: "formatPayload",
+          severity: "error",
+        };
+      }
+    }
+    const conflicts = Object.keys(conveniencePayload).filter(
+      (key) =>
+        formatPayload &&
+        key in formatPayload &&
+        JSON.stringify(formatPayload[key]) !== JSON.stringify(conveniencePayload[key]),
+    );
+    if (Object.keys(conveniencePayload).length > 0) {
+      formatPayload = { ...(formatPayload ?? {}), ...conveniencePayload };
+    }
+    const issues = [
+      ...parsed.issues,
+      ...(payloadIssue ? [payloadIssue] : []),
+      ...conflicts.map((key) => ({
+        code: "format_payload_conflict" as const,
+        field: "formatPayload" as const,
+        severity: "error" as const,
+        params: { key },
+      })),
+    ];
     return {
       ...parsed,
+      issues,
+      ...(formatPayload ? { formatPayload } : {}),
       channelNames: channels
         ? channels
             .split(/[,;]+/)

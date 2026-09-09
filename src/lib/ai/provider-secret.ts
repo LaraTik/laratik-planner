@@ -299,19 +299,3 @@ export async function hasManagedAiSecret(agencyId: string): Promise<boolean> {
     .limit(1);
   return !!row;
 }
-
-/**
- * Detect whether ANY agency on the platform has a managed secret
- * configured. The `/api/ai/generate` route uses this for its
- * 503 short-circuit ("no env key + no managed secret anywhere =
- * feature disabled") so the boot path is not affected by an
- * unused feature.
- */
-export async function hasAnyManagedSecretConfigured(): Promise<boolean> {
-  const [row] = await db
-    .select({ agencyId: aiProviderSecret.agencyId })
-    .from(aiProviderSecret)
-    .where(isNotNull(aiProviderSecret.ciphertext))
-    .limit(1);
-  return !!row;
-}
