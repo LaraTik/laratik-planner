@@ -1,13 +1,25 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { Archive, Folder, FolderPlus, Loader2, Pencil } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 type FolderOption = { id: string; name: string };
+
+function FolderLinkStatus() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      className="ms-auto inline-flex h-4 w-4 shrink-0 items-center justify-center"
+      aria-hidden="true"
+    >
+      <Loader2 className={`h-3.5 w-3.5 ${pending ? "animate-spin opacity-100" : "opacity-0"}`} />
+    </span>
+  );
+}
 
 export function MediaFolderSidebar({
   basePath,
@@ -171,6 +183,7 @@ export function MediaFolderSidebar({
           const value = event.target.value;
           router.push(
             value === "all" ? href("") : value === "shared" ? href("", true) : href(value),
+            { scroll: false },
           );
         }}
       >
@@ -186,29 +199,35 @@ export function MediaFolderSidebar({
       <nav className="mt-3 hidden gap-1 lg:grid" aria-label={labels.folders}>
         <Link
           href={href("")}
+          scroll={false}
           aria-current={!activeFolder && !sharedOnly ? "page" : undefined}
           className={`text-label flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 font-semibold ${!activeFolder && !sharedOnly ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
         >
           <Folder className="h-4 w-4" aria-hidden="true" />
           {labels.allMedia}
+          <FolderLinkStatus />
         </Link>
         <Link
           href={href("unfiled")}
+          scroll={false}
           aria-current={activeFolder === "unfiled" ? "page" : undefined}
           className={`text-label flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 font-semibold ${activeFolder === "unfiled" ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
         >
           <Folder className="h-4 w-4" aria-hidden="true" />
           {labels.unfiled}
+          <FolderLinkStatus />
         </Link>
         {folders.map((folder) => (
           <div key={folder.id} className="flex min-w-0 items-center gap-1">
             <Link
               href={href(folder.id)}
+              scroll={false}
               aria-current={activeFolder === folder.id ? "page" : undefined}
               className={`text-label flex min-h-10 min-w-0 flex-1 items-center gap-2 truncate rounded-[var(--radius-control)] px-2 font-semibold ${activeFolder === folder.id ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
             >
               <Folder className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="truncate">{folder.name}</span>
+              <FolderLinkStatus />
             </Link>
             {canManage ? (
               <>
@@ -238,11 +257,13 @@ export function MediaFolderSidebar({
         ))}
         <Link
           href={href("", true)}
+          scroll={false}
           aria-current={sharedOnly ? "page" : undefined}
           className={`text-label flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 font-semibold ${sharedOnly ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
         >
           <Folder className="h-4 w-4" aria-hidden="true" />
           {labels.agencyShared}
+          <FolderLinkStatus />
         </Link>
       </nav>
     </aside>
