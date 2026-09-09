@@ -15,6 +15,11 @@
   "existingTitle": "Saved packs",
   "existingDescription": "Only published packs are injected into planning sessions.",
   "revision": "Revision {revision}",
+  "status": {
+    "draft": "Draft",
+    "published": "Published",
+    "archived": "Archived"
+  },
   "edit": "Edit",
   "export": "Export Markdown",
   "empty": "No agency planning packs yet."

@@ -295,6 +295,40 @@ describe("Sidebar (workspace-aware)", () => {
     expect(planning).toHaveAttribute("aria-current", "page");
   });
 
+  it("does not mark the planning list as active on monthly or batch routes", () => {
+    for (const pathname of [
+      "/app/w/northstar/planning/monthly",
+      "/app/w/northstar/planning/batch",
+    ]) {
+      usePathnameMock.mockReturnValue(pathname);
+      const { unmount } = render(<Sidebar {...baseProps} />);
+      const monthly = screen.getByRole("link", { name: "Monthly planning" });
+      if (pathname.endsWith("/monthly")) {
+        expect(monthly).toHaveAttribute("aria-current", "page");
+      } else {
+        expect(monthly).not.toHaveAttribute("aria-current", "page");
+      }
+      expect(screen.getByRole("link", { name: "List" })).not.toHaveAttribute(
+        "aria-current",
+        "page",
+      );
+      unmount();
+    }
+  });
+
+  it("does not mark agency settings General as active on child settings routes", () => {
+    usePathnameMock.mockReturnValue("/app/agency-settings/planning-packs");
+    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
+    expect(screen.getByRole("link", { name: "Planning packs" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "General" })).not.toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
   it("ignores an unknown workspace slug in the URL (no crash, falls back to global)", () => {
     usePathnameMock.mockReturnValue("/app/w/not-a-real-slug");
     render(<Sidebar {...baseProps} />);

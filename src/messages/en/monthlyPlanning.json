@@ -24,7 +24,21 @@
     "strategy": "Strategy",
     "execution": "Execution",
     "review": "Proposal review",
-    "applied": "Applied"
+    "applied": "Applied",
+    "archived": "Archived"
+  },
+  "proposalStatus": {
+    "draft": "Draft",
+    "approved": "Approved",
+    "stale": "Needs regeneration"
+  },
+  "assumptionsTitle": "Assumptions",
+  "missingInformationTitle": "Missing information",
+  "risksTitle": "Risks to resolve",
+  "qualityTitle": "Quality check",
+  "quality": {
+    "strong": "Ready for review",
+    "revise": "Needs revision"
   },
   "status": {
     "discovery": "Discovery",

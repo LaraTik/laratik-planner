@@ -95,7 +95,7 @@ export default async function MonthlyPlanningPage({
               type="month"
               defaultValue={month}
               required
-              className="border-border bg-surface text-body h-11 rounded-[var(--radius-control)] border px-3"
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-11 w-full cursor-pointer rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2 sm:w-40"
             />
           </div>
           <Button type="submit">

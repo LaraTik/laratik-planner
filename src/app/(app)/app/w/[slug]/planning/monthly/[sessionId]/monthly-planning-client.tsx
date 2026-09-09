@@ -5,6 +5,7 @@ import { Check, FileOutput, Send, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
+import { formatDefinitionFor } from "@/lib/content/format-catalog";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 type Message = { id: string; role: string; content: string };
@@ -34,6 +35,11 @@ export function MonthlyPlanningClient({
   const abortRef = React.useRef<AbortController | null>(null);
   const stages = ["discovery", "strategy", "execution", "review"] as const;
   const stageLabel = (value: string) => t(`monthlyPlanning.stage.${value}`);
+  const proposalStatusLabel = (value: string) => t(`monthlyPlanning.proposalStatus.${value}`);
+  const formatLabel = (value: string) => {
+    const definition = formatDefinitionFor(value);
+    return definition ? t(definition.labelKey) : value;
+  };
 
   async function request(
     action: "message" | "generateProposal" | "approve" | "apply",
@@ -228,8 +234,17 @@ export function MonthlyPlanningClient({
       <div className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle>{t("monthlyPlanning.proposalTitle")}</CardTitle>
-            <CardDescription>{t("monthlyPlanning.proposalDescription")}</CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>{t("monthlyPlanning.proposalTitle")}</CardTitle>
+                <CardDescription>{t("monthlyPlanning.proposalDescription")}</CardDescription>
+              </div>
+              {proposal ? (
+                <span className="bg-surface-subtle text-fg-secondary rounded-full px-3 py-1 text-sm font-semibold">
+                  {proposalStatusLabel(proposal.status)}
+                </span>
+              ) : null}
+            </div>
           </CardHeader>
           <div className="space-y-3 p-4">
             {plan ? (
@@ -248,10 +263,71 @@ export function MonthlyPlanningClient({
                         {row.title}
                       </p>
                       <p className="text-label text-fg-muted">
-                        {row.format} · {row.brief}
+                        {formatLabel(row.format)} · {row.brief}
                       </p>
                     </div>
                   ))}
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {plan.assumptions?.length ? (
+                    <div className="bg-surface-subtle rounded-[var(--radius-control)] p-3">
+                      <p className="text-body font-semibold">
+                        {t("monthlyPlanning.assumptionsTitle")}
+                      </p>
+                      <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-4">
+                        {plan.assumptions.map((item, index) => (
+                          <li key={`${item}-${index}`} dir="auto">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {plan.missingInformation?.length ? (
+                    <div className="border-warning bg-warning-subtle rounded-[var(--radius-control)] border p-3">
+                      <p className="text-body text-warning font-semibold">
+                        {t("monthlyPlanning.missingInformationTitle")}
+                      </p>
+                      <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-4">
+                        {plan.missingInformation.map((item, index) => (
+                          <li key={`${item}-${index}`} dir="auto">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {plan.risks?.length ? (
+                    <div className="border-danger bg-danger-subtle rounded-[var(--radius-control)] border p-3">
+                      <p className="text-body text-danger font-semibold">
+                        {t("monthlyPlanning.risksTitle")}
+                      </p>
+                      <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-4">
+                        {plan.risks.map((item, index) => (
+                          <li key={`${item}-${index}`} dir="auto">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  {plan.qualitySummary ? (
+                    <div className="border-primary bg-primary-subtle rounded-[var(--radius-control)] border p-3">
+                      <p className="text-body font-semibold">{t("monthlyPlanning.qualityTitle")}</p>
+                      <p className="text-label text-fg-secondary mt-1">
+                        {t(`monthlyPlanning.quality.${plan.qualitySummary.status}`)}
+                      </p>
+                      {plan.qualitySummary.notes?.length ? (
+                        <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-4">
+                          {plan.qualitySummary.notes.map((item, index) => (
+                            <li key={`${item}-${index}`} dir="auto">
+                              {item}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
                 {plan.brandKitChanges?.length ? (
                   <div className="border-warning bg-warning-subtle rounded-[var(--radius-control)] border p-3">

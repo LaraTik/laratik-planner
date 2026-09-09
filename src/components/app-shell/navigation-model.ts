@@ -175,6 +175,7 @@ export function buildWorkspaceNavigation(input: {
               label: "List",
               labelKey: "sidebar.planningList",
               icon: ClipboardList,
+              exact: true,
             },
             {
               kind: "link",
@@ -614,6 +615,7 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               label: "General",
               labelKey: "sidebar.settingsGeneral",
               icon: Settings,
+              exact: true,
             },
             {
               kind: "link",

@@ -85,4 +85,21 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   expect(settingsOverflowsHorizontally).toBe(false);
 
   await expect(page.getByTestId("settings-health-lead-times")).toContainText("صحة الإعدادات");
+
+  await gotoStable(page, "/app/w/acme/planning/batch");
+  await expect(page.getByRole("heading", { name: "إضافة دفعة", level: 1 })).toBeVisible();
+  await expect(page.getByTestId("batch-planning-canvas")).toBeVisible();
+  const batchOverflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(batchOverflowsHorizontally).toBe(false);
+
+  await gotoStable(page, "/app/w/acme/planning/monthly");
+  await expect(page.getByRole("heading", { name: "التخطيط الشهري", level: 1 })).toBeVisible();
+
+  await gotoStable(page, "/app/w/acme/brand-kit/profile");
+  await expect(page.getByRole("heading", { name: "ملف العلامة التجارية", level: 1 })).toBeVisible();
+
+  await gotoStable(page, "/app/agency-settings/planning-packs");
+  await expect(page.getByRole("heading", { name: "حزم تعليمات التخطيط", level: 1 })).toBeVisible();
 });

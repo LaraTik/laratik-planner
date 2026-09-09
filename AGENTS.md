@@ -383,7 +383,9 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 > and Planning Packs are exposed through their intended workspace and agency
 > surfaces. Monthly planning uses the agency database master switch plus the
 > `monthly_planning_copilot` capability; provider configuration remains
-> deployment-scoped and is not a product feature flag.
+> deployment-scoped and is not a product feature flag. The responsive and
+> bilingual evidence is recorded in
+> `docs/design/PLANNING_CANVAS_UI_UX_AUDIT_2026-09-09.md`.
 
 **Release verdict (2026-08-24):** `READY FOR INDEPENDENT REVIEW` (shared across
 `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).
@@ -642,6 +644,7 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - `docs/visual-parity/MCP.md` — how to refresh the captured Stitch copy from the live MCP (auth, tools, gotchas, commit recipe)
 - `docs/operations/meta-devtools-mcp.md` — Meta Developer Tools MCP (`meta-devtools` on streamable-http) for the Just Halal GmbH business; OAuth flow, tools, app anchors, gotchas, when _not_ to use it
 - `docs/production-readiness/DESIGN_AUDIT.md` — structural audit that drove the M2/M3 refactor
+- `docs/design/PLANNING_CANVAS_UI_UX_AUDIT_2026-09-09.md` — responsive, bilingual, and interaction evidence for the planning canvas follow-up
 - `docs/production-readiness/SCREEN_PARITY.md` — 27-row matrix tracking each Stitch screen against a laratik-planner route; the responsive matrix (23 route surfaces with 73 scoped baselines) lives in `tests/e2e/visual-regression.spec.ts` and is gated by `tests/unit/stitch-cases.test.ts`
 - `docs/content/format-payload-schemas.md` — per-format `formatPayload` jsonb schemas (the structured fields under "More details")
 - `designs/stitch/DESIGN.md` — the captured token reference (color/typography/spacing)

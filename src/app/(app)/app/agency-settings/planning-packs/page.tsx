@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -47,21 +48,22 @@ export default async function PlanningPacksPage({
                 >
                   <p className="text-body font-semibold">{pack.name}</p>
                   <p className="text-label text-fg-muted">
-                    {t("planningPacks.revision", { revision: pack.revision })} · {pack.status}
+                    {t("planningPacks.revision", { revision: pack.revision })} ·{" "}
+                    {t(`planningPacks.status.${pack.status}`)}
                   </p>
                   <div className="mt-2 flex gap-3">
-                    <a
-                      className="text-label text-primary underline"
+                    <Link
+                      className="text-label text-primary focus-visible:ring-focus-ring cursor-pointer rounded underline focus:outline-none focus-visible:ring-2"
                       href={`/app/agency-settings/planning-packs?edit=${pack.id}`}
                     >
                       {t("planningPacks.edit")}
-                    </a>
-                    <a
-                      className="text-label text-primary underline"
+                    </Link>
+                    <Link
+                      className="text-label text-primary focus-visible:ring-focus-ring cursor-pointer rounded underline focus:outline-none focus-visible:ring-2"
                       href={`/api/agency/planning-packs/export?id=${pack.id}`}
                     >
                       {t("planningPacks.export")}
-                    </a>
+                    </Link>
                   </div>
                 </div>
               ))

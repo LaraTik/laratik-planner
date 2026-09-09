@@ -264,6 +264,24 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/w/acme/planning/batch", page);
   });
 
+  test("@a11y /app/w/[slug]/planning/monthly has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/planning/monthly");
+    await expectClean("/app/w/acme/planning/monthly", page);
+  });
+
+  test("@a11y /app/w/[slug]/brand-kit/profile has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/brand-kit/profile");
+    await expectClean("/app/w/acme/brand-kit/profile", page);
+  });
+
+  test("@a11y /app/agency-settings/planning-packs has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/planning-packs");
+    await expectClean("/app/agency-settings/planning-packs", page);
+  });
+
   test("@a11y /app/w/[slug]/library has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/w/acme/library");

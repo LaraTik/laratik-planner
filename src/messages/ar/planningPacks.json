@@ -15,6 +15,11 @@
   "existingTitle": "الحزم المحفوظة",
   "existingDescription": "تُحقن الحزم المنشورة فقط في جلسات التخطيط.",
   "revision": "الإصدار {revision}",
+  "status": {
+    "draft": "مسودة",
+    "published": "منشورة",
+    "archived": "مؤرشفة"
+  },
   "edit": "تحرير",
   "export": "تصدير Markdown",
   "empty": "لا توجد حزم تخطيط للوكالة بعد."

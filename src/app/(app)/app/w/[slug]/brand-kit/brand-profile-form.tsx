@@ -81,8 +81,8 @@ export function BrandProfileForm({
               defaultValue={profile.primaryLanguage}
               className="border-border bg-surface text-body focus-visible:ring-focus-ring h-11 cursor-pointer rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
             >
-              <option value="en">English</option>
-              <option value="ar">العربية</option>
+              <option value="en">{t("common.english")}</option>
+              <option value="ar">{t("common.arabic")}</option>
             </select>
           </FormField>
           <FormField
@@ -95,8 +95,8 @@ export function BrandProfileForm({
               className="border-border bg-surface text-body focus-visible:ring-focus-ring h-11 cursor-pointer rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
             >
               <option value="">{t("brandKit.profile.none")}</option>
-              <option value="en">English</option>
-              <option value="ar">العربية</option>
+              <option value="en">{t("common.english")}</option>
+              <option value="ar">{t("common.arabic")}</option>
             </select>
           </FormField>
           <div className="sm:col-span-2">

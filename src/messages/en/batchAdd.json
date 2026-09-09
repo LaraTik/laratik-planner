@@ -19,9 +19,9 @@
     "templateExample": "See the complete example",
     "templateExampleHint": "Copy the rows into Excel, Google Sheets, or Numbers, edit the title, time, brief, and channels, then paste the cells back here.",
     "templateAllChannels": "All active channels",
-    "templateDetailsNote": "Batch Add plans the idea only. Finish scenes, chapters, slide copy, visuals, captions, and other production details in More details after saving.",
+    "templateDetailsNote": "Use Creative details on each row to complete format-specific content before saving. You can continue refining it later from the draft.",
     "formatGuideTitle": "Choose the right format",
-    "formatGuideDescription": "Choose the content type now. Production details such as scenes, chapters, duration, slide copy, and visual direction are completed after the draft is created.",
+    "formatGuideDescription": "Choose the content type now, then use Creative details on each row to complete scenes, chapters, duration, slide copy, visual direction, captions, and other production details before saving.",
     "validCount": "{count} valid",
     "warningCount": "{count} warnings",
     "errorCount": "{count} errors",
@@ -82,35 +82,35 @@
     "formats": {
       "static_post": {
         "description": "One image, text, or static feed post. No video duration or scene list is required.",
-        "detail": "Later: add the hook, message, CTA, hashtags, and references."
+        "detail": "In Creative details: add the hook, message, CTA, hashtags, and references."
       },
       "carousel": {
         "description": "A sequence of images or cards for a swipeable post.",
-        "detail": "Later: define each card, message, and visual direction."
+        "detail": "In Creative details: define each card, message, and visual direction."
       },
       "story": {
         "description": "Short-lived vertical content for stories.",
-        "detail": "Later: add frames, stickers, captions, and timing."
+        "detail": "In Creative details: add frames, stickers, captions, and timing."
       },
       "short_form_video": {
         "description": "A Reel, TikTok, or Short; normally vertical and fast to watch.",
-        "detail": "Later: add scenes, on-screen text, voice-over, audio, captions, and cover direction."
+        "detail": "In Creative details: add scenes, on-screen text, voice-over, audio, captions, and cover direction."
       },
       "long_form_video": {
         "description": "A YouTube, LinkedIn, or other long-form video.",
-        "detail": "Later: add the description, chapters, captions, and references."
+        "detail": "In Creative details: add the description, chapters, captions, and references."
       },
       "live_content": {
         "description": "A live stream or scheduled broadcast.",
-        "detail": "Later: add the run of show, host, and supporting details."
+        "detail": "In Creative details: add the run of show, host, and supporting details."
       },
       "article": {
         "description": "A written article, blog post, or newsletter-style entry.",
-        "detail": "Later: add the outline, body, references, and CTA."
+        "detail": "In Creative details: add the outline, body, references, and CTA."
       },
       "other": {
         "description": "A custom content item that does not fit another format.",
-        "detail": "Later: describe the deliverable in More details."
+        "detail": "In Creative details: describe the deliverable and its requirements."
       }
     },
     "createDrafts": "Save all as drafts",

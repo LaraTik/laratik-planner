@@ -24,7 +24,21 @@
     "strategy": "الاستراتيجية",
     "execution": "التنفيذ",
     "review": "مراجعة المقترح",
-    "applied": "تم التطبيق"
+    "applied": "تم التطبيق",
+    "archived": "مؤرشفة"
+  },
+  "proposalStatus": {
+    "draft": "مسودة",
+    "approved": "تمت الموافقة",
+    "stale": "تحتاج إلى إعادة الإنشاء"
+  },
+  "assumptionsTitle": "الافتراضات",
+  "missingInformationTitle": "معلومات ناقصة",
+  "risksTitle": "مخاطر تحتاج إلى معالجة",
+  "qualityTitle": "فحص الجودة",
+  "quality": {
+    "strong": "جاهز للمراجعة",
+    "revise": "يحتاج إلى مراجعة"
   },
   "status": {
     "discovery": "الاكتشاف",
