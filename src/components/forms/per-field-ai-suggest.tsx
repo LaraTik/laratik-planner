@@ -5,6 +5,14 @@ import { Sparkles, Loader2, RotateCcw, Check, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 /**
  * Per-field AI suggest button + Insert / Replace / Try again
@@ -114,7 +122,11 @@ export function PerFieldAiSuggest({
   t,
 }: PerFieldAiSuggestProps) {
   const [state, setState] = React.useState<SuggestState>({ kind: "idle" });
+  const [replaceOpen, setReplaceOpen] = React.useState(false);
+  const [copied, setCopied] = React.useState(false);
+  const [notice, setNotice] = React.useState<string | null>(null);
   const inFlight = React.useRef<AbortController | null>(null);
+  const requestId = React.useRef(0);
 
   // When the user changes the source value (e.g. types more
   // text), an existing draft is stale. Clear it so the next
@@ -125,12 +137,19 @@ export function PerFieldAiSuggest({
   // render) is a worse user experience — the preview would
   // vanish mid-frame.
   React.useEffect(() => {
+    inFlight.current?.abort();
+    requestId.current += 1;
+    // The preview is intentionally derived from the current field value.
+    // Resetting it here prevents applying a result against stale text.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotice(null);
+    setCopied(false);
     if (state.kind === "ready" || state.kind === "error") {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState({ kind: "idle" });
     }
     // Intentionally only on `currentValue` change — we don't
     // want the preview to vanish while the user is reading it.
+    return () => inFlight.current?.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentValue]);
 
@@ -144,6 +163,8 @@ export function PerFieldAiSuggest({
     inFlight.current?.abort();
     const ctrl = new AbortController();
     inFlight.current = ctrl;
+    const id = ++requestId.current;
+    setNotice(null);
     setState({ kind: "loading" });
     try {
       const res = await fetch("/api/ai/generate", {
@@ -160,6 +181,7 @@ export function PerFieldAiSuggest({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
+        if (id !== requestId.current) return;
         setState({
           kind: "error",
           message: data.error ?? t("formatEditor.editor.ai.requestFailed", { status: res.status }),
@@ -175,6 +197,7 @@ export function PerFieldAiSuggest({
         setState({ kind: "error", message: t("formatEditor.editor.ai.emptyDraft") });
         return;
       }
+      if (id !== requestId.current) return;
       setState({ kind: "ready", text, parsed: data.parsed ?? null });
     } catch (err) {
       if ((err as { name?: string }).name === "AbortError") return;
@@ -183,6 +206,27 @@ export function PerFieldAiSuggest({
         message: (err as Error).message ?? t("formatEditor.editor.ai.unknownError"),
       });
     }
+  }
+
+  function cancelSuggest() {
+    requestId.current += 1;
+    inFlight.current?.abort();
+    inFlight.current = null;
+    setState({ kind: "idle" });
+    setNotice(t("formatEditor.editor.ai.cancelled"));
+  }
+
+  function apply(mode: "insert" | "replace") {
+    if (state.kind !== "ready") return;
+    const parsed = isHashtag
+      ? state.text
+          .split(/[\s,]+/)
+          .map((value) => value.trim())
+          .filter((value) => value.startsWith("#") && value.length > 1)
+      : state.parsed;
+    onApply(state.text, mode, parsed);
+    setNotice(t("formatEditor.editor.ai.applySuccess"));
+    setReplaceOpen(false);
   }
 
   return (
@@ -204,9 +248,22 @@ export function PerFieldAiSuggest({
       ) : null}
 
       {state.kind === "loading" ? (
-        <div className="text-label text-fg-muted inline-flex items-center gap-2">
+        <div
+          className="text-label text-fg-muted inline-flex items-center gap-2"
+          role="status"
+          aria-live="polite"
+        >
           <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
           {t("formatEditor.editor.ai.drafting")}
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="min-h-11"
+            onClick={cancelSuggest}
+          >
+            {t("formatEditor.editor.ai.cancel") || "Cancel"}
+          </Button>
         </div>
       ) : null}
 
@@ -218,39 +275,59 @@ export function PerFieldAiSuggest({
 
       {state.kind === "ready" ? (
         <div className="border-primary-subtle bg-primary-subtle/40 space-y-2 rounded-[var(--radius-control)] border p-2">
-          <p className="text-label text-fg-secondary font-semibold">
+          <p
+            className="text-label text-fg-secondary font-semibold"
+            role="status"
+            aria-live="polite"
+          >
             {contentLanguage
               ? t("formatEditor.editor.ai.suggestionHeaderWithLanguage", {
                   language: contentLanguage,
                 })
               : t("formatEditor.editor.ai.suggestionHeader")}
           </p>
+          {contentLanguage ? (
+            <span
+              className="text-label text-fg-muted inline-flex rounded-full border px-2 py-0.5"
+              aria-label={t("formatEditor.editor.ai.languageBadge", { language: contentLanguage })}
+            >
+              {contentLanguage}
+            </span>
+          ) : null}
+          <DirAwareTextarea
+            locale={locale}
+            value={state.text}
+            onChange={(event) => setState({ ...state, text: event.target.value })}
+            rows={Math.min(6, Math.max(2, state.text.split("\n").length + 1))}
+            className="bg-surface"
+            aria-label={t("formatEditor.editor.ai.suggestionHeader")}
+          />
           {isHashtag && state.parsed ? (
-            <ul className="flex flex-wrap gap-1.5">
-              {state.parsed.map((tag, i) => (
-                <li
-                  key={`${tag}-${i}`}
-                  className="border-primary-subtle bg-surface text-body text-fg-primary rounded-full border px-2 py-0.5"
-                >
-                  {tag}
-                </li>
-              ))}
+            <ul className="flex flex-wrap gap-1.5" aria-label={t("formatEditor.fields.hashtags")}>
+              {state.text
+                .split(/[\s,]+/)
+                .filter((tag) => tag.startsWith("#"))
+                .map((tag, i) => (
+                  <li
+                    key={`${tag}-${i}`}
+                    className="border-primary-subtle bg-surface text-body text-fg-primary rounded-full border px-2 py-0.5"
+                  >
+                    {tag}
+                  </li>
+                ))}
             </ul>
-          ) : (
-            <DirAwareTextarea
-              locale={locale}
-              readOnly
-              value={state.text}
-              rows={Math.min(6, Math.max(2, state.text.split("\n").length + 1))}
-              className="bg-surface"
-            />
-          )}
+          ) : null}
+          {notice ? (
+            <p className="text-label text-success" role="status" aria-live="polite">
+              {notice}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
               variant="default"
-              onClick={() => onApply(state.text, "insert", state.parsed)}
+              onClick={() => apply("insert")}
               aria-label={t("formatEditor.editor.ai.insertAria")}
             >
               <Check className="h-3.5 w-3.5" aria-hidden="true" />{" "}
@@ -260,18 +337,21 @@ export function PerFieldAiSuggest({
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => {
-                if (
-                  typeof window !== "undefined" &&
-                  !window.confirm(t("formatEditor.editor.ai.replaceConfirm"))
-                ) {
-                  return;
-                }
-                onApply(state.text, "replace", state.parsed);
-              }}
+              onClick={() => setReplaceOpen(true)}
               aria-label={t("formatEditor.editor.ai.replaceAria")}
             >
               {t("formatEditor.editor.ai.replace")}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="min-h-11"
+              onClick={() =>
+                void navigator.clipboard?.writeText(state.text).then(() => setCopied(true))
+              }
+            >
+              {copied ? t("formatEditor.editor.ai.copied") : t("formatEditor.editor.ai.copy")}
             </Button>
             <Button
               type="button"
@@ -295,6 +375,22 @@ export function PerFieldAiSuggest({
           </div>
         </div>
       ) : null}
+      <Dialog open={replaceOpen} onOpenChange={setReplaceOpen}>
+        <DialogContent closeAriaLabel={t("common.close") || "Close"}>
+          <DialogHeader>
+            <DialogTitle>{t("formatEditor.editor.ai.replaceTitle")}</DialogTitle>
+            <DialogDescription>{t("formatEditor.editor.ai.replaceBody")}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="ghost" onClick={() => setReplaceOpen(false)}>
+              {t("formatEditor.editor.ai.cancel") || "Cancel"}
+            </Button>
+            <Button type="button" onClick={() => apply("replace")}>
+              {t("formatEditor.editor.ai.confirmReplace") || t("formatEditor.editor.ai.replace")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

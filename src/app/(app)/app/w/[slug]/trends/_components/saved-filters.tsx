@@ -122,7 +122,7 @@ export function SavedFilters({
             <option value="all">{t("trends.filters.all") || "All verticals"}</option>
             {VERTICALS.map((v) => (
               <option key={v.value} value={v.value}>
-                {v.label}
+                {t(`trends.verticals.${v.value}`) || v.label}
               </option>
             ))}
           </select>

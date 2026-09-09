@@ -15,9 +15,13 @@ type Signal = React.ComponentProps<typeof TrendCard>["signal"];
 export function TrendsForYouTab({
   signals,
   onUseInBrief,
+  workspaceSlug,
+  boards = [],
 }: {
   signals: Signal[];
   onUseInBrief: (signal: Signal) => void;
+  workspaceSlug: string;
+  boards?: Array<{ id: string; name: string; description: string | null }>;
 }) {
   const t = useLocaleT();
   const ranked = [...signals]
@@ -47,6 +51,8 @@ export function TrendsForYouTab({
               <TrendCard
                 key={signal.id}
                 signal={signal}
+                workspaceSlug={workspaceSlug}
+                boards={boards}
                 onUseInBrief={() => onUseInBrief(signal)}
               />
             ))}

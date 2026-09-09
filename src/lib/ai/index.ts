@@ -367,6 +367,7 @@ export async function improveBrief(input: {
   onUsage?: (result: ChatResult) => void;
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
+  trendContext?: { label: string; platform: string; velocity: number } | undefined;
 }): Promise<string | null> {
   if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
@@ -386,6 +387,9 @@ export async function improveBrief(input: {
           `Format: ${input.format}`,
           input.audience ? `Audience: ${input.audience}` : null,
           `Brief: ${input.brief || "(empty)"}`,
+          input.trendContext
+            ? `Trend signal to turn into an angle: ${input.trendContext.label} (${input.trendContext.platform}, velocity ${input.trendContext.velocity})`
+            : null,
           contextBlock,
         ]
           .filter(Boolean)

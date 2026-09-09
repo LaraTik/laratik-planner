@@ -51,6 +51,7 @@ export interface AiAssistancePanelProps {
   className?: string;
   /** Label for the launcher button. */
   triggerLabel?: string;
+  trendContext?: { id: string; label: string };
 }
 
 export function AiAssistancePanel({
@@ -65,6 +66,7 @@ export function AiAssistancePanel({
   currentBrief,
   className,
   triggerLabel,
+  trendContext,
 }: AiAssistancePanelProps) {
   const t = useLocaleT();
   const resolvedTriggerLabel = triggerLabel ?? t("contentDetail.aiAssistance");
@@ -83,7 +85,7 @@ export function AiAssistancePanel({
         {resolvedTriggerLabel}
       </Button>
       <DialogContent
-        className="max-h-[85vh] w-[min(720px,calc(100vw-2rem))] overflow-hidden p-0"
+        className="top-0 left-0 h-[100dvh] max-h-[100dvh] w-full translate-x-0 translate-y-0 overflow-hidden rounded-none p-0 sm:top-1/2 sm:left-1/2 sm:h-auto sm:max-h-[85vh] sm:w-[min(720px,calc(100vw-2rem))] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-[var(--radius-card)]"
         data-testid="ai-assistance-panel-content"
       >
         <DialogHeader className="border-border border-b px-4 py-3">
@@ -107,7 +109,7 @@ export function AiAssistancePanel({
             </button>
           </div>
         </DialogHeader>
-        <div className="max-h-[calc(85vh-4.5rem)] overflow-y-auto px-4 py-4">
+        <div className="h-[calc(100dvh-4.5rem)] overflow-y-auto px-4 py-4 sm:h-auto sm:max-h-[calc(85vh-4.5rem)]">
           <AiAssistanceSection
             workspaceSlug={workspaceSlug}
             contentItemId={contentItemId}
@@ -118,6 +120,7 @@ export function AiAssistancePanel({
             agencyEnabled={agencyEnabled}
             hasKey={hasKey}
             currentBrief={currentBrief}
+            {...(trendContext ? { trendContext } : {})}
           />
         </div>
       </DialogContent>

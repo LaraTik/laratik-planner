@@ -18,6 +18,7 @@ type TrendSignal = {
   score: number;
   vertical: string[];
   fetchedAt: string;
+  sourceCount?: number;
 };
 
 type Optout = {
@@ -37,6 +38,8 @@ export function TrendFeed({
   onUseInBrief,
   isEmpty,
   vertical,
+  enabledSourceKeys: _enabledSourceKeys,
+  boards = [],
 }: {
   workspaceSlug: string;
   signals: TrendSignal[];
@@ -44,8 +47,11 @@ export function TrendFeed({
   onUseInBrief: (trend: TrendSignal) => void;
   isEmpty: boolean;
   vertical: string;
+  enabledSourceKeys: string[];
+  boards?: Array<{ id: string; name: string; description: string | null }>;
 }) {
   const t = useLocaleT();
+  void _enabledSourceKeys;
 
   if (isEmpty) {
     return (
@@ -123,7 +129,12 @@ export function TrendFeed({
       <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         {visibleSignals.map((signal) => (
           <li key={signal.id}>
-            <TrendCard signal={signal} onUseInBrief={() => onUseInBrief(signal)} />
+            <TrendCard
+              signal={signal}
+              workspaceSlug={workspaceSlug}
+              boards={boards}
+              onUseInBrief={() => onUseInBrief(signal)}
+            />
           </li>
         ))}
       </ul>

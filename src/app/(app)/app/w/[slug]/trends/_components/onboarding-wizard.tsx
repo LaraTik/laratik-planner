@@ -1,13 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { Compass, ShieldAlert, Sparkles, X } from "lucide-react";
+import { Compass, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { TREND_SOURCE_CATALOG, type SourceDefinition } from "@/lib/trends/source-catalog";
+import { MIN_TREND_SOURCES } from "@/lib/trends/presentation";
 
 /**
- * First-run onboarding wizard. Lets the operator pick 4+ free sources
+ * First-run onboarding wizard. Lets the operator pick at least 4 sources
  * to enable. Grey-area sources route through the ToS acknowledgement
  * modal before being added to the selection. Once the operator
  * confirms, we POST `/api/trends/sources/bulk-enable` and reload.
@@ -25,16 +33,11 @@ export function OnboardingWizard({
 }) {
   const t = useLocaleT();
 
-  // Pre-select the 4 canonical free sources so the e2e test has
-  // something to click without scripting the whole flow. Use the
-  // lazy initializer to avoid a setState in an effect (which
-  // triggers a cascading render and breaks React 19's strict-mode
-  // invariants).
   const [selected, setSelected] = React.useState<Set<string>>(() => new Set());
   const [error, setError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
 
-  const freeSources = TREND_SOURCE_CATALOG.filter((s) => s.tier === "free");
+  const availableSources = TREND_SOURCE_CATALOG.filter((s) => s.tier !== "experimental");
 
   const toggle = (source: SourceDefinition) => {
     setSelected((prev) => {
@@ -45,7 +48,7 @@ export function OnboardingWizard({
     });
   };
 
-  const canConfirm = selected.size >= 1 && !submitting;
+  const canConfirm = selected.size >= MIN_TREND_SOURCES && !submitting;
 
   const handleConfirm = async () => {
     setError(null);
@@ -75,53 +78,27 @@ export function OnboardingWizard({
   };
 
   return (
-    <>
-      {/* Backdrop — sits behind the wizard, captures stray clicks and
-          dims the workspace behind. The dialog itself scrolls
-          independently. */}
-      <div
-        aria-hidden="true"
-        className="bg-fg/40 fixed inset-0 z-40 backdrop-blur-sm"
-        onClick={onClose}
-        data-testid="onboarding-backdrop"
-      />
-      <div
+    <Dialog open onOpenChange={(open) => !open && !submitting && onClose()}>
+      <DialogContent
         data-testid="trends-onboarding-wizard"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="trends-onboarding-title"
+        closeAriaLabel={t("common.close") || "Close"}
         aria-busy={submitting}
-        className="bg-surface-card border-border fixed inset-0 z-50 overflow-y-auto border p-4 sm:p-6"
+        className="bg-surface-card h-dvh max-h-dvh max-w-4xl overflow-y-auto rounded-none p-4 sm:h-auto sm:max-h-[90dvh] sm:rounded-[var(--radius-card)] sm:p-6"
       >
         <div className="mx-auto max-w-3xl space-y-5">
-          <header className="flex items-start justify-between gap-3">
-            <div>
-              <h2
-                id="trends-onboarding-title"
-                className="text-title-section text-fg-primary flex items-center gap-2 font-semibold"
-              >
-                <Sparkles className="text-accent h-5 w-5" aria-hidden="true" />
-                {t("trends.onboarding.title") || "Pick your sources"}
-              </h2>
-              <p className="text-body text-fg-secondary mt-1">
-                {t("trends.onboarding.subtitle") ||
-                  "Choose 4 or more sources to start. You can change these any time from the source settings page."}
-              </p>
-            </div>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onClose}
-              disabled={submitting}
-              data-testid="onboarding-close"
-              aria-label={t("common.close") || "Close"}
-            >
-              <X className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </header>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="text-accent h-5 w-5" aria-hidden="true" />
+              {t("trends.onboarding.title") || "Pick your sources"}
+            </DialogTitle>
+            <DialogDescription>
+              {t("trends.onboarding.subtitle") ||
+                "Choose 4 or more sources to start. You can change these any time from the source settings page."}
+            </DialogDescription>
+          </DialogHeader>
 
           <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            {freeSources.map((source) => {
+            {availableSources.map((source) => {
               const isSelected = selected.has(source.key);
               return (
                 <li
@@ -134,7 +111,7 @@ export function OnboardingWizard({
                   <header className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-title-card text-fg-primary font-semibold">
-                        {source.displayName}
+                        {t(`trends.sources.${source.key}`) || source.displayName}
                       </p>
                       <p className="text-label text-fg-muted tracking-wide uppercase">
                         {source.tier} · {source.cadence}
@@ -158,6 +135,7 @@ export function OnboardingWizard({
                     <Button
                       type="button"
                       variant={isSelected ? "outline" : "default"}
+                      aria-pressed={isSelected}
                       onClick={() => {
                         if (source.tosClass === "grey" && !isSelected) {
                           onAcknowledgeTos(source);
@@ -183,10 +161,17 @@ export function OnboardingWizard({
           ) : null}
 
           <footer className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <p className="text-label text-fg-muted text-sm">
-              {t("trends.onboarding.selected", { count: selected.size }) ||
-                `${selected.size} selected`}
-            </p>
+            <div className="space-y-1">
+              <p className="text-label text-fg-muted text-sm" aria-live="polite">
+                {t("trends.onboarding.selected", { count: selected.size }) ||
+                  `${selected.size} selected`}
+              </p>
+              {selected.size < MIN_TREND_SOURCES ? (
+                <p className="text-label text-warning text-sm">
+                  {t("trends.onboarding.minimum") || "Select at least 4 sources to continue."}
+                </p>
+              ) : null}
+            </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
                 {t("common.skip") || "Skip for now"}
@@ -213,7 +198,7 @@ export function OnboardingWizard({
             </p>
           )}
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

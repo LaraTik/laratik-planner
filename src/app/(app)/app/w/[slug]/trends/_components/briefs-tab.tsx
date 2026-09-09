@@ -15,8 +15,10 @@ export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSl
       status: string;
       signalLabel: string | null;
       velocityAtSchedule: number | null;
+      createdAt: string;
     }>
   >([]);
+  const locale = typeof document !== "undefined" ? document.documentElement.lang || "en" : "en";
   React.useEffect(() => {
     void fetch(`/api/trends/briefs?workspace=${encodeURIComponent(_workspaceSlug)}`)
       .then((response) => (response.ok ? response.json() : { briefs: [] }))
@@ -50,8 +52,23 @@ export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSl
                 <bdi dir="auto">{brief.title}</bdi>
               </Link>
               <p className="text-label text-fg-muted mt-1">
-                <bdi dir="auto">{brief.signalLabel ?? "Trend signal"}</bdi> · {brief.status}
+                <bdi dir="auto">{brief.signalLabel ?? t("trends.briefs.signalFallback")}</bdi>
+                {" · "}
+                {t(
+                  `trends.briefs.status${brief.status
+                    .split("_")
+                    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                    .join("")}`,
+                ) || brief.status}
               </p>
+              <p className="text-label text-fg-muted mt-1">
+                {t("trends.briefs.created", {
+                  value: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
+                    new Date(brief.createdAt),
+                  ),
+                })}
+              </p>
+              <span className="sr-only">{t("trends.briefs.open") || "Open brief"}</span>
             </li>
           ))}
         </ul>

@@ -112,7 +112,14 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
 
   // Show the onboarding wizard the first time the workspace visits
   // the page (no enabled sources).
-  const showOnboarding = enabledKeys.length === 0;
+  const showOnboarding = enabledKeys.length === 0 && isAdmin;
+  const showReadOnlySetup = enabledKeys.length === 0 && !isAdmin;
+  const sourceCounts = new Map<string, Set<string>>();
+  for (const signal of signals) {
+    const sources = sourceCounts.get(signal.normalizedLabel) ?? new Set<string>();
+    sources.add(signal.sourceKey);
+    sourceCounts.set(signal.normalizedLabel, sources);
+  }
 
   return (
     <div className="space-y-6" data-testid="trends-page">
@@ -141,6 +148,7 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
           sourceKey: s.sourceKey,
           platform: s.platform,
           label: s.label,
+          sourceCount: sourceCounts.get(s.normalizedLabel)?.size ?? 1,
           sourceUrl: s.sourceUrl,
           velocity: s.velocity,
           lifecycle: s.lifecycle,
@@ -149,6 +157,7 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
           fetchedAt: s.fetchedAt.toISOString(),
         }))}
         showOnboarding={showOnboarding}
+        showReadOnlySetup={showReadOnlySetup}
       />
     </div>
   );

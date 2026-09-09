@@ -5,7 +5,14 @@ import { hasWorkspaceRole, requireWriteCapability } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
-import { aiFeatureSettings, aiUsageEvents, contentItems, workspaces } from "@/lib/db/schema";
+import {
+  aiFeatureSettings,
+  aiUsageEvents,
+  contentItems,
+  trendBriefs,
+  trendSignals,
+  workspaces,
+} from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import {
   campaignIdeas,
@@ -119,6 +126,8 @@ const Body = z.object({
    * default when unset.
    */
   contentLanguage: z.string().min(2).max(10).optional(),
+  /** Optional, validated link used by the explicit trend-angle action. */
+  trendSignalId: z.string().uuid().optional(),
   // Per master prompt §15, the user selects which context to include
   // before generation. The basic fields (title / brief / format /
   // workspace_name) are always included; the toggles below are
@@ -240,6 +249,33 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: mutatingApiHeaders() },
     );
 
+  let trendContext: { label: string; platform: string; velocity: number } | undefined;
+  if (parsed.data.trendSignalId) {
+    const [linked] = await db
+      .select({
+        label: trendSignals.label,
+        platform: trendSignals.platform,
+        velocity: trendSignals.velocity,
+      })
+      .from(trendBriefs)
+      .innerJoin(trendSignals, eq(trendSignals.id, trendBriefs.signalId))
+      .where(
+        and(
+          eq(trendBriefs.contentItemId, item.id),
+          eq(trendBriefs.workspaceId, ws.id),
+          eq(trendBriefs.signalId, parsed.data.trendSignalId),
+          eq(trendSignals.workspaceId, ws.id),
+        ),
+      )
+      .limit(1);
+    if (!linked)
+      return NextResponse.json(
+        { error: "Trend context is not linked to this content item." },
+        { status: 400, headers: mutatingApiHeaders() },
+      );
+    trendContext = linked;
+  }
+
   // FEAT-09 — load the AI context (brand voice, active campaign,
   // pillars, channels, approved-content samples) per the
   // planner's selection. The loader respects each boolean so a
@@ -337,6 +373,7 @@ export async function POST(req: NextRequest) {
       onUsage: (usage: ChatResult) => {
         providerUsage = usage;
       },
+      ...(trendContext ? { trendContext } : {}),
     };
     let text: string | null = null;
     // `brief_improvement` returns THREE variants delimited by
@@ -385,7 +422,7 @@ export async function POST(req: NextRequest) {
         }
         break;
       case "brief_improvement":
-        text = await improveBrief(baseInput);
+        text = await improveBrief({ ...baseInput, ...(trendContext ? { trendContext } : {}) });
         if (text) variants = splitVariants(text);
         break;
       case "completeness_check":

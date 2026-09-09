@@ -9,6 +9,49 @@
     "briefs": "الإحاطات",
     "discover": "اكتشف"
   },
+  "platforms": {
+    "tiktok": "تيك توك",
+    "youtube": "يوتيوب",
+    "reddit": "ريديت",
+    "meta_ads": "إعلانات ميتا",
+    "threads": "ثريدز",
+    "spotify": "سبوتيفاي",
+    "google_trends": "ترندات جوجل",
+    "x": "إكس",
+    "instagram": "إنستغرام",
+    "linkedin": "لينكدإن",
+    "pinterest": "بنترست",
+    "apify": "أبفاي"
+  },
+  "verticals": {
+    "fashion": "الأزياء",
+    "food": "الطعام",
+    "tech": "التقنية",
+    "beauty": "الجمال",
+    "finance": "المالية",
+    "travel": "السفر",
+    "fitness": "اللياقة"
+  },
+  "sources": {
+    "tiktok_creative_center": "مركز تيك توك الإبداعي",
+    "tiktok_tamnd_cli": "تيك توك (tamnd CLI)",
+    "youtube_data_api": "واجهة بيانات يوتيوب v3",
+    "reddit_json": "ريديت (نقطة JSON)",
+    "reddit_praw": "ريديت (PRAW)",
+    "meta_ads_library": "مكتبة إعلانات ميتا",
+    "threads_api": "واجهة ثريدز",
+    "spotify_web_api": "واجهة سبوتيفاي",
+    "google_trends_serpapi": "ترندات جوجل (SerpAPI)",
+    "x_twikit": "إكس (twikit)",
+    "x_v2_paid": "واجهة إكس v2 (مدفوعة)",
+    "instagram_instaloader": "إنستغرام (instaloader)",
+    "instagram_graph_api": "واجهة إنستغرام Graph",
+    "linkedin_tomquirk": "لينكدإن (tomquirk)",
+    "linkedin_marketing_api": "واجهة لينكدإن التسويقية",
+    "pinterest_api_v5": "واجهة بنترست v5",
+    "apify_x_scraper": "كاشط إكس عبر Apify",
+    "kawsarlog_threads": "KawsarLog Threads"
+  },
   "optoutBadge": "مستبعد",
   "degraded": {
     "title": "بعض المصادر غير متاحة مؤقتًا",
@@ -55,6 +98,16 @@
     "openSource": "فتح المصدر",
     "save": "حفظ في لوحة",
     "dismiss": "إخفاء",
+    "freshness": "تم التحديث {value}",
+    "whyFit": "لماذا يهم: {reason}",
+    "sourceCount": "{count} مصادر",
+    "saveSuccess": "تم الحفظ في {board}",
+    "saveError": "تعذر حفظ هذا الترند. حاول مرة أخرى.",
+    "removeSuccess": "تمت الإزالة من {board}",
+    "saveChooseBoard": "اختر لوحة",
+    "saveNoBoards": "أنشئ لوحة أولًا",
+    "saving": "جارٍ الحفظ…",
+    "removing": "جارٍ الإزالة…",
     "tosWarning": "مصدر غير رسمي — تم الإقرار بشروط الخدمة",
     "tosShort": "شروط"
   },
@@ -63,24 +116,45 @@
     "subtitle": "اختر 4 مصادر أو أكثر للبدء. يمكنك تغييرها في أي وقت من صفحة إعدادات المصادر.",
     "requiresKey": "يتطلب مفتاح API",
     "noKey": "لا حاجة لمفتاح",
-    "selected": "{count} مختار",
+    "selected": "{count} من 4 مختارة",
+    "minimum": "اختر 4 مصادر على الأقل للمتابعة.",
+    "readOnlyTitle": "لم يتم إعداد مصادر الترندات بعد",
+    "readOnlyBody": "يحتاج مسؤول الوكالة إلى تفعيل أربعة مصادر على الأقل قبل أن تتمكن مساحة العمل من استكشاف الترندات.",
+    "readOnlyCta": "اطلب من مسؤول الوكالة",
     "confirm": "ابدأ الاستكشاف",
     "submitting": "جارٍ الحفظ…",
     "error": "تعذر حفظ اختيارك. حاول مرة أخرى.",
     "adminOnly": "مسؤولو الوكالة فقط يمكنهم تغيير قائمة المصادر العامة."
   },
   "forYou": {
-    "title": "مخصص لك",
-    "body": "بمجرد حفظك لبعض الترندات في لوحات واستخدامها في إحاطات، سيتعلم نموذج التوافق ما تنشره فعلاً ويعرض أعلى الإشارات هنا."
+    "title": "أعلى الإشارات",
+    "body": "مرتبة حسب التوافق والزخم الحاليين. هذا العرض ليس مخصصًا لك بعد."
   },
   "boards": {
     "title": "اللوحات",
     "body": "أنشئ مجموعات لمساحة العمل للعروض والحملات ومراجعات العملاء.",
-    "namePlaceholder": "اسم اللوحة"
+    "namePlaceholder": "اسم اللوحة",
+    "create": "إنشاء لوحة",
+    "savedCount": "{count} ترند محفوظ",
+    "emptyItems": "احفظ ترندًا هنا لتعود إليه لاحقًا.",
+    "remove": "إزالة",
+    "createBrief": "إنشاء إحاطة",
+    "loading": "جارٍ تحميل اللوحة…",
+    "loadError": "تعذر تحميل هذه اللوحة. حاول مرة أخرى."
   },
   "briefs": {
     "title": "إحاطات مغلقة الحلقة",
-    "body": "الإحاطات التي بدأت من ترند، مع أداء النشر، ستظهر هنا بمجرد إنشائها عبر 'استخدم في إحاطة'."
+    "body": "تبقى الإحاطات التي بدأت من ترند مرتبطة هنا لتتابع الفكرة حتى التخطيط والنشر.",
+    "open": "فتح الإحاطة",
+    "signalFallback": "إشارة ترند",
+    "created": "أُنشئت {value}",
+    "statusDraft": "مسودة",
+    "statusInReview": "قيد المراجعة",
+    "statusChangesRequested": "مطلوب تغييرات",
+    "statusApproved": "معتمدة",
+    "statusScheduled": "مجدولة",
+    "statusPublished": "منشورة",
+    "statusArchived": "مؤرشفة"
   },
   "admin": {
     "title": "مصادر الترندات",

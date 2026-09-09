@@ -16,6 +16,34 @@ import { TrendSourceTosModal } from "@/components/ai/trend-source-tos-modal";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { SourceDefinition } from "@/lib/trends/source-catalog";
 
+function ReadOnlyTrendSetup() {
+  const t = useLocaleT();
+  return (
+    <div
+      data-testid="trends-readonly-setup"
+      role="status"
+      className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-6 sm:p-8"
+    >
+      <div className="flex items-start gap-3">
+        <Settings2 className="text-fg-muted mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <div className="space-y-2">
+          <h2 className="text-title-card text-fg-primary font-semibold">
+            {t("trends.onboarding.readOnlyTitle") || "Trend sources are not configured yet"}
+          </h2>
+          <p className="text-body text-fg-secondary">
+            {t("trends.onboarding.readOnlyBody") ||
+              "An agency admin needs to enable at least four sources before this workspace can explore trends."}
+          </p>
+          <p className="text-label text-fg-muted">
+            {t("trends.onboarding.adminOnly") ||
+              "Only agency admins can change the global source list. Contact your agency admin to request access."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type TrendSignal = {
   id: string;
   sourceKey: string;
@@ -57,11 +85,12 @@ type Optout = {
 export function TrendsPageClient({
   workspaceSlug,
   isAdmin,
-  enabledKeys: _enabledKeys,
+  enabledKeys,
   health,
   optouts,
   signals,
   showOnboarding,
+  showReadOnlySetup,
 }: {
   workspaceSlug: string;
   isAdmin: boolean;
@@ -70,14 +99,24 @@ export function TrendsPageClient({
   optouts: Optout[];
   signals: TrendSignal[];
   showOnboarding: boolean;
+  showReadOnlySetup: boolean;
 }) {
   const t = useLocaleT();
   const router = useRouter();
   const [tab, setTab] = React.useState<"explore" | "for-you" | "boards" | "briefs">("explore");
   const [wizardOpen, setWizardOpen] = React.useState(showOnboarding);
   const [tosSource, setTosSource] = React.useState<SourceDefinition | null>(null);
+  const [boards, setBoards] = React.useState<
+    Array<{ id: string; name: string; description: string | null }>
+  >([]);
   const [vertical, setVertical] = React.useState<string>("all");
-  void _enabledKeys;
+
+  React.useEffect(() => {
+    void fetch(`/api/trends/boards?workspace=${encodeURIComponent(workspaceSlug)}`)
+      .then((response) => (response.ok ? response.json() : { boards: [] }))
+      .then((body: { boards?: typeof boards }) => setBoards(body.boards ?? []))
+      .catch(() => setBoards([]));
+  }, [workspaceSlug]);
 
   // Sources whose circuit breaker is OPEN.
   const degraded = health.filter((h) => h.circuitState === "open");
@@ -162,20 +201,31 @@ export function TrendsPageClient({
         </div>
 
         <TabsContent value="explore" className="space-y-4">
-          <TrendFeed
-            workspaceSlug={workspaceSlug}
-            signals={signals}
-            vertical={vertical}
-            optouts={optouts}
-            onUseInBrief={handleUseInBrief}
-            isEmpty={!showOnboarding && signals.length === 0}
-          />
+          {showReadOnlySetup ? (
+            <ReadOnlyTrendSetup />
+          ) : (
+            <TrendFeed
+              workspaceSlug={workspaceSlug}
+              signals={signals}
+              vertical={vertical}
+              optouts={optouts}
+              onUseInBrief={handleUseInBrief}
+              isEmpty={!showOnboarding && signals.length === 0}
+              enabledSourceKeys={enabledKeys}
+              boards={boards}
+            />
+          )}
         </TabsContent>
         <TabsContent value="for-you">
-          <TrendsForYouTab signals={signals} onUseInBrief={handleUseInBrief} />
+          <TrendsForYouTab
+            signals={signals}
+            workspaceSlug={workspaceSlug}
+            boards={boards}
+            onUseInBrief={handleUseInBrief}
+          />
         </TabsContent>
         <TabsContent value="boards">
-          <TrendsBoardsTab workspaceSlug={workspaceSlug} />
+          <TrendsBoardsTab workspaceSlug={workspaceSlug} onBoardsChange={setBoards} />
         </TabsContent>
         <TabsContent value="briefs">
           <TrendsBriefsTab workspaceSlug={workspaceSlug} />

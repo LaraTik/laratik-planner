@@ -9,6 +9,49 @@
     "briefs": "Briefs",
     "discover": "Discover"
   },
+  "platforms": {
+    "tiktok": "TikTok",
+    "youtube": "YouTube",
+    "reddit": "Reddit",
+    "meta_ads": "Meta Ads",
+    "threads": "Threads",
+    "spotify": "Spotify",
+    "google_trends": "Google Trends",
+    "x": "X",
+    "instagram": "Instagram",
+    "linkedin": "LinkedIn",
+    "pinterest": "Pinterest",
+    "apify": "Apify"
+  },
+  "verticals": {
+    "fashion": "Fashion",
+    "food": "Food",
+    "tech": "Tech",
+    "beauty": "Beauty",
+    "finance": "Finance",
+    "travel": "Travel",
+    "fitness": "Fitness"
+  },
+  "sources": {
+    "tiktok_creative_center": "TikTok Creative Center",
+    "tiktok_tamnd_cli": "TikTok (tamnd CLI)",
+    "youtube_data_api": "YouTube Data API v3",
+    "reddit_json": "Reddit (JSON endpoint)",
+    "reddit_praw": "Reddit (PRAW)",
+    "meta_ads_library": "Meta Ad Library",
+    "threads_api": "Threads API",
+    "spotify_web_api": "Spotify Web API",
+    "google_trends_serpapi": "Google Trends (SerpAPI)",
+    "x_twikit": "X (twikit)",
+    "x_v2_paid": "X API v2 (paid)",
+    "instagram_instaloader": "Instagram (instaloader)",
+    "instagram_graph_api": "Instagram Graph API",
+    "linkedin_tomquirk": "LinkedIn (tomquirk)",
+    "linkedin_marketing_api": "LinkedIn Marketing API",
+    "pinterest_api_v5": "Pinterest API v5",
+    "apify_x_scraper": "Apify X Scraper",
+    "kawsarlog_threads": "KawsarLog Threads"
+  },
   "optoutBadge": "opted out",
   "degraded": {
     "title": "Some sources are temporarily unavailable",
@@ -55,6 +98,16 @@
     "openSource": "Open source",
     "save": "Save to board",
     "dismiss": "Dismiss",
+    "freshness": "Updated {value}",
+    "whyFit": "Why this matters: {reason}",
+    "sourceCount": "{count} sources",
+    "saveSuccess": "Saved to {board}",
+    "saveError": "Could not save this trend. Try again.",
+    "removeSuccess": "Removed from {board}",
+    "saveChooseBoard": "Choose a board",
+    "saveNoBoards": "Create a board first",
+    "saving": "Saving…",
+    "removing": "Removing…",
     "tosWarning": "Unofficial source — ToS acknowledgement on file",
     "tosShort": "TOS"
   },
@@ -63,24 +116,45 @@
     "subtitle": "Choose 4 or more sources to start. You can change these any time from the source settings page.",
     "requiresKey": "Requires API key",
     "noKey": "No key needed",
-    "selected": "{count} selected",
+    "selected": "{count} of 4 selected",
+    "minimum": "Select at least 4 sources to continue.",
+    "readOnlyTitle": "Trend sources are not configured yet",
+    "readOnlyBody": "An agency admin needs to enable at least four sources before this workspace can explore trends.",
+    "readOnlyCta": "Ask an agency admin",
     "confirm": "Start exploring",
     "submitting": "Saving…",
     "error": "Could not save your selection. Try again.",
     "adminOnly": "Only agency admins can change the global source list. Contact them to add more."
   },
   "forYou": {
-    "title": "Personalized for you",
-    "body": "Once you've saved a few trends to boards and used them in briefs, the Fit score will learn what you actually publish and surface the highest-signal matches here."
+    "title": "Highest signal",
+    "body": "Ranked by current fit and momentum. This view is not personalized yet."
   },
   "boards": {
     "title": "Boards",
     "body": "Create workspace collections for pitches, campaigns, or client reviews.",
-    "namePlaceholder": "Board name"
+    "namePlaceholder": "Board name",
+    "create": "Create board",
+    "savedCount": "{count} saved trends",
+    "emptyItems": "Save a trend here to make it useful later.",
+    "remove": "Remove",
+    "createBrief": "Create brief",
+    "loading": "Loading board…",
+    "loadError": "Could not load this board. Try again."
   },
   "briefs": {
     "title": "Closed-loop briefs",
-    "body": "Briefs that started from a trend, with their published performance, will appear here once you create one with 'Use in brief'."
+    "body": "Briefs that started from a trend stay linked here so you can follow the idea into planning and publishing.",
+    "open": "Open brief",
+    "signalFallback": "Trend signal",
+    "created": "Created {value}",
+    "statusDraft": "Draft",
+    "statusInReview": "In review",
+    "statusChangesRequested": "Changes requested",
+    "statusApproved": "Approved",
+    "statusScheduled": "Scheduled",
+    "statusPublished": "Published",
+    "statusArchived": "Archived"
   },
   "admin": {
     "title": "Trend sources",

@@ -60,7 +60,14 @@ import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { aiFeatureSettings, agencies, socialChannels, users } from "@/lib/db/schema";
+import {
+  aiFeatureSettings,
+  agencies,
+  socialChannels,
+  trendBriefs,
+  trendSignals,
+  users,
+} from "@/lib/db/schema";
 import { and, eq, isNull } from "drizzle-orm";
 import { EditDetailsDrawer } from "@/components/planning/edit-details-drawer";
 import { getActiveApiKey } from "@/lib/ai";
@@ -137,6 +144,12 @@ export default async function ContentDetailPage({
 
   const item = await getContentItem(actor, id);
   if (!item || item.workspaceId !== ws.id) notFound();
+  const [linkedTrend] = await db
+    .select({ id: trendSignals.id, label: trendSignals.label })
+    .from(trendBriefs)
+    .innerJoin(trendSignals, eq(trendSignals.id, trendBriefs.signalId))
+    .where(and(eq(trendBriefs.contentItemId, item.id), eq(trendBriefs.workspaceId, ws.id)))
+    .limit(1);
 
   const roles = await getWorkspaceRoles(actor, ws.id);
   const actorRoles = {
@@ -896,6 +909,9 @@ export default async function ContentDetailPage({
                           agencyEnabled={agencyEnabled}
                           hasKey={hasKey}
                           currentBrief={item.brief ?? ""}
+                          {...(linkedTrend
+                            ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
+                            : {})}
                         />
                       ) : null}
                       {canEdit ? (

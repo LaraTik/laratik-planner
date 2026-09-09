@@ -34,6 +34,12 @@ export function DiffPreview({
   onConfirmedChange,
   confirmId,
   testIdPrefix = "ai-diff",
+  emptyLabel = "(empty)",
+  noSizeChangeLabel = "No size change.",
+  lineLabel = "{count} lines",
+  characterLabel = "{count} characters",
+  confirmLabel = "I understand this will replace the current brief.",
+  confirmBody = "The previous text is shown above; the new text below. Once you confirm, the new text becomes the live brief.",
 }: {
   before: string;
   after: string;
@@ -47,10 +53,16 @@ export function DiffPreview({
   /** Used as the checkbox `id` so the label `htmlFor` resolves. Defaults to a stable string. */
   confirmId?: string;
   testIdPrefix?: string;
+  emptyLabel?: string;
+  noSizeChangeLabel?: string;
+  lineLabel?: string;
+  characterLabel?: string;
+  confirmLabel?: string;
+  confirmBody?: string;
 }) {
   const id = confirmId ?? `${testIdPrefix}-confirm`;
-  const beforeLines = before.length === 0 ? ["(empty)"] : before.split("\n");
-  const afterLines = after.length === 0 ? ["(empty)"] : after.split("\n");
+  const beforeLines = before.length === 0 ? [emptyLabel] : before.split("\n");
+  const afterLines = after.length === 0 ? [emptyLabel] : after.split("\n");
   // The model rewrites the whole brief ~95% of the time, so a
   // per-line diff would be noise. We show both blocks whole
   // and call out the line-count delta — that's the most
@@ -84,8 +96,8 @@ export function DiffPreview({
       >
         <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         {lineDelta === 0 && charDelta === 0
-          ? "No size change."
-          : `${lineDelta > 0 ? "+" : ""}${lineDelta} line${Math.abs(lineDelta) === 1 ? "" : "s"}, ${charDelta > 0 ? "+" : ""}${charDelta} character${Math.abs(charDelta) === 1 ? "" : "s"}.`}
+          ? noSizeChangeLabel
+          : `${lineLabel.replace("{count}", `${lineDelta > 0 ? "+" : ""}${lineDelta}`)}, ${characterLabel.replace("{count}", `${charDelta > 0 ? "+" : ""}${charDelta}`)}.`}
       </p>
       <div
         className="border-border bg-warning-soft text-body text-fg-primary flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
@@ -99,13 +111,8 @@ export function DiffPreview({
           data-testid={`${testIdPrefix}-confirm`}
         />
         <label htmlFor={id} className="min-w-0 flex-1 cursor-pointer">
-          <span className="block font-semibold">
-            I understand this will replace the current brief.
-          </span>
-          <span className="text-fg-secondary block">
-            The previous text is shown above; the new text below. Once you confirm, the new text
-            becomes the live brief.
-          </span>
+          <span className="block font-semibold">{confirmLabel}</span>
+          <span className="text-fg-secondary block">{confirmBody}</span>
         </label>
       </div>
     </div>

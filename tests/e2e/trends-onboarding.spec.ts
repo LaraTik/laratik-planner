@@ -10,7 +10,7 @@ import { bootstrapTestSession } from "./_helpers";
  * Steps:
  *   1. Visit /app/w/{slug}/trends as a workspace manager.
  *   2. Wizard appears with a list of available sources.
- *   3. Pick 4 free sources.
+ *   3. Pick at least 4 sources.
  *   4. Wizard confirms and the page transitions to the live feed.
  *   5. The feed has at least one trend card per enabled source.
  *
@@ -34,8 +34,13 @@ test.describe("Trend Radar — first-run onboarding", () => {
     const wizard = page.getByTestId("trends-onboarding-wizard");
     await expect(wizard).toBeVisible({ timeout: 10_000 });
 
-    // 2. Pick 4 free sources by their stable test ids.
-    for (const key of ["reddit_json", "reddit_praw", "tiktok_creative_center"]) {
+    // 2. Pick 4 sources by their stable test ids.
+    for (const key of [
+      "reddit_json",
+      "reddit_praw",
+      "tiktok_creative_center",
+      "youtube_data_api",
+    ]) {
       const card = wizard.getByTestId(`source-card-${key}`);
       await expect(card).toBeVisible();
       await card.getByRole("button", { name: /enable/i }).click();

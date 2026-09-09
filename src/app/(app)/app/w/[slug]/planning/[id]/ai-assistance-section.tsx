@@ -164,6 +164,7 @@ export function AiAssistanceSection({
   agencyEnabled,
   hasKey,
   currentBrief,
+  trendContext,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -179,6 +180,7 @@ export function AiAssistanceSection({
    * "before" side without an extra round-trip.
    */
   currentBrief: string;
+  trendContext?: { id: string; label: string };
 }) {
   const t = useLocaleT();
   const translatePath = (...segments: string[]) => t(segments.join("."));
@@ -195,6 +197,11 @@ export function AiAssistanceSection({
   const [platformTarget, setPlatformTarget] = React.useState<
     "instagram" | "tiktok" | "linkedin" | "x"
   >("instagram");
+  const requestController = React.useRef<AbortController | null>(null);
+  const requestId = React.useRef(0);
+  const [copied, setCopied] = React.useState(false);
+
+  React.useEffect(() => () => requestController.current?.abort(), []);
 
   const canUse = isManager || isPlanner;
   const canEditBrief = contentStatus === "draft" || contentStatus === "changes_requested";
@@ -209,8 +216,14 @@ export function AiAssistanceSection({
     setReplaceConfirmed(false);
   }, []);
 
-  const onInvoke = async (capabilityId: string) => {
+  const onInvoke = async (capabilityId: string, requestedTrendSignalId?: string) => {
+    if (pendingId) return;
+    requestController.current?.abort();
+    const controller = new AbortController();
+    requestController.current = controller;
+    const id = ++requestId.current;
     setError(null);
+    setCopied(false);
     setPendingId(capabilityId);
     setDraft(null);
     setApplied(null);
@@ -224,11 +237,14 @@ export function AiAssistanceSection({
           contentItemId,
           capability: capabilityId,
           contextSelection,
+          ...(requestedTrendSignalId ? { trendSignalId: requestedTrendSignalId } : {}),
           ...(capabilityId === "platform_adaptation"
             ? { targetPlatform: platformTarget, sourceText: draft?.variants[0]?.text ?? "" }
             : {}),
         }),
+        signal: controller.signal,
       });
+      if (id !== requestId.current) return;
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string };
         setError(
@@ -263,15 +279,26 @@ export function AiAssistanceSection({
       setDraft({ capabilityId, variants });
       setSelectedVariantId(variants[0]?.id ?? null);
     } catch (e) {
-      setError((e as Error).message);
+      if ((e as Error).name !== "AbortError" && id === requestId.current) {
+        setError((e as Error).message);
+      }
     } finally {
-      setPendingId(null);
+      if (id === requestId.current) setPendingId(null);
     }
+  };
+
+  const cancelInvoke = () => {
+    requestId.current += 1;
+    requestController.current?.abort();
+    requestController.current = null;
+    setPendingId(null);
+    setError(t("contentDetail.aiAssistanceSurface.cancelled"));
   };
 
   const onCopy = async (text: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      setCopied(true);
     } catch {
       // ignore — user can still select and copy manually
     }
@@ -340,6 +367,38 @@ export function AiAssistanceSection({
         ) : null}
       </header>
       <CardDescription>{t("contentDetail.aiAssistanceSurface.draftsOnly")}</CardDescription>
+
+      {trendContext ? (
+        <div className="border-primary-subtle bg-primary-subtle/30 mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3">
+          <div className="min-w-0">
+            <p className="text-body text-fg-primary font-semibold">
+              {t("contentDetail.aiAssistanceSurface.trendAngle")}
+            </p>
+            <p className="text-label text-fg-secondary mt-1">
+              {t("contentDetail.aiAssistanceSurface.trendAngleDescription")}
+            </p>
+            <bdi dir="auto" className="text-label text-fg-muted mt-1 block truncate">
+              {trendContext.label}
+            </bdi>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="min-h-11"
+            onClick={() => onInvoke("brief_improvement", trendContext.id)}
+            disabled={
+              Boolean(pendingId) ||
+              !agencyEnabled ||
+              !hasKey ||
+              !enabledCapabilities.includes("brief_improvement")
+            }
+            data-testid="ai-suggest-trend-angle"
+          >
+            <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("contentDetail.aiAssistanceSurface.trendAngle")}
+          </Button>
+        </div>
+      ) : null}
 
       {!agencyEnabled || !hasKey ? (
         <div
@@ -418,6 +477,27 @@ export function AiAssistanceSection({
         </ul>
       </details>
 
+      {pendingId ? (
+        <div
+          className="border-border bg-surface-subtle mt-4 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="text-label text-fg-secondary">
+            {t("contentDetail.aiAssistanceSurface.working")}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-11"
+            onClick={cancelInvoke}
+          >
+            {t("contentDetail.aiAssistanceSurface.cancel") || "Cancel"}
+          </Button>
+        </div>
+      ) : null}
+
       <ul
         className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-3"
         data-testid="ai-capability-actions"
@@ -484,7 +564,7 @@ export function AiAssistanceSection({
                 size="sm"
                 variant={on ? "default" : "outline"}
                 onClick={() => onInvoke(cap.id)}
-                disabled={isPending || !on}
+                disabled={Boolean(pendingId) || !on}
                 data-testid={`ai-action-${cap.id}-button`}
               >
                 <Wand2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -510,6 +590,7 @@ export function AiAssistanceSection({
       {error ? (
         <p
           role="alert"
+          aria-live="assertive"
           data-testid="ai-assistance-error"
           className="text-body text-danger mt-4 font-semibold"
         >
@@ -661,7 +742,9 @@ export function AiAssistanceSection({
                   onClick={() => onCopy(selectedVariant.text)}
                   data-testid="ai-assistance-copy"
                 >
-                  {t("contentDetail.aiAssistanceSurface.copy")}
+                  {copied
+                    ? t("contentDetail.aiAssistanceSurface.copied")
+                    : t("contentDetail.aiAssistanceSurface.copy")}
                 </Button>
                 <Button
                   type="button"
@@ -695,6 +778,12 @@ export function AiAssistanceSection({
               confirmed={replaceConfirmed}
               onConfirmedChange={setReplaceConfirmed}
               testIdPrefix="ai-diff"
+              emptyLabel={t("contentDetail.aiAssistanceSurface.diffEmpty")}
+              noSizeChangeLabel={t("contentDetail.aiAssistanceSurface.diffNoSizeChange")}
+              lineLabel={t("contentDetail.aiAssistanceSurface.diffLines")}
+              characterLabel={t("contentDetail.aiAssistanceSurface.diffCharacters")}
+              confirmLabel={t("contentDetail.aiAssistanceSurface.diffConfirm")}
+              confirmBody={t("contentDetail.aiAssistanceSurface.diffBody")}
             />
           ) : null}
 
