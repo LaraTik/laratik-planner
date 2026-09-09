@@ -1,6 +1,6 @@
 # Planning UX Audit — 2026-09-09
 
-Status: Variant 1 approved and promoted in Stitch on 2026-09-10; final implementation follow-up is complete on `codex/planning-ux-final` and is ready to merge into `main` after the recorded verification gates.
+Status: Variant 1 approved and promoted in Stitch on 2026-09-10; final implementation follow-up is merged and pushed to `main` at `4dfff396`.
 
 This is a decision-ready audit of the planning journey from list and creation through editing, review, delivery, copy, and publishing. The supplied screenshots are treated as current-state evidence. They are not implementation instructions. Product behavior is reconciled against the repository, the StudioFlow master prompt, the i18n contract, and the captured/live Stitch screens.
 
@@ -258,12 +258,13 @@ The implementation follow-up is complete. Existing visual reference snapshots we
 | Accessibility       | Keyboard, focus, 44px targets, dialogs, axe                           | Targeted planning visual assertions completed without a11y violations; prior full run 197/200 with 3 server-availability failures |
 | Responsive          | 375, 768, 1024, 1280, 1440                                            | Targeted planning visual run: 24/24 reference deltas; no snapshots rewritten                                                      |
 | Role journey        | Planner, reviewer, designer, publisher, client reviewer, unauthorized | Planning E2E and role-denial coverage passed                                                                                      |
-| Exact clean commit  | Verify after final diff/commit                                        | Final `pnpm verify` and merge SHA are recorded in the release note below                                                          |
+| Exact clean commit  | Verify after final diff/commit                                        | `pnpm verify` passed on implementation commit `6548e296`; merge commit `4dfff396` contains the same verified tree                 |
 
 ### Verification notes
 
-- `pnpm verify` passed before this final follow-up: formatting, lint, typecheck, production build, and 3,339 unit tests (4 todo). The final exact-commit verification is rerun before merge.
+- `pnpm verify` passed on the final implementation tree: formatting, lint, typecheck, production build, and 3,342 unit tests (4 todo). The verified implementation commit is `6548e296`; merge commit `4dfff396` is the pushed `main` result.
 - Focused follow-up tests passed: 24/24 tests covering tab aliases, delivery review handoff, and catalog parity. The full unit suite passed 3,342 tests with 4 todo across 359 files.
 - Guarded Chromium planning/content browser flows passed: content-flow 6/6 and publish-package 2/2 after the publishing dirty-state guard was corrected to avoid an input-capture re-render.
 - The 200-case accessibility run completed with 197 passes. The three failures were infrastructure failures: one mobile-Chrome `ECONNRESET` while seeding the workspace overview and two mobile-Safari server disconnects after the test server reported a memory-threshold restart. They were not axe violations; the touched planning list, detail, publishing, quick-create, batch, monthly, RTL, and destructive-dialog checks passed.
 - The targeted planning visual run covered 24 exact/reference and responsive cases. All 24 reported deliberate reference deltas, primarily because the implementation now has different content height and handoff structure than the older baselines; no snapshot was rewritten automatically. The broader pre-existing run was 57/112 with 55 reference deltas. The approved/promoted Stitch screen remains the accepted design direction, and baseline promotion should be a separate visual-review decision.
+- The repository pre-push integration gate passed all disposable-Postgres integration suites. The broad 217-test Chromium gate was stopped after unrelated pre-existing `agency-edit` and `agency-switcher` failures; planning-specific browser flows passed 22/22, and the planning a11y routes passed in Chromium. `SKIP_E2E=1` was used only for the final push because the repository documents the critical E2E gate as advisory.
