@@ -22,6 +22,7 @@ import {
   Package,
   Palette,
   PlugZap,
+  Radar,
   Settings,
   Share2,
   Shield,
@@ -132,8 +133,10 @@ export function buildWorkspaceNavigation(input: {
   canCreateContent: boolean;
   /** Whether the actor sees management items (admin/manager). */
   canManage: boolean;
+  /** Whether Trend Radar is enabled for the active agency and deployment. */
+  canAccessTrendRadar: boolean;
 }): { top: SidebarLinkSpec[]; groups: SidebarGroupSpec[]; createContentHref: string | null } {
-  const { wsBase, badges, canManage } = input;
+  const { wsBase, badges, canManage, canAccessTrendRadar } = input;
 
   const top: SidebarLinkSpec[] = [
     {
@@ -190,6 +193,18 @@ export function buildWorkspaceNavigation(input: {
             },
           ],
         },
+        ...(canAccessTrendRadar
+          ? [
+              {
+                kind: "link" as const,
+                key: "trends",
+                href: `${wsBase}/trends`,
+                label: "Trend Radar",
+                labelKey: "sidebar.trends",
+                icon: Radar,
+              },
+            ]
+          : []),
         {
           kind: "link",
           key: "approvals",
@@ -447,6 +462,18 @@ export function buildWorkspaceNavigation(input: {
               labelKey: "sidebar.settingsAiAssistance",
               icon: Bot,
             },
+            ...(canAccessTrendRadar
+              ? [
+                  {
+                    kind: "link" as const,
+                    key: "settings-trends",
+                    href: `${wsBase}/settings/trends`,
+                    label: "Trend settings",
+                    labelKey: "sidebar.settingsTrends",
+                    icon: Radar,
+                  },
+                ]
+              : []),
             {
               kind: "link",
               key: "settings-templates",
@@ -479,13 +506,21 @@ export type AgencyNavigationInput = {
   platformAccess: PlatformNavigationAccess;
   unreadAppErrors?: number;
   canAccessMedia?: boolean;
+  /** Whether Trend Radar is enabled for the active agency and deployment. */
+  canAccessTrendRadar: boolean;
 };
 
 export function buildAgencyNavigation(input: AgencyNavigationInput): {
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
 } {
-  const { isAdmin, platformAccess, unreadAppErrors, canAccessMedia = true } = input;
+  const {
+    isAdmin,
+    platformAccess,
+    unreadAppErrors,
+    canAccessMedia = true,
+    canAccessTrendRadar,
+  } = input;
 
   const top: SidebarLinkSpec[] = [
     {
@@ -579,6 +614,18 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               labelKey: "sidebar.settingsAiConfiguration",
               icon: Bot,
             },
+            ...(canAccessTrendRadar
+              ? [
+                  {
+                    kind: "link" as const,
+                    key: "agency-settings-trend-sources",
+                    href: "/app/agency-settings/trend-sources",
+                    label: "Trend sources",
+                    labelKey: "sidebar.settingsTrendSources",
+                    icon: Radar,
+                  },
+                ]
+              : []),
             {
               kind: "link",
               key: "agency-settings-social",

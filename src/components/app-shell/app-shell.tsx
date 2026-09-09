@@ -68,6 +68,7 @@ export function AppShell({
   notifications,
   unreadCount,
   platformAccess,
+  canAccessTrendRadar = false,
   supportGrants = [],
   workspaceBadges,
   unreadAppErrors = 0,
@@ -100,6 +101,7 @@ export function AppShell({
   }[];
   unreadCount: number;
   platformAccess: PlatformNavigationAccess;
+  canAccessTrendRadar?: boolean;
   supportGrants?: Array<{
     id: string;
     targetAgencyId: string;
@@ -152,6 +154,7 @@ export function AppShell({
           agencySwitcher={agencySwitcher}
           canCreateWorkspace={canCreateWorkspace}
           platformAccess={platformAccess}
+          canAccessTrendRadar={canAccessTrendRadar}
           workspaceBadgesByWorkspaceId={workspaceBadges ?? {}}
           unreadAppErrors={unreadAppErrors}
           collapsed={sidebarCollapsed}
@@ -231,6 +234,7 @@ export function AppShell({
         agencySwitcher={agencySwitcher}
         canCreateWorkspace={canCreateWorkspace}
         platformAccess={platformAccess}
+        canAccessTrendRadar={canAccessTrendRadar}
         labels={chrome.sidebar}
       />
     </div>

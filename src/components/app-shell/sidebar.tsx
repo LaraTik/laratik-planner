@@ -65,6 +65,7 @@ export function Sidebar({
   agencySwitcher,
   canCreateWorkspace,
   platformAccess,
+  canAccessTrendRadar = false,
   workspaceBadgesByWorkspaceId = {},
   unreadAppErrors = 0,
   collapsed = false,
@@ -79,6 +80,7 @@ export function Sidebar({
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
+  canAccessTrendRadar?: boolean;
   workspaceBadgesByWorkspaceId?: Record<string, { approvals: number; designQueue: number }>;
   unreadAppErrors?: number;
   collapsed?: boolean;
@@ -129,6 +131,7 @@ export function Sidebar({
         platformAccess,
         unreadAppErrors,
         canAccessMedia: user.isAdmin || Object.values(workspaceAccess).includes("internal"),
+        canAccessTrendRadar,
       })
     : null;
   const clientNav =
@@ -145,6 +148,7 @@ export function Sidebar({
           },
           canCreateContent,
           canManage: user.isAdmin || workspaceCanCreateContent[currentWorkspace.id] === true,
+          canAccessTrendRadar,
         })
       : null;
   const createContentHref = workspaceNav?.createContentHref ?? null;

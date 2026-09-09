@@ -13,6 +13,7 @@
   "planningList": "قائمة",
   "planningBoard": "لوحة",
   "planningCalendar": "تقويم",
+  "trends": "رادار الترندات",
   "approvals": "الموافقات",
   "designQueue": "قائمة التصميم",
   "designQueuePage": {
@@ -66,6 +67,7 @@
   "settingsApprovalMode": "وضع الموافقة",
   "settingsMetaPublishing": "النشر عبر Meta",
   "settingsAiAssistance": "مساعدة الذكاء الاصطناعي",
+  "settingsTrends": "إعدادات الترندات",
   "settingsPresets": "الإعدادات المسبقة",
   "myWork": "عملي",
   "agencyGroup": "الوكالة",
@@ -76,6 +78,7 @@
   "settingsGeneral": "عام",
   "settingsPlan": "الخطة والاستخدام",
   "settingsAiConfiguration": "إعدادات الذكاء الاصطناعي",
+  "settingsTrendSources": "مصادر الترندات",
   "settingsSocialAnalytics": "تحليلات التواصل الاجتماعي",
   "settingsSocialProviders": "إعداد موفري التواصل الاجتماعي",
   "settingsStorage": "تخزين الوسائط",

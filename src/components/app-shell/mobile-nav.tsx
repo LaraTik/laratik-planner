@@ -24,6 +24,7 @@ import {
   Palette,
   PlugZap,
   Plus,
+  Radar,
   Settings,
   Share2,
   Shield,
@@ -55,6 +56,7 @@ type MobileNavProps = {
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
+  canAccessTrendRadar?: boolean;
   labels?: Record<string, string>;
 };
 
@@ -71,6 +73,7 @@ export function MobileNav({
   agencySwitcher,
   canCreateWorkspace,
   platformAccess,
+  canAccessTrendRadar = false,
   labels = {},
 }: MobileNavProps) {
   const pathname = usePathname();
@@ -244,6 +247,14 @@ export function MobileNav({
                   label={labelFor("media", "Media")}
                   active={isActivePath(`${wsBase}/media`, pathname)}
                 />
+                {canAccessTrendRadar ? (
+                  <MobileMenuLink
+                    href={`${wsBase}/trends`}
+                    icon={<Radar />}
+                    label={labelFor("trends", "Trend Radar")}
+                    active={isActivePath(`${wsBase}/trends`, pathname)}
+                  />
+                ) : null}
                 <MobileMenuLink
                   href={`${wsBase}/channels`}
                   icon={<Share2 />}
@@ -269,6 +280,15 @@ export function MobileNav({
                   icon={<Bot />}
                   label={labelFor("settings-ai-assistance", "AI assistance")}
                 />
+                {canAccessTrendRadar &&
+                (user.isAdmin || workspaceCanCreateContent[currentWorkspace.id] === true) ? (
+                  <MobileMenuLink
+                    href={`${wsBase}/settings/trends`}
+                    icon={<Radar />}
+                    label={labelFor("settings-trends", "Trend settings")}
+                    active={isActivePath(`${wsBase}/settings/trends`, pathname)}
+                  />
+                ) : null}
               </MenuSection>
             ) : null}
 
@@ -298,6 +318,14 @@ export function MobileNav({
                   label={labelFor("agency-settings-ai", "AI configuration")}
                   active={isActivePath("/app/agency-settings/ai", pathname)}
                 />
+                {canAccessTrendRadar ? (
+                  <MobileMenuLink
+                    href="/app/agency-settings/trend-sources"
+                    icon={<Radar />}
+                    label={labelFor("agency-settings-trend-sources", "Trend sources")}
+                    active={isActivePath("/app/agency-settings/trend-sources", pathname)}
+                  />
+                ) : null}
                 <MobileMenuLink
                   href="/app/agency-settings/social"
                   icon={<Activity />}

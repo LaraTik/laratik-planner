@@ -13,6 +13,7 @@
   "planningList": "List",
   "planningBoard": "Board",
   "planningCalendar": "Calendar",
+  "trends": "Trend Radar",
   "approvals": "Approvals",
   "designQueue": "Design queue",
   "designQueuePage": {
@@ -66,6 +67,7 @@
   "settingsApprovalMode": "Approval mode",
   "settingsMetaPublishing": "Meta publishing",
   "settingsAiAssistance": "AI assistance",
+  "settingsTrends": "Trend settings",
   "settingsPresets": "Presets",
   "myWork": "My work",
   "agencyGroup": "Agency",
@@ -76,6 +78,7 @@
   "settingsGeneral": "General",
   "settingsPlan": "Plan and usage",
   "settingsAiConfiguration": "AI configuration",
+  "settingsTrendSources": "Trend sources",
   "settingsSocialAnalytics": "Social analytics",
   "settingsSocialProviders": "Social provider setup",
   "settingsStorage": "Media storage",

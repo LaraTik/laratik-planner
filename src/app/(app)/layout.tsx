@@ -25,6 +25,7 @@ import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
 import { getWorkspaceBadges, getGlobalBadges } from "@/lib/nav/badges";
+import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { AppShellChrome } from "@/components/app-shell/app-shell";
@@ -92,6 +93,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   const isAdmin = agencyId ? await isAgencyAdmin(actor, agencyId) : false;
+  const canAccessTrendRadar = agencyId
+    ? serverEnv.AI_FEATURE_ENABLED && (await loadEnabledCapabilities(agencyId)).has("trend_radar")
+    : false;
   // R9 — the bell's two reads are wrapped in `unstable_cache` so
   // a single `revalidateTag("notifications:user:<id>")` call from
   // the mark-read action or the outbox dispatcher invalidates
@@ -281,6 +285,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "planning-list": t("sidebar.planningList"),
       "planning-board": t("sidebar.planningBoard"),
       "planning-calendar": t("sidebar.planningCalendar"),
+      trends: t("sidebar.trends"),
       approvals: t("sidebar.approvals"),
       "design-queue": t("sidebar.designQueue"),
       library: t("sidebar.library"),
@@ -310,6 +315,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "settings-assignment-defaults": t("sidebar.settingsAssignmentDefaults"),
       "settings-approval-mode": t("sidebar.settingsApprovalMode"),
       "settings-ai-assistance": t("sidebar.settingsAiAssistance"),
+      "settings-trends": t("sidebar.settingsTrends"),
       "settings-presets": t("sidebar.settingsPresets"),
 
       // Agency navigation (matches the `key` field of each
@@ -323,6 +329,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "agency-settings-general": t("sidebar.settingsGeneral"),
       "agency-settings-plan": t("sidebar.settingsPlan"),
       "agency-settings-ai": t("sidebar.settingsAiConfiguration"),
+      "agency-settings-trend-sources": t("sidebar.settingsTrendSources"),
       "agency-settings-social": t("sidebar.settingsSocialAnalytics"),
       "agency-settings-social-providers": t("sidebar.settingsSocialProviders"),
       "agency-settings-storage": t("sidebar.settingsStorage"),
@@ -376,6 +383,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       })}
       unreadCount={unreadCount}
       platformAccess={platformAccess}
+      canAccessTrendRadar={canAccessTrendRadar}
       supportGrants={supportGrants}
       workspaceBadges={workspaceBadgesMap}
       unreadAppErrors={globalBadges.unreadAppErrors}

@@ -90,7 +90,7 @@ describe("MobileNav", () => {
   it("keeps every agency settings section reachable from More", async () => {
     usePathnameMock.mockReturnValue("/app/agency-settings/storage");
     const user = userEvent.setup();
-    render(<MobileNav {...baseProps} />);
+    render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
     await user.click(screen.getByTestId("mobile-navigation-more"));
 
@@ -118,12 +118,16 @@ describe("MobileNav", () => {
       "href",
       "/app/agency-settings/storage",
     );
+    expect(screen.getByRole("link", { name: "Trend sources" })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/trend-sources",
+    );
   });
 
   it("uses content creation inside a workspace and exposes every secondary route in More", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     const user = userEvent.setup();
-    render(<MobileNav {...baseProps} />);
+    render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
     expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
       "href",
@@ -149,6 +153,8 @@ describe("MobileNav", () => {
       "Team",
       "Settings",
       "AI assistance",
+      "Trend Radar",
+      "Trend settings",
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }

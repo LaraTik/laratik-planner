@@ -371,6 +371,12 @@ Per StudioFlow §15:
 
 See `docs/implementation/progress.md` for the live per-task checklist.
 
+> **2026-09-09 navigation follow-up** — Trend Radar v1 is now discoverable
+> through the capability-aware desktop and mobile shell: Trend Radar in
+> workspace Content, Trend settings for workspace managers, and Trend sources
+> for agency admins. These links remain gated by `AI_FEATURE_ENABLED` and the
+> agency `trend_radar` capability.
+
 **Release verdict (2026-08-24):** `READY FOR INDEPENDENT REVIEW` (shared across
 `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).
 The independent reviewer (Task 13) flips the verdict to `READY` after the

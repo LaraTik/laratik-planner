@@ -114,11 +114,17 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByRole("link", { name: /Agency Settings/i })).toBeNull();
   });
 
-  it("shows admin items in the sidebar when the user is an admin (global mode)", () => {
+  it("shows admin items in the sidebar when the user is an admin (global mode)", async () => {
     usePathnameMock.mockReturnValue("/app");
-    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} />);
+    const user = userEvent.setup();
+    render(<Sidebar {...baseProps} user={{ name: "Lara", isAdmin: true }} canAccessTrendRadar />);
+    await user.click(screen.getByRole("button", { name: "Expand Agency settings" }));
     expect(screen.getByRole("link", { name: /User Management/i })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Agency Settings/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Trend sources/i })).toHaveAttribute(
+      "href",
+      "/app/agency-settings/trend-sources",
+    );
   });
 
   it("shows plan usage to agency admins and platform console only to platform admins", () => {
@@ -188,19 +194,29 @@ describe("Sidebar (workspace-aware)", () => {
     },
   );
 
-  it("renders the workspace nav when the user is inside /app/w/[slug]/*", () => {
+  it("renders the workspace nav when the user is inside /app/w/[slug]/*", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(<Sidebar {...baseProps} />);
+    const user = userEvent.setup();
+    render(<Sidebar {...baseProps} canAccessTrendRadar />);
     // Workspace tabs are rendered, pointing to the current workspace
     const overview = screen.getByRole("link", { name: "Overview" });
     expect(overview).toHaveAttribute("href", "/app/w/northstar");
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");
     expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Trend Radar" })).toHaveAttribute(
+      "href",
+      "/app/w/northstar/trends",
+    );
     expect(screen.getByRole("link", { name: "Approvals" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Channels" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Brand kit" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Team" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Expand Settings" }));
+    expect(screen.getByRole("link", { name: "Trend settings" })).toHaveAttribute(
+      "href",
+      "/app/w/northstar/settings/trends",
+    );
     // "Workspaces" list link is NOT rendered in workspace mode
     expect(screen.queryByRole("link", { name: "Workspaces" })).toBeNull();
     // "Create content" CTA IS rendered in workspace mode

@@ -21,6 +21,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: {},
       canCreateContent: true,
       canManage: true,
+      canAccessTrendRadar: false,
     });
     expect(nav.top).toHaveLength(1);
     expect(nav.top[0]?.key).toBe("overview");
@@ -34,6 +35,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: {},
       canCreateContent: false,
       canManage: false,
+      canAccessTrendRadar: false,
     });
     expect(nav.groups.map((g) => g.key)).toEqual(["content", "performance", "brand"]);
   });
@@ -44,6 +46,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: {},
       canCreateContent: true,
       canManage: true,
+      canAccessTrendRadar: false,
     });
     expect(writerNav.createContentHref).toBe(`${wsBase}/planning/new`);
     const viewerNav = buildWorkspaceNavigation({
@@ -51,6 +54,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: {},
       canCreateContent: false,
       canManage: false,
+      canAccessTrendRadar: false,
     });
     expect(viewerNav.createContentHref).toBeNull();
   });
@@ -61,6 +65,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: { approvals: 3, designQueue: 2 },
       canCreateContent: true,
       canManage: true,
+      canAccessTrendRadar: false,
     });
     const findItem = (key: string) => {
       for (const g of nav.groups) {
@@ -89,6 +94,7 @@ describe("buildWorkspaceNavigation", () => {
       badges: {},
       canCreateContent: false,
       canManage: false,
+      canAccessTrendRadar: false,
     });
     const allHrefs: string[] = [];
     for (const g of nav.groups) {
@@ -110,6 +116,44 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/channels`);
     expect(allHrefs).toContain(`${wsBase}/analytics/social`);
   });
+
+  it("adds Trend Radar to content and settings only when enabled", () => {
+    const nav = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: true,
+      canManage: true,
+      canAccessTrendRadar: true,
+    });
+    const content = nav.groups.find((group) => group.key === "content");
+    const trends = content?.items.find((item) => item.key === "trends");
+    expect(trends?.kind).toBe("link");
+    if (trends?.kind === "link") expect(trends.href).toBe(`${wsBase}/trends`);
+
+    const settings = nav.groups
+      .find((group) => group.key === "manage")
+      ?.items.find((item) => item.key === "settings");
+    expect(settings?.kind).toBe("expandable");
+    if (settings?.kind === "expandable") {
+      expect(settings.children.map((item) => item.key)).toContain("settings-trends");
+      const trendSettings = settings.children.find((item) => item.key === "settings-trends");
+      expect(trendSettings?.kind).toBe("link");
+      if (trendSettings?.kind === "link") {
+        expect(trendSettings.href).toBe(`${wsBase}/settings/trends`);
+      }
+    }
+
+    const disabled = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: true,
+      canManage: true,
+      canAccessTrendRadar: false,
+    });
+    expect(disabled.groups.flatMap((group) => group.items)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: "trends" })]),
+    );
+  });
 });
 
 describe("buildAgencyNavigation", () => {
@@ -122,6 +166,7 @@ describe("buildAgencyNavigation", () => {
         canReadSecurity: false,
         canReadAccess: false,
       },
+      canAccessTrendRadar: false,
     });
     expect(nav.top[0]?.key).toBe("my-work");
     expect(nav.groups.map((g) => g.key)).toEqual(["agency"]);
@@ -137,6 +182,7 @@ describe("buildAgencyNavigation", () => {
         canReadSecurity: false,
         canReadAccess: false,
       },
+      canAccessTrendRadar: true,
     });
     expect(nav.groups.map((g) => g.key)).toContain("admin");
     const admin = nav.groups.find((g) => g.key === "admin");
@@ -147,6 +193,7 @@ describe("buildAgencyNavigation", () => {
         "agency-settings-general",
         "agency-settings-plan",
         "agency-settings-ai",
+        "agency-settings-trend-sources",
         "agency-settings-social",
         "agency-settings-social-providers",
         "agency-settings-storage",
@@ -163,6 +210,7 @@ describe("buildAgencyNavigation", () => {
         canReadSecurity: false,
         canReadAccess: false,
       },
+      canAccessTrendRadar: false,
     });
     const platformGroup = nav.groups.find((g) => g.key === "platform");
     expect(platformGroup).toBeDefined();
