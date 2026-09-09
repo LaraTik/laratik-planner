@@ -313,6 +313,13 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // New deliveries select only media that is already stored in the
       // agency's private storage. The fixture is seeded as a ready asset.
       expect(designerSeeded.deliveryMediaAssetId).toBeTruthy();
+      await deliveryForm.getByRole("button", { name: /Search media library/i }).click();
+      const mediaSearch = deliveryForm.getByPlaceholder(/Search by title or file name/i);
+      await mediaSearch.fill("Seeded creative delivery");
+      await mediaSearch.press("Enter");
+      await expect(deliveryForm.getByRole("checkbox").first()).toBeVisible({
+        timeout: 10_000,
+      });
       await deliveryForm.getByRole("checkbox").first().check();
       await deliveryForm.getByRole("button", { name: /Submit for creative review/i }).click();
       // The status should advance to creative_review.
