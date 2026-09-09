@@ -28,6 +28,12 @@ COPY app ./app
 # Install the package and its deps into an isolated prefix we can copy from.
 RUN pip install --prefix=/install .
 
+# Catch import-time ORM/configuration regressions while the image is built.
+# This uses a non-routable smoke-test DSN; importing the app does not connect.
+RUN PYTHONPATH=/install/lib/python3.12/site-packages:. \
+    DATABASE_URL=postgresql+asyncpg://smoke:smoke@127.0.0.1:5432/smoke \
+    python -c "import app.main"
+
 # ─── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.12-slim AS runtime
 
