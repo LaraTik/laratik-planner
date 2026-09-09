@@ -527,7 +527,9 @@ function DetailsSection({
         <SummaryRow
           label={t("contentDetail.overview.title")}
           value={
-            <span className="text-body text-fg-primary font-semibold break-words">{title}</span>
+            <span className="text-body text-fg-primary font-semibold break-words" dir="auto">
+              {title}
+            </span>
           }
         />
         <SummaryRow label={t("contentDetail.overview.format")} value={humanFormat(format)} />
@@ -555,7 +557,9 @@ function DetailsSection({
           label={t("contentDetail.overview.brief")}
           value={
             brief ? (
-              <span className="text-body text-fg-primary whitespace-pre-wrap">{brief}</span>
+              <span className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
+                {brief}
+              </span>
             ) : (
               <span className="text-body text-fg-muted">{t("contentDetail.overview.noBrief")}</span>
             )

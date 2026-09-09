@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { MentionPicker, type MentionableUser } from "@/components/comments/mention-picker";
 import { createCommentAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
+import { useLocaleCode } from "@/components/i18n/locale-provider";
 
 /**
  * CommentComposer — a textarea with an integrated @-mention
@@ -110,6 +112,7 @@ export function CommentComposer({
   placeholder,
   t,
 }: CommentComposerProps) {
+  const locale = useLocaleCode();
   const boundAction = createCommentAction.bind(null, workspaceSlug);
   const [state, formAction] = useActionState<
     { error?: string; mentionedUserIds?: string[] } | null,
@@ -409,9 +412,10 @@ export function CommentComposer({
       />
 
       <div className="relative">
-        <textarea
+        <DirAwareTextarea
           ref={textareaRef}
           name="body"
+          locale={locale}
           required
           minLength={1}
           maxLength={10_000}

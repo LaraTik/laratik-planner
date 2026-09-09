@@ -296,7 +296,11 @@ export function PlatformPreview({
           )}
         </div>
         {hashtags && hashtags.length > 0 ? (
-          <p className="text-label text-primary mt-1" data-testid="platform-preview-hashtags">
+          <p
+            className="text-label text-primary mt-1"
+            dir="auto"
+            data-testid="platform-preview-hashtags"
+          >
             {hashtags.map((h) => (h.startsWith("#") ? h : `#${h}`)).join(" ")}
           </p>
         ) : null}

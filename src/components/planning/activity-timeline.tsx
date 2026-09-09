@@ -144,8 +144,12 @@ export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityT
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-body text-fg-primary">
-                  <span className="font-semibold">{e.actorName}</span>{" "}
-                  <span className="text-fg-secondary">{humanizeKind(t, e.kind, e.summary)}</span>
+                  <bdi className="font-semibold" dir="auto">
+                    {e.actorName}
+                  </bdi>{" "}
+                  <bdi className="text-fg-secondary" dir="auto">
+                    {humanizeKind(t, e.kind, e.summary)}
+                  </bdi>
                 </p>
                 <p className="text-label text-fg-muted">
                   <time dateTime={e.occurredAt}>

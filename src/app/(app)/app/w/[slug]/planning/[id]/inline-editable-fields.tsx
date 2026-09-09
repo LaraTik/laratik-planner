@@ -63,6 +63,7 @@ import {
 import { formatDateForInput, parseInputAsLocalDate } from "@/lib/utils/date";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { cn } from "@/lib/utils";
 
 /**
@@ -106,6 +107,7 @@ export function InlineBriefEditor({
   value: string;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   return (
     <InlineEditableField
       testId="inline-edit-brief"
@@ -113,7 +115,9 @@ export function InlineBriefEditor({
       value={value}
       render={(v) =>
         v ? (
-          <p className="text-body text-fg-primary whitespace-pre-wrap">{v}</p>
+          <p className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
+            {v}
+          </p>
         ) : (
           // Empty state — muted text, italic to read as a
           // hint, no `border` so the page chrome doesn't
@@ -137,8 +141,9 @@ export function InlineBriefEditor({
               >
                 {t("contentDetail.overview.brief")}
               </label>
-              <textarea
+              <DirAwareTextarea
                 id="inline-edit-brief-input"
+                locale={locale}
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 rows={6}
@@ -198,12 +203,17 @@ export function InlineTitleEditor({
   value: string;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   return (
     <InlineEditableField
       testId="inline-edit-title"
       label={t("contentDetail.overview.title")}
       value={value}
-      render={(v) => <p className="text-body text-fg-primary font-semibold">{v}</p>}
+      render={(v) => (
+        <p className="text-body text-fg-primary font-semibold" dir="auto">
+          {v}
+        </p>
+      )}
       renderEditor={({ value, onChange, errorId }) => {
         const len = value.length;
         const overWarn = len >= TITLE_WARN;
@@ -217,8 +227,9 @@ export function InlineTitleEditor({
               >
                 {t("contentDetail.overview.title")}
               </label>
-              <input
+              <DirAwareInput
                 id="inline-edit-title-input"
+                locale={locale}
                 type="text"
                 value={value}
                 onChange={(e) => onChange(e.target.value)}

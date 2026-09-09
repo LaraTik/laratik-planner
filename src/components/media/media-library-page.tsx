@@ -180,6 +180,7 @@ export function MediaLibraryPage({
                 type="search"
                 defaultValue={search}
                 placeholder={t("media.searchPlaceholder")}
+                dir="auto"
                 className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
               />
             </label>

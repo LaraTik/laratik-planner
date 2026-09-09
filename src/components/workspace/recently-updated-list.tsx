@@ -131,7 +131,10 @@ export function RecentlyUpdatedList({
                   <span className="text-label text-fg-muted shrink-0 font-semibold tracking-wide uppercase">
                     {CONTENT_FORMAT_LABELS[it.format]}
                   </span>
-                  <span className="text-body text-fg-primary min-w-0 flex-1 truncate font-semibold">
+                  <span
+                    className="text-body text-fg-primary min-w-0 flex-1 truncate font-semibold"
+                    dir="auto"
+                  >
                     {it.title}
                   </span>
                   <span

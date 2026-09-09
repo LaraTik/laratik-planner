@@ -94,7 +94,9 @@ export function CommentItem({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="text-body text-fg-primary font-semibold">{c.authorDisplayName}</span>
+            <span className="text-body text-fg-primary font-semibold" dir="auto">
+              {c.authorDisplayName}
+            </span>
             <span className="text-label text-fg-muted">
               <time dateTime={c.createdAt}>
                 {formatDate(c.createdAt, locale, DateFormat.dateTime)}

@@ -47,10 +47,10 @@ export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSl
                 className="text-title-card text-fg-primary font-semibold hover:underline"
                 href={`/app/w/${_workspaceSlug}/planning/${brief.contentItemId}`}
               >
-                {brief.title}
+                <bdi dir="auto">{brief.title}</bdi>
               </Link>
               <p className="text-label text-fg-muted mt-1">
-                {brief.signalLabel ?? "Trend signal"} · {brief.status}
+                <bdi dir="auto">{brief.signalLabel ?? "Trend signal"}</bdi> · {brief.status}
               </p>
             </li>
           ))}

@@ -331,6 +331,7 @@ export function Combobox({
             aria-required={required || undefined}
             aria-describedby={describedBy}
             value={needle}
+            dir="auto"
             onChange={(e) => setNeedle(e.target.value)}
             onKeyDown={onKeyDown}
             placeholder="Search…"

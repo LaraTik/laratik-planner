@@ -166,7 +166,7 @@ export function DeliveryVersionCard({
             V{version.versionNumber}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-body text-fg-primary font-semibold">
+            <p className="text-body text-fg-primary font-semibold" dir="auto">
               {version.description ||
                 (isV1
                   ? t("contentDetail.deliveries.firstVersion")
@@ -273,7 +273,9 @@ export function DeliveryVersionCard({
             <PenSquare className="h-3 w-3" aria-hidden="true" />
             {t("contentDetail.deliveries.designerNote")}
           </p>
-          <p className="text-body text-fg-secondary whitespace-pre-wrap">{version.designerNote}</p>
+          <p className="text-body text-fg-secondary whitespace-pre-wrap" dir="auto">
+            {version.designerNote}
+          </p>
         </blockquote>
       ) : null}
 

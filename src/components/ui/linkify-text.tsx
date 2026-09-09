@@ -158,13 +158,14 @@ export function LinkifyText({
     // so the caller's layout doesn't collapse on a missing
     // node. (Most callers render LinkifyText instead of a
     // raw `<p>`; collapsing would cause a layout shift.)
-    return React.createElement(as, { className, "data-testid": testId }, null);
+    return React.createElement(as, { className, dir: "auto", "data-testid": testId }, null);
   }
   const Wrapper = as;
   const rel = userGenerated ? "noopener noreferrer nofollow" : "noopener noreferrer";
   return (
     <Wrapper
       className={cn("break-words", className)}
+      dir="auto"
       data-testid={testId}
       // `whitespace-pre-wrap` is opt-in via `className` —
       // some surfaces want the default collapsing.

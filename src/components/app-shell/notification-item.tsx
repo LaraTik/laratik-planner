@@ -113,8 +113,12 @@ export function NotificationItem({ item, onMarkRead, onActionClick }: Notificati
     >
       {React.createElement(KindIcon, { className: iconClass, "aria-hidden": "true" })}
       <div className="min-w-0 flex-1">
-        <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-        <p className="text-label text-fg-secondary">{item.body}</p>
+        <p className="text-body text-fg-primary font-semibold" dir="auto">
+          {item.title}
+        </p>
+        <p className="text-label text-fg-secondary" dir="auto">
+          {item.body}
+        </p>
         <p className="text-label text-fg-muted mt-0.5">{createdAt}</p>
         {item.actionUrl ? (
           <Link

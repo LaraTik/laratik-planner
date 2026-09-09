@@ -74,7 +74,9 @@ export function ReviewRow({
         className="hover:bg-surface-subtle focus-visible:bg-surface-subtle flex flex-wrap items-center gap-3 px-4 py-3 focus:outline-none sm:px-5"
       >
         <div className="min-w-0 flex-1">
-          <p className="text-body text-fg-primary truncate font-semibold">{item.title}</p>
+          <p className="text-body text-fg-primary truncate font-semibold" dir="auto">
+            {item.title}
+          </p>
           <p className="text-label text-fg-muted mt-1">
             {humanFormat(item.format)} ·{" "}
             {t("reviews.rowRequested", { date: formatDate(requested, locale, DateFormat.short) })}

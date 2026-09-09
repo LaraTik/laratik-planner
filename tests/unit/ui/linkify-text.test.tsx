@@ -73,6 +73,7 @@ describe("LinkifyText component", () => {
   it("renders plain text unchanged when there are no URLs", () => {
     render(<LinkifyText>Hello, world</LinkifyText>);
     expect(screen.getByText("Hello, world")).toBeInTheDocument();
+    expect(screen.getByText("Hello, world")).toHaveAttribute("dir", "auto");
     expect(screen.queryByTestId("linkify-link")).toBeNull();
   });
 

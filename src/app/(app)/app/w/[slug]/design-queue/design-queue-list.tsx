@@ -134,7 +134,9 @@ export function DesignQueueList({
                   href={item.href}
                   className="focus-visible:ring-focus-ring block rounded focus:outline-none focus-visible:ring-2"
                 >
-                  <p className="text-body text-fg-primary font-semibold">{item.title}</p>
+                  <p className="text-body text-fg-primary font-semibold" dir="auto">
+                    {item.title}
+                  </p>
                   <p
                     className="text-label text-fg-muted mt-1 font-semibold tracking-wide uppercase"
                     data-testid="design-queue-row-format"
@@ -156,6 +158,7 @@ export function DesignQueueList({
                   <p
                     className="text-body text-fg-secondary line-clamp-2"
                     data-testid="design-queue-row-brief"
+                    dir="auto"
                   >
                     {item.briefIsEmpty ? (
                       <span className="text-fg-muted italic">

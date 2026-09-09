@@ -96,8 +96,9 @@ export function CharacterCountInput({
           defaultValue={defaultValue}
           onChange={onChange}
           aria-describedby={cn(rest["aria-describedby"], counterId).trim() || undefined}
+          dir="auto"
           className={cn(
-            "border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring block min-h-[44px] w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
+            "border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring block min-h-[44px] w-full rounded-[var(--radius-control)] border px-3 py-2 text-start focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
             className,
           )}
         />

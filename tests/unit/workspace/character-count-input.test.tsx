@@ -46,6 +46,7 @@ describe("CharacterCountInput", () => {
     const textarea = document.querySelector("textarea");
     expect(textarea).toBeInTheDocument();
     expect(textarea?.rows).toBe(4);
+    expect(textarea).toHaveAttribute("dir", "auto");
   });
 
   it("uses the name attribute on the control", () => {

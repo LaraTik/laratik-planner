@@ -9,6 +9,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { decideApprovalAction } from "../planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 
 type ClientReviewCardProps = {
   workspaceSlug: string;
@@ -67,12 +68,14 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
   return (
     <Card>
       <div className="flex items-start justify-between gap-3">
-        <CardTitle>{props.title}</CardTitle>
+        <CardTitle dir="auto">{props.title}</CardTitle>
         <Badge variant={props.overdue ? "danger" : "info"}>
           {t("sidebar.clientReviewPage.badge")}
         </Badge>
       </div>
-      <p className="text-body text-fg-secondary mt-2">{props.deliveryDescription}</p>
+      <p className="text-body text-fg-secondary mt-2" dir="auto">
+        {props.deliveryDescription}
+      </p>
       <p className="text-label text-fg-muted mt-3">
         {t("sidebar.clientReviewPage.versionPublishes", {
           version: props.deliveryVersion ?? t("sidebar.clientReviewPage.noVersion"),
@@ -108,8 +111,9 @@ export function ClientReviewCard(props: ClientReviewCardProps) {
       >
         {t("sidebar.clientReviewPage.feedbackLabel")}
       </label>
-      <textarea
+      <DirAwareTextarea
         id={`feedback-${props.requestId}`}
+        locale={locale}
         value={feedback}
         onChange={(event) => setFeedback(event.target.value)}
         maxLength={2000}

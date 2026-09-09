@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils";
 export const Textarea = React.forwardRef<
   HTMLTextAreaElement,
   React.TextareaHTMLAttributes<HTMLTextAreaElement>
->(({ className, ...props }, ref) => (
+>(({ className, dir, ...props }, ref) => (
   <textarea
     ref={ref}
+    dir={dir ?? "auto"}
     className={cn(
-      "border-border bg-surface text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
+      "border-border bg-surface text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 text-start text-sm focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
       className,
     )}
     {...props}

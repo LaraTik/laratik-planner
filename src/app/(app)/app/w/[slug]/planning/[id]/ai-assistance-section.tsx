@@ -565,7 +565,9 @@ export function AiAssistanceSection({
                         <Check className="text-primary h-3.5 w-3.5" aria-hidden="true" />
                       ) : null}
                     </p>
-                    <p className="text-body text-fg-primary whitespace-pre-wrap">{variant.text}</p>
+                    <p className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
+                      {variant.text}
+                    </p>
                     <Button
                       type="button"
                       size="sm"
@@ -586,7 +588,7 @@ export function AiAssistanceSection({
               className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
               data-testid="ai-assistance-single-draft"
             >
-              <p className="text-body text-fg-primary whitespace-pre-wrap">
+              <p className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
                 {selectedVariant.text}
               </p>
             </div>

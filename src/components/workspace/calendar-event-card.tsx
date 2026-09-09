@@ -47,7 +47,9 @@ export function CalendarEventCard({ id, href, title, status, format }: CalendarE
         "border-s-4",
       )}
     >
-      <p className="text-label text-fg-primary truncate font-semibold">{title}</p>
+      <p className="text-label text-fg-primary truncate font-semibold" dir="auto">
+        {title}
+      </p>
       <div className="mt-1 flex items-center gap-1.5">
         <Badge variant={variant} className="text-[10px]">
           {humanStatus(status)}

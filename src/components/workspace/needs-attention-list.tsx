@@ -189,6 +189,7 @@ export function NeedsAttentionList({
                       <Link
                         href={`/app/w/${workspaceSlug}/planning/${it.id}`}
                         className="text-body text-fg-primary hover:text-primary truncate font-semibold"
+                        dir="auto"
                       >
                         {it.title}
                       </Link>

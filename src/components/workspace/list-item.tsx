@@ -78,7 +78,9 @@ export function ListItem({
           </span>
         ) : null}
         <div className="min-w-0 flex-1">
-          <span className="text-body text-fg-primary block truncate font-semibold">{title}</span>
+          <span className="text-body text-fg-primary block truncate font-semibold" dir="auto">
+            {title}
+          </span>
           {meta ? <div className="text-label text-fg-muted mt-0.5 truncate">{meta}</div> : null}
         </div>
         {trailing ? <div className="shrink-0">{trailing}</div> : null}
