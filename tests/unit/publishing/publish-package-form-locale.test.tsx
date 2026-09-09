@@ -70,4 +70,53 @@ describe("PublishPackageForm localization", () => {
     expect(screen.getByTestId("publish-save-draft")).toHaveTextContent("حفظ المسودة");
     expect(screen.getByTestId("publish-ready")).toHaveTextContent("جاهز للنشر");
   });
+
+  it("links publish blockers to the section that resolves them", () => {
+    render(
+      <LocaleProvider locale="en">
+        <PublishPackageForm
+          workspaceId="33333333-3333-4333-8333-333333333333"
+          workspaceSlug="food-game"
+          contentItemId={contentItemId}
+          itemTitle="Autumn campaign"
+          itemFormat="static_post"
+          channels={[
+            {
+              id: "44444444-4444-4444-8444-444444444444",
+              socialChannelId,
+              platform: "instagram",
+              accountName: "Food Game",
+              payload: null,
+            },
+          ]}
+          deliveryVersions={[]}
+          readiness={{
+            ...readiness,
+            channels: [
+              {
+                ...readiness.channels[0]!,
+                blockerCount: 1,
+                issues: [
+                  {
+                    path: "channels[0].approvedDeliveryVersion",
+                    code: "delivery_not_approved",
+                    severity: "blocker",
+                    message: "Approve a delivery version.",
+                  },
+                ],
+              },
+            ],
+          }}
+          canEdit={false}
+          canApproveFinalCopy={false}
+          canConfirmReadiness={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("publish-readiness-fix-delivery_not_approved")).toHaveAttribute(
+      "href",
+      "#assets-versions",
+    );
+  });
 });

@@ -228,11 +228,15 @@ Decision: use Variant 1 as the interaction reference for the current code pass, 
 - Implemented explicit primary/secondary tab sets without changing tab ids or hash aliases.
 - Implemented `More actions` disclosure for manager-only Cancel/Block controls while preserving existing confirmation dialogs and server actions.
 - Surfaced the already-computed contextual next-action label in the Overview and added a direct requested-changes handoff link.
+- Preserved the active planning filter context when KPI tiles switch status/risk views.
+- Added explicit `Latest` labeling to the newest delivery version so approval and publish selection are easier to scan.
+- Added `Fix` links for publish blockers, mapping delivery issues to Assets & versions, approval issues to Workflow, and package issues to Publishing.
+- Added an explicit publishing dirty state, browser/back navigation protection, and a save-before-ready guard.
 - Added English/Arabic catalog keys for the new wording.
 - Added a unit contract for the five primary tabs and two secondary utilities.
 - No database schema or external API changes.
 
-Remaining follow-up work is intentionally staged: deeper list/filter refinements, asset/version copy improvements, publish blocker-to-field links, and acceptance of a reviewed visual direction at every required width.
+Remaining follow-up work is limited to final visual-baseline acceptance after the reviewed Stitch direction is approved; existing reference snapshots are intentionally not rewritten automatically.
 
 ## Verification matrix
 
@@ -241,7 +245,7 @@ Remaining follow-up work is intentionally staged: deeper list/filter refinements
 | Tab compatibility   | Unit tests for primary/secondary sets and legacy hashes               | Passed; focused and full unit suites green                     |
 | Destructive actions | Role/state render checks; confirmation and reason dialog              | Passed; disclosure test added, existing reason dialog retained |
 | Readiness handoff   | Hash switch, mounted panel, scroll, focus                             | Passed; existing navigator tests green                         |
-| Save guards         | Unit/E2E for dirty state and navigation protection                    | Existing editor/copy coverage green                            |
+| Save guards         | Unit/E2E for dirty state and navigation protection                    | Publishing guard added; publish E2E 2/2 green                  |
 | Catalog parity      | EN/AR key shape                                                       | Passed in full unit suite                                      |
 | Accessibility       | Keyboard, focus, 44px targets, dialogs, axe                           | 197/200 passed; 3 server-availability failures, no axe finding |
 | Responsive          | 375, 768, 1024, 1280, 1440                                            | Visual matrix 57/112 passed; 55 reference deltas retained      |
@@ -251,6 +255,7 @@ Remaining follow-up work is intentionally staged: deeper list/filter refinements
 ### Verification notes
 
 - `pnpm verify` passed: formatting, lint, typecheck, production build, and 3,339 unit tests (4 todo).
-- Targeted planning/workflow tests passed: 16 focused tests; broader planning, publishing, delivery, content, and i18n set passed 365 tests.
+- Targeted planning/workflow tests passed: 16 focused tests; the second slice added KPI, delivery, publish-link, and catalog coverage; broader planning, publishing, delivery, content, and i18n set passed 365 tests.
+- Guarded Chromium planning/content browser flows passed: content-flow 6/6 and publish-package 2/2 after the publishing dirty-state guard was corrected to avoid an input-capture re-render.
 - The 200-case accessibility run completed with 197 passes. The three failures were infrastructure failures: one mobile-Chrome `ECONNRESET` while seeding the workspace overview and two mobile-Safari server disconnects after the test server reported a memory-threshold restart. They were not axe violations; the touched planning list, detail, publishing, quick-create, batch, monthly, RTL, and destructive-dialog checks passed.
 - The 112-case visual run completed with 57 passes and 55 reference deltas. The reference set is intentionally not rewritten in this pass. The planning deltas are evidence for the approved follow-up Stitch review, not automatic snapshot acceptance.

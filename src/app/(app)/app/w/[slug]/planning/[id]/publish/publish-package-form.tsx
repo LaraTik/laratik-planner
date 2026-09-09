@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,6 +21,8 @@ import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
+import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import type { MetaPublishingReadiness } from "@/lib/db/schema";
 import {
   MetaPublishingReadinessCard,
@@ -284,6 +287,14 @@ export function PublishPackageForm({
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Record<string, number>>({});
+  const [dirty, setDirty] = useState(false);
+  const formRef = useRef<HTMLFormElement | null>(null);
+  useBeforeunloadDirtyGuard(formRef, !dirty);
+  useNavigationDirtyGuard({
+    formRef,
+    isClean: !dirty,
+    confirmMessage: t("contentDetail.publish.unsavedGuard"),
+  });
 
   if (channels.length === 0) {
     return (
@@ -373,6 +384,7 @@ export function PublishPackageForm({
         } as PlatformPayload,
       };
     });
+    setDirty(true);
   }
 
   function handleSave(channelId: string) {
@@ -392,6 +404,7 @@ export function PublishPackageForm({
       }
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
+      setDirty(false);
       setStatusMessage(t("contentDetail.publish.statusDraftSaved"));
     });
   }
@@ -423,6 +436,7 @@ export function PublishPackageForm({
         return;
       }
       setDrafts((previous) => ({ ...previous, [current.id]: result.payload }));
+      setDirty(false);
       setStatusMessage(
         approved
           ? t("contentDetail.publish.statusFinalCopyApproved")
@@ -449,7 +463,13 @@ export function PublishPackageForm({
   }
 
   return (
-    <div className="space-y-4" data-testid="publish-package-form" data-workspace-id={workspaceId}>
+    <form
+      ref={formRef}
+      className="space-y-4"
+      data-testid="publish-package-form"
+      data-workspace-id={workspaceId}
+      onSubmit={(event) => event.preventDefault()}
+    >
       {/* Channel selector (top, also visible on mobile) */}
       <div className="flex flex-wrap gap-2" data-testid="publish-channel-tabs" role="tablist">
         {channels.map((ch) => {
@@ -532,8 +552,17 @@ export function PublishPackageForm({
               </p>
               <ul className="text-label mt-1 list-disc space-y-1 ps-5">
                 {currentReadiness.issues.map((issue, index) => (
-                  <li key={`${issue.code}-${index}`}>
-                    {readinessIssueText(issue.code, issue.message)}
+                  <li key={`${issue.code}-${index}`} className="flex flex-wrap items-start gap-2">
+                    <span className="min-w-0 flex-1">
+                      {readinessIssueText(issue.code, issue.message)}
+                    </span>
+                    <Link
+                      href={readinessAnchorForPath(issue.path)}
+                      className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                      data-testid={`publish-readiness-fix-${issue.code}`}
+                    >
+                      {t("contentDetail.readinessPanel.fix")}
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -848,6 +877,15 @@ export function PublishPackageForm({
               })}
             </span>
           ) : null}
+          {dirty ? (
+            <span
+              className="text-label text-warning font-semibold"
+              role="status"
+              data-testid="publish-unsaved-state"
+            >
+              {t("contentDetail.publish.unsaved")}
+            </span>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <Button
@@ -864,7 +902,7 @@ export function PublishPackageForm({
           <Button
             type="button"
             onClick={handleConfirmReadiness}
-            disabled={pending || !readiness.canPublish || !canConfirmReadiness}
+            disabled={pending || dirty || !readiness.canPublish || !canConfirmReadiness}
             className="min-h-11"
             data-testid="publish-ready"
           >
@@ -873,7 +911,7 @@ export function PublishPackageForm({
           </Button>
         </div>
       </div>
-    </div>
+    </form>
   );
 }
 
@@ -884,6 +922,14 @@ function translatePublishError(
 ): string {
   const code = result.errorCode ?? fallback;
   return t(`contentDetail.publishErrors.${code}`);
+}
+
+function readinessAnchorForPath(path: string): string {
+  if (/^channels\[\d+\]\.approvedDeliveryVersion/.test(path) || /^delivery\./.test(path)) {
+    return "#assets-versions";
+  }
+  if (/^approvals\./.test(path)) return "#workflow";
+  return "#publishing";
 }
 
 function Field({

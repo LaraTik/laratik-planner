@@ -88,4 +88,24 @@ describe("PlanningKpiBar", () => {
     const totalLink = screen.getByTestId("planning-kpi-total");
     expect(totalLink.getAttribute("href")).not.toContain("risk=at_risk");
   });
+
+  it("preserves the active planning context while switching KPI views", () => {
+    render(
+      <PlanningKpiBar
+        total={18}
+        atRisk={3}
+        needsReview={2}
+        ready={5}
+        notStarted={4}
+        baseHref="/app/w/acme/planning"
+        currentQuery={
+          new URLSearchParams("month=2026-08&format=carousel&owner=user-1&density=compact")
+        }
+      />,
+    );
+    expect(screen.getByTestId("planning-kpi-ready")).toHaveAttribute(
+      "href",
+      "/app/w/acme/planning?month=2026-08&format=carousel&owner=user-1&density=compact&status=ready_to_publish",
+    );
+  });
 });

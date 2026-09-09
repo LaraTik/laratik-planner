@@ -61,6 +61,7 @@ describe("DeliveryVersionCard", () => {
     );
     expect(screen.getByTestId("delivery-version-card-1")).toBeInTheDocument();
     expect(screen.getByTestId("delivery-version-card-2")).toBeInTheDocument();
+    expect(screen.getByText("Latest")).toBeInTheDocument();
   });
 
   it("marks assets that were added in a later delivery version", () => {
