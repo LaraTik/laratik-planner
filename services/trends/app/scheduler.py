@@ -247,7 +247,7 @@ async def _run_sync_cycle(
                     agency_id=source.agency_id,
                     event_type="sync_failed",
                     message=err_msg,
-                    metadata={"errorClass": err_class},
+                    metadata_={"errorClass": err_class},
                     duration_ms=int((datetime.now(timezone.utc) - started_at).total_seconds() * 1000),
                 )
                 session.add(activity)
@@ -303,7 +303,7 @@ async def _run_sync_cycle(
                 agency_id=source.agency_id,
                 event_type="sync_completed",
                 message=f"Stored {signals_added} signals across {len(workspace_ids)} workspaces",
-                metadata={"signalsCount": signals_added, "workspaceCount": len(workspace_ids)},
+                metadata_={"signalsCount": signals_added, "workspaceCount": len(workspace_ids)},
                 duration_ms=int(
                     (datetime.now(timezone.utc) - started_at).total_seconds() * 1000
                 ),

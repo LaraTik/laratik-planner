@@ -178,7 +178,9 @@ class TrendSourceActivity(Base):
     source_key: Mapped[str] = mapped_column(Text, nullable=False)
     event_type: Mapped[str] = mapped_column(Text, nullable=False)
     message: Mapped[str] = mapped_column(Text, nullable=False)
-    metadata: Mapped[Optional[dict[str, Any]]] = mapped_column(JSONB, nullable=True)
+    # `metadata` is reserved by SQLAlchemy's Declarative API. Keep the
+    # database column name stable while exposing a safe Python attribute.
+    metadata_: Mapped[Optional[dict[str, Any]]] = mapped_column("metadata", JSONB, nullable=True)
     duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
     __table_args__ = (Index("trend_source_activity_agency_source_created_idx", "agency_id", "source_key", "created_at"),)

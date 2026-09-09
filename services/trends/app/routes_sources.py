@@ -81,7 +81,7 @@ async def list_source_health(
                 func.count().filter(TrendSourceActivity.event_type == "sync_completed").label("success"),
                 func.count().label("total"),
                 func.coalesce(func.avg(TrendSourceActivity.duration_ms), 0).label("avg_dur"),
-                func.coalesce(func.sum(TrendSourceActivity.metadata["costCents"].as_integer()), 0).label("cost"),
+                func.coalesce(func.sum(TrendSourceActivity.metadata_["costCents"].as_integer()), 0).label("cost"),
             )
             .where(TrendSourceActivity.source_key == h.source_key)
             .where(TrendSourceActivity.agency_id == h.agency_id)
