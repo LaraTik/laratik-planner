@@ -185,6 +185,8 @@ function NextActionCard({
   contentStatus,
   readinessBlockers,
   readinessCanPublish,
+  primaryActionLabel,
+  reviewChangesHref,
   t,
 }: {
   contentStatus: string;
@@ -228,6 +230,24 @@ function NextActionCard({
           {headline}
         </CardTitle>
         {body ? <CardDescription>{body}</CardDescription> : null}
+        {primaryActionLabel ? (
+          <p className="text-label text-fg-secondary pt-1" data-testid="overview-next-action-label">
+            <span className="font-semibold">{t("contentDetail.overview.nextActionLabel")}</span>{" "}
+            {primaryActionLabel}
+          </p>
+        ) : null}
+        {contentStatus === "changes_requested" && reviewChangesHref ? (
+          <Link
+            href={reviewChangesHref}
+            className="text-label text-primary focus-visible:ring-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+            data-testid="overview-next-action-link"
+          >
+            {t("contentDetail.overview.openNextAction", {
+              action: primaryActionLabel ?? t("contentDetail.nextAction.changesRequested"),
+            })}
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
+        ) : null}
       </div>
     </Card>
   );

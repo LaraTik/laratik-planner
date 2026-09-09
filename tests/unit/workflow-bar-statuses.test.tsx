@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { ALL_STATUSES } from "@/lib/content/status";
 import { WorkflowRail } from "@/components/planning/workflow-rail";
 
@@ -88,5 +88,27 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
 
     expect(getByTestId("workflow-designer-assignment")).toHaveTextContent("Designer Name");
     expect(getByTestId("assign-designer-trigger")).toHaveTextContent("Change designer");
+  });
+
+  it("keeps manager-only destructive actions collapsed by default", () => {
+    const { getByTestId } = render(
+      <WorkflowRail
+        workspaceSlug="acme"
+        contentItemId="ci-1"
+        status="draft"
+        blockedReason={null}
+        cancellationReason={null}
+        roles={{ ...baseRoles, isManager: true }}
+        approvals={[]}
+        designers={[]}
+      />,
+    );
+
+    const disclosure = getByTestId("workflow-destructive-actions");
+    expect(disclosure).not.toHaveAttribute("open");
+    fireEvent.click(disclosure.querySelector("summary")!);
+    expect(disclosure).toHaveAttribute("open");
+    expect(disclosure).toHaveTextContent("Cancel");
+    expect(disclosure).toHaveTextContent("Block");
   });
 });
