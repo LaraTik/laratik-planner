@@ -26,6 +26,68 @@ afterEach(() => {
 });
 
 describe("DeliverySection media search", () => {
+  it("preselects only the immediately previous delivery version assets", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeliverySection
+        {...baseProps}
+        deliveries={[
+          {
+            id: "delivery-v1",
+            versionNumber: 1,
+            description: "V1",
+            designerNote: null,
+            submittedAt: "2026-08-25T10:00:00.000Z",
+            isFinalApproved: false,
+            submittedBy: { id: "u-1", name: "Designer" },
+            links: [
+              {
+                id: "link-a",
+                provider: "other",
+                label: "Asset A",
+                url: "/api/deliveries/assets/link-a",
+                isPreview: true,
+                mediaAssetId: "asset-a",
+                mediaKind: "image",
+              },
+              {
+                id: "link-b",
+                provider: "other",
+                label: "Asset B",
+                url: "/api/deliveries/assets/link-b",
+                isPreview: true,
+                mediaAssetId: "asset-b",
+                mediaKind: "image",
+              },
+            ],
+          },
+        ]}
+        mediaAssets={["asset-a", "asset-b", "asset-c"].map((id) => ({
+          id,
+          title: id,
+          kind: "image",
+          byteSize: 100,
+          workspaceName: "Northstar Coffee",
+          visibility: "workspace",
+        }))}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Submit new version" }));
+    expect(screen.getByRole("checkbox", { name: /asset-a/i })).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    expect(screen.getByRole("checkbox", { name: /asset-b/i })).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    expect(screen.getByRole("checkbox", { name: /asset-c/i })).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    expect(screen.getByText("New in V2")).toBeInTheDocument();
+  });
+
   it("explains why assets are not actionable while an idea is still a draft", () => {
     render(
       <DeliverySection {...baseProps} contentStatus="draft" isDesigner={false} isManager={false} />,

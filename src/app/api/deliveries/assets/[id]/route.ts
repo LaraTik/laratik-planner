@@ -13,6 +13,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { fetchStorageObject } from "@/lib/storage/read-service";
+import { downloadFilename } from "@/lib/media/contract";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -45,6 +46,9 @@ export async function GET(
       assetStatus: mediaAssets.status,
       objectId: storageObjects.id,
       objectStatus: storageObjects.status,
+      title: mediaAssets.title,
+      originalName: storageObjects.originalName,
+      mimeType: storageObjects.mimeType,
     })
     .from(mediaAssetLinks)
     .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
@@ -91,9 +95,16 @@ export async function GET(
   if (!remote) return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
 
   const headers = new Headers({
+    "Content-Type": row.mimeType,
     "Cache-Control": "private, max-age=300",
     "X-Content-Type-Options": "nosniff",
   });
+  if (request.nextUrl.searchParams.get("download") === "1") {
+    headers.set(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodeURIComponent(downloadFilename(row.title, row.originalName, row.mimeType))}`,
+    );
+  }
   for (const name of [
     "content-type",
     "content-length",

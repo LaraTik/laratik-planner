@@ -15,6 +15,7 @@ import {
   DeliveryVersionList,
   type DeliveryVersion,
 } from "@/components/workspace/delivery-version-card";
+import { deliveryAssetIds } from "@/lib/deliveries/presentation";
 
 type DeliveryMediaAsset = {
   id: string;
@@ -73,12 +74,13 @@ export function DeliverySection({
   viewerIsClient?: boolean;
 }) {
   const t = useLocaleT();
+  const previousAssetIds = deliveries[0] ? deliveryAssetIds(deliveries[0]) : [];
   const [open, setOpen] = useState(deliveries.length === 0);
   const [pending, start] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [availableAssets, setAvailableAssets] = useState(mediaAssets);
-  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(previousAssetIds);
   const [showUploader, setShowUploader] = useState(mediaAssets.length === 0);
   const [showMediaSearch, setShowMediaSearch] = useState(false);
   const [mediaQuery, setMediaQuery] = useState("");
@@ -86,6 +88,8 @@ export function DeliverySection({
   const [searchingMedia, setSearchingMedia] = useState(false);
   const [mediaSearchError, setMediaSearchError] = useState<string | null>(null);
   const canUploadInline = workspaceId.length > 0;
+  const previousAssetSet = new Set(previousAssetIds);
+  const nextVersionNumber = (deliveries[0]?.versionNumber ?? 0) + 1;
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
@@ -155,7 +159,14 @@ export function DeliverySection({
               </p>
             </div>
             {canSubmit ? (
-              <Button size="sm" onClick={() => setOpen(true)} disabled={open}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedAssetIds(previousAssetIds);
+                  setOpen(true);
+                }}
+                disabled={open}
+              >
                 <Package className="h-3.5 w-3.5" aria-hidden="true" />{" "}
                 {t("contentDetail.deliveries.submitNewVersion")}
               </Button>
@@ -420,6 +431,13 @@ export function DeliverySection({
                                 ? ` · ${t("contentDetail.deliveries.agencyShared")}`
                                 : ""}
                             </span>
+                            {deliveries.length > 0 && !previousAssetSet.has(asset.id) ? (
+                              <span className="text-label text-primary bg-primary-subtle mt-1 inline-flex rounded-full px-2 py-0.5 font-semibold">
+                                {t("contentDetail.deliveries.newInVersion", {
+                                  count: nextVersionNumber,
+                                })}
+                              </span>
+                            ) : null}
                           </span>
                         </div>
                       );
@@ -494,7 +512,13 @@ export function DeliverySection({
           <Card data-testid="delivery-submit-cta">
             <header className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>{t("contentDetail.deliveries.title")}</CardTitle>
-              <Button size="sm" onClick={() => setOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => {
+                  setSelectedAssetIds(previousAssetIds);
+                  setOpen(true);
+                }}
+              >
                 <Package className="h-3.5 w-3.5" aria-hidden="true" />{" "}
                 {t("contentDetail.deliveries.submitDelivery")}
               </Button>

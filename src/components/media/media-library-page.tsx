@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MediaAssetActions } from "./media-asset-actions";
+import { MediaAssetSelectionCheckbox, MediaSelectionToolbar } from "./media-selection-controls";
 import { MediaFolderSidebar } from "./media-folder-sidebar";
 import { MediaSourcePicker } from "./media-source-picker";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
@@ -284,6 +285,7 @@ export function MediaLibraryPage({
               </Link>
             </div>
           </div>
+          <MediaSelectionToolbar />
           {rows.length === 0 ? (
             <Card padding="lg">
               <EmptyState
@@ -423,13 +425,18 @@ function MediaCard({
       )}
       <div className="grid gap-2 p-4">
         <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="text-title-card text-fg-primary truncate font-semibold">
-              {row.asset.title}
-            </h2>
-            <p className="text-label text-fg-muted mt-1 truncate">
-              {row.object.originalName ?? "—"}
-            </p>
+          <div className="flex min-w-0 items-start gap-2">
+            {downloadable ? (
+              <MediaAssetSelectionCheckbox assetId={row.asset.id} title={row.asset.title} />
+            ) : null}
+            <div className="min-w-0">
+              <h2 className="text-title-card text-fg-primary truncate font-semibold">
+                {row.asset.title}
+              </h2>
+              <p className="text-label text-fg-muted mt-1 truncate">
+                {row.object.originalName ?? "—"}
+              </p>
+            </div>
           </div>
           <Badge variant={mediaStatusVariant(row.asset.status)}>{statusLabel}</Badge>
         </div>
@@ -571,6 +578,9 @@ function MediaListRow({
           {thumbnail}
         </div>
       )}
+      {downloadable ? (
+        <MediaAssetSelectionCheckbox assetId={row.asset.id} title={row.asset.title} />
+      ) : null}
       <div className="min-w-0 flex-1">
         <h2 className="text-body text-fg-primary truncate font-semibold">{row.asset.title}</h2>
         <p className="text-label text-fg-muted truncate">{row.object.originalName ?? "—"}</p>

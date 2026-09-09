@@ -3,6 +3,8 @@
 export const MEDIA_KINDS = ["image", "video", "document"] as const;
 export type MediaKind = (typeof MEDIA_KINDS)[number];
 
+export const MEDIA_ZIP_MAX_BYTES = 500 * 1024 * 1024;
+
 export const MEDIA_SIZE_LIMITS: Record<MediaKind, number> = {
   image: 50 * 1024 * 1024,
   video: 1024 * 1024 * 1024,

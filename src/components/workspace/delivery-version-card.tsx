@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  Download,
   Image as ImageIcon,
   Link as LinkIcon,
   PenSquare,
@@ -17,6 +18,9 @@ import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { MediaAssetGallery } from "@/components/media/media-asset-gallery";
+import { MediaCollectionActions } from "@/components/media/media-collection-actions";
+import { deliveryAssetIds, newDeliveryAssetIds } from "@/lib/deliveries/presentation";
+import { Checkbox } from "@/components/ui/checkbox";
 
 /**
  * DeliveryVersionCard — Phase 3 of the planning-workspace-v2
@@ -93,6 +97,8 @@ export interface DeliveryVersionCardProps {
   onApprove?: (version: DeliveryVersion) => void;
   /** Whether the approve action is in flight (disables the button). */
   approving?: boolean;
+  /** Assets introduced compared with the immediately older version. */
+  newAssetIds?: string[];
 }
 
 function deriveStatus(
@@ -140,10 +146,12 @@ export function DeliveryVersionCard({
   showApprove = false,
   onApprove,
   approving = false,
+  newAssetIds = [],
 }: DeliveryVersionCardProps) {
   const locale = useLocaleCode();
   const t = useLocaleT();
   const [expanded, setExpanded] = useState(version.isFinalApproved);
+  const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
   const status = deriveStatus(version, contentStatus);
   const badge = STATUS_BADGE[status];
   const BadgeIcon = badge.icon;
@@ -162,6 +170,8 @@ export function DeliveryVersionCard({
       : [],
   );
   const isV1 = version.versionNumber === 1;
+  const assetIds = deliveryAssetIds(version);
+  const newAssets = new Set(newAssetIds);
 
   return (
     <article
@@ -221,7 +231,7 @@ export function DeliveryVersionCard({
           {version.links.map((l) => (
             <li
               key={l.id}
-              className="border-border bg-surface-subtle flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] border"
+              className="border-border bg-surface-subtle relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] border"
               data-testid={`delivery-version-thumbnail-${version.versionNumber}-${l.id}`}
             >
               {l.mediaAssetId && l.mediaKind === "image" ? (
@@ -274,6 +284,11 @@ export function DeliveryVersionCard({
                   </span>
                 </div>
               )}
+              {l.mediaAssetId && newAssets.has(l.mediaAssetId) ? (
+                <span className="bg-primary text-label absolute inset-x-0 bottom-0 truncate px-1 py-0.5 text-center font-semibold text-white">
+                  {t("contentDetail.deliveries.newInVersion", { count: version.versionNumber })}
+                </span>
+              ) : null}
             </li>
           ))}
         </ol>
@@ -325,6 +340,17 @@ export function DeliveryVersionCard({
             <ExternalLink className="h-3 w-3" aria-hidden="true" />
           </a>
         ) : null}
+        {assetIds.length > 0 && !viewerIsClient ? (
+          <MediaCollectionActions
+            deliveryVersionId={version.id}
+            sourceType="delivery_version"
+            sourceId={version.id}
+            title={`delivery-v${version.versionNumber}`}
+            compact
+            downloadLabelKey="contentDetail.deliveries.downloadVersionZip"
+            shareLabelKey="contentDetail.deliveries.shareVersion"
+          />
+        ) : null}
         {showApprove && !version.isFinalApproved ? (
           <button
             type="button"
@@ -375,6 +401,23 @@ export function DeliveryVersionCard({
                   key={l.id}
                   className="text-body text-fg-primary flex flex-wrap items-center gap-2"
                 >
+                  {l.mediaAssetId && !viewerIsClient ? (
+                    <label className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)]">
+                      <Checkbox
+                        checked={selectedAssetIds.includes(l.mediaAssetId)}
+                        onCheckedChange={(checked) =>
+                          setSelectedAssetIds((current) =>
+                            checked === true
+                              ? [...new Set([...current, l.mediaAssetId!])]
+                              : current.filter((id) => id !== l.mediaAssetId),
+                          )
+                        }
+                        aria-label={t("contentDetail.deliveries.selectVersionAsset", {
+                          name: l.label,
+                        })}
+                      />
+                    </label>
+                  ) : null}
                   <span className="text-label text-fg-muted bg-surface rounded-[var(--radius-control)] px-2 py-0.5 font-semibold">
                     {t(`contentDetail.deliveries.providers.${l.provider}`)}
                   </span>
@@ -393,6 +436,20 @@ export function DeliveryVersionCard({
                       {t("contentDetail.deliveries.preview")}
                     </span>
                   ) : null}
+                  {l.mediaAssetId && newAssets.has(l.mediaAssetId) ? (
+                    <span className="text-label text-primary bg-primary-subtle rounded-full px-2 py-0.5 font-semibold">
+                      {t("contentDetail.deliveries.newInVersion", { count: version.versionNumber })}
+                    </span>
+                  ) : null}
+                  {l.mediaAssetId ? (
+                    <a
+                      href={`${l.url}?download=1`}
+                      aria-label={`${t("media.download")}: ${l.label}`}
+                      className="text-primary focus-visible:ring-focus-ring ms-auto inline-flex min-h-11 min-w-11 items-center justify-center rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
+                    >
+                      <Download className="h-4 w-4" aria-hidden="true" />
+                    </a>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -401,6 +458,14 @@ export function DeliveryVersionCard({
               {t("contentDetail.deliveries.noAssets")}
             </p>
           )}
+          {selectedAssetIds.length > 0 && !viewerIsClient ? (
+            <MediaCollectionActions
+              assetIds={selectedAssetIds}
+              title={`delivery-v${version.versionNumber}-selected`}
+              compact
+              downloadLabelKey="contentDetail.deliveries.downloadSelectedVersionZip"
+            />
+          ) : null}
         </div>
       ) : null}
     </article>
@@ -465,10 +530,13 @@ export function DeliveryVersionList({
   }
   return (
     <ul className="space-y-3" data-testid="delivery-version-list">
-      {versions.map((v) => (
+      {versions.map((v, index) => (
         <li key={v.id}>
           <DeliveryVersionCard
             version={v}
+            newAssetIds={
+              index < versions.length - 1 ? newDeliveryAssetIds(v, versions[index + 1]) : []
+            }
             {...(viewerIsClient ? { viewerIsClient: true } : {})}
             {...(contentStatus ? { contentStatus } : {})}
             {...(showApprove ? { showApprove: true } : {})}

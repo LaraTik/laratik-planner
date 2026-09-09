@@ -147,6 +147,65 @@ export const mediaShareLinks = pgTable(
   ],
 );
 
+/** Anonymous, expiring snapshots of a group of ready media assets. */
+export const mediaShareCollections = pgTable(
+  "media_share_collection",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "restrict" }),
+    title: text("title").notNull(),
+    sourceType: text("source_type").notNull(),
+    sourceId: uuid("source_id"),
+    tokenHash: text("token_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("media_share_collection_token_hash_uniq").on(t.tokenHash),
+    index("media_share_collection_agency_idx").on(t.agencyId, t.expiresAt),
+    index("media_share_collection_source_idx").on(t.sourceType, t.sourceId),
+    check(
+      "media_share_collection_source_type_valid",
+      sql`${t.sourceType} IN ('delivery_version', 'library_selection')`,
+    ),
+    check(
+      "media_share_collection_source_id_valid",
+      sql`${t.sourceType} = 'library_selection' OR ${t.sourceId} IS NOT NULL`,
+    ),
+    check(
+      "media_share_collection_title_not_empty",
+      sql`length(trim(${t.title})) BETWEEN 1 AND 160`,
+    ),
+  ],
+);
+
+export const mediaShareCollectionItems = pgTable(
+  "media_share_collection_item",
+  {
+    id: idColumn(),
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => mediaShareCollections.id, { onDelete: "cascade" }),
+    mediaAssetId: uuid("media_asset_id")
+      .notNull()
+      .references(() => mediaAssets.id, { onDelete: "restrict" }),
+    sortOrder: integer("sort_order").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("media_share_collection_item_asset_uniq").on(t.collectionId, t.mediaAssetId),
+    index("media_share_collection_item_order_idx").on(t.collectionId, t.sortOrder),
+    check("media_share_collection_item_sort_order_valid", sql`${t.sortOrder} >= 0`),
+  ],
+);
+
 /** Explicit consuming-workspace links; polymorphic targets avoid schema cycles. */
 export const mediaAssetLinks = pgTable(
   "media_asset_link",
@@ -188,3 +247,7 @@ export type MediaFolder = typeof mediaFolders.$inferSelect;
 export type NewMediaFolder = typeof mediaFolders.$inferInsert;
 export type MediaShareLink = typeof mediaShareLinks.$inferSelect;
 export type NewMediaShareLink = typeof mediaShareLinks.$inferInsert;
+export type MediaShareCollection = typeof mediaShareCollections.$inferSelect;
+export type NewMediaShareCollection = typeof mediaShareCollections.$inferInsert;
+export type MediaShareCollectionItem = typeof mediaShareCollectionItems.$inferSelect;
+export type NewMediaShareCollectionItem = typeof mediaShareCollectionItems.$inferInsert;

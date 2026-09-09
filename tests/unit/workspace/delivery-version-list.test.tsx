@@ -63,6 +63,55 @@ describe("DeliveryVersionCard", () => {
     expect(screen.getByTestId("delivery-version-card-2")).toBeInTheDocument();
   });
 
+  it("marks assets that were added in a later delivery version", () => {
+    render(
+      <DeliveryVersionList
+        versions={[
+          baseVersion({
+            id: "v-2",
+            versionNumber: 2,
+            links: [
+              {
+                id: "l-2a",
+                provider: "other",
+                label: "Existing",
+                url: "/asset/a",
+                isPreview: true,
+                mediaAssetId: "a",
+                mediaKind: "image",
+              },
+              {
+                id: "l-2b",
+                provider: "other",
+                label: "New",
+                url: "/asset/b",
+                isPreview: true,
+                mediaAssetId: "b",
+                mediaKind: "image",
+              },
+            ],
+          }),
+          baseVersion({
+            id: "v-1",
+            versionNumber: 1,
+            links: [
+              {
+                id: "l-1a",
+                provider: "other",
+                label: "Existing",
+                url: "/asset/a",
+                isPreview: true,
+                mediaAssetId: "a",
+                mediaKind: "image",
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getAllByText("New in V2").length).toBeGreaterThan(0);
+  });
+
   it("shows the 'Final approved' badge for approved versions", () => {
     render(
       <DeliveryVersionList
