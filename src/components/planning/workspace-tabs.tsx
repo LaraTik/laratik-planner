@@ -75,7 +75,12 @@ export const SECONDARY_WORKSPACE_TAB_IDS = [
 
 /** `#messages` was public in shared links; keep it as a read-compatible alias. */
 export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
+  // These aliases are kept for old bookmarks, readiness links, and
+  // shared review URLs. The visible workspace still uses the five
+  // task-oriented tabs; aliases only resolve to their owning task.
   if (value === "messages") return "copy";
+  if (value === "assets-versions") return "delivery";
+  if (value === "workflow") return "overview";
   return ["overview", "content", "copy", "delivery", "preview", "publishing", "activity"].includes(
     value,
   )
@@ -178,7 +183,10 @@ export function WorkspaceTabs({
                   aria-current={isActive ? "true" : undefined}
                   data-testid={`workspace-tab-${tab.id}`}
                   data-active={isActive || undefined}
-                  onClick={() => onValueChange(tab.id)}
+                  onClick={() => {
+                    onValueChange(tab.id);
+                    setMoreOpen(false);
+                  }}
                   className={cn(
                     "text-body inline-flex min-h-11 items-center gap-2 border-b-2 px-3 py-2 font-semibold transition-colors",
                     "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",

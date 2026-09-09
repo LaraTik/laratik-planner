@@ -561,7 +561,7 @@ export function PublishPackageForm({
                       className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
                       data-testid={`publish-readiness-fix-${issue.code}`}
                     >
-                      {t("contentDetail.readinessPanel.fix")}
+                      {readinessFixLabel(issue.path, t)}
                     </Link>
                   </li>
                 ))}
@@ -930,6 +930,17 @@ function readinessAnchorForPath(path: string): string {
   }
   if (/^approvals\./.test(path)) return "#workflow";
   return "#publishing";
+}
+
+function readinessFixLabel(
+  path: string,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (/^channels\[\d+\]\.approvedDeliveryVersion/.test(path) || /^delivery\./.test(path)) {
+    return t("contentDetail.publishReadiness.fixInAssets");
+  }
+  if (/^approvals\./.test(path)) return t("contentDetail.publishReadiness.fixInWorkflow");
+  return t("contentDetail.publishReadiness.fixInPublishing");
 }
 
 function Field({

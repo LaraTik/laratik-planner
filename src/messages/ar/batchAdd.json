@@ -47,6 +47,7 @@
     "importRows": "استيراد الصفوف",
     "successOne": "تم إنشاء {count} مسودة بنجاح.",
     "successMany": "تم إنشاء {count} مسودات بنجاح.",
+    "viewDrafts": "عرض المسودات",
     "selectFormat": "اختر الصيغة",
     "titleForRow": "عنوان الصف {row}",
     "formatForRow": "صيغة الصف {row}",

@@ -98,6 +98,33 @@ describe("DeliverySection media search", () => {
     expect(screen.queryByTestId("delivery-submit-form")).not.toBeInTheDocument();
   });
 
+  it("shows the current version, review owner, and next step as a handoff", () => {
+    render(
+      <DeliverySection
+        {...baseProps}
+        approvalGates={["creative_internal", "creative_client"]}
+        deliveries={[
+          {
+            id: "delivery-v2",
+            versionNumber: 2,
+            description: "Final cut",
+            designerNote: "Review the opening frame.",
+            submittedAt: "2026-08-25T10:00:00.000Z",
+            isFinalApproved: false,
+            submittedBy: { id: "u-1", name: "Designer" },
+            links: [],
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("delivery-review-handoff")).toHaveTextContent("Review handoff");
+    expect(screen.getByTestId("delivery-review-handoff")).toHaveTextContent("V2");
+    expect(screen.getByText("Internal and client reviewers")).toBeInTheDocument();
+    expect(screen.getByText(/A reviewer approves this version/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/by Designer/i).length).toBeGreaterThan(0);
+  });
+
   it("shows media already attached to the post before a search", async () => {
     const user = userEvent.setup();
     render(

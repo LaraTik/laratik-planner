@@ -59,6 +59,7 @@ export function DeliverySection({
   deliveries,
   mediaAssets = [],
   folderOptions = [],
+  approvalGates = [],
   viewerIsClient = false,
 }: {
   workspaceId?: string;
@@ -71,6 +72,7 @@ export function DeliverySection({
   deliveries: DeliveryVersion[];
   mediaAssets?: DeliveryMediaAsset[];
   folderOptions?: DeliveryFolder[];
+  approvalGates?: string[];
   viewerIsClient?: boolean;
 }) {
   const t = useLocaleT();
@@ -90,6 +92,26 @@ export function DeliverySection({
   const canUploadInline = workspaceId.length > 0;
   const previousAssetSet = new Set(previousAssetIds);
   const nextVersionNumber = (deliveries[0]?.versionNumber ?? 0) + 1;
+  const latestDelivery = deliveries[0] ?? null;
+  const reviewStatus = latestDelivery
+    ? latestDelivery.isFinalApproved
+      ? "approved"
+      : contentStatus === "changes_requested"
+        ? "changes_requested"
+        : "awaiting"
+    : "not_started";
+  const reviewOwner = viewerIsClient
+    ? t("contentDetail.deliveries.reviewerClient")
+    : approvalGates.includes("creative_internal") && approvalGates.includes("creative_client")
+      ? t("contentDetail.deliveries.reviewerBoth")
+      : approvalGates.includes("creative_client")
+        ? t("contentDetail.deliveries.reviewerClient")
+        : approvalGates.includes("creative_internal")
+          ? t("contentDetail.deliveries.reviewerInternal")
+          : t("contentDetail.deliveries.reviewerPending");
+  const reviewStatusLabel = t(`contentDetail.deliveries.reviewHandoffStatus.${reviewStatus}`);
+  const reviewStatusBody = t(`contentDetail.deliveries.reviewHandoffBody.${reviewStatus}`);
+  const nextStep = t(`contentDetail.deliveries.reviewHandoffNext.${reviewStatus}`);
   const canSubmit =
     (isDesigner || isManager) &&
     (contentStatus === "in_design" ||
@@ -143,6 +165,54 @@ export function DeliverySection({
 
   return (
     <div className="space-y-4">
+      <Card
+        className="border-info/30 bg-info-subtle/30"
+        data-testid="delivery-review-handoff"
+        role="region"
+        aria-labelledby="delivery-review-handoff-title"
+      >
+        <header className="flex flex-wrap items-start justify-between gap-2">
+          <div className="min-w-0">
+            <CardTitle id="delivery-review-handoff-title">
+              {t("contentDetail.deliveries.reviewHandoffTitle")}
+            </CardTitle>
+            <p className="text-body text-fg-secondary mt-1">{reviewStatusBody}</p>
+          </div>
+          <span className="text-label border-info/30 bg-surface text-info rounded-full border px-2 py-1 font-semibold">
+            {reviewStatusLabel}
+          </span>
+        </header>
+        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+          <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
+            <dt className="text-label text-fg-muted font-semibold">
+              {t("contentDetail.deliveries.currentVersionLabel")}
+            </dt>
+            <dd className="text-body text-fg-primary mt-0.5 font-semibold">
+              {latestDelivery
+                ? t("contentDetail.deliveries.currentVersion", {
+                    count: latestDelivery.versionNumber,
+                  })
+                : t("contentDetail.deliveries.noCurrentVersion")}
+            </dd>
+          </div>
+          <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
+            <dt className="text-label text-fg-muted font-semibold">
+              {t("contentDetail.deliveries.reviewerLabel")}
+            </dt>
+            <dd className="text-body text-fg-primary mt-0.5 font-semibold">{reviewOwner}</dd>
+          </div>
+        </dl>
+        {latestDelivery && !viewerIsClient && latestDelivery.submittedBy.name ? (
+          <p className="text-label text-fg-muted mt-3">
+            {t("contentDetail.deliveries.submittedBy", { name: latestDelivery.submittedBy.name })}
+          </p>
+        ) : null}
+        <p className="text-label text-fg-secondary border-border mt-3 border-t pt-3">
+          <span className="font-semibold">{t("contentDetail.deliveries.nextStepLabel")}</span>{" "}
+          {nextStep}
+        </p>
+      </Card>
+
       {/* History — always visible when there is at least one delivery */}
       {deliveries.length > 0 ? (
         <Card data-testid="delivery-history">
