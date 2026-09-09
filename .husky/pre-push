@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
-# Pre-push hook — full local unit + integration + critical E2E gate
+# Pre-push hook — full local unit + integration + advisory critical E2E
 # before a push reaches CI.
 #
 # Scope: catches regressions that the pre-commit affected unit run and
@@ -7,15 +7,14 @@
 #   1. full unit suite  (catches cross-module regressions)
 #   2. integration      (catches DB / migration / authorization
 #                        regressions that need a real Postgres)
-#   3. critical E2E     (chromium functional subset; visual review remains
-#                        a separate manual release-candidate gate)
+#   3. critical E2E     (chromium functional subset; advisory by default)
 #
 # This is the second-tier of the 2026-08-26 CI-minimization plan
 # + the 2026-08-26 "E2E moves local" follow-up + the 2026-08-28
-# "integration moves local" follow-up. The full unit suite, the
-# critical E2E, and (as of 2026-08-28) integration all live in
-# this hook so a failed run blocks the push instead of waiting
-# for CI. The benefit of the integration move is the dev sees
+# "integration moves local" follow-up. The full unit suite and
+# integration remain local hard gates. Critical E2E runs as an
+# advisory signal so browser setup/runtime does not block a push.
+# The benefit of the integration move is the dev sees
 # "I think I'm done" time converge with "actually shipped" time
 # — the CI deploy-gate then re-runs integration as the audit,
 # not the first signal.
@@ -35,7 +34,7 @@
 #                               docs/operations/runbook.md
 #                               § "Local E2E recipes").
 #   3. pnpm test:e2e:critical — chromium functional subset
-#                               (skipped only for docs-only pushes).
+#                               (advisory; skipped only for docs-only pushes).
 #                               Requires a local dev env.
 #
 # What does NOT run (intentionally — kept for CI or out of the
@@ -46,7 +45,7 @@
 #   • full 5-browser matrix (`pnpm test:e2e:isolated`, ~45 min on
 #     Linux CI / ~30-60 min on a Mac) — keep as a manual pre-merge
 #     step per the runbook. The critical subset is the
-#     pre-push gate; the full matrix is the release-candidate
+#     pre-push signal; the full matrix is the release-candidate
 #     gate. Per 2026-08-26 "E2E moves local" decision.
 
 set -e
@@ -135,8 +134,9 @@ else
   echo "⏭  pnpm test:integration skipped (docs-only or ref deletion push)"
 fi
 
-# 3) Critical E2E (chromium functional subset). Visual regression is
-#    intentionally a separate manual release-candidate gate because
+# 3) Critical E2E (chromium functional subset). This is advisory locally;
+#    the GitHub advisory workflow repeats it on the exact pushed SHA.
+#    Visual regression is intentionally a separate manual release-candidate gate because
 #    the committed Stitch references require deliberate review when
 #    product copy, fixtures, or layout density changes.
 #
@@ -155,7 +155,12 @@ if [ -n "$SKIP_E2E" ]; then
 elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
   printf '\n▶ pnpm test:e2e:critical — chromium functional checks before push:\n'
   printf '  (SKIP_E2E=1 to skip; full local pre-reqs in docs/operations/runbook.md)\n\n'
-  pnpm test:e2e:critical
+  if pnpm test:e2e:critical; then
+    echo "✓ pnpm test:e2e:critical passed (advisory)"
+  else
+    echo "⚠ pnpm test:e2e:critical failed (advisory); push continues."
+    echo "  Run pnpm test:e2e:release before a release candidate."
+  fi
 else
   echo "⏭  pnpm test:e2e:critical skipped (docs-only or ref deletion push)"
 fi

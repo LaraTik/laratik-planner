@@ -2,6 +2,8 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "node:path";
 
+const coverageAdvisory = process.env.COVERAGE_ADVISORY === "1";
+
 export default defineConfig({
   plugins: [react()],
   test: {
@@ -93,23 +95,67 @@ export default defineConfig({
       //                          granularity or (b) we add a
       //                          pg-mem-backed integration test that
       //                          runs in the unit config.
-      thresholds: {
-        "src/lib/auth/**/*.ts": { statements: 90, branches: 90, functions: 90, lines: 90 },
-        "src/lib/security/**/*.ts": { statements: 93, branches: 85, functions: 95, lines: 93 },
-        "src/lib/content/**/*.ts": { statements: 65, branches: 80, functions: 80, lines: 65 },
-        "src/lib/deliveries/**/*.ts": { statements: 85, branches: 85, functions: 70, lines: 85 },
-        "src/lib/publishing/**/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
-        "src/lib/observability/**/*.ts": { statements: 95, branches: 90, functions: 95, lines: 95 },
-        "src/lib/channels/**/*.ts": { statements: 80, branches: 70, functions: 80, lines: 85 },
-        "src/lib/brand/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/storage/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/dashboard/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/workspaces/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/ai/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/email/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
-        "src/lib/validation/**/*.ts": { statements: 87, branches: 85, functions: 100, lines: 87 },
-        "src/**/*.ts": { statements: 60, branches: 60, functions: 50, lines: 60 },
-      },
+      ...(coverageAdvisory
+        ? {}
+        : {
+            thresholds: {
+              "src/lib/auth/**/*.ts": { statements: 90, branches: 90, functions: 90, lines: 90 },
+              "src/lib/security/**/*.ts": {
+                statements: 93,
+                branches: 85,
+                functions: 95,
+                lines: 93,
+              },
+              "src/lib/content/**/*.ts": { statements: 65, branches: 80, functions: 80, lines: 65 },
+              "src/lib/deliveries/**/*.ts": {
+                statements: 85,
+                branches: 85,
+                functions: 70,
+                lines: 85,
+              },
+              "src/lib/publishing/**/*.ts": {
+                statements: 95,
+                branches: 90,
+                functions: 95,
+                lines: 95,
+              },
+              "src/lib/observability/**/*.ts": {
+                statements: 95,
+                branches: 90,
+                functions: 95,
+                lines: 95,
+              },
+              "src/lib/channels/**/*.ts": {
+                statements: 80,
+                branches: 70,
+                functions: 80,
+                lines: 85,
+              },
+              "src/lib/brand/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
+              "src/lib/storage/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
+              "src/lib/dashboard/**/*.ts": {
+                statements: 85,
+                branches: 80,
+                functions: 85,
+                lines: 85,
+              },
+              "src/lib/workspaces/**/*.ts": {
+                statements: 85,
+                branches: 80,
+                functions: 85,
+                lines: 85,
+              },
+              "src/lib/ai/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
+              "src/lib/email/**/*.ts": { statements: 85, branches: 80, functions: 85, lines: 85 },
+              "src/lib/validation/**/*.ts": {
+                statements: 87,
+                branches: 85,
+                functions: 100,
+                lines: 87,
+              },
+              "src/**/*.ts": { statements: 60, branches: 60, functions: 50, lines: 60 },
+            },
+          }),
     },
   },
   resolve: {

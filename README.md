@@ -34,13 +34,13 @@ pnpm lint
 pnpm typecheck
 pnpm test:unit
 TEST_DATABASE_URL=postgresql://.../planner_test pnpm test:integration
-pnpm test:coverage
+pnpm test:coverage:advisory
 pnpm build
 pnpm audit --prod
-pnpm test:e2e
+pnpm test:e2e:critical
 ```
 
-Integration tests require a disposable database whose URL contains `test` or `ci`; the runner refuses any other database name. Browser CI covers Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari. The dedicated `visual-chromium` project currently asserts 39 exact-reference captures plus 73 scoped responsive baselines (23 route surfaces: 19 non-planning × 3 viewports and four planning × 4 viewports); candidate baselines passed 112/112 at snapshot `f702b46`, with final exact-HEAD rerun and human review still required. See [`PRODUCTION_READINESS_TRACKER.md`](./PRODUCTION_READINESS_TRACKER.md) under QA-004.
+Integration tests require a disposable database whose URL contains `test` or `ci`; the runner refuses any other database name. Coverage and critical browser checks are advisory on ordinary pushes. Strict coverage thresholds and the full five-browser/visual matrix run nightly and through the release-candidate workflow. Use `pnpm test:e2e:release` for the blocking local release check.
 
 ## Deployment
 

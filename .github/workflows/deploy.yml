@@ -3,13 +3,10 @@ name: Deploy
 # Deploy fires when the authoritative `CI` workflow completes
 # successfully on `main`. As of the 2026-08-26 CI-minimization
 # plan, CI runs the irreducible deploy-gate (integration,
-# coverage, audit, build, Docker smoke, SMTP-cert probe, workflow
-# linters). As of the 2026-08-26 "E2E moves local" follow-up, E2E
-# runs locally in `.husky/pre-push` (critical subset) and as a
-# manual pre-merge step (full 5-browser matrix) — no GitHub
-# workflow. The deploy therefore fires on CI green alone; the
-# critical E2E is the dev's pre-push signal, the full E2E is the
-# dev's pre-merge signal, and `pnpm verify` covers the rest.
+# audit, build, Docker smoke, SMTP-cert probe, workflow linters).
+# Coverage and browser validation run independently in
+# `.github/workflows/advisory-quality.yml`; they never control this
+# workflow. The deploy therefore fires on required CI green alone.
 #
 # As of the 2026-08-28 single-build change, CI's `build-smoke`
 # job is the single source of the GHCR push — it builds the

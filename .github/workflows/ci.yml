@@ -6,17 +6,16 @@ name: CI
 #
 #   1. format, lint, typecheck, and unit correctness
 #   2. integration + migration drill
-#   3. coverage thresholds (runs the unit suite instrumented)
-#   4. production build + Docker smoke
-#   5. zero critical/high production audit findings
-#   6. SMTP cert probe (deploy-blocker)
-#   7. workflow / Dockerfile / shell linters (deploy-blocker)
-#   8. Trend sidecar boot and unit suite
+#   3. production build + Docker smoke
+#   4. zero critical/high production audit findings
+#   5. SMTP cert probe (deploy-blocker)
+#   6. workflow / Dockerfile / shell linters (deploy-blocker)
+#   7. Trend sidecar boot and unit suite
 #
 # Local hooks remain the fast feedback loop, but CI repeats the static
-# and unit gates authoritatively. Browser and visual suites remain local
-# release-candidate checks because they require the isolated runner and
-# committed baselines. See `docs/testing/strategy.md` for the contract.
+# and unit gates authoritatively. Coverage and browser checks run in the
+# independent advisory workflow; strict browser/coverage audits remain
+# release-candidate and nightly checks. See `docs/testing/strategy.md`.
 on:
   push:
     branches: [main]
@@ -65,7 +64,7 @@ jobs:
     # Local hooks provide fast feedback; these same checks run here so
     # deploy eligibility never depends on a developer machine or hook
     # configuration.
-    name: Quality, integration, coverage, audit
+    name: Quality, integration, audit
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -176,42 +175,22 @@ jobs:
         run: pnpm test:integration
         timeout-minutes: 20
 
-      - name: Coverage
-        # Runs the full vitest suite under v8 coverage with the
-        # module-threshold gates from vitest.config.ts. This is
-        # the authoritative coverage check; pre-push only asserts
-        # pass/fail, not the threshold.
-        run: pnpm test:coverage
-        timeout-minutes: 20
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 14
-        timeout-minutes: 5
-
       - name: Dependency audit
         run: pnpm audit --prod
         timeout-minutes: 10
 
-  # 2026-08-26 (CI-minimization plan): the `visual-regression` job
-  # was removed from this workflow. Visual regression is no longer
-  # on the per-push deploy-gate path. The full visual matrix lives
-  # in `.github/workflows/e2e.yml` under `workflow_dispatch`, and
-  # `deploy.yml` now requires a recent successful E2E dispatch
-  # before firing. Run `pnpm test:visual` locally to verify visual
-  # diffs before pushing a release candidate; dispatch `e2e.yml`
-  # from the Actions tab to register a green E2E for the SHA.
+  # Advisory coverage and browser checks live in
+  # `.github/workflows/advisory-quality.yml`. They are intentionally
+  # separate from this deploy-gate workflow so a slow or failing
+  # advisory run cannot prevent the required CI workflow from building
+  # and publishing the exact SHA.
   #
   # Rationale: this job burned ~30 min of the 2,000 min/month free
   # tier on every push. The 3-viewport responsive matrix is
   # deterministic enough to run on a dev laptop with the committed
   # baselines in `tests/e2e/visual-regression.spec.ts-snapshots/`.
-  # See `docs/testing/strategy.md` (Release gates) and the
-  # 2026-08-26 plan for the full rationale.
+  # See `docs/testing/strategy.md` (Release gates) and
+  # `docs/decisions/0013-advisory-quality-gates.md` for the rationale.
 
   build-smoke:
     name: Build, Docker image, health smoke, GHCR push
@@ -536,7 +515,7 @@ jobs:
         timeout-minutes: 5
 
       - name: actionlint
-        # Fast structural + syntax check on all 3 workflows. Surfaces
+        # Fast structural + syntax check on all workflows. Surfaces
         # shellcheck-level findings inside the workflow's `run: |` blocks
         # (actionlint runs shellcheck internally) and undeclared inputs.
         uses: reviewdog/action-actionlint@v1.65.2

@@ -30,11 +30,12 @@ rules:
   # Accepted: this is a tracked, scheduled refactor — not a missed fix.
   unpinned-uses:
     ignore:
-      # All 3 workflows. Once SHA pinning lands, narrow this to the
+      # All workflows. Once SHA pinning lands, narrow this to the
       # remaining unfixed cases (or delete the rule entry).
       - ci.yml
       - deploy.yml
       - e2e.yml
+      - advisory-quality.yml
 
   # ── dangerous-triggers ─────────────────────────────────────────────────────
   # zizmor flags `workflow_run` as a fundamentally insecure trigger because

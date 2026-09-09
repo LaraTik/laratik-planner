@@ -120,7 +120,8 @@ laratik-planner/
 ├── docker-compose.yml              # prod: app + postgres (Traefik labels)
 ├── docker-compose.dev.yml          # local: postgres only (app runs native)
 ├── .github/workflows/
-│   ├── ci.yml                      # deploy-gate: integration/coverage/audit/build/smoke/smtp-cert/lint-meta
+│   ├── ci.yml                      # deploy-gate: integration/audit/build/smoke/smtp-cert/lint-meta
+│   ├── advisory-quality.yml        # non-blocking coverage + browser quality checks
 │   └── deploy.yml                  # workflow_run: CI success → build+push GHCR → ssh deploy
 #                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
 #                                    # Local E2E recipes: docs/operations/runbook.md (Local E2E)
@@ -191,7 +192,7 @@ laratik-planner/
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs the full unit suite and the critical E2E subset (`pnpm test:e2e:critical` = chromium + visual-chromium). Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_E2E=1` for trivial pushes.
+- ✅ Pre-push hook runs the full unit suite and integration suite; critical E2E (`pnpm test:e2e:critical`) is an advisory signal and never blocks a normal push. Use `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_E2E=1` for trivial pushes.
 - ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
@@ -393,7 +394,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (integration, coverage, audit, build, Docker smoke, SMTP-cert probe, workflow linters). Format / lint / typecheck / full unit suite / critical E2E (chromium + visual-chromium) run locally in `.husky/pre-commit` and `.husky/pre-push` so a regression is caught before CI minutes are spent. The full 5-browser E2E matrix and the visual matrix run **locally** as a manual pre-merge step (no GitHub workflow). `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
+> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs changed-line coverage and critical Chromium on every `main` push, then strict coverage and the full browser/visual matrix nightly and for release candidates. Format / lint / typecheck / full unit suite run locally in `.husky/pre-commit` and `.husky/pre-push`; critical E2E is advisory locally. `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
 
 ## Conventions
 

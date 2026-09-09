@@ -2,19 +2,14 @@
 
 ## Release gates
 
-A merge to `main` is production-eligible only when every gate in the
-authoritative `CI` workflow passes. The deploy workflow triggers on
-successful `CI` (`workflow_run`) and never on a partial run, so any
-missing or skipped gate is a deploy-blocker. E2E moved to the local
-dev loop in 2026-08-26 (the "E2E moves local" follow-up to the
-CI-minimization plan) — the critical subset is the pre-push signal
-and the full 5-browser matrix is the pre-merge signal; no GitHub
-workflow. Integration also moved to the local pre-push in
-2026-08-28 (the "single-build-pipeline" change); CI re-runs it as
-the deploy-gate audit, not as the first signal. As of 2026-08-28,
-CI's `build-smoke` job is the single source of the GHCR push —
-`deploy.yml` no longer rebuilds; it just verifies the tag and
-SSHes to the VPS.
+A merge to `main` is production-eligible only when every required gate in
+the authoritative `CI` workflow passes. The deploy workflow triggers on
+successful `CI` (`workflow_run`) and never on a partial run, so missing or
+skipped required gates remain deploy-blockers. Coverage and browser checks
+run independently in `advisory-quality.yml`: changed-line coverage and
+critical Chromium run on every `main` push; strict coverage plus the full
+browser and visual matrix run nightly and through the release-candidate
+dispatch. See ADR 0013 for the split-gate rationale.
 
 | Gate                                                         | Where                                                                                     | Required for deploy     | Release-candidate |
 | ------------------------------------------------------------ | ----------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
@@ -25,10 +20,11 @@ SSHes to the VPS.
 | Affected unit selection on staged changes                    | `.husky/pre-commit`                                                                       | ✅ (pre-commit)         | ✅                |
 | Integration + migration drill (`pnpm test:integration`)      | `.husky/pre-push` (pre-push) + `ci.yml` `unit-quality` `Integration tests` (audit re-run) | ✅ (CI audit)           | ✅                |
 | Migration drill (`pnpm migration-drill`)                     | `ci.yml` `unit-quality` `Migration drill` + release checklist                             | ✅                      | ✅                |
-| Critical E2E (Chromium functional, `pnpm test:e2e:critical`) | `.husky/pre-push`                                                                         | ✅ (pre-push)           | ✅                |
-| Full 5-browser matrix (`pnpm test:e2e:isolated`)             | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
-| Visual matrix (`pnpm test:visual`)                           | Local (manual pre-merge step)                                                             | ❌ (manual pre-merge)   | ✅                |
-| Target coverage (95/90 critical, 85/80 services)             | `ci.yml` → `unit-quality` → `Coverage`                                                    | ✅                      | ✅                |
+| Critical E2E (Chromium functional, `pnpm test:e2e:critical`) | `.husky/pre-push` advisory + `advisory-quality.yml`                                       | ❌ (advisory)           | ✅                |
+| Full 5-browser matrix (`pnpm test:e2e:isolated`)             | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                         | ❌ (advisory)           | ✅                |
+| Visual matrix (`pnpm test:visual`)                           | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                         | ❌ (advisory)           | ✅                |
+| Changed-line coverage (`pnpm test:coverage:advisory`)        | `advisory-quality.yml`                                                                    | ❌ (advisory)           | ❌                |
+| Absolute coverage (`pnpm test:coverage`)                     | `advisory-quality.yml` nightly/dispatch                                                   | ❌ (advisory)           | ✅                |
 | Production audit (`pnpm audit --prod`)                       | `ci.yml` → `unit-quality` → `Dependency audit`                                            | ✅ (zero critical/high) | ✅                |
 | Production build (`pnpm build`)                              | `ci.yml` → `build-smoke` → `Build`                                                        | ✅                      | ✅                |
 | Docker image build + `/api/health` smoke                     | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                           | ✅                      | ✅                |
@@ -39,38 +35,34 @@ SSHes to the VPS.
 | Workflow / Dockerfile / shell linters                        | `ci.yml` → `lint-meta`                                                                    | ✅                      | ✅                |
 
 `CI` enforces the deploy-critical subset that genuinely cannot be
-reproduced on a dev laptop: integration tests + coverage thresholds
-(needs a disposable PostgreSQL; the pre-push is fast feedback, the
-CI run is the audit), production build + Docker image + GHCR push
+reproduced on a dev laptop: integration tests, production build + Docker image + GHCR push
 (platform-specific + the single source of the production image
 as of 2026-08-28), audit (needs the full dep graph), SMTP cert
 probe (talks to a real production endpoint), and the workflow +
 Dockerfile + shell linters (cheap but the only place that catches
 template-injection / unpinned action refs).
 
-Format, lint, typecheck, the full unit suite, integration, and the
-critical Chromium E2E subset run in `.github/workflows/ci.yml` and/or the local
-`.husky/pre-commit` / `.husky/pre-push` hooks. This gives fast local
-feedback and an authoritative server-side gate. The full
-5-browser E2E matrix and the visual matrix are run locally as a
-manual pre-merge step (see the runbook for recipes); they are not
-on the deploy critical path.
+Format, lint, typecheck, the full unit suite, and integration run in
+`.github/workflows/ci.yml` and/or the local hooks. Critical E2E runs as
+an advisory local signal and is repeated on the exact pushed SHA by
+`advisory-quality.yml`. The full browser and visual matrices remain
+advisory until the nightly or release-candidate quality audit.
 
-`CI` uploads `playwright-report`, `test-results`, and visual diffs
-as artifacts on failure, plus a `coverage-report` artifact, so any
-regression can be diagnosed from the run page without a local repro.
+`advisory-quality.yml` uploads coverage, Playwright, visual-diff, and
+structured JSON result artifacts. Persistent failures update one deduplicated
+GitHub issue per check; a later passing SHA closes that issue.
 
 ## Test layers
 
-| Layer         | Command                                              | Contract                                                                                                                                                                                                                         |
-| ------------- | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit/domain   | `pnpm test:unit`                                     | Pure schemas, workflow rules, KPI calculations, security helpers, and UI behavior. Never connects to PostgreSQL.                                                                                                                 |
-| Affected loop | `pnpm test:affected` / `pnpm test:area <domain>`     | Hard-gated developer feedback from Git changes: Vitest related unit tests, manifest-selected integration/browser tests, and conservative escalation for shared or unknown paths.                                                 |
-| Integration   | `TEST_DATABASE_URL=...test... pnpm test:integration` | Applies migrations to a disposable PostgreSQL database and runs real constraints, authorization, transaction, and concurrency cases. Missing or unsafe configuration fails; tests never skip.                                    |
-| Coverage      | `pnpm test:coverage`                                 | Generates HTML and LCOV evidence under `coverage/`. Threshold enforcement is tracked under QA-003 (Not Started); current numbers live in [`../production-readiness/TEST_EVIDENCE.md`](../production-readiness/TEST_EVIDENCE.md). |
-| Browser       | `pnpm test:e2e`                                      | Chromium, Firefox, WebKit, and mobile Chrome journeys with separated role identities. Mobile Safari and per-viewport visual baselines remain under UI-010 (Partial) in the production tracker.                                   |
-| Accessibility | `pnpm test:a11y` plus UAT                            | WCAG 2.2 AA automation and keyboard-only task completion.                                                                                                                                                                        |
-| Operations    | CI and UAT runbook                                   | Frozen install, audit, build, images, migrations, backup/restore, health/readiness, OAuth, SMTP, AI, and Sentry.                                                                                                                 |
+| Layer         | Command                                              | Contract                                                                                                                                                                                       |
+| ------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit/domain   | `pnpm test:unit`                                     | Pure schemas, workflow rules, KPI calculations, security helpers, and UI behavior. Never connects to PostgreSQL.                                                                               |
+| Affected loop | `pnpm test:affected` / `pnpm test:area <domain>`     | Hard-gated developer feedback from Git changes: Vitest related unit tests, manifest-selected integration/browser tests, and conservative escalation for shared or unknown paths.               |
+| Integration   | `TEST_DATABASE_URL=...test... pnpm test:integration` | Applies migrations to a disposable PostgreSQL database and runs real constraints, authorization, transaction, and concurrency cases. Missing or unsafe configuration fails; tests never skip.  |
+| Coverage      | `pnpm test:coverage` / `pnpm test:coverage:advisory` | Strict thresholds run in nightly/release audits; advisory runs produce HTML, LCOV, and changed-line evidence without blocking deployment.                                                      |
+| Browser       | `pnpm test:e2e`                                      | Chromium, Firefox, WebKit, and mobile Chrome journeys with separated role identities. Mobile Safari and per-viewport visual baselines remain under UI-010 (Partial) in the production tracker. |
+| Accessibility | `pnpm test:a11y` plus UAT                            | WCAG 2.2 AA automation and keyboard-only task completion.                                                                                                                                      |
+| Operations    | CI and UAT runbook                                   | Frozen install, audit, build, images, migrations, backup/restore, health/readiness, OAuth, SMTP, AI, and Sentry.                                                                               |
 
 ## Safety and determinism
 

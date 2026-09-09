@@ -1,0 +1,373 @@
+name: Advisory quality
+
+# Advisory checks intentionally live in a separate workflow. The deploy
+# workflow listens only to the required CI workflow, so a coverage or browser
+# failure remains visible without preventing the exact SHA from shipping.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Advisory suite to run"
+        required: true
+        default: critical
+        type: choice
+        options:
+          - critical
+          - release-candidate
+
+concurrency:
+  group: advisory-quality-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  ADVISORY_SUITE: ${{ inputs.suite || 'critical' }}
+
+jobs:
+  coverage:
+    name: Coverage advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Resolve comparison SHA
+        env:
+          EVENT_BEFORE: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "${GITHUB_EVENT_NAME}" == "push" && -n "${EVENT_BEFORE}" && "${EVENT_BEFORE}" != "0000000000000000000000000000000000000000" ]]; then
+            echo "BASE_SHA=${EVENT_BEFORE}" >> "$GITHUB_ENV"
+          else
+            echo "BASE_SHA=$(git rev-parse HEAD^1)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Download previous coverage baseline
+        if: github.event_name == 'push'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          previous_run=$(gh run list --workflow advisory-quality.yml --branch main --status success --limit 1 --json databaseId --jq '.[0].databaseId // empty')
+          if [[ -n "${previous_run}" ]]; then
+            gh run download "${previous_run}" --name "advisory-coverage-${previous_run}" --dir previous-advisory || true
+          fi
+
+      - name: Run coverage attempt 1
+        id: attempt_one
+        run: |
+          echo "ADVISORY_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+          set +e
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+            pnpm test:coverage > coverage-attempt-1.log 2>&1
+          else
+            pnpm test:coverage:advisory > coverage-attempt-1.log 2>&1
+          fi
+          status=$?
+          cat coverage-attempt-1.log
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run coverage attempt 2 after failure
+        id: attempt_two
+        if: steps.attempt_one.outputs.status != '0'
+        run: |
+          set +e
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+            pnpm test:coverage > coverage-attempt-2.log 2>&1
+          else
+            pnpm test:coverage:advisory > coverage-attempt-2.log 2>&1
+          fi
+          status=$?
+          cat coverage-attempt-2.log
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Calculate changed-line coverage
+        if: always()
+        run: |
+          set +e
+          if [[ -f coverage/lcov.info ]]; then
+            previous_args=()
+            if [[ -f previous-advisory/coverage/advisory-diff.json ]]; then
+              previous_args+=(--previous previous-advisory/coverage/advisory-diff.json)
+            fi
+            pnpm coverage:diff -- --base "$BASE_SHA" --head "$GITHUB_SHA" --output coverage/advisory-diff.json "${previous_args[@]}"
+          else
+            echo "No LCOV file was produced; coverage execution failed before reporting."
+          fi
+          exit 0
+
+      - name: Write coverage advisory report
+        if: always()
+        env:
+          ATTEMPT_ONE_STATUS: ${{ steps.attempt_one.outputs.status }}
+          ATTEMPT_TWO_STATUS: ${{ steps.attempt_two.outputs.status }}
+        run: |
+          first="${ATTEMPT_ONE_STATUS}"
+          second="${ATTEMPT_TWO_STATUS}"
+          if [[ "${first}" == "0" ]]; then
+            status=passed
+            attempts=1
+          elif [[ "${second}" == "0" ]]; then
+            status=flaky
+            attempts=2
+          else
+            status=failed
+            attempts=2
+          fi
+          duration=$(($(date +%s) - ADVISORY_STARTED_AT))
+          pnpm exec tsx scripts/ci/advisory-report.ts \
+            --check coverage \
+            --status "${status}" \
+            --attempts "${attempts}" \
+            --duration-seconds "${duration}" \
+            --artifacts "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+            --output advisory-coverage.json
+          echo "ADVISORY_FINAL_STATUS=${status}" >> "$GITHUB_ENV"
+
+      - name: Read previous coverage result
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues?state=all&per_page=100" \
+            --jq '.[] | select(.title == "Advisory: coverage on main" and (.pull_request | not)) | .body' \
+            > prior-advisory-issue.txt
+
+      - name: Prepare read-only diagnosis context
+        if: always()
+        run: |
+          pnpm exec tsx scripts/ci/prepare-advisory-context.ts \
+            --check coverage --base "$BASE_SHA" --head "$GITHUB_SHA" \
+            --output diagnosis-context
+
+      - name: Upload coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: advisory-coverage-${{ github.run_id }}
+          path: |
+            coverage/
+            coverage-attempt-*.log
+            advisory-coverage.json
+            diagnosis-context/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Update coverage advisory issue
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec tsx scripts/ci/publish-advisory-issue.ts advisory-coverage.json
+
+      - name: Fail persistent coverage result
+        if: env.ADVISORY_FINAL_STATUS == 'failed'
+        run: exit 1
+
+  e2e:
+    name: E2E advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      issues: write
+    services:
+      postgres:
+        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
+        env:
+          POSTGRES_USER: planner
+          POSTGRES_PASSWORD: planner_ci
+          POSTGRES_DB: planner_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U planner -d planner_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      mailpit:
+        image: axllent/mailpit:v1.27.4@sha256:df6c2541907e1be6fac21f509927cf6ed771617a1f4b361ef66d97bd05593d2d
+        ports:
+          - 1025:1025
+          - 8025:8025
+        env:
+          MP_MAX_MESSAGES: "5000"
+          MP_SMTP_AUTH_ACCEPT_ANY: "1"
+          MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+        options: >-
+          --health-cmd "wget -qO- http://localhost:8025/api/v1/info >/dev/null 2>&1 || exit 1"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
+      TEST_DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
+      AUTH_SECRET: ci_secret_only_not_for_production_xxxxxxxxxxxxxxxx
+      AGENCY_COOKIE_SECRET: ci_agency_cookie_secret_not_for_production_xxxxxxxxx
+      AUTH_URL: http://localhost:3011
+      NEXTAUTH_URL: http://localhost:3011
+      AUTH_TRUST_HOST: "true"
+      SMTP_HOST: localhost
+      SMTP_PORT: 1025
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci-only
+      SMTP_FROM: "ci <ci@planner.test>"
+      PORT: 3011
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Chromium
+        if: github.event_name == 'push' && env.ADVISORY_SUITE != 'release-candidate'
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Install full browser matrix
+        if: github.event_name == 'schedule' || env.ADVISORY_SUITE == 'release-candidate'
+        run: pnpm exec playwright install --with-deps chromium firefox webkit
+
+      - name: Run E2E attempt 1
+        id: attempt_one
+        run: |
+          echo "ADVISORY_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
+          set +e
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+            pnpm test:e2e:release > e2e-attempt-1.log 2>&1
+          else
+            pnpm test:e2e:critical > e2e-attempt-1.log 2>&1
+          fi
+          status=$?
+          cat e2e-attempt-1.log
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Run E2E attempt 2 after failure
+        id: attempt_two
+        if: steps.attempt_one.outputs.status != '0'
+        run: |
+          set +e
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+            pnpm test:e2e:release > e2e-attempt-2.log 2>&1
+          else
+            pnpm test:e2e:critical > e2e-attempt-2.log 2>&1
+          fi
+          status=$?
+          cat e2e-attempt-2.log
+          echo "status=${status}" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Write E2E advisory report
+        if: always()
+        env:
+          ATTEMPT_ONE_STATUS: ${{ steps.attempt_one.outputs.status }}
+          ATTEMPT_TWO_STATUS: ${{ steps.attempt_two.outputs.status }}
+        run: |
+          first="${ATTEMPT_ONE_STATUS}"
+          second="${ATTEMPT_TWO_STATUS}"
+          if [[ "${first}" == "0" ]]; then
+            status=passed
+            attempts=1
+          elif [[ "${second}" == "0" ]]; then
+            status=flaky
+            attempts=2
+          else
+            status=failed
+            attempts=2
+          fi
+          duration=$(($(date +%s) - ADVISORY_STARTED_AT))
+          pnpm exec tsx scripts/ci/advisory-report.ts \
+            --check e2e \
+            --status "${status}" \
+            --attempts "${attempts}" \
+            --duration-seconds "${duration}" \
+            --artifacts "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts" \
+            --output advisory-e2e.json
+          echo "ADVISORY_FINAL_STATUS=${status}" >> "$GITHUB_ENV"
+
+      - name: Read previous E2E result
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/issues?state=all&per_page=100" \
+            --jq '.[] | select(.title == "Advisory: e2e on main" and (.pull_request | not)) | .body' \
+            > prior-advisory-issue.txt
+
+      - name: Prepare read-only diagnosis context
+        if: always()
+        run: |
+          pnpm exec tsx scripts/ci/prepare-advisory-context.ts \
+            --check e2e --base "HEAD^1" --head "$GITHUB_SHA" \
+            --output diagnosis-context
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: advisory-e2e-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+            e2e-attempt-*.log
+            advisory-e2e.json
+            diagnosis-context/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Update E2E advisory issue
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: pnpm exec tsx scripts/ci/publish-advisory-issue.ts advisory-e2e.json
+
+      - name: Fail persistent E2E result
+        if: env.ADVISORY_FINAL_STATUS == 'failed'
+        run: exit 1

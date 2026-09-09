@@ -41,7 +41,8 @@ database, migration, i18n, dependency, config, fixture, and unknown changes
 escalate to the broadest relevant suites.
 
 The affected command does not run coverage unless `--coverage` is supplied.
-The full coverage run remains the threshold-enforced release gate. A
+The full coverage run remains the threshold-enforced nightly/release audit;
+`pnpm test:coverage:advisory` is the non-blocking per-push signal. A
 documentation-only change prints an explicit no-tests-needed result.
 
 The standard location for new tests is `tests/<layer>/<domain>/`. Existing

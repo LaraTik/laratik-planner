@@ -21,7 +21,7 @@ machine. The same Postgres, the same OAuth credentials, and the
 same Sentry project back both. The acceptance flow is:
 
 1. Local dev (`pnpm dev` against `localhost`) — full feature work, integration tests run against `TEST_DATABASE_URL`.
-2. CI on every push / PR — authoritative format, lint, typecheck, unit, audit, integration, coverage, build, and operational gates; local hooks additionally run the critical E2E subset (`pnpm test:e2e:critical`).
+2. CI on every push / PR — authoritative format, lint, typecheck, unit, audit, integration, build, and operational gates; the separate advisory workflow runs changed-line coverage and critical E2E on `main`.
 3. Deploy workflow (CI green) — immutable SHA-tagged images to GHCR, VPS deploy script, post-deploy health probe.
 4. Production handoff — owner-driven UAT, P0/P1 items in [`PRODUCTION_READINESS_TRACKER.md`](../production-readiness/PRODUCTION_READINESS_TRACKER.md), a verified `Verified` row per item.
 
@@ -29,7 +29,7 @@ same Sentry project back both. The acceptance flow is:
 
 - **Operator count:** the project owner is the solo on-call. A second VPS doubles the deploy + backup + monitoring surface, which is significant for a one-person team. See [`incident-response.md`](./incident-response.md) § "Scope and on-call model".
 - **Tenant count:** v1 has one production agency. The staging environment cannot have realistic tenant data without either an anonymised data export (a real engineering cost — see [`backup-recovery.md`](./backup-recovery.md) for the offsite-restore pattern) or a separate demo agency, which means a second round of seed fixtures.
-- **CI coverage:** the integration tests against `TEST_DATABASE_URL`, the `pnpm migration-drill` script, and the static/unit/coverage/build release contract run on every push. The critical E2E subset runs in the local pre-push hook and the full browser/visual matrix is a manual release-candidate check. The deploy gate is a `head_sha`-pinned GHCR image; a bad SHA cannot land in production without first failing CI.
+- **CI coverage:** the integration tests against `TEST_DATABASE_URL`, the `pnpm migration-drill` script, and the static/unit/build release contract run on every push. Changed-line coverage and critical E2E run in the advisory workflow; strict coverage and the full browser/visual matrix run nightly and for release candidates. The deploy gate is a `head_sha`-pinned GHCR image; a bad SHA cannot land in production without first failing required CI.
 - **Migration discipline:** the migration journal is forward-only and is checked at boot by `/api/health/ready` (see [`../production-readiness/MIGRATION_DEPLOYMENT.md`](../production-readiness/MIGRATION_DEPLOYMENT.md) § "2026-08-24 incident" for the post-incident hardening). A bad migration cannot silently land in production.
 
 The decision is recorded in [`AGENTS.md`](../../AGENTS.md) §169 as
@@ -70,7 +70,7 @@ When staging lands, the deployment is **three-environment**:
 A change may be promoted from `staging` to `production` only when
 **all** of the following are green on the `head_sha`:
 
-1. **CI quality** — the CI workflow runs format, lint, strict typecheck, unit, audit, integration, coverage, build, and smoke gates on the `head_sha`. The release-gate coverage thresholds are 95/90 critical and 85/80 service, per [`../testing/strategy.md`](../testing/strategy.md).
+1. **CI quality** — the CI workflow runs format, lint, strict typecheck, unit, audit, integration, build, and smoke gates on the `head_sha`; the release-candidate advisory audit must also pass strict coverage and browser/visual checks. The release-gate coverage thresholds are 95/90 critical and 85/80 service, per [`../testing/strategy.md`](../testing/strategy.md).
 2. **Release-candidate browser** — `pnpm test:e2e:critical` locally, followed by the full 5-browser and visual matrix, on the `head_sha`.
 3. **CI migration** — `pnpm migration-drill` 4/4 PASS on the `head_sha`. The drill proves the from-zero, in-place upgrade, backup/restore, and failed-migration abort paths against a disposable Postgres.
 4. **CI build** — `pnpm build` (Next.js production build) and `docker build` (immutable SHA-tagged images for `laratik-planner` and `laratik-planner-migrator`) both succeed.
