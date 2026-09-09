@@ -72,6 +72,7 @@ import { PublishPackageForm } from "./publish/publish-package-form";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
+import { listMediaAssetsForContentItem, listMediaFolders } from "@/lib/media/service";
 
 export async function generateMetadata({
   params,
@@ -162,6 +163,8 @@ export default async function ContentDetailPage({
     activeChannels,
     canConfirmReadiness,
     canApproveFinalCopy,
+    linkedMediaAssets,
+    mediaFolders,
   ] = await Promise.all([
     listApprovalsForItem(actor, id),
     listPublicationsForItem(actor, id).catch(() => []),
@@ -213,6 +216,12 @@ export default async function ContentDetailPage({
     // here so the form can render with the right affordances.
     hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner", "publisher"]),
     isAgencyAdmin(actor, ws.agencyId),
+    listMediaAssetsForContentItem(actor, {
+      agencyId: ws.agencyId,
+      workspaceId: ws.id,
+      contentItemId: item.id,
+    }).catch(() => []),
+    listMediaFolders(actor, { agencyId: ws.agencyId, workspaceId: ws.id }).catch(() => []),
   ]);
 
   const agencyId = ws.agencyId;
@@ -922,6 +931,21 @@ export default async function ContentDetailPage({
                     isDesigner={actorRoles.isDesigner}
                     isManager={actorRoles.isManager}
                     viewerIsClient={actorRoles.isClientReviewer}
+                    mediaAssets={linkedMediaAssets.map((row) => ({
+                      id: row.asset.id,
+                      title: row.asset.title,
+                      kind: row.object.kind,
+                      mimeType: row.object.mimeType,
+                      byteSize: row.object.byteSize,
+                      workspaceName: row.workspaceName,
+                      visibility: row.asset.visibility,
+                      altText: row.asset.altText,
+                    }))}
+                    folderOptions={mediaFolders.map((folder) => ({
+                      id: folder.id,
+                      name: folder.name,
+                      parentId: folder.parentId,
+                    }))}
                     deliveries={deliveries.map((d) => ({
                       id: d.id,
                       versionNumber: d.versionNumber,

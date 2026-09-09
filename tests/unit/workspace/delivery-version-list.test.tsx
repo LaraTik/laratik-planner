@@ -212,6 +212,45 @@ describe("DeliveryVersionCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("opens all stored image assets in a keyboard-navigable gallery", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeliveryVersionList
+        versions={[
+          baseVersion({
+            links: [
+              {
+                id: "l-image-1",
+                provider: "other",
+                label: "First image",
+                url: "/api/deliveries/assets/l-image-1",
+                isPreview: true,
+                mediaAssetId: "asset-image-1",
+                mediaKind: "image",
+              },
+              {
+                id: "l-image-2",
+                provider: "other",
+                label: "Second image",
+                url: "/api/deliveries/assets/l-image-2",
+                isPreview: true,
+                mediaAssetId: "asset-image-2",
+                mediaKind: "image",
+              },
+            ],
+          }),
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByTestId("media-asset-gallery-trigger"));
+    expect(screen.getByTestId("media-asset-gallery")).toBeInTheDocument();
+    expect(screen.getByText("Asset 1 of 2")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Next asset" }));
+    expect(screen.getByText("Asset 2 of 2")).toBeInTheDocument();
+  });
+
   it("renders an Approve button when showApprove is set and the version is not approved", () => {
     render(<DeliveryVersionList versions={[baseVersion()]} showApprove onApprove={vi.fn()} />);
     expect(screen.getByTestId("delivery-version-approve-1")).toBeInTheDocument();

@@ -2,7 +2,10 @@ import "server-only";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  contentItems,
+  deliveryVersions,
   mediaAssets,
+  mediaAssetLinks,
   mediaFolders,
   mediaShareLinks,
   securityAuditEvents,
@@ -51,6 +54,8 @@ export class MediaPermissionError extends Error {
   }
 }
 
+export type MediaSort = "name" | "uploadedAt" | "updatedAt";
+
 type ListInput = {
   agencyId: string;
   workspaceId?: string;
@@ -59,6 +64,10 @@ type ListInput = {
   folderId?: string | null;
   sharedOnly?: boolean;
   includeTrashed?: boolean;
+  assetIds?: string[];
+  sort?: MediaSort;
+  page?: number;
+  pageSize?: number;
   limit?: number;
 };
 
@@ -90,6 +99,36 @@ async function accessibleWorkspaceIds(actor: Actor, agencyId: string): Promise<s
   return [...new Set(rows.map((row) => row.id))];
 }
 
+async function mediaFolderDescendantIds(input: {
+  agencyId: string;
+  workspaceId: string;
+  folderId: string;
+}): Promise<string[]> {
+  const folders = await db
+    .select({ id: mediaFolders.id, parentId: mediaFolders.parentId })
+    .from(mediaFolders)
+    .where(
+      and(
+        eq(mediaFolders.agencyId, input.agencyId),
+        eq(mediaFolders.workspaceId, input.workspaceId),
+        isNull(mediaFolders.archivedAt),
+      ),
+    );
+  if (!folders.some((folder) => folder.id === input.folderId)) return [];
+  const descendantIds = new Set([input.folderId]);
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const folder of folders) {
+      if (folder.parentId && descendantIds.has(folder.parentId) && !descendantIds.has(folder.id)) {
+        descendantIds.add(folder.id);
+        changed = true;
+      }
+    }
+  }
+  return [...descendantIds];
+}
+
 export async function listMediaAssets(actor: Actor, input: ListInput) {
   if (!(await isAgencyMember(actor, input.agencyId))) return [];
   const accessibleIds = await accessibleWorkspaceIds(actor, input.agencyId);
@@ -116,7 +155,35 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
   ];
   if (input.kind) conditions.push(eq(storageObjects.kind, input.kind));
   if (input.folderId === null) conditions.push(isNull(mediaAssets.folderId));
-  if (input.folderId) conditions.push(eq(mediaAssets.folderId, input.folderId));
+  if (input.folderId) {
+    const [selectedFolder] = input.workspaceId
+      ? [{ workspaceId: input.workspaceId }]
+      : await db
+          .select({ workspaceId: mediaFolders.workspaceId })
+          .from(mediaFolders)
+          .where(
+            and(
+              eq(mediaFolders.id, input.folderId),
+              eq(mediaFolders.agencyId, input.agencyId),
+              isNull(mediaFolders.archivedAt),
+            ),
+          )
+          .limit(1);
+    const folderIds =
+      selectedFolder && accessibleIds.includes(selectedFolder.workspaceId)
+        ? await mediaFolderDescendantIds({
+            agencyId: input.agencyId,
+            workspaceId: selectedFolder.workspaceId,
+            folderId: input.folderId,
+          })
+        : [];
+    if (folderIds.length === 0) return [];
+    conditions.push(inArray(mediaAssets.folderId, folderIds));
+  }
+  if (input.assetIds) {
+    if (input.assetIds.length === 0) return [];
+    conditions.push(inArray(mediaAssets.id, input.assetIds));
+  }
   if (input.sharedOnly) conditions.push(eq(mediaAssets.visibility, "agency"));
   const query = input.query?.trim();
   if (query) {
@@ -125,7 +192,15 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
     );
   }
 
-  return db
+  const orderBy =
+    input.sort === "uploadedAt"
+      ? [desc(mediaAssets.createdAt), desc(mediaAssets.id)]
+      : input.sort === "updatedAt"
+        ? [desc(mediaAssets.updatedAt), desc(mediaAssets.id)]
+        : [asc(sql`lower(${mediaAssets.title})`), asc(mediaAssets.createdAt), asc(mediaAssets.id)];
+  const pageSize = Math.min(Math.max(input.pageSize ?? input.limit ?? 60, 1), 100);
+  const page = Math.max(input.page ?? 1, 1);
+  const rows = await db
     .select({
       asset: mediaAssets,
       object: {
@@ -151,8 +226,93 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
     .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
     .leftJoin(mediaFolders, eq(mediaFolders.id, mediaAssets.folderId))
     .where(and(...conditions))
-    .orderBy(desc(mediaAssets.createdAt))
-    .limit(Math.min(Math.max(input.limit ?? 60, 1), 100));
+    .orderBy(...orderBy)
+    .limit(pageSize)
+    .offset((page - 1) * pageSize);
+
+  if (rows.length === 0) return rows.map((row) => ({ ...row, relatedContentItems: [] }));
+
+  const relations = await db
+    .select({
+      assetId: mediaAssetLinks.mediaAssetId,
+      contentItemId: contentItems.id,
+      title: contentItems.title,
+      format: contentItems.format,
+      plannedPublishAt: contentItems.plannedPublishAt,
+      workspaceSlug: workspaces.slug,
+    })
+    .from(mediaAssetLinks)
+    .innerJoin(contentItems, eq(contentItems.id, mediaAssetLinks.targetId))
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .where(
+      and(
+        eq(mediaAssetLinks.agencyId, input.agencyId),
+        eq(mediaAssetLinks.targetType, "content_item"),
+        input.workspaceId
+          ? eq(contentItems.workspaceId, input.workspaceId)
+          : inArray(contentItems.workspaceId, accessibleIds),
+        inArray(
+          mediaAssetLinks.mediaAssetId,
+          rows.map((row) => row.asset.id),
+        ),
+      ),
+    );
+
+  const deliveryRelations = await db
+    .select({
+      assetId: mediaAssetLinks.mediaAssetId,
+      contentItemId: contentItems.id,
+      title: contentItems.title,
+      format: contentItems.format,
+      plannedPublishAt: contentItems.plannedPublishAt,
+      workspaceSlug: workspaces.slug,
+    })
+    .from(mediaAssetLinks)
+    .innerJoin(deliveryVersions, eq(deliveryVersions.id, mediaAssetLinks.targetId))
+    .innerJoin(contentItems, eq(contentItems.id, deliveryVersions.contentItemId))
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .where(
+      and(
+        eq(mediaAssetLinks.agencyId, input.agencyId),
+        eq(mediaAssetLinks.targetType, "delivery"),
+        input.workspaceId
+          ? eq(contentItems.workspaceId, input.workspaceId)
+          : inArray(contentItems.workspaceId, accessibleIds),
+        inArray(
+          mediaAssetLinks.mediaAssetId,
+          rows.map((row) => row.asset.id),
+        ),
+      ),
+    );
+
+  const relatedByAsset = new Map<string, (typeof relations)[number]>();
+  const relationLists = new Map<string, (typeof relations)[number][]>();
+  for (const relation of [...relations, ...deliveryRelations]) {
+    const key = `${relation.assetId}:${relation.contentItemId}`;
+    if (relatedByAsset.has(key)) continue;
+    relatedByAsset.set(key, relation);
+    const current = relationLists.get(relation.assetId) ?? [];
+    current.push(relation);
+    relationLists.set(relation.assetId, current);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    relatedContentItems: relationLists.get(row.asset.id) ?? [],
+  }));
+}
+
+export async function listMediaAssetsPage(actor: Actor, input: ListInput) {
+  const pageSize = Math.min(Math.max(input.pageSize ?? input.limit ?? 48, 1), 100);
+  const page = Math.max(input.page ?? 1, 1);
+  const rows = await listMediaAssets(actor, { ...input, page, pageSize: pageSize + 1 });
+  return {
+    rows: rows.slice(0, pageSize),
+    page,
+    pageSize,
+    hasPreviousPage: page > 1,
+    hasNextPage: rows.length > pageSize,
+  };
 }
 
 export type MediaDuplicateAdvisory = {
@@ -254,6 +414,196 @@ export async function findDuplicateMediaAssets(
   }));
 }
 
+function mediaFormatFolderName(format: string): string {
+  return format
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+async function ensureMediaFolder(input: {
+  agencyId: string;
+  workspaceId: string;
+  parentId: string | null;
+  name: string;
+  createdBy: string;
+}): Promise<string> {
+  const parentCondition = input.parentId
+    ? eq(mediaFolders.parentId, input.parentId)
+    : isNull(mediaFolders.parentId);
+  const [existing] = await db
+    .select({ id: mediaFolders.id })
+    .from(mediaFolders)
+    .where(
+      and(
+        eq(mediaFolders.agencyId, input.agencyId),
+        eq(mediaFolders.workspaceId, input.workspaceId),
+        parentCondition,
+        eq(mediaFolders.name, input.name),
+        isNull(mediaFolders.archivedAt),
+      ),
+    )
+    .limit(1);
+  if (existing) return existing.id;
+
+  const [created] = await db
+    .insert(mediaFolders)
+    .values({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      ...(input.parentId ? { parentId: input.parentId } : {}),
+      name: input.name,
+      createdBy: input.createdBy,
+    })
+    .onConflictDoNothing()
+    .returning({ id: mediaFolders.id });
+  if (created) return created.id;
+
+  const [concurrent] = await db
+    .select({ id: mediaFolders.id })
+    .from(mediaFolders)
+    .where(
+      and(
+        eq(mediaFolders.agencyId, input.agencyId),
+        eq(mediaFolders.workspaceId, input.workspaceId),
+        parentCondition,
+        eq(mediaFolders.name, input.name),
+        isNull(mediaFolders.archivedAt),
+      ),
+    )
+    .limit(1);
+  if (!concurrent) throw new Error("Planning media folder could not be created");
+  return concurrent.id;
+}
+
+async function ensurePlanningMediaFolderPath(input: {
+  agencyId: string;
+  workspaceId: string;
+  format: string;
+  plannedPublishAt: Date;
+  timezone: string;
+  createdBy: string;
+}): Promise<string> {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: input.timezone,
+    year: "numeric",
+    month: "2-digit",
+  })
+    .formatToParts(input.plannedPublishAt)
+    .reduce<Record<string, string>>((result, part) => {
+      result[part.type] = part.value;
+      return result;
+    }, {});
+  let parentId = await ensureMediaFolder({
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    parentId: null,
+    name: "Posts",
+    createdBy: input.createdBy,
+  });
+  for (const name of [mediaFormatFolderName(input.format), parts.year!, parts.month!]) {
+    parentId = await ensureMediaFolder({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      parentId,
+      name,
+      createdBy: input.createdBy,
+    });
+  }
+  return parentId;
+}
+
+export async function linkMediaAssetToContentItem(
+  actor: Actor,
+  input: { assetId: string; contentItemId: string },
+) {
+  const [item] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      agencyId: workspaces.agencyId,
+    })
+    .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .where(eq(contentItems.id, input.contentItemId))
+    .limit(1);
+  if (!item || !(await canWriteToWorkspace(actor, item.workspaceId))) {
+    throw new MediaPermissionError("You do not have permission to attach media to this post.");
+  }
+
+  const [asset] = await db
+    .select({
+      id: mediaAssets.id,
+      agencyId: mediaAssets.agencyId,
+      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+      visibility: mediaAssets.visibility,
+    })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.id, input.assetId))
+    .limit(1);
+  if (
+    !asset ||
+    asset.agencyId !== item.agencyId ||
+    (asset.ownerWorkspaceId !== item.workspaceId && asset.visibility !== "agency")
+  ) {
+    throw new MediaPermissionError("The selected media is not available for this post.");
+  }
+
+  const [link] = await db
+    .insert(mediaAssetLinks)
+    .values({
+      agencyId: item.agencyId,
+      workspaceId: item.workspaceId,
+      mediaAssetId: input.assetId,
+      targetType: "content_item",
+      targetId: input.contentItemId,
+      createdBy: actor.id,
+    })
+    .onConflictDoNothing()
+    .returning();
+  return link ?? null;
+}
+
+export async function listMediaAssetsForContentItem(
+  actor: Actor,
+  input: { agencyId: string; workspaceId: string; contentItemId: string; limit?: number },
+) {
+  const contentItemLinks = await db
+    .select({ assetId: mediaAssetLinks.mediaAssetId })
+    .from(mediaAssetLinks)
+    .where(
+      and(
+        eq(mediaAssetLinks.agencyId, input.agencyId),
+        eq(mediaAssetLinks.workspaceId, input.workspaceId),
+        eq(mediaAssetLinks.targetType, "content_item"),
+        eq(mediaAssetLinks.targetId, input.contentItemId),
+      ),
+    );
+  const deliveryLinks = await db
+    .select({ assetId: mediaAssetLinks.mediaAssetId })
+    .from(mediaAssetLinks)
+    .innerJoin(deliveryVersions, eq(deliveryVersions.id, mediaAssetLinks.targetId))
+    .where(
+      and(
+        eq(mediaAssetLinks.agencyId, input.agencyId),
+        eq(mediaAssetLinks.workspaceId, input.workspaceId),
+        eq(mediaAssetLinks.targetType, "delivery"),
+        eq(deliveryVersions.contentItemId, input.contentItemId),
+      ),
+    );
+  const assetIds = [
+    ...new Set([...contentItemLinks, ...deliveryLinks].map((link) => link.assetId)),
+  ];
+  return listMediaAssets(actor, {
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    assetIds,
+    sort: "name",
+    limit: input.limit ?? 100,
+  });
+}
+
 export async function registerUploadedMediaAsset(input: {
   actor: Actor;
   agencyId: string;
@@ -261,6 +611,7 @@ export async function registerUploadedMediaAsset(input: {
   storageObjectId: string;
   title: string;
   folderId?: string | null;
+  contentItemId?: string;
   visibility?: "workspace" | "agency";
   sourceType?: MediaSourceType;
   sourceProvider?: string;
@@ -285,13 +636,47 @@ export async function registerUploadedMediaAsset(input: {
     .limit(1);
   if (!object) throw new MediaPermissionError("The uploaded object is not available.");
 
-  if (input.folderId) {
+  let selectedFolderId = input.folderId ?? null;
+  if (input.contentItemId) {
+    const [contentItem] = await db
+      .select({
+        id: contentItems.id,
+        workspaceId: contentItems.workspaceId,
+        agencyId: workspaces.agencyId,
+        format: contentItems.format,
+        plannedPublishAt: contentItems.plannedPublishAt,
+        timezone: workspaces.timezone,
+      })
+      .from(contentItems)
+      .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+      .where(eq(contentItems.id, input.contentItemId))
+      .limit(1);
+    if (
+      !contentItem ||
+      contentItem.workspaceId !== input.workspaceId ||
+      contentItem.agencyId !== input.agencyId
+    ) {
+      throw new MediaPermissionError("The selected content item is not available.");
+    }
+    if (!selectedFolderId) {
+      selectedFolderId = await ensurePlanningMediaFolderPath({
+        agencyId: input.agencyId,
+        workspaceId: input.workspaceId,
+        format: contentItem.format,
+        plannedPublishAt: contentItem.plannedPublishAt,
+        timezone: contentItem.timezone,
+        createdBy: input.actor.id,
+      });
+    }
+  }
+
+  if (selectedFolderId) {
     const [folder] = await db
       .select({ id: mediaFolders.id })
       .from(mediaFolders)
       .where(
         and(
-          eq(mediaFolders.id, input.folderId),
+          eq(mediaFolders.id, selectedFolderId),
           eq(mediaFolders.agencyId, input.agencyId),
           eq(mediaFolders.workspaceId, input.workspaceId),
           isNull(mediaFolders.archivedAt),
@@ -353,7 +738,7 @@ export async function registerUploadedMediaAsset(input: {
         agencyId: input.agencyId,
         ownerWorkspaceId: input.workspaceId,
         storageObjectId: input.storageObjectId,
-        ...(input.folderId ? { folderId: input.folderId } : {}),
+        ...(selectedFolderId ? { folderId: selectedFolderId } : {}),
         title: sanitizeAssetTitle(input.title),
         visibility: input.visibility ?? "workspace",
         status,
@@ -368,7 +753,15 @@ export async function registerUploadedMediaAsset(input: {
       })
       .onConflictDoNothing({ target: mediaAssets.storageObjectId })
       .returning();
-    if (asset) return asset;
+    if (asset) {
+      if (input.contentItemId) {
+        await linkMediaAssetToContentItem(input.actor, {
+          assetId: asset.id,
+          contentItemId: input.contentItemId,
+        });
+      }
+      return asset;
+    }
 
     // A concurrent request may have won the unique storage-object race.
     const [alreadyRegistered] = await db
@@ -376,7 +769,15 @@ export async function registerUploadedMediaAsset(input: {
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);
-    if (alreadyRegistered) return alreadyRegistered;
+    if (alreadyRegistered) {
+      if (input.contentItemId) {
+        await linkMediaAssetToContentItem(input.actor, {
+          assetId: alreadyRegistered.id,
+          contentItemId: input.contentItemId,
+        });
+      }
+      return alreadyRegistered;
+    }
     throw new Error("Media asset could not be registered");
   } catch (error) {
     // Never leave a completed storage object active when catalog registration
@@ -387,7 +788,15 @@ export async function registerUploadedMediaAsset(input: {
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);
-    if (alreadyRegistered) return alreadyRegistered;
+    if (alreadyRegistered) {
+      if (input.contentItemId) {
+        await linkMediaAssetToContentItem(input.actor, {
+          assetId: alreadyRegistered.id,
+          contentItemId: input.contentItemId,
+        });
+      }
+      return alreadyRegistered;
+    }
     await quarantineMediaObject({ agencyId: input.agencyId, objectId: input.storageObjectId });
     throw error;
   }
@@ -489,18 +898,35 @@ export async function listMediaFolders(
 
 export async function createMediaFolder(
   actor: Actor,
-  input: { agencyId: string; workspaceId: string; name: string },
+  input: { agencyId: string; workspaceId: string; name: string; parentId?: string | null },
 ) {
   if (!(await hasWorkspaceRole(actor, input.workspaceId, ["workspace_manager"]))) {
     throw new MediaPermissionError("Only workspace managers can manage media folders.");
   }
   const name = normalizeMediaFolderName(input.name);
   if (!name) throw new MediaPermissionError("The folder name is invalid.");
+  const parentId = input.parentId ?? null;
+  if (parentId) {
+    const [parent] = await db
+      .select({ id: mediaFolders.id })
+      .from(mediaFolders)
+      .where(
+        and(
+          eq(mediaFolders.id, parentId),
+          eq(mediaFolders.agencyId, input.agencyId),
+          eq(mediaFolders.workspaceId, input.workspaceId),
+          isNull(mediaFolders.archivedAt),
+        ),
+      )
+      .limit(1);
+    if (!parent) throw new MediaPermissionError("The parent media folder is not available.");
+  }
   const [folder] = await db
     .insert(mediaFolders)
     .values({
       agencyId: input.agencyId,
       workspaceId: input.workspaceId,
+      ...(parentId ? { parentId } : {}),
       name,
       createdBy: actor.id,
     })
@@ -538,18 +964,44 @@ export async function archiveMediaFolder(actor: Actor, folderId: string) {
   }
   const now = new Date();
   const updated = await db.transaction(async (tx) => {
-    const [archived] = await tx
+    const folders = await tx
+      .select({ id: mediaFolders.id, parentId: mediaFolders.parentId })
+      .from(mediaFolders)
+      .where(
+        and(
+          eq(mediaFolders.workspaceId, folder.workspaceId),
+          eq(mediaFolders.agencyId, folder.agencyId),
+          isNull(mediaFolders.archivedAt),
+        ),
+      );
+    const descendantIds = new Set([folderId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const candidate of folders) {
+        if (
+          candidate.parentId &&
+          descendantIds.has(candidate.parentId) &&
+          !descendantIds.has(candidate.id)
+        ) {
+          descendantIds.add(candidate.id);
+          changed = true;
+        }
+      }
+    }
+    const ids = [...descendantIds];
+    const archived = await tx
       .update(mediaFolders)
       .set({ archivedAt: now, archivedBy: actor.id, updatedAt: now })
-      .where(and(eq(mediaFolders.id, folderId), isNull(mediaFolders.archivedAt)))
+      .where(inArray(mediaFolders.id, ids))
       .returning();
-    if (archived) {
+    if (archived.length > 0) {
       await tx
         .update(mediaAssets)
         .set({ folderId: null, updatedBy: actor.id, updatedAt: now })
-        .where(eq(mediaAssets.folderId, folderId));
+        .where(inArray(mediaAssets.folderId, ids));
     }
-    return archived;
+    return archived.find((candidate) => candidate.id === folderId);
   });
   return updated ?? null;
 }
@@ -808,6 +1260,7 @@ export async function importPublicMediaAsset(input: {
   workspaceId: string;
   url: string;
   title?: string;
+  contentItemId?: string;
   visibility?: "workspace" | "agency";
 }) {
   if (!(await canWriteToWorkspace(input.actor, input.workspaceId))) {
@@ -859,6 +1312,7 @@ export async function importPublicMediaAsset(input: {
       workspaceId: input.workspaceId,
       storageObjectId: completed.objectId,
       title: input.title ?? (sourceName ? titleFromFilename(sourceName) : "Imported media"),
+      ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
       ...(input.visibility ? { visibility: input.visibility } : {}),
       sourceType:
         source.provider === "google_drive"

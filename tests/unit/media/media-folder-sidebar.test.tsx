@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MediaFolderSidebar } from "@/components/media/media-folder-sidebar";
@@ -37,6 +37,9 @@ const labels = {
   folderName: "Folder name",
   folderPlaceholder: "Campaign assets",
   createFolder: "Create folder",
+  newSubfolder: "New subfolder",
+  parentFolder: "Parent folder",
+  rootFolder: "No parent (root folder)",
   renameFolder: "Rename folder",
   archiveFolder: "Archive folder",
   archiveConfirm: "Archive this folder?",
@@ -75,6 +78,43 @@ describe("MediaFolderSidebar navigation", () => {
     expect(pushMock).toHaveBeenCalledWith(
       "/app/media?q=launch&view=grid&workspace=workspace-1&folder=folder-1",
       { scroll: false },
+    );
+  });
+
+  it("creates a subfolder under the selected parent", async () => {
+    const user = userEvent.setup();
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 201 }));
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <MediaFolderSidebar
+        basePath="/app/media"
+        preserveParams={{}}
+        workspaceId="workspace-1"
+        workspaceName="Main workspace"
+        folders={[{ id: "folder-1", name: "Campaign" }]}
+        activeFolder=""
+        sharedOnly={false}
+        canManage
+        labels={labels}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "New subfolder: Campaign" }));
+    await user.type(screen.getByLabelText("Folder name"), "Launch week");
+    expect(screen.getByRole("combobox", { name: "Parent folder" })).toHaveValue("folder-1");
+    await user.click(screen.getByRole("button", { name: "Create folder" }));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/media/folders",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          workspaceId: "workspace-1",
+          name: "Launch week",
+          parentId: "folder-1",
+        }),
+      }),
     );
   });
 });

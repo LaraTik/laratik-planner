@@ -30,6 +30,8 @@ export function MediaLibraryPage({
   view,
   search,
   kind,
+  sort,
+  pageInfo,
   initialSource = "device",
   t,
   storageSummary,
@@ -39,7 +41,10 @@ export function MediaLibraryPage({
   rows: MediaRow[];
   workspaceOptions: { id: string; name: string }[];
   folderWorkspaceOptions: { id: string; name: string }[];
-  folderOptionsByWorkspace: Record<string, { id: string; name: string }[]>;
+  folderOptionsByWorkspace: Record<
+    string,
+    { id: string; name: string; parentId?: string | null }[]
+  >;
   basePath: string;
   selectedWorkspaceId: string;
   selectedFolderId: string;
@@ -51,6 +56,8 @@ export function MediaLibraryPage({
   view: "grid" | "list";
   search: string;
   kind: string;
+  sort: "name" | "uploadedAt" | "updatedAt";
+  pageInfo: { page: number; pageSize: number; hasPreviousPage: boolean; hasNextPage: boolean };
   initialSource?: "device" | "link";
   t: (key: string, params?: Record<string, string | number>) => string;
   storageSummary: {
@@ -68,8 +75,21 @@ export function MediaLibraryPage({
     if (selectedWorkspaceId) params.set("workspace", selectedWorkspaceId);
     if (selectedFolderId) params.set("folder", selectedFolderId);
     if (sharedOnly) params.set("shared", "1");
+    if (sort !== "name") params.set("sort", sort);
+    if (pageInfo.page > 1) params.set("page", String(pageInfo.page));
     params.set("view", nextView);
     return `?${params.toString()}`;
+  };
+  const pageHref = (nextPage: number) => {
+    const params = new URLSearchParams(preserveParams);
+    if (selectedWorkspaceId) params.set("workspace", selectedWorkspaceId);
+    if (selectedFolderId) params.set("folder", selectedFolderId);
+    if (sharedOnly) params.set("shared", "1");
+    if (sort !== "name") params.set("sort", sort);
+    if (view !== "grid") params.set("view", view);
+    if (nextPage > 1) params.set("page", String(nextPage));
+    else params.delete("page");
+    return `${basePath}?${params.toString()}`;
   };
   return (
     <div className="space-y-6" data-testid="media-library">
@@ -156,6 +176,9 @@ export function MediaLibraryPage({
                 folderName: t("media.folderName"),
                 folderPlaceholder: t("media.folderNamePlaceholder"),
                 createFolder: t("media.createFolder"),
+                newSubfolder: t("media.newSubfolder"),
+                parentFolder: t("media.parentFolder"),
+                rootFolder: t("media.rootFolder"),
                 folderError: t("media.folderError"),
                 renameFolder: t("media.renameFolder"),
                 archiveFolder: t("media.archiveFolder"),
@@ -196,6 +219,19 @@ export function MediaLibraryPage({
                 <option value="image">{t("media.images")}</option>
                 <option value="video">{t("media.videos")}</option>
                 <option value="document">{t("media.documents")}</option>
+              </select>
+            </label>
+            <label className="text-body text-fg-primary font-semibold" htmlFor="media-sort">
+              {t("media.sortBy")}
+              <select
+                id="media-sort"
+                name="sort"
+                defaultValue={sort}
+                className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
+              >
+                <option value="name">{t("media.sortName")}</option>
+                <option value="uploadedAt">{t("media.sortUploadedAt")}</option>
+                <option value="updatedAt">{t("media.sortUpdatedAt")}</option>
               </select>
             </label>
             <label
@@ -285,6 +321,32 @@ export function MediaLibraryPage({
               </ul>
             </div>
           )}
+          <nav
+            className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3"
+            aria-label={t("common.paginationAria")}
+          >
+            <span className="text-label text-fg-secondary">
+              {t("media.pageSummary", { page: pageInfo.page })}
+            </span>
+            <div className="flex gap-2">
+              {pageInfo.hasPreviousPage ? (
+                <Link
+                  href={pageHref(pageInfo.page - 1)}
+                  className="border-border text-button focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+                >
+                  {t("media.previousPage")}
+                </Link>
+              ) : null}
+              {pageInfo.hasNextPage ? (
+                <Link
+                  href={pageHref(pageInfo.page + 1)}
+                  className="border-border text-button focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+                >
+                  {t("media.nextPage")}
+                </Link>
+              ) : null}
+            </div>
+          </nav>
         </div>
       </div>
     </div>
@@ -300,7 +362,7 @@ function MediaCard({
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
-  folderOptions: { id: string; name: string }[];
+  folderOptions: { id: string; name: string; parentId?: string | null }[];
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
@@ -383,9 +445,12 @@ function MediaCard({
           </span>
           <span>
             <span className="sr-only">{t("media.folder")}: </span>
-            {row.folder?.name ?? t("media.unfiled")}
+            <span dir="auto">
+              {formatFolderPath(row.folder?.id, folderOptions, t("media.unfiled"))}
+            </span>
           </span>
         </div>
+        <RelatedPosts row={row} t={t} />
         <MediaAssetActions
           assetId={row.asset.id}
           title={row.asset.title}
@@ -407,6 +472,42 @@ function formatBytes(value: number) {
   return `${(value / 1024 ** 3).toFixed(1)} GB`;
 }
 
+function RelatedPosts({
+  row,
+  t,
+}: {
+  row: MediaRow;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const related = row.relatedContentItems;
+  if (related.length === 0) {
+    return <p className="text-label text-fg-muted">{t("media.notLinkedToPost")}</p>;
+  }
+  return (
+    <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border px-3 py-2">
+      <p className="text-label text-fg-muted mb-1">
+        {t(related.length === 1 ? "media.relatedPost" : "media.relatedPosts")}
+      </p>
+      <div className="grid gap-1">
+        {related.slice(0, 3).map((post) => (
+          <Link
+            key={post.contentItemId}
+            href={`/app/w/${post.workspaceSlug}/planning/${post.contentItemId}#delivery`}
+            className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-8 items-center justify-between gap-2 rounded-[var(--radius-control)] font-semibold hover:underline focus:outline-none focus-visible:ring-2"
+          >
+            <span className="min-w-0 truncate" dir="auto">
+              {post.title}
+            </span>
+            <span className="shrink-0 text-xs font-normal uppercase" dir="ltr">
+              {post.format.replaceAll("_", " ")}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MediaListRow({
   row,
   t,
@@ -416,7 +517,7 @@ function MediaListRow({
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
-  folderOptions: { id: string; name: string }[];
+  folderOptions: { id: string; name: string; parentId?: string | null }[];
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
@@ -486,8 +587,13 @@ function MediaListRow({
         </span>
         <span>
           <span className="sr-only">{t("media.folder")}: </span>
-          {row.folder?.name ?? t("media.unfiled")}
+          <span dir="auto">
+            {formatFolderPath(row.folder?.id, folderOptions, t("media.unfiled"))}
+          </span>
         </span>
+      </div>
+      <div className="w-full sm:w-auto sm:min-w-52">
+        <RelatedPosts row={row} t={t} />
       </div>
       <Badge variant={mediaStatusVariant(row.asset.status)}>{statusLabel}</Badge>
       <MediaAssetActions
@@ -502,6 +608,26 @@ function MediaListRow({
       />
     </li>
   );
+}
+
+function formatFolderPath(
+  folderId: string | undefined,
+  folders: { id: string; name: string; parentId?: string | null }[],
+  unfiledLabel: string,
+): string {
+  if (!folderId) return unfiledLabel;
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  const names: string[] = [];
+  const visited = new Set<string>();
+  let currentId: string | undefined = folderId;
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+    const folder = byId.get(currentId);
+    if (!folder) break;
+    names.unshift(folder.name);
+    currentId = folder.parentId ?? undefined;
+  }
+  return names.length > 0 ? names.join(" / ") : unfiledLabel;
 }
 
 function mediaStatusLabel(

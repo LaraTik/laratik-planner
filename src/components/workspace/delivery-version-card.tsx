@@ -16,6 +16,7 @@ import {
 import { DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { MediaAssetGallery } from "@/components/media/media-asset-gallery";
 
 /**
  * DeliveryVersionCard — Phase 3 of the planning-workspace-v2
@@ -148,6 +149,18 @@ export function DeliveryVersionCard({
   const BadgeIcon = badge.icon;
   const primaryLink = version.links[0];
   const previewLink = version.links.find((l) => l.isPreview) ?? primaryLink;
+  const galleryAssets = version.links.flatMap((link) =>
+    link.mediaAssetId && (link.mediaKind === "image" || link.mediaKind === "video")
+      ? [
+          {
+            id: link.id,
+            url: link.url,
+            label: link.label,
+            kind: link.mediaKind as "image" | "video",
+          },
+        ]
+      : [],
+  );
   const isV1 = version.versionNumber === 1;
 
   return (
@@ -281,7 +294,12 @@ export function DeliveryVersionCard({
 
       {/* Action row */}
       <div className="mt-3 flex flex-wrap items-center gap-1.5">
-        {primaryLink ? (
+        {galleryAssets.length > 0 ? (
+          <MediaAssetGallery
+            title={version.description || `V${version.versionNumber}`}
+            assets={galleryAssets}
+          />
+        ) : primaryLink ? (
           <a
             href={primaryLink.url}
             target="_blank"

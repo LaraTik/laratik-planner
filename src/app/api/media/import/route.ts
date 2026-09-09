@@ -12,6 +12,7 @@ const Body = z.object({
   workspaceId: z.string().uuid(),
   url: z.string().trim().url().max(2048),
   title: z.string().trim().max(160).optional(),
+  contentItemId: z.string().uuid().optional(),
   visibility: z.enum(["workspace", "agency"]).optional(),
 });
 
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
       workspaceId: parsed.data.workspaceId,
       url: parsed.data.url,
       ...(parsed.data.title ? { title: parsed.data.title } : {}),
+      ...(parsed.data.contentItemId ? { contentItemId: parsed.data.contentItemId } : {}),
       ...(parsed.data.visibility ? { visibility: parsed.data.visibility } : {}),
     });
     return NextResponse.json({ asset }, { status: 201 });

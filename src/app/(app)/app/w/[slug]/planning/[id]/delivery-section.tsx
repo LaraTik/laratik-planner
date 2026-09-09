@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { FileText, FolderOpen, Package, Search, X } from "lucide-react";
+import { FileText, FolderOpen, Package, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,8 @@ type DeliveryMediaAsset = {
   visibility: string;
   altText?: string | null;
 };
+
+type DeliveryFolder = { id: string; name: string; parentId?: string | null };
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §10 — Delivery history + submit form.
@@ -55,6 +57,7 @@ export function DeliverySection({
   isManager,
   deliveries,
   mediaAssets = [],
+  folderOptions = [],
   viewerIsClient = false,
 }: {
   workspaceId?: string;
@@ -66,6 +69,7 @@ export function DeliverySection({
   isManager: boolean;
   deliveries: DeliveryVersion[];
   mediaAssets?: DeliveryMediaAsset[];
+  folderOptions?: DeliveryFolder[];
   viewerIsClient?: boolean;
 }) {
   const t = useLocaleT();
@@ -75,7 +79,7 @@ export function DeliverySection({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [availableAssets, setAvailableAssets] = useState(mediaAssets);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>([]);
-  const [showUploader, setShowUploader] = useState(false);
+  const [showUploader, setShowUploader] = useState(mediaAssets.length === 0);
   const [showMediaSearch, setShowMediaSearch] = useState(false);
   const [mediaQuery, setMediaQuery] = useState("");
   const [hasSearched, setHasSearched] = useState(false);
@@ -279,10 +283,10 @@ export function DeliverySection({
                       <Button
                         type="button"
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => setShowUploader((value) => !value)}
                       >
-                        <Package className="h-3.5 w-3.5" aria-hidden="true" />
+                        <Upload className="h-3.5 w-3.5" aria-hidden="true" />
                         {showUploader
                           ? t("contentDetail.deliveries.hideUploader")
                           : t("contentDetail.deliveries.uploadHere")}
@@ -353,6 +357,8 @@ export function DeliverySection({
                     <MediaUploadForm
                       compact
                       workspaceOptions={[{ id: workspaceId, name: workspaceName }]}
+                      folderOptionsByWorkspace={{ [workspaceId]: folderOptions }}
+                      contentItemId={contentItemId}
                       onAssetReady={(asset: MediaUploadResult) => {
                         setAvailableAssets((current) =>
                           current.some((candidate) => candidate.id === asset.id)
@@ -375,7 +381,8 @@ export function DeliverySection({
                     />
                   </div>
                 ) : null}
-                {availableAssets.length > 0 && (hasSearched || selectedAssetIds.length > 0) ? (
+                {availableAssets.length > 0 &&
+                (hasSearched || selectedAssetIds.length > 0 || mediaAssets.length > 0) ? (
                   <div className="grid gap-2 sm:grid-cols-2">
                     {availableAssets.map((asset, index) => {
                       const checkboxId = `delivery-media-${asset.id}`;
@@ -441,6 +448,18 @@ export function DeliverySection({
                   </div>
                 ) : null}
               </fieldset>
+
+              {selectedAssetIds.length > 0 ? (
+                <p
+                  className="border-success/30 bg-success-subtle text-label text-fg-secondary rounded-[var(--radius-control)] border p-3"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {t("contentDetail.deliveries.assetsReadyToSubmit", {
+                    count: selectedAssetIds.length,
+                  })}
+                </p>
+              ) : null}
 
               <p className="border-border bg-surface-subtle text-label text-fg-secondary rounded-[var(--radius-control)] border p-3">
                 {t("contentDetail.deliveries.storedOnlyNotice")}

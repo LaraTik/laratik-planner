@@ -4,7 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { listMediaAssets, listMediaFolders } from "@/lib/media/service";
+import { listMediaAssetsPage, listMediaFolders, type MediaSort } from "@/lib/media/service";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -29,6 +29,8 @@ export default async function WorkspaceMediaPage({
     source?: string;
     folder?: string;
     shared?: string;
+    sort?: string;
+    page?: string;
   }>;
 }) {
   const { t } = await tForActive();
@@ -44,7 +46,10 @@ export default async function WorkspaceMediaPage({
     workspaceId: workspace.id,
   });
   const selectedFolderId = filters.folder ?? "";
-  const rows = await listMediaAssets(actor, {
+  const sort: MediaSort =
+    filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";
+  const page = Math.max(Number.parseInt(filters.page ?? "1", 10) || 1, 1);
+  const mediaPage = await listMediaAssetsPage(actor, {
     agencyId: workspace.agencyId,
     workspaceId: workspace.id,
     ...(filters.q ? { query: filters.q } : {}),
@@ -54,6 +59,9 @@ export default async function WorkspaceMediaPage({
       : {}),
     ...(filters.shared === "1" ? { sharedOnly: true } : {}),
     includeTrashed: filters.trash === "1",
+    sort,
+    page,
+    pageSize: 48,
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
 
@@ -61,7 +69,7 @@ export default async function WorkspaceMediaPage({
     <MediaLibraryPage
       title={workspace.name}
       description={t("media.workspaceDescription", { workspace: workspace.name })}
-      rows={rows}
+      rows={mediaPage.rows}
       workspaceOptions={[workspace]}
       folderWorkspaceOptions={[workspace]}
       folderOptionsByWorkspace={{ [workspace.id]: folders }}
@@ -75,6 +83,7 @@ export default async function WorkspaceMediaPage({
         ...(filters.trash === "1" ? { trash: "1" } : {}),
         ...(filters.view ? { view: filters.view } : {}),
         ...(filters.source ? { source: filters.source } : {}),
+        ...(sort !== "name" ? { sort } : {}),
       }}
       managerWorkspaceIds={
         (await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"])) ? [workspace.id] : []
@@ -84,6 +93,8 @@ export default async function WorkspaceMediaPage({
       view={filters.view === "list" ? "list" : "grid"}
       search={filters.q ?? ""}
       kind={filters.kind ?? ""}
+      sort={sort}
+      pageInfo={mediaPage}
       initialSource={filters.source === "link" ? "link" : "device"}
       t={t}
       storageSummary={{

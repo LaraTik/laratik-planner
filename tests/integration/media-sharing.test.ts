@@ -86,7 +86,7 @@ describe("media sharing and folder database contract", () => {
     await pool.end();
   });
 
-  it("scopes folders to workspaces and rejects duplicate active names", async () => {
+  it("scopes folders to workspaces and allows names to repeat under different parents", async () => {
     const [folder] = await db
       .insert(mediaFolders)
       .values({ agencyId, workspaceId, name: "Campaign", createdBy: userId })
@@ -98,8 +98,35 @@ describe("media sharing and folder database contract", () => {
       db
         .insert(mediaFolders)
         .values({ agencyId, workspaceId, name: "Campaign", createdBy: userId }),
-      "media_folder_workspace_name_active_uniq",
+      "media_folder_workspace_parent_name_active_uniq",
     );
+
+    const [archive] = await db
+      .insert(mediaFolders)
+      .values({ agencyId, workspaceId, name: "Archive", createdBy: userId })
+      .returning();
+    const [campaignAssets] = await db
+      .insert(mediaFolders)
+      .values({
+        agencyId,
+        workspaceId,
+        parentId: folder!.id,
+        name: "Assets",
+        createdBy: userId,
+      })
+      .returning();
+    const [archiveAssets] = await db
+      .insert(mediaFolders)
+      .values({
+        agencyId,
+        workspaceId,
+        parentId: archive!.id,
+        name: "Assets",
+        createdBy: userId,
+      })
+      .returning();
+    expect(campaignAssets?.parentId).toBe(folder?.id);
+    expect(archiveAssets?.parentId).toBe(archive?.id);
   });
 
   it("stores only token hashes and permits one active link per image", async () => {

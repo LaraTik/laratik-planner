@@ -10,8 +10,10 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
 
 export function MediaLinkImporter({
   workspaceOptions,
+  contentItemId,
 }: {
   workspaceOptions: { id: string; name: string }[];
+  contentItemId?: string;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -68,6 +70,7 @@ export function MediaLinkImporter({
           workspaceId,
           url,
           ...(title.trim() ? { title: title.trim() } : {}),
+          ...(contentItemId ? { contentItemId } : {}),
         }),
       });
       if (!response.ok) {

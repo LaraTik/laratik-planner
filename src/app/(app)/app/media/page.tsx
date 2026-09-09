@@ -5,7 +5,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
-import { listMediaAssets, listMediaFolders } from "@/lib/media/service";
+import { listMediaAssetsPage, listMediaFolders, type MediaSort } from "@/lib/media/service";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -28,6 +28,8 @@ export default async function AgencyMediaPage({
     workspace?: string;
     folder?: string;
     shared?: string;
+    sort?: string;
+    page?: string;
   }>;
 }) {
   const { t } = await tForActive();
@@ -43,6 +45,9 @@ export default async function AgencyMediaPage({
     ? filters.workspace!
     : "";
   const selectedFolderId = filters.folder ?? "";
+  const sort: MediaSort =
+    filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";
+  const page = Math.max(Number.parseInt(filters.page ?? "1", 10) || 1, 1);
   const folderOptionsByWorkspace = Object.fromEntries(
     await Promise.all(
       options.map(
@@ -57,7 +62,7 @@ export default async function AgencyMediaPage({
       ),
     ),
   );
-  const rows = await listMediaAssets(actor, {
+  const mediaPage = await listMediaAssetsPage(actor, {
     agencyId: context.agencyId,
     ...(selectedWorkspaceId ? { workspaceId: selectedWorkspaceId } : {}),
     ...(filters.q ? { query: filters.q } : {}),
@@ -67,6 +72,9 @@ export default async function AgencyMediaPage({
       : {}),
     ...(filters.shared === "1" ? { sharedOnly: true } : {}),
     includeTrashed: filters.trash === "1",
+    sort,
+    page,
+    pageSize: 48,
   });
   const storageSummary = await getAgencyStorageSummary(context.agencyId);
   const writable = await Promise.all(
@@ -85,7 +93,7 @@ export default async function AgencyMediaPage({
     <MediaLibraryPage
       title={t("media.title")}
       description={t("media.description")}
-      rows={rows}
+      rows={mediaPage.rows}
       workspaceOptions={writableOptions}
       folderWorkspaceOptions={options}
       folderOptionsByWorkspace={folderOptionsByWorkspace}
@@ -98,6 +106,7 @@ export default async function AgencyMediaPage({
         ...(filters.kind ? { kind: filters.kind } : {}),
         ...(filters.trash === "1" ? { trash: "1" } : {}),
         ...(filters.view ? { view: filters.view } : {}),
+        ...(sort !== "name" ? { sort } : {}),
       }}
       managerWorkspaceIds={managerWorkspaceIds}
       canUpload={writable.some(Boolean)}
@@ -105,6 +114,8 @@ export default async function AgencyMediaPage({
       view={filters.view === "list" ? "list" : "grid"}
       search={filters.q ?? ""}
       kind={filters.kind ?? ""}
+      sort={sort}
+      pageInfo={mediaPage}
       t={t}
       storageSummary={{
         mode: storageSummary.mode,

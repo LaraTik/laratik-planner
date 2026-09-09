@@ -36,7 +36,7 @@ describe("DeliverySection media search", () => {
     expect(screen.queryByTestId("delivery-submit-form")).not.toBeInTheDocument();
   });
 
-  it("does not render the existing media library until the user searches", async () => {
+  it("shows media already attached to the post before a search", async () => {
     const user = userEvent.setup();
     render(
       <DeliverySection
@@ -54,7 +54,7 @@ describe("DeliverySection media search", () => {
       />,
     );
 
-    expect(screen.queryByText("Existing hero image")).not.toBeInTheDocument();
+    expect(screen.getByText("Existing hero image")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Search media library" }));
     expect(screen.getByLabelText("Search the media library")).toBeInTheDocument();
   });

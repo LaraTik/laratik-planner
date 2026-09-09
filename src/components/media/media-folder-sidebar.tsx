@@ -7,7 +7,27 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-type FolderOption = { id: string; name: string };
+type FolderOption = { id: string; name: string; parentId?: string | null };
+
+function orderedFolders(folders: FolderOption[]) {
+  const children = new Map<string | null, FolderOption[]>();
+  for (const folder of folders) {
+    const parent = folder.parentId ?? null;
+    children.set(parent, [...(children.get(parent) ?? []), folder]);
+  }
+  const result: { folder: FolderOption; depth: number }[] = [];
+  const visit = (parentId: string | null, depth: number) => {
+    for (const folder of children.get(parentId) ?? []) {
+      result.push({ folder, depth });
+      visit(folder.id, depth + 1);
+    }
+  };
+  visit(null, 0);
+  for (const folder of folders) {
+    if (!result.some((entry) => entry.folder.id === folder.id)) result.push({ folder, depth: 0 });
+  }
+  return result;
+}
 
 function FolderLinkStatus() {
   const { pending } = useLinkStatus();
@@ -49,6 +69,9 @@ export function MediaFolderSidebar({
     folderName: string;
     folderPlaceholder: string;
     createFolder: string;
+    newSubfolder?: string;
+    parentFolder?: string;
+    rootFolder?: string;
     renameFolder: string;
     archiveFolder: string;
     archiveConfirm: string;
@@ -57,9 +80,17 @@ export function MediaFolderSidebar({
 }) {
   const router = useRouter();
   const [newFolderOpen, setNewFolderOpen] = React.useState(false);
+  const [parentId, setParentId] = React.useState<string | null>(null);
   const [name, setName] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const flatFolders = React.useMemo(() => orderedFolders(folders), [folders]);
+
+  function openCreateFolder(nextParentId: string | null = null) {
+    setParentId(nextParentId);
+    setNewFolderOpen(true);
+    setError(null);
+  }
 
   function href(folder: string, shared = false) {
     const params = new URLSearchParams(preserveParams);
@@ -80,10 +111,15 @@ export function MediaFolderSidebar({
       const response = await fetch("/api/media/folders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ workspaceId, name: name.trim() }),
+        body: JSON.stringify({
+          workspaceId,
+          name: name.trim(),
+          ...(parentId ? { parentId } : {}),
+        }),
       });
       if (!response.ok) throw new Error("folder create failed");
       setName("");
+      setParentId(null);
       setNewFolderOpen(false);
       router.refresh();
     } catch {
@@ -140,7 +176,10 @@ export function MediaFolderSidebar({
             size="icon"
             variant="ghost"
             aria-label={labels.newFolder}
-            onClick={() => setNewFolderOpen((value) => !value)}
+            onClick={() => {
+              if (newFolderOpen) setNewFolderOpen(false);
+              else openCreateFolder();
+            }}
           >
             <FolderPlus className="h-4 w-4" aria-hidden="true" />
           </Button>
@@ -163,6 +202,25 @@ export function MediaFolderSidebar({
               className="mt-1"
               autoFocus
             />
+          </label>
+          <label
+            className="text-label text-fg-primary font-semibold"
+            htmlFor={`new-folder-parent-${workspaceId}`}
+          >
+            {labels.parentFolder ?? labels.folderName}
+            <select
+              id={`new-folder-parent-${workspaceId}`}
+              value={parentId ?? ""}
+              onChange={(event) => setParentId(event.target.value || null)}
+              className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 min-h-11 w-full rounded-[var(--radius-control)] border px-2 focus-visible:ring-2"
+            >
+              <option value="">{labels.rootFolder ?? labels.unfiled}</option>
+              {flatFolders.map(({ folder, depth }) => (
+                <option key={folder.id} value={folder.id}>
+                  {`${"— ".repeat(depth)}${folder.name}`}
+                </option>
+              ))}
+            </select>
           </label>
           <Button type="submit" size="sm" disabled={busy || !name.trim()}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : null}
@@ -189,9 +247,9 @@ export function MediaFolderSidebar({
       >
         <option value="all">{labels.allMedia}</option>
         <option value="unfiled">{labels.unfiled}</option>
-        {folders.map((folder) => (
+        {flatFolders.map(({ folder, depth }) => (
           <option key={folder.id} value={folder.id}>
-            {folder.name}
+            {`${"— ".repeat(depth)}${folder.name}`}
           </option>
         ))}
         <option value="shared">{labels.agencyShared}</option>
@@ -217,13 +275,14 @@ export function MediaFolderSidebar({
           {labels.unfiled}
           <FolderLinkStatus />
         </Link>
-        {folders.map((folder) => (
+        {flatFolders.map(({ folder, depth }) => (
           <div key={folder.id} className="flex min-w-0 items-center gap-1">
             <Link
               href={href(folder.id)}
               scroll={false}
               aria-current={activeFolder === folder.id ? "page" : undefined}
-              className={`text-label flex min-h-10 min-w-0 flex-1 items-center gap-2 truncate rounded-[var(--radius-control)] px-2 font-semibold ${activeFolder === folder.id ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
+              style={{ paddingInlineStart: `${0.5 + depth * 0.75}rem` }}
+              className={`text-label flex min-h-10 min-w-0 flex-1 items-center gap-2 truncate rounded-[var(--radius-control)] pe-2 font-semibold ${activeFolder === folder.id ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle"}`}
             >
               <Folder className="h-4 w-4 shrink-0" aria-hidden="true" />
               <span className="truncate">{folder.name}</span>
@@ -231,6 +290,16 @@ export function MediaFolderSidebar({
             </Link>
             {canManage ? (
               <>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  aria-label={`${labels.newSubfolder ?? labels.newFolder}: ${folder.name}`}
+                  disabled={busy}
+                  onClick={() => openCreateFolder(folder.id)}
+                >
+                  <FolderPlus className="h-3.5 w-3.5" aria-hidden="true" />
+                </Button>
                 <Button
                   type="button"
                   size="icon"

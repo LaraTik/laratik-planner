@@ -37,7 +37,24 @@ export type MediaUploadResult = {
   byteSize: number;
 };
 
-type FolderOption = { id: string; name: string };
+type FolderOption = { id: string; name: string; parentId?: string | null };
+
+function orderedFolderOptions(folders: FolderOption[]) {
+  const children = new Map<string | null, FolderOption[]>();
+  for (const folder of folders) {
+    const parent = folder.parentId ?? null;
+    children.set(parent, [...(children.get(parent) ?? []), folder]);
+  }
+  const result: { folder: FolderOption; depth: number }[] = [];
+  const visit = (parentId: string | null, depth: number) => {
+    for (const folder of children.get(parentId) ?? []) {
+      result.push({ folder, depth });
+      visit(folder.id, depth + 1);
+    }
+  };
+  visit(null, 0);
+  return result;
+}
 
 type DuplicateHint = {
   assetId: string;
@@ -123,11 +140,13 @@ export function MediaUploadForm({
   workspaceOptions,
   folderOptionsByWorkspace,
   compact = false,
+  contentItemId,
   onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
   folderOptionsByWorkspace?: Record<string, FolderOption[]>;
   compact?: boolean;
+  contentItemId?: string;
   onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
@@ -139,6 +158,7 @@ export function MediaUploadForm({
   const [busy, setBusy] = React.useState(false);
   const activeRequests = React.useRef(new Map<string, XMLHttpRequest>());
   const inputId = `media-file-input-${workspaceId}`;
+  const queuedCount = items.filter((item) => item.status === "queued").length;
 
   React.useEffect(
     () => () => {
@@ -215,6 +235,7 @@ export function MediaUploadForm({
           fileSize: item.file.size,
           contentType: item.contentType,
           originalName: item.file.name,
+          ...(contentItemId ? { contentItemId } : {}),
           ...(checksumSha256 ? { checksumSha256 } : {}),
         }),
       });
@@ -266,6 +287,7 @@ export function MediaUploadForm({
           storageObjectId: result.objectId,
           title: sanitizeAssetTitle(item.title),
           ...(folderId ? { folderId } : {}),
+          ...(contentItemId ? { contentItemId } : {}),
         }),
       });
       if (!register.ok) throw await uploadResponseError(register, t);
@@ -315,8 +337,20 @@ export function MediaUploadForm({
             {compact ? t("media.inlineUploadDescription") : t("media.uploadDescription")}
           </CardDescription>
         </div>
-        {items.length > 0 ? (
-          <div className="flex flex-wrap justify-end gap-2">
+      </div>
+      {items.length > 0 ? (
+        <div className="border-primary/30 bg-primary-subtle mt-5 flex flex-col gap-3 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-body text-fg-primary font-semibold" role="status" aria-live="polite">
+            {queuedCount > 0
+              ? t(
+                  contentItemId
+                    ? "media.uploadSelectionReady"
+                    : "media.uploadSelectionReadyLibrary",
+                  { count: queuedCount },
+                )
+              : t("media.uploadSelectionDone")}
+          </p>
+          <div className="flex flex-wrap gap-2 sm:shrink-0">
             <Button
               type="button"
               size="lg"
@@ -329,7 +363,7 @@ export function MediaUploadForm({
             <Button
               type="button"
               size="lg"
-              disabled={busy || !items.some((i) => i.status === "queued")}
+              disabled={busy || queuedCount === 0}
               onClick={() => void uploadAll()}
             >
               {busy ? (
@@ -340,8 +374,8 @@ export function MediaUploadForm({
               {busy ? t("media.uploading") : t("media.uploadSelected")}
             </Button>
           </div>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       {workspaceOptions.length > 1 ? (
         <label
           className="text-body text-fg-primary mt-5 block font-semibold"
@@ -381,11 +415,13 @@ export function MediaUploadForm({
             className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2 sm:max-w-sm"
           >
             <option value="">{t("media.unfiled")}</option>
-            {(folderOptionsByWorkspace[workspaceId] ?? []).map((folder) => (
-              <option key={folder.id} value={folder.id}>
-                {folder.name}
-              </option>
-            ))}
+            {orderedFolderOptions(folderOptionsByWorkspace[workspaceId] ?? []).map(
+              ({ folder, depth }) => (
+                <option key={folder.id} value={folder.id}>
+                  {`${"— ".repeat(depth)}${folder.name}`}
+                </option>
+              ),
+            )}
           </select>
         </label>
       ) : null}

@@ -12,6 +12,7 @@ export const runtime = "nodejs";
 const CreateBody = z.object({
   workspaceId: z.string().uuid(),
   name: z.string().trim().min(1).max(80),
+  parentId: z.string().uuid().nullable().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -47,7 +48,12 @@ export async function POST(req: NextRequest) {
   try {
     const folder = await createMediaFolder(
       { id: session.user.id },
-      { ...parsed.data, agencyId: workspace.agencyId },
+      {
+        workspaceId: parsed.data.workspaceId,
+        name: parsed.data.name,
+        agencyId: workspace.agencyId,
+        ...(parsed.data.parentId !== undefined ? { parentId: parsed.data.parentId } : {}),
+      },
     );
     return NextResponse.json({ folder }, { status: 201, headers: { "Cache-Control": "no-store" } });
   } catch (error) {

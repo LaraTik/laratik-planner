@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import {
+  AnyPgColumn,
   boolean,
   check,
   index,
@@ -15,7 +16,7 @@ import { agencies, users } from "./identity";
 import { workspaces } from "./workspaces";
 import { storageObjects } from "./storage";
 
-/** Workspace-scoped, one-level media folders. `folder_id = NULL` is Unfiled. */
+/** Workspace-scoped media folders. `folder_id = NULL` is a root folder. */
 export const mediaFolders = pgTable(
   "media_folder",
   {
@@ -26,6 +27,9 @@ export const mediaFolders = pgTable(
     workspaceId: uuid("workspace_id")
       .notNull()
       .references(() => workspaces.id, { onDelete: "cascade" }),
+    parentId: uuid("parent_id").references((): AnyPgColumn => mediaFolders.id, {
+      onDelete: "cascade",
+    }),
     name: text("name").notNull(),
     sortOrder: integer("sort_order").notNull().default(0),
     archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
@@ -36,9 +40,13 @@ export const mediaFolders = pgTable(
     ...timestamps,
   },
   (t) => [
-    index("media_folder_workspace_idx").on(t.workspaceId, t.sortOrder, t.createdAt),
-    uniqueIndex("media_folder_workspace_name_active_uniq")
-      .on(t.workspaceId, sql`lower(${t.name})`)
+    index("media_folder_workspace_idx").on(t.workspaceId, t.parentId, t.sortOrder, t.createdAt),
+    uniqueIndex("media_folder_workspace_parent_name_active_uniq")
+      .on(
+        t.workspaceId,
+        sql`coalesce(${t.parentId}, '00000000-0000-0000-0000-000000000000'::uuid)`,
+        sql`lower(${t.name})`,
+      )
       .where(sql`${t.archivedAt} IS NULL`),
     check("media_folder_name_not_empty", sql`length(trim(${t.name})) BETWEEN 1 AND 80`),
     check("media_folder_sort_order_valid", sql`${t.sortOrder} >= 0`),

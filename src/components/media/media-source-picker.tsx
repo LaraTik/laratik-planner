@@ -14,10 +14,15 @@ export function MediaSourcePicker({
   workspaceOptions,
   folderOptionsByWorkspace,
   initialSource = "device",
+  contentItemId,
 }: {
   workspaceOptions: { id: string; name: string }[];
-  folderOptionsByWorkspace: Record<string, { id: string; name: string }[]>;
+  folderOptionsByWorkspace: Record<
+    string,
+    { id: string; name: string; parentId?: string | null }[]
+  >;
   initialSource?: "device" | "link";
+  contentItemId?: string;
 }) {
   const t = useLocaleT();
   return (
@@ -46,10 +51,14 @@ export function MediaSourcePicker({
           <MediaUploadForm
             workspaceOptions={workspaceOptions}
             folderOptionsByWorkspace={folderOptionsByWorkspace}
+            {...(contentItemId ? { contentItemId } : {})}
           />
         </TabsContent>
         <TabsContent value="link">
-          <MediaLinkImporter workspaceOptions={workspaceOptions} />
+          <MediaLinkImporter
+            workspaceOptions={workspaceOptions}
+            {...(contentItemId ? { contentItemId } : {})}
+          />
         </TabsContent>
       </Tabs>
     </section>

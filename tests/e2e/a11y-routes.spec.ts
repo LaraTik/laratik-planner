@@ -78,6 +78,12 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/workspaces", page);
   });
 
+  test("@a11y /app/media has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/media");
+    await expectClean("/app/media", page);
+  });
+
   test("@a11y /app/account has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/account");
@@ -88,6 +94,12 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app/w/acme");
     await expectClean("/app/w/acme", page);
+  });
+
+  test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/media");
+    await expectClean("/app/w/[slug]/media", page);
   });
 
   test("@a11y /app/w/[slug]/planning (planning list) has no critical violations", async ({
