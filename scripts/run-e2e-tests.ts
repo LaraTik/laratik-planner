@@ -60,8 +60,8 @@ let exitCode = 0;
 
 try {
   for (const [command, args] of [
-    ["pnpm", ["exec", "tsx", "scripts/reset-test-database.ts"]],
     ["pnpm", ["db:migrate"]],
+    ["pnpm", ["exec", "tsx", "scripts/reset-test-database.ts"]],
     ["pnpm", ["exec", "playwright", "test", ...testArgs]],
   ] as const) {
     const result = spawnSync(command, args, { env, stdio: "inherit" });

@@ -5,8 +5,9 @@ import { Pool } from "pg";
  *
  * The E2E seed is intentionally idempotent, but idempotence alone does not
  * remove rows created by earlier suites. A clean schema state is required for
- * deterministic visual heights, pagination, and role fixtures. The migration
- * ledger is preserved so the normal migration step remains authoritative.
+ * deterministic visual heights, pagination, and role fixtures. The runner
+ * applies migrations before calling this script, so a pristine CI database
+ * has the reference tables this reset needs before it truncates any rows.
  */
 async function main() {
   const databaseUrl = process.env.DATABASE_URL ?? process.env.TEST_DATABASE_URL;
