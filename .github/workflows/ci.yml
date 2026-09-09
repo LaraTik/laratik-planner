@@ -11,6 +11,7 @@ name: CI
 #   5. zero critical/high production audit findings
 #   6. SMTP cert probe (deploy-blocker)
 #   7. workflow / Dockerfile / shell linters (deploy-blocker)
+#   8. Trend sidecar boot and unit suite
 #
 # Local hooks remain the fast feedback loop, but CI repeats the static
 # and unit gates authoritatively. Browser and visual suites remain local
@@ -215,7 +216,7 @@ jobs:
   build-smoke:
     name: Build, Docker image, health smoke, GHCR push
     runs-on: ubuntu-latest
-    needs: [unit-quality]
+    needs: [unit-quality, trends-quality]
     timeout-minutes: 30
     # `packages: write` is required so this job can push the production
     # image (and the migrator) to ghcr.io. The default workflow-level
@@ -418,6 +419,25 @@ jobs:
           docker push "ghcr.io/laratik/laratik-planner-migrator:${GITHUB_SHA}"
           docker push ghcr.io/laratik/laratik-planner-migrator:latest
         timeout-minutes: 5
+
+  trends-quality:
+    # Build the sidecar's test-only target so the tests run against the same
+    # Python and production dependency graph that the runtime image uses.
+    # The target is not published; build-smoke depends on this job so a
+    # failing sidecar gate blocks the GHCR push and downstream deploy.
+    name: Trend sidecar boot and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+        timeout-minutes: 5
+
+      - name: Build and run Trend sidecar tests
+        run: docker build --target test --file services/trends/Dockerfile services/trends
+        timeout-minutes: 25
 
   check-smtp-cert:
     # Gates deploys on the production SMTP cert not being within 14

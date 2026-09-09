@@ -40,17 +40,26 @@ def classify_lifecycle(
         # Not enough data for a meaningful classification.
         return "stable"
 
+    def signed_velocity(recent: float, total: float) -> float:
+        """Return velocity magnitude with the recent-vs-baseline direction."""
+        baseline = total / 7.0
+        delta = recent - baseline
+        if abs(delta) <= max(1.0, abs(baseline) * 0.05):
+            return 0.0
+        magnitude = compute_velocity(recent, total, half_life_hours=half_life_hours)
+        return magnitude if delta > 0 else -magnitude
+
     last_24h = time_series[-1]
     last_7d = sum(time_series[-7:])  # up to 7 points; shorter series are summed wholly
 
-    velocity_now = compute_velocity(last_24h, last_7d, half_life_hours=half_life_hours)
+    velocity_now = signed_velocity(last_24h, last_7d)
 
     # Acceleration = velocity_now - velocity_prev. If we have < 2 velocity
     # samples, acceleration is undefined → treat as 0.
     if len(time_series) >= 4:
         prev_24h = time_series[-2]
-        prev_7d = sum(time_series[-8:-1]) if len(time_series) >= 8 else last_7d
-        velocity_prev = compute_velocity(prev_24h, prev_7d, half_life_hours=half_life_hours)
+        prev_7d = sum(time_series[-8:-1]) if len(time_series) >= 8 else sum(time_series[:-1])
+        velocity_prev = signed_velocity(prev_24h, prev_7d)
         velocity_accel = velocity_now - velocity_prev
     else:
         velocity_accel = 0.0

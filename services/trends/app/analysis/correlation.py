@@ -1,9 +1,10 @@
 """Cross-platform correlation: hard merge (rapidfuzz) + soft merge (embeddings).
 
 A "group" is a set of signals that refer to the same underlying trend
-across one or more platforms. Hard-merge is a token-sort ratio > 85
-(cheap, deterministic). Soft-merge is a sentence-transformer cosine > 0.78
-(handles "AIRevolution" vs "AI revolution" without normalisation tricks).
+across one or more platforms. Hard-merge uses the extractor's canonical
+normalized label, with a token-sort ratio > 85 as a fallback when either
+signal has no canonical label. Soft-merge is a sentence-transformer cosine
+> 0.78 (handles semantically similar labels without a hard merge).
 
 When a group has more than one signal, we boost each member's velocity by
 1 + 0.25 × (group_size - 1) — the cross-platform signal. The boost is
@@ -68,9 +69,13 @@ def _norm(s: str) -> str:
 
 
 def _hard_match(a: TrendSignal, b: TrendSignal) -> bool:
-    """Token-sort-ratio > threshold OR exact normalized-label match."""
-    if a.normalized_label and a.normalized_label == b.normalized_label:
-        return True
+    """Use canonical labels first, with fuzzy matching only as a fallback."""
+    # Extractors persist a canonical normalized label. When both sides have
+    # one, it is the authoritative identity signal; falling back to fuzzy raw
+    # labels would turn punctuation-only variants into hard merges and hide
+    # the intended soft-related relationship.
+    if a.normalized_label and b.normalized_label:
+        return a.normalized_label == b.normalized_label
     score = fuzz.token_sort_ratio(_norm(a.label), _norm(b.label))
     return score > HARD_MERGE_THRESHOLD
 
@@ -140,8 +145,10 @@ def dedupe_and_correlate(
                 used.add(other.id)
             elif _soft_match(primary, other):
                 soft.append(other)
-                # Note: soft matches stay ungrouped; they appear in the
-                # "related trends" rail but are not merged.
+                # Soft matches appear in the "related trends" rail but are
+                # consumed by this group so they do not become duplicate
+                # primary cards of their own.
+                used.add(other.id)
         boosted = _boost(primary.velocity, 1 + len(members))
         groups.append(
             TrendSignalGroup(

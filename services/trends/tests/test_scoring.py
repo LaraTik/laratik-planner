@@ -60,9 +60,9 @@ class TestComputeVelocity:
         # weighted_recent (decay term larger), so a smaller ratio.
         long = compute_velocity(50, 70, half_life_hours=24.0)
         short = compute_velocity(50, 70, half_life_hours=2.0)
-        # The two aren't expected to be identical, but the long one
-        # should be at least as large because decay is smaller.
-        assert short <= long, f"short={short} should be <= long={long}"
+        # A shorter half-life discounts historical activity faster, so the
+        # same recent burst receives more weight.
+        assert short >= long, f"short={short} should be >= long={long}"
 
 
 # ─── apply_bayesian_smoothing ───────────────────────────────────────────────

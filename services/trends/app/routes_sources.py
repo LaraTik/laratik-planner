@@ -112,7 +112,6 @@ async def list_source_health(
 async def test_source(
     source_key: str,
     agencyId: Optional[uuid.UUID] = None,
-    session: AsyncSession = Depends(get_session),
 ) -> SourceTestResponse:
     """Run a 1-call sample fetch for `source_key`. The body is empty
     (source_key comes from the path); agency_id comes from the query string.

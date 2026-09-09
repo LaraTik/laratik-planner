@@ -13,7 +13,7 @@ matter:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -78,12 +78,19 @@ class TestDedupeAndCorrelate:
 
     def test_soft_match_kept_in_soft_related(self) -> None:
         """Different normalized labels but very close embeddings → soft, not merged."""
-        a = _mk_signal(label="AIRevolution", platform="reddit", embedding=[0.1] * 384)
+        now = datetime.now(timezone.utc)
+        a = _mk_signal(
+            label="AIRevolution",
+            platform="reddit",
+            embedding=[0.1] * 384,
+            fetched_at=now,
+        )
         b = _mk_signal(
             label="A.I. Revolution",
             platform="youtube",
             normalized_label="airevolution",  # would hard-match on label normalisation
             embedding=[0.1] * 384,
+            fetched_at=now - timedelta(seconds=1),
         )
         # Note: with normalized_label both "airevolution" and "airevolution" they
         # will hard-match. So test the *soft* path by giving them DIFFERENT
@@ -96,9 +103,10 @@ class TestDedupeAndCorrelate:
 
     def test_velocity_boost_with_group_size(self) -> None:
         """A group of 3 gets a 1 + 2*0.25 = 1.5× boost on the primary's velocity."""
-        primary = _mk_signal(label="AI", platform="reddit", velocity=50.0)
-        a = _mk_signal(label="ai", platform="tiktok", velocity=70.0)
-        b = _mk_signal(label="ai", platform="youtube", velocity=60.0)
+        now = datetime.now(timezone.utc)
+        primary = _mk_signal(label="AI", platform="reddit", velocity=50.0, fetched_at=now)
+        a = _mk_signal(label="ai", platform="tiktok", velocity=70.0, fetched_at=now - timedelta(seconds=1))
+        b = _mk_signal(label="ai", platform="youtube", velocity=60.0, fetched_at=now - timedelta(seconds=2))
         groups = dedupe_and_correlate([primary, a, b])
         assert len(groups) == 1
         assert groups[0].size == 3

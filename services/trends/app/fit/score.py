@@ -225,14 +225,33 @@ def update_workspace_weights(
             weights[comp] -= learning_rate
             n_neg += 1
 
-    # Clamp to a non-negative floor; never let any weight go to 0.
+    # Clamp to a floor while preserving the floor after normalisation. A
+    # plain divide-after-clamp can shrink a clamped value below 0.01 again
+    # when another component has received a large positive update.
     floor = 0.01
-    for k in weights:
-        weights[k] = max(weights[k], floor)
+    keys = list(weights)
+    floor_total = floor * len(keys)
+    if not keys or floor_total >= 1.0:
+        weights = {k: round(1.0 / len(keys), 4) for k in keys} if keys else {}
+    else:
+        adjustable = {k: max(value - floor, 0.0) for k, value in weights.items()}
+        adjustable_total = sum(adjustable.values())
+        remaining = 1.0 - floor_total
+        if adjustable_total:
+            weights = {
+                k: floor + remaining * (adjustable[k] / adjustable_total)
+                for k in keys
+            }
+        else:
+            weights = {k: 1.0 / len(keys) for k in keys}
 
-    # Re-normalise.
-    total = sum(weights.values()) or 1.0
-    weights = {k: round(v / total, 4) for k, v in weights.items()}
+        # Keep the serialized values summing to exactly one without taking a
+        # floored component back below its minimum.
+        weights = {k: round(value, 4) for k, value in weights.items()}
+        correction = round(1.0 - sum(weights.values()), 4)
+        if correction:
+            target = max(keys, key=lambda key: weights[key])
+            weights[target] = round(weights[target] + correction, 4)
 
     logger.info(
         "fit.weights.updated",

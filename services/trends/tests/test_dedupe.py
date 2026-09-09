@@ -88,7 +88,7 @@ class TestShouldKeepSync:
 
     def test_different_label_keeps(self) -> None:
         sig = _mk_signal(normalized_label="airevolution")
-        existing = [_mk_signal(normalized_label="skateboarding")]
+        existing = [_mk_signal(source_id="different", normalized_label="skateboarding")]
         assert should_keep_sync(sig, existing) is True
 
 

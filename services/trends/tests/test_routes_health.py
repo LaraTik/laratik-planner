@@ -8,13 +8,15 @@ returns a `SourceHealthResponse` per source.
 from __future__ import annotations
 
 import uuid
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
 
+from app.db import get_session
 from app.main import app
 
 
@@ -46,15 +48,28 @@ def _patch_db_health(rows: list[Any]) -> Any:
     result_activity = MagicMock()
     result_activity.one.return_value = MagicMock(success=0, total=0, avg_dur=0.0, cost=0)
 
-    session.execute = AsyncMock(side_effect=[result_health, result_activity])
+    # The endpoint runs one activity rollup per health row.
+    session.execute = AsyncMock(side_effect=[result_health, *([result_activity] * len(rows))])
     return session
+
+
+@contextmanager
+def _override_session(session: AsyncMock):
+    async def override():
+        yield session
+
+    app.dependency_overrides[get_session] = override
+    try:
+        yield
+    finally:
+        app.dependency_overrides.pop(get_session, None)
 
 
 # ─── Tests ──────────────────────────────────────────────────────────────────
 class TestSourceHealthEndpoint:
     def test_returns_200_with_empty_list(self) -> None:
         client = _client()
-        with patch("app.routes_sources.get_session", _patch_db_health([])):
+        with _override_session(_patch_db_health([])):
             resp = client.get("/v1/sources/health")
         assert resp.status_code == 200
         body = resp.json()
@@ -64,7 +79,7 @@ class TestSourceHealthEndpoint:
     def test_returns_one_card_per_source(self) -> None:
         client = _client()
         rows = [_health_row("reddit"), _health_row("tiktok_tamnd")]
-        with patch("app.routes_sources.get_session", _patch_db_health(rows)):
+        with _override_session(_patch_db_health(rows)):
             resp = client.get("/v1/sources/health")
         assert resp.status_code == 200
         body = resp.json()
@@ -75,7 +90,7 @@ class TestSourceHealthEndpoint:
     def test_card_includes_circuit_state(self) -> None:
         client = _client()
         rows = [_health_row("reddit", state="open")]
-        with patch("app.routes_sources.get_session", _patch_db_health(rows)):
+        with _override_session(_patch_db_health(rows)):
             resp = client.get("/v1/sources/health")
         assert resp.status_code == 200
         body = resp.json()
@@ -85,7 +100,7 @@ class TestSourceHealthEndpoint:
         """The 24h rollup fields are always present in the card."""
         client = _client()
         rows = [_health_row("reddit")]
-        with patch("app.routes_sources.get_session", _patch_db_health(rows)):
+        with _override_session(_patch_db_health(rows)):
             resp = client.get("/v1/sources/health")
         body = resp.json()
         s = body["sources"][0]
@@ -101,6 +116,6 @@ class TestSourceHealthEndpoint:
         """`?agencyId=...` is forwarded to the DB query (smoke test)."""
         client = _client()
         agency_id = str(uuid.uuid4())
-        with patch("app.routes_sources.get_session", _patch_db_health([])):
+        with _override_session(_patch_db_health([])):
             resp = client.get(f"/v1/sources/health?agencyId={agency_id}")
         assert resp.status_code == 200

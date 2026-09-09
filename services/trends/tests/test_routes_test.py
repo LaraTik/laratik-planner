@@ -9,7 +9,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -55,6 +55,17 @@ class _FakeExtractor:
         return self.signals
 
 
+def _configured_extractor(
+    *, signals: list[RawSignal] | None = None, raises: Exception | None = None
+) -> type[_FakeExtractor]:
+    """Return a registry class whose no-argument constructor keeps test state."""
+    class ConfiguredExtractor(_FakeExtractor):
+        def __init__(self) -> None:
+            super().__init__(signals=signals, raises=raises)
+
+    return ConfiguredExtractor
+
+
 # ─── Tests ──────────────────────────────────────────────────────────────────
 class TestSourceTestEndpoint:
     def test_unknown_source_key_returns_404(self) -> None:
@@ -66,10 +77,11 @@ class TestSourceTestEndpoint:
     def test_known_source_success(self) -> None:
         """A registered source with a working fetch returns success."""
         client = _client()
-        fake = _FakeExtractor()
-        with patch("app.routes_sources.get_session", AsyncMock()):
-            with patch("app.extractor.base.all_sources", return_value=[type(fake)]):
-                resp = client.post("/v1/sources/reddit/test")
+        with patch(
+            "app.extractor.base.all_sources",
+            return_value=[_configured_extractor()],
+        ):
+            resp = client.post("/v1/sources/reddit/test")
         # Either the registry has the real reddit (success=True) or
         # the patched version (success=True). Both are acceptable for v1.
         assert resp.status_code == 200
@@ -81,10 +93,11 @@ class TestSourceTestEndpoint:
     def test_source_failure_is_reported_not_raised(self) -> None:
         """If fetch() raises, the endpoint reports success=False, not 500."""
         client = _client()
-        fake = _FakeExtractor(raises=RuntimeError("upstream 503"))
-        with patch("app.routes_sources.get_session", AsyncMock()):
-            with patch("app.extractor.base.all_sources", return_value=[type(fake)]):
-                resp = client.post("/v1/sources/reddit/test")
+        with patch(
+            "app.extractor.base.all_sources",
+            return_value=[_configured_extractor(raises=RuntimeError("upstream 503"))],
+        ):
+            resp = client.post("/v1/sources/reddit/test")
         assert resp.status_code == 200
         body = resp.json()
         assert body["success"] is False
@@ -103,10 +116,11 @@ class TestSourceTestEndpoint:
             )
             for i in range(3)
         ]
-        fake = _FakeExtractor(signals=signals)
-        with patch("app.routes_sources.get_session", AsyncMock()):
-            with patch("app.extractor.base.all_sources", return_value=[type(fake)]):
-                resp = client.post("/v1/sources/reddit/test")
+        with patch(
+            "app.extractor.base.all_sources",
+            return_value=[_configured_extractor(signals=signals)],
+        ):
+            resp = client.post("/v1/sources/reddit/test")
         body = resp.json()
         if body["success"]:
             assert body["signals_count"] == 3

@@ -77,3 +77,15 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -fsS http://localhost:8010/healthz || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8010"]
+
+# Test-only target used by the deploy gate. It inherits the exact production
+# dependency graph and runs the sidecar suite without adding test packages to
+# the runtime image published for production.
+FROM runtime AS test
+
+USER root
+RUN python -m pip install --no-cache-dir ".[dev]"
+COPY --chown=trends:trends tests ./tests
+ENV DATABASE_URL="postgresql+asyncpg://smoke:smoke@127.0.0.1:5432/smoke"
+USER trends
+RUN python -m pytest -p no:cacheprovider -q

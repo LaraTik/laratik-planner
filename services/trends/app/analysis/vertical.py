@@ -86,7 +86,9 @@ def classify_vertical(
     """
     if not text or not text.strip():
         return []
-    labels = candidates or DEFAULT_VERTICAL_CANDIDATES
+    if top_k <= 0:
+        return []
+    labels = DEFAULT_VERTICAL_CANDIDATES if candidates is None else candidates
     if not labels:
         return []
 
@@ -95,7 +97,8 @@ def classify_vertical(
     # `transformers` returns either a dict or a list of dicts.
     if isinstance(result, dict):
         result = [result]
-    return [(item["label"], float(item["score"])) for item in result]
+    ranked = [(item["label"], float(item["score"])) for item in result]
+    return ranked[:top_k]
 
 
 def warmup() -> None:

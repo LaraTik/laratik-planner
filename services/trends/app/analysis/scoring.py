@@ -127,6 +127,6 @@ def compute_lifecycle(velocity_now: float, velocity_accel: float) -> Lifecycle:
         return "emerging"
     if velocity_now >= POS and velocity_accel <= 0.0:
         return "peaking"
-    if velocity_now <= NEG and velocity_accel < 0.0:
+    if velocity_now <= NEG:
         return "declining"
     return "stable"
