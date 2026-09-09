@@ -1,11 +1,13 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
+import { clientEnv, serverEnv } from "@/lib/validation/env";
 import {
   activeMediaShareForActor,
   createPublicMediaShare,
   MediaPermissionError,
   revokePublicMediaShare,
 } from "@/lib/media/service";
+import { resolvePublicAppOrigin } from "@/lib/http/public-app-origin";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,7 +40,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   try {
     const result = await createPublicMediaShare({ id: session.user.id }, id);
-    const url = new URL(`/share/media/${encodeURIComponent(result.token)}`, req.nextUrl.origin);
+    const origin = resolvePublicAppOrigin({
+      requestOrigin: req.nextUrl.origin,
+      configuredOrigins: [serverEnv.AUTH_URL, clientEnv.NEXT_PUBLIC_APP_URL],
+      allowLocalhost: serverEnv.NODE_ENV !== "production",
+    });
+    const url = new URL(`/share/media/${encodeURIComponent(result.token)}`, origin);
     return NextResponse.json(
       { url: url.toString(), expiresAt: result.expiresAt },
       { headers: { "Cache-Control": "no-store, max-age=0" } },
