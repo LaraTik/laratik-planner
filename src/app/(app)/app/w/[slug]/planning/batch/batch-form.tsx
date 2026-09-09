@@ -207,6 +207,70 @@ function DefaultSelect({
   );
 }
 
+function DefaultChannelPicker({
+  channels,
+  value,
+  t,
+  onChange,
+}: {
+  channels: BatchChannel[];
+  value: string[];
+  t: ReturnType<typeof useLocaleT>;
+  onChange: (value: string[]) => void;
+}) {
+  const label = channels.length
+    ? t("batchAdd.form.channelsSelected", { count: value.length })
+    : t("batchAdd.form.noActiveChannels");
+  return (
+    <div className="min-w-0 space-y-1">
+      <span className="text-label text-fg-secondary block font-semibold">
+        {t("batchAdd.form.channels")}
+      </span>
+      <details className="relative">
+        <summary className="border-border bg-surface text-body hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-1 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none">
+          <span className="truncate">{label}</span>
+          <ChevronDown className="h-4 w-4 shrink-0" aria-hidden="true" />
+        </summary>
+        <div
+          className="border-border bg-surface absolute start-0 z-20 mt-1 max-h-64 w-64 max-w-[calc(100vw-2rem)] overflow-auto rounded-[var(--radius-control)] border p-2 shadow-lg"
+          role="group"
+          aria-label={t("batchAdd.form.channels")}
+        >
+          {channels.length ? (
+            channels.map((channel) => {
+              const checkboxId = `batch-default-channel-${channel.id}`;
+              return (
+                <label
+                  key={channel.id}
+                  htmlFor={checkboxId}
+                  className="hover:bg-surface-subtle flex min-h-11 cursor-pointer items-center gap-2 rounded px-2"
+                >
+                  <Checkbox
+                    id={checkboxId}
+                    checked={value.includes(channel.id)}
+                    onCheckedChange={(checked) =>
+                      onChange(
+                        checked
+                          ? [...new Set([...value, channel.id])]
+                          : value.filter((id) => id !== channel.id),
+                      )
+                    }
+                  />
+                  <span className="text-label">
+                    <bdi>{channel.platform}</bdi> · <bdi>{channel.accountName}</bdi>
+                  </span>
+                </label>
+              );
+            })
+          ) : (
+            <p className="text-label text-fg-muted p-2">{t("batchAdd.form.noChannels")}</p>
+          )}
+        </div>
+      </details>
+    </div>
+  );
+}
+
 export function BatchForm({
   slug,
   workspaceTimezone = "UTC",
@@ -264,7 +328,7 @@ export function BatchForm({
   const [saved, setSaved] = useState(false);
   const [templateCopied, setTemplateCopied] = useState(false);
   const [detailsRowId, setDetailsRowId] = useState<string | null>(null);
-  const [planningMonth, setPlanningMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [planningMonth, setPlanningMonth] = useState(() => currentPlanningMonth(workspaceTimezone));
   const templateChannelNames = useMemo(
     () => channels.map((channel) => channel.accountName || channel.platform),
     [channels],
@@ -559,22 +623,12 @@ export function BatchForm({
                 })
               }
             />
-            <DefaultSelect
-              id="batch-default-channel"
-              label={t("batchAdd.form.channels")}
-              value={globalDefaults.defaultChannelIds?.[0] ?? ""}
-              options={channels.map((channel) => ({
-                id: channel.id,
-                name: channel.accountName || channel.platform,
-              }))}
-              emptyLabel={t("batchAdd.form.allChannels")}
+            <DefaultChannelPicker
+              channels={channels}
+              value={globalDefaults.defaultChannelIds ?? channels.map((channel) => channel.id)}
+              t={t}
               onChange={(value) =>
-                setGlobalDefaults((current) => {
-                  const next = { ...current };
-                  if (value) next.defaultChannelIds = [value];
-                  else delete next.defaultChannelIds;
-                  return next;
-                })
+                setGlobalDefaults((current) => ({ ...current, defaultChannelIds: value }))
               }
             />
           </div>
@@ -1053,7 +1107,12 @@ function FormatSelect({
       onChange={(event) =>
         onChange({
           format: event.target.value,
-          formatPayload: { schemaVersion: 1 },
+          formatPayload: {
+            schemaVersion: 1,
+            ...(typeof row.formatPayload?.contentLanguage === "string"
+              ? { contentLanguage: row.formatPayload.contentLanguage }
+              : {}),
+          },
         })
       }
       className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-11 w-full rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none"
@@ -1082,7 +1141,7 @@ function ChannelPicker({
       : t("batchAdd.form.channelsSelected", { count: row.channelIds.length });
   return (
     <details className="relative min-w-0">
-      <summary className="border-border bg-surface text-body flex min-h-11 cursor-pointer list-none items-center justify-between gap-1 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none">
+      <summary className="border-border bg-surface text-body hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center justify-between gap-1 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:outline-none">
         <span className="truncate">
           {channels.length ? label : t("batchAdd.form.noActiveChannels")}
         </span>
@@ -1252,7 +1311,7 @@ function DesktopRow({
         </Button>
         <button
           type="button"
-          className="focus-visible:ring-focus-ring ms-1 flex min-h-11 min-w-11 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
+          className="hover:bg-surface-subtle focus-visible:ring-focus-ring ms-1 flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded transition-colors focus-visible:ring-2 focus-visible:outline-none"
           aria-label={t("batchAdd.form.removeRow", { row: rowNumber })}
           onClick={onRemove}
         >
@@ -1294,7 +1353,7 @@ function MobileRow({
           </Button>
           <button
             type="button"
-            className="focus-visible:ring-focus-ring flex min-h-11 min-w-11 items-center justify-center rounded focus-visible:ring-2 focus-visible:outline-none"
+            className="hover:bg-surface focus-visible:ring-focus-ring flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded transition-colors focus-visible:ring-2 focus-visible:outline-none"
             aria-label={t("batchAdd.form.removeRow", { row: rowNumber })}
             onClick={onRemove}
           >
@@ -1362,4 +1421,15 @@ function localDate(value: string): string {
   // Grid values are kept as workspace-local `datetime-local` strings.
   // An explicit offset/ISO value is converted only for imported rows.
   return value.length >= 16 ? value.slice(0, 16) : value;
+}
+
+function currentPlanningMonth(timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  return year && month ? `${year}-${month}` : new Date().toISOString().slice(0, 7);
 }

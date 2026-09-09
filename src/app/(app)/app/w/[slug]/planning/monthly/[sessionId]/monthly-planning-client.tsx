@@ -94,6 +94,11 @@ export function MonthlyPlanningClient({
           proposal?: unknown;
           proposalId?: string;
         };
+        if (response.status === 409) {
+          setProposal((current) => (current ? { ...current, status: "stale" } : current));
+          setError(t("monthlyPlanning.stale"));
+          return;
+        }
         if (!response.ok) throw new Error(body.error ?? t("monthlyPlanning.requestFailed"));
         if (action === "generateProposal" && body.proposal && body.proposalId) {
           setProposal({ id: body.proposalId, status: "draft", proposal: body.proposal });
@@ -270,6 +275,7 @@ export function MonthlyPlanningClient({
                     type="button"
                     onClick={() => void request("generateProposal")}
                     disabled={pending}
+                    aria-busy={pending}
                   >
                     <Sparkles className="h-4 w-4" aria-hidden="true" />
                     {t("monthlyPlanning.refreshProposal")}
@@ -280,13 +286,19 @@ export function MonthlyPlanningClient({
                       variant="secondary"
                       onClick={() => void request("approve")}
                       disabled={pending}
+                      aria-busy={pending}
                     >
                       <Check className="h-4 w-4" aria-hidden="true" />
                       {t("monthlyPlanning.approve")}
                     </Button>
                   ) : null}
                   {proposal?.status === "approved" ? (
-                    <Button type="button" onClick={() => void request("apply")} disabled={pending}>
+                    <Button
+                      type="button"
+                      onClick={() => void request("apply")}
+                      disabled={pending}
+                      aria-busy={pending}
+                    >
                       <FileOutput className="h-4 w-4" aria-hidden="true" />
                       {t("monthlyPlanning.apply")}
                     </Button>
@@ -298,6 +310,7 @@ export function MonthlyPlanningClient({
                 type="button"
                 onClick={() => void request("generateProposal")}
                 disabled={pending}
+                aria-busy={pending}
               >
                 <Sparkles className="h-4 w-4" aria-hidden="true" />
                 {t("monthlyPlanning.generateProposal")}
@@ -306,6 +319,11 @@ export function MonthlyPlanningClient({
             {error ? (
               <p className="text-label text-danger font-semibold" role="alert">
                 {error}
+              </p>
+            ) : null}
+            {proposal?.status === "stale" ? (
+              <p className="bg-warning-subtle text-body text-warning rounded p-3" role="status">
+                {t("monthlyPlanning.stale")}
               </p>
             ) : null}
           </div>

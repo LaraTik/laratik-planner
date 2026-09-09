@@ -92,6 +92,21 @@ export function BatchFormatPayloadFields({
       <div className="bg-surface-subtle text-label text-fg-secondary rounded-[var(--radius-control)] p-3">
         {t("batchAdd.form.detailsGuidance")}
       </div>
+      <div className="space-y-1">
+        <label htmlFor="batch-payload-content-language" className="text-label font-semibold">
+          {t("batchAdd.form.contentLanguage")}
+        </label>
+        <select
+          id="batch-payload-content-language"
+          value={typeof value.contentLanguage === "string" ? value.contentLanguage : ""}
+          onChange={(event) => setField("contentLanguage", event.target.value || undefined)}
+          className="border-border bg-surface text-body focus-visible:ring-focus-ring h-11 w-full cursor-pointer rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
+        >
+          <option value="">{t("batchAdd.form.contentLanguageWorkspaceDefault")}</option>
+          <option value="en">{t("batchAdd.form.contentLanguageEnglish")}</option>
+          <option value="ar">{t("batchAdd.form.contentLanguageArabic")}</option>
+        </select>
+      </div>
       <div className="space-y-5" data-testid="batch-essential-fields">
         {hasObjectiveAudience ? renderObjectiveAudience() : null}
         {essentialFields.map((field) => (

@@ -79,7 +79,7 @@ export function BrandProfileForm({
             <select
               name="primaryLanguage"
               defaultValue={profile.primaryLanguage}
-              className="border-border bg-surface h-11 rounded-[var(--radius-control)] border px-3"
+              className="border-border bg-surface text-body focus-visible:ring-focus-ring h-11 cursor-pointer rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
             >
               <option value="en">English</option>
               <option value="ar">العربية</option>
@@ -92,7 +92,7 @@ export function BrandProfileForm({
             <select
               name="secondaryLanguage"
               defaultValue={profile.secondaryLanguage ?? ""}
-              className="border-border bg-surface h-11 rounded-[var(--radius-control)] border px-3"
+              className="border-border bg-surface text-body focus-visible:ring-focus-ring h-11 cursor-pointer rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
             >
               <option value="">{t("brandKit.profile.none")}</option>
               <option value="en">English</option>

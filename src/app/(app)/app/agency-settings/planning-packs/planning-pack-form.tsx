@@ -30,12 +30,12 @@ export function PlanningPackForm({ initial }: { initial?: Pack }) {
     <form action={action} className="space-y-4" data-testid="planning-pack-form">
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
       {state.error ? (
-        <p className="text-body text-danger rounded bg-red-50 p-3" role="alert">
+        <p className="bg-danger-subtle text-body text-danger rounded p-3" role="alert">
           {state.error}
         </p>
       ) : null}
       {state.saved ? (
-        <p className="text-body text-success rounded bg-green-50 p-3" role="status">
+        <p className="bg-success-subtle text-body text-success rounded p-3" role="status">
           {t("planningPacks.saved")}
         </p>
       ) : null}
@@ -72,6 +72,7 @@ export function PlanningPackForm({ initial }: { initial?: Pack }) {
               defaultValue={JSON.stringify(initial?.manifest ?? {}, null, 2)}
               rows={16}
               className="border-border bg-surface text-body focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border p-3 font-mono focus:outline-none focus-visible:ring-2"
+              dir="ltr"
               spellCheck={false}
             />
           </FormField>

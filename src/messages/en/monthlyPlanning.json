@@ -26,6 +26,14 @@
     "review": "Proposal review",
     "applied": "Applied"
   },
+  "status": {
+    "discovery": "Discovery",
+    "strategy": "Strategy",
+    "execution": "Execution",
+    "review": "Proposal review",
+    "applied": "Applied",
+    "archived": "Archived"
+  },
   "you": "You",
   "copilot": "Copilot",
   "firstPrompt": "Start by describing what matters most this month. The copilot will ask for missing decisions instead of guessing.",

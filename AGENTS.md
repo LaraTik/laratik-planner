@@ -347,6 +347,7 @@ Per StudioFlow §15:
 - **Allowlist is server-enforced.** The agency's `enabled_capabilities` is the gate. The route returns `403` for a disabled capability. The UI hides the button but the server is the source of truth.
 - **Capability allowlist is the full set** (not the 3 working ones). Disabling `brief_improvement` in agency settings hides the button on the content detail page. The allowlist size is what the agency admin sees, not what is currently implemented.
 - **Per-field AI scope.** The More details editor's per-field "Suggest with AI" button (`src/components/forms/per-field-ai-suggest.tsx`) reuses the existing `caption_drafts` capability for allowlist + governance. The new `field` body parameter scopes the prompt to a single field (`caption`, `hook`, `hashtags`, `callToAction`, `description`, `visualDirection`, `additionalNotes`, etc.). An agency with `caption_drafts` on gets per-field AI for free — no new entitlement. The response shape is `{ text, parsed? }`; `parsed` is the structured value for fields like `hashtags` (string[]). Adding a field to the per-field surface is a one-line change to the `FIELD_PROMPTS` map in `src/lib/ai/index.ts` + the `FormatPayloadField` union.
+- **Monthly planning instruction packs.** The reviewed canonical pack is the paired Markdown source and manifest under `docs/ai-planning/source/` and `docs/ai-planning/defaults/`. Keep the nineteen source files mapped one-to-one in `manifest.json`; only published agency/workspace revisions may enter an AI context, while draft revisions remain editable and reviewable. Changes to the pack must update the source, manifest, validation, and the bilingual monthly-planning UI together.
 
 ## Goal progress (live)
 
@@ -377,6 +378,12 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 > for agency admins. These links remain gated by the agency database master
 > switch and the `trend_radar` capability, while provider configuration remains
 > deployment-scoped.
+
+> **2026-09-09 planning follow-up** — Monthly planning, Batch Add, Brand Profile,
+> and Planning Packs are exposed through their intended workspace and agency
+> surfaces. Monthly planning uses the agency database master switch plus the
+> `monthly_planning_copilot` capability; provider configuration remains
+> deployment-scoped and is not a product feature flag.
 
 **Release verdict (2026-08-24):** `READY FOR INDEPENDENT REVIEW` (shared across
 `PRODUCTION_READINESS_TRACKER.md` and `docs/production-readiness/UAT_RELEASE.md`).

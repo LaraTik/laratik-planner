@@ -2,9 +2,10 @@
 
 This directory contains the version-controlled, reviewed defaults for monthly
 planning. The nineteen source documents supplied with the product brief are
-mapped one-to-one in `manifest.json`; they remain source material and are not
-executed as prompts. The runtime uses the manifest to select a mode, collect
-inputs, pause on blocking questions, validate outputs, and report risks.
+preserved in `../source/` and mapped one-to-one in `manifest.json`; they remain
+source material and are not executed as prompts. The runtime uses the manifest
+to select a mode, collect inputs, pause on blocking questions, validate
+outputs, and report risks.
 
 ## Precedence
 

@@ -1,6 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { asc, eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { CalendarDays, Plus } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -11,6 +11,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { createMonthlySessionAction } from "./actions";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -35,7 +36,7 @@ export default async function MonthlyPlanningPage({
     ]))
   )
     notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const sessions = await db
     .select({
       id: monthlyPlanningSessions.id,
@@ -45,8 +46,21 @@ export default async function MonthlyPlanningPage({
     })
     .from(monthlyPlanningSessions)
     .where(eq(monthlyPlanningSessions.workspaceId, workspace.id))
-    .orderBy(asc(monthlyPlanningSessions.month));
-  const month = new Date().toISOString().slice(0, 7);
+    .orderBy(desc(monthlyPlanningSessions.month), desc(monthlyPlanningSessions.updatedAt));
+  const formatUpdatedAt = (value: Date) =>
+    new Intl.DateTimeFormat(code, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      numberingSystem: "latn",
+      timeZone: workspace.timezone,
+    }).format(value);
+  const monthParts = new Intl.DateTimeFormat("en-US", {
+    timeZone: workspace.timezone,
+    year: "numeric",
+    month: "2-digit",
+  }).formatToParts(new Date());
+  const month = `${monthParts.find((part) => part.type === "year")?.value ?? ""}-${monthParts.find((part) => part.type === "month")?.value ?? ""}`;
   return (
     <div className="space-y-6" data-testid="monthly-planning-page">
       <PageHeader
@@ -55,10 +69,10 @@ export default async function MonthlyPlanningPage({
         description={t("monthlyPlanning.description")}
         action={
           <Button asChild>
-            <a href={`/app/w/${slug}/planning/batch`}>
+            <Link href={`/app/w/${slug}/planning/batch`}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               {t("monthlyPlanning.openBatch")}
-            </a>
+            </Link>
           </Button>
         }
       />
@@ -98,21 +112,21 @@ export default async function MonthlyPlanningPage({
         <div className="divide-border divide-y">
           {sessions.length ? (
             sessions.map((item) => (
-              <a
+              <Link
                 key={item.id}
                 href={`/app/w/${slug}/planning/monthly/${item.id}`}
-                className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-14 items-center justify-between gap-3 px-5 py-3 focus:outline-none focus-visible:ring-2"
+                className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-14 cursor-pointer items-center justify-between gap-3 px-5 py-3 focus:outline-none focus-visible:ring-2"
               >
                 <span>
                   <span className="text-body block font-semibold">{item.month}</span>
                   <span className="text-label text-fg-muted">
-                    {item.status} · {item.updatedAt.toLocaleDateString()}
+                    {t(`monthlyPlanning.status.${item.status}`)} · {formatUpdatedAt(item.updatedAt)}
                   </span>
                 </span>
                 <span className="text-primary text-label font-semibold">
                   {t("monthlyPlanning.open")}
                 </span>
-              </a>
+              </Link>
             ))
           ) : (
             <p className="text-body text-fg-muted p-5">{t("monthlyPlanning.empty")}</p>
