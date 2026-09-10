@@ -22,11 +22,8 @@
  */
 import * as React from "react";
 import * as Sentry from "@sentry/nextjs";
-import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/feedback/empty-state";
-import { AlertTriangle } from "lucide-react";
+import { RouteErrorState } from "@/components/feedback/route-error-state";
 import { getClientT } from "@/lib/i18n/client-locale";
 
 export default function ContentDetailError({
@@ -50,34 +47,14 @@ export default function ContentDetailError({
   }, [error]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 py-12">
-      <EmptyState
-        icon={<AlertTriangle className="h-10 w-10" aria-hidden="true" />}
-        title={t("errors.planningDetailTitle")}
-        description={t("errors.planningDetailDescription")}
-        action={
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <Button onClick={reset} variant="default">
-              {t("errors.tryAgain")}
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href={listHref}>{t("errors.backToPlanning")}</Link>
-            </Button>
-            <Button asChild variant="ghost">
-              <Link href="/app">{t("errors.backToMyWork")}</Link>
-            </Button>
-          </div>
-        }
-      />
-      {error.digest ? (
-        <p
-          data-testid="content-detail-error-digest"
-          className="text-label text-fg-muted mt-4 text-center"
-        >
-          {t("errors.referenceLabel")}{" "}
-          <code className="bg-surface-subtle rounded px-1.5 py-0.5 font-mono">{error.digest}</code>
-        </p>
-      ) : null}
-    </div>
+    <RouteErrorState
+      title={t("errors.planningDetailTitle")}
+      description={t("errors.planningDetailDescription")}
+      reset={reset}
+      backHref={listHref}
+      backLabel={t("errors.backToPlanning")}
+      errorDigest={error.digest}
+      dataTestId="content-detail-error"
+    />
   );
 }

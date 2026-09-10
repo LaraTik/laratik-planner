@@ -1,18 +1,22 @@
 import path from "node:path";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import type { PlatformRole } from "../../src/lib/auth/platform-access-types";
 import { bootstrapTestSession, devSeed, devSignIn, type SeedResult } from "./_helpers";
 import {
   CANONICAL_SURFACES,
+  APP_ONLY_SURFACES,
   viewportsForSurface,
   SETUP_FUNCTIONS,
   STITCH_CASES,
   responsiveScreenshotName,
   resolveStitchRoute,
   screenshotNameFor,
+  type StitchCase,
   type RegressionViewport,
   type SeedResultLike,
 } from "./stitch-cases";
+import { setupTrendsLiveState } from "./stitch-state-helpers";
 
 /**
  * Visual regression coverage for the canonical Stitch screen set.
@@ -24,15 +28,17 @@ import {
  *      (`canonical` / `responsive` / `supporting`) at the viewport
  *      the case was captured at. Names contain the screen ID and
  *      classification so reviewers can map every PNG to its source
- *      capture in `designs/stitch/`.
+ *      capture in `designs/stitch-current/`.
  *
- *   2. **Responsive matrix** — one screenshot per canonical surface
- *      (unique route from the 27 canonical cases) at the viewports
- *      selected by `viewportsForSurface()`: 19 non-planning surfaces
- *      use 360 / 768 / 1440, while four planning surfaces use 375 /
- *      768 / 1024 / 1440 (73 scoped baselines total). The
+ *   2. **Responsive matrix** — one screenshot per canonical and app-only
+ *      surface at the viewports
+ *      selected by `viewportsForSurface()`: non-planning surfaces use
+ *      360 / 768 / 1440, while planning surfaces use 375 / 768 / 1024 / 1440.
+ *      The current matrix covers 20 canonical and 50 app-only surfaces
+ *      (217 responsive baselines). The
  *      `operational-states` evidence group is not a route and is
- *      reviewed directly against the captured PNG/HTML.
+ *      reviewed directly against the captured PNG/HTML. App-only surfaces
+ *      are regression references for the shipped UI, not Stitch targets.
  *
  * Dynamic data (timestamps, IDs, hash-like strings) is masked via
  * injected CSS so baselines stay stable across runs.
@@ -56,7 +62,7 @@ import {
  *   pnpm test:visual                              # compare against baselines
  *
  * The spec runs in the dedicated `visual-chromium` project (see
- * `playwright.config.ts`) so the 6-viewport matrix does not repeat
+ * `playwright.config.ts`) so the responsive matrix does not repeat
  * across the 5 functional browser projects.
  */
 
@@ -89,9 +95,39 @@ const SNAPSHOT_DIR = "tests/e2e/visual-regression.spec.ts-snapshots";
 const A11Y_TAGS = ["wcag2a", "wcag2aa", "wcag22aa"] as const;
 const PUBLIC_VISUAL_SEED: SeedResultLike = { contentItemId: "public-route" };
 
+function sessionOptionsFor(entry: StitchCase): {
+  agencyAdmin?: boolean;
+  workspaceRoles?: ["client_reviewer"];
+  platformRole?: PlatformRole;
+  authRole?: "agency_admin" | "user";
+  enableTrendRadar?: boolean;
+} {
+  return {
+    ...(entry.route === "/app/w/acme/client" || entry.route === "/app/w/acme/client/calendar"
+      ? {
+          agencyAdmin: false,
+          workspaceRoles: ["client_reviewer"] as ["client_reviewer"],
+          authRole: "user" as const,
+        }
+      : {}),
+    ...(entry.platformRole ? { platformRole: entry.platformRole, authRole: "user" } : {}),
+    ...(entry.route === "/app/w/acme/trends" ? { enableTrendRadar: true } : {}),
+  };
+}
+
 /** Public auth screens must be captured without the dev session cookie. */
 function isUnauthenticatedVisualRoute(route: string): boolean {
-  return route === "/signin" || route.startsWith("/signin/");
+  return (
+    route === "/" ||
+    route === "/accept-invitation" ||
+    route === "/agency-unavailable" ||
+    route === "/data-deletion" ||
+    route === "/privacy" ||
+    route === "/setup" ||
+    route === "/signin" ||
+    route.startsWith("/signin/") ||
+    route === "/terms"
+  );
 }
 
 /**
@@ -216,6 +252,22 @@ async function waitForStableDom(page: Page, route: string, timeoutMs: number): P
     });
 }
 
+/** Never turn a Next.js dev overlay into a visual reference image. */
+async function assertNoNextRuntimeError(page: Page): Promise<void> {
+  const runtimeError = page.getByText(/Runtime (Error|SyntaxError)/, { exact: true });
+  const manifestError = page.getByText("Manifest file is empty", { exact: true });
+  const jsonParseError = page.getByText("Unexpected end of JSON input", { exact: true });
+  if ((await runtimeError.count()) > 0 && (await runtimeError.first().isVisible())) {
+    throw new Error("Next.js runtime error overlay is visible");
+  }
+  if ((await manifestError.count()) > 0 && (await manifestError.first().isVisible())) {
+    throw new Error("Next.js manifest error overlay is visible");
+  }
+  if ((await jsonParseError.count()) > 0 && (await jsonParseError.first().isVisible())) {
+    throw new Error("Next.js JSON parse error overlay is visible");
+  }
+}
+
 async function assertNoCriticalA11y(page: Page, context: string): Promise<void> {
   let results: Awaited<ReturnType<AxeBuilder["analyze"]>> | undefined;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -294,7 +346,7 @@ const formatBootstrapError = (error: unknown): string => {
  * actual visual captures could start (CI run 32945846242).
  *
  * With the pre-warm removed, each test pays its own dev compile cost.
- * Per-test compile on the 24 routes × 3 viewports matrix is ~5-10s
+ * Per-test compile on the current route × viewport matrix is ~5-10s
  * each, so the cumulative cost stays under the 30-min action timeout
  * the workflow now uses. The exact-reference phase reuses
  * `bootstrapTestSession` per test, which already only pays the dev
@@ -349,13 +401,14 @@ test.describe("visual regression (exact reference)", () => {
       try {
         const seedLike: SeedResultLike = isUnauthenticatedVisualRoute(entry.route!)
           ? PUBLIC_VISUAL_SEED
-          : await bootstrapTestSession(page);
+          : await bootstrapTestSession(page, sessionOptionsFor(entry));
         const setup = SETUP_FUNCTIONS[entry.state];
         resolved = resolveStitchRoute(entry.route!, seedLike);
         await setup(page, seedLike);
         await page.goto(resolved);
         await page.waitForLoadState("domcontentloaded");
         await waitForStableDom(page, entry.route!, CAPTURE_MODE_TIMEOUT_MS);
+        await assertNoNextRuntimeError(page);
         // Radix intentionally marks the application tree `aria-hidden` while
         // its menu portal owns focus. Axe reports the hidden background's
         // focusables as a violation even though this is the expected modal
@@ -409,7 +462,7 @@ test.describe("visual regression (exact reference)", () => {
   }
 });
 
-// ─── Phase 2: responsive matrix (canonical surface × viewport) ──────────
+// ─── Phase 2: responsive matrix (canonical + app-only surface × viewport) ─
 //
 // In capture mode the matrix runs serially and the dev seed is
 // established once per surface via `test.beforeAll`, not per
@@ -425,9 +478,10 @@ test.describe("visual regression (exact reference)", () => {
 // step is already fast (warm dev server, real DB, no flake budget
 // to spend) and the strict contract must not be weakened.
 test.describe("visual regression (responsive matrix)", () => {
-  for (const surface of CANONICAL_SURFACES) {
+  for (const surface of [...CANONICAL_SURFACES, ...APP_ONLY_SURFACES]) {
     test.describe(`surface ${surface}`, () => {
       const publicSurface = isUnauthenticatedVisualRoute(surface);
+      const platformSurface = surface.startsWith("/app/platform/");
       if (isCaptureMode) {
         // Force sequential execution per-surface in capture mode so
         // the dev server is not being hammered by parallel tests
@@ -444,12 +498,22 @@ test.describe("visual regression (responsive matrix)", () => {
       // per-page-context), but the expensive `devSeed` is paid once.
       let sharedSeed: SeedResult | undefined;
 
-      if (isCaptureMode && !publicSurface) {
+      if (isCaptureMode && !publicSurface && !platformSurface) {
         test.beforeAll(async ({ request }) => {
           // The dev seed is idempotent, so re-seeding across
           // surfaces is fine; we just want one seed per surface
           // instead of one per (surface, viewport) pair.
-          sharedSeed = await devSeed(request);
+          sharedSeed = await devSeed(
+            request,
+            surface.startsWith("/app/platform/")
+              ? { platformRole: "platform_owner" }
+              : surface === "/app/w/acme/client" || surface === "/app/w/acme/client/calendar"
+                ? { agencyAdmin: false, workspaceRoles: ["client_reviewer"] }
+                : surface === "/app/w/acme/trends" ||
+                    surface === "/app/agency-settings/trend-sources"
+                  ? { enableTrendRadar: true }
+                  : {},
+          );
         });
       }
 
@@ -475,15 +539,33 @@ test.describe("visual regression (responsive matrix)", () => {
               // (cheap) sign-in so the page context has the auth
               // cookie. This is the bulk of the capture-mode
               // time saving.
-              await devSignIn(page.request);
+              if (surface.startsWith("/app/platform/")) {
+                await devSignIn(page.request, { role: "user" });
+              } else {
+                await devSignIn(page.request);
+              }
               seedLike = sharedSeed;
             } else {
-              seedLike = await bootstrapTestSession(page);
+              seedLike = await bootstrapTestSession(
+                page,
+                platformSurface
+                  ? { platformRole: "platform_owner", authRole: "user" }
+                  : surface === "/app/w/acme/client" || surface === "/app/w/acme/client/calendar"
+                    ? { agencyAdmin: false, workspaceRoles: ["client_reviewer"], authRole: "user" }
+                    : surface === "/app/w/acme/trends" ||
+                        surface === "/app/agency-settings/trend-sources"
+                      ? { enableTrendRadar: true }
+                      : {},
+              );
+            }
+            if (surface === "/app/w/acme/trends") {
+              await setupTrendsLiveState(page, seedLike);
             }
             resolved = resolveStitchRoute(surface, seedLike);
             await page.goto(resolved);
             await page.waitForLoadState("domcontentloaded");
             await waitForStableDom(page, surface, CAPTURE_MODE_TIMEOUT_MS);
+            await assertNoNextRuntimeError(page);
             await applyMask(page);
           } catch (error) {
             if (!isCaptureMode) throw error;

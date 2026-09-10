@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** Route-level loading UI for media filtering and folder navigation. */
 export function MediaLibraryLoading() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
+    <div className="space-y-6" aria-busy="true" aria-live="polite" role="status">
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-7 w-40" />

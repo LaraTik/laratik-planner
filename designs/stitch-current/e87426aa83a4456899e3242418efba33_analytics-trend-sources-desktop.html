@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner — Social Analytics</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+  tailwind.config = {
+    darkMode: "class",
+    theme: {
+      extend: {
+        "colors": {
+          "on-secondary": "#ffffff",
+          "secondary-container": "#d7e0f5",
+          "on-error-container": "#93000a",
+          "tertiary": "#004c77",
+          "tertiary-fixed": "#cde5ff",
+          "primary-fixed-dim": "#c3c0ff",
+          "inverse-primary": "#c3c0ff",
+          "on-surface": "#121b2e",
+          "on-tertiary": "#ffffff",
+          "outline-variant": "#c7c4d8",
+          "on-tertiary-fixed-variant": "#004b74",
+          "on-primary-fixed-variant": "#3323cc",
+          "on-primary-container": "#dad7ff",
+          "surface-container": "#e9edff",
+          "on-secondary-container": "#5a6375",
+          "surface-dim": "#d1daf4",
+          "inverse-on-surface": "#edf0ff",
+          "error": "#ba1a1a",
+          "surface-container-lowest": "#ffffff",
+          "surface-variant": "#d9e2fc",
+          "on-primary": "#ffffff",
+          "background": "#f9f9ff",
+          "primary": "#3525cd",
+          "tertiary-fixed-dim": "#94ccff",
+          "on-error": "#ffffff",
+          "secondary": "#565f70",
+          "error-container": "#ffdad6",
+          "primary-fixed": "#e2dfff",
+          "primary-container": "#4f46e5",
+          "on-tertiary-container": "#bfdfff",
+          "surface-container-low": "#f1f3ff",
+          "secondary-fixed-dim": "#bec7db",
+          "on-surface-variant": "#464555",
+          "surface-container-high": "#e1e8ff",
+          "on-background": "#121b2e",
+          "on-primary-fixed": "#0f0069",
+          "on-tertiary-fixed": "#001d32",
+          "surface-tint": "#4d44e3",
+          "surface-container-highest": "#d9e2fc",
+          "on-secondary-fixed": "#131c2b",
+          "surface-bright": "#f9f9ff",
+          "on-secondary-fixed-variant": "#3e4758",
+          "surface": "#f9f9ff",
+          "tertiary-container": "#00659c",
+          "secondary-fixed": "#dae3f8",
+          "outline": "#777587",
+          "inverse-surface": "#273044"
+        },
+        "borderRadius": {
+          "DEFAULT": "0.25rem",
+          "lg": "0.5rem",
+          "xl": "0.75rem",
+          "full": "9999px"
+        },
+        "spacing": {
+          "base": "4px",
+          "sidebar-collapsed": "72px",
+          "sidebar-expanded": "248px",
+          "screen-padding": "24px",
+          "card-padding": "16px",
+          "gutter": "16px",
+          "topbar-height": "64px",
+          "touch-target-min": "44px"
+        },
+        "fontFamily": {
+          "card-title": ["Inter"],
+          "body": ["Inter"],
+          "section-title": ["Inter"],
+          "label": ["Inter"],
+          "button": ["Inter"],
+          "page-title": ["Inter"],
+          "table-dense": ["Inter"]
+        },
+        "fontSize": {
+          "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+          "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+          "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+          "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+          "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+          "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+          "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+        }
+      },
+    },
+  }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body text-body antialiased flex h-full selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- SideNavBar Anchor Component from JSON Blueprint -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded z-40 bg-surface-container-lowest dark:bg-inverse-surface border-r border-outline-variant dark:border-outline">
+<div class="flex flex-col justify-between h-full p-4">
+<!-- Workspace Brand & Header -->
+<div class="space-y-6">
+<div class="flex items-center gap-3 px-1">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center text-primary font-section-title text-section-title font-bold">
+            NC
+          </div>
+<div class="overflow-hidden">
+<h1 class="font-section-title text-section-title text-on-surface dark:text-inverse-on-surface truncate">Northstar Coffee</h1>
+<p class="font-label text-label text-secondary dark:text-secondary-fixed-dim">Agency Workspace</p>
+</div>
+</div>
+<button class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary-container text-on-primary hover:opacity-95 font-button text-button transition-colors duration-150 active:scale-[0.99] shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Brief</span>
+</button>
+<!-- Navigation items: Exact 8 tab_labels and icons from JSON Blueprint -->
+<nav aria-label="Main Navigation" class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">event_note</span>
+<span>Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">view_kanban</span>
+<span>Board</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_month</span>
+<span>Calendar</span>
+</a>
+<!-- Trends (Closest Semantic Match for Analytics / Social Analytics as per blueprint active state) -->
+<a aria-current="page" class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container-low dark:bg-surface-container text-primary dark:text-inverse-primary font-button text-button transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<span class="flex-1">Trends</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">rate_review</span>
+<span>Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">perm_media</span>
+<span>Media</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Footer navigation from JSON Blueprint -->
+<div class="pt-4 border-t border-outline-variant/60 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-body text-body hover:bg-surface-container-low dark:hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+<span>Workspace Settings</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Content Wrap (Shifted by 248px for expanded desktop sidebar) -->
+<div class="flex-1 ml-sidebar-expanded min-w-0 flex flex-col h-full bg-background overflow-y-auto">
+<!-- TopNavBar Anchor Component from JSON Blueprint -->
+<header class="sticky top-0 z-30 bg-surface-container-lowest dark:bg-inverse-surface border-b border-outline-variant dark:border-outline h-topbar-height px-screen-padding flex items-center justify-between">
+<!-- Left: Breadcrumbs & Search -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 font-label text-label text-secondary">
+<span class="font-card-title text-card-title text-on-surface dark:text-inverse-on-surface mr-1">LaraTik Planner</span>
+<span class="text-outline-variant">/</span>
+<a class="hover:text-on-surface transition-colors" href="#">Northstar Coffee</a>
+<span class="text-outline-variant">/</span>
+<a class="hover:text-on-surface transition-colors" href="#">Analytics</a>
+<span class="text-outline-variant">/</span>
+<span class="text-on-surface dark:text-inverse-on-surface font-button text-button">Social</span>
+</div>
+<!-- Global Search -->
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-[18px]">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 text-body rounded-lg bg-surface-container-low border border-outline-variant/60 focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none placeholder:text-secondary placeholder:text-body" placeholder="Search metrics, posts... (⌘K)" type="text"/>
+</div>
+</div>
+<!-- Right: Operational Status, Actions, Profile -->
+<div class="flex items-center gap-4">
+<!-- System Operational Status Indicator -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant/50">
+<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+<span class="font-label text-label text-secondary">All systems operational</span>
+</div>
+<!-- Primary Top Action from JSON -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary hover:opacity-95 font-button text-button transition-colors active:scale-95" type="button">
+<span class="material-symbols-outlined text-[18px]">post_add</span>
+<span>Create Post</span>
+</button>
+<!-- Icon Actions -->
+<div class="flex items-center gap-1">
+<button class="p-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="Notifications" type="button">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+</button>
+<button class="p-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" title="Help" type="button">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+</div>
+<div class="h-5 w-[1px] bg-outline-variant"></div>
+<!-- User Profile Pill -->
+<div class="flex items-center gap-2 pl-1">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest border border-outline-variant flex items-center justify-center font-button text-button text-primary font-bold">
+            SJ
+          </div>
+<div class="text-left hidden sm:block">
+<div class="font-button text-button text-on-surface leading-tight">Sarah Jenkins</div>
+<div class="font-label text-label text-secondary leading-tight">Production Lead</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Operational Data-Quality Callout Banner -->
+<div class="bg-surface-container-lowest border-b border-outline-variant/70 px-screen-padding py-3">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-3 bg-surface-container-low/70 border border-outline-variant/60 rounded-lg p-3">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-amber-600 text-[22px]">sync_problem</span>
+<div class="font-body text-body text-on-surface">
+<strong class="font-button text-button text-on-surface">Partial data sync:</strong> 
+            TikTok Graph API token expires in 4 days; Instagram metrics live-synced 12 minutes ago. YouTube Shorts metric ingestion paused by rate limit.
+          </div>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<button class="px-3 py-1 text-button font-button rounded bg-surface-container-lowest border border-outline-variant text-on-surface hover:bg-surface-container-high transition-colors" type="button">
+            Reconnect TikTok
+          </button>
+<button aria-label="Dismiss banner" class="p-1 text-secondary hover:text-on-surface rounded hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined text-[18px]">close</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Main Analytics Body Content -->
+<main class="flex-1 p-screen-padding max-w-7xl w-full mx-auto space-y-6">
+<!-- Page Header & Controls -->
+<section class="space-y-4">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">Social analytics</h1>
+<p class="font-body text-body text-secondary mt-1">Audience growth, published post retention, and verified platform engagement metrics for Northstar Coffee.</p>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<!-- Date range picker dropdown -->
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant font-button text-button text-on-surface hover:bg-surface-container-low transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-secondary text-[18px]">calendar_today</span>
+<span>Last 30 days: Sep 25 – Oct 24, 2024</span>
+<span class="material-symbols-outlined text-secondary text-[18px]">expand_more</span>
+</button>
+<!-- Export CSV Dominant Secondary Action -->
+<button class="flex items-center gap-2 px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant font-button text-button text-on-surface hover:bg-surface-container-low transition-colors shadow-sm" type="button">
+<span class="material-symbols-outlined text-[18px]">download</span>
+<span>Export CSV</span>
+</button>
+</div>
+</div>
+<!-- Filter Controls Row -->
+<div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-outline-variant/50">
+<div class="flex flex-wrap items-center gap-2">
+<span class="font-label text-label text-secondary mr-1">Channels:</span>
+<button class="px-3 py-1 rounded-full text-label font-label bg-primary-container text-on-primary" type="button">
+              All channels (4)
+            </button>
+<button class="px-3 py-1 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              Instagram Reels &amp; Posts
+            </button>
+<button class="px-3 py-1 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              TikTok
+            </button>
+<button class="px-3 py-1 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              LinkedIn
+            </button>
+<button class="px-3 py-1 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              YouTube Shorts
+            </button>
+</div>
+<div class="flex items-center gap-3">
+<label class="inline-flex items-center gap-2 cursor-pointer select-none">
+<input checked="" class="rounded border-outline-variant text-primary-container focus:ring-primary h-4 w-4" type="checkbox"/>
+<span class="font-label text-label text-secondary">vs Previous period</span>
+</label>
+</div>
+</div>
+</section>
+<!-- Operational KPI Metric Strip (No fake charts, pure verified data) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Total verified impressions</span>
+<span class="material-symbols-outlined text-[18px]">verified</span>
+</div>
+<div class="my-3">
+<div class="text-[30px] font-bold text-on-surface tracking-tight leading-none">428,950</div>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="inline-flex items-center text-emerald-700 text-label font-label bg-emerald-50 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-0.5">trending_up</span>+14.2%
+              </span>
+<span class="text-secondary font-label text-label">vs previous 30d</span>
+</div>
+</div>
+<div class="font-label text-label text-secondary pt-2 border-t border-outline-variant/40 flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Verified Graph API ingest</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Audience net growth</span>
+<span class="material-symbols-outlined text-[18px]">group_add</span>
+</div>
+<div class="my-3">
+<div class="text-[30px] font-bold text-on-surface tracking-tight leading-none">+3,840</div>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="inline-flex items-center text-emerald-700 text-label font-label bg-emerald-50 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-0.5">trending_up</span>+8.1%
+              </span>
+<span class="text-secondary font-label text-label">MoM</span>
+</div>
+</div>
+<div class="font-label text-label text-secondary pt-2 border-t border-outline-variant/40">
+            Net new followers across active channels
+          </div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Average engagement rate</span>
+<span class="material-symbols-outlined text-[18px]">percent</span>
+</div>
+<div class="my-3">
+<div class="text-[30px] font-bold text-on-surface tracking-tight leading-none">4.62%</div>
+<div class="flex items-center gap-1.5 mt-2">
+<span class="inline-flex items-center text-emerald-700 text-label font-label bg-emerald-50 px-1.5 py-0.5 rounded">
+<span class="material-symbols-outlined text-[14px] mr-0.5">arrow_upward</span>+0.4%
+              </span>
+<span class="text-secondary font-label text-label">delta</span>
+</div>
+</div>
+<div class="font-label text-label text-secondary pt-2 border-t border-outline-variant/40">
+            Saves, shares, comments over impressions
+          </div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col justify-between">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Published posts in period</span>
+<span class="material-symbols-outlined text-[18px]">publish</span>
+</div>
+<div class="my-3">
+<div class="text-[30px] font-bold text-on-surface tracking-tight leading-none">18 <span class="text-body font-normal text-secondary">/ 24 goal</span></div>
+<div class="flex items-center gap-1.5 mt-2">
+<div class="w-full bg-surface-container rounded-full h-2">
+<div class="bg-primary-container h-2 rounded-full" style="width: 75%"></div>
+</div>
+<span class="text-label font-label text-secondary shrink-0">75%</span>
+</div>
+</div>
+<div class="font-label text-label text-secondary pt-2 border-t border-outline-variant/40">
+            1 overdue draft resolved this week
+          </div>
+</div>
+</section>
+<!-- Performance & Velocity Section (2/3 Breakdown + 1/3 Data Hygiene Notes) -->
+<section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Left: Channel Performance Comparison Table (2 columns) -->
+<div class="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl flex flex-col overflow-hidden">
+<div class="p-4 border-b border-outline-variant flex items-center justify-between">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface">Channel performance comparison</h2>
+<p class="font-label text-label text-secondary">Verified telemetry mapped to production output</p>
+</div>
+<span class="font-label text-label px-2.5 py-1 rounded bg-surface-container-low text-secondary border border-outline-variant/50">
+              4 of 4 integrated
+            </span>
+</div>
+<div class="overflow-x-auto">
+<table class="w-full text-left font-table-dense text-table-dense border-collapse">
+<thead>
+<tr class="bg-surface-container-low/60 text-secondary border-b border-outline-variant font-label text-label">
+<th class="py-2.5 px-4">Channel &amp; handle</th>
+<th class="py-2.5 px-3 text-right">Posts</th>
+<th class="py-2.5 px-3 text-right">Net reach</th>
+<th class="py-2.5 px-3 text-right">Avg. retention</th>
+<th class="py-2.5 px-3 text-right">Eng. rate</th>
+<th class="py-2.5 px-3">Top format</th>
+<th class="py-2.5 px-4 text-right">Sync status</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/60">
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">Instagram</div>
+<div class="font-label text-label text-secondary">@northstar_coffee</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">9</td>
+<td class="py-3 px-3 text-right">240,120</td>
+<td class="py-3 px-3 text-right">58.4%</td>
+<td class="py-3 px-3 text-right font-medium text-emerald-700">5.1%</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">Reels</span>
+</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 text-emerald-700 font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Synced 12m ago
+                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">TikTok</div>
+<div class="font-label text-label text-secondary">@northstarcoffee</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">5</td>
+<td class="py-3 px-3 text-right">162,400</td>
+<td class="py-3 px-3 text-right">41.2%</td>
+<td class="py-3 px-3 text-right font-medium text-emerald-700">4.2%</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">9:16 Video</span>
+</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 text-amber-700 font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Token renewal in 4d
+                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">LinkedIn</div>
+<div class="font-label text-label text-secondary">Northstar Roasters</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">3</td>
+<td class="py-3 px-3 text-right">21,530</td>
+<td class="py-3 px-3 text-right">72.0%</td>
+<td class="py-3 px-3 text-right font-medium">3.8%</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">Carousel</span>
+</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 text-secondary font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Synced 3h ago
+                    </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">YouTube Shorts</div>
+<div class="font-label text-label text-secondary">@northstarroasters</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">1</td>
+<td class="py-3 px-3 text-right">4,900</td>
+<td class="py-3 px-3 text-right">34.8%</td>
+<td class="py-3 px-3 text-right font-medium">2.9%</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">Short</span>
+</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 text-rose-700 font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> Quota Paused
+                    </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<!-- Right: Data Hygiene & Attribution Notes (1 column) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex flex-col justify-between">
+<div class="space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/60">
+<h2 class="font-card-title text-card-title text-on-surface">Data hygiene &amp; attribution</h2>
+<span class="material-symbols-outlined text-secondary text-[20px]">policy</span>
+</div>
+<div class="space-y-3">
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/40 space-y-1">
+<div class="flex items-center gap-1.5 font-button text-button text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span>Attribution window</span>
+</div>
+<p class="font-body text-body text-secondary text-sm">Strict 7-day post-click / 1-day post-view attribution model enforced across Meta Graph API &amp; TikTok Business Center.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/40 space-y-1">
+<div class="flex items-center gap-1.5 font-button text-button text-amber-800">
+<span class="material-symbols-outlined text-[16px] text-amber-700">warning</span>
+<span>Stale data notice</span>
+</div>
+<p class="font-body text-body text-secondary text-sm">YouTube Shorts last synced 48 hours ago due to daily quota freeze on Data API v3. Manual trigger pending next quota reset.</p>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/40 space-y-1">
+<div class="flex items-center gap-1.5 font-button text-button text-on-surface">
+<span class="material-symbols-outlined text-[16px] text-primary">forward_to_inbox</span>
+<span>Automated dispatch</span>
+</div>
+<p class="font-body text-body text-secondary text-sm">Scheduled Monday 08:00 AM EST executive report directly to Dave K. (Client Approver).</p>
+</div>
+</div>
+</div>
+<div class="pt-4 border-t border-outline-variant/60">
+<button class="w-full py-2 px-3 text-center rounded-lg border border-outline-variant font-button text-button text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              Manage Attribution Rules
+            </button>
+</div>
+</div>
+</section>
+<!-- Content Performance Table Section -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<!-- Table Header & Action Controls -->
+<div class="p-4 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface">Published content performance</h2>
+<p class="font-label text-label text-secondary">Granular engagement and save retention by published creative unit</p>
+</div>
+<div class="flex flex-wrap items-center gap-3">
+<!-- Format Filter -->
+<select aria-label="Filter by format" class="text-body font-body py-1.5 px-3 rounded-lg bg-surface-container-low border border-outline-variant/70 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+<option>All formats</option>
+<option>Reels</option>
+<option>Carousels</option>
+<option>Stories</option>
+<option>Shorts</option>
+</select>
+<!-- Sorting Dropdown -->
+<select aria-label="Sort content" class="text-body font-body py-1.5 px-3 rounded-lg bg-surface-container-low border border-outline-variant/70 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+<option>Highest engagement</option>
+<option>Most impressions</option>
+<option>Most saves</option>
+<option>Latest published</option>
+</select>
+</div>
+</div>
+<!-- Table Data -->
+<div class="overflow-x-auto">
+<table class="w-full text-left font-table-dense text-table-dense border-collapse">
+<thead>
+<tr class="bg-surface-container-low/60 text-secondary border-b border-outline-variant font-label text-label">
+<th class="py-3 px-4">Post &amp; Campaign details</th>
+<th class="py-3 px-3">Publish date</th>
+<th class="py-3 px-3">Channels</th>
+<th class="py-3 px-3 text-right">Impressions</th>
+<th class="py-3 px-3 text-right">Eng. rate</th>
+<th class="py-3 px-3 text-right">Saves</th>
+<th class="py-3 px-4 text-right">Verification</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/60">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">Autumn Cold Brew Reel — Final Cut</div>
+<div class="font-label text-label text-secondary">Camp: Seasonal Beverage Launch 2024</div>
+</td>
+<td class="py-3 px-3 text-secondary whitespace-nowrap">Oct 24, 2024</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">IG Reels</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">TikTok</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">42,800</td>
+<td class="py-3 px-3 text-right font-semibold text-emerald-700">6.8%</td>
+<td class="py-3 px-3 text-right">840</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-label text-label">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Verified
+                  </span>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">Single Origin Ethiopia Launch Carousel</div>
+<div class="font-label text-label text-secondary">Camp: Direct Trade Farm Stories</div>
+</td>
+<td class="py-3 px-3 text-secondary whitespace-nowrap">Oct 18, 2024</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">IG Feed</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">LinkedIn</span>
+</div>
+</td>
+<td class="py-3 px-3 text-right font-medium">31,240</td>
+<td class="py-3 px-3 text-right font-semibold text-emerald-700">4.9%</td>
+<td class="py-3 px-3 text-right">412</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-label text-label">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Verified
+                  </span>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">Barista Tips: Dialing Espresso</div>
+<div class="font-label text-label text-secondary">Camp: Education &amp; Community Engagement</div>
+</td>
+<td class="py-3 px-3 text-secondary whitespace-nowrap">Oct 12, 2024</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">IG Stories</span>
+</td>
+<td class="py-3 px-3 text-right font-medium">18,500</td>
+<td class="py-3 px-3 text-right font-semibold">3.2%</td>
+<td class="py-3 px-3 text-right">98</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label text-label">
+<span class="material-symbols-outlined text-[14px]">done</span> Ingested
+                  </span>
+</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-surface-container-low/40 transition-colors">
+<td class="py-3 px-4">
+<div class="font-button text-button text-on-surface">Roaster's Choice: Kenya Peaberry</div>
+<div class="font-label text-label text-secondary">Camp: Roastery Behind The Scenes</div>
+</td>
+<td class="py-3 px-3 text-secondary whitespace-nowrap">Oct 5, 2024</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container text-primary font-label text-label">TikTok</span>
+</td>
+<td class="py-3 px-3 text-right font-medium">54,100</td>
+<td class="py-3 px-3 text-right font-semibold text-emerald-700">5.8%</td>
+<td class="py-3 px-3 text-right">630</td>
+<td class="py-3 px-4 text-right">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-label text-label">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Verified
+                  </span>
+</td>
+</tr>
+<!-- Honest No-Data Callout Row (No fake numbers) -->
+<tr class="bg-surface-container-low/30 text-secondary">
+<td class="py-3 px-4">
+<div class="font-button text-button text-secondary">YouTube Shorts test series</div>
+<div class="font-label text-label text-secondary/80">Camp: Pilot Micro-video format</div>
+</td>
+<td class="py-3 px-3 text-secondary/80 whitespace-nowrap">—</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-secondary font-label text-label">Shorts</span>
+</td>
+<td class="py-3 px-4 text-right italic font-label text-label text-secondary" colspan="4">
+                  No data recorded: No published shorts during selected date range
+                </td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer / Pagination -->
+<div class="p-4 border-t border-outline-variant bg-surface-container-low/40 flex flex-col sm:flex-row items-center justify-between gap-3">
+<div class="font-label text-label text-secondary">
+            Showing 4 published posts and 1 pending series (Total 18 posts in scope)
+          </div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 text-label font-label rounded border border-outline-variant/60 bg-surface-container-lowest text-secondary opacity-50 cursor-not-allowed" disabled="" type="button">
+              Previous
+            </button>
+<span class="text-label font-label px-2 text-on-surface">Page 1 of 4</span>
+<button class="px-2.5 py-1 text-label font-label rounded border border-outline-variant/60 bg-surface-container-lowest text-on-surface hover:bg-surface-container-low transition-colors" type="button">
+              Next
+            </button>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

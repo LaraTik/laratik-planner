@@ -162,6 +162,7 @@ export async function devSeed(
     platformRole?: PlatformRole;
     socialAnalyticsFixture?: boolean;
     includeDeliveryMediaFixture?: boolean;
+    enableTrendRadar?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -184,6 +185,7 @@ export async function devSeed(
         ...(options.includeDeliveryMediaFixture
           ? { includeDeliveryMediaFixture: options.includeDeliveryMediaFixture }
           : {}),
+        ...(options.enableTrendRadar ? { enableTrendRadar: true } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step
@@ -236,11 +238,18 @@ export async function bootstrapTestSession(
     workspaceName?: string;
     workspaceSlug?: string;
     locale?: "en" | "ar";
+    agencyAdmin?: boolean;
+    workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
     platformRole?: PlatformRole;
+    authRole?: "agency_admin" | "user";
+    enableTrendRadar?: boolean;
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
-  await setAuthCookie(page, page.request, options.email ? { email: options.email } : {});
+  await setAuthCookie(page, page.request, {
+    ...(options.email ? { email: options.email } : {}),
+    ...(options.authRole ? { role: options.authRole } : {}),
+  });
   await applySeededAgencyContext(page, result);
   return result;
 }

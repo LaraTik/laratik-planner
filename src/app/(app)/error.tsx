@@ -252,6 +252,8 @@ export default function AppError({
     <div
       className="mx-auto w-full max-w-4xl space-y-4 px-4 py-8 sm:py-12"
       data-testid="app-error-page"
+      role="alert"
+      aria-live="assertive"
     >
       {/* Hero: one-line summary + the recovery actions. */}
       <Card padding="lg" data-testid="app-error-summary">

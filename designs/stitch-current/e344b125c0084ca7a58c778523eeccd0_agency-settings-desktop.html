@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Agency Admin - Agency Settings Hub</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container": "#e9edff",
+            "error-container": "#ffdad6",
+            "primary-container": "#4f46e5",
+            "secondary-fixed-dim": "#bec7db",
+            "on-secondary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "background": "#f9f9ff",
+            "primary-fixed": "#e2dfff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-secondary-fixed": "#131c2b",
+            "on-background": "#121b2e",
+            "on-secondary-container": "#5a6375",
+            "surface-variant": "#d9e2fc",
+            "on-primary-fixed": "#0f0069",
+            "surface-container-low": "#f1f3ff",
+            "secondary-fixed": "#dae3f8",
+            "on-tertiary": "#ffffff",
+            "inverse-on-surface": "#edf0ff",
+            "surface": "#f9f9ff",
+            "on-tertiary-fixed": "#001d32",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-primary-fixed-variant": "#3323cc",
+            "tertiary": "#004c77",
+            "surface-container-high": "#e1e8ff",
+            "on-surface": "#121b2e",
+            "primary-fixed-dim": "#c3c0ff",
+            "secondary": "#565f70",
+            "on-primary": "#ffffff",
+            "inverse-primary": "#c3c0ff",
+            "secondary-container": "#d7e0f5",
+            "primary": "#3525cd",
+            "tertiary-fixed": "#cde5ff",
+            "surface-bright": "#f9f9ff",
+            "outline": "#777587",
+            "tertiary-fixed-dim": "#94ccff",
+            "error": "#ba1a1a",
+            "on-error": "#ffffff",
+            "tertiary-container": "#00659c",
+            "surface-tint": "#4d44e3",
+            "on-tertiary-container": "#bfdfff",
+            "outline-variant": "#c7c4d8",
+            "on-primary-container": "#dad7ff",
+            "surface-dim": "#d1daf4",
+            "on-surface-variant": "#464555",
+            "surface-container-highest": "#d9e2fc",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#273044"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "topbar-height": "64px",
+            "card-padding": "16px",
+            "base": "4px",
+            "sidebar-expanded": "248px",
+            "sidebar-collapsed": "72px",
+            "touch-target-min": "44px",
+            "screen-padding": "24px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "section-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "page-title": ["Inter"],
+            "body": ["Inter"],
+            "card-title": ["Inter"],
+            "button": ["Inter"],
+            "label": ["Inter"]
+          },
+          "fontSize": {
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface antialiased font-body selection:bg-primary selection:text-on-primary">
+<!-- SideNavBar Component -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded flex flex-col justify-between p-4 border-r border-outline-variant bg-surface-container-lowest z-40">
+<div>
+<!-- Brand & Header -->
+<div class="flex items-center gap-3 px-2 py-3 mb-4">
+<div class="w-9 h-9 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="admin_panel_settings">admin_panel_settings</span>
+</div>
+<div class="flex flex-col">
+<span class="font-card-title text-card-title text-on-surface font-semibold leading-tight">LaraTik Agency</span>
+<span class="font-label text-label text-on-surface-variant leading-tight">Admin Console</span>
+</div>
+</div>
+<!-- Quick CTA Button -->
+<button class="w-full mb-5 flex items-center justify-center gap-2 px-3 py-2 bg-primary hover:bg-primary/90 text-on-primary font-button text-button rounded-lg transition-colors duration-150 shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>New Workspace</span>
+</button>
+<!-- Primary Navigation -->
+<nav class="space-y-1">
+<!-- Workspaces -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-body rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="domain">domain</span>
+<span>Workspaces</span>
+</a>
+<!-- Users -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-body rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span>Users</span>
+</a>
+<!-- Agency Settings (Active Destination) -->
+<div class="pt-1">
+<a class="flex items-center justify-between px-3 py-2 bg-surface-container text-primary font-button rounded-lg transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="admin_panel_settings">admin_panel_settings</span>
+<span>Agency Settings</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="expand_more">expand_more</span>
+</a>
+<!-- Sub-navigation links -->
+<div class="mt-1 ml-4 pl-3 border-l-2 border-primary/30 space-y-1">
+<a class="flex items-center px-2 py-1.5 font-button text-button text-primary bg-surface-container-low rounded-md" href="#general">General</a>
+<a class="flex items-center px-2 py-1.5 font-body text-body text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-md" href="#ai-config">AI configuration</a>
+<a class="flex items-center px-2 py-1.5 font-body text-body text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-md" href="#social">Social</a>
+<a class="flex items-center px-2 py-1.5 font-body text-body text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-md" href="#storage">Storage</a>
+<a class="flex items-center px-2 py-1.5 font-body text-body text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-md" href="#planning-packs">Planning packs</a>
+<a class="flex items-center px-2 py-1.5 font-body text-body text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-md" href="#billing">Plan &amp; billing</a>
+</div>
+</div>
+<!-- Account -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-body rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="manage_accounts">manage_accounts</span>
+<span>Account</span>
+</a>
+</nav>
+</div>
+<!-- SideNav Footer -->
+<div class="pt-3 border-t border-outline-variant space-y-2">
+<a class="flex items-center justify-between px-3 py-2 text-on-surface-variant font-body rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-tertiary" data-icon="monitor_heart">monitor_heart</span>
+<span class="font-body text-body">System Health</span>
+</div>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium bg-surface-container text-primary">Operational</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-body rounded-lg hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="font-body text-body">Support</span>
+</a>
+</div>
+</aside>
+<!-- TopNavBar Component -->
+<header class="fixed top-0 right-0 left-[248px] h-topbar-height flex items-center justify-between px-6 border-b border-outline-variant bg-surface-container-lowest z-30">
+<div class="flex items-center gap-6">
+<!-- Breadcrumb Navigation -->
+<div class="flex items-center gap-2 font-body text-body text-on-surface-variant">
+<span class="text-on-surface-variant">Agency Administration</span>
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-semibold">Agency settings</span>
+</div>
+<!-- Global Search -->
+<div class="relative w-72">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-outline">
+<span class="material-symbols-outlined text-[18px]" data-icon="search">search</span>
+</div>
+<input class="w-full pl-9 pr-8 py-1.5 font-body text-body bg-surface-container-low border border-outline-variant rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Search settings, scopes, keys (⌘K)..." type="text"/>
+<div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+<kbd class="px-1.5 py-0.5 text-[10px] font-medium text-on-surface-variant bg-surface border border-outline-variant rounded">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Actions & Profile -->
+<div class="flex items-center gap-4">
+<!-- Tenant status indicator -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container border border-outline-variant text-primary font-label text-label">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span>All systems operational</span>
+</div>
+<!-- Icon Actions -->
+<div class="flex items-center gap-1 border-r border-outline-variant pr-3">
+<button class="w-9 h-9 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" title="Notifications">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors" title="Help &amp; Documentation">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+</button>
+</div>
+<!-- User Profile -->
+<div class="flex items-center gap-3 pl-1">
+<img class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A professional, clean studio portrait of Sarah Jenkins, a Super Admin in modern corporate tech attire. She smiles calmly with warm high-key lighting, soft white studio background, high contrast, sharp focus, with subtle indigo accents matching a modern web administrative portal identity." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDrrFPIHhRQR5WW6pi7cPKYpp6njxU1_4ZoRwjyBw1-9-ABIlTD3qYdz6gmDrS1mGVfHpbZ6wTZwh32WpKJuwqyaUnhiOE6i76ri6HfDiyxDfK0Ro6ODh2kxnD4th16iyDMhaQQUquR9XqO96TxnxcYFJK0His7fuKt_-BmG0yUqeNVszojrY5-0Ot7WhbjmbtlNJh2RXQ8i2HHBq-vWDWRUCYjb5xIYgUcxLQ7PY5b3pzFsAaCV4V6vkYJ6FPSqgBbm8G-ZWe_Yffk"/>
+<div class="hidden sm:flex flex-col text-left">
+<span class="font-button text-button text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="font-label text-label text-on-surface-variant leading-tight">Super Admin</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="ml-[248px] pt-topbar-height min-h-screen bg-surface px-8 py-8">
+<div class="max-w-7xl mx-auto space-y-6">
+<!-- Page Header & Global Controls -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-2 border-b border-outline-variant">
+<div class="space-y-1">
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Agency settings</h1>
+<span class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-surface-container text-primary border border-outline-variant">Central Hub</span>
+</div>
+<p class="font-body text-body text-on-surface-variant max-w-3xl">
+            Configure agency-wide defaults, verified social credentials, multi-tenant storage quotas, and reviewed monthly planning instruction packs.
+          </p>
+</div>
+<!-- Telemetry Pill & Dominant Action Cluster -->
+<div class="flex flex-wrap items-center gap-3">
+<div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface-variant font-label text-label">
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="verified_user">verified_user</span>
+<span>Health status: <strong class="text-on-surface font-semibold">Optimal</strong></span>
+<span class="text-outline">•</span>
+<span>4 active channels</span>
+<span class="text-outline">•</span>
+<span>42.8 GB / 100 GB</span>
+<span class="text-outline">•</span>
+<span class="text-primary font-medium">S3 vault verified</span>
+</div>
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface font-button text-button transition-colors">
+            Export config
+          </button>
+<button class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-button text-button transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]" data-icon="save">save</span>
+<span>Save all settings</span>
+</button>
+</div>
+</div>
+<!-- Bento-style Operational Cards Grid -->
+<div class="grid grid-cols-1 gap-6">
+<!-- CARD 1: Agency Identity & Default Locale -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 transition-all duration-150" id="general">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-6 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="corporate_fare">corporate_fare</span>
+</div>
+<div>
+<h2 class="font-section-title text-section-title text-on-surface leading-tight">Agency identity &amp; localization</h2>
+<p class="font-label text-label text-on-surface-variant">Global tenant parameters applied during workspace provisioning</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant font-label text-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="lock">lock</span>
+              Managed by Super Admin
+            </span>
+</div>
+<!-- 2-Column Form Fields -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+<!-- Legal Name -->
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface font-semibold">Agency legal name</label>
+<input class="w-full px-3.5 py-2 font-body text-body bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" type="text" value="LaraTik Media Group LLC"/>
+</div>
+<!-- Agency Subdomain -->
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface font-semibold">Agency slug / subdomain</label>
+<div class="flex rounded-lg border border-outline-variant overflow-hidden focus-within:ring-2 focus-within:ring-primary">
+<span class="inline-flex items-center px-3 bg-surface-container-low border-r border-outline-variant font-body text-body text-on-surface-variant">https://</span>
+<input class="w-full px-3.5 py-2 font-body text-body bg-surface-container-lowest border-0 text-on-surface focus:ring-0" type="text" value="laratik-agency.planner.io"/>
+</div>
+</div>
+<!-- Contact Email -->
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface font-semibold">Primary agency contact email</label>
+<div class="relative">
+<input class="w-full pl-3.5 pr-10 py-2 font-body text-body bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" type="email" value="governance@laratik.io"/>
+<div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-primary" title="Verified Domain">
+<span class="material-symbols-outlined text-[18px]" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+</div>
+<!-- Timezone -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between">
+<label class="block font-label text-label text-on-surface font-semibold">Default operational timezone</label>
+<span class="inline-flex items-center gap-1 font-label text-label text-primary bg-surface-container px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-[12px]" data-icon="schedule">schedule</span>
+                  14:28 PDT Live
+                </span>
+</div>
+<select class="w-full px-3.5 py-2 font-body text-body bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
+<option selected="">UTC-07:00 America/Los_Angeles (Pacific Time)</option>
+<option>UTC-04:00 America/New_York (Eastern Time)</option>
+<option>UTC+00:00 Europe/London (GMT)</option>
+<option>UTC+04:00 Asia/Dubai (GST - Arabic Ops)</option>
+</select>
+</div>
+<!-- Locale & Script -->
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface font-semibold">Primary default locale &amp; script</label>
+<select class="w-full px-3.5 py-2 font-body text-body bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
+<option selected="">English (United States) — LTR</option>
+<option>Arabic (United Arab Emirates) — RTL</option>
+<option>Arabic (Saudi Arabia) — RTL</option>
+<option>French (France) — LTR</option>
+</select>
+<p class="font-label text-label text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]" data-icon="info">info</span>
+                Supports Arabic RTL auto-direction for regional Middle East creator briefs
+              </p>
+</div>
+<!-- Workweek Cadence -->
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface font-semibold">Default workweek cadence</label>
+<div class="flex items-center gap-2">
+<input class="w-full px-3.5 py-2 font-body text-body bg-surface-container-lowest border border-outline-variant rounded-lg text-on-surface focus:outline-none focus:ring-2 focus:ring-primary" type="text" value="Monday – Friday • 09:00 - 18:00"/>
+<button class="px-3 py-2 border border-outline-variant rounded-lg hover:bg-surface-container-low text-on-surface-variant text-label font-label whitespace-nowrap">
+                  Set SLA
+                </button>
+</div>
+</div>
+</div>
+<!-- Action Footer -->
+<div class="mt-6 pt-4 border-t border-outline-variant flex flex-col sm:flex-row items-center justify-between gap-3">
+<span class="font-label text-label text-on-surface-variant">Last updated today at 09:14 AM by Sarah Jenkins</span>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface font-button text-button transition-colors">
+                Discard
+              </button>
+<button class="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-button text-button transition-colors shadow-sm">
+                Save identity changes
+              </button>
+</div>
+</div>
+</section>
+<!-- CARD 2: Social Provider Configuration -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 transition-all duration-150" id="social">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-outline-variant">
+<div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="hub">hub</span>
+</div>
+<h2 class="font-section-title text-section-title text-on-surface leading-tight">Social provider configuration</h2>
+</div>
+<p class="font-label text-label text-on-surface-variant mt-1">
+                Centralized OAuth apps and token refresh pools shared across tenant workspaces.
+              </p>
+</div>
+<div class="flex items-center gap-2">
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-button transition-colors">
+<span class="material-symbols-outlined text-[16px]" data-icon="sync">sync</span>
+                Verify all pools
+              </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-button text-button hover:bg-primary/90 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="add">add</span>
+                Add social provider
+              </button>
+</div>
+</div>
+<!-- Masked Secret Vault Banner -->
+<div class="mb-5 p-3 rounded-lg bg-surface-container-low border border-outline-variant flex items-center gap-3">
+<div class="w-8 h-8 rounded-md bg-surface-container flex items-center justify-center text-primary shrink-0">
+<span class="material-symbols-outlined text-[18px]" data-icon="encrypted">encrypted</span>
+</div>
+<div class="flex-1">
+<p class="font-body text-body text-on-surface font-semibold">Masked credentials encrypted via AWS KMS Key Vault</p>
+<p class="font-label text-label text-on-surface-variant">Application secrets are write-only in browser. Tokens refresh autonomously across managed TikTok, Meta, LinkedIn, and YouTube channels.</p>
+</div>
+<span class="hidden md:inline-flex items-center px-2 py-1 bg-surface rounded border border-outline-variant font-label text-label text-on-surface">KMS 256-bit active</span>
+</div>
+<!-- Providers Table -->
+<div class="overflow-x-auto border border-outline-variant rounded-lg">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant font-label text-label text-on-surface-variant">
+<th class="py-3 px-4">Provider / API Target</th>
+<th class="py-3 px-4">App Identifier</th>
+<th class="py-3 px-4">Granted API Scopes</th>
+<th class="py-3 px-4">Status &amp; Token Health</th>
+<th class="py-3 px-4 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-table-dense text-table-dense text-on-surface">
+<!-- Meta / Instagram -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-4 font-button text-button">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary font-bold">M</span>
+<div>
+<div class="text-on-surface">Meta / Instagram Graph API</div>
+<div class="text-[11px] text-on-surface-variant">v19.0 Enterprise Partner</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-on-surface-variant">app_meta_9824...89</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">instagram_basic</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">pages_show_list</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">publish_video</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Connected • Token valid for 58d
+                    </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<div class="inline-flex items-center gap-2">
+<button class="px-2.5 py-1 rounded border border-outline-variant text-xs font-semibold hover:bg-surface-container-low text-on-surface">Test token</button>
+<button class="px-2.5 py-1 rounded border border-outline-variant text-xs font-semibold hover:bg-surface-container-low text-on-surface-variant">Rotate</button>
+</div>
+</td>
+</tr>
+<!-- TikTok Commercial API -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-4 font-button text-button">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary font-bold">TT</span>
+<div>
+<div class="text-on-surface">TikTok Commercial Content API</div>
+<div class="text-[11px] text-on-surface-variant">Direct Creator Marketplace</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-on-surface-variant">••••••••••••_tk89</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">video.upload</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">video.publish</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container-high text-on-surface">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Connected • 94% quota used
+                    </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="px-2.5 py-1 rounded border border-outline-variant text-xs font-semibold hover:bg-surface-container-low text-on-surface">Test connection</button>
+</td>
+</tr>
+<!-- LinkedIn Developer API -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-4 font-button text-button">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary font-bold">IN</span>
+<div>
+<div class="text-on-surface">LinkedIn Marketing Developer API</div>
+<div class="text-[11px] text-on-surface-variant">Member Share &amp; Video v2</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-on-surface-variant">••••••••••••_li44</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">w_member_social</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">r_organization_social</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Connected • Enterprise Tier
+                    </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="px-2.5 py-1 rounded border border-outline-variant text-xs font-semibold hover:bg-surface-container-low text-on-surface">Re-authenticate</button>
+</td>
+</tr>
+<!-- YouTube Data v3 -->
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3.5 px-4 font-button text-button">
+<div class="flex items-center gap-2.5">
+<span class="w-7 h-7 rounded bg-surface-container flex items-center justify-center text-primary font-bold">YT</span>
+<div>
+<div class="text-on-surface">YouTube Data v3 (Google Cloud)</div>
+<div class="text-[11px] text-on-surface-variant">Shorts &amp; Community Direct</div>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-4 font-mono text-xs text-on-surface-variant">••••••••••••_gcloud</td>
+<td class="py-3.5 px-4">
+<div class="flex flex-wrap gap-1">
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">youtube.upload</span>
+<span class="px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-on-surface-variant">youtube.readonly</span>
+</div>
+</td>
+<td class="py-3.5 px-4">
+<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-surface-container text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                      Active • Quota 10k/day
+                    </span>
+</td>
+<td class="py-3.5 px-4 text-right">
+<button class="px-2.5 py-1 rounded border border-outline-variant text-xs font-semibold hover:bg-surface-container-low text-on-surface">Test connection</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- CARD 3: Agency-Owned Storage & Health Telemetry -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 transition-all duration-150" id="storage">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-6 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="cloud_done">cloud_done</span>
+</div>
+<div>
+<h2 class="font-section-title text-section-title text-on-surface leading-tight">Agency storage &amp; infrastructure health</h2>
+<p class="font-label text-label text-on-surface-variant">Direct multi-tenant object storage quotas, read latency, and pruning rules</p>
+</div>
+</div>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-container text-primary font-label text-label font-semibold">
+<span class="material-symbols-outlined text-[14px]" data-icon="security">security</span>
+              Direct S3 Bucket Encrypted
+            </span>
+</div>
+<!-- Capacity Telemetry Meter -->
+<div class="mb-6 space-y-3 p-4 rounded-xl bg-surface-container-low border border-outline-variant">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between text-sm gap-2">
+<div>
+<span class="font-body text-body text-on-surface font-semibold">Storage Capacity Consumed: </span>
+<span class="font-button text-button text-primary">42.8 GB</span>
+<span class="font-body text-body text-on-surface-variant"> of 100 GB allocated quota (42.8%)</span>
+</div>
+<span class="text-xs font-semibold px-2 py-0.5 rounded bg-surface border border-outline-variant text-on-surface">
+                57.2 GB remaining
+              </span>
+</div>
+<!-- Segmented Progress Bar -->
+<div class="w-full h-3.5 bg-surface-container rounded-full overflow-hidden flex border border-outline-variant">
+<!-- Raw Video Masters (28 GB -> 28%) -->
+<div class="bg-primary hover:opacity-90 transition-opacity" style="width: 28%;" title="Raw Video Masters: 28 GB"></div>
+<!-- Figma/Motion Packages (10.2 GB -> 10.2%) -->
+<div class="bg-tertiary-container hover:opacity-90 transition-opacity" style="width: 10.2%;" title="Figma/Motion Packages: 10.2 GB"></div>
+<!-- Render Cache (4.6 GB -> 4.6%) -->
+<div class="bg-secondary hover:opacity-90 transition-opacity" style="width: 4.6%;" title="Render Cache &amp; Thumbnails: 4.6 GB"></div>
+</div>
+<!-- Legend breakdown -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded bg-primary"></span>
+<span class="text-on-surface-variant">Raw Video Masters (ProRes/H.264): <strong class="text-on-surface">28.0 GB</strong></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded bg-tertiary-container"></span>
+<span class="text-on-surface-variant">Motion/Design Assets: <strong class="text-on-surface">10.2 GB</strong></span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2.5 h-2.5 rounded bg-secondary"></span>
+<span class="text-on-surface-variant">Thumbnails &amp; Render Cache: <strong class="text-on-surface">4.6 GB</strong></span>
+</div>
+</div>
+</div>
+<!-- Auto-cleanup Policies & Health Status Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Toggles and Retention Policies -->
+<div class="space-y-4">
+<h3 class="font-button text-button text-on-surface border-b border-outline-variant pb-2">Lifecycle &amp; Cold Storage Automation</h3>
+<!-- Rule 1 -->
+<div class="flex items-start justify-between gap-4 p-3 rounded-lg border border-outline-variant bg-surface">
+<div class="space-y-0.5">
+<div class="font-button text-button text-on-surface">Auto-prune draft video renders older than 45 days</div>
+<div class="font-label text-label text-on-surface-variant">Reclaims temporary timeline cache files automatically across active spaces.</div>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary" role="switch">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+<!-- Rule 2 -->
+<div class="flex items-start justify-between gap-4 p-3 rounded-lg border border-outline-variant bg-surface">
+<div class="space-y-0.5">
+<div class="font-button text-button text-on-surface">Archive tenant assets on campaign completion to cold Glacier vault</div>
+<div class="font-label text-label text-on-surface-variant">Decreases live S3 costs by 68% for finished client deliverables.</div>
+</div>
+<button aria-checked="true" class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-primary transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary" role="switch">
+<span class="translate-x-5 pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</button>
+</div>
+</div>
+<!-- Health Telemetry -->
+<div class="space-y-4">
+<h3 class="font-button text-button text-on-surface border-b border-outline-variant pb-2">Object Store Telemetry</h3>
+<div class="grid grid-cols-3 gap-3">
+<div class="p-3 rounded-lg border border-outline-variant bg-surface text-center">
+<div class="font-label text-label text-on-surface-variant">Read Latency</div>
+<div class="font-section-title text-section-title text-primary mt-1">34ms</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5 font-medium">99th percentile</div>
+</div>
+<div class="p-3 rounded-lg border border-outline-variant bg-surface text-center">
+<div class="font-label text-label text-on-surface-variant">Error Rate</div>
+<div class="font-section-title text-section-title text-primary mt-1">0.002%</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5 font-medium">Within nominal SLA</div>
+</div>
+<div class="p-3 rounded-lg border border-outline-variant bg-surface text-center">
+<div class="font-label text-label text-on-surface-variant">Bucket Region</div>
+<div class="font-button text-button text-on-surface mt-2.5 leading-tight">us-west-2</div>
+<div class="text-[11px] text-on-surface-variant mt-0.5 font-medium">Oregon (AES-256)</div>
+</div>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg border border-outline-variant bg-surface-container-low">
+<span class="font-label text-label text-on-surface-variant">Direct CDN CloudFront acceleration endpoint:</span>
+<span class="font-mono text-xs font-semibold text-primary">cdn.agency.laratik.io</span>
+</div>
+</div>
+</div>
+<!-- Storage Actions -->
+<div class="mt-6 pt-4 border-t border-outline-variant flex items-center justify-between">
+<span class="font-label text-label text-on-surface-variant">Telemetry sync: Real-time event bridge active</span>
+<div class="flex items-center gap-3">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface hover:bg-surface-container-low text-on-surface font-button text-button transition-colors">
+                Run storage diagnostic
+              </button>
+<button class="px-3.5 py-2 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-button text-button transition-colors">
+                Configure auto-scaling
+              </button>
+</div>
+</div>
+</section>
+<!-- CARD 4: Reviewed Monthly Planning Instruction Packs -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 transition-all duration-150" id="planning-packs">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-outline-variant">
+<div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[20px]" data-icon="library_books">library_books</span>
+</div>
+<h2 class="font-section-title text-section-title text-on-surface leading-tight">Reviewed monthly planning instruction packs</h2>
+</div>
+<p class="font-label text-label text-on-surface-variant mt-1">
+                Standardized sprint cadence, brief templates, and QA checklists injected across all brand workspaces.
+              </p>
+</div>
+<div class="flex items-center gap-2">
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-button transition-colors">
+<span class="material-symbols-outlined text-[16px]" data-icon="sync">sync</span>
+                Sync to all active tenants
+              </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-on-primary font-button text-button hover:bg-primary/90 transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="add_circle">add_circle</span>
+                Create instruction pack
+              </button>
+</div>
+</div>
+<!-- Instruction Packs Cards Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Pack 1 -->
+<div class="p-4 rounded-xl border border-outline-variant bg-surface flex flex-col justify-between hover:border-primary/50 transition-colors">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-surface-container text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Published v2.4
+                  </span>
+<span class="text-xs font-medium px-2 py-0.5 rounded bg-surface-container-low text-on-surface-variant">Default template</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface font-semibold leading-snug">
+                    Q4 High-Velocity Reel &amp; TikTok Sprint Framework
+                  </h3>
+<p class="font-label text-label text-on-surface-variant mt-1.5">
+                    Covers 14-day agile production rounds, TikTok sound licensing review gates, and rapid revisions.
+                  </p>
+</div>
+<div class="pt-2 border-t border-outline-variant space-y-1 text-xs text-on-surface-variant font-label">
+<div class="flex items-center justify-between">
+<span>Active workspaces:</span>
+<span class="font-semibold text-on-surface">8 workspaces</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Last reviewed:</span>
+<span class="font-semibold text-on-surface">Sarah Jenkins</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<button class="text-xs font-semibold text-on-surface-variant hover:text-on-surface">Duplicate</button>
+<button class="px-3 py-1 rounded border border-outline-variant bg-surface-container-lowest text-xs font-semibold text-primary hover:bg-surface-container-low">
+                  Edit pack
+                </button>
+</div>
+</div>
+<!-- Pack 2 -->
+<div class="p-4 rounded-xl border border-outline-variant bg-surface flex flex-col justify-between hover:border-primary/50 transition-colors">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-surface-container text-primary">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                    Published v1.8
+                  </span>
+<span class="text-xs font-medium px-2 py-0.5 rounded bg-surface-container-low text-on-surface-variant">Seasonal</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface font-semibold leading-snug">
+                    Omnichannel Holiday Campaign &amp; Gift Guide Blueprint
+                  </h3>
+<p class="font-label text-label text-on-surface-variant mt-1.5">
+                    Covers Black Friday, Cyber Week, and holiday carousel brief packs tailored for eCommerce clients.
+                  </p>
+</div>
+<div class="pt-2 border-t border-outline-variant space-y-1 text-xs text-on-surface-variant font-label">
+<div class="flex items-center justify-between">
+<span>Active workspaces:</span>
+<span class="font-semibold text-on-surface">6 workspaces</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Last reviewed:</span>
+<span class="font-semibold text-on-surface">Alex Rivera</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<button class="text-xs font-semibold text-on-surface-variant hover:text-on-surface">Duplicate</button>
+<button class="px-3 py-1 rounded border border-outline-variant bg-surface-container-lowest text-xs font-semibold text-primary hover:bg-surface-container-low">
+                  Edit pack
+                </button>
+</div>
+</div>
+<!-- Pack 3 (Draft State) -->
+<div class="p-4 rounded-xl border border-outline-variant bg-surface flex flex-col justify-between hover:border-primary/50 transition-colors">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-semibold bg-secondary-container text-on-secondary-fixed-variant">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                    Draft v0.9
+                  </span>
+<span class="text-xs font-medium px-2 py-0.5 rounded bg-surface-container text-tertiary">Unreleased</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface font-semibold leading-snug">
+                    B2B Thought Leadership &amp; LinkedIn Carousel Protocol
+                  </h3>
+<p class="font-label text-label text-on-surface-variant mt-1.5">
+                    Optimized for executive ghostwriting, technical multi-slide PDFs, and compliance disclosures.
+                  </p>
+</div>
+<div class="pt-2 border-t border-outline-variant space-y-1 text-xs text-on-surface-variant font-label">
+<div class="flex items-center justify-between">
+<span>Review state:</span>
+<span class="font-semibold text-on-surface">In review by Marcus Chen</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Modified:</span>
+<span class="font-semibold text-on-surface">Yesterday at 18:40</span>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<button class="px-3 py-1 rounded border border-outline-variant bg-surface-container-lowest text-xs font-semibold text-on-surface hover:bg-surface-container-low">
+                  Resume review
+                </button>
+<button class="px-3 py-1 rounded bg-primary text-xs font-semibold text-on-primary hover:bg-primary/90">
+                  Publish pack
+                </button>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Operational Footer Note -->
+<div class="p-4 text-center text-xs font-label text-on-surface-variant">
+        LaraTik Agency Administrative Kernel v4.2.1 • All security modifications logged to immutable audit ledger.
+      </div>
+</div>
+</main>
+</body></html>

@@ -738,12 +738,9 @@ function NestedNavGroup({
       {!collapsed && open ? (
         <ul className="ms-3 mt-0.5 space-y-0.5 border-s border-[var(--color-border)] ps-3">
           {spec.items.map((it) => (
-            <SidebarLinkRow
-              key={it.key}
-              spec={it}
-              active={isActivePath(it.href, pathname)}
-              labels={labels}
-            />
+            <li key={it.key}>
+              <SidebarLinkRow spec={it} active={isActivePath(it.href, pathname)} labels={labels} />
+            </li>
           ))}
         </ul>
       ) : null}

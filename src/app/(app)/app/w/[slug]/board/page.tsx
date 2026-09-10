@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
 import { Clock, LayoutGrid, List } from "lucide-react";
 import { auth } from "@/lib/auth/config";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
 import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
@@ -83,6 +84,10 @@ export default async function WorkflowBoardPage({
   if (!session?.user?.id) redirect("/signin");
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
+  const canCreate = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
+    "workspace_manager",
+    "content_planner",
+  ]);
 
   const filters = await searchParams;
   const selectedStatus =
@@ -213,7 +218,9 @@ export default async function WorkflowBoardPage({
                     ) as Parameters<typeof describeActiveFilter>[0],
                   ),
                 })
-              : t("board.emptyNothingDescription")
+              : canCreate
+                ? t("board.emptyNothingDescription")
+                : t("board.emptyNothingDescriptionReadOnly")
           }
           action={
             hasFilter ? (
@@ -222,11 +229,11 @@ export default async function WorkflowBoardPage({
                   {t("board.clearFilters")}
                 </Link>
               </Button>
-            ) : (
+            ) : canCreate ? (
               <Button asChild>
                 <Link href={`/app/w/${slug}/planning/new`}>{t("board.quickCreate")}</Link>
               </Button>
-            )
+            ) : undefined
           }
         />
       ) : (

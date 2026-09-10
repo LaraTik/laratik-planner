@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Brand Setup &amp; Channels | LaraTik Planner</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Forms & Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-primary-fixed": "#0f0069",
+            "surface-variant": "#d9e2fc",
+            "outline-variant": "#c7c4d8",
+            "on-tertiary": "#ffffff",
+            "primary": "#3525cd",
+            "on-secondary": "#ffffff",
+            "on-tertiary-fixed": "#001d32",
+            "on-surface-variant": "#464555",
+            "secondary-fixed": "#dae3f8",
+            "primary-fixed-dim": "#c3c0ff",
+            "tertiary-fixed": "#cde5ff",
+            "on-surface": "#121b2e",
+            "inverse-primary": "#c3c0ff",
+            "on-secondary-container": "#5a6375",
+            "error": "#ba1a1a",
+            "tertiary": "#004c77",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-container-highest": "#d9e2fc",
+            "background": "#f9f9ff",
+            "tertiary-container": "#00659c",
+            "secondary-fixed-dim": "#bec7db",
+            "on-secondary-fixed": "#131c2b",
+            "on-error-container": "#93000a",
+            "surface-tint": "#4d44e3",
+            "primary-fixed": "#e2dfff",
+            "primary-container": "#4f46e5",
+            "surface-dim": "#d1daf4",
+            "surface-container": "#e9edff",
+            "surface-container-high": "#e1e8ff",
+            "tertiary-fixed-dim": "#94ccff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-primary": "#ffffff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "outline": "#777587",
+            "on-background": "#121b2e",
+            "inverse-surface": "#273044",
+            "on-error": "#ffffff",
+            "surface": "#f9f9ff",
+            "inverse-on-surface": "#edf0ff",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-container": "#bfdfff",
+            "surface-container-low": "#f1f3ff",
+            "on-primary-container": "#dad7ff",
+            "secondary": "#565f70",
+            "surface-bright": "#f9f9ff",
+            "secondary-container": "#d7e0f5",
+            "error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-expanded": "248px",
+            "sidebar-collapsed": "72px",
+            "touch-target-min": "44px",
+            "gutter": "16px",
+            "base": "4px",
+            "topbar-height": "64px",
+            "screen-padding": "24px",
+            "card-padding": "16px"
+          },
+          "fontFamily": {
+            "card-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "body": ["Inter"],
+            "section-title": ["Inter"],
+            "page-title": ["Inter"],
+            "button": ["Inter"],
+            "label": ["Inter"]
+          },
+          "fontSize": {
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full font-body text-body text-on-surface bg-surface antialiased flex flex-col">
+<!-- ========================================================================= -->
+<!-- SIDE NAVIGATION (Shared Component Anchored) -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 start-0 h-screen w-[248px] bg-surface border-e border-outline-variant z-40 hidden md:block">
+<div class="flex flex-col justify-between h-full p-4">
+<!-- Top Brand Header & Navigation List -->
+<div class="space-y-6">
+<!-- Brand Info -->
+<div class="flex items-center gap-3 px-2 py-1.5">
+<div class="w-9 h-9 rounded-lg bg-primary-container text-white flex items-center justify-center font-semibold text-base shadow-sm">
+            NC
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-page-title text-card-title text-on-surface truncate font-semibold leading-tight">Northstar Coffee</span>
+<span class="font-label text-label text-on-surface-variant truncate">Acme Agency Space</span>
+</div>
+</div>
+<!-- Primary Quick CTA -->
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary font-button text-button transition-colors duration-150 active:scale-[0.99]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Create Post</span>
+</button>
+<!-- Navigation Tabs: Canonical LaraTik List -->
+<nav class="space-y-1">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Planning -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">calendar_today</span>
+<span>Planning</span>
+</a>
+<!-- Board -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">view_kanban</span>
+<span>Board</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">event</span>
+<span>Calendar</span>
+</a>
+<!-- Reviews -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">rate_review</span>
+<span>Reviews</span>
+</a>
+<!-- Design queue -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">palette</span>
+<span>Design queue</span>
+</a>
+<!-- Channels -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">share</span>
+<span>Channels</span>
+<span class="ms-auto w-2 h-2 rounded-full bg-amber-500"></span>
+</a>
+<!-- Brand kit (ACTIVE matching destination) -->
+<a class="flex items-center gap-3 px-3 py-2 text-primary font-semibold bg-primary-fixed rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span>Brand kit</span>
+</a>
+<!-- Team -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">group</span>
+<span>Team</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Footer Action / Docs -->
+<div class="pt-4 border-t border-outline-variant space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant font-normal hover:bg-surface-container rounded-lg transition-colors duration-150 text-body" href="#">
+<span class="material-symbols-outlined text-[20px] text-outline">help_outline</span>
+<span>Help &amp; Docs</span>
+</a>
+<div class="px-3 py-2 flex items-center justify-between text-xs text-on-surface-variant">
+<span>v2.8.4 Enterprise</span>
+<span class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-container font-medium text-[11px] text-secondary">SOC2</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- TOP NAVIGATION BAR (Shared Component Anchored) -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 end-0 start-0 md:start-[248px] h-[64px] bg-surface-container-lowest border-b border-outline-variant z-30 flex items-center px-4 md:px-6 justify-between">
+<!-- Left Area: Breadcrumbs & Search -->
+<div class="flex items-center gap-4 flex-1 max-w-xl">
+<div class="hidden sm:flex items-center gap-2 text-sm text-on-surface-variant">
+<span class="hover:text-on-surface cursor-pointer">Workspaces</span>
+<span class="text-outline">/</span>
+<span class="font-medium text-on-surface hover:text-primary cursor-pointer">Northstar Coffee</span>
+<span class="text-outline">/</span>
+<span class="text-on-surface font-semibold">Brand kit &amp; channels</span>
+</div>
+<div class="relative w-full max-w-xs ms-2">
+<span class="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-outline text-[18px]">search</span>
+<input class="w-full ps-9 pe-3 py-1.5 text-body bg-surface-container-low border border-outline-variant rounded-lg placeholder:text-on-surface-variant focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors text-xs md:text-sm" placeholder="Search parameters, colors, tokens..." type="text"/>
+</div>
+</div>
+<!-- Right Area: Status Pill, Icon Actions, Profile -->
+<div class="flex items-center gap-3">
+<!-- Live Status Pill -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-label font-label">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>All systems operational</span>
+</div>
+<!-- Icon Buttons -->
+<button aria-label="Notifications" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface-variant transition-colors relative">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-2 end-2 w-2 h-2 rounded-full bg-primary ring-2 ring-surface-container-lowest"></span>
+</button>
+<button aria-label="Help" class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+<div class="h-5 w-px bg-outline-variant mx-1"></div>
+<!-- User Profile Avatar -->
+<div class="flex items-center gap-2.5 ps-1 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-fixed flex items-center justify-center font-semibold text-xs border border-outline-variant">
+          SJ
+        </div>
+<div class="hidden xl:flex flex-col text-start">
+<span class="text-xs font-semibold text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="text-[11px] text-on-surface-variant leading-tight">Production Lead</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE CONTENT CANVAS -->
+<!-- ========================================================================= -->
+<main class="mt-[64px] md:ms-[248px] flex-1 p-4 md:p-6 lg:p-8 space-y-6 max-w-7xl">
+<!-- PAGE HEADER -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+<div class="space-y-1">
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Brand setup &amp; channel configuration</h1>
+<p class="font-body text-body text-on-surface-variant">
+          Establish brand foundations and distribution pipes before production dispatches begin.
+        </p>
+</div>
+<!-- Right Header Actions -->
+<div class="flex items-center gap-3 flex-wrap">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container border border-outline-variant text-on-surface text-label font-label shadow-xs">
+<span class="material-symbols-outlined text-amber-600 text-[16px]">info</span>
+<span>Brand health: <strong>85% ready</strong> • 1 pending channel</span>
+</div>
+<!-- The One Dominant Next Action -->
+<button class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary-container hover:bg-primary text-white font-button text-button shadow-sm transition-all duration-150 active:scale-[0.99] focus:ring-2 focus:ring-primary focus:ring-offset-2">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+<span>Validate &amp; lock brand profile</span>
+</button>
+</div>
+</div>
+<!-- SUB-NAVIGATION / SEGMENTED TABS -->
+<div class="border-b border-outline-variant flex items-center gap-8 text-sm">
+<button class="pb-3 px-1 border-b-2 border-primary font-semibold text-primary flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">style</span>
+<span>Brand kit</span>
+</button>
+<button class="pb-3 px-1 border-b-2 border-transparent hover:border-outline text-on-surface-variant hover:text-on-surface font-medium flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">rss_feed</span>
+<span>Connected channels (4)</span>
+<span class="px-1.5 py-0.5 text-xs rounded-full bg-amber-100 text-amber-800 font-semibold">1 Alert</span>
+</button>
+<button class="pb-3 px-1 border-b-2 border-transparent hover:border-outline text-on-surface-variant hover:text-on-surface font-medium flex items-center gap-2 transition-colors">
+<span class="material-symbols-outlined text-[18px]">gavel</span>
+<span>Approval policies</span>
+</button>
+</div>
+<!-- SECTION 1: SETUP HEALTH & READINESS SUMMARY BANNER -->
+<section class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 md:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div class="flex items-start md:items-center gap-4">
+<div class="w-12 h-12 rounded-xl bg-primary-fixed text-primary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[24px]">checklist_rtl</span>
+</div>
+<div class="space-y-1">
+<div class="flex items-center gap-2 flex-wrap">
+<h2 class="font-card-title text-card-title text-on-surface">6 of 7 foundational steps completed</h2>
+<span class="px-2 py-0.5 rounded text-xs bg-emerald-100 text-emerald-800 font-medium">Production active</span>
+</div>
+<p class="text-body text-on-surface-variant text-sm">
+            Visual identity, Primary palette, Typography, Brand voice, Logo assets, and Governance verified. <span class="text-amber-700 font-medium">Pending: TikTok Creator API re-authentication.</span>
+</p>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0 self-end lg:self-center">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-button text-button transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">network_check</span>
+<span>Test asset compliance</span>
+</button>
+</div>
+</section>
+<!-- SECTION 2: BRAND KIT & WORKSPACE MODULES (BENTO-STYLE GRID) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- LEFT COLUMN: Identity, Colors, Typography (7 Cols) -->
+<div class="lg:col-span-7 space-y-6">
+<!-- Module: Identity & Profile -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">badge</span>
+<h3 class="font-card-title text-card-title text-on-surface">Workspace Identity &amp; Target Core</h3>
+</div>
+<span class="text-xs text-on-surface-variant">Last saved 4 hours ago</span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface">Formal Brand Name</label>
+<input class="w-full px-3 py-2 text-sm bg-surface border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="Northstar Coffee Roasters"/>
+</div>
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface">Workspace Slug</label>
+<div class="flex rounded-lg border border-outline-variant overflow-hidden bg-surface">
+<span class="px-2.5 py-2 text-xs text-on-surface-variant bg-surface-container border-e border-outline-variant select-none">/app/w/</span>
+<input class="w-full px-2.5 py-2 text-sm bg-transparent border-0 focus:ring-0 focus:outline-none" type="text" value="northstar-coffee"/>
+</div>
+</div>
+</div>
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface">Brand Positioning Statement &amp; Tagline</label>
+<input class="w-full px-3 py-2 text-sm bg-surface border border-outline-variant rounded-lg focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none" type="text" value="Single-origin craftsmanship roasted for mindful everyday rituals."/>
+</div>
+<div class="space-y-1.5">
+<label class="block font-label text-label text-on-surface">Target Audience Demographic Focus</label>
+<div class="flex items-center gap-2 flex-wrap p-2.5 bg-surface border border-outline-variant rounded-lg text-sm text-on-surface">
+<span class="px-2.5 py-1 bg-surface-container rounded-full text-xs font-medium text-on-surface flex items-center gap-1">
+                Urban specialty coffee lovers
+                <button class="text-on-surface-variant hover:text-error material-symbols-outlined text-[14px]">close</button>
+</span>
+<span class="px-2.5 py-1 bg-surface-container rounded-full text-xs font-medium text-on-surface flex items-center gap-1">
+                Ages 21–36
+                <button class="text-on-surface-variant hover:text-error material-symbols-outlined text-[14px]">close</button>
+</span>
+<span class="px-2.5 py-1 bg-surface-container rounded-full text-xs font-medium text-on-surface flex items-center gap-1">
+                Sustainability-conscious
+                <button class="text-on-surface-variant hover:text-error material-symbols-outlined text-[14px]">close</button>
+</span>
+<button class="text-xs text-primary font-semibold hover:underline flex items-center gap-0.5 ps-1">
+<span class="material-symbols-outlined text-[14px]">add</span> Add criterion
+              </button>
+</div>
+</div>
+</div>
+<!-- Module: Colors & Swatches -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">palette</span>
+<h3 class="font-card-title text-card-title text-on-surface">Color Palette &amp; Contrast Guard</h3>
+</div>
+<button class="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add_circle</span> Add Swatch
+            </button>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+<!-- Primary Swatch -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-12 w-full rounded-md shadow-inner flex items-end justify-end p-1.5" style="background-color: #4F46E5;">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/40 text-white">8.6:1 AAA</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="font-semibold text-on-surface">Primary</span>
+<span class="font-mono text-on-surface-variant">#4F46E5</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Main CTAs &amp; Brand Headers</p>
+</div>
+<!-- Secondary Swatch -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-12 w-full rounded-md shadow-inner flex items-end justify-end p-1.5" style="background-color: #10B981;">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/40 text-white">5.1:1 AA</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="font-semibold text-on-surface">Secondary</span>
+<span class="font-mono text-on-surface-variant">#10B981</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Sustainability / Roasting notes</p>
+</div>
+<!-- Accent Swatch -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-12 w-full rounded-md shadow-inner flex items-end justify-end p-1.5" style="background-color: #F59E0B;">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/40 text-white">4.8:1 AA</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="font-semibold text-on-surface">Accent Warm</span>
+<span class="font-mono text-on-surface-variant">#F59E0B</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Limited Editions &amp; Badges</p>
+</div>
+<!-- Neutral Dark -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-12 w-full rounded-md shadow-inner flex items-end justify-end p-1.5" style="background-color: #172033;">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-white/20 text-white">14.2:1 AAA</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="font-semibold text-on-surface">Neutral Dark</span>
+<span class="font-mono text-on-surface-variant">#172033</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Typography &amp; Overlays</p>
+</div>
+<!-- Neutral Light -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-12 w-full rounded-md shadow-inner border border-outline-variant flex items-end justify-end p-1.5" style="background-color: #F7F7F5;">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-black/10 text-on-surface">15.1:1 AAA</span>
+</div>
+<div class="flex justify-between items-center text-xs">
+<span class="font-semibold text-on-surface">Neutral Light</span>
+<span class="font-mono text-on-surface-variant">#F7F7F5</span>
+</div>
+<p class="text-[11px] text-on-surface-variant">Canvas &amp; Surface Base</p>
+</div>
+<!-- Add Swatch Prompt Block -->
+<button class="p-3 border border-dashed border-outline-variant hover:border-primary rounded-lg bg-surface-container-low hover:bg-surface-container flex flex-col items-center justify-center text-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-outline text-[22px]">add</span>
+<span class="text-xs font-semibold text-on-surface">Add Brand Tone</span>
+<span class="text-[10px] text-on-surface-variant">HEX / HSL / RGB</span>
+</button>
+</div>
+</div>
+<!-- Module: Typography System -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">match_case</span>
+<h3 class="font-card-title text-card-title text-on-surface">Typography Pairing &amp; Editorial Rules</h3>
+</div>
+<span class="text-xs text-on-surface-variant">2 Families Loaded</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- Primary Font -->
+<div class="p-4 border border-outline-variant rounded-lg bg-surface space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold uppercase text-primary tracking-wider">Primary Workhorse</span>
+<span class="text-xs text-on-surface-variant font-mono">Google Fonts</span>
+</div>
+<div>
+<p class="text-xl font-bold text-on-surface">Inter</p>
+<p class="text-xs text-on-surface-variant">Regular (400), Medium (500), SemiBold (600)</p>
+</div>
+<div class="p-2.5 bg-surface-container-lowest border border-outline-variant rounded text-xs leading-relaxed text-on-surface">
+                "Freshly ground Ethiopian Yirgacheffe notes of bergamot and jasmine bloom."
+              </div>
+</div>
+<!-- Display / Editorial Font -->
+<div class="p-4 border border-outline-variant rounded-lg bg-surface space-y-3">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold uppercase text-secondary tracking-wider">Editorial Accent</span>
+<span class="text-xs text-on-surface-variant font-mono">Adobe Typekit</span>
+</div>
+<div>
+<p class="text-xl font-serif text-on-surface italic">Playfair Display</p>
+<p class="text-xs text-on-surface-variant">Medium (500), Bold (700) • Seasonal Launches</p>
+</div>
+<div class="p-2.5 bg-surface-container-lowest border border-outline-variant rounded text-xs leading-relaxed text-on-surface italic font-serif">
+                "Small-Batch Roasters Dedicated to Single-Estate Terroir."
+              </div>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: Logos, Tone Guidelines, Publishing Rules (5 Cols) -->
+<div class="lg:col-span-5 space-y-6">
+<!-- Module: Logos & Brand Assets -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">photo_library</span>
+<h3 class="font-card-title text-card-title text-on-surface">Master Logos &amp; Lockups</h3>
+</div>
+<button class="text-xs text-primary font-semibold hover:underline">Upload Vector</button>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<!-- Dark Lockup -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-24 bg-surface-container-lowest border border-outline-variant rounded flex items-center justify-center p-3 relative">
+<div class="text-center font-bold text-on-surface tracking-widest text-sm uppercase">
+                  NORTHSTAR
+                  <div class="text-[9px] font-normal tracking-normal text-on-surface-variant">COFFEE ROASTERS</div>
+</div>
+<span class="absolute bottom-1 end-1 text-[9px] font-mono text-outline">16px SAFE</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface">Primary Light BG</span>
+<button class="text-primary hover:text-primary-container material-symbols-outlined text-[16px]">download</button>
+</div>
+</div>
+<!-- Inverted Lockup -->
+<div class="p-3 border border-outline-variant rounded-lg bg-surface space-y-2">
+<div class="h-24 bg-inverse-surface rounded flex items-center justify-center p-3 relative">
+<div class="text-center font-bold text-inverse-on-surface tracking-widest text-sm uppercase">
+                  NORTHSTAR
+                  <div class="text-[9px] font-normal tracking-normal text-secondary-fixed">COFFEE ROASTERS</div>
+</div>
+<span class="absolute bottom-1 end-1 text-[9px] font-mono text-secondary-fixed-dim">SVG MASTER</span>
+</div>
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface">Inverted Dark BG</span>
+<button class="text-primary hover:text-primary-container material-symbols-outlined text-[16px]">download</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Module: Brand Voice & Disclaimers -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-4">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">record_voice_over</span>
+<h3 class="font-card-title text-card-title text-on-surface">Brand Voice &amp; Copy Directives</h3>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] bg-emerald-50 text-emerald-700 font-medium">AI Guard Enforced</span>
+</div>
+<div class="space-y-3">
+<div>
+<span class="text-xs font-semibold text-on-surface block mb-1.5">Approved Tonality Tags</span>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface text-xs font-medium">Authentic</span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface text-xs font-medium">Craftsman</span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface text-xs font-medium">Unhurried</span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface text-xs font-medium">Knowledgeable</span>
+<span class="px-2.5 py-1 rounded bg-surface-container text-on-surface text-xs font-medium">Warm Minimalism</span>
+</div>
+</div>
+<div>
+<span class="text-xs font-semibold text-error block mb-1.5">Prohibited Words &amp; Claims</span>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-xs flex items-center gap-1">
+                  "World's best"
+                  <button class="material-symbols-outlined text-[12px]">close</button>
+</span>
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-xs flex items-center gap-1">
+                  "Guaranteed energy rush"
+                  <button class="material-symbols-outlined text-[12px]">close</button>
+</span>
+<span class="px-2 py-0.5 rounded bg-error-container text-on-error-container text-xs flex items-center gap-1">
+                  "Superfood coffee"
+                  <button class="material-symbols-outlined text-[12px]">close</button>
+</span>
+</div>
+</div>
+<!-- Mandatory Disclaimer -->
+<div class="space-y-1">
+<label class="block font-label text-label text-on-surface">Automated Footer Disclaimer</label>
+<textarea class="w-full p-2.5 text-xs bg-surface border border-outline-variant rounded-lg text-on-surface-variant focus:border-primary focus:outline-none" rows="2">Ethically sourced directly from partner cooperatives in Sidama and Huila. Packaged in compostable plant-fiber pouches.</textarea>
+</div>
+</div>
+</div>
+<!-- Module: Safe Zones & Aspect Ratios -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 space-y-3">
+<div class="flex items-center justify-between pb-2 border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">aspect_ratio</span>
+<h3 class="font-card-title text-card-title text-on-surface">Target Canvas Presets</h3>
+</div>
+<span class="text-xs text-on-surface-variant">Auto-safe zones</span>
+</div>
+<div class="grid grid-cols-4 gap-2 text-center">
+<div class="p-2 border border-primary bg-primary-fixed rounded-lg">
+<span class="text-xs font-bold text-primary block">9:16</span>
+<span class="text-[10px] text-on-surface-variant">Reels/TikTok</span>
+</div>
+<div class="p-2 border border-outline-variant bg-surface rounded-lg">
+<span class="text-xs font-bold text-on-surface block">1:1</span>
+<span class="text-[10px] text-on-surface-variant">IG Feed</span>
+</div>
+<div class="p-2 border border-outline-variant bg-surface rounded-lg">
+<span class="text-xs font-bold text-on-surface block">4:5</span>
+<span class="text-[10px] text-on-surface-variant">Portrait</span>
+</div>
+<div class="p-2 border border-outline-variant bg-surface rounded-lg">
+<span class="text-xs font-bold text-on-surface block">16:9</span>
+<span class="text-[10px] text-on-surface-variant">YouTube</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- SECTION 3: NEIGHBORING SOCIAL CHANNELS CONFIGURATION -->
+<section class="space-y-4 pt-4">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+<div>
+<h2 class="font-section-title text-section-title text-on-surface">Connected Social Distribution Pipes</h2>
+<p class="text-sm text-on-surface-variant">
+            Manage channel authorizations, scopes, and automated publishing bridges.
+          </p>
+</div>
+<button class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-button text-button self-start sm:self-auto transition-colors">
+<span class="material-symbols-outlined text-[18px]">add_link</span>
+<span>Connect New Platform</span>
+</button>
+</div>
+<!-- Channel Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Channel 1: TikTok (Alert / Attention Needed) -->
+<div class="bg-surface-container-lowest border-2 border-amber-300 rounded-xl p-4 flex flex-col justify-between space-y-4 relative">
+<div class="space-y-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-lg bg-black text-white flex items-center justify-center font-bold text-sm">
+                  TT
+                </div>
+<div>
+<h4 class="font-semibold text-on-surface text-sm">TikTok Creator</h4>
+<span class="text-xs text-on-surface-variant">@northstarcoffee</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-900 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">warning</span> Token Expiry
+              </span>
+</div>
+<div class="text-xs text-on-surface-variant space-y-1 bg-surface p-2.5 rounded-lg border border-outline-variant">
+<div class="flex justify-between">
+<span>API Tier:</span>
+<span class="font-medium text-on-surface">Enterprise v2</span>
+</div>
+<div class="flex justify-between text-amber-800 font-medium">
+<span>Refresh Required:</span>
+<span>In 42 hours</span>
+</div>
+<div class="flex justify-between">
+<span>Auto-scheduler:</span>
+<span class="text-emerald-700 font-medium">Active</span>
+</div>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between">
+<button class="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold transition-colors">
+              Re-authenticate Now
+            </button>
+<button class="text-on-surface-variant hover:text-on-surface text-xs font-medium" title="Archive channel">
+              Archive
+            </button>
+</div>
+</div>
+<!-- Channel 2: Instagram Professional (Healthy) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col justify-between space-y-4">
+<div class="space-y-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-amber-500 via-rose-500 to-purple-600 text-white flex items-center justify-center font-bold text-sm">
+                  IG
+                </div>
+<div>
+<h4 class="font-semibold text-on-surface text-sm">Instagram Pro</h4>
+<span class="text-xs text-on-surface-variant">@northstar_roasters</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span> Active
+              </span>
+</div>
+<div class="text-xs text-on-surface-variant space-y-1 bg-surface p-2.5 rounded-lg border border-outline-variant">
+<div class="flex justify-between">
+<span>Graph API:</span>
+<span class="font-medium text-on-surface">v19.0 Scoped</span>
+</div>
+<div class="flex justify-between">
+<span>Linked Accounts:</span>
+<span class="font-medium text-on-surface">3 Brand pages</span>
+</div>
+<div class="flex justify-between">
+<span>Story &amp; Reel Pipe:</span>
+<span class="text-emerald-700 font-medium">Synced</span>
+</div>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between">
+<button class="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">tune</span> Manage Scopes
+            </button>
+<button class="text-on-surface-variant hover:text-on-surface text-xs font-medium">
+              Archive
+            </button>
+</div>
+</div>
+<!-- Channel 3: YouTube Shorts (Healthy) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col justify-between space-y-4">
+<div class="space-y-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-lg bg-red-600 text-white flex items-center justify-center font-bold text-sm">
+                  YT
+                </div>
+<div>
+<h4 class="font-semibold text-on-surface text-sm">YouTube Shorts</h4>
+<span class="text-xs text-on-surface-variant">Northstar Studio</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800 flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">check_circle</span> Active
+              </span>
+</div>
+<div class="text-xs text-on-surface-variant space-y-1 bg-surface p-2.5 rounded-lg border border-outline-variant">
+<div class="flex justify-between">
+<span>Auth Protocol:</span>
+<span class="font-medium text-on-surface">OAuth 2.0 PKCE</span>
+</div>
+<div class="flex justify-between">
+<span>Channel ID:</span>
+<span class="font-mono text-on-surface">UC-9848...</span>
+</div>
+<div class="flex justify-between">
+<span>Max Resolution:</span>
+<span class="font-medium text-on-surface">4K 60fps</span>
+</div>
+</div>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between">
+<button class="text-xs text-primary font-semibold hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">tune</span> Manage Scopes
+            </button>
+<button class="text-on-surface-variant hover:text-on-surface text-xs font-medium">
+              Archive
+            </button>
+</div>
+</div>
+<!-- Channel 4: LinkedIn Pages (Disconnected / Opportunity) -->
+<div class="bg-surface border border-dashed border-outline-variant rounded-xl p-4 flex flex-col justify-between space-y-4">
+<div class="space-y-3">
+<div class="flex items-start justify-between">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-lg bg-blue-700 text-white flex items-center justify-center font-bold text-sm">
+                  in
+                </div>
+<div>
+<h4 class="font-semibold text-on-surface text-sm">LinkedIn Org</h4>
+<span class="text-xs text-on-surface-variant">Not connected</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container text-on-surface-variant">
+                Unlinked
+              </span>
+</div>
+<p class="text-xs text-on-surface-variant leading-relaxed">
+              Connect company page to publish B2B sourcing reports, sustainability milestones, and cafe recruitment notices.
+            </p>
+</div>
+<div class="pt-2 border-t border-outline-variant flex items-center justify-between">
+<button class="w-full py-1.5 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-[14px]">link</span>
+<span>Connect LinkedIn page</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Privacy-Safe Assurance Strip -->
+<div class="p-3.5 bg-surface-container-low border border-outline-variant rounded-xl flex items-start sm:items-center gap-3 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-[20px] shrink-0 mt-0.5 sm:mt-0">verified_user</span>
+<p class="leading-relaxed">
+<strong class="text-on-surface">Privacy-first API scoping:</strong> LaraTik Planner accesses strictly designated organization pages and professional creator endpoints. We never index personal profiles, private messaging feeds, or unapproved metadata. All access keys are encrypted at rest with AES-256 and SOC2 Type II compliance standards.
+        </p>
+</div>
+</section>
+</main>
+<!-- Mobile Bottom Navigation Fallback (Responsive Pivot Anchor) -->
+<nav class="md:hidden fixed bottom-0 start-0 end-0 bg-surface-container-lowest border-t border-outline-variant px-4 py-2 flex items-center justify-around z-40 text-on-surface-variant">
+<a class="flex flex-col items-center gap-0.5 py-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span class="text-[10px]">Plan</span>
+</a>
+<a class="flex flex-col items-center gap-0.5 py-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">view_kanban</span>
+<span class="text-[10px]">Board</span>
+</a>
+<a class="flex flex-col items-center gap-0.5 py-1 text-primary font-semibold" href="#">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">auto_stories</span>
+<span class="text-[10px]">Brand Kit</span>
+</a>
+<a class="flex flex-col items-center gap-0.5 py-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">share</span>
+<span class="text-[10px]">Channels</span>
+</a>
+<a class="flex flex-col items-center gap-0.5 py-1 text-on-surface-variant" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="text-[10px]">Settings</span>
+</a>
+</nav>
+</body></html>

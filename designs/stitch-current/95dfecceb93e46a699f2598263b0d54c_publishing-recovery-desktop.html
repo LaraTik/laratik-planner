@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner - Manual Publishing &amp; Recovery Console</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed-dim": "#bec7db",
+            "on-primary-container": "#dad7ff",
+            "on-surface-variant": "#464555",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-error": "#ffffff",
+            "tertiary": "#004c77",
+            "surface-container-high": "#e1e8ff",
+            "on-primary": "#ffffff",
+            "inverse-on-surface": "#edf0ff",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-container-low": "#f1f3ff",
+            "surface-container": "#e9edff",
+            "surface-container-highest": "#d9e2fc",
+            "surface-tint": "#4d44e3",
+            "tertiary-container": "#00659c",
+            "surface-variant": "#d9e2fc",
+            "error-container": "#ffdad6",
+            "on-secondary-container": "#5a6375",
+            "on-tertiary-fixed": "#001d32",
+            "primary-fixed": "#e2dfff",
+            "inverse-primary": "#c3c0ff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "secondary-container": "#d7e0f5",
+            "on-secondary-fixed": "#131c2b",
+            "on-secondary": "#ffffff",
+            "on-tertiary-container": "#bfdfff",
+            "error": "#ba1a1a",
+            "on-surface": "#121b2e",
+            "surface": "#f9f9ff",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-bright": "#f9f9ff",
+            "on-error-container": "#93000a",
+            "outline": "#777587",
+            "on-tertiary": "#ffffff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "primary-container": "#4f46e5",
+            "primary": "#3525cd",
+            "on-primary-fixed": "#0f0069",
+            "secondary-fixed": "#dae3f8",
+            "background": "#f9f9ff",
+            "tertiary-fixed": "#cde5ff",
+            "secondary": "#565f70",
+            "outline-variant": "#c7c4d8",
+            "inverse-surface": "#273044",
+            "on-background": "#121b2e",
+            "surface-dim": "#d1daf4"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "topbar-height": "64px",
+            "sidebar-collapsed": "72px",
+            "card-padding": "16px",
+            "base": "4px",
+            "touch-target-min": "44px",
+            "sidebar-expanded": "248px",
+            "screen-padding": "24px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "card-title": ["Inter"],
+            "button": ["Inter"],
+            "page-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "body": ["Inter"],
+            "section-title": ["Inter"],
+            "label": ["Inter"]
+          },
+          "fontSize": {
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+    body {
+      background-color: #F7F7F5;
+      color: #172033;
+      font-family: 'Inter', sans-serif;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased">
+<!-- TOP APP BAR (Shared Components JSON Anchor) -->
+<header class="bg-surface-container-lowest dark:bg-surface-container-lowest border-b border-outline-variant dark:border-outline-variant flex justify-between items-center px-6 h-16 w-full sticky top-0 z-40">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</div>
+<span class="font-section-title text-section-title text-primary dark:text-primary-fixed-dim">LaraTik Planner</span>
+</div>
+<!-- Navigation Breadcrumb Links directly matching JSON array -->
+<nav class="hidden md:flex items-center gap-2 font-body text-body">
+<span class="text-outline-variant">/</span>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Workspaces</a>
+<span class="text-outline-variant">/</span>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Northstar Coffee</a>
+<span class="text-outline-variant">/</span>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Planning</a>
+<span class="text-outline-variant">/</span>
+<a class="text-on-surface-variant dark:text-on-surface-variant hover:text-primary transition-colors" href="#">Autumn Cold Brew Reel</a>
+<span class="text-outline-variant">/</span>
+<span class="text-on-surface dark:text-on-surface font-semibold">Manual Publish &amp; Recovery</span>
+</nav>
+</div>
+<!-- Trailing Actions & Profile -->
+<div class="flex items-center gap-3">
+<button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors" title="System Monitor" type="button">
+<span class="material-symbols-outlined">monitor_heart</span>
+</button>
+<button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors relative" title="Notifications" type="button">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span>
+</button>
+<div class="h-6 w-px bg-outline-variant"></div>
+<button class="px-3.5 py-1.5 rounded-lg bg-surface-container text-primary font-button text-button hover:bg-surface-container-high transition-colors flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+<span>Manual Publish</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-fixed text-xs font-semibold overflow-hidden border border-outline-variant">
+<span class="material-symbols-outlined text-sm">account_circle</span>
+</div>
+</div>
+</header>
+<!-- MAIN WRAPPER WITH PERSISTENT SIDEBAR -->
+<div class="flex-1 flex w-full">
+<!-- SIDEBAR NAV (Shared Components JSON Anchor) -->
+<aside class="hidden lg:flex flex-col justify-between h-[calc(100vh-64px)] p-4 w-64 bg-surface-container-lowest dark:bg-surface-container-lowest border-r border-outline-variant dark:border-outline-variant sticky top-16 shrink-0">
+<div class="flex flex-col gap-6">
+<!-- Workspace Header -->
+<div class="flex items-center gap-3 px-2 py-1.5 rounded-lg bg-surface-container-low border border-[#DDE1E6]">
+<div class="w-8 h-8 rounded-md bg-[#273044] flex items-center justify-center text-white font-bold text-xs shrink-0">
+            NC
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-card-title text-card-title text-on-surface truncate">Northstar Coffee</span>
+<span class="font-label text-label text-secondary truncate">Operational Workspace</span>
+</div>
+</div>
+<!-- Tab Items -->
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-body text-body">Overview</span>
+</a>
+<!-- Active Tab: Planning -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container dark:bg-surface-container text-primary dark:text-primary font-semibold transition-all" href="#">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="font-body text-body">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">view_kanban</span>
+<span class="font-body text-body">Board</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">event</span>
+<span class="font-body text-body">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">rate_review</span>
+<span class="font-body text-body">Reviews</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">perm_media</span>
+<span class="font-body text-body">Media</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-on-surface-variant font-normal hover:bg-surface-container-low hover:text-on-surface transition-all" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-body text-body">Settings</span>
+</a>
+</nav>
+</div>
+<!-- Footer Elements -->
+<div class="flex flex-col gap-3 pt-4 border-t border-[#DDE1E6]">
+<button class="w-full py-2.5 px-3 rounded-lg bg-primary-container text-white font-button text-button hover:bg-primary transition-colors flex items-center justify-center gap-2" type="button">
+<span class="material-symbols-outlined text-[18px]">send</span>
+<span>Dispatch Now</span>
+</button>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low text-xs" href="#">
+<span class="material-symbols-outlined text-[18px] text-emerald-600">check_circle</span>
+<span class="font-body text-body">System Health</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low text-xs" href="#">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+<span class="font-body text-body">Help</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- CONTENT CANVAS -->
+<main class="flex-1 min-w-0 p-4 sm:p-6 lg:p-8 pb-32">
+<div class="max-w-7xl mx-auto flex flex-col gap-6">
+<!-- 1. Header & Context Banner -->
+<section class="flex flex-col gap-4">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex flex-col gap-1">
+<a class="inline-flex items-center gap-1.5 font-label text-label text-primary hover:underline mb-1" href="/app/w/northstar-coffee/planning/nb-108">
+<span class="material-symbols-outlined text-[16px]">arrow_back</span>
+<span>Back to content detail (nb-108)</span>
+</a>
+<h1 class="font-page-title text-page-title text-[#172033] tracking-tight">Manual publishing &amp; recovery console</h1>
+</div>
+<!-- Manual Publication Policy Notice -->
+<div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+<span class="material-symbols-outlined text-amber-700 text-[18px]">verified_user</span>
+<span class="font-medium">Human-in-the-loop dispatch: No automated posting engine enabled</span>
+</div>
+</div>
+<!-- Metadata Badges Bar -->
+<div class="p-4 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-wrap items-center justify-between gap-4">
+<div class="flex flex-wrap items-center gap-2.5">
+<!-- Urgent Status Badge -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200 font-label text-label">
+<span class="material-symbols-outlined text-amber-800 text-[16px]">warning</span>
+<span>Action required: Manual verification</span>
+</div>
+<!-- Content Type Badge -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low border border-[#DDE1E6] text-[#172033] font-label text-label">
+<span class="material-symbols-outlined text-secondary text-[16px]">videocam</span>
+<span>Reels / 9:16 vertical video</span>
+</div>
+<!-- Sprint Badge -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low border border-[#DDE1E6] text-[#172033] font-label text-label">
+<span class="material-symbols-outlined text-secondary text-[16px]">flag</span>
+<span>Oct Sprint 4</span>
+</div>
+<!-- Target Window Badge -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-container-low border border-[#DDE1E6] text-[#172033] font-label text-label">
+<span class="material-symbols-outlined text-secondary text-[16px]">schedule</span>
+<span>Target window: Today, Oct 24, 4:00 PM – 5:00 PM EST</span>
+</div>
+</div>
+<div class="flex items-center gap-2 text-xs text-[#5D6678]">
+<span class="material-symbols-outlined text-[16px]">lock_clock</span>
+<span>SLA deadline in 34 minutes</span>
+</div>
+</div>
+</section>
+<!-- 2. Main Content Grid (Two-column desktop layout) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- LEFT COLUMN: Channel package review & verification (8 Cols) -->
+<div class="lg:col-span-7 xl:col-span-8 flex flex-col gap-6">
+<!-- Channel Selector Tabs -->
+<div class="p-2 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-wrap items-center justify-between gap-2">
+<div class="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+<!-- TikTok Channel (Incident State) -->
+<button class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container text-[#172033] font-button text-button border border-transparent transition-all" type="button">
+<span class="w-2 h-2 rounded-full bg-error"></span>
+<span>TikTok</span>
+<span class="text-xs text-[#5D6678]">@northstarcoffee</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-red-100 text-red-700 font-semibold">Incident</span>
+</button>
+<!-- Instagram Reels Channel (Active Tab) -->
+<button class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-[#4F46E5] text-white font-button text-button shadow-sm transition-all" type="button">
+<span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+<span>Instagram Reels</span>
+<span class="text-xs text-indigo-100">@northstar_coffee</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-indigo-700 text-white font-semibold">Pending</span>
+</button>
+<!-- YouTube Shorts (Draft only) -->
+<button class="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-surface-container-lowest hover:bg-surface-container-low text-[#5D6678] font-button text-button transition-all" type="button">
+<span class="w-2 h-2 rounded-full bg-gray-400"></span>
+<span>YouTube Shorts</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600">Draft only</span>
+</button>
+</div>
+<!-- Locale Switch for Preview -->
+<div class="flex items-center gap-1 bg-surface-container-low p-1 rounded-lg border border-[#DDE1E6]">
+<button class="px-2.5 py-1 text-xs font-semibold rounded bg-white text-[#172033] shadow-xs" type="button">English (US)</button>
+<button class="px-2.5 py-1 text-xs font-medium rounded text-[#5D6678] hover:text-[#172033]" type="button">Arabic (MENA)</button>
+</div>
+</div>
+<!-- Content Asset & Master Reference -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">movie</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Master Asset &amp; Technical Verification</h2>
+</div>
+<span class="px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check</span> Spec Validated
+                </span>
+</div>
+<div class="grid grid-cols-1 sm:grid-cols-12 gap-6">
+<!-- Thumbnail Preview with 9:16 safe area indicator -->
+<div class="sm:col-span-5 relative group rounded-lg overflow-hidden border border-[#DDE1E6] bg-black aspect-[9/16] max-w-[220px] mx-auto sm:mx-0">
+<img class="w-full h-full object-cover" data-alt="Close up professional beverage commercial shot of iced cold brew coffee swirling inside a clean crystal highball glass with thick organic Madagascar vanilla cold foam topping. Warm ambient coffee shop lighting in soft autumn tones with cinnamon and roasted coffee bean aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjQ90zArfEQOBW_hbiQN8RVfSLL0oZVii2-Upad_USCCLq74F_xjI1VYjAYOfdl6yGekNV0crdz5t1h53oYKeAiRBQkoetIIxHajfcAn5hs9GCct3CtuF2YH5bp5UuRW5zYkPtYPPSGXG5WqGzQKsVdIFtE7x9BU9zIKn3Alr1Xsn9K6AvFdWqLBlssC6nc2uGQBgW7eqUQR68UlCz6sBhrQvRN-csWa1yYzZSlj3AgdoZEgZGeDff0cnDP5KOOBjpuMQw84SZleGy"/>
+<!-- 9:16 Safe Area Overlay Grid Lines -->
+<div class="absolute inset-0 pointer-events-none border border-dashed border-white/40 m-4 rounded flex flex-col justify-between p-2">
+<div class="flex justify-between items-center text-[10px] text-white/80 font-mono bg-black/40 px-1 rounded backdrop-blur-xs">
+<span>SAFE ZONE</span>
+<span>9:16</span>
+</div>
+<div class="flex items-center justify-center">
+<span class="w-8 h-8 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center text-white">
+<span class="material-symbols-outlined text-[20px]">play_arrow</span>
+</span>
+</div>
+<div class="text-[9px] text-white/70 font-mono bg-black/40 p-1 rounded">
+                      Overlay cleared: No text obstruction
+                    </div>
+</div>
+</div>
+<!-- Asset Technical Metadata List -->
+<div class="sm:col-span-7 flex flex-col justify-between gap-4">
+<div class="space-y-3">
+<div class="flex items-center justify-between py-1.5 border-b border-[#DDE1E6] text-xs">
+<span class="text-[#5D6678]">Duration &amp; Dimension</span>
+<span class="font-semibold text-[#172033]">0:28 sec • 1080 x 1920 (9:16)</span>
+</div>
+<div class="flex items-center justify-between py-1.5 border-b border-[#DDE1E6] text-xs">
+<span class="text-[#5D6678]">Master Codec / Size</span>
+<span class="font-semibold text-[#172033]">ProRes 422 to H.264 MP4 • 48.2 MB</span>
+</div>
+<div class="flex items-center justify-between py-1.5 border-b border-[#DDE1E6] text-xs">
+<span class="text-[#5D6678]">Audio Sync Status</span>
+<span class="font-semibold text-[#172033] flex items-center gap-1">
+<span class="material-symbols-outlined text-emerald-600 text-[14px]">music_note</span>
+                        Autumn Jazz Beats #TRK-8812
+                      </span>
+</div>
+<div class="flex items-center justify-between py-1.5 border-b border-[#DDE1E6] text-xs">
+<span class="text-[#5D6678]">Color Profile</span>
+<span class="font-semibold text-[#172033]">Rec.709 sRGB Gamma 2.4</span>
+</div>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low border border-[#DDE1E6] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#5D6678]">download</span>
+<div class="text-xs">
+<div class="font-medium text-[#172033]">autumn_coldbrew_master_v2.mp4</div>
+<div class="text-[#5D6678]">SHA-256: 4f88e9a2b...</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded bg-white border border-[#DDE1E6] hover:bg-gray-50 text-xs font-semibold text-[#172033] shadow-xs" type="button">
+                      Download File
+                    </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Audience Copy & Payload Breakdown with quick copy utilities -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">notes</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Approved Audience Copy &amp; Metadata</h2>
+</div>
+<span class="text-xs text-[#5D6678]">Ready for manual clipboard transfer</span>
+</div>
+<!-- Caption Block -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<label class="font-label text-label text-[#5D6678]">Primary Post Caption</label>
+<button class="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline" onclick="navigator.clipboard.writeText('Crisp mornings call for slow-steeped cold brew crowned with Madagascar vanilla cold foam. 🍂✨ Brewed for 18 hours, finished in seconds. Available at all Seattle roasteries &amp; order ahead.'); alert('Caption copied to clipboard');" type="button">
+<span class="material-symbols-outlined text-[14px]">content_copy</span> Copy Caption
+                  </button>
+</div>
+<div class="p-3.5 rounded-lg bg-surface-container-low border border-[#DDE1E6] text-body font-body text-[#172033] select-all leading-relaxed">
+                  Crisp mornings call for slow-steeped cold brew crowned with Madagascar vanilla cold foam. 🍂✨ Brewed for 18 hours, finished in seconds. Available at all Seattle roasteries &amp; order ahead.
+                </div>
+</div>
+<!-- Hashtags Block -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<label class="font-label text-label text-[#5D6678]">Approved Discovery Hashtags</label>
+<button class="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline" onclick="navigator.clipboard.writeText('#ColdBrewSeason #NorthstarCoffee #AutumnAesthetics #CraftCoffee'); alert('Hashtags copied');" type="button">
+<span class="material-symbols-outlined text-[14px]">content_copy</span> Copy Hashtags
+                  </button>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low border border-[#DDE1E6] text-xs font-mono text-primary select-all">
+                  #ColdBrewSeason #NorthstarCoffee #AutumnAesthetics #CraftCoffee
+                </div>
+</div>
+<!-- First Comment Block -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between">
+<label class="font-label text-label text-[#5D6678]">First Comment (Community Prompt)</label>
+<button class="inline-flex items-center gap-1 text-xs text-primary font-semibold hover:underline" onclick="navigator.clipboard.writeText('Which fall roast are you brewing at home this week? Let us know in the comments 👇'); alert('Comment copied');" type="button">
+<span class="material-symbols-outlined text-[14px]">content_copy</span> Copy Comment
+                  </button>
+</div>
+<div class="p-2.5 rounded-lg bg-surface-container-low border border-[#DDE1E6] text-xs text-[#172033] select-all">
+                  Which fall roast are you brewing at home this week? Let us know in the comments 👇
+                </div>
+</div>
+</div>
+<!-- Schedule & Destination Profile Details -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">account_circle</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Target Destination &amp; Dispatch Protocol</h2>
+</div>
+<span class="text-xs text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Token Verified</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="p-3 rounded-lg border border-[#DDE1E6] bg-surface-container-low">
+<div class="text-xs text-[#5D6678] mb-1">Target Account</div>
+<div class="flex items-center gap-2">
+<span class="font-semibold text-sm text-[#172033]">@northstar_coffee</span>
+<span class="material-symbols-outlined text-primary text-[16px]">verified</span>
+</div>
+<div class="text-xs text-[#5D6678] mt-1">Instagram Business • 92,400 Followers</div>
+</div>
+<div class="p-3 rounded-lg border border-[#DDE1E6] bg-surface-container-low">
+<div class="text-xs text-[#5D6678] mb-1">Target Dispatch Slot</div>
+<div class="font-semibold text-sm text-[#172033]">Thursday, Oct 24, 2024 at 4:30 PM EST</div>
+<div class="text-xs text-amber-700 mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">timer</span> Window opens in 15 mins
+                  </div>
+</div>
+</div>
+<div class="p-3.5 rounded-lg bg-indigo-50/50 border border-indigo-100 flex items-start gap-3">
+<span class="material-symbols-outlined text-primary text-[20px] mt-0.5">info</span>
+<div class="text-xs text-[#172033] leading-relaxed">
+<strong class="font-semibold">Manual Dispatch SOP:</strong> Publisher must upload approved master file via mobile creator studio or web business manager, paste the exact approved caption and hashtags above, verify audio synchronicity with cleared sound track, and record the live URL proof below immediately after posting.
+                </div>
+</div>
+</div>
+<!-- 3. Manual Publication Record Form (The Execution Surface) -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border-2 border-indigo-200 shadow-sm flex flex-col gap-5">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">fact_check</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Record Live Publication Proof</h2>
+</div>
+<span class="px-2 py-0.5 rounded bg-indigo-50 text-primary text-xs font-semibold">Step 2 of 2</span>
+</div>
+<form class="space-y-4" onsubmit="event.preventDefault(); alert('Publishing record saved and locked.');">
+<!-- Live URL Input -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-[#172033]">
+                    Live Post Permalink / URL <span class="text-error">*</span>
+</label>
+<div class="relative">
+<span class="absolute left-3 top-2.5 text-[#5D6678] material-symbols-outlined text-[18px]">link</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#DDE1E6] bg-white text-sm text-[#172033] focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none" placeholder="https://instagram.com/reel/DB_49xkLs02/" required="" type="url" value="https://instagram.com/reel/DB_49xkLs02/"/>
+</div>
+<span class="text-[11px] text-[#5D6678]">Must be publicly accessible or creator manager reference URL</span>
+</div>
+<!-- Dual Columns: Native Platform ID & Timestamp -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-[#172033]">
+                      Platform Native Media ID <span class="text-error">*</span>
+</label>
+<div class="relative">
+<span class="absolute left-3 top-2.5 text-[#5D6678] material-symbols-outlined text-[18px]">tag</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#DDE1E6] bg-white text-sm text-[#172033] focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none" placeholder="e.g. 180392819283921" required="" type="text" value="180392819283921"/>
+</div>
+</div>
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-[#172033]">
+                      Actual Published Timestamp <span class="text-error">*</span>
+</label>
+<div class="relative">
+<span class="absolute left-3 top-2.5 text-[#5D6678] material-symbols-outlined text-[18px]">calendar_today</span>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-lg border border-[#DDE1E6] bg-white text-sm text-[#172033] focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none" required="" type="text" value="2024-10-24 16:32:00 EST"/>
+</div>
+</div>
+</div>
+<!-- Proof Screenshot Dropzone -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-[#172033]">
+                    Delivery Proof (Screenshot or Creator Studio Confirmation)
+                  </label>
+<div class="border-2 border-dashed border-[#DDE1E6] hover:border-[#4F46E5] rounded-xl p-5 flex flex-col items-center justify-center text-center bg-surface-container-low transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-primary text-[32px] mb-1">add_photo_alternate</span>
+<span class="text-xs font-semibold text-[#172033]">Click to upload proof screenshot or drag &amp; drop</span>
+<span class="text-[11px] text-[#5D6678] mt-0.5">PNG, JPG, or PDF up to 10MB</span>
+</div>
+</div>
+<!-- Publisher Notes -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-[#172033]">
+                    Publisher Operational Notes
+                  </label>
+<textarea class="w-full p-3 rounded-lg border border-[#DDE1E6] bg-white text-sm text-[#172033] focus:border-[#4F46E5] focus:ring-1 focus:ring-[#4F46E5] outline-none resize-none" placeholder="Add notes about audio sync calibration, collaborative tag acceptance, or ad-boost pin configuration..." rows="2">Audio verified sync on sound beat 0:03. Added Seattle roastery location geotag.</textarea>
+</div>
+</form>
+</div>
+</div>
+<!-- RIGHT COLUMN: Governance, Recovery Panel & Audit Trail (4 Cols) -->
+<div class="lg:col-span-5 xl:col-span-4 flex flex-col gap-6">
+<!-- Recovery & Incident Resolution Panel -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border-2 border-red-200 shadow-sm flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-red-100 pb-3">
+<div class="flex items-center gap-2 text-error font-semibold text-sm">
+<span class="material-symbols-outlined text-error">emergency_home</span>
+<span>Publishing incident &amp; recovery protocol</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-red-100 text-error font-mono text-[11px] font-semibold">TT-AUTH-429</span>
+</div>
+<div class="p-3 rounded-lg bg-red-50/60 border border-red-200 flex flex-col gap-2">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-error text-[18px] mt-0.5">error</span>
+<div class="text-xs text-[#172033]">
+<span class="font-semibold text-red-900">TikTok channel alert:</span> Rate limit &amp; session token refresh required on secondary handle (@northstarcoffee). Manual dispatch paused.
+                  </div>
+</div>
+<div class="text-[11px] text-[#5D6678] pl-6">
+                  Recommended action: Verify platform credentials, run direct latency test, or shift responsibility to assigned backup publisher.
+                </div>
+</div>
+<!-- Recovery Fast Actions -->
+<div class="flex flex-col gap-2 pt-1">
+<button class="w-full py-2 px-3 rounded-lg border border-[#DDE1E6] hover:bg-surface-container-low text-xs font-semibold text-[#172033] flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary">sync</span>
+<span>Retry connection test</span>
+</button>
+<button class="w-full py-2 px-3 rounded-lg border border-[#DDE1E6] hover:bg-surface-container-low text-xs font-semibold text-[#172033] flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">edit_note</span>
+<span>Edit channel package payload</span>
+</button>
+<button class="w-full py-2 px-3 rounded-lg bg-red-50 hover:bg-red-100 border border-red-200 text-xs font-semibold text-error flex items-center justify-center gap-2 transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">forward</span>
+<span>Re-route to backup publisher (Elena Rostova)</span>
+</button>
+</div>
+</div>
+<!-- Governance & Approvals Reference Card -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">gavel</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Governance &amp; Approvals</h2>
+</div>
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">verified</span>
+</div>
+<div class="space-y-3">
+<!-- Approval item 1 -->
+<div class="flex items-start gap-3 p-2.5 rounded-lg bg-surface-container-low border border-[#DDE1E6]">
+<div class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                    DK
+                  </div>
+<div class="flex flex-col text-xs min-w-0">
+<div class="font-semibold text-[#172033]">Brand Lead Sign-off</div>
+<div class="text-[#5D6678]">Approved by Dave K.</div>
+<div class="text-[11px] text-emerald-700 mt-0.5 font-medium">Oct 24, 11:42 AM EST</div>
+</div>
+</div>
+<!-- Approval item 2 -->
+<div class="flex items-start gap-3 p-2.5 rounded-lg bg-surface-container-low border border-[#DDE1E6]">
+<div class="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                    SJ
+                  </div>
+<div class="flex flex-col text-xs min-w-0">
+<div class="font-semibold text-[#172033]">QA Master Compliance</div>
+<div class="text-[#5D6678]">9:16 4K master passed by Sarah Jenkins</div>
+<div class="text-[11px] text-emerald-700 mt-0.5 font-medium">Oct 24, 10:15 AM EST</div>
+</div>
+</div>
+<!-- Approval item 3 -->
+<div class="flex items-start gap-3 p-2.5 rounded-lg bg-surface-container-low border border-[#DDE1E6]">
+<div class="w-7 h-7 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center font-bold text-xs shrink-0 mt-0.5">
+                    ES
+                  </div>
+<div class="flex flex-col text-xs min-w-0">
+<div class="font-semibold text-[#172033]">Compliance Escrow</div>
+<div class="text-[#5D6678]">Enterprise strict gate verified</div>
+<div class="text-[11px] text-secondary mt-0.5 font-mono">Tenant #8812 Security Escrow</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Complete Audit Trail & Activity Log -->
+<div class="p-6 rounded-xl bg-surface-container-lowest border border-[#DDE1E6] flex flex-col gap-4">
+<div class="flex items-center justify-between border-b border-[#DDE1E6] pb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">history</span>
+<h2 class="font-card-title text-card-title text-[#172033]">Audit Trail &amp; Activity</h2>
+</div>
+<span class="text-xs text-[#5D6678]">Live stream</span>
+</div>
+<!-- Timeline -->
+<div class="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-[#DDE1E6]">
+<div class="relative flex flex-col gap-0.5 text-xs">
+<div class="absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white"></div>
+<div class="font-semibold text-[#172033]">Manual override window authorized</div>
+<div class="text-[#5D6678]">Dave K. granted publisher override for Instagram Reels slot.</div>
+<span class="text-[10px] text-secondary font-mono">16:02 EST</span>
+</div>
+<div class="relative flex flex-col gap-0.5 text-xs">
+<div class="absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full bg-amber-500 border-2 border-white"></div>
+<div class="font-semibold text-[#172033]">Manual dispatch reminder issued</div>
+<div class="text-[#5D6678]">Automated ping routed to Elena Rostova (On-call Publisher).</div>
+<span class="text-[10px] text-secondary font-mono">15:45 EST</span>
+</div>
+<div class="relative flex flex-col gap-0.5 text-xs">
+<div class="absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white"></div>
+<div class="font-semibold text-[#172033]">Master asset v2 verified &amp; locked</div>
+<div class="text-[#5D6678]">SHA-256 fingerprint verified against original render.</div>
+<span class="text-[10px] text-secondary font-mono">15:30 EST</span>
+</div>
+<div class="relative flex flex-col gap-0.5 text-xs">
+<div class="absolute -left-[23px] top-1 w-2.5 h-2.5 rounded-full bg-slate-400 border-2 border-white"></div>
+<div class="font-semibold text-[#172033]">Client sign-off recorded</div>
+<div class="text-[#5D6678]">Northstar Marketing team approved copy &amp; first comment.</div>
+<span class="text-[10px] text-secondary font-mono">14:10 EST</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- 4. Sticky Action Area (Docked bottom bar) -->
+<footer class="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#DDE1E6] shadow-lg px-6 py-3.5">
+<div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+<!-- Status Summary -->
+<div class="flex items-center gap-3 w-full sm:w-auto">
+<div class="w-3 h-3 rounded-full bg-amber-500 animate-pulse"></div>
+<div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs">
+<span class="font-semibold text-[#172033]">1 of 2 channels recorded</span>
+<span class="hidden sm:inline text-gray-300">•</span>
+<span class="text-[#5D6678]">Instagram pending live permalink verification</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+<button class="px-4 py-2.5 rounded-lg border border-[#DDE1E6] bg-white hover:bg-gray-50 text-xs font-semibold text-[#5D6678] hover:text-error transition-colors flex items-center gap-1.5" type="button">
+<span class="material-symbols-outlined text-[16px]">flag</span>
+<span>Mark as delayed / Flag issue</span>
+</button>
+<!-- The Single Dominant Next Action -->
+<button class="px-6 py-2.5 rounded-lg bg-[#4F46E5] hover:bg-indigo-700 text-white font-button text-button shadow-sm flex items-center justify-center gap-2 transition-colors min-h-[44px]" onclick="alert('Publishing record saved and verified in compliance audit!');" type="button">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+<span>Save publishing record</span>
+</button>
+</div>
+</div>
+</footer>
+</body></html>

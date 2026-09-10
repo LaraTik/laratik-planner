@@ -8,6 +8,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { PermissionNotice } from "@/components/platform/permission-notice";
 import { AlertTriangle, CheckCircle2, CircleSlash, Cloud } from "lucide-react";
 import { StorageConfigForm } from "./storage-config-form";
 
@@ -21,15 +22,24 @@ export async function generateMetadata() {
 export default async function PlatformStoragePage() {
   const { t } = await tForActive();
   const actor = await currentActor();
-  if (!actor)
+  if (!actor) {
     return (
-      <PageHeader
-        eyebrow={t("platform.eyebrow")}
-        title={t("storage.platformTitle")}
-        description={t("storage.notConfigured")}
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.signInRequiredStorageBody")}
       />
     );
-  await requirePlatformPermission(actor, "platform.console.manage");
+  }
+  try {
+    await requirePlatformPermission(actor, "platform.console.manage");
+  } catch {
+    return (
+      <PermissionNotice
+        title={t("platform.storageUnavailable")}
+        description={t("platform.storageUnavailableBody")}
+      />
+    );
+  }
   const [config] = await db
     .select({
       accountId: platformStorageProviderConfigs.accountId,

@@ -213,6 +213,37 @@ export async function setupNotificationDrawer(page: Page, seed: SeedResultLike):
   await page.getByRole("dialog", { name: /Notifications/i }).waitFor({ state: "visible" });
 }
 
+/**
+ * `trends-live` — enable the four-source minimum so the visual harness
+ * captures the real Trends surface instead of the first-run wizard or the
+ * gated My Work redirect.
+ */
+export async function setupTrendsLiveState(page: Page, seed: SeedResultLike): Promise<void> {
+  assertDevOnly("setupTrendsLiveState");
+  const slug = workspaceSlug(seed as SeedResultLike & { workspaceSlug?: string });
+  const response = await page.request.post("/api/trends/sources/bulk-enable", {
+    data: {
+      workspaceSlug: slug,
+      keys: ["tiktok_creative_center", "youtube_data_api", "reddit_json", "reddit_praw"],
+    },
+  });
+  if (!response.ok()) {
+    throw new Error(`Trend Radar fixture could not enable sources: ${response.status()}`);
+  }
+
+  const signalResponse = await page.request.post("/api/dev/trend-signal", {
+    data: { workspaceSlug: slug },
+  });
+  if (!signalResponse.ok()) {
+    throw new Error(`Trend Radar fixture could not add a signal: ${signalResponse.status()}`);
+  }
+
+  await page.goto(`/app/w/${slug}/trends`, { waitUntil: "domcontentloaded" });
+  const wizard = page.locator('[data-testid="trends-onboarding-wizard"]');
+  await wizard.waitFor({ state: "hidden" });
+  await page.locator('[data-testid="trends-feed"]').waitFor({ state: "visible" });
+}
+
 // ─── Internal helpers ────────────────────────────────────────────────────
 
 async function archiveApprovedItems(page: Page, slug: string): Promise<void> {

@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+
+<html class="h-full" dir="ltr" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee Review Portal — LaraTik Planner</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Theme Configuration Verbatim -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-tint": "#4d44e3",
+            "primary-container": "#4f46e5",
+            "on-tertiary": "#ffffff",
+            "outline": "#777587",
+            "surface-container": "#e9edff",
+            "on-primary-container": "#dad7ff",
+            "on-background": "#121b2e",
+            "outline-variant": "#c7c4d8",
+            "surface-bright": "#f9f9ff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "primary-fixed-dim": "#c3c0ff",
+            "primary": "#3525cd",
+            "primary-fixed": "#e2dfff",
+            "on-surface-variant": "#464555",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed-variant": "#3323cc",
+            "inverse-primary": "#c3c0ff",
+            "tertiary": "#004c77",
+            "surface-container-lowest": "#ffffff",
+            "secondary-fixed-dim": "#bec7db",
+            "on-tertiary-container": "#bfdfff",
+            "secondary-fixed": "#dae3f8",
+            "surface-container-high": "#e1e8ff",
+            "surface-container-highest": "#d9e2fc",
+            "tertiary-fixed-dim": "#94ccff",
+            "inverse-surface": "#273044",
+            "on-tertiary-fixed": "#001d32",
+            "inverse-on-surface": "#edf0ff",
+            "error-container": "#ffdad6",
+            "surface-variant": "#d9e2fc",
+            "surface-dim": "#d1daf4",
+            "on-surface": "#121b2e",
+            "on-primary-fixed": "#0f0069",
+            "on-error": "#ffffff",
+            "on-secondary-container": "#5a6375",
+            "secondary-container": "#d7e0f5",
+            "on-secondary-fixed": "#131c2b",
+            "error": "#ba1a1a",
+            "on-error-container": "#93000a",
+            "background": "#f9f9ff",
+            "on-primary": "#ffffff",
+            "secondary": "#565f70",
+            "tertiary-container": "#00659c",
+            "tertiary-fixed": "#cde5ff",
+            "surface": "#f9f9ff",
+            "surface-container-low": "#f1f3ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-expanded": "248px",
+            "gutter": "16px",
+            "topbar-height": "64px",
+            "screen-padding": "24px",
+            "touch-target-min": "44px",
+            "sidebar-collapsed": "72px",
+            "base": "4px",
+            "card-padding": "16px"
+          },
+          "fontFamily": {
+            "section-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "body": ["Inter"],
+            "page-title": ["Inter"],
+            "label": ["Inter"],
+            "card-title": ["Inter"],
+            "button": ["Inter"]
+          },
+          "fontSize": {
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body text-body min-h-full flex flex-col antialiased selection:bg-primary selection:text-on-primary">
+<!-- TOP APP BAR (Shared Components JSON Anchor) -->
+<header class="bg-surface dark:bg-inverse-surface border-b border-outline-variant dark:border-outline flat no shadows docked full-width top-0 z-30 sticky">
+<div class="flex justify-between items-center h-topbar-height px-screen-padding w-full">
+<!-- Brand Identity Lockup -->
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-sm">
+<span class="material-symbols-outlined text-2xl" data-icon="local_cafe">local_cafe</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface dark:text-inverse-on-surface font-semibold tracking-tight">Northstar Coffee Review Portal</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-container-high text-on-surface-variant">Client Portal</span>
+</div>
+<p class="text-xs text-secondary dark:text-secondary-fixed-dim">External Review • Production Workspace</p>
+</div>
+</div>
+<!-- Navigation Tabs from Shared Components JSON -->
+<nav class="hidden md:flex items-center gap-6 ml-6 border-l border-outline-variant pl-6">
+<button class="border-b-2 border-primary text-primary dark:text-inverse-primary dark:border-inverse-primary font-button text-button pb-1 flex items-center gap-1.5 transition-colors" id="navTabList" onclick="switchView('list')">
+<span class="material-symbols-outlined text-base" data-icon="view_list">view_list</span>
+<span>List View</span>
+</button>
+<button class="text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-button text-button pb-1 flex items-center gap-1.5 transition-colors" id="navTabCal" onclick="switchView('calendar')">
+<span class="material-symbols-outlined text-base" data-icon="calendar_month">calendar_month</span>
+<span>Calendar View</span>
+</button>
+<button class="text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-button text-button pb-1 flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="pending_actions">pending_actions</span>
+<span>Pending Approval</span>
+<span class="ml-1 px-1.5 py-0.5 text-xs rounded-full bg-primary-container text-on-primary">2</span>
+</button>
+<button class="text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-button text-button pb-1 flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-base" data-icon="inventory_2">inventory_2</span>
+<span>Approved Archive</span>
+</button>
+</nav>
+</div>
+<!-- Trailing Action Buttons & Client Reviewer Persona -->
+<div class="flex items-center gap-3">
+<!-- Action Buttons from JSON -->
+<button class="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-button text-secondary hover:text-on-surface bg-surface-container-lowest border border-outline-variant rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="file_download">file_download</span>
+          Export Schedule
+        </button>
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-button bg-primary text-on-primary rounded-lg hover:bg-primary-container active:opacity-90 transition-all shadow-sm">
+<span class="material-symbols-outlined text-sm" data-icon="done_all">done_all</span>
+          Approve All Safe
+        </button>
+<!-- Icon Actions from JSON -->
+<div class="flex items-center border-l border-outline-variant pl-2 gap-1 text-secondary">
+<button aria-label="Help and Support" class="p-2 rounded-lg hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+<button aria-label="Notifications" class="p-2 rounded-lg hover:bg-surface-container-high relative transition-colors">
+<span class="material-symbols-outlined" data-icon="notifications_none">notifications_none</span>
+<span class="w-2 h-2 rounded-full bg-primary absolute top-2 right-2"></span>
+</button>
+</div>
+<!-- Verified Client Sign-off Identity -->
+<div class="flex items-center gap-2.5 pl-2 border-l border-outline-variant">
+<img class="w-9 h-9 rounded-full ring-1 ring-outline-variant object-cover" data-alt="Professional headshot of Dave K., Brand Approver for Northstar Coffee, wearing a crisp dark navy collared shirt against a warm, soft-lit modern cafe studio background. High-key natural lighting, cinematic shallow depth of field, confident and friendly executive demeanor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBVcG49nEeNnlQIYRtbfneuPHHDdKa0W7dUofQCfzUteYjRLqdp-sxJ2WQkOL6WbPqLtbIKfEJVybGETqqKcBVrza0gEGCaz2gHRp24xOJpqEyK0O-Js2BKpbN3G8EkAkecUETjRO5PpzCTSgKk1tnP3ty9zlGPnl0wzHw_F5zPWm7rLb5i79ruHoYrFQMV5CelLT1SDck3dnIlZd3MqqgkdeVc3CCt2jTy5oolO9Ujb3Jv5Y5EzP3520q6Ge7zTZVY4Fjx9UZOCvs9"/>
+<div class="hidden xl:block text-left">
+<div class="flex items-center gap-1">
+<span class="font-button text-xs text-on-surface">Dave K.</span>
+<span class="material-symbols-outlined text-sm text-primary" data-icon="verified" style="font-variation-settings: 'FILL' 1;">verified</span>
+</div>
+<span class="text-[11px] block leading-none text-secondary">Northstar Coffee Approver</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Client Privacy Shield Banner -->
+<aside aria-label="Privacy Shield Notice" class="bg-surface-container-lowest border-b border-outline-variant px-screen-padding py-2 flex items-center justify-between text-xs text-secondary">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-base" data-icon="lock">lock</span>
+<span class="font-medium text-on-surface">Client Privacy Shield Active:</span>
+<span>You are viewing client-cleared assets and deliverables only. Agency-internal draft notes &amp; QA states remain strictly restricted.</span>
+</div>
+<div class="hidden md:flex items-center gap-4 text-[11px]">
+<span class="flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Live Synced</span>
+<span class="text-outline">Role: Brand Sign-off Authority</span>
+</div>
+</aside>
+<!-- Secondary Control Bar: View Switches, Dates, and Channel Filters -->
+<section class="bg-surface border-b border-outline-variant px-screen-padding py-3">
+<div class="flex flex-wrap items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<!-- Date Selector -->
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-1">
+<button aria-label="Previous Month" class="p-1 rounded hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_left">chevron_left</span>
+</button>
+<span class="font-button text-xs px-3 text-on-surface">October 2024</span>
+<button aria-label="Next Month" class="p-1 rounded hover:bg-surface-container-high transition-colors">
+<span class="material-symbols-outlined text-lg" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+<!-- Filter: Platform Channels -->
+<div class="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface">
+<span class="material-symbols-outlined text-sm text-secondary" data-icon="filter_alt">filter_alt</span>
+<span class="text-secondary">Channel:</span>
+<select class="bg-transparent border-0 p-0 text-xs font-medium focus:ring-0 cursor-pointer">
+<option>All Channels (Reels, TikTok, IG)</option>
+<option>Instagram Reels Only</option>
+<option>TikTok Only</option>
+</select>
+</div>
+<!-- Filter: Review Status -->
+<div class="flex items-center gap-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 text-xs text-on-surface">
+<span class="material-symbols-outlined text-sm text-secondary" data-icon="tune">tune</span>
+<span class="text-secondary">Status:</span>
+<select class="bg-transparent border-0 p-0 text-xs font-medium focus:ring-0 cursor-pointer">
+<option>Needs your review (2)</option>
+<option>Changes requested (1)</option>
+<option>Approved by you (1)</option>
+<option>All items</option>
+</select>
+</div>
+</div>
+<!-- Segmented View Toggle Buttons -->
+<div class="flex items-center bg-surface-container-high p-1 rounded-lg border border-outline-variant">
+<button class="flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded bg-surface-container-lowest text-primary shadow-xs transition-all" id="btnListToggle" onclick="switchView('list')">
+<span class="material-symbols-outlined text-sm" data-icon="view_agenda">view_agenda</span>
+<span>Dual Review Stage</span>
+</button>
+<button class="flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded text-secondary hover:text-on-surface transition-all" id="btnCalToggle" onclick="switchView('calendar')">
+<span class="material-symbols-outlined text-sm" data-icon="calendar_view_month">calendar_view_month</span>
+<span>Monthly Grid</span>
+</button>
+</div>
+</div>
+</section>
+<!-- MAIN CANVAS -->
+<main class="flex-1 px-screen-padding py-6 max-w-[1720px] w-full mx-auto">
+<!-- VIEW A: DUAL-PANE REVIEW WORKSPACE (Default Selected) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" id="reviewWorkspace">
+<!-- LEFT COLUMN: Upcoming Deliverables & Review Queue (5 cols) -->
+<div class="lg:col-span-5 space-y-4">
+<div class="flex items-center justify-between pb-1">
+<div>
+<h2 class="font-section-title text-section-title text-on-surface">Deliverable Queue</h2>
+<p class="text-xs text-secondary">3 items pending your definitive agency release</p>
+</div>
+<span class="px-2.5 py-1 text-xs font-medium bg-surface-container text-primary rounded-full">3 Pending</span>
+</div>
+<!-- Card 1: ACTIVE / SELECTED -->
+<article class="bg-surface-container-lowest border-2 border-primary rounded-xl p-4 shadow-sm relative transition-all">
+<div class="flex items-start justify-between gap-3">
+<div class="flex gap-3">
+<div class="w-12 h-16 rounded bg-surface-container flex items-center justify-center text-primary relative overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Vertical thumbnail frame showing cold brew iced coffee streaming into an elegant glass with thick cream floating on top, warm autumn morning sun lighting the wooden cafe counter. High-end lifestyle brand photography style with soft focus and natural amber highlights." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBk45V88Gnqghqem7ydWJRe9kH8SaVMM02Q3A7omOkY-f1oKeuh6q_CNlgs1wykUiAjzI6epPa5tR7GIOUQ-3U8rhyJ1L4V9jocTM88fibZpWbu3MHd_IkfZ4Pa-bDOAZeiQigRQuRHD4t0KNYQMgtcSToFmRrRL6sgtbt65MpWZbkkiS0ezSX-EPkgOucq1sf4uN9I-6YQqpKbeTVI5lDy5_EFdZbLdGy9c7mBqZpr4H0AQmtCHKVulFWSrccRkpFg5XKjXgv-NbE"/>
+<span class="absolute inset-0 bg-black/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-base" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded">Needs your review</span>
+<span class="text-[11px] text-secondary font-medium">v2 Final Cut</span>
+</div>
+<h3 class="font-card-title text-card-title text-on-surface mt-1 leading-snug">Autumn Cold Brew Reel — Final Cut</h3>
+<p class="text-xs text-secondary mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span>
+                  Planned: Thu, Oct 24, 4:30 PM EST
+                </p>
+</div>
+</div>
+<span class="w-2.5 h-2.5 rounded-full bg-primary ring-4 ring-surface-container-high flex-shrink-0" title="Currently open in Stage"></span>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2 text-xs text-secondary">
+<span class="inline-flex items-center gap-1 font-medium text-on-surface">
+<span class="material-symbols-outlined text-sm text-pink-600" data-icon="smart_display">smart_display</span>
+                Reels / TikTok
+              </span>
+<span>• 0:28s Video</span>
+</div>
+<span class="inline-flex items-center gap-1 px-3 py-1 bg-primary text-on-primary text-xs font-button rounded-md shadow-xs">
+<span class="material-symbols-outlined text-sm" data-icon="edit_note">edit_note</span>
+              Reviewing now
+            </span>
+</div>
+</article>
+<!-- Card 2: Needs Review -->
+<article class="bg-surface-container-lowest border border-outline-variant hover:border-outline rounded-xl p-4 transition-all hover:shadow-xs">
+<div class="flex items-start justify-between gap-3">
+<div class="flex gap-3">
+<div class="w-12 h-16 rounded bg-surface-container flex items-center justify-center text-primary relative overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Coffee packaging mockup of Single Origin Ethiopia whole bean bag standing proudly beside hand-picked green and roasted coffee cherries on a clean stone counter. Ultra clean studio product photography with neutral earth tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCH2tGVRG3c2ucf46G0HM2q8t99rZkd2417dLwpzJL_IgzWQK_y6SQc6FmyRypXd7rnvn-zumiMsxfrrwdJCDqW8eb5R0jaiAPbvp0mvvuVVi5XQBS_JmfjZJ4ZzkMjdmiaNI31wzaGLdC5VoNUxl4QPbzYqDg1Arrrt-pWNZ-2wAUWcGVngpTJdtQdE_gh2nXXAq6vmZ452UXvw1r3uKjFbVw5NJj8J5A7AKs2MApswhVAGaZeOzRrs032TyQVefuD73cOlQ8Duhq8"/>
+<span class="absolute bottom-1 right-1 bg-black/70 text-white rounded px-1 text-[9px] font-bold">5 slides</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200 rounded">Needs your review</span>
+<span class="text-[11px] text-secondary font-medium">v1 Launch Deck</span>
+</div>
+<h3 class="font-card-title text-card-title text-on-surface mt-1 leading-snug">Single Origin Ethiopia Launch Carousel</h3>
+<p class="text-xs text-secondary mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span>
+                  Planned: Fri, Oct 25, 11:00 AM EST
+                </p>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-2 text-xs text-secondary">
+<span class="inline-flex items-center gap-1 font-medium text-on-surface">
+<span class="material-symbols-outlined text-sm text-purple-600" data-icon="collections">collections</span>
+                Multi-slide Carousel
+              </span>
+</div>
+<button class="inline-flex items-center gap-1 px-3 py-1 bg-surface-container-lowest text-on-surface hover:bg-surface-container-high border border-outline-variant text-xs font-button rounded-md transition-colors">
+              Review item
+            </button>
+</div>
+</article>
+<!-- Card 3: Changes Requested -->
+<article class="bg-surface-container-lowest border border-outline-variant hover:border-outline rounded-xl p-4 transition-all opacity-95">
+<div class="flex items-start justify-between gap-3">
+<div class="flex gap-3">
+<div class="w-12 h-16 rounded bg-surface-container flex items-center justify-center text-primary relative overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Seasonal Halloween themed dark roast coffee beans arranged in an artisanal flat lay with rustic cinnamon sticks, dried orange slices, and star anise on dark burnt timber. High contrast dramatic cinematic lighting." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBr7tu-YQivnOGXap379xp-I7yVS1oqOHykHDR-yhmQtJUZ-voxGFF7gSa_uAl_OvhZv9WgN0mnV4vN4EbsN2P-VkG_Kunm1uDkzd9n67Gi5cjUkIatSGBTG0HGtsCgHdWDwLFEQGixlE8XhOHc1OogA14xKAoiwOTccYUaHz_pcj0B2Ukya5cSSOfq9ypW8UrorR2gXwpfHeNvEb5YUW650tzXSmY4di_gZf4HOZKlRYmKD_8qex1peo5R3wRKXykXqi0iBdBjJCsP"/>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 text-[11px] font-semibold bg-rose-50 text-rose-800 border border-rose-200 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]" data-icon="history_toggle_off">history_toggle_off</span>
+                    Changes requested
+                  </span>
+<span class="text-[11px] text-secondary font-medium">Feedback sent</span>
+</div>
+<h3 class="font-card-title text-card-title text-on-surface mt-1 leading-snug">Halloween Roast Promo — Caption Approval</h3>
+<p class="text-xs text-secondary mt-0.5 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs" data-icon="schedule">schedule</span>
+                  Planned: Sun, Oct 27, 3:30 PM EST
+                </p>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant flex items-center justify-between">
+<div class="flex items-center gap-1 text-xs text-secondary">
+<span class="material-symbols-outlined text-sm" data-icon="photo">photo</span>
+<span>Static Post • Revision with Copywriter</span>
+</div>
+<button class="inline-flex items-center gap-1 px-2.5 py-1 text-xs text-secondary hover:text-on-surface font-medium">
+<span class="material-symbols-outlined text-sm" data-icon="chat">chat</span>
+              View history
+            </button>
+</div>
+</article>
+<!-- Card 4: Approved by You -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 opacity-75 hover:opacity-100 transition-opacity">
+<div class="flex items-start justify-between gap-3">
+<div class="flex gap-3">
+<div class="w-12 h-16 rounded bg-surface-container flex items-center justify-center text-primary relative overflow-hidden flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="Four small glassware tasting flights filled with different coffee extractions lined up on a modern Scandinavian oak tasting bar. Bright morning illumination, clean lines, and calm minimalist cafe backdrop." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2Z2L74pTNybgThOKYHrjgIoKBt2eP1_LKCHOv2tjm3aYhGQj7rK3RU7RkpI4Z8XxJpyGDpF1Z6ObeQkywOPRFg6FfrA81Ki87WxsPQO4YJZZdsRPCA6PoGjv95vbFDRnV_PDH0KZGtrwudOD2-sa5pOL_icdc50nUx2N5SLXPY6uTn0wbRwiw_iVyhsVAdxyKPu-SXfajVj5LJUjSmchxtAwDk7CShtbp6l4I-klWuESwjEPAvO17v9AXaEKpns0hdn-gvFk85KLe"/>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 text-[11px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 rounded flex items-center gap-1">
+<span class="material-symbols-outlined text-[13px] text-emerald-700" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                    Approved by you
+                  </span>
+<span class="text-[11px] text-secondary">Ready for publishing</span>
+</div>
+<h3 class="font-card-title text-card-title text-on-surface mt-1 leading-snug">Coffee Tasting Flight Announcement</h3>
+<p class="text-xs text-secondary mt-0.5">Planned: Mon, Oct 28</p>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-2.5 border-t border-outline-variant flex items-center justify-between text-xs text-secondary">
+<span>Signed off by Dave K.</span>
+<span class="text-[11px] text-outline">Locked &amp; Scheduled</span>
+</div>
+</article>
+</div>
+<!-- RIGHT COLUMN: Focused Review & Decision Stage (7 cols) -->
+<div class="lg:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm">
+<!-- Header & Deliverable Context -->
+<div class="flex flex-wrap items-start justify-between gap-4 pb-5 border-b border-outline-variant">
+<div>
+<div class="flex items-center gap-2">
+<span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200">Needs your review</span>
+<span class="px-2 py-0.5 rounded text-xs bg-surface-container text-on-surface font-mono">v2-Final-Cut</span>
+<span class="text-xs text-secondary">Submitted 3h ago</span>
+</div>
+<h1 class="font-page-title text-page-title text-on-surface mt-2">Autumn Cold Brew Reel — Final Cut</h1>
+<p class="text-xs text-secondary mt-1 flex items-center gap-2">
+<span>Channels: <strong>Instagram Reels</strong> &amp; <strong>TikTok</strong></span>
+<span>•</span>
+<span>Scheduled Date: <strong>Thu, Oct 24, 2024 at 4:30 PM EST</strong></span>
+</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="p-2 border border-outline-variant rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Download raw asset preview">
+<span class="material-symbols-outlined text-base" data-icon="download">download</span>
+</button>
+<button class="p-2 border border-outline-variant rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-high transition-colors" title="Share review link with internal stakeholder">
+<span class="material-symbols-outlined text-base" data-icon="share">share</span>
+</button>
+</div>
+</div>
+<!-- Dual Component Stage: 9:16 Video Stage + Client Metadata -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-6 mt-6">
+<!-- Realistic 9:16 Vertical Video Player Simulation -->
+<div class="md:col-span-6 flex flex-col items-center">
+<div class="relative w-full max-w-[280px] aspect-[9/16] rounded-2xl bg-neutral-900 overflow-hidden shadow-md border border-neutral-800 group">
+<!-- Video Cover Media -->
+<img class="w-full h-full object-cover" data-alt="Vertical 9:16 social video frame showing cold brew streaming smoothly into a glass cup layered with thick white cream foam. Cinematic close-up with cold moisture condensation on the glass and golden late afternoon Seattle cafe light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC5Hc3k-5qxUbKLeJ6ikbGe8ce-nE-tqbr3Fgshpn0lzkR3OP02tfJLDoQD6h1zvFWU9xsngXgeLU5onXv8xG-d2QV7XkSD5K6lGShcachGLO4RIqK4rZDOvzJv0bbgUap8skmt5l9QNR3dmvDvzKWZebwGsGqrfPIWfgkovxQBKfq9F8rZV3cBJJG-vkkKIUzDfMRGS0tcRvg0YN3UwwJNgBjuWpqf51CVJURRqtrZp-P13gnnIwe83FX6-HGzyebPq2YrbeWdoe3O"/>
+<!-- Safe Zone Guide Overlay (Toggled) -->
+<div class="absolute inset-0 border-2 border-dashed border-white/40 pointer-events-none m-4 rounded-lg flex flex-col justify-between p-2" id="safeZoneGuide">
+<div class="flex justify-between items-center text-[10px] text-white/70 font-mono bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs">
+<span>IG Reels Safe Zone</span>
+<span>0:28s</span>
+</div>
+<div class="text-[10px] text-white/70 font-mono bg-black/40 px-1.5 py-0.5 rounded backdrop-blur-xs self-start">
+                  Captions clear zone
+                </div>
+</div>
+<!-- Top Controls on Video -->
+<div class="absolute top-3 inset-x-3 flex justify-between items-center z-10">
+<span class="inline-flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-[11px] text-white">
+<span class="material-symbols-outlined text-xs text-amber-400" data-icon="music_note">music_note</span>
+                  Autumn Jazz Beats
+                </span>
+<button class="bg-black/60 hover:bg-black/80 backdrop-blur-md p-1.5 rounded-full text-white text-xs transition-colors" onclick="toggleSafeZone()" title="Toggle Safe Zone Guides">
+<span class="material-symbols-outlined text-sm" data-icon="aspect_ratio">aspect_ratio</span>
+</button>
+</div>
+<!-- Center Play/Pause Micro-interaction Indicator -->
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="w-14 h-14 rounded-full bg-black/40 backdrop-blur-md border border-white/20 flex items-center justify-center text-white opacity-80 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-3xl" data-icon="play_arrow" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</div>
+</div>
+<!-- Bottom Overlay simulation -->
+<div class="absolute bottom-0 inset-x-0 p-3 bg-gradient-to-t from-black/90 via-black/40 to-transparent text-white text-left z-10">
+<div class="flex items-center gap-2 mb-1">
+<div class="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold">N</div>
+<span class="text-xs font-semibold">@northstarcoffee</span>
+</div>
+<p class="text-[11px] line-clamp-2 text-white/90">Crisp mornings call for slow-steeped cold brew crowned with Madagascar vanilla...</p>
+<!-- Scrubber bar -->
+<div class="w-full bg-white/20 h-1 rounded-full mt-2 overflow-hidden">
+<div class="bg-white h-full w-2/5"></div>
+</div>
+</div>
+</div>
+<!-- Video Micro-specifications -->
+<div class="w-full max-w-[280px] flex items-center justify-between mt-2.5 text-xs text-secondary">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm" data-icon="hd">hd</span>
+                1080x1920 MP4
+              </span>
+<span>Audio: Cleared Commercial</span>
+</div>
+</div>
+<!-- Client-Visible Deliverable Details & Copy Payload -->
+<div class="md:col-span-6 flex flex-col justify-between space-y-4">
+<div class="space-y-4">
+<!-- Caption Box -->
+<div>
+<label class="font-label text-label text-on-surface uppercase tracking-wider block mb-1.5">Approved Primary Caption</label>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-3 text-xs leading-relaxed text-on-surface selection:bg-primary-fixed">
+                  Crisp mornings call for slow-steeped cold brew crowned with Madagascar vanilla cold foam. 🍂✨ Brewed for 18 hours, finished in seconds. Available at all Seattle roasteries &amp; order ahead.
+                </div>
+</div>
+<!-- Hashtags -->
+<div>
+<label class="font-label text-label text-on-surface uppercase tracking-wider block mb-1.5">Target Hashtags</label>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 text-xs bg-surface-container text-primary font-medium rounded">#ColdBrewSeason</span>
+<span class="px-2 py-0.5 text-xs bg-surface-container text-primary font-medium rounded">#NorthstarCoffee</span>
+<span class="px-2 py-0.5 text-xs bg-surface-container text-primary font-medium rounded">#AutumnAesthetics</span>
+<span class="px-2 py-0.5 text-xs bg-surface-container text-primary font-medium rounded">#CraftCoffee</span>
+</div>
+</div>
+<!-- First Comment / Engagement Prompt -->
+<div>
+<label class="font-label text-label text-on-surface uppercase tracking-wider block mb-1.5">First Pinned Comment</label>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-2.5 text-xs text-secondary italic">
+                  "Which fall roast are you brewing at home this week? Let us know in the comments 👇"
+                </div>
+</div>
+<!-- Client Audit Trail -->
+<div class="bg-surface-container-low/60 rounded-lg p-3 border border-outline-variant text-xs space-y-1.5">
+<div class="flex items-center gap-1.5 text-secondary">
+<span class="material-symbols-outlined text-emerald-600 text-sm" data-icon="check" style="font-variation-settings: 'FILL' 1;">check</span>
+<span>Dave K. approved v1 caption (Oct 21)</span>
+</div>
+<div class="flex items-center gap-1.5 text-amber-800 font-medium">
+<span class="material-symbols-outlined text-amber-600 text-sm" data-icon="schedule">schedule</span>
+<span>Awaiting Dave K. or Mia T. final video sign-off</span>
+</div>
+</div>
+</div>
+<!-- DECISION BOX: The Single Dominant Next Action -->
+<div class="pt-4 border-t border-outline-variant space-y-3">
+<div>
+<label class="font-label text-label text-on-surface block mb-1" for="clientNotes">
+                  Revision or Sign-off Notes (Optional)
+                </label>
+<textarea class="w-full text-xs rounded-lg border border-outline-variant focus:border-primary focus:ring-1 focus:ring-primary p-2 text-on-surface placeholder:text-secondary" id="clientNotes" placeholder="Add revision notes or sign-off notes for the creative team... (e.g., Please ensure roastery location tag is included)" rows="2"></textarea>
+</div>
+<div class="flex flex-col sm:flex-row gap-2.5">
+<!-- Dominant Action Primary Button -->
+<button class="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-container hover:bg-primary text-on-primary font-button text-button rounded-xl shadow-sm transition-all active:scale-[0.99]" id="approveBtn" onclick="simulateApproval()">
+<span class="material-symbols-outlined text-lg" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>Approve for publishing</span>
+</button>
+<!-- Secondary Action Outlined Button -->
+<button class="inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 bg-surface-container-lowest hover:bg-surface-container-high border border-outline-variant text-on-surface font-button text-button rounded-xl transition-colors" onclick="promptRevision()">
+<span class="material-symbols-outlined text-base text-secondary" data-icon="rate_review">rate_review</span>
+<span>Request changes</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- VIEW B: INTERACTIVE MONTHLY CALENDAR GRID (Client View `/calendar`) -->
+<div class="hidden space-y-4" id="calendarWorkspace">
+<!-- Calendar Header & Month Overview -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-wrap items-center justify-between gap-4">
+<div>
+<h2 class="font-section-title text-section-title text-on-surface">Publishing Schedule — October 2024</h2>
+<p class="text-xs text-secondary">All dates in Eastern Daylight Time (EDT) • 14 scheduled client posts</p>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 text-xs">
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Approved (11)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> Pending Your Review (2)</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-rose-400"></span> Changes Sent (1)</span>
+</div>
+<button class="px-3 py-1.5 text-xs font-button bg-surface-container hover:bg-surface-container-high text-on-surface rounded-lg transition-colors flex items-center gap-1" onclick="switchView('list')">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_back">arrow_back</span>
+            Back to Queue
+          </button>
+</div>
+</div>
+<!-- 7-Column Monthly Calendar Grid -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-2xl overflow-hidden shadow-sm">
+<!-- Day of Week Headings -->
+<div class="grid grid-cols-7 border-b border-outline-variant bg-surface-container-low text-center text-xs font-semibold py-2.5 text-secondary">
+<div>Mon</div>
+<div>Tue</div>
+<div>Wed</div>
+<div>Thu</div>
+<div>Fri</div>
+<div>Sat</div>
+<div>Sun</div>
+</div>
+<!-- Day Cells (Sample representative week around late October 2024) -->
+<div class="grid grid-cols-7 divide-x divide-y divide-outline-variant min-h-[460px] text-xs">
+<!-- Inactive / Past Days -->
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">21</span>
+<div class="mt-2 p-1.5 rounded bg-surface-container-lowest border border-outline-variant text-[11px] text-secondary">
+<span class="inline-flex items-center gap-0.5 text-emerald-600 font-medium">✓ Coffee Origins #3</span>
+</div>
+</div>
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">22</span>
+</div>
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">23</span>
+<div class="mt-2 p-1.5 rounded bg-surface-container-lowest border border-outline-variant text-[11px] text-secondary">
+<span class="inline-flex items-center gap-0.5 text-emerald-600 font-medium">✓ Espresso Reel</span>
+</div>
+</div>
+<!-- TODAY / FOCUS DAY: Thu Oct 24 (Pending Review) -->
+<div class="p-2 bg-primary-fixed/30 relative">
+<div class="flex items-center justify-between">
+<span class="font-bold text-primary px-1.5 py-0.5 rounded-full bg-white text-xs shadow-xs">24 Today</span>
+<span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+</div>
+<div class="mt-2 p-2 rounded-lg bg-white border-2 border-primary cursor-pointer hover:shadow-sm transition-shadow" onclick="switchView('list')">
+<div class="flex items-center justify-between text-[10px] text-amber-700 font-bold mb-0.5">
+<span>Needs Review</span>
+<span>4:30 PM</span>
+</div>
+<div class="font-semibold text-on-surface text-[11px] line-clamp-1">Autumn Cold Brew Reel</div>
+<div class="text-[10px] text-secondary mt-0.5">Instagram &amp; TikTok</div>
+</div>
+</div>
+<!-- Fri Oct 25 (Needs Review 2) -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">25</span>
+<div class="mt-2 p-2 rounded-lg bg-surface-container-low border border-amber-300 cursor-pointer hover:bg-amber-50 transition-colors" onclick="switchView('list')">
+<div class="text-[10px] text-amber-700 font-bold mb-0.5">Needs Review</div>
+<div class="font-semibold text-on-surface text-[11px] line-clamp-1">Ethiopia Launch Carousel</div>
+<div class="text-[10px] text-secondary">11:00 AM</div>
+</div>
+</div>
+<!-- Sat Oct 26 -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">26</span>
+</div>
+<!-- Sun Oct 27 (Changes Requested) -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">27</span>
+<div class="mt-2 p-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800">
+<div class="text-[10px] font-bold">Feedback Sent</div>
+<div class="font-medium text-[11px] line-clamp-1">Halloween Roast Promo</div>
+</div>
+</div>
+<!-- Mon Oct 28 (Approved) -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">28</span>
+<div class="mt-2 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+<div class="text-[10px] text-emerald-700 font-semibold flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]" data-icon="check" style="font-variation-settings: 'FILL' 1;">check</span> Approved
+              </div>
+<div class="font-medium text-[11px] line-clamp-1">Tasting Flight</div>
+</div>
+</div>
+<!-- Tue Oct 29 -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">29</span>
+</div>
+<!-- Wed Oct 30 -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">30</span>
+<div class="mt-2 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+<div class="text-[10px] text-emerald-700 font-semibold">✓ Approved</div>
+<div class="font-medium text-[11px] line-clamp-1">Roaster Interview Part 2</div>
+</div>
+</div>
+<!-- Thu Oct 31 -->
+<div class="p-2 bg-surface-container-lowest">
+<span class="font-medium">31</span>
+<div class="mt-2 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900">
+<div class="text-[10px] text-emerald-700 font-semibold">✓ Approved</div>
+<div class="font-medium text-[11px] line-clamp-1">Halloween Treat Story</div>
+</div>
+</div>
+<!-- Next Month preview -->
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">1 Nov</span>
+<p class="text-[10px] text-secondary mt-1">Zero pending reviews for November</p>
+</div>
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">2 Nov</span>
+</div>
+<div class="p-2 bg-surface-container-low/40 text-outline">
+<span class="font-medium">3 Nov</span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Sticky Mobile Action Sheet for Quick Approval -->
+<div class="md:hidden sticky bottom-0 bg-surface-container-lowest border-t border-outline-variant p-3 z-20 flex items-center justify-between gap-3 shadow-lg">
+<div class="flex items-center gap-2">
+<div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+<span class="text-xs font-semibold text-on-surface">Autumn Cold Brew Reel</span>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-2 text-xs font-button rounded-lg border border-outline-variant bg-surface" onclick="promptRevision()">
+        Revise
+      </button>
+<button class="px-4 py-2 text-xs font-button rounded-lg bg-primary text-on-primary" onclick="simulateApproval()">
+        Approve
+      </button>
+</div>
+</div>
+<!-- Client Interaction Logic -->
+<script>
+    function switchView(view) {
+      const workspace = document.getElementById('reviewWorkspace');
+      const cal = document.getElementById('calendarWorkspace');
+      const tabList = document.getElementById('navTabList');
+      const tabCal = document.getElementById('navTabCal');
+      const btnList = document.getElementById('btnListToggle');
+      const btnCal = document.getElementById('btnCalToggle');
+
+      if (view === 'calendar') {
+        workspace.classList.add('hidden');
+        cal.classList.remove('hidden');
+
+        tabCal.className = "border-b-2 border-primary text-primary dark:text-inverse-primary dark:border-inverse-primary font-button text-button pb-1 flex items-center gap-1.5 transition-colors";
+        tabList.className = "text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-button text-button pb-1 flex items-center gap-1.5 transition-colors";
+
+        btnCal.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded bg-surface-container-lowest text-primary shadow-xs transition-all";
+        btnList.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded text-secondary hover:text-on-surface transition-all";
+      } else {
+        cal.classList.add('hidden');
+        workspace.classList.remove('hidden');
+
+        tabList.className = "border-b-2 border-primary text-primary dark:text-inverse-primary dark:border-inverse-primary font-button text-button pb-1 flex items-center gap-1.5 transition-colors";
+        tabCal.className = "text-secondary dark:text-secondary-fixed-dim hover:text-on-surface dark:hover:text-inverse-on-surface font-button text-button pb-1 flex items-center gap-1.5 transition-colors";
+
+        btnList.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded bg-surface-container-lowest text-primary shadow-xs transition-all";
+        btnCal.className = "flex items-center gap-1.5 px-3 py-1 text-xs font-button rounded text-secondary hover:text-on-surface transition-all";
+      }
+    }
+
+    function toggleSafeZone() {
+      const guide = document.getElementById('safeZoneGuide');
+      if (guide) {
+        guide.classList.toggle('opacity-0');
+      }
+    }
+
+    function simulateApproval() {
+      const btn = document.getElementById('approveBtn');
+      if (btn) {
+        btn.innerHTML = `<span class="material-symbols-outlined text-lg text-white animate-spin" data-icon="progress_activity">progress_activity</span> <span>Publishing Sign-off Confirmed...</span>`;
+        btn.classList.remove('bg-primary-container', 'hover:bg-primary');
+        btn.classList.add('bg-emerald-600', 'text-white');
+
+        setTimeout(() => {
+          btn.innerHTML = `<span class="material-symbols-outlined text-lg" data-icon="check_circle" style="font-variation-settings: 'FILL' 1;">check_circle</span> <span>Approved by Dave K. (Live)</span>`;
+          alert('Asset Approved: "Autumn Cold Brew Reel — Final Cut" is confirmed for scheduled publication on Oct 24, 4:30 PM EST.');
+        }, 700);
+      }
+    }
+
+    function promptRevision() {
+      const notes = document.getElementById('clientNotes');
+      if (notes) {
+        notes.focus();
+        notes.placeholder = "Please enter specific feedback for the agency team before submitting changes...";
+        notes.classList.add('ring-2', 'ring-primary');
+      }
+    }
+  </script>
+</body></html>

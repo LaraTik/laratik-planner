@@ -79,7 +79,7 @@ export default async function SignInPage({
 
   return (
     <main
-      className="bg-canvas relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 py-10 sm:px-6 sm:py-16"
+      className="bg-canvas relative isolate flex min-h-screen items-center justify-center overflow-hidden px-4 pt-20 pb-10 sm:px-6 sm:py-16"
       data-testid="signin-page"
     >
       <div
@@ -164,13 +164,15 @@ export default async function SignInPage({
         {serverEnv.NODE_ENV !== "production" ? (
           <p className="text-label text-fg-muted flex items-center justify-center gap-1.5 text-center">
             <Wrench className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("auth.signin.devModeNotice")}
-            <Link
-              href="/dev/signin"
-              className="text-primary font-semibold underline-offset-4 hover:underline"
-            >
-              {t("auth.signin.devModeLink")}
-            </Link>
+            <span>
+              {t("auth.signin.devModeNotice")}{" "}
+              <Link
+                href="/dev/signin"
+                className="text-primary font-semibold underline-offset-4 hover:underline"
+              >
+                {t("auth.signin.devModeLink")}
+              </Link>
+            </span>
           </p>
         ) : null}
 

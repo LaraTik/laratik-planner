@@ -145,18 +145,75 @@ export function MobileNav({
       ];
 
   const onPlatformRoute = pathname.startsWith("/app/platform/");
-  const createHref = onPlatformRoute
-    ? null
-    : currentWorkspace
-      ? !clientOnly &&
-        pathname !== wsBase &&
-        pathname !== `${wsBase}/planning` &&
-        workspaceCanCreateContent[currentWorkspace.id]
-        ? `${wsBase}/planning/new`
-        : null
-      : canCreateWorkspace
-        ? "/app/workspaces/new"
-        : null;
+  const isWorkspaceRoute = /^\/app\/w\/[^/]+(?:\/|$)/.test(pathname);
+  const planningPath = pathname.startsWith(`${wsBase}/planning/`)
+    ? pathname.slice(`${wsBase}/planning/`.length)
+    : null;
+  const planningRootSegment = planningPath?.split("/", 1)[0] ?? null;
+  const isContentDetailRoute =
+    planningPath !== null &&
+    planningPath.length > 0 &&
+    planningRootSegment !== null &&
+    !["new", "batch", "monthly"].includes(planningRootSegment);
+  const isReviewsRoute = currentWorkspace !== null && pathname === `${wsBase}/reviews`;
+  const isSettingsRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/settings` || pathname.startsWith(`${wsBase}/settings/`));
+  const isMediaRoute = /^\/app\/w\/[^/]+\/media(?:\/|$)/.test(pathname);
+  const isTrendsRoute = currentWorkspace !== null && pathname === `${wsBase}/trends`;
+  const isBrandKitRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/brand-kit` || pathname.startsWith(`${wsBase}/brand-kit/`));
+  const isChannelsRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/channels` || pathname.startsWith(`${wsBase}/channels/`));
+  const isAnalyticsRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/analytics/social` ||
+      pathname.startsWith(`${wsBase}/analytics/social/`));
+  const isDesignQueueRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/design-queue` || pathname.startsWith(`${wsBase}/design-queue/`));
+  const isLibraryRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/library` || pathname.startsWith(`${wsBase}/library/`));
+  const isBoardRoute =
+    currentWorkspace !== null &&
+    (pathname === `${wsBase}/board` || pathname.startsWith(`${wsBase}/board/`));
+  const isGlobalTaskRoute =
+    pathname === "/app/account" ||
+    pathname.startsWith("/app/account/") ||
+    pathname === "/app/agency-settings" ||
+    pathname.startsWith("/app/agency-settings/") ||
+    pathname === "/app/users" ||
+    pathname.startsWith("/app/users/") ||
+    pathname === "/app/media" ||
+    pathname.startsWith("/app/media/") ||
+    pathname === "/app/workspaces/new";
+  const createHref =
+    onPlatformRoute || isGlobalTaskRoute || (isWorkspaceRoute && !currentWorkspace)
+      ? null
+      : currentWorkspace
+        ? !clientOnly &&
+          pathname !== wsBase &&
+          pathname !== `${wsBase}/planning` &&
+          !isContentDetailRoute &&
+          !isReviewsRoute &&
+          !isSettingsRoute &&
+          !isMediaRoute &&
+          !isTrendsRoute &&
+          !isBrandKitRoute &&
+          !isChannelsRoute &&
+          !isAnalyticsRoute &&
+          !isDesignQueueRoute &&
+          !isLibraryRoute &&
+          !isBoardRoute &&
+          workspaceCanCreateContent[currentWorkspace.id]
+          ? `${wsBase}/planning/new`
+          : null
+        : canCreateWorkspace
+          ? "/app/workspaces/new"
+          : null;
   const createLabel = currentWorkspace
     ? labelFor("createContent", "Create content")
     : labelFor("workspaceCreate", "Create workspace");
@@ -228,21 +285,25 @@ export function MobileNav({
                   href={`${wsBase}/board`}
                   icon={<Kanban />}
                   label={labelFor("planning-board", "Board")}
+                  active={isActivePath(`${wsBase}/board`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/calendar`}
                   icon={<CalendarDays />}
                   label={labelFor("planning-calendar", "Calendar")}
+                  active={isActivePath(`${wsBase}/calendar`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/design-queue`}
                   icon={<Palette />}
                   label={labelFor("design-queue", "Design queue")}
+                  active={isActivePath(`${wsBase}/design-queue`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/library`}
                   icon={<Library />}
                   label={labelFor("library", "Library")}
+                  active={isActivePath(`${wsBase}/library`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/media`}
@@ -262,26 +323,31 @@ export function MobileNav({
                   href={`${wsBase}/channels`}
                   icon={<Share2 />}
                   label={labelFor("channels", "Social channels")}
+                  active={isActivePath(`${wsBase}/channels`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/brand-kit`}
                   icon={<Package />}
                   label={labelFor("brand-kit", "Brand kit")}
+                  active={isActivePath(`${wsBase}/brand-kit`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/team`}
                   icon={<Users />}
                   label={labelFor("team", "Team")}
+                  active={isActivePath(`${wsBase}/team`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/settings`}
                   icon={<Settings />}
                   label={labelFor("settings", "Settings")}
+                  active={isActivePath(`${wsBase}/settings`, pathname)}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/ai-settings`}
                   icon={<Bot />}
                   label={labelFor("settings-ai-assistance", "AI assistance")}
+                  active={isActivePath(`${wsBase}/ai-settings`, pathname)}
                 />
                 {canAccessTrendRadar &&
                 (user.isAdmin || workspaceCanCreateContent[currentWorkspace.id] === true) ? (
@@ -367,12 +433,14 @@ export function MobileNav({
                   href="/app/platform/overview"
                   icon={<LayoutDashboard />}
                   label={labelFor("platform-overview", "Platform overview")}
+                  active={isActivePath("/app/platform/overview", pathname, { exact: true })}
                 />
                 {platformAccess.canReadAgencies ? (
                   <MobileMenuLink
                     href="/app/platform/agencies"
                     icon={<Shield />}
                     label={labelFor("platform-agencies", "Agencies")}
+                    active={isActivePath("/app/platform/agencies", pathname)}
                   />
                 ) : null}
                 {platformAccess.canReadSecurity ? (
@@ -380,6 +448,7 @@ export function MobileNav({
                     href="/app/platform/security"
                     icon={<Lock />}
                     label={labelFor("platform-security", "Security and support")}
+                    active={isActivePath("/app/platform/security", pathname)}
                   />
                 ) : null}
                 {platformAccess.canReadAccess ? (
@@ -387,6 +456,7 @@ export function MobileNav({
                     href="/app/platform/access"
                     icon={<ShieldCheck />}
                     label={labelFor("platform-access", "Platform access")}
+                    active={isActivePath("/app/platform/access", pathname)}
                   />
                 ) : null}
               </MenuSection>
@@ -397,6 +467,7 @@ export function MobileNav({
                 href="/app/account"
                 icon={<UserRound />}
                 label={labelFor("account", "Account")}
+                active={isActivePath("/app/account", pathname)}
               />
               <MobileMenuLink
                 href="https://github.com/LaraTik/laratik-planner"

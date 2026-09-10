@@ -114,7 +114,7 @@ export default async function ForgotPasswordPage({
   const { sent } = await searchParams;
   return (
     <main
-      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 py-16"
+      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-8 px-6 pt-20 pb-16 sm:py-16"
       data-testid="forgot-password-page"
     >
       <header className="flex flex-col items-center gap-2 text-center">

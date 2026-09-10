@@ -21,7 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  */
 export default function BrandKitLoading() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
+    <div className="space-y-6" aria-busy="true" aria-live="polite" role="status">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1 space-y-2">
           <Skeleton className="h-4 w-32" />

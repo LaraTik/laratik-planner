@@ -178,7 +178,7 @@ export default async function SettingsTemplatesPage({
                       className={cn(
                         "border-border text-label rounded-full border px-2.5 py-0.5 font-bold",
                         currentMonthlyTarget === tpl.value
-                          ? "bg-success/15 text-success border-success/30"
+                          ? "bg-success-subtle text-success border-success/30"
                           : "bg-primary-subtle text-primary",
                       )}
                     >
@@ -245,7 +245,7 @@ function DeltaBadge({
       <span
         className={cn(
           "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-bold",
-          delta === 0 ? "bg-success/15 text-success" : "bg-warning/15 text-warning",
+          delta === 0 ? "bg-success-subtle text-success" : "bg-warning-subtle text-warning",
         )}
         data-testid="settings-template-delta"
       >
@@ -258,9 +258,9 @@ function DeltaBadge({
   const Icon = delta < 0 ? ArrowDown : delta > 0 ? ArrowUp : Equal;
   const tone =
     delta < 0
-      ? "bg-success/15 text-success"
+      ? "bg-success-subtle text-success"
       : delta > 0
-        ? "bg-warning/15 text-warning"
+        ? "bg-warning-subtle text-warning"
         : "bg-surface text-fg-muted";
   return (
     <span

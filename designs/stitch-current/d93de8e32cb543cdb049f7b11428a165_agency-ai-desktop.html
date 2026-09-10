@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Agency AI configuration - LaraTik Planner</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#c3c0ff",
+            "tertiary-fixed": "#cde5ff",
+            "primary": "#3525cd",
+            "surface-container-high": "#e1e8ff",
+            "on-secondary": "#ffffff",
+            "on-secondary-container": "#5a6375",
+            "surface-dim": "#d1daf4",
+            "surface": "#f9f9ff",
+            "on-error-container": "#93000a",
+            "on-primary-container": "#dad7ff",
+            "on-primary": "#ffffff",
+            "primary-container": "#4f46e5",
+            "surface-variant": "#d9e2fc",
+            "on-tertiary": "#ffffff",
+            "on-surface": "#121b2e",
+            "on-secondary-fixed": "#131c2b",
+            "secondary": "#565f70",
+            "surface-container-highest": "#d9e2fc",
+            "on-tertiary-container": "#bfdfff",
+            "on-error": "#ffffff",
+            "outline-variant": "#c7c4d8",
+            "tertiary": "#004c77",
+            "background": "#f9f9ff",
+            "secondary-fixed": "#dae3f8",
+            "error": "#ba1a1a",
+            "primary-fixed": "#e2dfff",
+            "surface-container": "#e9edff",
+            "on-tertiary-fixed": "#001d32",
+            "secondary-container": "#d7e0f5",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-bright": "#f9f9ff",
+            "outline": "#777587",
+            "inverse-primary": "#c3c0ff",
+            "on-background": "#121b2e",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-tint": "#4d44e3",
+            "surface-container-lowest": "#ffffff",
+            "on-surface-variant": "#464555",
+            "inverse-surface": "#273044",
+            "tertiary-container": "#00659c",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-primary-fixed": "#0f0069",
+            "surface-container-low": "#f1f3ff",
+            "inverse-on-surface": "#edf0ff",
+            "secondary-fixed-dim": "#bec7db",
+            "error-container": "#ffdad6"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-expanded": "248px",
+            "base": "4px",
+            "touch-target-min": "44px",
+            "screen-padding": "24px",
+            "card-padding": "16px",
+            "topbar-height": "64px",
+            "sidebar-collapsed": "72px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "button": ["Inter"],
+            "page-title": ["Inter"],
+            "body": ["Inter"],
+            "section-title": ["Inter"],
+            "label": ["Inter"],
+            "card-title": ["Inter"],
+            "table-dense": ["Inter"]
+          },
+          "fontSize": {
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Operational subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #DDE1E6;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #c7c4d8;
+    }
+  </style>
+</head>
+<body class="bg-surface text-on-surface font-body text-body antialiased min-h-screen flex flex-col selection:bg-surface-container-high selection:text-primary">
+<!-- Fixed SideNavBar: mapped from JSON specification -->
+<aside aria-label="Sidebar navigation" class="fixed top-0 left-0 h-screen w-sidebar-expanded z-40 flex flex-col justify-between bg-surface-container-lowest border-r border-outline-variant select-none">
+<div class="flex flex-col h-full overflow-hidden">
+<!-- Agency & Workspace Brand Switcher -->
+<div class="p-4 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-card-title text-card-title shrink-0">
+<span class="material-symbols-outlined fill text-[20px]">auto_awesome</span>
+</div>
+<div class="flex flex-col min-w-0 flex-1">
+<span class="font-card-title text-card-title text-on-surface truncate font-semibold">LaraTik Agency</span>
+<span class="font-label text-label text-on-surface-variant truncate">Global Workspace</span>
+</div>
+</div>
+<!-- Client Workspace Context Switcher -->
+<button class="mt-3 w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant hover:bg-surface-container transition-colors duration-150 text-start" type="button">
+<div class="flex items-center gap-2 min-w-0">
+<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+<span class="font-label text-label text-on-surface font-medium truncate">Northstar Coffee</span>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant text-[16px]">unfold_more</span>
+</button>
+</div>
+<!-- Navigation links scrollable area -->
+<nav aria-label="Main Navigation" class="flex-1 overflow-y-auto px-3 py-3 space-y-1 text-start">
+<!-- Main items from JSON tab_labels -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#overview">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="truncate">Overview</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#planning">
+<span class="material-symbols-outlined">calendar_today</span>
+<span class="truncate">Planning</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#board">
+<span class="material-symbols-outlined">view_kanban</span>
+<span class="truncate">Board</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#calendar">
+<span class="material-symbols-outlined">event</span>
+<span class="truncate">Calendar</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#reviews">
+<span class="material-symbols-outlined">rate_review</span>
+<span class="truncate">Reviews</span>
+<span class="ms-auto font-label text-[11px] px-1.5 py-0.2 rounded-full bg-surface-container text-on-secondary-container">3</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#design-queue">
+<span class="material-symbols-outlined">palette</span>
+<span class="truncate">Design queue</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#channels">
+<span class="material-symbols-outlined">share</span>
+<span class="truncate">Channels</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#brand-kit">
+<span class="material-symbols-outlined">auto_stories</span>
+<span class="truncate">Brand kit</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 active:scale-[0.98]" href="#team">
+<span class="material-symbols-outlined">group</span>
+<span class="truncate">Team</span>
+</a>
+<!-- Expandable Admin Section -->
+<div class="pt-3 mt-2 border-t border-outline-variant">
+<div class="px-3 py-1 flex items-center justify-between">
+<span class="font-label text-label uppercase tracking-wider text-secondary font-semibold">Agency Settings</span>
+<span class="font-label text-[10px] px-1.5 py-0.5 rounded bg-surface-container-high text-primary font-semibold">Admin only</span>
+</div>
+<div class="mt-1 space-y-0.5 ps-2">
+<a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings-general">
+<span class="material-symbols-outlined text-[16px]">tune</span>
+<span class="truncate">General</span>
+</a>
+<!-- Active Sub-Item: AI configuration -->
+<a aria-current="page" class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface-container-high text-primary font-button text-button relative" href="/app/agency-settings/ai">
+<span class="absolute left-0 top-1 bottom-1 w-1 bg-primary-container rounded-r"></span>
+<span class="material-symbols-outlined text-[16px] text-primary-container fill">smart_toy</span>
+<span class="truncate">AI configuration</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings-social">
+<span class="material-symbols-outlined text-[16px]">hub</span>
+<span class="truncate">Social</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings-storage">
+<span class="material-symbols-outlined text-[16px]">cloud</span>
+<span class="truncate">Storage</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings-planning-packs">
+<span class="material-symbols-outlined text-[16px]">inventory_2</span>
+<span class="truncate">Planning packs</span>
+</a>
+<a class="flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings-billing">
+<span class="material-symbols-outlined text-[16px]">credit_card</span>
+<span class="truncate">Plan &amp; Billing</span>
+</a>
+</div>
+</div>
+</nav>
+<!-- Sidebar Footer -->
+<div class="p-3 border-t border-outline-variant flex flex-col gap-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#settings">
+<span class="material-symbols-outlined">settings</span>
+<span class="truncate">Settings</span>
+</a>
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-surface-container border border-outline-variant hover:bg-surface-container-high text-primary font-button text-button transition-colors duration-150 active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>New Post</span>
+</button>
+</div>
+</div>
+</aside>
+<!-- TopNavBar: Fixed on desktop -->
+<header class="fixed top-0 right-0 left-sidebar-expanded h-topbar-height z-30 flex items-center justify-between px-screen-padding bg-surface-container-lowest border-b border-outline-variant select-none" role="banner">
+<!-- Breadcrumbs & Quick Search -->
+<div class="flex items-center gap-6">
+<nav aria-label="Breadcrumbs" class="flex items-center gap-1.5 font-label text-label text-on-surface-variant">
+<span class="hover:text-on-surface cursor-pointer">Workspaces</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="hover:text-on-surface cursor-pointer">Agency Settings</span>
+<span class="material-symbols-outlined text-[14px] text-outline">chevron_right</span>
+<span class="text-on-surface font-semibold">AI configuration</span>
+</nav>
+<div class="relative w-64">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-outline text-[16px]">search</span>
+<input class="w-full h-8 ps-8 pe-3 rounded-lg bg-surface-container-low border border-outline-variant text-body font-body text-on-surface placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary-container text-xs" placeholder="Search settings (Ctrl + K)" type="text"/>
+</div>
+</div>
+<!-- Right Controls: Telemetry badge, Notifications, User -->
+<div class="flex items-center gap-4">
+<!-- Operational Status Pill -->
+<div class="flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-label text-label" title="All agency microservices responding normally">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>All systems operational</span>
+</div>
+<!-- Action Icons -->
+<button aria-label="Notifications" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 relative" type="button">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-primary-container"></span>
+</button>
+<button aria-label="Help and documentation" class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+<!-- User Profile -->
+<div class="flex items-center gap-2.5 ps-2 border-l border-outline-variant">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-button text-xs font-semibold">
+          SJ
+        </div>
+<div class="flex flex-col text-start">
+<span class="font-button text-[13px] text-on-surface font-medium leading-none">Sarah Jenkins</span>
+<span class="font-label text-[11px] text-secondary mt-0.5">Production Lead / Admin</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Fixed Sidebar Offset & Topbar Offset) -->
+<main class="ms-sidebar-expanded mt-topbar-height flex-1 p-screen-padding pb-28 max-w-7xl">
+<!-- Header Section -->
+<section class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-outline-variant pb-6">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-page-title text-on-surface font-semibold tracking-tight">AI configuration</h1>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-container-high text-primary font-label text-label font-medium border border-outline-variant">
+<span class="material-symbols-outlined text-[13px] text-primary-container">admin_panel_settings</span>
+            Agency admin only
+          </span>
+</div>
+<p class="font-body text-body text-secondary mt-1 max-w-3xl">
+          AI drafts assist human creators and never autonomously publish or transition content status through governance gates.
+        </p>
+</div>
+<!-- Top action buttons -->
+<div class="flex items-center gap-3">
+<button class="min-h-touch-target-min px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container-low transition-colors duration-150 active:scale-[0.98]" type="button">
+          Discard changes
+        </button>
+<button class="min-h-touch-target-min px-5 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors duration-150 shadow-sm active:scale-[0.98] flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[16px]">check</span>
+          Save changes
+        </button>
+</div>
+</section>
+<!-- SECTION 1: Provider & Model Status Summary -->
+<section aria-labelledby="provider-status-heading" class="mb-6">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding">
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary-container">dns</span>
+<h2 class="font-card-title text-card-title text-on-surface font-semibold" id="provider-status-heading">
+              Provider &amp; runtime status
+            </h2>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 font-label text-label">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+<span class="font-medium">Connected &amp; operational</span>
+</div>
+</div>
+<!-- 5 Compact Spec Blocks in Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 pt-4">
+<!-- Block 1: Provider -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
+<span class="font-label text-label text-secondary">Inference Provider</span>
+<div class="mt-2">
+<div class="flex items-center gap-1.5">
+<span class="font-button text-button text-on-surface">MiniMax</span>
+<span class="material-symbols-outlined text-[14px] text-primary-container fill">verified</span>
+</div>
+<span class="font-label text-[11px] text-emerald-700 font-medium">Active primary runtime</span>
+</div>
+</div>
+<!-- Block 2: Model -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
+<span class="font-label text-label text-secondary">Active Model</span>
+<div class="mt-2">
+<span class="font-button text-button text-on-surface">MiniMax-M3</span>
+<p class="font-label text-[11px] text-secondary leading-tight mt-0.5">Balanced latency &amp; 128k context</p>
+</div>
+</div>
+<!-- Block 3: Key Source -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
+<span class="font-label text-label text-secondary">Credential Source</span>
+<div class="mt-2">
+<div class="flex items-center gap-1 text-on-surface font-button text-[13px] truncate">
+<span class="material-symbols-outlined text-[14px] text-secondary">shield</span>
+<span class="truncate font-mono">ENV_MINIMAX_API_KEY</span>
+</div>
+<span class="font-label text-[11px] text-secondary">Protected host vault</span>
+</div>
+</div>
+<!-- Block 4: Connection Test -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label text-label text-secondary">Last Handshake</span>
+<span class="font-label text-[11px] text-emerald-700 font-semibold">312ms</span>
+</div>
+<div class="mt-2 flex items-center justify-between gap-1">
+<span class="font-label text-[11px] text-on-surface-variant">Passed 14 min ago</span>
+<button class="px-2 py-0.5 rounded text-[11px] font-button bg-surface-container-lowest border border-outline-variant hover:bg-surface-container transition-colors text-primary" type="button">
+                Ping
+              </button>
+</div>
+</div>
+<!-- Block 5: Token Quota & Meter -->
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="font-label text-label text-secondary">30-day Token Usage</span>
+<span class="font-label text-label text-on-surface font-semibold">25%</span>
+</div>
+<div class="mt-2">
+<div class="w-full bg-secondary-container h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 25%"></div>
+</div>
+<span class="font-label text-[11px] text-secondary mt-1 block">1,248,500 / 5,000,000</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 2: Safe API Key & Credential Management -->
+<section aria-labelledby="credentials-heading" class="mb-6">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface font-semibold" id="credentials-heading">
+              Safe API credential management
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">
+              Secret keys are provisioned via enterprise server environments and are never rendered or editable in the browser.
+            </p>
+</div>
+<span class="inline-flex items-center gap-1 text-xs font-label px-2.5 py-1 rounded bg-surface-container-low text-secondary border border-outline-variant">
+<span class="material-symbols-outlined text-[15px] text-emerald-600">lock</span>
+            Read-only client view
+          </span>
+</div>
+<div class="mt-4 p-4 rounded-lg bg-surface-container-low border border-outline-variant flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div class="flex items-center gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container-lowest border border-outline-variant flex items-center justify-center text-primary-container">
+<span class="material-symbols-outlined text-[22px]">key</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-button text-button text-on-surface font-mono">Key suffix: ••••••••••••••••_4k9B</span>
+<span class="font-label text-[11px] px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 font-medium">Valid</span>
+</div>
+<p class="font-label text-label text-secondary mt-0.5">
+                Target cluster: <span class="text-on-surface font-medium">us-east-prod-inference-02</span> • Scopes: <span class="font-mono text-[11px]">chat.completions, embeddings</span>
+</p>
+</div>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-2 shrink-0">
+<button class="min-h-touch-target-min px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-button text-button transition-colors flex items-center gap-1.5 text-xs" type="button">
+<span class="material-symbols-outlined text-[16px] text-primary-container">network_ping</span>
+              Test connection
+            </button>
+<a class="min-h-touch-target-min px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-button text-button transition-colors flex items-center gap-1.5 text-xs" href="#devops-guide">
+<span class="material-symbols-outlined text-[16px] text-secondary">menu_book</span>
+              Rotate via DevOps handbook
+            </a>
+<button class="min-h-touch-target-min px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:bg-surface-container text-on-surface font-button text-button transition-colors flex items-center gap-1.5 text-xs" type="button">
+<span class="material-symbols-outlined text-[16px] text-secondary">history</span>
+              Connection logs
+            </button>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 3: Capability Grid & Governance Controls -->
+<section aria-labelledby="capabilities-heading" class="mb-6">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface font-semibold" id="capabilities-heading">
+              Assistance capabilities
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">
+              Toggle individual AI capabilities available to producers across briefs, boards, and review surfaces.
+            </p>
+</div>
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary">Workspace policy:</span>
+<span class="font-label text-label px-2 py-0.5 rounded bg-surface-container text-on-surface font-medium border border-outline-variant">
+              Human approval required
+            </span>
+</div>
+</div>
+<!-- Capabilities List -->
+<div class="divide-y divide-outline-variant">
+<!-- Item 1: Campaign ideas -->
+<div class="py-4 flex items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary-container shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">lightbulb</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Campaign ideas</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">Active</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Generates multi-platform campaign hooks, creative angles, and seasonal concepts from workspace briefs.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Enabled) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Campaign ideas capability" checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Item 2: Brief improvement -->
+<div class="py-4 flex items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary-container shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Brief improvement</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">Active</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Analyzes creative briefs for missing deliverables, unclear tone guidelines, or vague target demographics.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Enabled) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Brief improvement capability" checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Item 3: Caption drafts -->
+<div class="py-4 flex items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary-container shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">chat_bubble</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Caption drafts</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">Active</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Drafts caption variations, hook lines, call-to-actions, and hashtag recommendations adhering to brand voice.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Enabled) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Caption drafts capability" checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Item 4: Platform adaptation -->
+<div class="py-4 flex items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary-container shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">responsive_layout</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Platform adaptation</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">Active</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Re-formats and resizes copy length and formatting constraints for TikTok, Instagram Reels, and LinkedIn.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Enabled) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Platform adaptation capability" checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Item 5: Related format ideas (Disabled by Admin) -->
+<div class="py-4 flex items-center justify-between gap-4 bg-surface-container-low/40 px-2 rounded-lg">
+<div class="flex items-start gap-3.5 opacity-75">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-secondary shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Related format ideas</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-surface-container-highest text-secondary font-medium border border-outline-variant">Disabled by admin</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Suggests accompanying story teasers, carousels, or email digest formats from approved video scripts.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Disabled / Off) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Related format ideas capability" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Item 6: Completeness check -->
+<div class="py-4 flex items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-9 h-9 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-primary-container shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]">fact_check</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-on-surface font-semibold">Completeness check</span>
+<span class="font-label text-[11px] px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-medium border border-emerald-200">Active</span>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">
+                  Verifies video safe zones, sound clearance status, and required legal disclosures before QA handover.
+                </p>
+</div>
+</div>
+<!-- Accessible Toggle Switch (Enabled) -->
+<label class="relative inline-flex items-center cursor-pointer shrink-0 min-h-touch-target-min">
+<input aria-label="Toggle Completeness check capability" checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-secondary-container peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary-container rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+</div>
+</section>
+<!-- SECTION 4: Audit Log & Telemetry Summary -->
+<section aria-labelledby="telemetry-heading" class="mb-6">
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding">
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface font-semibold" id="telemetry-heading">
+              Recent AI telemetry &amp; audit trail
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">
+              All generations log requesting producer ID, workspace context, and token consumption.
+            </p>
+</div>
+<button class="font-button text-xs text-primary hover:underline flex items-center gap-1" type="button">
+<span>Export audit logs (CSV)</span>
+<span class="material-symbols-outlined text-[14px]">download</span>
+</button>
+</div>
+<!-- Telemetry Data Table -->
+<div class="mt-4 overflow-x-auto">
+<table class="w-full text-start border-collapse">
+<thead>
+<tr class="border-b border-outline-variant bg-surface-container-low font-label text-label text-secondary text-start">
+<th class="py-2.5 px-3 font-medium">Timestamp</th>
+<th class="py-2.5 px-3 font-medium">Producer</th>
+<th class="py-2.5 px-3 font-medium">Workspace Context</th>
+<th class="py-2.5 px-3 font-medium">Capability &amp; Asset</th>
+<th class="py-2.5 px-3 font-medium text-end">Tokens</th>
+<th class="py-2.5 px-3 font-medium text-end">Status</th>
+</tr>
+</thead>
+<tbody class="font-table-dense text-table-dense divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-3 text-secondary font-mono text-xs whitespace-nowrap">Oct 24, 2:14 PM</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-[10px] font-semibold">ER</span>
+<span class="font-medium text-on-surface">Elena Rostova</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface">Northstar Coffee</td>
+<td class="py-3 px-3 text-on-surface">
+<div class="flex items-center gap-1.5">
+<span class="font-medium">Caption drafts</span>
+<span class="text-secondary">•</span>
+<span class="text-secondary text-xs truncate max-w-xs">Autumn Cold Brew Reel</span>
+</div>
+</td>
+<td class="py-3 px-3 text-end font-mono text-xs text-on-surface">412</td>
+<td class="py-3 px-3 text-end">
+<span class="inline-flex items-center gap-1 font-label text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+<span class="w-1 h-1 rounded-full bg-emerald-600"></span>
+                    Success
+                  </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-3 text-secondary font-mono text-xs whitespace-nowrap">Oct 24, 1:45 PM</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-[10px] font-semibold">MC</span>
+<span class="font-medium text-on-surface">Marcus Chen</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface">Northstar Coffee</td>
+<td class="py-3 px-3 text-on-surface">
+<div class="flex items-center gap-1.5">
+<span class="font-medium">Campaign ideas</span>
+<span class="text-secondary">•</span>
+<span class="text-secondary text-xs truncate max-w-xs">Holiday Harvest</span>
+</div>
+</td>
+<td class="py-3 px-3 text-end font-mono text-xs text-on-surface">1,180</td>
+<td class="py-3 px-3 text-end">
+<span class="inline-flex items-center gap-1 font-label text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+<span class="w-1 h-1 rounded-full bg-emerald-600"></span>
+                    Success
+                  </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-3 text-secondary font-mono text-xs whitespace-nowrap">Oct 24, 11:20 AM</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-primary-container text-on-primary flex items-center justify-center text-[10px] font-semibold">SJ</span>
+<span class="font-medium text-on-surface">Sarah Jenkins</span>
+</div>
+</td>
+<td class="py-3 px-3 text-on-surface">Northstar Coffee</td>
+<td class="py-3 px-3 text-on-surface">
+<div class="flex items-center gap-1.5">
+<span class="font-medium">Completeness check</span>
+<span class="text-secondary">•</span>
+<span class="text-secondary text-xs truncate max-w-xs">Ethiopia Carousel</span>
+</div>
+</td>
+<td class="py-3 px-3 text-end font-mono text-xs text-on-surface">260</td>
+<td class="py-3 px-3 text-end">
+<span class="inline-flex items-center gap-1 font-label text-[11px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+<span class="w-1 h-1 rounded-full bg-emerald-600"></span>
+                    Success
+                  </span>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 px-3 text-secondary font-mono text-xs whitespace-nowrap">Oct 24, 09:05 AM</td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-2">
+<span class="w-6 h-6 rounded-full bg-surface-container-highest text-secondary flex items-center justify-center text-[10px]">
+<span class="material-symbols-outlined text-[12px]">monitor_heart</span>
+</span>
+<span class="font-medium text-secondary">System Healthcheck</span>
+</div>
+</td>
+<td class="py-3 px-3 text-secondary">LaraTik Core</td>
+<td class="py-3 px-3 text-secondary">
+<div class="flex items-center gap-1.5">
+<span>Connection ping test</span>
+</div>
+</td>
+<td class="py-3 px-3 text-end font-mono text-xs text-secondary">48</td>
+<td class="py-3 px-3 text-end">
+<span class="inline-flex items-center gap-1 font-label text-[11px] text-secondary bg-surface-container-low px-2 py-0.5 rounded border border-outline-variant">
+                    Success (312ms)
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+</main>
+<!-- Persistent Bottom Sticky Action Bar -->
+<footer class="fixed bottom-0 right-0 left-sidebar-expanded bg-surface-container-lowest border-t border-outline-variant px-screen-padding py-3 z-30 flex items-center justify-between shadow-[0_-2px_10px_rgba(0,0,0,0.02)]">
+<div class="flex items-center gap-2 text-secondary font-label text-label">
+<span class="material-symbols-outlined text-[16px] text-emerald-600">verified_user</span>
+<span>Enterprise policy active • Unsaved capability changes pending</span>
+</div>
+<div class="flex items-center gap-3">
+<button class="min-h-touch-target-min px-4 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container transition-colors duration-150 active:scale-[0.98]" type="button">
+        Revert to defaults
+      </button>
+<button class="min-h-touch-target-min px-6 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors duration-150 active:scale-[0.98] flex items-center gap-2" type="button">
+<span class="material-symbols-outlined text-[16px]">save</span>
+        Save changes
+      </button>
+</div>
+</footer>
+</body></html>

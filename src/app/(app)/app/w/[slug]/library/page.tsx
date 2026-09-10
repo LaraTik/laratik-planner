@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { and, eq, isNull } from "drizzle-orm";
@@ -18,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
 import { humanFormat } from "@/lib/content/status";
@@ -121,6 +123,15 @@ export default async function PlanningLibraryPage({
               icon={<Megaphone className="h-8 w-8" aria-hidden="true" />}
               title={t("users.library.campaignsEmpty")}
               description={t("users.library.campaignsEmptyDescription")}
+              action={
+                canEditLibrary ? (
+                  <Button asChild variant="outline">
+                    <Link href="#library-new-campaign">
+                      {t("users.library.form.createCampaign")}
+                    </Link>
+                  </Button>
+                ) : undefined
+              }
             />
           </div>
         ) : (
@@ -147,7 +158,7 @@ export default async function PlanningLibraryPage({
           </ul>
         )}
         {canEditLibrary ? (
-          <div className="border-border border-t px-4 py-3">
+          <div id="library-new-campaign" className="border-border scroll-mt-6 border-t px-4 py-3">
             <NewCampaignForm slug={slug} />
           </div>
         ) : null}
@@ -171,6 +182,13 @@ export default async function PlanningLibraryPage({
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
               title={t("users.library.pillarsEmpty")}
               description={t("users.library.pillarsEmptyDescription")}
+              action={
+                canEditLibrary ? (
+                  <Button asChild variant="outline">
+                    <Link href="#library-new-pillar">{t("users.library.form.createPillar")}</Link>
+                  </Button>
+                ) : undefined
+              }
             />
           </div>
         ) : (
@@ -184,7 +202,7 @@ export default async function PlanningLibraryPage({
           </div>
         )}
         {canEditLibrary ? (
-          <div className="border-border border-t px-4 py-3">
+          <div id="library-new-pillar" className="border-border scroll-mt-6 border-t px-4 py-3">
             <NewPillarForm slug={slug} />
           </div>
         ) : null}
@@ -208,6 +226,15 @@ export default async function PlanningLibraryPage({
               icon={<Layers className="h-8 w-8" aria-hidden="true" />}
               title={t("users.library.templatesEmpty")}
               description={t("users.library.templatesEmptyDescription")}
+              action={
+                canEditLibrary ? (
+                  <Button asChild variant="outline">
+                    <Link href="#library-new-template">
+                      {t("users.library.form.createTemplate")}
+                    </Link>
+                  </Button>
+                ) : undefined
+              }
             />
           </div>
         ) : (
@@ -227,7 +254,7 @@ export default async function PlanningLibraryPage({
           </ul>
         )}
         {canEditLibrary ? (
-          <div className="border-border border-t px-4 py-3">
+          <div id="library-new-template" className="border-border scroll-mt-6 border-t px-4 py-3">
             <NewTemplateForm slug={slug} />
           </div>
         ) : null}

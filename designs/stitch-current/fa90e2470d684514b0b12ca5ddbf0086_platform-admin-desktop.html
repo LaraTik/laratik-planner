@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Northstar Coffee Roasters - Platform Governance | LaraTik Planner</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-dim": "#d1daf4",
+            "on-surface": "#121b2e",
+            "secondary-fixed": "#dae3f8",
+            "surface-container-lowest": "#ffffff",
+            "error": "#ba1a1a",
+            "surface-bright": "#f9f9ff",
+            "on-background": "#121b2e",
+            "secondary-container": "#d7e0f5",
+            "inverse-surface": "#273044",
+            "outline-variant": "#c7c4d8",
+            "on-tertiary": "#ffffff",
+            "primary-container": "#4f46e5",
+            "background": "#f9f9ff",
+            "on-error": "#ffffff",
+            "on-secondary-fixed": "#131c2b",
+            "surface-tint": "#4d44e3",
+            "secondary-fixed-dim": "#bec7db",
+            "surface-container-low": "#f1f3ff",
+            "tertiary-fixed": "#cde5ff",
+            "on-error-container": "#93000a",
+            "tertiary": "#004c77",
+            "on-secondary-container": "#5a6375",
+            "surface-variant": "#d9e2fc",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed": "#001d32",
+            "tertiary-container": "#00659c",
+            "on-secondary": "#ffffff",
+            "on-primary-fixed": "#0f0069",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-tertiary-container": "#bfdfff",
+            "outline": "#777587",
+            "on-primary": "#ffffff",
+            "inverse-primary": "#c3c0ff",
+            "surface-container-highest": "#d9e2fc",
+            "primary": "#3525cd",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-container": "#e9edff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "primary-fixed": "#e2dfff",
+            "secondary": "#565f70",
+            "on-surface-variant": "#464555",
+            "primary-fixed-dim": "#c3c0ff",
+            "surface-container-high": "#e1e8ff",
+            "surface": "#f9f9ff",
+            "on-primary-container": "#dad7ff",
+            "inverse-on-surface": "#edf0ff",
+            "tertiary-fixed-dim": "#94ccff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-collapsed": "72px",
+            "touch-target-min": "44px",
+            "gutter": "16px",
+            "topbar-height": "64px",
+            "sidebar-expanded": "248px",
+            "screen-padding": "24px",
+            "card-padding": "16px",
+            "base": "4px"
+          },
+          "fontFamily": {
+            "label": ["Inter"],
+            "button": ["Inter"],
+            "body": ["Inter"],
+            "page-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "section-title": ["Inter"],
+            "card-title": ["Inter"]
+          },
+          "fontSize": {
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Quiet operational scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f3ff;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="bg-surface font-body text-body text-on-surface antialiased selection:bg-primary-container selection:text-on-primary min-h-screen">
+<!-- ================= TOP APP BAR (Shared Component JSON) ================= -->
+<header class="fixed top-0 left-0 w-full h-topbar-height bg-surface-container-lowest border-b border-outline-variant px-screen-padding flex items-center justify-between z-40 transition-colors">
+<!-- Left: Identity & Scope & Search -->
+<div class="flex items-center gap-gutter">
+<div class="flex items-center gap-2">
+<span class="font-section-title text-section-title font-semibold text-primary tracking-tight">LaraTik Platform Governance</span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-label font-label bg-surface-container text-primary border border-outline-variant">
+          Root Control
+        </span>
+</div>
+<!-- Quick Platform Search -->
+<div class="relative w-80 ms-4">
+<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none text-secondary">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</div>
+<input class="w-full h-9 ps-9 pe-3 bg-surface-container-low border border-outline-variant rounded-lg text-table-dense font-table-dense text-on-surface placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="Tenant ID (tnt_*), API trace key, domain..." type="text" value="tnt_cff_9821"/>
+<div class="absolute inset-y-0 end-0 flex items-center pe-2 text-secondary text-[11px] font-mono">
+<kbd class="px-1.5 py-0.5 rounded bg-surface-container border border-outline-variant">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Center: Operational Status Pill -->
+<div class="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container border border-outline-variant text-label font-label text-secondary">
+<span class="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+<span class="text-on-surface font-medium">Production - US/EU</span>
+<span class="text-outline-variant">•</span>
+<span>All systems operational (38ms latency)</span>
+</div>
+<!-- Right Actions Cluster -->
+<div class="flex items-center gap-3">
+<!-- Icon Actions -->
+<div class="flex items-center gap-1 border-r border-outline-variant pe-3">
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors relative" title="Notifications">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 end-1.5 w-1.5 h-1.5 rounded-full bg-error"></span>
+</button>
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors" title="DNS Health">
+<span class="material-symbols-outlined text-[20px]">dns</span>
+</button>
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors font-mono text-xs" title="Terminal CLI">
+<span class="material-symbols-outlined text-[20px]">terminal</span>
+</button>
+</div>
+<!-- Secondary Action: Audit Export -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-button font-button text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[16px]">file_download</span>
+        Audit Export
+      </button>
+<!-- Trailing Primary Action: Emergency Freeze -->
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-error-container text-on-error-container border border-error/30 text-button font-button hover:bg-error hover:text-on-error transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[16px]">lock_clock</span>
+        Emergency Freeze
+      </button>
+<!-- Super-Admin Avatar Badge -->
+<div class="flex items-center gap-2.5 ps-2 border-s border-outline-variant">
+<img class="w-8 h-8 rounded-full ring-1 ring-outline-variant object-cover" data-alt="Platform Super-Admin Sarah Jenkins portrait dressed in professional corporate attire in a soft minimalist studio light setting with modern calm colors" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCx8IhIXf0nfs_M6BHgVvZjlZWUGAogiF0Tv49Xl0eWYbNb1MZj-vmJhwH1FmWi5kktg0ew-OoeLefpsvqGYYGWcw0Rlv742kjbgAAwbfvtBEK6pqrv9dGQ5OwNTmE1dpVGoyHmdk87qw4mJVIi8RnH0LWTG4-MpGFUPLOHnYZnU4NEk4Lk7BXqc1HETyIwu84Z7NZTAhkv-LhlAldAVCegYaoq6fYCGgQJ5CvFPYopM_3v4TrTqlZaxgEkoYexLv6l2iDnbEn-o0PS"/>
+<div class="hidden xl:flex flex-col text-start">
+<span class="text-button font-button text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="text-[11px] text-secondary font-medium">Platform Lead</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ================= SIDEBAR (Shared Component JSON) ================= -->
+<aside class="fixed left-0 top-0 h-screen w-sidebar-expanded bg-surface-container-low border-r border-outline-variant flex flex-col justify-between p-gutter z-50 pt-[76px]">
+<!-- Brand / Root Context Sub-Header -->
+<div>
+<div class="flex items-center gap-3 px-card-padding py-2 mb-4 bg-surface-container-lowest rounded-lg border border-outline-variant">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined text-[18px]">shield_person</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-card-title text-card-title font-semibold text-on-surface truncate">Root Control</span>
+<span class="text-label font-label text-secondary truncate">Super-Admin Scope</span>
+</div>
+</div>
+<!-- Main Navigation Menu -->
+<nav aria-label="Platform Governance Navigation" class="space-y-1">
+<!-- 1. Overview & Operations -->
+<a class="flex items-center gap-base px-card-padding py-2 rounded-lg text-secondary font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#overview">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span class="truncate">Overview &amp; Operations</span>
+</a>
+<!-- 2. Tenants & Agencies (ACTIVE ITEM) -->
+<a class="flex items-center gap-base px-card-padding py-2 rounded-lg bg-secondary-container text-on-secondary-container font-button text-button transition-colors duration-150 shadow-sm" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary" style="font-variation-settings: 'FILL' 1;">corporate_fare</span>
+<span class="truncate font-semibold text-on-surface">Tenants &amp; Agencies</span>
+</a>
+<!-- 3. Infrastructure & Vaults -->
+<a class="flex items-center gap-base px-card-padding py-2 rounded-lg text-secondary font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#vaults">
+<span class="material-symbols-outlined text-[20px]">cloud_done</span>
+<span class="truncate">Infrastructure &amp; Vaults</span>
+</a>
+<!-- 4. Audit & Compliance -->
+<a class="flex items-center gap-base px-card-padding py-2 rounded-lg text-secondary font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#audit">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+<span class="truncate">Audit &amp; Compliance</span>
+</a>
+<!-- 5. Platform Settings -->
+<a class="flex items-center gap-base px-card-padding py-2 rounded-lg text-secondary font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#settings">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span class="truncate">Platform Settings</span>
+</a>
+</nav>
+</div>
+<!-- Sidebar Bottom Utilities & Impersonation Call-To-Action -->
+<div class="space-y-3 pt-4 border-t border-outline-variant">
+<!-- Tenant Impersonate CTA -->
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-button font-button text-secondary hover:text-on-surface hover:border-primary transition-all active:scale-[0.99] group shadow-sm">
+<span class="material-symbols-outlined text-[18px] text-primary group-hover:rotate-12 transition-transform">supervised_user_circle</span>
+<span>Impersonate Agency</span>
+</button>
+<!-- Documentation & System Health Links -->
+<div class="space-y-1 text-label font-label text-secondary">
+<a class="flex items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-surface-container hover:text-on-surface transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">menu_book</span>
+<span>Documentation</span>
+</a>
+<a class="flex items-center justify-between px-3 py-1.5 rounded-lg hover:bg-surface-container hover:text-on-surface transition-colors" href="#">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-emerald-600">monitor_heart</span>
+<span>System Health</span>
+</div>
+<span class="font-mono text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">99.98%</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- ================= MAIN OPERATIONAL CANVAS ================= -->
+<main class="ms-sidebar-expanded pt-topbar-height min-h-screen bg-surface p-screen-padding space-y-6">
+<!-- 1. BREADCRUMBS & PAGE HEADER -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant p-screen-padding shadow-sm">
+<!-- Breadcrumb -->
+<nav class="flex items-center gap-2 text-label font-label text-secondary mb-3">
+<a class="hover:text-primary transition-colors" href="#">Platform</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Tenants &amp; Agencies</a>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold font-mono">agency_cff_9821</span>
+</nav>
+<!-- Header Row -->
+<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+<!-- Agency Identity -->
+<div class="flex items-start gap-4">
+<div class="w-14 h-14 rounded-xl bg-inverse-surface text-inverse-on-surface flex items-center justify-center font-bold text-xl tracking-tight shadow-sm border border-outline-variant flex-shrink-0">
+            NC
+          </div>
+<div>
+<div class="flex items-center gap-3 flex-wrap">
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Northstar Coffee Roasters LLC</h1>
+<span class="px-2.5 py-0.5 rounded-full text-label font-label bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-600"></span>
+                Healthy • 99.94% Uptime
+              </span>
+<span class="px-2.5 py-0.5 rounded-full text-label font-label bg-secondary-container text-on-secondary-container border border-outline-variant">
+                Enterprise Dedicated
+              </span>
+</div>
+<p class="text-table-dense font-table-dense text-secondary mt-1 flex items-center gap-2 flex-wrap">
+<span class="font-mono text-on-surface">Tenant ID: tnt_cff_9821</span>
+<span>•</span>
+<span>Provisioned Oct 14, 2023</span>
+<span>•</span>
+<span class="flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">public</span> AWS us-west-2 (Oregon)</span>
+<span>•</span>
+<span class="text-primary font-medium">Tier 1 Priority Support (15m response)</span>
+</p>
+</div>
+</div>
+<!-- Header Actions -->
+<div class="flex items-center gap-3 self-end lg:self-center">
+<button class="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-button font-button text-on-surface hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[16px] text-amber-600">lock</span>
+            Impersonate Agency Admin
+          </button>
+<button class="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary-container text-on-primary text-button font-button hover:bg-primary transition-colors shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+            Manage Provisioning
+          </button>
+</div>
+</div>
+<!-- Quick Sub-Route Jump Tabs (Deep linking navigation) -->
+<div class="flex items-center gap-6 mt-6 pt-4 border-t border-outline-variant overflow-x-auto text-button font-button">
+<a class="text-primary border-b-2 border-primary pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#vitals">
+<span class="material-symbols-outlined text-[18px]">speed</span>
+          Overview &amp; Vital Metrics
+        </a>
+<a class="text-secondary hover:text-on-surface pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#limits">
+<span class="material-symbols-outlined text-[18px]">tune</span>
+          Plan &amp; Tenant Limits
+        </a>
+<a class="text-secondary hover:text-on-surface pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#ai-governance">
+<span class="material-symbols-outlined text-[18px]">psychology</span>
+          AI &amp; Token Governance
+        </a>
+<a class="text-secondary hover:text-on-surface pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#security-access">
+<span class="material-symbols-outlined text-[18px]">security</span>
+          Security &amp; JIT Access
+        </a>
+<a class="text-secondary hover:text-on-surface pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#storage">
+<span class="material-symbols-outlined text-[18px]">database</span>
+          Storage &amp; Vaults
+        </a>
+<a class="text-secondary hover:text-on-surface pb-2 flex items-center gap-1.5 whitespace-nowrap" href="#cron-jobs">
+<span class="material-symbols-outlined text-[18px]">schedule</span>
+          Background Cron Jobs
+        </a>
+</div>
+</div>
+<!-- 2. OVERVIEW & TENANT VITAL METRICS -->
+<section class="space-y-4" id="vitals">
+<div class="flex items-center justify-between">
+<h2 class="font-section-title text-section-title text-on-surface flex items-center gap-2">
+<span>Tenant Real-Time Vitals</span>
+<span class="text-label font-label text-secondary font-normal">(Live telemetry streamed from telemetry-agent-usw2-04)</span>
+</h2>
+<span class="text-label font-label font-mono text-secondary">Refresh interval: 10s</span>
+</div>
+<!-- 4 Vital Metric Cards -->
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-gutter">
+<!-- Metric 1: Workspaces -->
+<div class="bg-surface-container-lowest p-card-padding rounded-xl border border-outline-variant shadow-sm space-y-2">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label font-label uppercase tracking-wider">Active Workspaces</span>
+<span class="material-symbols-outlined text-[18px] text-primary">domain</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">8</span>
+<span class="text-table-dense font-table-dense text-secondary">/ 12 provisioned</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 66.6%;"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary">
+<span>66.6% allocated</span>
+<span class="text-emerald-700 font-medium">4 remaining</span>
+</div>
+</div>
+<!-- Metric 2: Seats -->
+<div class="bg-surface-container-lowest p-card-padding rounded-xl border border-outline-variant shadow-sm space-y-2">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label font-label uppercase tracking-wider">Provisioned Seats</span>
+<span class="material-symbols-outlined text-[18px] text-primary">badge</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">48</span>
+<span class="text-table-dense font-table-dense text-secondary">/ 60 active</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary h-1.5 rounded-full" style="width: 80%;"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary">
+<span>80.0% seat utilization</span>
+<span class="text-amber-700 font-medium">12 open slots</span>
+</div>
+</div>
+<!-- Metric 3: Dedicated Storage -->
+<div class="bg-surface-container-lowest p-card-padding rounded-xl border border-outline-variant shadow-sm space-y-2">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label font-label uppercase tracking-wider">Storage Consumed</span>
+<span class="material-symbols-outlined text-[18px] text-primary">cloud_queue</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">42.8 GB</span>
+<span class="text-table-dense font-table-dense text-secondary">/ 100 GB S3 tier</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-emerald-600 h-1.5 rounded-full" style="width: 42.8%;"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary">
+<span>42.8% capacity</span>
+<span class="text-secondary font-mono">Bucket: KMS Enforced</span>
+</div>
+</div>
+<!-- Metric 4: Monthly AI Quota -->
+<div class="bg-surface-container-lowest p-card-padding rounded-xl border border-outline-variant shadow-sm space-y-2">
+<div class="flex items-center justify-between text-secondary">
+<span class="text-label font-label uppercase tracking-wider">Monthly AI Tokens</span>
+<span class="material-symbols-outlined text-[18px] text-primary">auto_awesome</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">1.28M</span>
+<span class="text-table-dense font-table-dense text-secondary">/ 5.00M tokens</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 25.6%;"></div>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary">
+<span>25.6% consumed</span>
+<span class="text-secondary">Resets in 18 days</span>
+</div>
+</div>
+</div>
+<!-- Quick Platform Health Signal Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="flex items-center justify-between p-3 px-4 rounded-lg bg-surface-container-lowest border border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">webhook</span>
+<div>
+<div class="text-button font-button text-on-surface">TikTok API Webhooks</div>
+<div class="text-label font-label text-secondary">Ingesting real-time engagement events</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-label font-label bg-emerald-50 text-emerald-700 border border-emerald-200">Operational</span>
+</div>
+<div class="flex items-center justify-between p-3 px-4 rounded-lg bg-surface-container-lowest border border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">key</span>
+<div>
+<div class="text-button font-button text-on-surface">Instagram Graph Token</div>
+<div class="text-label font-label text-secondary">Long-lived OAuth token active</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-label font-label bg-emerald-50 text-emerald-700 border border-emerald-200">Valid (58d left)</span>
+</div>
+<div class="flex items-center justify-between p-3 px-4 rounded-lg bg-surface-container-lowest border border-outline-variant">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-emerald-600 text-[20px]">shield</span>
+<div>
+<div class="text-button font-button text-on-surface">S3 Vault KMS Key</div>
+<div class="text-label font-label text-secondary">Customer managed key cmk_99182a</div>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded text-label font-label bg-emerald-50 text-emerald-700 border border-emerald-200">Enforced</span>
+</div>
+</div>
+</section>
+<!-- 3. PLAN & TENANT LIMITS -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-sm space-y-5" id="limits">
+<div class="flex items-center justify-between border-b border-outline-variant pb-3">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Plan &amp; Resource Allocation Limits</h3>
+<p class="text-label font-label text-secondary">Defines concurrency gates, worker compute, and tenant rate boundaries.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-secondary">Billing Tier:</span>
+<span class="px-2 py-1 rounded bg-secondary-container text-on-secondary-container text-button font-button">
+            Enterprise Multi-Brand ($4,800/mo)
+          </span>
+<span class="text-label font-label text-secondary">Renews Dec 2025</span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Resource Allocation Sliders/Controls -->
+<div class="space-y-4">
+<div class="space-y-1.5">
+<div class="flex justify-between text-button font-button text-on-surface">
+<span>Workspace Provisioning Allowance</span>
+<span class="font-mono text-primary">12 max</span>
+</div>
+<input class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer" max="20" min="1" type="range" value="12"/>
+<div class="flex justify-between text-[11px] text-secondary font-mono">
+<span>Current: 8 in use</span>
+<span>Hardware Cap: 20</span>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-button font-button text-on-surface">
+<span>Dedicated Seat Allotment</span>
+<span class="font-mono text-primary">60 seats</span>
+</div>
+<input class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer" max="100" min="10" type="range" value="60"/>
+<div class="flex justify-between text-[11px] text-secondary font-mono">
+<span>Current: 48 active</span>
+<span>Billing step: +10 seats ($350)</span>
+</div>
+</div>
+<div class="space-y-1.5">
+<div class="flex justify-between text-button font-button text-on-surface">
+<span>Concurrent Video Render Nodes (Pro-Res / H.265)</span>
+<span class="font-mono text-primary">4 dedicated nodes</span>
+</div>
+<input class="w-full accent-primary h-2 bg-surface-container rounded-lg cursor-pointer" max="10" min="1" type="range" value="4"/>
+<div class="flex justify-between text-[11px] text-secondary font-mono">
+<span>Queue latency: &lt; 400ms</span>
+<span>Hardware pool: GPU-A10G</span>
+</div>
+</div>
+</div>
+<!-- Domain & API Rate Limiters -->
+<div class="bg-surface-container-low rounded-lg p-4 border border-outline-variant space-y-3">
+<div class="font-button text-button text-on-surface flex items-center justify-between">
+<span>Custom Domain &amp; CNAME Router</span>
+<span class="px-2 py-0.5 rounded text-label font-label bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span>
+</div>
+<div class="p-2.5 bg-surface-container-lowest rounded border border-outline-variant flex items-center justify-between text-table-dense font-table-dense">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary text-[16px]">link</span>
+<code class="font-mono text-primary">cdn.agency.laratik.io</code>
+</div>
+<span class="text-secondary">Cloudflare SSL Active</span>
+</div>
+<div class="pt-2 border-t border-outline-variant space-y-2">
+<span class="text-label font-label text-secondary font-medium">Tenant Daily Rate Limiters</span>
+<div class="flex items-center justify-between text-table-dense font-table-dense">
+<span class="text-on-surface">TikTok Trend Query Ceiling</span>
+<span class="font-mono font-medium text-on-surface">5,000 queries / day</span>
+</div>
+<div class="flex items-center justify-between text-table-dense font-table-dense">
+<span class="text-on-surface">YouTube Data v3 Gateway Calls</span>
+<span class="font-mono font-medium text-on-surface">10,000 calls / day</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. AI & TOKEN GOVERNANCE -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-sm space-y-5" id="ai-governance">
+<div class="flex items-center justify-between border-b border-outline-variant pb-3">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">AI &amp; Token Governance</h3>
+<p class="text-label font-label text-secondary">Manage LLM fallbacks, token allowances, and enterprise safety guardrails.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-secondary">Active Multi-Route Engine:</span>
+<span class="px-2.5 py-1 rounded-md bg-surface-container text-on-surface text-table-dense font-table-dense border border-outline-variant font-mono">
+            MiniMax-M3 &amp; Claude 3.5 Sonnet
+          </span>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+<!-- Token Burn Telemetry Breakdown -->
+<div class="space-y-3">
+<h4 class="text-label font-label uppercase text-secondary tracking-wider">30-Day Token Burn Distribution</h4>
+<div class="space-y-2">
+<div>
+<div class="flex justify-between text-table-dense font-table-dense mb-1">
+<span class="text-on-surface">Campaign Hook Ideation</span>
+<span class="font-mono text-secondary">620k (48.4%)</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 48.4%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-table-dense font-table-dense mb-1">
+<span class="text-on-surface">Copy Re-write &amp; Brand QA</span>
+<span class="font-mono text-secondary">410k (32.0%)</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5">
+<div class="bg-tertiary h-1.5 rounded-full" style="width: 32%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-table-dense font-table-dense mb-1">
+<span class="text-on-surface">Auto-Transcription Whisper</span>
+<span class="font-mono text-secondary">250k (19.6%)</span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-1.5">
+<div class="bg-secondary h-1.5 rounded-full" style="width: 19.6%;"></div>
+</div>
+</div>
+</div>
+</div>
+<!-- Compliance & Safety Toggles -->
+<div class="space-y-3 lg:col-span-2">
+<h4 class="text-label font-label uppercase text-secondary tracking-wider">Enterprise Safety &amp; Data Ingestion Policy</h4>
+<div class="space-y-2.5">
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant">
+<div>
+<div class="text-button font-button text-on-surface">Strict Brand Safety Guardrails</div>
+<div class="text-label font-label text-secondary">Automated checks against FTC disclosure regulations and competitive trademark locks.</div>
+</div>
+<span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 text-label font-label border border-emerald-200 font-medium">Enforced</span>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant">
+<div>
+<div class="text-button font-button text-on-surface">Output Zero-Data Retention (ZDR)</div>
+<div class="text-label font-label text-secondary">Third-party LLM providers are prohibited from logging prompt tokens to train frontier models.</div>
+</div>
+<span class="px-2.5 py-1 rounded bg-emerald-50 text-emerald-700 text-label font-label border border-emerald-200 font-medium">Active</span>
+</div>
+<div class="flex items-center justify-between p-3 rounded-lg bg-surface-container-low border border-outline-variant">
+<div>
+<div class="text-button font-button text-on-surface">Quota Safety Throttle</div>
+<div class="text-label font-label text-secondary">Slow down non-critical batch generation if tenant consumes over 90% before reset.</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-outline-variant after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- 5. SECURITY & JIT ACCESS DELEGATION -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-sm space-y-5" id="security-access">
+<div class="flex items-center justify-between border-b border-outline-variant pb-3">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Security Envelope &amp; Support Access Delegation</h3>
+<p class="text-label font-label text-secondary">Just-in-Time (JIT) operational escalation and tenant zero-trust identity envelope.</p>
+</div>
+<span class="text-label font-label font-mono px-2 py-0.5 rounded bg-surface-container text-secondary">
+          Security Level: High (SOC-2 Type II)
+        </span>
+</div>
+<!-- JIT Support Card (Prominent Callout) -->
+<div class="p-4 rounded-xl bg-amber-50 border border-amber-200 space-y-3">
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-700 text-2xl mt-0.5">admin_panel_settings</span>
+<div>
+<div class="flex items-center gap-2">
+<h4 class="font-button text-button text-amber-900">LaraTik Support Escalation Access Active</h4>
+<span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-200 text-amber-900 animate-pulse">
+                  Expires in 02h:44m
+                </span>
+</div>
+<p class="text-table-dense font-table-dense text-amber-800 mt-0.5">
+                Granted to Support Engineer <span class="font-semibold text-amber-950">Liam Vance</span> under verified Zendesk Ticket <span class="font-mono font-medium">#ESC-4912</span>.
+              </p>
+</div>
+</div>
+<!-- Revoke JIT Access -->
+<button class="px-3 py-1.5 rounded-lg bg-surface-container-lowest text-error border border-error/40 text-button font-button hover:bg-error hover:text-on-error transition-colors flex items-center gap-1.5 self-start md:self-center flex-shrink-0">
+<span class="material-symbols-outlined text-[16px]">cancel</span>
+            Revoke JIT Access Immediately
+          </button>
+</div>
+<div class="p-2.5 rounded bg-amber-100/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-center gap-2">
+<span class="material-symbols-outlined text-[14px]">info</span>
+<span>Revocation consequence: Immediately terminates current session and flushes active SSH &amp; browser bearer tokens.</span>
+</div>
+</div>
+<!-- Tenant Security Envelope Specifications -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<div class="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label font-label text-secondary uppercase">Enterprise SSO / SAML</span>
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">verified</span>
+</div>
+<div class="text-button font-button text-on-surface">Okta Enterprise</div>
+<p class="text-table-dense font-table-dense text-secondary">Enforced for all 48 tenant members. Passwords disabled.</p>
+</div>
+<div class="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label font-label text-secondary uppercase">Hardware 2FA / WebAuthn</span>
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">key</span>
+</div>
+<div class="text-button font-button text-on-surface">Mandatory FIDO2</div>
+<p class="text-table-dense font-table-dense text-secondary">SMS 2FA disallowed by organizational tenant policy.</p>
+</div>
+<div class="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant space-y-1">
+<div class="flex items-center justify-between">
+<span class="text-label font-label text-secondary uppercase">IP Whitelisting</span>
+<span class="material-symbols-outlined text-emerald-600 text-[18px]">filter_list</span>
+</div>
+<div class="text-button font-button text-on-surface">3 CIDR Blocks Configured</div>
+<p class="text-table-dense font-table-dense text-secondary font-mono text-xs">HQ Seattle, Portland Studio, London HQ</p>
+</div>
+</div>
+</section>
+<!-- 6. DEDICATED STORAGE & INFRASTRUCTURE VAULTS -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-sm space-y-5" id="storage">
+<div class="flex items-center justify-between border-b border-outline-variant pb-3">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Dedicated Storage &amp; Infrastructure Vaults</h3>
+<p class="text-label font-label text-secondary">Bucket telemetry, S3 encryption keying, and Glacier tiering lifecycle policies.</p>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 text-button font-button rounded border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container transition-colors">
+            Run Orphan Blob Collector
+          </button>
+<button class="px-2.5 py-1 text-button font-button rounded border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container transition-colors">
+            Recalculate Storage Quota
+          </button>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-gutter">
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-2">
+<span class="text-label font-label uppercase text-secondary">Target Media Bucket</span>
+<div class="font-mono text-button font-button text-primary break-all">laratik-tenant-cff-9821-media</div>
+<div class="text-table-dense font-table-dense text-secondary">AWS S3 us-west-2 • AES-256 Server KMS Enforced</div>
+</div>
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-2">
+<span class="text-label font-label uppercase text-secondary">Glacier Deep Archive Policy</span>
+<div class="text-button font-button text-on-surface">Raw Masters &gt; 45 Days</div>
+<div class="text-table-dense font-table-dense text-secondary">Automatic transition saves $0.00099/GB on video assets.</div>
+</div>
+<div class="p-4 rounded-lg bg-surface-container-low border border-outline-variant space-y-2">
+<span class="text-label font-label uppercase text-secondary">Asset Egress Bandwidth</span>
+<div class="text-button font-button text-on-surface">184.2 GB / 1.0 TB Allowance</div>
+<div class="text-table-dense font-table-dense text-secondary">Global Edge Cloudflare CDN distribution.</div>
+</div>
+</div>
+</section>
+<!-- 7. SCHEDULED OPERATIONS & BACKGROUND CRON -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-card-padding shadow-sm space-y-4" id="cron-jobs">
+<div class="flex items-center justify-between border-b border-outline-variant pb-3">
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">Scheduled Operations &amp; Background Cron</h3>
+<p class="text-label font-label text-secondary">Tenant-isolated worker jobs and synchronous trend aggregators.</p>
+</div>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-button font-button text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors">
+<span class="material-symbols-outlined text-[16px]">sync</span>
+          Trigger Manual Re-sync
+        </button>
+</div>
+<!-- Dense Operational Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-start border-collapse text-table-dense font-table-dense">
+<thead>
+<tr class="border-b border-outline-variant text-secondary text-label font-label">
+<th class="py-2.5 ps-3 pe-4 text-start">Job Identifier</th>
+<th class="py-2.5 px-4 text-start">Cadence / Schedule</th>
+<th class="py-2.5 px-4 text-start">Next Expected Execution</th>
+<th class="py-2.5 px-4 text-start">Last Run Status</th>
+<th class="py-2.5 ps-4 pe-3 text-end">Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/60">
+<!-- Job 1 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 ps-3 pe-4 font-mono font-medium text-on-surface flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                cron:trend_signal_ingest
+              </td>
+<td class="py-3 px-4 text-secondary">Every 4 hours</td>
+<td class="py-3 px-4 text-secondary">in 38 minutes</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                  Success (14m ago • 24 signals)
+                </span>
+</td>
+<td class="py-3 ps-4 pe-3 text-end">
+<button class="text-primary hover:underline font-button text-button">Force Run</button>
+</td>
+</tr>
+<!-- Job 2 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 ps-3 pe-4 font-mono font-medium text-on-surface flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                cron:oauth_token_refresher
+              </td>
+<td class="py-3 px-4 text-secondary">Daily at 02:00 UTC</td>
+<td class="py-3 px-4 text-secondary">in 14 hours</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                  Success (Renewed Meta Token)
+                </span>
+</td>
+<td class="py-3 ps-4 pe-3 text-end">
+<button class="text-primary hover:underline font-button text-button">Force Run</button>
+</td>
+</tr>
+<!-- Job 3 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 ps-3 pe-4 font-mono font-medium text-on-surface flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-600"></span>
+                cron:social_telemetry_rollup
+              </td>
+<td class="py-3 px-4 text-secondary">Hourly at :15</td>
+<td class="py-3 px-4 text-secondary">in 2 minutes</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                  Healthy (Avg 1.4s duration)
+                </span>
+</td>
+<td class="py-3 ps-4 pe-3 text-end">
+<button class="text-primary hover:underline font-button text-button">Force Run</button>
+</td>
+</tr>
+<!-- Job 4 -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3 ps-3 pe-4 font-mono font-medium text-on-surface flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-slate-400"></span>
+                cron:transcode_cache_cleaner
+              </td>
+<td class="py-3 px-4 text-secondary">Daily at 04:00 UTC</td>
+<td class="py-3 px-4 text-secondary">in 16 hours</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-secondary border border-outline-variant">
+                  Idle (Clean)
+                </span>
+</td>
+<td class="py-3 ps-4 pe-3 text-end">
+<button class="text-primary hover:underline font-button text-button">Force Run</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- 8. LIFECYCLE & CRITICAL DANGER ZONE -->
+<section class="bg-surface-container-lowest rounded-xl border border-error/30 p-card-padding shadow-sm space-y-4">
+<div class="flex items-center gap-2 text-error">
+<span class="material-symbols-outlined text-2xl">warning</span>
+<h3 class="font-card-title text-card-title text-error">Tenant Lifecycle &amp; Critical Danger Zone</h3>
+</div>
+<p class="text-table-dense font-table-dense text-secondary">
+        High-impact administrative locks. Any action triggered here registers directly in the immutable super-admin audit trail.
+      </p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-gutter pt-2">
+<!-- Freeze Actions -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-low flex flex-col justify-between space-y-3">
+<div>
+<div class="text-button font-button text-on-surface">Freeze Agency Dispatches</div>
+<p class="text-table-dense font-table-dense text-secondary mt-1">
+              Temporarily halts all automated social posting across all 8 brand workspaces without revoking user session access.
+            </p>
+</div>
+<button class="w-fit px-3.5 py-1.5 rounded-lg border border-error/50 text-error hover:bg-error hover:text-on-error transition-colors text-button font-button">
+            Freeze Automated Queue
+          </button>
+</div>
+<!-- Tenant Decommission / Archive -->
+<div class="p-4 rounded-lg border border-error/40 bg-error-container/20 flex flex-col justify-between space-y-3">
+<div>
+<div class="text-button font-button text-error">Archive Agency Tenant</div>
+<p class="text-table-dense font-table-dense text-secondary mt-1">
+              Retain encrypted backups for 90 days in compliance escrow, unbind OAuth tokens, and release compute pods.
+            </p>
+</div>
+<div class="space-y-2">
+<div class="text-[11px] text-secondary">Requires typing tenant slug <code class="bg-surface-container px-1 py-0.5 rounded font-mono text-error font-semibold">northstar-coffee-roasters</code>:</div>
+<div class="flex gap-2">
+<input class="h-9 px-3 text-table-dense font-mono rounded border border-outline-variant bg-surface-container-lowest text-on-surface focus:ring-1 focus:ring-error focus:outline-none flex-grow" placeholder="northstar-coffee-roasters" type="text"/>
+<button class="px-4 py-1.5 rounded-lg bg-error text-on-error text-button font-button hover:opacity-90 transition-opacity">
+                Archive
+              </button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer Copyright & Hoststamp -->
+<footer class="text-center py-6 text-label font-label text-secondary space-y-1">
+<div>LaraTik Planner • Platform Control Plane v4.19.2-prod • Region: AWS us-west-2</div>
+<div>Session verified for Super-Admin Sarah Jenkins (ID: adm_sjk_001)</div>
+</footer>
+</main>
+</body></html>

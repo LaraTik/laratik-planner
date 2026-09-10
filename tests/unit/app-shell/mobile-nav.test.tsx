@@ -157,14 +157,125 @@ describe("MobileNav", () => {
     }
   });
 
-  it("keeps the mobile create action on workspace surfaces without a page-level action", () => {
+  it("marks the current secondary workspace route active in More", async () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/settings/trends");
+    const user = userEvent.setup();
+    render(<MobileNav {...baseProps} canAccessTrendRadar />);
+
+    await user.click(screen.getByTestId("mobile-navigation-more"));
+
+    expect(screen.getByRole("link", { name: "Settings" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Trend settings" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Board" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("marks the current platform route active in More", async () => {
+    usePathnameMock.mockReturnValue("/app/platform/agencies/agency-1");
+    const user = userEvent.setup();
+    render(<MobileNav {...baseProps} platformAccess={ownerAccess} />);
+
+    await user.click(screen.getByTestId("mobile-navigation-more"));
+
+    expect(screen.getByRole("link", { name: "Agencies" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Platform overview" })).not.toHaveAttribute(
+      "aria-current",
+    );
+  });
+
+  it("removes the generic create action from the workflow board", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/board");
     render(<MobileNav {...baseProps} />);
 
-    expect(screen.getByTestId("mobile-primary-create")).toHaveAttribute(
-      "href",
-      "/app/w/northstar/planning/new",
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from content detail", () => {
+    usePathnameMock.mockReturnValue(
+      "/app/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc",
     );
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from publishing", () => {
+    usePathnameMock.mockReturnValue(
+      "/app/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc/publish",
+    );
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from Reviews", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/reviews");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from workspace Settings", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/settings");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from Media", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/media");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("does not fall back to workspace creation on an unresolved workspace route", () => {
+    usePathnameMock.mockReturnValue("/app/w/unknown/media");
+    render(<MobileNav {...baseProps} workspaces={[]} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from Trend Radar", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/trends");
+    render(<MobileNav {...baseProps} canAccessTrendRadar />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it("removes the generic create action from Brand Kit", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/brand-kit");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it.each([
+    ["Social channels", "/app/w/northstar/channels"],
+    ["Social analytics", "/app/w/northstar/analytics/social"],
+    ["Design queue", "/app/w/northstar/design-queue"],
+    ["Planning library", "/app/w/northstar/library"],
+  ])("removes the generic create action from %s", (_label, pathname) => {
+    usePathnameMock.mockReturnValue(pathname);
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
+  it.each([
+    ["Account", "/app/account"],
+    ["Agency Settings", "/app/agency-settings"],
+    ["Agency AI", "/app/agency-settings/ai"],
+    ["People", "/app/users"],
+    ["Global Media", "/app/media"],
+    ["New workspace", "/app/workspaces/new"],
+  ])("removes the unrelated workspace create action from %s", (_label, pathname) => {
+    usePathnameMock.mockReturnValue(pathname);
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("keeps client navigation restricted and removes the create action", async () => {

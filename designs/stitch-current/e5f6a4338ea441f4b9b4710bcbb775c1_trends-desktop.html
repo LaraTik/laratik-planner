@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Trends • Northstar Coffee • LaraTik Planner</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#f9f9ff",
+            "on-secondary": "#ffffff",
+            "tertiary-fixed": "#cde5ff",
+            "on-background": "#121b2e",
+            "error-container": "#ffdad6",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "primary-container": "#4f46e5",
+            "on-primary": "#ffffff",
+            "inverse-surface": "#273044",
+            "secondary-container": "#d7e0f5",
+            "secondary-fixed-dim": "#bec7db",
+            "primary-fixed": "#e2dfff",
+            "surface-container-highest": "#d9e2fc",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-primary-fixed": "#0f0069",
+            "tertiary": "#004c77",
+            "on-primary-container": "#dad7ff",
+            "on-tertiary": "#ffffff",
+            "surface-container": "#e9edff",
+            "surface-variant": "#d9e2fc",
+            "on-surface-variant": "#464555",
+            "surface-container-low": "#f1f3ff",
+            "on-secondary-container": "#5a6375",
+            "on-surface": "#121b2e",
+            "inverse-primary": "#c3c0ff",
+            "outline": "#777587",
+            "surface-tint": "#4d44e3",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-container-high": "#e1e8ff",
+            "on-tertiary-fixed": "#001d32",
+            "outline-variant": "#c7c4d8",
+            "primary": "#3525cd",
+            "on-error-container": "#93000a",
+            "surface-dim": "#d1daf4",
+            "on-primary-fixed-variant": "#3323cc",
+            "error": "#ba1a1a",
+            "secondary-fixed": "#dae3f8",
+            "on-secondary-fixed": "#131c2b",
+            "tertiary-container": "#00659c",
+            "secondary": "#565f70",
+            "inverse-on-surface": "#edf0ff",
+            "on-tertiary-container": "#bfdfff",
+            "on-error": "#ffffff",
+            "background": "#f9f9ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "touch-target-min": "44px",
+            "gutter": "16px",
+            "topbar-height": "64px",
+            "screen-padding": "24px",
+            "base": "4px",
+            "card-padding": "16px",
+            "sidebar-expanded": "248px",
+            "sidebar-collapsed": "72px"
+          },
+          "fontFamily": {
+            "table-dense": ["Inter"],
+            "section-title": ["Inter"],
+            "button": ["Inter"],
+            "label": ["Inter"],
+            "page-title": ["Inter"],
+            "card-title": ["Inter"],
+            "body": ["Inter"]
+          },
+          "fontSize": {
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-surface text-on-surface antialiased overflow-x-hidden min-h-screen">
+<!-- ========================================================================= -->
+<!-- SIDE NAVIGATION (Desktop Sidebar Anchored to Shared Component JSON)      -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded z-40 bg-surface-container-low dark:bg-inverse-surface border-r border-outline-variant dark:border-outline hidden md:block">
+<div class="flex flex-col justify-between h-full p-4">
+<!-- Top Workspace Section -->
+<div class="space-y-4">
+<!-- Workspace Header / Switcher -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-surface-container-lowest border border-outline-variant">
+<div class="flex items-center gap-2.5 overflow-hidden">
+<div class="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center font-button text-button shrink-0">
+              NC
+            </div>
+<div class="min-w-0">
+<div class="font-button text-button text-on-surface truncate leading-tight">Northstar Coffee</div>
+<div class="font-label text-label text-secondary truncate">LaraTik Agency</div>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary text-lg cursor-pointer hover:text-on-surface">unfold_more</span>
+</div>
+<!-- Quick Primary Action -->
+<button class="w-full h-10 px-3 py-2 rounded-lg bg-primary text-on-primary font-button text-button flex items-center justify-center gap-2 hover:bg-primary-container transition-colors duration-150 active:scale-98">
+<span class="material-symbols-outlined text-lg">add</span>
+<span>New Brief</span>
+</button>
+<!-- Navigation Tabs -->
+<nav class="space-y-1">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Planning -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">event_note</span>
+<span>Planning</span>
+</a>
+<!-- Board -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">view_kanban</span>
+<span>Board</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">calendar_today</span>
+<span>Calendar</span>
+</a>
+<!-- Trends (ACTIVE TAB) -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-highest dark:bg-surface-container text-primary dark:text-primary-fixed font-button text-button" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' 1;">trending_up</span>
+<span>Trends</span>
+</div>
+<span class="bg-primary text-on-primary font-label text-label px-1.5 py-0.5 rounded-full text-[10px]">24</span>
+</a>
+<!-- Reviews -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-xl">rate_review</span>
+<span>Reviews</span>
+</div>
+<span class="bg-secondary-container text-on-secondary-container font-label text-label px-1.5 py-0.5 rounded-full text-[10px]">3</span>
+</a>
+<!-- Media -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">perm_media</span>
+<span>Media</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container dark:hover:bg-surface-variant hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Bottom User & Support Info -->
+<div class="space-y-3 pt-3 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant dark:text-outline-variant font-body text-body hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-xl">help_outline</span>
+<span>Help &amp; Support</span>
+</a>
+<!-- Producer Profile Snippet -->
+<div class="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-surface-container transition-colors duration-150 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-button text-button shrink-0">
+            SJ
+          </div>
+<div class="min-w-0 flex-1">
+<div class="font-button text-button text-on-surface truncate leading-tight">Sarah Jenkins</div>
+<div class="font-label text-label text-secondary truncate">Production Lead</div>
+</div>
+<span class="material-symbols-outlined text-secondary text-sm">more_vert</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- TOP NAVIGATION BAR                                                        -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 md:left-sidebar-expanded left-0 right-0 h-topbar-height z-30 bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-6">
+<!-- Left: Breadcrumbs & Global Search -->
+<div class="flex items-center gap-6 flex-1 max-w-2xl">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 font-label text-label text-secondary shrink-0">
+<span>Workspaces</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-xs">chevron_right</span>
+<span class="font-button text-button text-on-surface">Trends</span>
+</div>
+<!-- Quick Global Search -->
+<div class="relative flex-1 hidden sm:block">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-secondary text-lg">search</span>
+<input class="w-full h-9 pl-9 pr-14 rounded-lg bg-surface border border-outline-variant font-body text-body text-on-surface placeholder:text-secondary focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all duration-150 text-xs" placeholder="Search trend signals, topics, hashtags... (Ctrl+K)" type="text"/>
+<span class="absolute right-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-outline-variant bg-surface-container-low text-[10px] font-mono text-secondary">
+          ⌘K
+        </span>
+</div>
+</div>
+<!-- Right: Operational Status & System Actions -->
+<div class="flex items-center gap-4">
+<!-- Live Status Badge -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant font-label text-label text-secondary">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>All systems operational</span>
+</div>
+<!-- Notifications with unread dot -->
+<button aria-label="Notifications" class="relative p-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container transition-colors duration-150">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error ring-2 ring-surface-container-lowest"></span>
+</button>
+<!-- Help Action -->
+<button aria-label="Help" class="p-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container transition-colors duration-150">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+<div class="h-5 w-px bg-outline-variant"></div>
+<!-- Active Client Brand Indicator -->
+<div class="flex items-center gap-2 text-right">
+<div class="w-7 h-7 rounded bg-primary-fixed text-primary flex items-center justify-center font-button text-xs font-semibold">
+          NS
+        </div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE CONTENT CANVAS                                             -->
+<!-- ========================================================================= -->
+<main class="md:ml-sidebar-expanded pt-topbar-height min-h-screen bg-surface flex flex-col">
+<!-- Page Header & Tab Bar -->
+<section class="px-6 pt-6 pb-4 bg-surface-container-lowest border-b border-outline-variant">
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Trends</h1>
+<span class="px-2.5 py-0.5 rounded-full bg-secondary-container font-label text-label text-on-secondary-container">
+              Workspace Live
+            </span>
+</div>
+<p class="font-body text-body text-secondary mt-1">
+            24 active signals discovered • 3 saved to Northstar boards • Ingestion updated 14m ago
+          </p>
+</div>
+<!-- Primary Context Controls -->
+<div class="flex items-center gap-2.5 self-start md:self-auto">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button flex items-center gap-2 hover:bg-surface-container-low transition-colors duration-150">
+<span class="material-symbols-outlined text-base">bookmark_border</span>
+<span>Save to board</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-primary text-on-primary font-button text-button flex items-center gap-2 hover:bg-primary-container transition-colors duration-150 shadow-sm">
+<span class="material-symbols-outlined text-base">auto_stories</span>
+<span>Create brief</span>
+</button>
+</div>
+</div>
+<!-- Segment Tabs -->
+<div class="flex items-center gap-6 mt-6 border-b border-outline-variant/60 -mb-4">
+<button class="flex items-center gap-2 pb-3 font-button text-button text-primary border-b-2 border-primary">
+<span>For you</span>
+<span class="bg-primary-fixed text-primary px-2 py-0.5 rounded-full font-label text-[11px]">18</span>
+</button>
+<button class="flex items-center gap-2 pb-3 font-body text-body text-secondary hover:text-on-surface transition-colors duration-150">
+<span>Boards</span>
+<span class="bg-surface-container-high text-secondary px-2 py-0.5 rounded-full font-label text-[11px]">4</span>
+</button>
+<button class="flex items-center gap-2 pb-3 font-body text-body text-secondary hover:text-on-surface transition-colors duration-150">
+<span>Briefs</span>
+<span class="bg-surface-container-high text-secondary px-2 py-0.5 rounded-full font-label text-[11px]">6</span>
+</button>
+</div>
+</section>
+<!-- Operational Filter & Selection Banner Toolbar -->
+<section class="px-6 py-3 bg-surface-container-low border-b border-outline-variant flex flex-wrap items-center justify-between gap-3">
+<!-- Filter Dropdowns Cluster -->
+<div class="flex flex-wrap items-center gap-2">
+<!-- Source Selector -->
+<div class="relative">
+<button class="h-8 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label text-label flex items-center gap-2 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm text-secondary">tune</span>
+<span>All sources (TikTok, Reels, Search)</span>
+<span class="material-symbols-outlined text-xs text-secondary">expand_more</span>
+</button>
+</div>
+<!-- Category Selector -->
+<div class="relative">
+<button class="h-8 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label text-label flex items-center gap-2 hover:bg-surface-container transition-colors">
+<span>Category: Brew methods, Seasonal</span>
+<span class="material-symbols-outlined text-xs text-secondary">expand_more</span>
+</button>
+</div>
+<!-- Velocity Filter -->
+<div class="relative">
+<button class="h-8 px-3 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-label text-label flex items-center gap-2 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-sm text-emerald-600">bolt</span>
+<span>Velocity: Surging (+140%)</span>
+<span class="material-symbols-outlined text-xs text-secondary">expand_more</span>
+</button>
+</div>
+<button class="h-8 px-2.5 rounded text-secondary hover:text-on-surface font-label text-label flex items-center gap-1 transition-colors">
+<span class="material-symbols-outlined text-sm">refresh</span>
+<span>Reset</span>
+</button>
+</div>
+<!-- Active Selection Floating Callout Indicator -->
+<div class="flex items-center gap-2 font-label text-label text-primary bg-primary-fixed/50 px-3 py-1 rounded border border-primary/20">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+<span>1 signal selected: "Sparkling cascara &amp; cold brew tonics"</span>
+</div>
+</section>
+<!-- ========================================================================= -->
+<!-- SPLIT-VIEW FEED & INSPECTOR CANVAS                                       -->
+<!-- ========================================================================= -->
+<div class="flex-1 flex flex-col xl:flex-row overflow-hidden">
+<!-- LEFT/CENTER FEED (62% Desktop Width) -->
+<div class="flex-1 p-6 space-y-4 overflow-y-auto">
+<!-- Ingestion Status & Health Alert Banner -->
+<div class="flex items-start gap-3 p-3.5 rounded-lg bg-surface-container border border-outline-variant text-on-surface">
+<span class="material-symbols-outlined text-secondary text-lg mt-0.5">pause_circle</span>
+<div class="flex-1 min-w-0 font-body text-body text-xs">
+<span class="font-button text-button text-xs">1 source paused:</span>
+<span class="text-secondary ml-1">TikTok US Trends ingestion paused by admin for API quota conservation (resumes in 4h).</span>
+</div>
+<button class="font-button text-button text-xs text-primary hover:underline shrink-0">
+            Manage sources
+          </button>
+</div>
+<!-- Quick Filter Pills -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1">
+<button class="px-3 py-1 rounded-full bg-on-surface text-surface-container-lowest font-label text-label whitespace-nowrap">
+            All signals (24)
+          </button>
+<button class="px-3 py-1 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface font-label text-label whitespace-nowrap">
+            High relevance (8)
+          </button>
+<button class="px-3 py-1 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface font-label text-label whitespace-nowrap">
+            Surging velocity (6)
+          </button>
+<button class="px-3 py-1 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface font-label text-label whitespace-nowrap">
+            Paused sources (1)
+          </button>
+</div>
+<!-- Trend Cards List -->
+<div class="space-y-3.5">
+<!-- CARD 1: SELECTED STATE (Cascara & Cold Brew Tonics) -->
+<div class="p-4 rounded-lg bg-surface-container-lowest border-2 border-primary shadow-sm transition-all duration-150 relative">
+<div class="flex items-start justify-between gap-3">
+<!-- Header Meta: Source & Velocity -->
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container font-label text-label text-on-surface">
+<span class="material-symbols-outlined text-xs">smart_display</span>
+<span>TikTok • 9:16 Video</span>
+</span>
+<span class="font-label text-label text-secondary">2h ago</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 font-label text-label">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>Surging +184% (7d)</span>
+</span>
+</div>
+<!-- Selection Checkbox -->
+<div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary text-on-primary font-label text-label">
+<span class="material-symbols-outlined text-sm">check</span>
+<span>Active</span>
+</div>
+</div>
+<!-- Title & Pitch -->
+<div class="mt-2.5">
+<h3 class="font-card-title text-card-title text-on-surface hover:text-primary cursor-pointer">
+                Sparkling cascara &amp; cold brew tonics
+              </h3>
+<p class="font-body text-body text-secondary mt-1">
+                High creator engagement pairing botanical sparkling water with single-origin slow drip over clear ice. Heavy focus on visual fizz, citrus aroma, and clean transparency.
+              </p>
+</div>
+<!-- Tags & Match Score -->
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-outline-variant/50">
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#ColdBrew</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#SparklingCoffee</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#Cascara</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#CraftBeverage</span>
+</div>
+<div class="flex items-center gap-1 text-primary font-label text-label">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-semibold">94% Northstar audience match</span>
+</div>
+</div>
+<!-- Action Bar -->
+<div class="mt-3 flex items-center justify-between pt-2 border-t border-outline-variant/40">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">visibility</span>
+<span>420K weekly signals</span>
+</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded text-secondary hover:text-on-surface hover:bg-surface-container font-label text-label flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">bookmark</span>
+<span>Save</span>
+</button>
+<a class="px-2.5 py-1 rounded text-secondary hover:text-on-surface hover:bg-surface-container font-label text-label flex items-center gap-1" href="#">
+<span class="material-symbols-outlined text-sm">open_in_new</span>
+<span>Source URL</span>
+</a>
+</div>
+</div>
+</div>
+<!-- CARD 2: Pour-Over Flights -->
+<div class="p-4 rounded-lg bg-surface-container-lowest border border-outline-variant hover:border-outline transition-all duration-150">
+<div class="flex items-start justify-between gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container font-label text-label text-on-surface">
+<span class="material-symbols-outlined text-xs">video_library</span>
+<span>Instagram Reels</span>
+</span>
+<span class="font-label text-label text-secondary">5h ago</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-label text-label">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>Growing +62%</span>
+</span>
+</div>
+<button class="text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined text-lg">bookmark_border</span>
+</button>
+</div>
+<div class="mt-2.5">
+<h3 class="font-card-title text-card-title text-on-surface hover:text-primary cursor-pointer">
+                Deconstructed pour-over tasting flights
+              </h3>
+<p class="font-body text-body text-secondary mt-1">
+                Specialty cafe baristas presenting 3 distinct roast profiles in mini carafes with sensory flavor tasting cards. Strong organic engagement on tasting notes comparison.
+              </p>
+</div>
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-outline-variant/50">
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#SensoryTasting</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#PourOver</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#OriginStory</span>
+</div>
+<div class="flex items-center gap-1 text-secondary font-label text-label">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span>88% match</span>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2 border-t border-outline-variant/40">
+<span class="font-label text-label text-secondary">160K estimated impressions</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded text-primary hover:bg-primary-fixed/30 font-button text-label flex items-center gap-1">
+<span>Draft brief</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 3: Spiced Maple Cortado -->
+<div class="p-4 rounded-lg bg-surface-container-lowest border border-outline-variant hover:border-outline transition-all duration-150">
+<div class="flex items-start justify-between gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container font-label text-label text-on-surface">
+<span class="material-symbols-outlined text-xs">travel_explore</span>
+<span>Google Trends Search</span>
+</span>
+<span class="font-label text-label text-secondary">1d ago</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 font-label text-label">
+<span class="material-symbols-outlined text-xs">star</span>
+<span>Seasonal breakout</span>
+</span>
+</div>
+<button class="text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined text-lg">bookmark_border</span>
+</button>
+</div>
+<div class="mt-2.5">
+<h3 class="font-card-title text-card-title text-on-surface hover:text-primary cursor-pointer">
+                Spiced maple cortado &amp; autumn botanical syrups
+              </h3>
+<p class="font-body text-body text-secondary mt-1">
+                Search volume queries up 210% MoM for natural sweetener alternatives to pumpkin spice in specialty coffee. High intent for at-home brewing recipes.
+              </p>
+</div>
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-outline-variant/50">
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#AutumnMenu</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#AlternativeSweeteners</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#Cortado</span>
+</div>
+<div class="flex items-center gap-1 text-primary font-label text-label">
+<span class="material-symbols-outlined text-sm" style="font-variation-settings: 'FILL' 1;">verified</span>
+<span class="font-semibold">91% match</span>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2 border-t border-outline-variant/40">
+<span class="font-label text-label text-secondary">+210% search volume jump</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded text-primary hover:bg-primary-fixed/30 font-button text-label flex items-center gap-1">
+<span>Draft brief</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 4: Direct-Trade Ethiopian Micro-lot -->
+<div class="p-4 rounded-lg bg-surface-container-lowest border border-outline-variant hover:border-outline transition-all duration-150">
+<div class="flex items-start justify-between gap-3">
+<div class="flex flex-wrap items-center gap-2">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-surface-container font-label text-label text-on-surface">
+<span class="material-symbols-outlined text-xs">newspaper</span>
+<span>Roast Magazine Digest</span>
+</span>
+<span class="font-label text-label text-secondary">2d ago</span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container text-secondary font-label text-label">
+<span class="material-symbols-outlined text-xs">sync</span>
+<span>Steady</span>
+</span>
+</div>
+<button class="text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined text-lg">bookmark_border</span>
+</button>
+</div>
+<div class="mt-2.5">
+<h3 class="font-card-title text-card-title text-on-surface hover:text-primary cursor-pointer">
+                Direct-trade Ethiopian micro-lot transparency
+              </h3>
+<p class="font-body text-body text-secondary mt-1">
+                Gen-Z coffee consumers prioritizing farmer equity, altitude harvest stamps, and QR transparency tags printed directly onto retail bags.
+              </p>
+</div>
+<div class="mt-3 flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-outline-variant/50">
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#DirectTrade</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#FairPrice</span>
+<span class="font-label text-[11px] text-secondary bg-surface-container px-2 py-0.5 rounded">#SingleOrigin</span>
+</div>
+<div class="flex items-center gap-1 text-secondary font-label text-label">
+<span class="material-symbols-outlined text-sm">verified</span>
+<span>85% match</span>
+</div>
+</div>
+<div class="mt-3 flex items-center justify-between pt-2 border-t border-outline-variant/40">
+<span class="font-label text-label text-secondary">Editorial &amp; retail trend</span>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 rounded text-primary hover:bg-primary-fixed/30 font-button text-label flex items-center gap-1">
+<span>Draft brief</span>
+<span class="material-symbols-outlined text-sm">arrow_forward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom Ingestion Footnote / Integration Prompt -->
+<div class="p-4 rounded-lg border border-dashed border-outline-variant bg-surface-container-low/50 flex items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary">add_link</span>
+<div>
+<div class="font-button text-button text-xs text-on-surface">Expand discovery parameters</div>
+<div class="font-body text-body text-xs text-secondary">Connect Pinterest boards or r/coffee Reddit subreddits to monitor niche specialty chatter.</div>
+</div>
+</div>
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest font-button text-button text-xs text-on-surface hover:bg-surface-container transition-colors shrink-0">
+              Integration settings
+            </button>
+</div>
+</div>
+</div>
+<!-- ===================================================================== -->
+<!-- RIGHT INSPECTOR PANEL (38% Desktop Width, Sticky Brief Builder)      -->
+<!-- ===================================================================== -->
+<aside class="w-full xl:w-[480px] bg-surface-container-lowest border-t xl:border-t-0 xl:border-l border-outline-variant flex flex-col shrink-0 overflow-y-auto">
+<!-- Inspector Header -->
+<div class="p-4 border-b border-outline-variant flex items-center justify-between bg-surface-container-low/40">
+<div>
+<h2 class="font-card-title text-card-title text-on-surface">Signal intelligence</h2>
+<p class="font-label text-label text-secondary">Inspecting selected signal #NS-9482</p>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded text-secondary hover:text-on-surface hover:bg-surface-container" title="Open in new window">
+<span class="material-symbols-outlined text-lg">open_in_new</span>
+</button>
+<button class="p-1 rounded text-secondary hover:text-on-surface hover:bg-surface-container" title="Close inspector">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+</div>
+</div>
+<!-- Inspector Content Area -->
+<div class="p-5 space-y-5 flex-1">
+<!-- Selected Trend Media Card & Audio Tag -->
+<div class="border border-outline-variant rounded-lg p-3.5 bg-surface">
+<div class="flex gap-3">
+<!-- Thumbnail with placeholder -->
+<div class="w-20 h-24 rounded bg-surface-container-high relative overflow-hidden shrink-0 flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="A macro cinematic shot of single origin cold brew coffee cascading over crystal clear ice with botanical tonic fizz and a dried blood orange slice inside a specialty cafe setting. Soft natural morning window lighting, calm warm wooden tabletop, quiet minimalist aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDiLSqLKjBzZQs3BaJDHQ3jDaiM5YXSfwDe9IUpfArxPZFZmpnWKaoOCgfbY-QyoCTYUHz41tilOyMAZKkIoArYIevMo8SHz5jyc3nNrDcwunSkKqtEVIYxGF4HgRuWnjBkMm7HXdVPZIfCPxDgd3zHKXCehxcec4RPwive3Y2NT3HQD6lNxS0Q6b3jMIeomL57pdOUs7fxGkLxYuFadeNCtYZNsuJeBjSmmq3Jbk6AbuTEOcDvtxeTDBcc05Az8r1NpnggjBEBisZ6"/>
+<span class="absolute bottom-1 right-1 px-1 py-0.5 rounded bg-on-surface/80 text-surface-container-lowest font-mono text-[9px]">0:28</span>
+</div>
+<!-- Meta & Creator Audio -->
+<div class="flex-1 min-w-0">
+<span class="inline-flex items-center gap-1 font-label text-[11px] text-primary bg-primary-fixed/40 px-2 py-0.5 rounded">
+<span class="material-symbols-outlined text-xs">music_note</span>
+<span>Original Audio • Fizz &amp; Tonic</span>
+</span>
+<h4 class="font-button text-button text-on-surface mt-1.5 truncate">Sparkling cascara &amp; cold brew tonics</h4>
+<p class="font-label text-label text-secondary mt-1">Creator: @nordic_brewlab</p>
+<div class="mt-2 flex items-center gap-2 font-label text-label text-secondary">
+<span class="material-symbols-outlined text-xs">schedule</span>
+<span>Recorded: Oct 24, 08:32 AM</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Quantitative Metrics Trio -->
+<div class="grid grid-cols-3 gap-2.5">
+<div class="p-3 rounded-lg bg-surface border border-outline-variant">
+<div class="font-label text-label text-secondary">Weekly views</div>
+<div class="font-section-title text-section-title text-on-surface mt-0.5">420K</div>
+<div class="font-label text-[11px] text-emerald-700 flex items-center gap-0.5 mt-0.5">
+<span class="material-symbols-outlined text-xs">arrow_upward</span>
+<span>+184% 7d</span>
+</div>
+</div>
+<div class="p-3 rounded-lg bg-surface border border-outline-variant">
+<div class="font-label text-label text-secondary">Eng. rate</div>
+<div class="font-section-title text-section-title text-on-surface mt-0.5">4.8%</div>
+<div class="font-label text-[11px] text-emerald-700 mt-0.5">Top 10% tier</div>
+</div>
+<div class="p-3 rounded-lg bg-surface border border-outline-variant">
+<div class="font-label text-label text-secondary">Roasters</div>
+<div class="font-section-title text-section-title text-on-surface mt-0.5">12</div>
+<div class="font-label text-[11px] text-secondary mt-0.5">Active cafes</div>
+</div>
+</div>
+<!-- Narrative Hook Insight -->
+<div class="p-3.5 rounded-lg bg-surface border border-outline-variant space-y-1.5">
+<div class="font-label text-label text-secondary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm">hearing</span>
+<span class="font-semibold text-on-surface">Auditory &amp; sensory hook</span>
+</div>
+<p class="font-body text-body text-xs text-secondary">
+              "Crisp, amplified microphone capture of carbonated citrus water pouring onto dense slow-drip Ethiopian concentrate over carved crystal ice."
+            </p>
+</div>
+<!-- Alignment with Northstar Brand Identity -->
+<div class="space-y-2">
+<div class="font-button text-button text-xs text-on-surface">Brand strategic alignment</div>
+<div class="space-y-1.5 font-body text-xs text-secondary">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+<span>Target menu: Autumn Cold Brew lineup &amp; RTD cans</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+<span>Recommended format: 9:16 Vertical Video (TikTok/Reels)</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm text-emerald-600">check_circle</span>
+<span>Tone: Authentic, craftsman, unhurried (No artificial hyperbole)</span>
+</div>
+</div>
+</div>
+<!-- AI BRIEF DRAFT ASSISTANT (Human-in-the-loop Guardrail) -->
+<div class="border border-primary/30 rounded-lg p-4 bg-surface space-y-3 relative">
+<!-- Non-autonomous badge -->
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-primary-fixed text-primary font-label text-[11px] font-semibold">
+<span class="material-symbols-outlined text-xs">psychology</span>
+<span>Draft Assistant • Non-autonomous suggestion</span>
+</span>
+<span class="material-symbols-outlined text-secondary text-sm" title="AI suggestions require explicit approval before brief staging">info</span>
+</div>
+<!-- Suggestion Card Content -->
+<div class="p-3 rounded border border-outline-variant bg-surface-container-lowest space-y-2">
+<div>
+<span class="font-label text-[11px] text-secondary">Working Title</span>
+<div class="font-button text-button text-sm text-on-surface">
+                  Brief Idea: Sparkling Cascara Cold Brew Tonic Launch
+                </div>
+</div>
+<div>
+<span class="font-label text-[11px] text-secondary">Production Objective</span>
+<p class="font-body text-body text-xs text-secondary">
+                  Drive weekend afternoon cafe visits with refreshing low-calorie alternative to heavy syrups.
+                </p>
+</div>
+<div>
+<span class="font-label text-[11px] text-secondary">Suggested Hook</span>
+<div class="p-2 rounded bg-surface-container-low font-body text-body text-xs text-on-surface italic border-l-2 border-primary">
+                  "Forget sugary iced lattes. Here is what 18-hour cold brew over sparkling citrus tonic sounds like."
+                </div>
+</div>
+<div>
+<span class="font-label text-[11px] text-secondary">Deliverables</span>
+<p class="font-body text-body text-xs text-secondary">
+                  1x 9:16 vertical recipe reel • 1x photo carousel on tasting notes pairing.
+                </p>
+</div>
+</div>
+<!-- Human Confirmation Controls -->
+<div class="flex flex-col gap-2 pt-1">
+<button class="w-full h-9 px-4 rounded-lg bg-primary text-on-primary font-button text-button flex items-center justify-center gap-2 hover:bg-primary-container transition-colors duration-150">
+<span class="material-symbols-outlined text-base">edit_document</span>
+<span>Insert into new brief</span>
+</button>
+<div class="flex items-center gap-2">
+<button class="flex-1 h-8 px-3 rounded border border-outline-variant bg-surface-container-lowest text-secondary hover:text-on-surface font-label text-label flex items-center justify-center gap-1.5 hover:bg-surface-container transition-colors">
+<span class="material-symbols-outlined text-xs">refresh</span>
+<span>Try another angle</span>
+</button>
+<button class="h-8 px-3 rounded text-secondary hover:text-error font-label text-label flex items-center justify-center transition-colors">
+<span>Dismiss</span>
+</button>
+</div>
+</div>
+<!-- Governance Policy Note -->
+<div class="text-[11px] text-secondary text-center pt-1 border-t border-outline-variant/60 font-body">
+              Workspace Policy: Client and Compliance sign-off required prior to production scheduling.
+            </div>
+</div>
+</div>
+<!-- Inspector Sticky Footer -->
+<div class="p-3 border-t border-outline-variant bg-surface-container-low flex items-center justify-between text-xs text-secondary font-label">
+<span>Signal UUID: 2024-NS-TR-098</span>
+<a class="text-primary hover:underline" href="#">View raw JSON payload</a>
+</div>
+</aside>
+</div>
+</main>
+</body></html>

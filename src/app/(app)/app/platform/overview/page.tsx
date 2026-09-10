@@ -1,6 +1,16 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { count, desc, eq, isNull, sql } from "drizzle-orm";
-import { Building, Building2, Sparkles, Users2, Workflow } from "lucide-react";
+import {
+  AlertCircle,
+  Building,
+  Building2,
+  KeyRound,
+  LockKeyhole,
+  Sparkles,
+  Users2,
+  Workflow,
+} from "lucide-react";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -170,6 +180,39 @@ export default async function PlatformOverviewPage() {
         />
       </div>
 
+      <Card padding="lg" className="space-y-4" data-testid="platform-overview-operations">
+        <div>
+          <CardTitle>{t("platform.operationsTitle")}</CardTitle>
+          <CardDescription>{t("platform.operationsDescription")}</CardDescription>
+        </div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <PlatformOperationLink
+            href="/app/platform/agencies"
+            icon={<Building2 className="h-4 w-4" aria-hidden="true" />}
+            title={t("platform.agenciesTitle")}
+            description={t("platform.operationsAgencies")}
+          />
+          <PlatformOperationLink
+            href="/app/platform/security"
+            icon={<LockKeyhole className="h-4 w-4" aria-hidden="true" />}
+            title={t("platform.securityTitle")}
+            description={t("platform.operationsSecurity")}
+          />
+          <PlatformOperationLink
+            href="/app/platform/access"
+            icon={<KeyRound className="h-4 w-4" aria-hidden="true" />}
+            title={t("platform.accessTitle")}
+            description={t("platform.operationsAccess")}
+          />
+          <PlatformOperationLink
+            href="/app/platform/errors"
+            icon={<AlertCircle className="h-4 w-4" aria-hidden="true" />}
+            title={t("platform.appErrorsTitle")}
+            description={t("platform.operationsErrors")}
+          />
+        </div>
+      </Card>
+
       <Card padding="lg" className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
@@ -217,5 +260,34 @@ export default async function PlatformOverviewPage() {
         )}
       </Card>
     </>
+  );
+}
+
+function PlatformOperationLink({
+  href,
+  icon,
+  title,
+  description,
+}: {
+  href: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="border-border bg-surface-subtle hover:border-primary focus-visible:ring-focus-ring group flex min-h-24 items-start gap-3 rounded-[var(--radius-control)] border p-3 transition-colors focus:outline-none focus-visible:ring-2"
+    >
+      <span className="bg-primary-subtle text-primary mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="text-body text-fg-primary group-hover:text-primary block font-semibold">
+          {title}
+        </span>
+        <span className="text-label text-fg-secondary mt-1 block text-pretty">{description}</span>
+      </span>
+    </Link>
   );
 }

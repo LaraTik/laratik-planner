@@ -63,7 +63,7 @@ export default function PrivacyPage() {
         <div className="mt-10 grid gap-8 lg:grid-cols-[16rem_1fr]">
           <Toc sections={SECTIONS} />
 
-          <article className="text-body text-fg-secondary min-w-0 space-y-6 leading-relaxed">
+          <article className="text-body text-fg-secondary min-w-0 space-y-6 leading-relaxed [&_a]:underline [&_a]:underline-offset-2">
             <ControllerCallout />
 
             <Section id="controller" icon={<Building2 className="h-4 w-4" aria-hidden />}>

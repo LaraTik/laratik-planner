@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F7F7F5]" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner — Planning &amp; Workflow (Northstar Coffee)</title>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined font -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#00659c",
+            "surface-tint": "#4d44e3",
+            "on-secondary-container": "#5a6375",
+            "primary-fixed": "#e2dfff",
+            "on-primary-fixed": "#0f0069",
+            "on-tertiary-fixed": "#001d32",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-error-container": "#93000a",
+            "outline-variant": "#c7c4d8",
+            "secondary-fixed-dim": "#bec7db",
+            "surface-dim": "#d1daf4",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-secondary": "#ffffff",
+            "surface": "#f9f9ff",
+            "surface-container-lowest": "#ffffff",
+            "inverse-primary": "#c3c0ff",
+            "on-secondary-fixed": "#131c2b",
+            "tertiary": "#004c77",
+            "inverse-surface": "#273044",
+            "inverse-on-surface": "#edf0ff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-background": "#121b2e",
+            "on-primary-container": "#dad7ff",
+            "surface-container-highest": "#d9e2fc",
+            "secondary-fixed": "#dae3f8",
+            "secondary": "#565f70",
+            "tertiary-fixed": "#cde5ff",
+            "surface-container-low": "#f1f3ff",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-variant": "#d9e2fc",
+            "on-error": "#ffffff",
+            "on-primary": "#ffffff",
+            "error-container": "#ffdad6",
+            "primary": "#3525cd",
+            "background": "#f9f9ff",
+            "primary-fixed-dim": "#c3c0ff",
+            "surface-bright": "#f9f9ff",
+            "outline": "#777587",
+            "on-surface-variant": "#464555",
+            "primary-container": "#4f46e5",
+            "secondary-container": "#d7e0f5",
+            "surface-container": "#e9edff",
+            "on-tertiary": "#ffffff",
+            "surface-container-high": "#e1e8ff",
+            "on-tertiary-container": "#bfdfff",
+            "on-surface": "#121b2e"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "touch-target-min": "44px",
+            "topbar-height": "64px",
+            "card-padding": "16px",
+            "base": "4px",
+            "gutter": "16px",
+            "sidebar-expanded": "248px",
+            "sidebar-collapsed": "72px",
+            "screen-padding": "24px"
+          },
+          "fontFamily": {
+            "card-title": ["Inter", "sans-serif"],
+            "button": ["Inter", "sans-serif"],
+            "page-title": ["Inter", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+            "table-dense": ["Inter", "sans-serif"],
+            "label": ["Inter", "sans-serif"],
+            "section-title": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }]
+          }
+        }
+      }
+    };
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="h-full font-body text-body text-on-surface bg-[#F7F7F5] antialiased flex flex-col selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- ========================================================================= -->
+<!-- TOP APP BAR (Shared Components Definition & Implementation)               -->
+<!-- ========================================================================= -->
+<header class="bg-surface-container-lowest border-b border-outline-variant flex justify-between items-center w-full px-screen-padding h-topbar-height sticky top-0 z-40">
+<div class="flex items-center gap-4">
+<!-- Mobile sidebar toggle -->
+<button aria-label="Toggle workspace navigation" class="md:hidden p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors" id="mobile-menu-toggle">
+<span class="material-symbols-outlined text-[22px]">menu</span>
+</button>
+<!-- Breadcrumbs & Workspace Brand -->
+<nav aria-label="Breadcrumbs" class="flex items-center space-x-2 text-on-surface-variant">
+<a class="font-body text-body text-on-surface-variant hover:text-primary transition-colors flex items-center gap-1.5" href="#workspaces">
+<span class="material-symbols-outlined text-[18px]">workspaces</span>
+<span>Workspaces</span>
+</a>
+<span class="text-outline-variant font-medium">/</span>
+<a class="font-button text-button text-on-surface hover:text-primary transition-colors flex items-center gap-1" href="#northstar">
+<span class="w-2 h-2 rounded-full bg-tertiary-container inline-block me-1"></span>
+<span>Northstar Coffee</span>
+</a>
+<span class="text-outline-variant font-medium">/</span>
+<span class="font-button text-button text-primary flex items-center gap-1 bg-primary-fixed/40 px-2 py-0.5 rounded-md">
+<span>Planning</span>
+</span>
+</nav>
+</div>
+<!-- Center Search with shortcut -->
+<div class="hidden lg:flex items-center max-w-md w-full mx-6">
+<div class="relative w-full">
+<div class="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none text-secondary">
+<span class="material-symbols-outlined text-[18px]">search</span>
+</div>
+<input class="w-full bg-surface-container-low text-on-surface placeholder:text-secondary rounded-lg border border-outline-variant ps-9 pe-12 py-1.5 text-sm focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200" placeholder="Search posts, campaigns, or brief tags... (Press ⌘K)" type="text"/>
+<div class="absolute inset-y-0 end-0 flex items-center pe-2.5">
+<kbd class="px-1.5 py-0.5 text-[11px] font-semibold text-secondary bg-surface-container-lowest border border-outline-variant rounded shadow-none">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right utility cluster -->
+<div class="flex items-center gap-3">
+<!-- Operational status badge -->
+<div class="hidden sm:flex items-center gap-2 px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200/70 rounded-full text-xs font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="font-label text-label">All systems operational</span>
+</div>
+<!-- Trailing icon actions -->
+<button aria-label="Notifications" class="relative p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors focus:ring-2 focus:ring-primary focus:outline-none">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 end-1.5 w-2 h-2 bg-primary rounded-full ring-2 ring-surface-container-lowest"></span>
+</button>
+<button aria-label="Documentation and Help" class="p-2 text-on-surface-variant hover:bg-surface-container-low rounded-lg transition-colors focus:ring-2 focus:ring-primary focus:outline-none">
+<span class="material-symbols-outlined text-[20px]">help</span>
+</button>
+<div class="h-6 w-px bg-outline-variant mx-1"></div>
+<!-- User Profile Avatar and role -->
+<div class="flex items-center gap-2.5 ps-1 cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-button text-button shadow-sm ring-1 ring-outline-variant">
+          SJ
+        </div>
+<div class="hidden xl:block text-start leading-tight">
+<p class="font-button text-button text-on-surface text-xs">Sarah Jenkins</p>
+<p class="text-[11px] text-secondary font-normal">Production Lead</p>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE SHELL (Sidebar + Canvas)                                   -->
+<!-- ========================================================================= -->
+<div class="flex-1 flex overflow-hidden">
+<!-- SIDE NAVIGATION BAR (Shared Components Definition & Implementation) -->
+<aside class="fixed md:static inset-y-0 start-0 z-30 w-sidebar-expanded bg-surface-container-low border-r border-outline-variant flex flex-col justify-between p-gutter transition-transform duration-200 -translate-x-full md:translate-x-0 mt-topbar-height md:mt-0 shadow-none" id="sidebar-nav">
+<!-- Top Section: Workspace Header & Primary CTA -->
+<div>
+<!-- Workspace brand card -->
+<div class="flex items-center gap-3 p-2 rounded-lg bg-surface-container-lowest border border-outline-variant mb-4">
+<div class="w-9 h-9 rounded-lg bg-[#273044] text-white flex items-center justify-center font-bold text-sm shadow-inner flex-shrink-0">
+<span class="material-symbols-outlined text-[20px] text-amber-300">local_cafe</span>
+</div>
+<div class="min-w-0 flex-1">
+<h2 class="font-section-title text-card-title text-on-surface truncate">Northstar Coffee</h2>
+<p class="text-xs text-secondary truncate flex items-center gap-1">
+<span>Agency Workspace</span>
+<span class="inline-block w-1 h-1 rounded-full bg-outline-variant"></span>
+<span class="text-emerald-700 font-medium">Pro</span>
+</p>
+</div>
+<button aria-label="Switch workspace" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[18px]">unfold_more</span>
+</button>
+</div>
+<!-- Primary Action CTA Button -->
+<button class="w-full mb-5 bg-primary hover:bg-primary-container text-on-primary font-button text-button py-2.5 px-4 rounded-lg flex items-center justify-center gap-2 shadow-none focus:ring-2 focus:ring-primary focus:outline-none active:scale-[0.98] transition-all duration-150">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Create content</span>
+</button>
+<!-- Navigation items list -->
+<nav aria-label="Main Navigation" class="space-y-1">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#overview">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Planning (ACTIVE TAB with sub-navigation) -->
+<div class="rounded-lg bg-surface-container/60 pb-1">
+<a class="flex items-center justify-between px-3 py-2 bg-primary text-on-primary rounded-lg font-button text-button shadow-none" href="#planning">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">event_note</span>
+<span>Planning</span>
+</div>
+<span class="bg-primary-fixed/30 text-on-primary text-[11px] px-1.5 py-0.5 rounded-full font-semibold">18</span>
+</a>
+<!-- Sub-tabs matching Board & Calendar intents -->
+<div class="ps-8 pe-2 pt-1.5 space-y-1">
+<button class="w-full text-start flex items-center justify-between py-1.5 px-2 rounded font-button text-xs text-primary font-semibold hover:bg-surface-container-lowest transition-colors" onclick="switchView('board')">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">view_kanban</span>
+<span>Board view</span>
+</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+</button>
+<button class="w-full text-start flex items-center justify-between py-1.5 px-2 rounded font-button text-xs text-secondary hover:text-on-surface hover:bg-surface-container-lowest transition-colors" onclick="switchView('calendar')">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Calendar view</span>
+</span>
+</button>
+</div>
+</div>
+<!-- Board (General list link) -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#board">
+<span class="material-symbols-outlined text-[20px]">view_kanban</span>
+<span>Board</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#calendar">
+<span class="material-symbols-outlined text-[20px]">calendar_today</span>
+<span>Calendar</span>
+</a>
+<!-- Reviews with count badge -->
+<a class="flex items-center justify-between px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#reviews">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">rate_review</span>
+<span>Reviews</span>
+</div>
+<span class="bg-amber-100 text-amber-800 text-[11px] font-bold px-2 py-0.5 rounded-full border border-amber-200">3</span>
+</a>
+<!-- Trends -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#trends">
+<span class="material-symbols-outlined text-[20px]">trending_up</span>
+<span>Trends</span>
+</a>
+<!-- Media Assets -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#media">
+<span class="material-symbols-outlined text-[20px]">perm_media</span>
+<span>Media</span>
+</a>
+<!-- Settings -->
+<a class="flex items-center gap-3 px-3 py-2 text-on-surface-variant rounded-lg font-button text-button hover:bg-surface-container hover:text-on-surface transition-colors duration-150" href="#settings">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Footer Area with Support & Capacity Indicator -->
+<div class="pt-4 border-t border-outline-variant space-y-3">
+<!-- Monthly Capacity Progress -->
+<div class="px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant">
+<div class="flex items-center justify-between text-xs mb-1.5">
+<span class="text-secondary font-label">October Quota</span>
+<span class="font-semibold text-on-surface">18 / 25 posts</span>
+</div>
+<div class="w-full bg-surface-container-high rounded-full h-1.5">
+<div class="bg-primary h-1.5 rounded-full" style="width: 72%"></div>
+</div>
+</div>
+<a class="flex items-center gap-3 px-3 py-2 text-secondary rounded-lg font-button text-xs hover:bg-surface-container hover:text-on-surface transition-colors" href="#help">
+<span class="material-symbols-outlined text-[18px]">help_outline</span>
+<span>Help &amp; Docs</span>
+</a>
+</div>
+</aside>
+<!-- CANVASCENTER CONTENT AREA -->
+<main class="flex-1 overflow-y-auto flex flex-col bg-[#F7F7F5] focus:outline-none" tabindex="-1">
+<!-- ===================================================================== -->
+<!-- UNIFIED PLANNING PAGE HEADER & ACTION CONTROLS                        -->
+<!-- ===================================================================== -->
+<section class="p-4 md:p-6 bg-surface-container-lowest border-b border-outline-variant">
+<div class="max-w-[1600px] mx-auto space-y-4">
+<!-- Title row with tags and client context -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+<div class="space-y-1">
+<div class="flex items-center gap-2 flex-wrap">
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Planning &amp; Workflow</h1>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-secondary-container text-on-secondary-fixed">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary-container"></span>
+<span>Specialty Roastery • Active</span>
+</div>
+</div>
+<p class="text-xs md:text-sm text-secondary flex items-center gap-2 flex-wrap">
+<span>18 posts scheduled for October 2024</span>
+<span class="text-outline-variant">•</span>
+<span class="text-amber-700 font-medium">3 awaiting review</span>
+<span class="text-outline-variant">•</span>
+<span class="text-rose-700 font-medium">1 draft overdue</span>
+</p>
+</div>
+<!-- Header Quick Action Buttons -->
+<div class="flex items-center gap-2">
+<button class="px-3 py-2 bg-surface-container-lowest border border-outline-variant text-on-surface font-button text-button rounded-lg hover:bg-surface-container-low transition-colors flex items-center gap-1.5 focus:ring-2 focus:ring-primary focus:outline-none">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+<span>AI Brief Helper</span>
+</button>
+<button class="px-3.5 py-2 bg-primary hover:bg-primary-container text-on-primary font-button text-button rounded-lg flex items-center gap-2 transition-all shadow-none focus:ring-2 focus:ring-primary focus:outline-none active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>+ Create content</span>
+</button>
+</div>
+</div>
+<!-- Secondary Control Bar: View Switcher, Date Nav, and Multi-Filter -->
+<div class="pt-2 border-t border-outline-variant/60 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+<!-- Left grouping: View Toggle & Date Switcher -->
+<div class="flex items-center gap-3 flex-wrap">
+<!-- Segmented View Toggle -->
+<div aria-label="Content layout views" class="inline-flex p-1 bg-surface-container-low border border-outline-variant rounded-lg" role="tablist">
+<button aria-selected="false" class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-button text-secondary hover:text-on-surface transition-colors" id="tab-btn-list" onclick="switchView('list')" role="tab">
+<span class="material-symbols-outlined text-[16px]">view_list</span>
+<span>List</span>
+</button>
+<button aria-selected="true" class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-button bg-surface-container-lowest text-primary font-semibold shadow-sm transition-colors" id="tab-btn-board" onclick="switchView('board')" role="tab">
+<span class="material-symbols-outlined text-[16px]">view_kanban</span>
+<span>Board</span>
+</button>
+<button aria-selected="false" class="flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-button text-secondary hover:text-on-surface transition-colors" id="tab-btn-calendar" onclick="switchView('calendar')" role="tab">
+<span class="material-symbols-outlined text-[16px]">calendar_month</span>
+<span>Calendar</span>
+</button>
+</div>
+<!-- Date Navigation -->
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant rounded-lg p-0.5">
+<button aria-label="Previous month" class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_left</span>
+</button>
+<span class="font-button text-button px-2.5 text-xs text-on-surface">October 2024</span>
+<button aria-label="Next month" class="p-1.5 text-secondary hover:text-on-surface hover:bg-surface-container-low rounded transition-colors">
+<span class="material-symbols-outlined text-[16px]">chevron_right</span>
+</button>
+<div class="h-4 w-px bg-outline-variant mx-1"></div>
+<button class="px-2 py-1 text-xs font-button text-secondary hover:text-on-surface hover:bg-surface-container-low rounded">Month</button>
+<button class="px-2 py-1 text-xs font-button text-secondary hover:text-on-surface hover:bg-surface-container-low rounded">Week</button>
+</div>
+</div>
+<!-- Right grouping: Filters -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0">
+<!-- Filter by status dropdown -->
+<div class="relative">
+<select aria-label="Filter by status" class="bg-surface-container-lowest text-secondary text-xs rounded-lg border border-outline-variant py-1.5 ps-3 pe-8 focus:ring-1 focus:ring-primary focus:outline-none">
+<option>All statuses</option>
+<option>Brief</option>
+<option>In Production</option>
+<option>Internal Review</option>
+<option>Client Review</option>
+<option>Ready / Scheduled</option>
+</select>
+</div>
+<!-- Filter by format dropdown -->
+<div class="relative">
+<select aria-label="Filter by content format" class="bg-surface-container-lowest text-secondary text-xs rounded-lg border border-outline-variant py-1.5 ps-3 pe-8 focus:ring-1 focus:ring-primary focus:outline-none">
+<option>All formats</option>
+<option>Reels</option>
+<option>Carousels</option>
+<option>Stories</option>
+<option>Static Post</option>
+</select>
+</div>
+<!-- Filter by channel dropdown -->
+<div class="relative">
+<select aria-label="Filter by social channel" class="bg-surface-container-lowest text-secondary text-xs rounded-lg border border-outline-variant py-1.5 ps-3 pe-8 focus:ring-1 focus:ring-primary focus:outline-none">
+<option>All channels</option>
+<option>Instagram</option>
+<option>TikTok</option>
+<option>LinkedIn</option>
+</select>
+</div>
+<!-- Owner filter button -->
+<button class="bg-surface-container-lowest text-secondary hover:text-on-surface text-xs rounded-lg border border-outline-variant py-1.5 px-2.5 flex items-center gap-1.5 whitespace-nowrap">
+<span class="material-symbols-outlined text-[16px]">person</span>
+<span>Assignee: All</span>
+</button>
+<button aria-label="Clear filters" class="text-secondary hover:text-rose-600 p-1.5 rounded transition-colors" title="Reset filters">
+<span class="material-symbols-outlined text-[16px]">filter_alt_off</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW PANE 1: BOARD / KANBAN WORKFLOW VIEW (`#board-view`)            -->
+<!-- ===================================================================== -->
+<section class="flex-1 p-4 md:p-6 overflow-x-auto" id="board-view">
+<div class="min-w-[1240px] grid grid-cols-5 gap-4 items-start pb-12">
+<!-- COLUMN 1: BRIEF -->
+<div class="bg-surface-container-low/80 rounded-xl p-3 border border-outline-variant/80 flex flex-col max-h-full">
+<div class="flex items-center justify-between pb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-secondary"></span>
+<h3 class="font-section-title text-sm font-semibold text-on-surface">Brief</h3>
+<span class="text-xs px-2 py-0.5 rounded-full bg-surface-container-highest text-on-surface-variant font-medium">3</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Column menu" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">more_horiz</span>
+</button>
+<button aria-label="Add brief card" class="text-secondary hover:text-primary p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</div>
+<!-- Column cards container -->
+<div class="space-y-3 overflow-y-auto pe-0.5">
+<!-- Card 1.1 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-primary/50 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs text-secondary">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event</span>
+                    Oct 30, 10:00 AM
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-secondary-fixed">
+                    Ideation
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Holiday 2024</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Single Origin Holiday Blend Concept</h4>
+<p class="text-xs text-secondary mt-1 line-clamp-2">Pitching seasonal cinnamon and candied orange roast notes with cozy visuals.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">burst_mode</span>
+                      Carousel
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface-container-high text-[11px] font-semibold flex items-center justify-center text-on-surface" title="Assigned to Liam Croft">
+                    LC
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-primary font-button text-xs rounded border border-outline-variant/50 transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit_note</span>
+<span>Flesh out brief</span>
+</button>
+</article>
+<!-- Card 1.2 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-primary/50 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs text-secondary">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event</span>
+                    Nov 02, 2:00 PM
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-secondary-fixed">
+                    Concept
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">In-Store Menu</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Nitro Cold Brew Tasting Flight</h4>
+<p class="text-xs text-secondary mt-1 line-clamp-2">Behind the bar tap setup and sensory tasting guide with Master Barista.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">movie</span>
+                      Reels
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-900 text-white">TT</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface-container-high text-[11px] font-semibold flex items-center justify-center text-on-surface" title="Assigned to Sarah Jenkins">
+                    SJ
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-primary font-button text-xs rounded border border-outline-variant/50 transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit_note</span>
+<span>Flesh out brief</span>
+</button>
+</article>
+<!-- Card 1.3 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-primary/50 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs text-secondary">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event</span>
+                    Nov 05, 9:00 AM
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container-high text-on-secondary-fixed">
+                    Outline
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Education</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Barista Training Teaser: Steaming Silky Microfoam</h4>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">movie</span>
+                      Stories
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-fixed text-[11px] font-semibold flex items-center justify-center">
+                    ER
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-primary font-button text-xs rounded border border-outline-variant/50 transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit_note</span>
+<span>Flesh out brief</span>
+</button>
+</article>
+</div>
+</div>
+<!-- COLUMN 2: PRODUCTION -->
+<div class="bg-surface-container-low/80 rounded-xl p-3 border border-outline-variant/80 flex flex-col max-h-full">
+<div class="flex items-center justify-between pb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+<h3 class="font-section-title text-sm font-semibold text-on-surface">Production</h3>
+<span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 font-medium">4</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Column menu" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">more_horiz</span>
+</button>
+<button aria-label="Add production card" class="text-secondary hover:text-primary p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">add</span>
+</button>
+</div>
+</div>
+<div class="space-y-3 overflow-y-auto pe-0.5">
+<!-- Card 2.1 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-blue-400 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-blue-700 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                    Due tomorrow, 5:00 PM
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    Drafting
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Origin Stories</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Single Origin Ethiopia Launch Carousel</h4>
+<p class="text-xs text-secondary mt-1">4 of 6 slides designed. Highlighting Yirgacheffe floral tasting notes.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">burst_mode</span>
+                      Carousel
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">LI</span>
+</div>
+<div class="flex items-center gap-1">
+<div class="w-6 h-6 rounded-full bg-blue-100 text-blue-800 text-[11px] font-semibold flex items-center justify-center" title="Marcus Chen">
+                      MC
+                    </div>
+</div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-blue-600 hover:bg-blue-700 text-white font-button text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-none">
+<span class="material-symbols-outlined text-[14px]">upload_file</span>
+<span>Upload slides</span>
+</button>
+</article>
+<!-- Card 2.2 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-blue-400 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">event</span>
+                    Oct 26, 3:00 PM
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                    Video Editing
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">R&amp;D Series</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Matcha Seasonal R&amp;D Video</h4>
+<p class="text-xs text-secondary mt-1">Rough cut completed. Waiting on B-roll color grading audio mix.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">movie</span>
+                      Reels
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-900 text-white">TT</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-fixed text-[11px] font-semibold flex items-center justify-center" title="Elena Rostova">
+                    ER
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-on-surface font-button text-xs rounded border border-outline-variant transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">play_circle</span>
+<span>View cut #2</span>
+</button>
+</article>
+</div>
+</div>
+<!-- COLUMN 3: INTERNAL REVIEW -->
+<div class="bg-surface-container-low/80 rounded-xl p-3 border border-outline-variant/80 flex flex-col max-h-full">
+<div class="flex items-center justify-between pb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<h3 class="font-section-title text-sm font-semibold text-on-surface">Internal review</h3>
+<span class="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-medium">2</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Column menu" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="space-y-3 overflow-y-auto pe-0.5">
+<!-- Card 3.1: Needs Attention / Asset Missing -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border-2 border-rose-300 shadow-none flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-rose-700 font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">warning</span>
+                    Asset missing
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    QA Check
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Barista School</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Barista Tips: Dialing Espresso</h4>
+<p class="text-xs text-rose-600 mt-1 font-medium">Cover thumbnail missing 1080x1920 safety margin text.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">movie</span>
+                      Reels
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-primary-container text-on-primary text-[11px] font-semibold flex items-center justify-center" title="Sarah Jenkins">
+                    SJ
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-rose-600 hover:bg-rose-700 text-white font-button text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-none">
+<span class="material-symbols-outlined text-[14px]">cloud_download</span>
+<span>Fix thumbnail</span>
+</button>
+</article>
+<!-- Card 3.2 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-amber-400 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                    Passed Copy QA
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                    Lead QA
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Brand Story</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Roaster's Choice Origin Story</h4>
+<p class="text-xs text-secondary mt-1">Interviews with green coffee buyer. 3-minute read format.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">article</span>
+                      Article
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-100 text-blue-700">LI</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface-container-high text-[11px] font-semibold flex items-center justify-center">
+                    MC
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-amber-600 hover:bg-amber-700 text-white font-button text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-none">
+<span class="material-symbols-outlined text-[14px]">rate_review</span>
+<span>Review &amp; approve</span>
+</button>
+</article>
+</div>
+</div>
+<!-- COLUMN 4: CLIENT REVIEW -->
+<div class="bg-surface-container-low/80 rounded-xl p-3 border border-outline-variant/80 flex flex-col max-h-full">
+<div class="flex items-center justify-between pb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-purple-500"></span>
+<h3 class="font-section-title text-sm font-semibold text-on-surface">Client review</h3>
+<span class="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-medium">3</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Column menu" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="space-y-3 overflow-y-auto pe-0.5">
+<!-- Card 4.1: Critical Deadline -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border-2 border-purple-300 shadow-none flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-purple-700 font-semibold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">alarm</span>
+                    Due today, 5:00 PM EST
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                    1/2 Sign-offs
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Fall Launch</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Autumn Cold Brew Reel — Final Cut</h4>
+<p class="text-xs text-secondary mt-1">Awaiting Dave K. (Marketing Director, Northstar) sign-off.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">movie</span>
+                      Reels
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-900 text-white">TT</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-purple-100 text-purple-800 text-[11px] font-semibold flex items-center justify-center" title="Dave K. reviewing">
+                    DK
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-purple-600 hover:bg-purple-700 text-white font-button text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-none">
+<span class="material-symbols-outlined text-[14px]">send</span>
+<span>Send client ping</span>
+</button>
+</article>
+<!-- Card 4.2 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-purple-400 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs text-secondary">
+<span class="font-label text-label text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">feedback</span>
+                    Notes left
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800">
+                    Needs update
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Holidays</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Halloween Roast Promo — Caption Approval</h4>
+<p class="text-xs text-secondary mt-1">Client requested promo code update in first line of caption.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">burst_mode</span>
+                      Stories
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface-container-high text-[11px] font-semibold flex items-center justify-center">
+                    ER
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-on-surface font-button text-xs rounded border border-outline-variant transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">edit</span>
+<span>Apply feedback</span>
+</button>
+</article>
+</div>
+</div>
+<!-- COLUMN 5: READY / SCHEDULED -->
+<div class="bg-surface-container-low/80 rounded-xl p-3 border border-outline-variant/80 flex flex-col max-h-full">
+<div class="flex items-center justify-between pb-3 px-1">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<h3 class="font-section-title text-sm font-semibold text-on-surface">Ready</h3>
+<span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-medium">6</span>
+</div>
+<div class="flex items-center gap-1">
+<button aria-label="Column menu" class="text-secondary hover:text-on-surface p-1 rounded">
+<span class="material-symbols-outlined text-[16px]">more_horiz</span>
+</button>
+</div>
+</div>
+<div class="space-y-3 overflow-y-auto pe-0.5">
+<!-- Card 5.1 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-emerald-500 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-emerald-700 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                    Oct 28, 4:00 PM EST
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Scheduled
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Events</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Coffee Tasting Flight Announcement</h4>
+<p class="text-xs text-secondary mt-1">Direct API dispatch armed for Instagram feed and TikTok auto-post.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">burst_mode</span>
+                      Carousel
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-neutral-900 text-white">TT</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-semibold flex items-center justify-center">
+                    SJ
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-emerald-800 font-button text-xs rounded border border-emerald-200 transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+<span>Preview queue</span>
+</button>
+</article>
+<!-- Card 5.2 -->
+<article class="bg-surface-container-lowest p-card-padding rounded-lg border border-outline-variant shadow-none hover:border-emerald-500 transition-all flex flex-col gap-3">
+<div class="flex items-center justify-between text-xs">
+<span class="font-label text-label text-emerald-700 font-medium flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">check_circle</span>
+                    Oct 29, 11:30 AM EST
+                  </span>
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Scheduled
+                  </span>
+</div>
+<div>
+<span class="text-[11px] font-semibold text-primary uppercase tracking-wider">Product</span>
+<h4 class="font-card-title text-card-title text-on-surface mt-0.5 leading-snug">Roaster's Choice: Kenya Peaberry</h4>
+<p class="text-xs text-secondary mt-1">Locked in buffer queue with verified UTM links.</p>
+</div>
+<div class="flex items-center justify-between pt-1 border-t border-outline-variant/60">
+<div class="flex items-center gap-1.5">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-surface-container-low text-[11px] text-secondary">
+<span class="material-symbols-outlined text-[13px]">image</span>
+                      Static
+                    </span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-pink-100 text-pink-700">IG</span>
+</div>
+<div class="w-6 h-6 rounded-full bg-surface-container-high text-[11px] font-semibold flex items-center justify-center">
+                    LC
+                  </div>
+</div>
+<!-- Single dominant next action -->
+<button class="w-full mt-1 py-1.5 px-3 bg-surface-container-low hover:bg-surface-container text-emerald-800 font-button text-xs rounded border border-emerald-200 transition-colors flex items-center justify-center gap-1.5">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+<span>Preview queue</span>
+</button>
+</article>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW PANE 2: INTERACTIVE CALENDAR VIEW (`#calendar-view`)             -->
+<!-- ===================================================================== -->
+<section class="hidden flex-1 p-4 md:p-6 flex-col" id="calendar-view">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex-1 flex flex-col">
+<!-- Calendar operational metadata & dispatch slot -->
+<div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-outline-variant text-xs text-secondary">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="flex items-center gap-1 text-on-surface font-medium">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+                Scheduled in America/New_York (EST)
+              </span>
+<span class="text-outline-variant">•</span>
+<span class="text-emerald-700 font-medium flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                Next auto-publish slot: Today, 4:00 PM EST
+              </span>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2.5 py-1 text-xs border border-outline-variant rounded hover:bg-surface-container-low text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">sync</span>
+<span>Sync with Google Calendar</span>
+</button>
+</div>
+</div>
+<!-- Day of week header row -->
+<div class="grid grid-cols-7 text-center font-button text-xs font-semibold text-secondary py-2 border-b border-outline-variant/60">
+<div>MON</div>
+<div>TUE</div>
+<div>WED</div>
+<div class="text-primary font-bold">THU (TODAY)</div>
+<div>FRI</div>
+<div>SAT</div>
+<div>SUN</div>
+</div>
+<!-- Monthly Grid container (October 2024 active sample week) -->
+<div class="grid grid-cols-7 grid-rows-5 gap-px bg-outline-variant/40 flex-1 border border-outline-variant/60 rounded-lg overflow-hidden mt-1">
+<!-- Cell: Prev month days -->
+<div class="bg-surface-container-low/40 p-2 min-h-[100px] flex flex-col justify-between opacity-50">
+<span class="text-xs font-medium text-secondary">30</span>
+</div>
+<!-- Days 1 - 20 simplified representation -->
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">1</span>
+<div class="p-1 rounded bg-surface-container text-[11px] text-secondary truncate">Monthly promo kick</div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">2</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">3</span>
+<div class="p-1 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 text-[11px] truncate">Coffee Origins #1</div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">4</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">5</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">6</span>
+</div>
+<!-- Week 2-3 collapsed placeholders for brevity -->
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">7</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">8</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">9</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">10</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">11</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">12</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[100px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">13</span>
+</div>
+<!-- Current Week (Oct 21 - Oct 27) -->
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">21</span>
+<div class="p-1.5 rounded bg-emerald-50 text-emerald-800 text-xs truncate border border-emerald-200">
+<span class="font-semibold">Published:</span> Aeropress Guide
+              </div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">22</span>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">23</span>
+<div class="p-1.5 rounded bg-blue-50 text-blue-800 text-xs truncate border border-blue-200">
+                Single Origin Teaser
+              </div>
+</div>
+<!-- TODAY: OCT 24 (Highlighted cell) -->
+<div class="bg-primary-fixed/20 p-2 min-h-[115px] flex flex-col justify-between border-2 border-primary relative">
+<div class="flex items-center justify-between">
+<span class="w-6 h-6 rounded-full bg-primary text-on-primary text-xs font-bold flex items-center justify-center">24</span>
+<span class="text-[10px] uppercase font-bold text-primary tracking-wider">Today</span>
+</div>
+<!-- Scheduled post item in cell -->
+<div class="group relative mt-1 p-1.5 bg-surface-container-lowest rounded border border-purple-300 shadow-sm">
+<div class="flex items-center justify-between text-[11px]">
+<span class="font-semibold text-purple-900 truncate">Cold Brew Reel</span>
+<span class="text-[10px] text-purple-700 font-medium">4:00 PM</span>
+</div>
+<p class="text-[10px] text-secondary truncate">Awaiting Dave K.</p>
+<!-- Reschedule hover popover / dropdown affordance -->
+<div class="mt-1 pt-1 border-t border-outline-variant/40 flex items-center justify-between text-[10px]">
+<span class="text-purple-700 font-medium flex items-center gap-0.5">
+<span class="material-symbols-outlined text-[12px]">alarm</span>
+                    5h left
+                  </span>
+<button class="text-primary hover:underline" onclick="alert('Reschedule: Shifted to Oct 25, 4:00 PM EST')">
+                    Shift +1d
+                  </button>
+</div>
+</div>
+</div>
+<!-- Oct 25 -->
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<div class="flex items-center justify-between">
+<span class="text-xs font-medium text-secondary">25</span>
+</div>
+<div class="p-1.5 rounded bg-blue-50 text-blue-800 text-xs border border-blue-200">
+<div class="font-semibold truncate">Ethiopia Launch</div>
+<div class="text-[10px] text-blue-600">Carousel • 2:00 PM</div>
+</div>
+</div>
+<!-- Oct 26 -->
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">26</span>
+<div class="p-1.5 rounded bg-amber-50 text-amber-800 text-xs border border-amber-200">
+<div class="font-semibold truncate">Dialing Espresso</div>
+<div class="text-[10px] text-amber-700">Reels (Asset QA)</div>
+</div>
+</div>
+<!-- Oct 27 -->
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">27</span>
+<div class="p-1.5 rounded bg-purple-50 text-purple-800 text-xs border border-purple-200">
+<div class="font-semibold truncate">Halloween Promo</div>
+<div class="text-[10px] text-purple-700">Caption Review</div>
+</div>
+</div>
+<!-- Week 5 (Oct 28 - Nov 3) -->
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">28</span>
+<div class="p-1.5 rounded bg-emerald-50 text-emerald-800 text-xs border border-emerald-200">
+<div class="font-semibold truncate">Tasting Flight</div>
+<div class="text-[10px] text-emerald-700">Scheduled 4:00 PM</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">29</span>
+<div class="p-1.5 rounded bg-emerald-50 text-emerald-800 text-xs border border-emerald-200">
+<div class="font-semibold truncate">Kenya Peaberry</div>
+<div class="text-[10px] text-emerald-700">Scheduled 11:30 AM</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">30</span>
+<div class="p-1.5 rounded bg-surface-container text-on-surface-variant text-xs">
+<div class="font-medium truncate">Holiday Blend Brief</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest p-2 min-h-[115px] flex flex-col justify-between">
+<span class="text-xs font-medium text-secondary">31</span>
+<div class="p-1.5 rounded bg-emerald-50 text-emerald-800 text-xs border border-emerald-200">
+<div class="font-semibold truncate">Halloween Special</div>
+</div>
+</div>
+<!-- Next month (Nov 1 - Nov 3) -->
+<div class="bg-surface-container-low/40 p-2 min-h-[115px] flex flex-col justify-between opacity-50">
+<span class="text-xs font-medium text-secondary">1</span>
+</div>
+<div class="bg-surface-container-low/40 p-2 min-h-[115px] flex flex-col justify-between opacity-50">
+<span class="text-xs font-medium text-secondary">2</span>
+</div>
+<div class="bg-surface-container-low/40 p-2 min-h-[115px] flex flex-col justify-between opacity-50">
+<span class="text-xs font-medium text-secondary">3</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ===================================================================== -->
+<!-- VIEW PANE 3: COMPACT LIST VIEW (`#list-view`)                         -->
+<!-- ===================================================================== -->
+<section class="hidden flex-1 p-4 md:p-6" id="list-view">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-none">
+<div class="p-4 border-b border-outline-variant flex items-center justify-between">
+<h3 class="font-section-title text-base text-on-surface">Master Production Schedule</h3>
+<span class="text-xs text-secondary">Showing 18 items</span>
+</div>
+<table class="w-full text-start text-xs font-table-dense border-collapse">
+<thead>
+<tr class="bg-surface-container-low text-secondary border-b border-outline-variant">
+<th class="py-3 px-4 text-start font-semibold">Post Title &amp; Concept</th>
+<th class="py-3 px-4 text-start font-semibold">Workflow Stage</th>
+<th class="py-3 px-4 text-start font-semibold">Format &amp; Channels</th>
+<th class="py-3 px-4 text-start font-semibold">Assignee</th>
+<th class="py-3 px-4 text-start font-semibold">Publish Date</th>
+<th class="py-3 px-4 text-end font-semibold">Next Action</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant">
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-semibold text-on-surface">Single Origin Ethiopia Launch Carousel</div>
+<div class="text-secondary text-[11px]">Campaign: Origin Stories</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-blue-100 text-blue-800">
+<span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                    In production
+                  </span>
+</td>
+<td class="py-3 px-4">
+<span class="px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-bold me-1">IG</span>
+<span class="px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">LI</span>
+</td>
+<td class="py-3 px-4 text-on-surface">Marcus Chen</td>
+<td class="py-3 px-4 text-secondary">Oct 25, 2:00 PM EST</td>
+<td class="py-3 px-4 text-end">
+<button class="px-2.5 py-1 bg-primary text-on-primary rounded text-xs font-medium hover:bg-primary-container">Upload slides</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-semibold text-on-surface">Autumn Cold Brew Reel — Final Cut</div>
+<div class="text-secondary text-[11px]">Campaign: Fall Beverage Launch</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-purple-100 text-purple-800">
+<span class="w-1.5 h-1.5 rounded-full bg-purple-500"></span>
+                    Client review (1/2)
+                  </span>
+</td>
+<td class="py-3 px-4">
+<span class="px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-bold me-1">IG</span>
+<span class="px-1.5 py-0.5 rounded bg-neutral-900 text-white font-bold">TT</span>
+</td>
+<td class="py-3 px-4 text-on-surface">Dave K. (Client)</td>
+<td class="py-3 px-4 text-purple-700 font-medium">Oct 24, 4:00 PM EST</td>
+<td class="py-3 px-4 text-end">
+<button class="px-2.5 py-1 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700">Ping reviewer</button>
+</td>
+</tr>
+<tr class="hover:bg-surface-container-low/50 transition-colors">
+<td class="py-3 px-4">
+<div class="font-semibold text-on-surface">Barista Tips: Dialing Espresso</div>
+<div class="text-secondary text-[11px]">Campaign: Barista School</div>
+</td>
+<td class="py-3 px-4">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-rose-100 text-rose-800">
+<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+                    Asset missing
+                  </span>
+</td>
+<td class="py-3 px-4">
+<span class="px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 font-bold">IG</span>
+</td>
+<td class="py-3 px-4 text-on-surface">Sarah Jenkins</td>
+<td class="py-3 px-4 text-secondary">Oct 26, 3:00 PM EST</td>
+<td class="py-3 px-4 text-end">
+<button class="px-2.5 py-1 bg-rose-600 text-white rounded text-xs font-medium hover:bg-rose-700">Fix cover</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+<!-- Micro-interaction JavaScript to toggle Board / Calendar / List views -->
+<script>
+    function switchView(viewName) {
+      const boardView = document.getElementById('board-view');
+      const calendarView = document.getElementById('calendar-view');
+      const listView = document.getElementById('list-view');
+
+      const btnBoard = document.getElementById('tab-btn-board');
+      const btnCalendar = document.getElementById('tab-btn-calendar');
+      const btnList = document.getElementById('tab-btn-list');
+
+      // Reset tabs visual state
+      [btnBoard, btnCalendar, btnList].forEach(btn => {
+        btn.classList.remove('bg-surface-container-lowest', 'text-primary', 'font-semibold', 'shadow-sm');
+        btn.classList.add('text-secondary');
+        btn.setAttribute('aria-selected', 'false');
+      });
+
+      // Hide all panes
+      boardView.classList.add('hidden');
+      calendarView.classList.add('hidden');
+      listView.classList.add('hidden');
+
+      if (viewName === 'board') {
+        boardView.classList.remove('hidden');
+        btnBoard.classList.add('bg-surface-container-lowest', 'text-primary', 'font-semibold', 'shadow-sm');
+        btnBoard.classList.remove('text-secondary');
+        btnBoard.setAttribute('aria-selected', 'true');
+      } else if (viewName === 'calendar') {
+        calendarView.classList.remove('hidden');
+        calendarView.classList.add('flex');
+        btnCalendar.classList.add('bg-surface-container-lowest', 'text-primary', 'font-semibold', 'shadow-sm');
+        btnCalendar.classList.remove('text-secondary');
+        btnCalendar.setAttribute('aria-selected', 'true');
+      } else if (viewName === 'list') {
+        listView.classList.remove('hidden');
+        btnList.classList.add('bg-surface-container-lowest', 'text-primary', 'font-semibold', 'shadow-sm');
+        btnList.classList.remove('text-secondary');
+        btnList.setAttribute('aria-selected', 'true');
+      }
+    }
+
+    // Mobile sidebar toggle
+    const mobileToggle = document.getElementById('mobile-menu-toggle');
+    const sidebarNav = document.getElementById('sidebar-nav');
+
+    if (mobileToggle && sidebarNav) {
+      mobileToggle.addEventListener('click', () => {
+        sidebarNav.classList.toggle('-translate-x-full');
+      });
+    }
+  </script>
+</body></html>

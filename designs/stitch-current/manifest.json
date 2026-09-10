@@ -1,0 +1,32 @@
+{
+  "projectId": "16083107078886291815",
+  "designSystemId": "14000568228937989951",
+  "generatedAt": "2026-09-10",
+  "screens": [
+    { "id": "9821d2eb7b254f7bbfe47827e9ab53eb", "route": "/app/w/[slug]", "device": "desktop", "slug": "workspace-overview-desktop" },
+    { "id": "9f3ef0dec68646c2a697fadffeb65731", "route": "/app/w/[slug]/planning", "device": "desktop", "slug": "monthly-planning-desktop" },
+    { "id": "8ba7973deb6c4353aeb45ed1af2972d9", "route": "/app/w/[slug]/planning/[id]", "device": "desktop", "slug": "content-detail-desktop" },
+    { "id": "d1252782c93c45ee92fd4300444489b0", "route": "/app/w/[slug]/reviews", "device": "desktop", "slug": "reviews-desktop" },
+    { "id": "9bce0489fe5e4146a937dfb4a330a5ea", "route": "/app/w/[slug]/settings", "device": "desktop", "slug": "workspace-settings-desktop" },
+    { "id": "d93de8e32cb543cdb049f7b11428a165", "route": "/app/agency-settings/ai", "device": "desktop", "slug": "agency-ai-desktop" },
+    { "id": "5f2606cfa6be4f02822e477c637ddcf0", "route": "/app/w/[slug]/media", "device": "desktop", "slug": "media-library-desktop" },
+    { "id": "e5f6a4338ea441f4b9b4710bcbb775c1", "route": "/app/w/[slug]/trends", "device": "desktop", "slug": "trends-desktop" },
+    { "id": "ab5ee0411c54483191c4ad5403afa35f", "route": "/app/platform/overview", "device": "desktop", "slug": "platform-overview-desktop" },
+    { "id": "c6e51dea498041958a5631d4cd21c715", "route": "/signin", "device": "desktop", "slug": "access-setup-desktop" },
+    { "id": "f9fae47e44a44fb09a9870485ae7806e", "route": "/app/workspaces", "device": "desktop", "slug": "agency-admin-desktop" },
+    { "id": "b8b3b576e09e47a0825637f3bab5d0c5", "route": "/app/w/[slug]/brand-kit", "device": "desktop", "slug": "brand-kit-channels-desktop" },
+    { "id": "95dfecceb93e46a699f2598263b0d54c", "route": "/app/w/[slug]/planning/[id]/publish", "device": "desktop", "slug": "publishing-recovery-desktop" },
+    { "id": "a62bb395ab294343bd2853b4f11941d9", "route": "/app/w/[slug]/client", "device": "desktop", "slug": "client-review-desktop" },
+    { "id": "76e0913910d04e0f8de463b349a5bc73", "route": "/app/account", "device": "desktop", "slug": "account-notifications-desktop" },
+    { "id": "b75a9ec57d5b4859ab318e2003f2bf65", "route": "/app/w/[slug]/board", "device": "desktop", "slug": "board-calendar-desktop" },
+    { "id": "a37448b4648449b5bd18e41d7dbf34b5", "route": "/app/w/[slug]/design-queue", "device": "desktop", "slug": "queue-library-desktop" },
+    { "id": "e344b125c0084ca7a58c778523eeccd0", "route": "/app/agency-settings", "device": "desktop", "slug": "agency-settings-desktop" },
+    { "id": "e87426aa83a4456899e3242418efba33", "route": "/app/w/[slug]/analytics/social", "device": "desktop", "slug": "analytics-trend-sources-desktop" },
+    { "id": "fa90e2470d684514b0b12ca5ddbf0086", "route": "/app/platform/agencies/[agencyId]", "device": "desktop", "slug": "platform-admin-desktop" },
+    { "id": "27d7fc6cddd444d78d79535f0b2e328b", "route": "shared operational states", "device": "desktop", "slug": "operational-states-desktop" },
+    { "id": "8319aff48c454f69a6c614fe79e7b411", "route": "/app/w/[slug]", "device": "mobile", "slug": "workspace-overview-mobile" },
+    { "id": "8758e7247c194e00a24e09f9a9a37962", "route": "/app/w/[slug]/planning", "device": "mobile", "slug": "monthly-planning-mobile" },
+    { "id": "627f80e530f04738a7e16f829ea35fe3", "route": "/app/w/[slug]/planning/[id]", "device": "mobile", "slug": "content-detail-mobile" },
+    { "id": "176f9b09f4cb49b08b2051b820cb48ee", "route": "/app/w/[slug]/settings", "device": "mobile", "slug": "workspace-settings-mobile" }
+  ]
+}

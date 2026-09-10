@@ -62,29 +62,17 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     }
   });
 
-  test("workspace More sheet exposes secondary routes and the correct create action", async ({
+  test("workspace More sheet exposes secondary routes without a competing create action", async ({
     page,
   }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/app/w/acme/planning");
 
-    await expect(page.getByTestId("mobile-primary-create")).toHaveAttribute(
-      "href",
-      "/app/w/acme/planning/new",
-    );
+    await expect(page.getByTestId("mobile-primary-create")).toHaveCount(0);
     await page.getByTestId("mobile-navigation-more").click();
     await expect(page.getByRole("dialog", { name: "Navigate" })).toBeVisible();
-    for (const label of [
-      "Board",
-      "Calendar",
-      "Design queue",
-      "Library",
-      "Brand kit",
-      "Settings",
-      "Trend Radar",
-      "Trend settings",
-    ]) {
+    for (const label of ["Board", "Calendar", "Design queue", "Library", "Brand kit", "Settings"]) {
       await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
     const a11y = await new AxeBuilder({ page })

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Northstar Coffee — Workspace Overview | LaraTik</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary": "#ffffff",
+            "surface-dim": "#d1daf4",
+            "inverse-primary": "#c3c0ff",
+            "secondary-container": "#d7e0f5",
+            "on-primary-container": "#dad7ff",
+            "background": "#f9f9ff",
+            "inverse-surface": "#273044",
+            "on-surface": "#121b2e",
+            "tertiary-fixed-dim": "#94ccff",
+            "primary-fixed": "#e2dfff",
+            "primary-container": "#4f46e5",
+            "primary": "#3525cd",
+            "on-primary-fixed-variant": "#3323cc",
+            "surface-container-high": "#e1e8ff",
+            "surface-tint": "#4d44e3",
+            "primary-fixed-dim": "#c3c0ff",
+            "outline-variant": "#c7c4d8",
+            "surface": "#f9f9ff",
+            "on-error": "#ffffff",
+            "inverse-on-surface": "#edf0ff",
+            "tertiary": "#004c77",
+            "on-tertiary-container": "#bfdfff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "surface-container-highest": "#d9e2fc",
+            "secondary": "#565f70",
+            "tertiary-container": "#00659c",
+            "on-secondary-fixed": "#131c2b",
+            "surface-container-low": "#f1f3ff",
+            "surface-container": "#e9edff",
+            "on-primary": "#ffffff",
+            "surface-variant": "#d9e2fc",
+            "error-container": "#ffdad6",
+            "tertiary-fixed": "#cde5ff",
+            "surface-container-lowest": "#ffffff",
+            "outline": "#777587",
+            "on-secondary-container": "#5a6375",
+            "error": "#ba1a1a",
+            "secondary-fixed": "#dae3f8",
+            "on-error-container": "#93000a",
+            "secondary-fixed-dim": "#bec7db",
+            "on-tertiary-fixed": "#001d32",
+            "on-secondary": "#ffffff",
+            "surface-bright": "#f9f9ff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-primary-fixed": "#0f0069",
+            "on-surface-variant": "#464555",
+            "on-background": "#121b2e"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-collapsed": "72px",
+            "touch-target-min": "44px",
+            "screen-padding": "24px",
+            "sidebar-expanded": "248px",
+            "gutter": "16px",
+            "base": "4px",
+            "card-padding": "16px",
+            "topbar-height": "64px"
+          },
+          "fontFamily": {
+            "section-title": ["Inter"],
+            "label": ["Inter"],
+            "button": ["Inter"],
+            "card-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "body": ["Inter"],
+            "page-title": ["Inter"]
+          },
+          "fontSize": {
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      -webkit-tap-highlight-color: transparent;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      background-color: #f7f7f5;
+    }
+    /* Hide scrollbar for horizontal chips list */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-[#f7f7f5] text-on-surface antialiased selection:bg-primary-container selection:text-on-primary">
+<!-- Mobile Viewport Container: 375px canonical simulation / responsive mobile wrapper -->
+<div class="mx-auto max-w-[420px] min-h-screen bg-[#f7f7f5] relative flex flex-col pb-[96px] shadow-sm">
+<!-- 1. TopAppBar (Shared Component Implementation) -->
+<header class="sticky top-0 left-0 w-full h-topbar-height z-40 flex items-center justify-between px-screen-padding bg-surface-container-lowest/95 backdrop-blur-md shadow-sm border-b border-outline-variant/30">
+<!-- Leading Item + Brand Identifier -->
+<div class="flex items-center gap-2">
+<button aria-label="Storefront Profile" class="active:scale-95 transition-transform duration-100 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface">
+<span class="material-symbols-outlined text-primary" data-icon="storefront">storefront</span>
+</button>
+<div class="flex flex-col text-left">
+<div class="flex items-center gap-1">
+<span class="font-card-title text-card-title font-semibold text-on-surface tracking-tight">Northstar Coffee</span>
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant" data-icon="expand_more">expand_more</span>
+</div>
+<div class="flex items-center gap-1.5 mt-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span class="font-label text-[10px] leading-none text-secondary">All systems operational</span>
+</div>
+</div>
+</div>
+<!-- Trailing Notification & Context Menu Actions -->
+<div class="flex items-center gap-1">
+<button aria-label="Notifications" class="relative active:scale-95 transition-transform duration-100 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">3</span>
+</button>
+<button aria-label="Workspace options" class="active:scale-95 transition-transform duration-100 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-surface-container text-on-surface">
+<span class="material-symbols-outlined" data-icon="more_vert">more_vert</span>
+</button>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 px-base px-screen-padding pt-4 space-y-5">
+<!-- 2. Page Header & Dominant Primary Action -->
+<section class="space-y-3">
+<!-- Title & Subtitle Badge -->
+<div class="flex items-start justify-between">
+<div>
+<div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label text-[11px] mb-1">
+<span class="w-1 h-1 rounded-full bg-primary"></span>
+              Specialty Roastery
+            </div>
+<h1 class="font-page-title text-page-title tracking-tight text-on-surface">Northstar Coffee</h1>
+</div>
+<!-- Month Selector Pill -->
+<div class="flex items-center bg-surface-container-lowest border border-outline-variant/50 rounded-lg p-0.5 shadow-none">
+<button aria-label="Previous month" class="w-7 h-7 flex items-center justify-center text-secondary hover:text-on-surface active:scale-95">
+<span class="material-symbols-outlined text-[16px]" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-1.5 flex items-center gap-1 font-label text-label text-on-surface">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="calendar_today">calendar_today</span>
+<span>October 2024</span>
+</button>
+<button aria-label="Next month" class="w-7 h-7 flex items-center justify-center text-secondary hover:text-on-surface active:scale-95">
+<span class="material-symbols-outlined text-[16px]" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+<!-- Dominant Single Primary Action -->
+<button class="w-full min-h-[44px] bg-primary-container hover:bg-primary text-on-primary font-button text-button rounded-xl flex items-center justify-center gap-2 shadow-sm active:scale-[0.99] transition duration-150">
+<span class="material-symbols-outlined text-[20px]" data-icon="add">add</span>
+<span>Create content</span>
+</button>
+<!-- Status Summary Micro-line -->
+<p class="font-body text-[13px] text-on-surface-variant flex items-center justify-center text-center">
+<span>18 posts scheduled  ·  3 awaiting client review  ·  <span class="text-error font-medium">1 draft overdue</span></span>
+</p>
+</section>
+<!-- 3. Compact 2x2 KPI Grid -->
+<section class="grid grid-cols-2 gap-2.5">
+<!-- KPI 1 -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-secondary">Planned</span>
+<div class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" data-icon="calendar_month">calendar_month</span>
+</div>
+</div>
+<div>
+<div class="font-card-title text-card-title text-on-surface font-bold text-[20px]">12 posts</div>
+<span class="font-label text-[11px] text-emerald-700 font-medium">+4 vs Sept</span>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-secondary">In production</span>
+<div class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" data-icon="edit_document">edit_document</span>
+</div>
+</div>
+<div>
+<div class="font-card-title text-card-title text-on-surface font-bold text-[20px]">5 posts</div>
+<span class="font-label text-[11px] text-secondary">2 copy, 3 motion</span>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-secondary">Awaiting review</span>
+<div class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" data-icon="rate_review">rate_review</span>
+</div>
+</div>
+<div>
+<div class="font-card-title text-card-title text-on-surface font-bold text-[20px]">3 posts</div>
+<span class="font-label text-[11px] text-amber-700 font-medium">1 urgent callout</span>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 flex flex-col justify-between">
+<div class="flex items-center justify-between mb-1">
+<span class="font-label text-label text-secondary">Ready to publish</span>
+<div class="w-7 h-7 rounded-lg bg-surface-container flex items-center justify-center text-emerald-700">
+<span class="material-symbols-outlined text-[18px]" data-icon="check_circle">check_circle</span>
+</div>
+</div>
+<div>
+<div class="font-card-title text-card-title text-on-surface font-bold text-[20px]">6 posts</div>
+<span class="font-label text-[11px] text-secondary">Next in 2h 15m</span>
+</div>
+</div>
+</section>
+<!-- 4. Needs Attention Section -->
+<section class="space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h2 class="font-section-title text-[17px] font-semibold text-on-surface">Needs attention</h2>
+<span class="px-2 py-0.5 text-xs font-semibold rounded-full bg-error-container text-on-error-container">4 items</span>
+</div>
+<button class="font-label text-primary font-semibold text-[13px] hover:underline">View all</button>
+</div>
+<!-- Filter Chips Carousel -->
+<div class="flex items-center gap-2 overflow-x-auto no-scrollbar py-0.5">
+<button class="px-3 py-1.5 rounded-full text-xs font-medium bg-primary text-on-primary">All (4)</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container">Urgent (1)</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container">Reviews (2)</button>
+<button class="px-3 py-1.5 rounded-full text-xs font-medium bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container">Assets (1)</button>
+</div>
+<!-- Task Item A -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 space-y-2.5 shadow-none">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">Awaiting review</span>
+<span class="font-label text-[11px] text-secondary">Today, 5:00 PM</span>
+</div>
+<h3 class="font-card-title text-card-title font-semibold text-on-surface">Autumn Cold Brew Reel – Final Cut</h3>
+</div>
+<div class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-100 text-indigo-800 font-label text-[11px] font-bold flex items-center justify-center" title="Elena Rostova">ER</div>
+</div>
+<div class="pt-1 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-secondary text-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="videocam">videocam</span>
+<span>Instagram Reels</span>
+</div>
+<button class="min-h-[38px] px-3.5 rounded-lg bg-primary text-on-primary font-button text-xs hover:bg-primary-container active:scale-95 transition-all">
+              Open review
+            </button>
+</div>
+</div>
+<!-- Task Item B -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 space-y-2.5 shadow-none">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 text-[11px] font-semibold border border-blue-200">In production</span>
+<span class="font-label text-[11px] text-secondary">Tomorrow, 11:00 AM</span>
+</div>
+<h3 class="font-card-title text-card-title font-semibold text-on-surface">Single Origin Ethiopia Launch Carousel</h3>
+</div>
+<div class="flex-shrink-0 w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 font-label text-[11px] font-bold flex items-center justify-center" title="Marcus Chen">MC</div>
+</div>
+<div class="pt-1 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-secondary text-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="view_carousel">view_carousel</span>
+<span>LinkedIn &amp; IG</span>
+</div>
+<button class="min-h-[38px] px-3.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant/50 font-button text-xs hover:bg-surface-container active:scale-95 transition-all">
+              View draft
+            </button>
+</div>
+</div>
+<!-- Task Item C (Alert) -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 space-y-2.5 shadow-none">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 text-[11px] font-semibold border border-rose-200">Asset missing</span>
+<span class="font-label text-[11px] text-error font-medium">Due Oct 26</span>
+</div>
+<h3 class="font-card-title text-card-title font-semibold text-on-surface">Barista Tips: Dialing Espresso (Stories)</h3>
+</div>
+<div class="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 text-amber-800 font-label text-[11px] font-bold flex items-center justify-center" title="Sarah Jenkins">SJ</div>
+</div>
+<div class="pt-1 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-secondary text-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="photo_library">photo_library</span>
+<span>Instagram Stories</span>
+</div>
+<button class="min-h-[38px] px-3.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant/50 font-button text-xs hover:bg-surface-container active:scale-95 transition-all">
+              Upload media
+            </button>
+</div>
+</div>
+<!-- Task Item D -->
+<div class="bg-surface-container-lowest p-3.5 rounded-xl border border-outline-variant/40 space-y-2.5 shadow-none">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 text-[11px] font-semibold border border-amber-200">Client feedback</span>
+<span class="font-label text-[11px] text-secondary">Oct 27</span>
+</div>
+<h3 class="font-card-title text-card-title font-semibold text-on-surface">Halloween Roast Promo – Caption Approval</h3>
+</div>
+<div class="flex-shrink-0 w-7 h-7 rounded-full bg-indigo-100 text-indigo-800 font-label text-[11px] font-bold flex items-center justify-center" title="Elena Rostova">ER</div>
+</div>
+<div class="pt-1 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-secondary text-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="edit_note">edit_note</span>
+<span>All Channels</span>
+</div>
+<button class="min-h-[38px] px-3.5 rounded-lg bg-surface-container-low text-on-surface border border-outline-variant/50 font-button text-xs hover:bg-surface-container active:scale-95 transition-all">
+              Resolve notes
+            </button>
+</div>
+</div>
+</section>
+<!-- 5. Channel & Format Coverage Card -->
+<section class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 space-y-4 shadow-none">
+<div class="flex items-center justify-between">
+<div>
+<h2 class="font-section-title text-[16px] font-semibold text-on-surface">Channel &amp; format coverage</h2>
+<p class="font-label text-[11px] text-secondary">Target schedule vs actual posts</p>
+</div>
+<span class="material-symbols-outlined text-secondary" data-icon="tune">tune</span>
+</div>
+<div class="space-y-3 pt-1">
+<!-- Instagram -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-pink-500"></span>
+                Instagram
+              </span>
+<span class="font-semibold text-on-surface">9/12 <span class="text-secondary font-normal">(75%)</span></span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+<div class="flex items-center gap-1.5 pt-0.5">
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Reels (4)</span>
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Stories (3)</span>
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Carousel (2)</span>
+</div>
+</div>
+<!-- TikTok -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-slate-900"></span>
+                TikTok
+              </span>
+<span class="font-semibold text-on-surface">4/6 <span class="text-secondary font-normal">(67%)</span></span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 67%"></div>
+</div>
+<div class="flex items-center gap-1.5 pt-0.5">
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Video (4)</span>
+</div>
+</div>
+<!-- LinkedIn -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                LinkedIn
+              </span>
+<span class="font-semibold text-on-surface">3/4 <span class="text-secondary font-normal">(75%)</span></span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-2 rounded-full" style="width: 75%"></div>
+</div>
+<div class="flex items-center gap-1.5 pt-0.5">
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Article (1)</span>
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Static (2)</span>
+</div>
+</div>
+<!-- Newsletter -->
+<div class="space-y-1.5">
+<div class="flex items-center justify-between text-xs">
+<span class="font-medium text-on-surface flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-amber-600"></span>
+                Newsletter
+              </span>
+<span class="font-semibold text-on-surface">2/2 <span class="text-emerald-700 font-semibold">(100%)</span></span>
+</div>
+<div class="w-full bg-surface-container rounded-full h-2 overflow-hidden">
+<div class="bg-emerald-600 h-2 rounded-full" style="width: 100%"></div>
+</div>
+<div class="flex items-center gap-1.5 pt-0.5">
+<span class="font-label text-[10px] px-2 py-0.5 bg-surface-container rounded text-on-surface-variant">Monthly Digest</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 6. Upcoming 48 Hours & Activity -->
+<section class="space-y-4">
+<!-- Upcoming Title -->
+<div class="flex items-center justify-between">
+<h2 class="font-section-title text-[17px] font-semibold text-on-surface">Upcoming 48 hours</h2>
+<span class="font-label text-[12px] text-secondary">Auto-sync enabled</span>
+</div>
+<!-- Chronological Cards -->
+<div class="space-y-2">
+<!-- Item 1 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/40 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-surface-container-low text-primary">
+<span class="font-label text-[10px] uppercase font-bold text-secondary">Today</span>
+<span class="font-button text-[12px] font-bold text-primary">4:00 PM</span>
+</div>
+<div>
+<h4 class="font-card-title text-card-title text-[14px] text-on-surface font-semibold">Coffee Tasting Flight</h4>
+<p class="font-label text-[11px] text-secondary">IG Story + TikTok Teaser</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-emerald-600" data-icon="check_circle">check_circle</span>
+</div>
+<!-- Item 2 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/40 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-surface-container-low text-primary">
+<span class="font-label text-[10px] uppercase font-bold text-secondary">Tmrw</span>
+<span class="font-button text-[12px] font-bold text-primary">9:30 AM</span>
+</div>
+<div>
+<h4 class="font-card-title text-card-title text-[14px] text-on-surface font-semibold">Roaster's Choice Origin Story</h4>
+<p class="font-label text-[11px] text-secondary">LinkedIn Longform Article</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-amber-600" data-icon="schedule">schedule</span>
+</div>
+<!-- Item 3 -->
+<div class="bg-surface-container-lowest p-3 rounded-xl border border-outline-variant/40 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="flex flex-col items-center justify-center w-11 h-11 rounded-lg bg-surface-container-low text-primary">
+<span class="font-label text-[10px] uppercase font-bold text-secondary">Oct 25</span>
+<span class="font-button text-[12px] font-bold text-primary">11:00 AM</span>
+</div>
+<div>
+<h4 class="font-card-title text-card-title text-[14px] text-on-surface font-semibold">Cold Brew At-Home Guide</h4>
+<p class="font-label text-[11px] text-secondary">Newsletter Broadcast</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-amber-600" data-icon="schedule">schedule</span>
+</div>
+</div>
+<!-- Recent Activity Stream -->
+<div class="bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/40 space-y-3">
+<h3 class="font-card-title text-[14px] font-semibold text-on-surface">Recent activity</h3>
+<div class="space-y-3 pt-1">
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">ER</div>
+<div class="text-xs leading-relaxed text-on-surface">
+<span class="font-semibold text-on-surface">Elena Rostova</span> uploaded v2 for <span class="text-primary font-medium">Autumn Cold Brew Reel</span>
+<div class="font-label text-[10px] text-secondary mt-0.5">14m ago</div>
+</div>
+</div>
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[14px]" data-icon="done_all">done_all</span>
+</div>
+<div class="text-xs leading-relaxed text-on-surface">
+<span class="font-semibold text-on-surface">Northstar Marketing Team</span> approved <span class="text-primary font-medium">Single Origin Ethiopia</span>
+<div class="font-label text-[10px] text-secondary mt-0.5">1h ago</div>
+</div>
+</div>
+<div class="flex items-start gap-2.5">
+<div class="w-6 h-6 rounded-full bg-slate-100 text-slate-800 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">MC</div>
+<div class="text-xs leading-relaxed text-on-surface">
+<span class="font-semibold text-on-surface">Marcus Chen</span> scheduled <span class="text-primary font-medium">Barista Spotlight Series</span>
+<div class="font-label text-[10px] text-secondary mt-0.5">3h ago</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- 7. Fixed Bottom Navigation Bar (Shared Component Implementation) -->
+<!-- Destination count: 5. Active item: "Overview" (strict match to Workspace Overview intent). -->
+<nav aria-label="Bottom Navigation" class="fixed bottom-0 left-0 right-0 mx-auto max-w-[420px] z-50 flex items-center justify-around px-gutter py-base bg-surface-container-lowest/95 backdrop-blur-lg shadow-lg border-t border-outline-variant/30 pb-6">
+<!-- Tab 1: Overview (ACTIVE) -->
+<a aria-current="page" class="flex flex-col items-center justify-center text-primary dark:text-inverse-primary font-semibold min-h-[44px] min-w-[44px] active:scale-95 transition-transform duration-100" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="dashboard" data-weight="fill" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label text-[11px] mt-0.5 tracking-tight">Overview</span>
+</a>
+<!-- Tab 2: Planning -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim min-h-[44px] min-w-[44px] active:scale-95 transition-transform duration-100 hover:text-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="calendar_month">calendar_month</span>
+<span class="font-label text-[11px] mt-0.5 tracking-tight">Planning</span>
+</a>
+<!-- Tab 3: Reviews (With Badge 3) -->
+<a class="relative flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim min-h-[44px] min-w-[44px] active:scale-95 transition-transform duration-100 hover:text-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="rate_review">rate_review</span>
+<span class="absolute top-1 right-2 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-on-primary">3</span>
+<span class="font-label text-[11px] mt-0.5 tracking-tight">Reviews</span>
+</a>
+<!-- Tab 4: Media -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim min-h-[44px] min-w-[44px] active:scale-95 transition-transform duration-100 hover:text-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="perm_media">perm_media</span>
+<span class="font-label text-[11px] mt-0.5 tracking-tight">Media</span>
+</a>
+<!-- Tab 5: More -->
+<a class="flex flex-col items-center justify-center text-secondary dark:text-secondary-fixed-dim min-h-[44px] min-w-[44px] active:scale-95 transition-transform duration-100 hover:text-primary transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[22px]" data-icon="more_horiz">more_horiz</span>
+<span class="font-label text-[11px] mt-0.5 tracking-tight">More</span>
+</a>
+</nav>
+</div>
+</body></html>

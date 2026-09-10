@@ -20,7 +20,7 @@ export default async function VerifyRequestPage() {
   const { t } = await tForActive();
   return (
     <main
-      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 py-16 text-center"
+      className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 pt-20 pb-16 text-center sm:py-16"
       data-testid="signin-verify-page"
     >
       <div className="border-border bg-surface rounded-full border p-3">

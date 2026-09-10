@@ -8,6 +8,7 @@
   "emptyFilterDescription": "لا توجد عناصر تطابق {filter}. جرّب مسح المرشّح لرؤية كل شيء.",
   "emptyNothingTitle": "لا يوجد شيء على اللوحة بعد",
   "emptyNothingDescription": "استخدم الإنشاء السريع لإضافة مسودة — ستظهر هنا عندما تصل إلى سير العمل.",
+  "emptyNothingDescriptionReadOnly": "ستظهر المحتويات هنا عندما يضيف المخطط أو مدير مساحة العمل المسودة الأولى.",
   "clearFilters": "مسح المرشّحات",
   "quickCreate": "إنشاء سريع",
   "columnIdeas": "أفكار",

@@ -72,9 +72,10 @@ export default async function PlatformSecurityPage() {
   const actor = await currentActor();
   if (!actor) {
     return (
-      <div className="p-8">
-        <p className="text-body text-fg-muted">{t("platform.securitySignInBody")}</p>
-      </div>
+      <PermissionNotice
+        title={t("platform.signInRequired")}
+        description={t("platform.securitySignInBody")}
+      />
     );
   }
   let overview;

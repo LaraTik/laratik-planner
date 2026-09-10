@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner — Design Queue &amp; Planning Library</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed-dim": "#c3c0ff",
+            "primary": "#3525cd",
+            "on-tertiary": "#ffffff",
+            "on-secondary": "#ffffff",
+            "outline": "#777587",
+            "on-surface-variant": "#464555",
+            "secondary": "#565f70",
+            "on-secondary-fixed-variant": "#3e4758",
+            "inverse-on-surface": "#edf0ff",
+            "background": "#f9f9ff",
+            "tertiary-fixed-dim": "#94ccff",
+            "surface-dim": "#d1daf4",
+            "tertiary": "#004c77",
+            "on-tertiary-container": "#bfdfff",
+            "on-primary-fixed": "#0f0069",
+            "surface-variant": "#d9e2fc",
+            "error-container": "#ffdad6",
+            "surface-container": "#e9edff",
+            "tertiary-container": "#00659c",
+            "surface-container-lowest": "#ffffff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "surface": "#f9f9ff",
+            "on-background": "#121b2e",
+            "surface-container-highest": "#d9e2fc",
+            "inverse-primary": "#c3c0ff",
+            "error": "#ba1a1a",
+            "on-tertiary-fixed": "#001d32",
+            "on-surface": "#121b2e",
+            "on-error": "#ffffff",
+            "secondary-fixed-dim": "#bec7db",
+            "surface-container-low": "#f1f3ff",
+            "on-secondary-fixed": "#131c2b",
+            "surface-bright": "#f9f9ff",
+            "on-error-container": "#93000a",
+            "on-secondary-container": "#5a6375",
+            "surface-container-high": "#e1e8ff",
+            "secondary-fixed": "#dae3f8",
+            "tertiary-fixed": "#cde5ff",
+            "surface-tint": "#4d44e3",
+            "on-primary": "#ffffff",
+            "primary-container": "#4f46e5",
+            "inverse-surface": "#273044",
+            "outline-variant": "#c7c4d8",
+            "on-primary-container": "#dad7ff",
+            "secondary-container": "#d7e0f5",
+            "on-primary-fixed-variant": "#3323cc",
+            "primary-fixed": "#e2dfff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "topbar-height": "64px",
+            "base": "4px",
+            "gutter": "16px",
+            "card-padding": "16px",
+            "sidebar-collapsed": "72px",
+            "screen-padding": "24px",
+            "sidebar-expanded": "248px",
+            "touch-target-min": "44px"
+          },
+          "fontFamily": {
+            "table-dense": ["Inter"],
+            "card-title": ["Inter"],
+            "section-title": ["Inter"],
+            "label": ["Inter"],
+            "button": ["Inter"],
+            "page-title": ["Inter"],
+            "body": ["Inter"]
+          },
+          "fontSize": {
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      background-color: #f7f7f5;
+      font-family: 'Inter', sans-serif;
+    }
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="bg-[#f7f7f5] text-on-surface antialiased min-h-screen flex">
+<!-- ========================================================================= -->
+<!-- 1. FIXED LEFT SIDEBAR (Derived exactly from Shared Components JSON)      -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between p-4 z-40">
+<!-- Top Brand & Navigation Tabs -->
+<div class="flex flex-col gap-6">
+<!-- Workspace Brand Anchor -->
+<div class="flex items-center gap-3 px-1 py-1">
+<div class="w-9 h-9 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-card-title text-card-title shadow-sm">
+<span>N</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-card-title font-card-title text-on-surface tracking-tight truncate leading-tight">LaraTik Planner</span>
+<span class="text-label font-label text-on-surface-variant flex items-center gap-1">
+            Northstar Coffee
+            <span class="material-symbols-outlined text-[14px]" data-icon="unfold_more">unfold_more</span>
+</span>
+</div>
+</div>
+<!-- Quick Action / New Ticket CTA -->
+<button class="w-full flex items-center justify-center gap-2 bg-primary-container hover:opacity-95 text-on-primary font-button text-button py-2.5 px-3 rounded-lg shadow-sm transition duration-150">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>New Ticket</span>
+</button>
+<!-- Main Navigation Items -->
+<nav class="flex flex-col gap-1">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- Planning -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="calendar_today">calendar_today</span>
+<span>Planning</span>
+</a>
+<!-- Board -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="view_kanban">view_kanban</span>
+<span>Board</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="event">event</span>
+<span>Calendar</span>
+</a>
+<!-- Reviews (with notification badge) -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]" data-icon="rate_review">rate_review</span>
+<span>Reviews</span>
+</div>
+<span class="bg-surface-container-high text-primary font-label text-[11px] px-2 py-0.5 rounded-full font-medium">3</span>
+</a>
+<!-- Design queue (ACTIVE TAB per page intent) -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-high text-primary font-button text-button shadow-xs" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px] text-primary" data-icon="palette">palette</span>
+<span>Design queue</span>
+</div>
+<span class="bg-primary text-on-primary font-label text-[11px] px-2 py-0.5 rounded-full font-semibold">4</span>
+</a>
+<!-- Channels -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="share">share</span>
+<span>Channels</span>
+</a>
+<!-- Brand kit -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="auto_stories">auto_stories</span>
+<span>Brand kit</span>
+</a>
+</nav>
+</div>
+<!-- Footer Meta Navigation -->
+<div class="flex flex-col gap-1 pt-4 border-t border-outline-variant">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="group">group</span>
+<span>Team</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span>Settings</span>
+</a>
+<!-- Storage / Agency quota meter widget -->
+<div class="mt-3 p-3 bg-surface-container-low rounded-lg border border-outline-variant">
+<div class="flex justify-between items-center text-label font-label text-on-surface-variant mb-1.5">
+<span>Sprint Assets</span>
+<span class="font-semibold text-on-surface">68% used</span>
+</div>
+<div class="w-full bg-surface-container-highest h-1.5 rounded-full overflow-hidden">
+<div class="bg-primary h-full rounded-full" style="width: 68%;"></div>
+</div>
+<p class="text-[11px] text-on-surface-variant mt-2 leading-tight">14 draft video renders expiring in 48h.</p>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- 2. TOP NAVBAR (Shared Components JSON: desktop_topbar)                   -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 right-0 h-topbar-height left-sidebar-expanded bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-6 z-30">
+<!-- Left: Product Breadcrumbs & Quick Search -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span>Workspaces</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface font-semibold">Design Queue &amp; Library</span>
+</div>
+<!-- Quick Search input -->
+<div class="relative hidden xl:block w-72">
+<div class="absolute inset-y-0 left-0 ps-3 flex items-center pointer-events-none text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]" data-icon="search">search</span>
+</div>
+<input class="w-full text-table-dense font-table-dense bg-[#f7f7f5] border border-outline-variant rounded-lg ps-9 pe-8 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary text-on-surface placeholder:text-on-surface-variant" placeholder="Search queue, specs, briefs... (⌘K)" type="text"/>
+<div class="absolute inset-y-0 right-0 pe-2.5 flex items-center pointer-events-none">
+<kbd class="text-[10px] font-semibold text-on-surface-variant bg-surface-container-lowest px-1.5 py-0.5 border border-outline-variant rounded">⌘K</kbd>
+</div>
+</div>
+</div>
+<!-- Right: Operational indicator, Action items & Profile -->
+<div class="flex items-center gap-4">
+<!-- Status pill -->
+<div class="hidden sm:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container-low border border-outline-variant text-label font-label text-on-surface">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>System Operational</span>
+</div>
+<!-- Trailing Action Icons -->
+<button class="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors relative" title="Notifications">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full ring-2 ring-surface-container-lowest"></span>
+</button>
+<button class="p-2 text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg transition-colors" title="Help &amp; Documentation">
+<span class="material-symbols-outlined text-[20px]" data-icon="help_outline">help_outline</span>
+</button>
+<!-- Divider -->
+<div class="h-6 w-px bg-outline-variant"></div>
+<!-- User Profile Cluster -->
+<div class="flex items-center gap-3 ps-1 cursor-pointer group">
+<div class="relative">
+<img class="w-8 h-8 rounded-full object-cover border border-outline-variant" data-alt="Professional studio portrait photo of Sarah Jenkins, a female production lead with subtle natural lighting against a neutral warm grey agency studio backdrop, wearing a dark navy crewneck sweater, calm confident demeanor, high key editorial modern aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC9STK19EAo91wS5oRienuPvHDbzMsGDdfLwUVOZX3mp8-zeqnipPSYOVDKCANkCuLjS8u595_CMb4UdEZ5lOvq6LZUqn2Daafg_Eb1rHYvxMAW3Mzc3BES6hf7h-cYXM1HXAvMCNmDH0pMCx0Ca2XVTs2VtfqN6UUrFCpjDzAGpv1M0D1RCc-4QKEm7Md-bW8p6M540LEbeBV6pdFlZ5Wua8oQwvp2t2fkY88ARs4b3e9HCV3p3F0RJRriT1gd3-xE6TVkXesdu3ae"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-surface-container-lowest rounded-full"></span>
+</div>
+<div class="hidden lg:flex flex-col text-start">
+<span class="text-label font-label font-semibold text-on-surface leading-tight group-hover:text-primary transition-colors">Sarah Jenkins</span>
+<span class="text-[11px] text-on-surface-variant leading-tight">Production Lead</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- 3. MAIN WORKSPACE CANVAS AREA                                            -->
+<!-- ========================================================================= -->
+<main class="ms-sidebar-expanded pt-topbar-height flex-1 min-h-screen p-8 max-w-[1580px]">
+<!-- PAGE HEADER -->
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-outline-variant mb-6">
+<div class="flex flex-col gap-1 max-w-2xl">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-primary-fixed text-on-primary-fixed tracking-wide">SPRINT WK 43</span>
+<span class="text-label font-label text-on-surface-variant">Active delivery pipeline</span>
+</div>
+<h1 class="text-page-title font-page-title text-on-surface tracking-tight">Design queue &amp; planning library</h1>
+<p class="text-body font-body text-on-surface-variant">Claim queued creative tasks for sprint delivery or spawn new assets from verified campaign templates.</p>
+</div>
+<!-- Action Cluster with Dominant CTA -->
+<div class="flex items-center gap-3 flex-wrap">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container-low transition shadow-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="auto_stories">auto_stories</span>
+<span>Template builder</span>
+</button>
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container-low transition shadow-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="add_task">add_task</span>
+<span>New production ticket</span>
+</button>
+<!-- Dominant Next Action CTA -->
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:opacity-95 transition shadow-sm flex items-center gap-2 ring-2 ring-primary/20">
+<span class="material-symbols-outlined text-[18px]" data-icon="bolt">bolt</span>
+<span>Claim next item</span>
+</button>
+</div>
+</div>
+<!-- METRICS STRIP (4 Key Operational Indicators) -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+<!-- Metric 1 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex items-center justify-between">
+<div>
+<span class="text-label font-label text-on-surface-variant block mb-1">Queued Tasks</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">4</span>
+<span class="text-[12px] font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Unassigned</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]" data-icon="inbox">inbox</span>
+</div>
+</div>
+<!-- Metric 2 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex items-center justify-between">
+<div>
+<span class="text-label font-label text-on-surface-variant block mb-1">Your Load</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">2</span>
+<span class="text-[12px] font-medium text-primary bg-surface-container-high px-2 py-0.5 rounded">Assigned to you</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[22px]" data-icon="assignment_ind">assignment_ind</span>
+</div>
+</div>
+<!-- Metric 3 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex items-center justify-between">
+<div>
+<span class="text-label font-label text-on-surface-variant block mb-1">SLA Alert</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-error">1</span>
+<span class="text-[12px] font-medium text-error bg-error-container/40 px-2 py-0.5 rounded font-semibold">Urgent (&lt;4h)</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-error-container/30 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-[22px]" data-icon="timer">timer</span>
+</div>
+</div>
+<!-- Metric 4 -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding flex items-center justify-between">
+<div>
+<span class="text-label font-label text-on-surface-variant block mb-1">Verified Assets</span>
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-bold text-on-surface">12</span>
+<span class="text-[12px] font-medium text-secondary bg-secondary-fixed/50 px-2 py-0.5 rounded">Ready templates</span>
+</div>
+</div>
+<div class="w-10 h-10 rounded-lg bg-surface-container-low flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[22px]" data-icon="layers">layers</span>
+</div>
+</div>
+</div>
+<!-- MAIN SEGMENTED CONTROLLER & FILTERS TOOLBAR -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 mb-8">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<!-- Tab Segment: Queue vs Library -->
+<div class="flex items-center p-1 bg-surface-container-low rounded-lg border border-outline-variant max-w-fit">
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-md bg-surface-container-lowest text-on-surface font-button text-button shadow-xs">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="view_agenda">view_agenda</span>
+<span>Design queue</span>
+<span class="bg-primary-fixed text-on-primary-fixed text-[11px] font-bold px-1.5 py-0.2 rounded-full">6</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface font-button text-button transition-colors">
+<span class="material-symbols-outlined text-[18px]" data-icon="folder_special">folder_special</span>
+<span>Planning library</span>
+<span class="bg-surface-container-highest text-on-surface-variant text-[11px] font-medium px-1.5 py-0.2 rounded-full">18</span>
+</button>
+</div>
+<!-- Filter Sub-Tabs & Selectors -->
+<div class="flex items-center gap-3 flex-wrap">
+<!-- Queue Status Pill Filter -->
+<div class="flex items-center gap-1 border-e border-outline-variant pe-3">
+<button class="px-2.5 py-1 rounded text-label font-label bg-surface-container-high text-primary font-semibold">Unassigned (4)</button>
+<button class="px-2.5 py-1 rounded text-label font-label text-on-surface-variant hover:bg-surface-container-low">Assigned to team (2)</button>
+<button class="px-2.5 py-1 rounded text-label font-label text-on-surface-variant hover:bg-surface-container-low">Completed / Archive</button>
+</div>
+<!-- Format dropdown filter -->
+<div class="relative">
+<select class="text-label font-label bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+<option>All formats</option>
+<option>Reels / 9:16</option>
+<option>TikTok 9:16</option>
+<option>Carousel (4:5)</option>
+<option>Stories</option>
+<option>Static 1:1</option>
+</select>
+</div>
+<!-- Priority filter -->
+<div class="relative">
+<select class="text-label font-label bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+<option>All priorities</option>
+<option>Urgent (&lt;12h)</option>
+<option>High priority</option>
+<option>Normal</option>
+</select>
+</div>
+<!-- Channel Filter -->
+<div class="relative">
+<select class="text-label font-label bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 text-on-surface focus:ring-1 focus:ring-primary focus:border-primary">
+<option>All channels</option>
+<option>Instagram</option>
+<option>TikTok</option>
+<option>LinkedIn</option>
+<option>YouTube Shorts</option>
+</select>
+</div>
+<!-- Filter reset button -->
+<button class="p-1.5 text-on-surface-variant hover:text-on-surface rounded-lg hover:bg-surface-container-low" title="Clear Filters">
+<span class="material-symbols-outlined text-[18px]" data-icon="filter_alt_off">filter_alt_off</span>
+</button>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 4. ACTIVE DESIGN QUEUE SECTION (Bento & Dense Item Rows)                  -->
+<!-- ========================================================================= -->
+<div class="mb-12">
+<!-- Section sub-title with quick helper info -->
+<div class="flex items-center justify-between mb-4">
+<div class="flex items-center gap-2">
+<h2 class="text-section-title font-section-title text-on-surface">Unassigned tickets</h2>
+<span class="text-label font-label text-on-surface-variant">• 4 tasks waiting for lead or designer pickup</span>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span>Sort by:</span>
+<span class="font-semibold text-on-surface cursor-pointer flex items-center">
+            SLA deadline (soonest)
+            <span class="material-symbols-outlined text-[16px]" data-icon="arrow_drop_down">arrow_drop_down</span>
+</span>
+</div>
+</div>
+<!-- TICKETS LIST: HIGH VALUE OPERATIONAL CARDS -->
+<div class="flex flex-col gap-3">
+<!-- TICKET 1: URGENT / TOP PRIORITY TICKET -->
+<div class="bg-surface-container-lowest border-2 border-primary-container/40 rounded-xl p-5 hover:border-primary transition duration-150 shadow-xs">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<!-- Left Ticket Details -->
+<div class="flex items-start gap-4 flex-1">
+<!-- Urgency badge icon -->
+<div class="w-10 h-10 rounded-lg bg-error-container/30 border border-error/30 flex items-center justify-center text-error shrink-0">
+<span class="material-symbols-outlined text-[20px]" data-icon="priority_high">priority_high</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2.5 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-error-container text-on-error-container">Urgent (Due in 4h)</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Reels / 9:16</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Instagram, TikTok</span>
+<span class="text-[11px] text-on-surface-variant font-mono">#TCK-9902</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface hover:text-primary cursor-pointer">
+                  Autumn Cold Brew Reel — Macro Pour Cut
+                </h3>
+<!-- Spec Details & Attachments -->
+<div class="flex items-center gap-4 text-table-dense font-table-dense text-on-surface-variant flex-wrap mt-0.5">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="person">person</span>
+                    Elena Rostova (Brand Mgr)
+                  </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="tune">tune</span>
+                    1080x1920 60fps • 14s cutdown
+                  </span>
+<span class="flex items-center gap-1 text-primary">
+<span class="material-symbols-outlined text-[16px]" data-icon="audio_file">audio_file</span>
+                    Licensed audio sync #TRK-8812 attached
+                  </span>
+<span class="flex items-center gap-1 text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-medium">
+<span class="material-symbols-outlined text-[14px]" data-icon="check_circle">check_circle</span>
+                    ProRes B-Roll linked
+                  </span>
+</div>
+</div>
+</div>
+<!-- Right Actions: Dominant Atomic Claim Button -->
+<div class="flex items-center gap-3 self-end lg:self-center shrink-0">
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface-variant font-button text-button flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="visibility">visibility</span>
+<span>Inspect spec</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:opacity-95 transition shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="pan_tool">pan_tool</span>
+<span>Claim ticket</span>
+</button>
+</div>
+</div>
+</div>
+<!-- TICKET 2: HIGH PRIORITY (Single Origin Ethiopia Carousel) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 hover:border-outline transition duration-150 shadow-xs">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div class="flex items-start gap-4 flex-1">
+<div class="w-10 h-10 rounded-lg bg-amber-50 border border-amber-200 flex items-center justify-center text-amber-700 shrink-0">
+<span class="material-symbols-outlined text-[20px]" data-icon="warning">warning</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2.5 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-amber-100 text-amber-900">High (Due tomorrow)</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Carousel (6 slides)</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Instagram &amp; LinkedIn</span>
+<span class="text-[11px] text-on-surface-variant font-mono">#TCK-9894</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface hover:text-primary cursor-pointer">
+                  Single Origin Ethiopia Carousel — Slide Deck 2
+                </h3>
+<div class="flex items-center gap-4 text-table-dense font-table-dense text-on-surface-variant flex-wrap mt-0.5">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="person">person</span>
+                    Marcus Chen (Copy Lead)
+                  </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="aspect_ratio">aspect_ratio</span>
+                    1080x1350 (4:5) • Typography heavy
+                  </span>
+<span class="flex items-center gap-1 text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px]" data-icon="link">link</span>
+                    Origin tasting notes copy approved
+                  </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 self-end lg:self-center shrink-0">
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface-variant font-button text-button flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="visibility">visibility</span>
+<span>Inspect spec</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition shadow-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="pan_tool">pan_tool</span>
+<span>Claim ticket</span>
+</button>
+</div>
+</div>
+</div>
+<!-- TICKET 3: NORMAL PRIORITY (Halloween Roast Promo) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 hover:border-outline transition duration-150 shadow-xs">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div class="flex items-start gap-4 flex-1">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[20px]" data-icon="movie">movie</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2.5 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface">Normal (Due Oct 27)</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Video / 16:9 &amp; 9:16</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Stories, Reels</span>
+<span class="text-[11px] text-on-surface-variant font-mono">#TCK-9881</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface hover:text-primary cursor-pointer">
+                  Halloween Roast Promo — Motion Teaser 15s
+                </h3>
+<div class="flex items-center gap-4 text-table-dense font-table-dense text-on-surface-variant flex-wrap mt-0.5">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="person">person</span>
+                    Elena Rostova (Brand Mgr)
+                  </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="tune">tune</span>
+                    Kinetic title card template provided
+                  </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 self-end lg:self-center shrink-0">
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface-variant font-button text-button flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="visibility">visibility</span>
+<span>Inspect</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition shadow-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="pan_tool">pan_tool</span>
+<span>Claim ticket</span>
+</button>
+</div>
+</div>
+</div>
+<!-- TICKET 4: NORMAL PRIORITY (Barista Tips: Dialing Espresso) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 hover:border-outline transition duration-150 shadow-xs">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+<div class="flex items-start gap-4 flex-1">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-center text-secondary shrink-0">
+<span class="material-symbols-outlined text-[20px]" data-icon="mic">mic</span>
+</div>
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center gap-2.5 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface">Normal</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">Stories / 9:16</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-surface-container text-on-surface-variant">IG Stories</span>
+<span class="text-[11px] text-on-surface-variant font-mono">#TCK-9875</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface hover:text-primary cursor-pointer">
+                  Barista Tips: Dialing Espresso — Sound Cutdown
+                </h3>
+<div class="flex items-center gap-4 text-table-dense font-table-dense text-on-surface-variant flex-wrap mt-0.5">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="person">person</span>
+                    Chloe Bennett (Barista Trainer)
+                  </span>
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="tune">tune</span>
+                    ASMR grinder audio eq profile ready
+                  </span>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3 self-end lg:self-center shrink-0">
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface-variant font-button text-button flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]" data-icon="visibility">visibility</span>
+<span>Inspect</span>
+</button>
+<button class="px-4 py-2 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition shadow-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]" data-icon="pan_tool">pan_tool</span>
+<span>Claim ticket</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ASSIGNED IN-PROGRESS ROW (Claimed Context & Quick Action) -->
+<div class="mb-10">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-card-title font-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-primary" data-icon="work">work</span>
+          Currently assigned to you (In production)
+        </h2>
+<span class="text-label font-label text-primary hover:underline cursor-pointer">View active sprint workboard →</span>
+</div>
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex items-center gap-3">
+<div class="w-2.5 h-12 bg-primary rounded-full"></div>
+<div>
+<div class="flex items-center gap-2 mb-0.5">
+<span class="text-card-title font-card-title text-on-surface">Seasonal Cascara Cold Brew Ad</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-100 text-emerald-800">In production (Step 3/5)</span>
+</div>
+<p class="text-table-dense font-table-dense text-on-surface-variant">Assigned to: <strong class="text-on-surface">Sarah Jenkins (You)</strong> • Target handoff: Today 17:00 • Format: 9:16 Kinetic Cut</p>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container-high transition">
+            Reassign
+          </button>
+<button class="px-3.5 py-1.5 rounded-lg bg-primary text-on-primary font-button text-button hover:opacity-95 transition flex items-center gap-1.5 shadow-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="open_in_new">open_in_new</span>
+<span>Open in Figma / editor</span>
+</button>
+</div>
+</div>
+</div>
+<!-- OPERATIONAL CALLOUT CARDS & ASYMMETRIC STATE DEMOS -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-12">
+<!-- State Callout 1: Permission-denied raw archive safeguard -->
+<div class="p-4 rounded-xl border border-amber-200 bg-amber-50/60 flex items-start gap-3">
+<span class="material-symbols-outlined text-amber-700 text-[22px] shrink-0 mt-0.5" data-icon="lock">lock</span>
+<div class="flex flex-col gap-1">
+<span class="text-card-title font-card-title text-amber-900 text-[15px]">Tenant compliance sign-off required</span>
+<p class="text-table-dense font-table-dense text-amber-800">Direct access to unlocked 4K Raw ProRes Master footage requires Brand Safety compliance authorization. Approvals can be granted by Client Workspace Owners.</p>
+<a class="text-label font-label text-amber-900 font-semibold underline mt-1 hover:text-amber-950" href="#">Request supervisor unlock clearance</a>
+</div>
+</div>
+<!-- State Callout 2: Safe Duplicate & Empty Search State Sample -->
+<div class="p-4 rounded-xl border border-outline-variant bg-surface-container-lowest flex items-start gap-3">
+<span class="material-symbols-outlined text-on-surface-variant text-[22px] shrink-0 mt-0.5" data-icon="filter_list">filter_list</span>
+<div class="flex flex-col gap-1">
+<span class="text-card-title font-card-title text-on-surface text-[15px]">Empty filter query fallback test</span>
+<p class="text-table-dense font-table-dense text-on-surface-variant">No tickets matching <code class="bg-surface-container px-1 py-0.5 rounded text-primary">"Podcasts"</code> in current Northstar Coffee sprint. All audio assets live under TikTok audio stems.</p>
+<span class="text-label font-label text-primary cursor-pointer hover:underline mt-1">Reset filter parameters</span>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- 5. PLANNING LIBRARY SECTION (Reusable Frameworks & Master Templates)     -->
+<!-- ========================================================================= -->
+<div class="pt-6 border-t border-outline-variant">
+<!-- Section Header with Category Pills -->
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<h2 class="text-section-title font-section-title text-on-surface">Planning library &amp; reusable assets</h2>
+<span class="bg-surface-container text-on-surface-variant text-[11px] font-semibold px-2 py-0.5 rounded">18 Assets</span>
+</div>
+<p class="text-body font-body text-on-surface-variant">Verified multi-post frameworks, content pillars, and locked Figma layout presets ready to spawn production tasks.</p>
+</div>
+<!-- Safe duplicate safeguard badge -->
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-low border border-outline-variant rounded-lg text-label font-label text-on-surface-variant">
+<span class="material-symbols-outlined text-emerald-600 text-[18px]" data-icon="shield">shield</span>
+<span>Safe duplicate mode active (Base templates protected)</span>
+</div>
+</div>
+<!-- Quick Category Filter Pills -->
+<div class="flex items-center gap-2 overflow-x-auto pb-3 mb-6">
+<button class="px-3.5 py-1.5 rounded-full text-label font-label bg-primary text-on-primary font-semibold whitespace-nowrap">All categories</button>
+<button class="px-3.5 py-1.5 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container-low whitespace-nowrap">Campaign frameworks (4)</button>
+<button class="px-3.5 py-1.5 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container-low whitespace-nowrap">Content pillars (6)</button>
+<button class="px-3.5 py-1.5 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container-low whitespace-nowrap">Master templates (5)</button>
+<button class="px-3.5 py-1.5 rounded-full text-label font-label bg-surface-container-lowest border border-outline-variant text-on-surface-variant hover:bg-surface-container-low whitespace-nowrap">Seasonal reels (3)</button>
+</div>
+<!-- LIBRARY BENTO GRID -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+<!-- CARD 1: CAMPAIGN FRAMEWORK -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
+<div class="p-card-padding">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-primary-fixed text-on-primary-fixed">Campaign Framework</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] cursor-pointer hover:text-on-surface" data-icon="more_vert">more_vert</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface mb-2">Autumn Harvest &amp; Cold Brew Launch</h3>
+<p class="text-table-dense font-table-dense text-on-surface-variant mb-4">Complete 3-week product introduction sequence with teaser reel, education carousel, and promotional story cuts.</p>
+<div class="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg text-table-dense font-table-dense text-on-surface-variant mb-4">
+<div class="flex items-center justify-between">
+<span>Linked posts</span>
+<span class="font-semibold text-on-surface">6 verified posts</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Design briefs</span>
+<span class="font-semibold text-on-surface">4 briefs linked</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Approved scripts</span>
+<span class="font-semibold text-emerald-700">2 scripts ready</span>
+</div>
+</div>
+</div>
+<div class="p-card-padding pt-0 border-t border-outline-variant/50 mt-auto bg-surface-container-low/30">
+<div class="flex items-center gap-2 pt-3">
+<button class="flex-1 py-1.5 rounded-lg bg-primary-container text-on-primary font-button text-button hover:opacity-95 transition text-center shadow-xs">
+                Use framework
+              </button>
+<button class="p-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface" title="Preview Structure">
+<span class="material-symbols-outlined text-[18px]" data-icon="visibility">visibility</span>
+</button>
+<button class="p-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface" title="Safe Duplicate">
+<span class="material-symbols-outlined text-[18px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 2: CONTENT PILLAR -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
+<div class="p-card-padding">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-secondary-fixed text-on-secondary-fixed-variant">Content Pillar</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] cursor-pointer hover:text-on-surface" data-icon="more_vert">more_vert</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface mb-2">Origin Stories &amp; Sustainable Direct Trade</h3>
+<p class="text-table-dense font-table-dense text-on-surface-variant mb-4">Farmer interview snippets, cooperative harvest photography specs, and ethical sourcing stats for monthly brand advocacy.</p>
+<div class="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg text-table-dense font-table-dense text-on-surface-variant mb-4">
+<div class="flex items-center justify-between">
+<span>Copy templates</span>
+<span class="font-semibold text-on-surface">12 micro-lot copies</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Photo guides</span>
+<span class="font-semibold text-on-surface">Verified farm guide</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Brand tone</span>
+<span class="font-semibold text-on-surface">Educational / Candid</span>
+</div>
+</div>
+</div>
+<div class="p-card-padding pt-0 border-t border-outline-variant/50 mt-auto bg-surface-container-low/30">
+<div class="flex items-center gap-2 pt-3">
+<button class="flex-1 py-1.5 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition text-center shadow-xs">
+                Use pillar
+              </button>
+<button class="p-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface" title="Safe Duplicate">
+<span class="material-symbols-outlined text-[18px]" data-icon="content_copy">content_copy</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 3: DESIGN TEMPLATE (FIGMA AUTO-SYNC) -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
+<div class="p-card-padding">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-surface-container-highest text-on-surface">Master Design Template</span>
+<span class="flex items-center gap-1 text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-medium">
+<span class="material-symbols-outlined text-[12px]" data-icon="sync">sync</span> Figma Live
+              </span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface mb-2">Multi-slide Education Carousel (4:5 / 1080x1350)</h3>
+<p class="text-table-dense font-table-dense text-on-surface-variant mb-4">Strict Northstar typography system with 8 pre-composed slide arrangements: cover hook, stat card, and quote layout.</p>
+<div class="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg text-table-dense font-table-dense text-on-surface-variant mb-4">
+<div class="flex items-center justify-between">
+<span>Layout presets</span>
+<span class="font-semibold text-on-surface">8 slide archetypes</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Figma components</span>
+<span class="font-semibold text-on-surface">v3.4 tokenized</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Export formats</span>
+<span class="font-semibold text-on-surface">PNG, WebP, PDF</span>
+</div>
+</div>
+</div>
+<div class="p-card-padding pt-0 border-t border-outline-variant/50 mt-auto bg-surface-container-low/30">
+<div class="flex items-center gap-2 pt-3">
+<button class="flex-1 py-1.5 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition text-center shadow-xs">
+                Spawn ticket
+              </button>
+<button class="p-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface" title="Inspect Layouts">
+<span class="material-symbols-outlined text-[18px]" data-icon="preview">preview</span>
+</button>
+</div>
+</div>
+</div>
+<!-- CARD 4: VIDEO MOTION TEMPLATE -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:shadow-md transition-shadow flex flex-col justify-between">
+<div class="p-card-padding">
+<div class="flex items-center justify-between mb-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant">Motion Video Template</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[18px] cursor-pointer hover:text-on-surface" data-icon="more_vert">more_vert</span>
+</div>
+<h3 class="text-card-title font-card-title text-on-surface mb-2">9:16 Kinetic Typography Product Reveal</h3>
+<p class="text-table-dense font-table-dense text-on-surface-variant mb-4">Premiere Pro MOGRT &amp; CapCut master project files with automated text wrap, beat-markers, and dynamic color swaps.</p>
+<div class="flex flex-col gap-2 p-3 bg-surface-container-low rounded-lg text-table-dense font-table-dense text-on-surface-variant mb-4">
+<div class="flex items-center justify-between">
+<span>Bundle bundle</span>
+<span class="font-semibold text-on-surface">XML + Audio Stems</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Duration range</span>
+<span class="font-semibold text-on-surface">9s – 15s auto-loop</span>
+</div>
+<div class="flex items-center justify-between">
+<span>Audio clearance</span>
+<span class="font-semibold text-emerald-700">Commercial Sync OK</span>
+</div>
+</div>
+</div>
+<div class="p-card-padding pt-0 border-t border-outline-variant/50 mt-auto bg-surface-container-low/30">
+<div class="flex items-center gap-2 pt-3">
+<button class="flex-1 py-1.5 rounded-lg bg-surface-container-high text-primary hover:bg-primary-container hover:text-on-primary font-button text-button transition text-center shadow-xs">
+                Use template
+              </button>
+<button class="p-1.5 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-on-surface" title="Download XML Bundle">
+<span class="material-symbols-outlined text-[18px]" data-icon="download">download</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- WORKSPACE FOOTER CONTEXT -->
+<footer class="mt-16 pt-6 border-t border-outline-variant flex flex-col sm:flex-row items-center justify-between text-table-dense font-table-dense text-on-surface-variant gap-4">
+<div class="flex items-center gap-2">
+<span class="font-semibold text-on-surface">LaraTik Planner</span>
+<span>• Agency Engine for Social Media Operations</span>
+<span>• Tenant ID: <code class="text-[11px] font-mono">nst-cff-prod-98</code></span>
+</div>
+<div class="flex items-center gap-6">
+<a class="hover:text-on-surface transition-colors" href="#">Queue Rules</a>
+<a class="hover:text-on-surface transition-colors" href="#">Figma Token Sync</a>
+<a class="hover:text-on-surface transition-colors" href="#">SLA Thresholds</a>
+<span class="text-[11px] bg-surface-container px-2 py-0.5 rounded text-on-surface font-mono">v4.18.2</span>
+</div>
+</footer>
+</main>
+<!-- Interactive micro-interaction script for immediate tactile feedback -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Immediate tactile feedback on claim buttons
+      const claimButtons = document.querySelectorAll('button:has(.material-symbols-outlined[data-icon="pan_tool"]), button:has(.material-symbols-outlined[data-icon="bolt"])');
+      claimButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const origHTML = btn.innerHTML;
+          btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin" data-icon="progress_activity">progress_activity</span><span>Claiming...</span>';
+          setTimeout(() => {
+            btn.innerHTML = '<span class="material-symbols-outlined text-[18px]" data-icon="check">check</span><span>Claimed</span>';
+            btn.classList.remove('bg-primary-container', 'bg-surface-container-high', 'text-primary');
+            btn.classList.add('bg-emerald-600', 'text-white');
+          }, 400);
+        });
+      });
+    });
+  </script>
+</body></html>

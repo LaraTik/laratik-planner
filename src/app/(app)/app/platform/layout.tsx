@@ -2,6 +2,7 @@ import { Building2, ShieldAlert } from "lucide-react";
 import { gatePlatformAdmin, type PlatformGateResult } from "@/lib/auth/platform-admin-gate";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
+import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
  * Platform routes layout (Milestone 1.8).
@@ -29,22 +30,50 @@ import { PageHeader } from "@/components/workspace/page-header";
 export default async function PlatformLayout({ children }: { children: React.ReactNode }) {
   const gate = await gatePlatformAdmin();
   if (gate.status === "forbidden") {
-    return <PlatformForbidden reason={gate.reason} />;
+    const { t } = await tForActive();
+    return (
+      <PlatformForbidden
+        reason={gate.reason}
+        copy={{
+          eyebrow: t("platform.forbiddenEyebrow"),
+          title:
+            gate.reason === "anonymous"
+              ? t("platform.signInRequired")
+              : t("platform.forbiddenTitle"),
+          description:
+            gate.reason === "anonymous"
+              ? t("platform.forbiddenAnonymousDescription")
+              : t("platform.forbiddenAdminDescription"),
+          cardTitle: t("platform.forbiddenCardTitle"),
+          cardDescription:
+            gate.reason === "anonymous"
+              ? t("platform.forbiddenAnonymousCardDescription")
+              : t("platform.forbiddenAdminCardDescription"),
+        }}
+      />
+    );
   }
   return <div className="space-y-6">{children}</div>;
 }
 
 type ForbiddenReason = Extract<PlatformGateResult, { status: "forbidden" }>["reason"];
 
-function PlatformForbidden({ reason }: { reason: ForbiddenReason }) {
-  const title = reason === "anonymous" ? "Sign in required" : "Forbidden";
-  const description =
-    reason === "anonymous"
-      ? "You need to be signed in as a platform administrator to view this area."
-      : "Only platform administrators can access the platform console. This page intentionally does not redirect so the audit log can record the exact URL that was attempted.";
+function PlatformForbidden({
+  reason,
+  copy,
+}: {
+  reason: ForbiddenReason;
+  copy: {
+    eyebrow: string;
+    title: string;
+    description: string;
+    cardTitle: string;
+    cardDescription: string;
+  };
+}) {
   return (
     <div className="space-y-4" data-testid="platform-forbidden">
-      <PageHeader eyebrow="Platform" title={title} description={description} />
+      <PageHeader eyebrow={copy.eyebrow} title={copy.title} description={copy.description} />
       <Card padding="lg" variant="subtle">
         <div className="flex items-start gap-3">
           <span className="text-danger mt-0.5" aria-hidden="true">
@@ -55,12 +84,8 @@ function PlatformForbidden({ reason }: { reason: ForbiddenReason }) {
             )}
           </span>
           <div className="min-w-0">
-            <CardTitle>Platform console is restricted</CardTitle>
-            <CardDescription>
-              {reason === "anonymous"
-                ? "Sign in with an account that has platform-admin grants, then revisit this URL."
-                : "If you believe you should have access, ask a current platform admin to grant the role. Attempts are recorded for audit."}
-            </CardDescription>
+            <CardTitle>{copy.cardTitle}</CardTitle>
+            <CardDescription>{copy.cardDescription}</CardDescription>
           </div>
         </div>
       </Card>

@@ -48,7 +48,10 @@ describe("visual-regression pre-warm routes must be fully resolvable", () => {
   // A single representative seed is enough — the substitution is
   // value-agnostic. We only need a value that doesn't itself contain
   // `{` or `}` so the post-resolution check is unambiguous.
-  const representativeSeed = { contentItemId: "00000000-0000-0000-0000-000000000001" };
+  const representativeSeed = {
+    contentItemId: "00000000-0000-0000-0000-000000000001",
+    agencyId: "00000000-0000-0000-0000-000000000002",
+  };
 
   it("pre-warm route set is non-empty (sanity)", () => {
     const routes = collectPreWarmRoutes();

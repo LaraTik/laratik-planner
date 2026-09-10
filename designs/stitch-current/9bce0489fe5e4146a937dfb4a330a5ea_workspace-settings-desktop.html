@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik - Northstar Coffee Workspace Settings</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#f9f9ff",
+            "on-primary-fixed": "#0f0069",
+            "on-surface-variant": "#464555",
+            "outline-variant": "#c7c4d8",
+            "outline": "#777587",
+            "on-tertiary-container": "#bfdfff",
+            "on-tertiary": "#ffffff",
+            "background": "#f9f9ff",
+            "inverse-primary": "#c3c0ff",
+            "secondary-container": "#d7e0f5",
+            "inverse-on-surface": "#edf0ff",
+            "primary-fixed-dim": "#c3c0ff",
+            "primary-container": "#4f46e5",
+            "tertiary-fixed": "#cde5ff",
+            "surface-dim": "#d1daf4",
+            "secondary-fixed": "#dae3f8",
+            "surface-container": "#e9edff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "error-container": "#ffdad6",
+            "tertiary-container": "#00659c",
+            "on-background": "#121b2e",
+            "on-tertiary-fixed": "#001d32",
+            "on-error-container": "#93000a",
+            "inverse-surface": "#273044",
+            "primary": "#3525cd",
+            "on-surface": "#121b2e",
+            "surface-bright": "#f9f9ff",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-primary": "#ffffff",
+            "surface-container-highest": "#d9e2fc",
+            "secondary": "#565f70",
+            "on-primary-container": "#dad7ff",
+            "surface-tint": "#4d44e3",
+            "secondary-fixed-dim": "#bec7db",
+            "on-secondary-fixed-variant": "#3e4758",
+            "tertiary-fixed-dim": "#94ccff",
+            "on-secondary-fixed": "#131c2b",
+            "on-secondary": "#ffffff",
+            "tertiary": "#004c77",
+            "on-secondary-container": "#5a6375",
+            "surface-container-high": "#e1e8ff",
+            "surface-variant": "#d9e2fc",
+            "surface-container-low": "#f1f3ff",
+            "on-error": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "primary-fixed": "#e2dfff",
+            "error": "#ba1a1a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "sidebar-collapsed": "72px",
+            "topbar-height": "64px",
+            "gutter": "16px",
+            "card-padding": "16px",
+            "base": "4px",
+            "touch-target-min": "44px",
+            "sidebar-expanded": "248px",
+            "screen-padding": "24px"
+          },
+          "fontFamily": {
+            "page-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "section-title": ["Inter"],
+            "body": ["Inter"],
+            "button": ["Inter"],
+            "label": ["Inter"],
+            "card-title": ["Inter"]
+          },
+          "fontSize": {
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    html {
+      scroll-behavior: smooth;
+    }
+    /* Custom subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 3px;
+    }
+  </style>
+</head>
+<body class="bg-surface-container-low text-on-surface font-body text-body antialiased min-h-full selection:bg-secondary-container selection:text-on-surface">
+<!-- ================= SIDEBAR (248px Fixed) ================= -->
+<aside class="fixed top-0 start-0 h-screen w-[248px] bg-surface border-e border-outline-variant flex flex-col justify-between p-4 z-30 select-none">
+<div class="flex flex-col gap-4 overflow-y-auto pr-1">
+<!-- Workspace Brand Header -->
+<div class="flex items-center gap-3 px-2 py-1.5 rounded-lg">
+<div class="w-9 h-9 rounded-lg bg-on-background flex items-center justify-center text-surface-container-lowest font-bold text-sm shadow-sm flex-shrink-0">
+          NC
+        </div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-card-title text-on-surface truncate">Northstar Coffee</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+<span class="font-label text-label text-secondary truncate">Specialty Roastery</span>
+</div>
+</div>
+</div>
+<!-- Primary Action CTA -->
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary-container hover:bg-primary text-on-primary rounded-lg font-button text-button transition-colors duration-150 shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-container focus:ring-offset-2" type="button">
+<span class="material-symbols-outlined" data-icon="add">add</span>
+<span>+ New Post</span>
+</button>
+<!-- Main Navigation Menu -->
+<nav class="flex flex-col gap-0.5 mt-1 font-body text-body">
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span>Overview</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="view_kanban">view_kanban</span>
+<span>Planning</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="table_chart">table_chart</span>
+<span>Board</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+<span>Calendar</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="rate_review">rate_review</span>
+<span>Reviews</span>
+</div>
+<span class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-secondary-container text-on-surface">3</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="folder">folder</span>
+<span>Media</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="draw">draw</span>
+<span>Design queue</span>
+</div>
+<span class="px-1.5 py-0.5 text-xs font-medium rounded-full bg-secondary-container text-on-surface">2</span>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+<span>Channels</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="palette">palette</span>
+<span>Brand kit</span>
+</div>
+</a>
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined" data-icon="group">group</span>
+<span>Team</span>
+</div>
+</a>
+<!-- Nested Settings Group -->
+<div class="pt-2 mt-2 border-t border-outline-variant/60 flex flex-col gap-0.5">
+<div class="flex items-center justify-between px-3 py-1.5 text-xs font-semibold text-secondary uppercase tracking-wider">
+<span>Settings</span>
+<span class="material-symbols-outlined text-xs" data-icon="expand_more">expand_more</span>
+</div>
+<!-- Active Workspace settings -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container-high text-primary font-medium transition-colors duration-150 relative" href="#settings">
+<span class="w-1.5 h-1.5 rounded-full bg-primary absolute start-1.5"></span>
+<span class="material-symbols-outlined ms-1" data-icon="tune">tune</span>
+<span class="truncate">Workspace settings</span>
+</a>
+<!-- Sub item 2 -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<span class="w-1.5 h-1.5 invisible"></span>
+<span class="material-symbols-outlined ms-1" data-icon="integration_instructions">integration_instructions</span>
+<span class="truncate">Integrations &amp; webhooks</span>
+</a>
+<!-- Sub item 3 -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low transition-colors duration-150" href="#">
+<span class="w-1.5 h-1.5 invisible"></span>
+<span class="material-symbols-outlined ms-1" data-icon="credit_card">credit_card</span>
+<span class="truncate">Client billing link</span>
+</a>
+</div>
+</nav>
+</div>
+<!-- Sidebar Footer -->
+<div class="pt-3 border-t border-outline-variant flex flex-col gap-2">
+<div class="flex items-center justify-between px-2 text-xs text-secondary">
+<span class="truncate">Workspace active • 5 seats</span>
+<a class="text-primary hover:underline font-medium" href="#">Manage</a>
+</div>
+<div class="flex items-center justify-between px-2 pt-1 text-xs text-secondary">
+<div class="flex items-center gap-1.5 hover:text-on-surface cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="help_outline">help_outline</span>
+<span>Help &amp; docs</span>
+</div>
+<div class="flex items-center gap-1.5 hover:text-on-surface cursor-pointer">
+<span class="material-symbols-outlined text-sm" data-icon="swap_horiz">swap_horiz</span>
+<span>Switch</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ================= TOPBAR (Docked 64px Fixed) ================= -->
+<header class="fixed top-0 end-0 start-[248px] h-[64px] bg-surface-container-lowest border-b border-outline-variant flex items-center justify-between px-6 z-20">
+<!-- Breadcrumbs -->
+<div class="flex items-center gap-2 font-label text-label text-secondary min-w-0">
+<span class="hover:text-on-surface cursor-pointer">Workspaces</span>
+<span class="text-outline-variant">/</span>
+<span class="hover:text-on-surface cursor-pointer">Northstar Coffee</span>
+<span class="text-outline-variant">/</span>
+<span class="hover:text-on-surface cursor-pointer">Settings</span>
+<span class="text-outline-variant">/</span>
+<span class="text-on-surface font-semibold truncate">Workspace settings</span>
+</div>
+<!-- Center Search -->
+<div class="relative w-80 hidden md:block">
+<span class="material-symbols-outlined absolute start-3 top-1/2 -translate-y-1/2 text-secondary" data-icon="search">search</span>
+<input class="w-full h-9 ps-9 pe-12 bg-surface-container-low border border-outline-variant rounded-md text-xs text-on-surface placeholder:text-secondary focus:bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-colors" placeholder="Search settings, policies, members..." type="text"/>
+<kbd class="absolute end-2.5 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] font-medium text-secondary bg-surface border border-outline-variant rounded">⌘K</kbd>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-4">
+<!-- Status dot -->
+<div class="hidden lg:flex items-center gap-1.5 text-xs text-secondary pe-2 border-e border-outline-variant">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span>All systems operational</span>
+</div>
+<!-- Discard & Save Header Actions (As specified in JSON) -->
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 text-xs font-button text-secondary hover:text-on-surface transition-colors" type="button">Discard</button>
+<button class="px-3.5 py-1.5 text-xs font-button bg-primary-container text-on-primary rounded-md hover:bg-primary transition-colors" type="button">Save changes</button>
+</div>
+<!-- Icons -->
+<div class="flex items-center gap-1 text-secondary">
+<button class="p-2 hover:text-on-surface hover:bg-surface-container-low rounded-md relative transition-colors" title="Notifications" type="button">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-2 end-2 w-1.5 h-1.5 rounded-full bg-primary"></span>
+</button>
+<button class="p-2 hover:text-on-surface hover:bg-surface-container-low rounded-md transition-colors" title="Help" type="button">
+<span class="material-symbols-outlined" data-icon="help_outline">help_outline</span>
+</button>
+</div>
+<!-- Profile Avatar -->
+<div class="flex items-center gap-2.5 ps-2 border-s border-outline-variant cursor-pointer">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-surface flex items-center justify-center font-medium text-xs border border-outline-variant">
+          SJ
+        </div>
+<div class="hidden xl:flex flex-col">
+<span class="text-xs font-semibold text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="text-[11px] text-secondary leading-tight">Production Lead</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ================= MAIN CONTENT CANVAS ================= -->
+<main class="ms-[248px] pt-[64px] min-h-screen bg-surface-container-low">
+<div class="max-w-5xl mx-auto py-8 px-8">
+<!-- Page Header -->
+<div class="mb-8">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface">Workspace settings</h1>
+<p class="font-body text-body text-secondary mt-1">Configure operational defaults, governance lifecycles, and production rules for Northstar Coffee.</p>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-surface-container rounded-md border border-outline-variant/70 self-start sm:self-auto flex-shrink-0">
+<span class="material-symbols-outlined text-xs text-emerald-600" data-icon="check_circle">check_circle</span>
+<span class="font-label text-label text-secondary">Last saved: Today at 2:14 PM by Sarah Jenkins</span>
+</div>
+</div>
+<!-- Anchor Strip Navigation -->
+<nav class="flex items-center gap-2 mt-6 overflow-x-auto pb-1 border-b border-outline-variant text-xs font-medium text-secondary">
+<a class="px-3 py-1.5 rounded-full bg-surface-container-high text-primary font-semibold hover:bg-surface-container-highest transition-colors whitespace-nowrap" href="#lifecycle">Lifecycle &amp; stages</a>
+<a class="px-3 py-1.5 rounded-full hover:text-on-surface hover:bg-surface-container transition-colors whitespace-nowrap" href="#lead-times">Lead times &amp; buffers</a>
+<a class="px-3 py-1.5 rounded-full hover:text-on-surface hover:bg-surface-container transition-colors whitespace-nowrap" href="#assignments">Assignment defaults</a>
+<a class="px-3 py-1.5 rounded-full hover:text-on-surface hover:bg-surface-container transition-colors whitespace-nowrap" href="#approval-mode">Approval mode</a>
+<a class="px-3 py-1.5 rounded-full hover:text-on-surface hover:bg-surface-container transition-colors whitespace-nowrap" href="#ai-assistance">AI assistance</a>
+<a class="px-3 py-1.5 rounded-full hover:text-error hover:bg-error-container/30 transition-colors whitespace-nowrap" href="#danger-zone">Danger zone</a>
+</nav>
+</div>
+<!-- Settings Cards Stack -->
+<div class="flex flex-col gap-6">
+<!-- CARD 1: Lifecycle & Content Stages -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="lifecycle">
+<div class="border-b border-outline-variant/60 pb-4 mb-5">
+<h2 class="font-card-title text-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="alt_route">alt_route</span>
+              Lifecycle &amp; content stages
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">Define required workflow verification gates and milestones for published content.</p>
+</div>
+<!-- Stages checklist container -->
+<div class="flex flex-col gap-2.5">
+<!-- Stage 1 -->
+<div class="flex items-start gap-3.5 p-3.5 rounded-lg border border-outline-variant bg-surface-container-low/50">
+<input checked="" class="mt-1 rounded text-primary-container focus:ring-primary h-4 w-4 border-outline cursor-not-allowed opacity-75" disabled="" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-semibold text-xs text-on-surface">1. Brief &amp; Strategy</span>
+<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-secondary-container text-on-surface-variant">Mandatory</span>
+</div>
+<p class="text-xs text-secondary mt-0.5">Context, visual anchors &amp; target specs defined by brand strategist.</p>
+</div>
+</div>
+<!-- Stage 2 -->
+<div class="flex items-start gap-3.5 p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:border-outline transition-colors">
+<input checked="" class="mt-1 rounded text-primary-container focus:ring-primary h-4 w-4 border-outline cursor-pointer" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-semibold text-xs text-on-surface">2. Creative Production</span>
+<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-surface-container text-secondary">In-Progress Core</span>
+</div>
+<p class="text-xs text-secondary mt-0.5">Filming, audio cuts, B-roll stitching, and copy composition.</p>
+</div>
+</div>
+<!-- Stage 3 -->
+<div class="flex items-start gap-3.5 p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:border-outline transition-colors">
+<input checked="" class="mt-1 rounded text-primary-container focus:ring-primary h-4 w-4 border-outline cursor-pointer" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-semibold text-xs text-on-surface">3. Internal QA Gate</span>
+<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-primary-fixed text-on-primary-fixed">Mandatory Gate</span>
+</div>
+<p class="text-xs text-secondary mt-0.5">Peer review, brand checklist compliance, and technical aspect ratio verification.</p>
+</div>
+</div>
+<!-- Stage 4 -->
+<div class="flex items-start gap-3.5 p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:border-outline transition-colors">
+<input checked="" class="mt-1 rounded text-primary-container focus:ring-primary h-4 w-4 border-outline cursor-pointer" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-semibold text-xs text-on-surface">4. Client Review &amp; Sign-off</span>
+<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-tertiary-fixed text-on-tertiary-fixed">Client Portal</span>
+</div>
+<p class="text-xs text-secondary mt-0.5">Shared directly to Northstar Brand Managers for revision notes or final publishing sign-off.</p>
+</div>
+</div>
+<!-- Stage 5 -->
+<div class="flex items-start gap-3.5 p-3.5 rounded-lg border border-outline-variant bg-surface-container-lowest hover:border-outline transition-colors">
+<input checked="" class="mt-1 rounded text-primary-container focus:ring-primary h-4 w-4 border-outline cursor-pointer" type="checkbox"/>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 flex-wrap">
+<span class="font-semibold text-xs text-on-surface">5. Scheduled &amp; Publish</span>
+<span class="px-2 py-0.5 text-[11px] font-medium rounded bg-surface-container-high text-primary">Automated</span>
+</div>
+<p class="text-xs text-secondary mt-0.5">Dispatches automatically to TikTok, Instagram Reels, and YouTube Shorts via API rail.</p>
+</div>
+</div>
+</div>
+<!-- Additional Configuration Controls -->
+<div class="mt-6 pt-5 border-t border-outline-variant/60 grid grid-cols-1 md:grid-cols-2 gap-6">
+<!-- Dropdown -->
+<div class="flex flex-col gap-1.5">
+<label class="font-label text-label text-on-surface font-semibold" for="auto-archive">Auto-archive completed posts</label>
+<select class="h-9 px-3 bg-surface-container-low border border-outline-variant rounded-md text-xs text-on-surface focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none" id="auto-archive">
+<option selected="">After 30 days</option>
+<option>After 60 days</option>
+<option>After 90 days</option>
+<option>Never (Manual archive only)</option>
+</select>
+<span class="text-[11px] text-secondary">Moves historical posts out of standard operational boards.</span>
+</div>
+<!-- Switch Toggle -->
+<div class="flex items-start justify-between gap-3 p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/60">
+<div class="flex flex-col">
+<span class="font-label text-label text-on-surface font-semibold">Require brief link before production</span>
+<span class="text-[11px] text-secondary mt-0.5">Blocks moving posts into production column without an approved brief URL.</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0 mt-0.5">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+<!-- Card Footer -->
+<div class="mt-5 pt-3 border-t border-outline-variant/40 flex items-center gap-2 text-xs text-secondary">
+<span class="material-symbols-outlined text-xs text-emerald-600" data-icon="sync">sync</span>
+<span>All stage updates automatically propagate to active boards and calendar timelines.</span>
+</div>
+</section>
+<!-- CARD 2: Lead Times & Production Buffers -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="lead-times">
+<div class="border-b border-outline-variant/60 pb-4 mb-5">
+<h2 class="font-card-title text-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="timelapse">timelapse</span>
+              Lead times &amp; production buffers
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">Set minimum required business days between stage transitions to prevent rushing and quality loss.</p>
+</div>
+<!-- 4-Column Metric Steppers Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Stepper 1 -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<span class="text-xs font-semibold text-on-surface block truncate">Standard Video</span>
+<span class="text-[11px] text-secondary block mt-0.5 line-clamp-2">Reel / TikTok video footage editing &amp; motion buffer</span>
+</div>
+<div class="mt-4 flex items-center justify-between border border-outline-variant rounded-md bg-surface-container-low p-1">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">−</button>
+<span class="font-semibold text-xs text-on-surface">5 days</span>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">+</button>
+</div>
+</div>
+<!-- Stepper 2 -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<span class="text-xs font-semibold text-on-surface block truncate">Graphic Buffer</span>
+<span class="text-[11px] text-secondary block mt-0.5 line-clamp-2">Carousel &amp; Static multi-frame Figma canvas layout</span>
+</div>
+<div class="mt-4 flex items-center justify-between border border-outline-variant rounded-md bg-surface-container-low p-1">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">−</button>
+<span class="font-semibold text-xs text-on-surface">3 days</span>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">+</button>
+</div>
+</div>
+<!-- Stepper 3 -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<span class="text-xs font-semibold text-on-surface block truncate">Copywriting Turn</span>
+<span class="text-[11px] text-secondary block mt-0.5 line-clamp-2">Hooks, CTA scripts, and first-comment search tags</span>
+</div>
+<div class="mt-4 flex items-center justify-between border border-outline-variant rounded-md bg-surface-container-low p-1">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">−</button>
+<span class="font-semibold text-xs text-on-surface">2 days</span>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">+</button>
+</div>
+</div>
+<!-- Stepper 4 -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<span class="text-xs font-semibold text-on-surface block truncate">Review SLA</span>
+<span class="text-[11px] text-secondary block mt-0.5 line-clamp-2">Client Turnaround max window before auto-alert</span>
+</div>
+<div class="mt-4 flex items-center justify-between border border-outline-variant rounded-md bg-surface-container-low p-1">
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">−</button>
+<span class="font-semibold text-xs text-on-surface">48 hours</span>
+<button class="w-7 h-7 flex items-center justify-center rounded bg-surface-container-lowest hover:bg-surface text-secondary hover:text-on-surface border border-outline-variant/60 text-xs font-bold transition-colors" type="button">+</button>
+</div>
+</div>
+</div>
+<!-- Callout Notice Banner -->
+<div class="mt-5 p-3 rounded-lg bg-surface-container flex items-start gap-2.5 border border-outline-variant/50">
+<span class="material-symbols-outlined text-sm text-secondary mt-0.5" data-icon="info">info</span>
+<p class="text-xs text-secondary">Overdue items trigger automated Slack alerts to the assigned producer and recalculate projected publish dates on the Calendar view.</p>
+</div>
+</section>
+<!-- CARD 3: Assignment Defaults -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="assignments">
+<div class="border-b border-outline-variant/60 pb-4 mb-5">
+<h2 class="font-card-title text-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="person_add">person_add</span>
+              Assignment defaults
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">Default owners and routing rules for new content drafts created in this workspace.</p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Default 1: Locked Workspace Lead -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-low/40 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface">Workspace Lead</span>
+<span class="material-symbols-outlined text-xs text-secondary" data-icon="lock" title="Locked by organization administrator">lock</span>
+</div>
+<div class="mt-3 flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-surface font-semibold text-xs flex items-center justify-center">
+                    SJ
+                  </div>
+<div class="min-w-0">
+<span class="text-xs font-medium text-on-surface block truncate">Sarah Jenkins</span>
+<span class="text-[11px] text-secondary block truncate">Production Lead</span>
+</div>
+</div>
+</div>
+<span class="text-[11px] text-secondary mt-4 block border-t border-outline-variant/40 pt-2">Responsible for stage approvals and cadence integrity.</span>
+</div>
+<!-- Default 2: Video Producer Dropdown -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<label class="text-xs font-semibold text-on-surface block" for="default-editor">Default Video Producer</label>
+<div class="mt-3">
+<select class="w-full h-9 px-2.5 bg-surface-container-low border border-outline-variant rounded-md text-xs text-on-surface focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none" id="default-editor">
+<option selected="">Elena Rostova (Senior Editor)</option>
+<option>Liam Henderson (Motion Designer)</option>
+<option>Devon Miles (Content Producer)</option>
+<option>Unassigned</option>
+</select>
+</div>
+</div>
+<span class="text-[11px] text-secondary mt-4 block border-t border-outline-variant/40 pt-2">Auto-assigned when content format is set to Reel or Short.</span>
+</div>
+<!-- Default 3: Copywriter Dropdown -->
+<div class="p-4 rounded-lg border border-outline-variant bg-surface-container-lowest flex flex-col justify-between">
+<div>
+<label class="text-xs font-semibold text-on-surface block" for="default-copywriter">Default Copywriter</label>
+<div class="mt-3">
+<select class="w-full h-9 px-2.5 bg-surface-container-low border border-outline-variant rounded-md text-xs text-on-surface focus:ring-1 focus:ring-primary focus:border-primary focus:outline-none" id="default-copywriter">
+<option selected="">Marcus Chen (Brand Strategist)</option>
+<option>Aaliyah Patel (Senior Copywriter)</option>
+<option>Tom Rossi (Social Lead)</option>
+<option>Unassigned</option>
+</select>
+</div>
+</div>
+<span class="text-[11px] text-secondary mt-4 block border-t border-outline-variant/40 pt-2">Receives notification upon brief completion.</span>
+</div>
+</div>
+<!-- Bottom Toggle in Assignment -->
+<div class="mt-5 pt-4 border-t border-outline-variant/60 flex items-center justify-between">
+<div>
+<span class="text-xs font-semibold text-on-surface block">Auto-assign reviewer on QA submission</span>
+<span class="text-[11px] text-secondary block mt-0.5">Automatically routes draft to Sarah Jenkins as soon as production assets are marked done.</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ms-4">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</section>
+<!-- CARD 4: Approval Mode & Client Gates -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="approval-mode">
+<div class="border-b border-outline-variant/60 pb-4 mb-5">
+<h2 class="font-card-title text-card-title text-on-surface flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="verified_user">verified_user</span>
+              Approval mode &amp; client gates
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">Configure sign-off thresholds and client review permissions.</p>
+</div>
+<!-- 3 Selectable Radio Cards -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Option 1: Single Sign-off -->
+<label class="relative flex flex-col justify-between p-4 rounded-lg border border-outline-variant hover:border-outline cursor-pointer bg-surface-container-lowest transition-all">
+<div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-on-surface">Single sign-off</span>
+<input class="h-4 w-4 text-primary-container focus:ring-primary border-outline" name="approval_mode" type="radio"/>
+</div>
+<p class="text-xs text-secondary mt-2">Any verified client reviewer in Northstar Coffee can approve drafts directly for scheduled queue.</p>
+</div>
+<span class="text-[11px] font-medium text-emerald-700 mt-4 block">Fastest release cycle</span>
+</label>
+<!-- Option 2: Dual Sign-off (Strict) [SELECTED] -->
+<label class="relative flex flex-col justify-between p-4 rounded-lg border-2 border-primary-container bg-surface-container-low cursor-pointer transition-all shadow-sm">
+<div>
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-1.5">
+<span class="text-xs font-bold text-on-surface">Dual sign-off (Strict)</span>
+<span class="material-symbols-outlined text-xs text-primary" data-icon="shield">shield</span>
+</div>
+<input checked="" class="h-4 w-4 text-primary-container focus:ring-primary border-outline" name="approval_mode" type="radio"/>
+</div>
+<p class="text-xs text-on-surface-variant mt-2">Requires approval from designated Brand Lead and Compliance/Legal before auto-publishing is unlocked.</p>
+</div>
+<div class="flex items-center gap-1 mt-4">
+<span class="px-2 py-0.5 text-[10px] font-semibold rounded bg-primary-fixed text-on-primary-fixed">Protected status</span>
+<span class="text-[11px] text-secondary">Enforced for enterprise</span>
+</div>
+</label>
+<!-- Option 3: Internal Only -->
+<label class="relative flex flex-col justify-between p-4 rounded-lg border border-outline-variant hover:border-outline cursor-pointer bg-surface-container-lowest transition-all">
+<div>
+<div class="flex items-center justify-between">
+<span class="text-xs font-bold text-on-surface">Internal only</span>
+<input class="h-4 w-4 text-primary-container focus:ring-primary border-outline" name="approval_mode" type="radio"/>
+</div>
+<p class="text-xs text-secondary mt-2">Client portal review is suppressed. Internal Agency QA gate serves as final publication authority.</p>
+</div>
+<span class="text-[11px] font-medium text-secondary mt-4 block">Sandbox / Staging mode</span>
+</label>
+</div>
+<!-- Nested Client Portal Permissions Panel -->
+<div class="mt-6 p-4 rounded-lg bg-surface-container-low border border-outline-variant">
+<h3 class="text-xs font-semibold text-on-surface flex items-center gap-1.5 mb-3">
+<span class="material-symbols-outlined text-xs text-secondary" data-icon="lock_open">lock_open</span>
+              Client Portal Permissions
+            </h3>
+<div class="flex flex-col gap-3.5">
+<!-- Toggle 1 -->
+<div class="flex items-center justify-between">
+<div>
+<span class="text-xs font-medium text-on-surface block">Allow client to view production comments</span>
+<span class="text-[11px] text-secondary block">Restricts internal team annotations and QA notes from client portal view.</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0 ms-4">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+<!-- Divider -->
+<div class="border-t border-outline-variant/60"></div>
+<!-- Toggle 2 with PIN -->
+<div class="flex items-center justify-between">
+<div>
+<span class="text-xs font-medium text-on-surface block">Require 4-digit PIN for preview links</span>
+<span class="text-[11px] text-secondary block">Enforces PIN verification on unauthenticated external preview links.</span>
+</div>
+<div class="flex items-center gap-3">
+<span class="px-2 py-1 text-xs font-mono font-semibold bg-surface-container-lowest border border-outline-variant rounded text-on-surface">PIN: 4419</span>
+<label class="relative inline-flex items-center cursor-pointer flex-shrink-0">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-9 h-5 bg-outline-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary-container"></div>
+</label>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- CARD 5: AI Draft Assistance Status (Read-only Governance) -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="ai-assistance">
+<div class="flex items-start justify-between gap-4 border-b border-outline-variant/60 pb-4 mb-5">
+<div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary" data-icon="psychology">psychology</span>
+<h2 class="font-card-title text-card-title text-on-surface">AI draft assistance status</h2>
+</div>
+<p class="font-body text-body text-secondary mt-0.5">Model version: Claude 3.5 Sonnet / Gemini Pro (Dual Routing). AI drafts assist human creators and never autonomously publish or transition content status.</p>
+</div>
+<span class="px-2.5 py-1 text-xs font-semibold rounded bg-surface-container-high text-primary border border-primary/20 flex-shrink-0">
+              Agency managed
+            </span>
+</div>
+<!-- Information banner -->
+<div class="p-3.5 rounded-lg bg-surface-container-low border border-outline-variant flex items-center justify-between flex-wrap gap-3">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-secondary" data-icon="lock">lock</span>
+<p class="text-xs text-secondary">To modify model temperature, custom safety filters, or global brand voice guidelines, visit Agency Global Settings.</p>
+</div>
+<a class="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline" href="#">
+<span>View agency AI policy</span>
+<span class="material-symbols-outlined text-xs" data-icon="open_in_new">open_in_new</span>
+</a>
+</div>
+</section>
+<!-- CARD 6: Danger Zone -->
+<section class="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm" id="danger-zone">
+<div class="border-b border-outline-variant/60 pb-4 mb-4">
+<h2 class="font-card-title text-card-title text-error flex items-center gap-2">
+<span class="material-symbols-outlined text-error" data-icon="warning">warning</span>
+              Danger zone
+            </h2>
+<p class="font-body text-body text-secondary mt-0.5">Irreversible actions and workspace dispatches.</p>
+</div>
+<div class="flex flex-col divide-y divide-outline-variant/50">
+<!-- Action 1 -->
+<div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div>
+<span class="text-xs font-semibold text-on-surface block">Pause all active workspace publishing</span>
+<span class="text-[11px] text-secondary block mt-0.5">Freezes scheduled dispatches and queues for all active social channels immediately.</span>
+</div>
+<button class="px-3.5 py-2 text-xs font-button border border-error text-error hover:bg-error-container/40 rounded-md transition-colors flex-shrink-0" type="button">
+                Pause schedule
+              </button>
+</div>
+<!-- Action 2 -->
+<div class="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div>
+<span class="text-xs font-semibold text-on-surface block">Archive this workspace</span>
+<span class="text-[11px] text-secondary block mt-0.5">Removes Northstar Coffee from production rails and revokes client portal links. Data retains for 90 days.</span>
+</div>
+<button class="px-3.5 py-2 text-xs font-button text-error hover:bg-error-container/40 rounded-md transition-colors flex-shrink-0" type="button">
+                Archive
+              </button>
+</div>
+</div>
+</section>
+</div>
+<!-- Bottom Spacer / Save Reminder -->
+<div class="mt-8 pt-4 border-t border-outline-variant flex items-center justify-between text-xs text-secondary">
+<span>LaraTik Production Planner v4.2 • Northstar Coffee workspace</span>
+<div class="flex items-center gap-3">
+<button class="text-secondary hover:text-on-surface font-medium" type="button">Discard changes</button>
+<button class="px-4 py-2 font-button bg-primary-container text-on-primary rounded-md hover:bg-primary shadow-sm transition-colors" type="button">Save changes</button>
+</div>
+</div>
+</div>
+</main>
+</body></html>

@@ -61,31 +61,35 @@ migrations, and injects deterministic test-only Auth.js secrets. Never point
 
 ## Design source — Google Stitch
 
-The visual target is the **StudioFlow** design system on Google Stitch
-(project `5403097764334458790`, design system `assets/e2bbd2e84f524a5eb7e1aa20a22d7531`).
-The captured copy lives in `./designs/stitch/` (49 PNGs + 49 HTMLs + `DESIGN.md`)
-and is the in-repo canonical artifact for visual parity work. `docs/visual-parity/PLAN.md`
-records the M0–M6 plan that consumed it; `docs/production-readiness/SCREEN_PARITY.md`
-is the 27-row matrix that tracks each Stitch screen against a laratik-planner route.
+The current visual target is the **LaraTik Planner** design system on Google
+Stitch (project `16083107078886291815`, design system
+`assets/14000568228937989951`). The current route/screen inventory and refresh
+protocol live in `docs/visual-parity/CURRENT_SYNC.md`.
+
+The older StudioFlow project (`5403097764334458790`) and the captured copy in
+`./designs/stitch/` are retained as a historical baseline for traceability;
+they are not the current source of truth. `docs/visual-parity/PLAN.md` records
+the historical M0–M6 work, while `docs/production-readiness/SCREEN_PARITY.md`
+labels its 27-row matrix as the archived baseline.
 
 **Refresh from the live Stitch MCP** only when the user reports an upstream
 change. The MCP endpoint is `https://stitch.googleapis.com/mcp`; auth is the
 `X-Goog-Api-Key` header. The full recipe (auth, tools, gotchas, regeneration
-of `DESIGN.md`, what to commit) is in **`docs/visual-parity/MCP.md`** — read
+of the current capture manifest, what to commit) is in **`docs/visual-parity/MCP.md`** — read
 it before re-capturing. Key reminders:
 
-- `list_screens` param is the bare integer `"5403097764334458790"`, not
+- `list_screens` param is the bare integer `"16083107078886291815"`, not
   the `"projects/…"` form (the latter returns "Request contains an
   invalid argument")
-- `get_screen` param is the `parent/child` shape
-  `"projects/5403097764334458790/screens/<id>"` — there is no
-  `get_project` tool
+- `get_screen` uses the `parent/child` shape
+  `"projects/16083107078886291815/screens/<id>"` and also requires the bare
+  `projectId` and `screenId` fields
 - The CDN `downloadUrl` in `get_screen` is a **512px thumbnail**, not
   the 2560px original — full-res requires authenticated access
 - Captured HTML uses arbitrary-value classes (`bg-[#3525cd]`,
   `p-[20px]`); always translate to the project's design tokens
   (`src/app/globals.css`), never copy-paste
-- `designs/stitch/` is in `.prettierignore` — the captured HTML is
+- `designs/stitch-current/` is in `.prettierignore` — the captured HTML is
   auto-generated and must not be reformatted
 - The Stitch API key is a personal secret. The captured copy in the
   repo is the build artifact; the MCP is only for refreshes

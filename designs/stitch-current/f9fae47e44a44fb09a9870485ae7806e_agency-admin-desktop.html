@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner — Workspaces &amp; Organization</title>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Google Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface": "#f9f9ff",
+            "inverse-surface": "#273044",
+            "error": "#ba1a1a",
+            "secondary-fixed-dim": "#bec7db",
+            "on-secondary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-error-container": "#93000a",
+            "secondary-container": "#d7e0f5",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-surface": "#121b2e",
+            "surface-container-low": "#f1f3ff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "surface-container": "#e9edff",
+            "tertiary-fixed-dim": "#94ccff",
+            "primary-container": "#4f46e5",
+            "inverse-on-surface": "#edf0ff",
+            "tertiary-container": "#00659c",
+            "on-tertiary-container": "#bfdfff",
+            "on-primary-fixed-variant": "#3323cc",
+            "tertiary": "#004c77",
+            "background": "#f9f9ff",
+            "tertiary-fixed": "#cde5ff",
+            "secondary": "#565f70",
+            "surface-variant": "#d9e2fc",
+            "surface-dim": "#d1daf4",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-secondary-fixed": "#131c2b",
+            "surface-tint": "#4d44e3",
+            "outline": "#777587",
+            "surface-bright": "#f9f9ff",
+            "on-primary-fixed": "#0f0069",
+            "inverse-primary": "#c3c0ff",
+            "primary-fixed": "#e2dfff",
+            "outline-variant": "#c7c4d8",
+            "on-tertiary": "#ffffff",
+            "primary": "#3525cd",
+            "on-primary": "#ffffff",
+            "secondary-fixed": "#dae3f8",
+            "on-primary-container": "#dad7ff",
+            "on-background": "#121b2e",
+            "on-surface-variant": "#464555",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-container": "#5a6375",
+            "surface-container-highest": "#d9e2fc",
+            "surface-container-high": "#e1e8ff",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed": "#001d32"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "topbar-height": "64px",
+            "sidebar-expanded": "248px",
+            "screen-padding": "24px",
+            "base": "4px",
+            "sidebar-collapsed": "72px",
+            "card-padding": "16px",
+            "touch-target-min": "44px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "table-dense": ["Inter"],
+            "body": ["Inter"],
+            "button": ["Inter"],
+            "card-title": ["Inter"],
+            "label": ["Inter"],
+            "section-title": ["Inter"],
+            "page-title": ["Inter"]
+          },
+          "fontSize": {
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 20px;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+    /* Operational subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="h-full bg-surface text-on-surface font-body text-body antialiased flex flex-col overflow-hidden">
+<!-- ================= TOP NAVIGATION BAR (Exact Shared Component Anchors) ================= -->
+<header class="h-topbar-height w-full flex items-center justify-between px-6 bg-surface-container-lowest border-b border-outline-variant z-30 shrink-0">
+<!-- Left Cluster: Brand / Product Name + Context Breadcrumbs -->
+<div class="flex items-center gap-5">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center text-on-primary">
+<span class="material-symbols-outlined" style="font-size: 20px;">domain</span>
+</div>
+<span class="font-page-title text-card-title text-on-surface font-semibold tracking-tight">LaraTik Planner</span>
+</div>
+<div class="h-4 w-px bg-outline-variant"></div>
+<!-- Navigation Breadcrumbs -->
+<nav aria-label="Breadcrumb" class="flex items-center gap-2 text-secondary font-label text-label">
+<span class="hover:text-on-surface cursor-pointer">Agency Administration</span>
+<span class="text-outline-variant">/</span>
+<span class="font-semibold text-primary">Workspaces &amp; Organization</span>
+</nav>
+</div>
+<!-- Center/Search Bar (Shared Component Contract: search_bar: 'on_left') -->
+<div class="hidden lg:flex items-center flex-1 max-w-md mx-6">
+<div class="relative w-full">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary pointer-events-none">search</span>
+<input class="w-full bg-surface-container-low border border-outline-variant rounded-lg pl-9 pr-14 py-2 font-body text-table-dense text-on-surface placeholder:text-secondary focus:outline-none focus:ring-2 focus:ring-primary-container focus:bg-surface-container-lowest transition-colors" placeholder="Universal search workspaces, leads, slugs (Cmd+K)" type="text"/>
+<span class="absolute right-2.5 top-2 px-1.5 py-0.5 rounded border border-outline-variant bg-surface-container-lowest font-label text-label text-secondary pointer-events-none">⌘K</span>
+</div>
+</div>
+<!-- Right Cluster: Status badge, icon buttons, Trailing Primary CTA, Profile avatar -->
+<div class="flex items-center gap-3">
+<div class="hidden xl:flex items-center gap-2 px-2.5 py-1 rounded-full bg-surface-container border border-outline-variant font-label text-label text-on-surface">
+<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>Enterprise Tier • 8 of 12 Workspaces active</span>
+</div>
+<!-- Action Icons (Exact Shared Components: ['notifications', 'help'] + Security Audit) -->
+<div class="flex items-center gap-1 border-r border-outline-variant pr-3">
+<button class="relative w-9 h-9 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface transition-colors" title="Notifications">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-primary-container text-on-primary font-label text-[10px] flex items-center justify-center font-bold">2</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface transition-colors" title="Security Audit Log">
+<span class="material-symbols-outlined">shield</span>
+</button>
+<button class="w-9 h-9 flex items-center justify-center rounded-lg text-secondary hover:bg-surface-container hover:text-on-surface transition-colors" title="Documentation &amp; Help">
+<span class="material-symbols-outlined">help</span>
+</button>
+</div>
+<!-- Trailing primary action (from JSON: 'Create Workspace') -->
+<button class="hidden sm:flex items-center gap-1.5 bg-primary-container hover:bg-primary text-on-primary font-button text-button px-3.5 py-2 rounded-lg transition-colors shadow-sm focus:ring-2 focus:ring-offset-2 focus:ring-primary-container">
+<span class="material-symbols-outlined">add</span>
+<span>Create Workspace</span>
+</button>
+<!-- Profile Image (Alt from JSON: 'Admin User Avatar') -->
+<div class="flex items-center gap-2 pl-1 cursor-pointer group">
+<div class="relative">
+<img alt="Admin User Avatar" class="w-9 h-9 rounded-full object-cover border border-outline-variant group-hover:border-primary transition-colors" data-alt="A clean corporate close-up portrait of Sarah Jenkins, a professional female agency administrator with short hair and modern minimal eyeglasses, smiling in a bright architectural agency office setting with soft studio lighting and a tranquil palette of indigo and soft white tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9ATv23h9G27q444OZYOQkEc9zElNlXnPAKtQ5eEnZjkTINA1OovHzRVx7iuOYOgMKR-abTS5qGPPgCZ7hRW5IHCoQ4_pZMaZB0eK3L7w889rHpsJNmu9TdR8giGMgz3bOzgipDwHMX5B5jJM3PLc10jY8KKu0hMywNtvfh3yxIlX21ZSchhMaiAjr3rHQphiJjlQTHv5pOOasPf9JThCVDJejvVANaGR7onTGUmm6yPtAFYI8wWwDd-Rjh_w8dYy5Zfxsx0opgfVy"/>
+<span class="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-surface-container-lowest"></span>
+</div>
+</div>
+</div>
+</header>
+<!-- ================= MAIN LAYOUT WITH DOCKED SIDEBAR & FLUID CANVAS ================= -->
+<div class="flex-1 flex overflow-hidden">
+<!-- ================= FIXED / DOCKED SIDEBAR NAVIGATION (Shared Component) ================= -->
+<aside class="w-sidebar-expanded shrink-0 bg-surface-container-lowest border-r border-outline-variant flex flex-col justify-between p-4 z-20">
+<div class="space-y-6">
+<!-- Sidebar Brand Lockup (from JSON: header_title: 'LaraTik Agency', header_subtext: 'Admin Console') -->
+<div class="flex items-center justify-between pb-4 border-b border-outline-variant">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container flex items-center justify-center text-primary font-bold border border-outline-variant">
+<span class="material-symbols-outlined fill-icon text-primary">security</span>
+</div>
+<div class="leading-tight">
+<h2 class="font-section-title text-card-title text-primary font-semibold">LaraTik Agency</h2>
+<span class="font-label text-label text-secondary flex items-center gap-1">
+                Admin Console
+                <span class="w-1.5 h-1.5 rounded-full bg-primary-container inline-block"></span>
+</span>
+</div>
+</div>
+</div>
+<!-- Primary Navigation Tabs (Shared Component: ['Workspaces', 'Users', 'Agency Settings', 'Account']) -->
+<nav class="space-y-1">
+<div class="px-2 pb-1 font-label text-[11px] text-secondary tracking-wider font-semibold">MAIN GOVERNANCE</div>
+<!-- Tab 1: Workspaces (ACTIVE STATE - Exactly styled per style_active_navigation) -->
+<a class="bg-secondary-container text-primary font-semibold rounded-lg px-3 py-2 flex items-center justify-between group transition-all duration-150 ease-in-out" href="#workspaces">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary">domain</span>
+<span class="font-body text-body font-semibold">Workspaces</span>
+</div>
+<span class="bg-primary-container text-on-primary font-label text-[11px] px-2 py-0.5 rounded-full font-medium">8 active</span>
+</a>
+<!-- Tab 2: Users (Inactive per style_inactive_navigation) -->
+<a class="text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-lg px-3 py-2 flex items-center justify-between transition-all duration-150 ease-in-out group" href="#users">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-secondary group-hover:text-on-surface">group</span>
+<span class="font-body text-body">Users</span>
+</div>
+<span class="bg-surface-container text-secondary font-label text-[11px] px-2 py-0.5 rounded-full font-medium">42 members</span>
+</a>
+<!-- Tab 3: Agency Settings -->
+<a class="text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-lg px-3 py-2 flex items-center gap-3 transition-all duration-150 ease-in-out group" href="#settings">
+<span class="material-symbols-outlined text-secondary group-hover:text-on-surface">tune</span>
+<span class="font-body text-body">Agency Settings</span>
+</a>
+<!-- Tab 4: Account -->
+<a class="text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-lg px-3 py-2 flex items-center gap-3 transition-all duration-150 ease-in-out group" href="#account">
+<span class="material-symbols-outlined text-secondary group-hover:text-on-surface">manage_accounts</span>
+<span class="font-body text-body">Account</span>
+</a>
+</nav>
+<!-- CTA from JSON: Invite Member -->
+<div class="pt-2">
+<button class="w-full flex items-center justify-center gap-2 border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low font-button text-button py-2 rounded-lg transition-colors">
+<span class="material-symbols-outlined text-primary" style="font-size: 18px;">person_add</span>
+<span>Invite Member</span>
+</button>
+</div>
+</div>
+<!-- Sidebar Footer (from JSON: footer_tab_labels: ["System Status", "Documentation"], footer_tab_icons: ["verified", "menu_book"]) -->
+<div class="pt-4 border-t border-outline-variant space-y-2">
+<a class="text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-lg px-3 py-1.5 flex items-center justify-between text-body transition-colors" href="#status">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-emerald-600" style="font-size: 18px;">verified</span>
+<span class="font-body text-table-dense">System Status</span>
+</div>
+<span class="flex items-center gap-1 font-label text-[11px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Operational
+          </span>
+</a>
+<a class="text-secondary hover:text-on-surface hover:bg-surface-container-low rounded-lg px-3 py-1.5 flex items-center gap-2.5 text-body transition-colors" href="#documentation">
+<span class="material-symbols-outlined" style="font-size: 18px;">menu_book</span>
+<span class="font-body text-table-dense">Documentation</span>
+</a>
+<!-- Admin User profile footnote -->
+<div class="mt-3 p-2 bg-surface-container-low rounded-lg border border-outline-variant flex items-center gap-2.5">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary flex items-center justify-center font-bold text-xs">
+            SJ
+          </div>
+<div class="min-w-0 flex-1">
+<p class="font-body text-table-dense font-medium text-on-surface truncate">Sarah Jenkins</p>
+<p class="font-label text-[11px] text-secondary truncate">Super Admin Role</p>
+</div>
+</div>
+</div>
+</aside>
+<!-- ================= CONTENT CANVAS & SPLIT INSPECTION DRAWER ================= -->
+<main class="flex-1 flex overflow-hidden bg-background">
+<!-- Primary Data & Control Canvas (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-6 space-y-6">
+<!-- 1. Page Header Section -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface font-semibold tracking-tight">Workspaces &amp; Organization</h1>
+<p class="font-body text-body text-secondary mt-1 max-w-2xl">
+              Manage tenant workspace boundaries, member permissions, invitations, and compliance archiving.
+            </p>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<button class="px-4 py-2 border border-outline-variant bg-surface-container-lowest hover:bg-surface-container-low text-on-surface font-button text-button rounded-lg transition-colors flex items-center gap-2">
+<span class="material-symbols-outlined text-secondary">group_add</span>
+<span>Invite member</span>
+</button>
+<button class="px-4 py-2 bg-primary-container hover:bg-primary text-on-primary font-button text-button rounded-lg transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined">add</span>
+<span>Create workspace</span>
+</button>
+</div>
+</div>
+<!-- 2. Workspace Setup & Health Overview Card (Bento Style 4-column) -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+<!-- Stat 1: Total Workspaces -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Total Workspaces</span>
+<span class="material-symbols-outlined text-primary">domain</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-page-title text-page-title font-bold text-on-surface">11</span>
+<span class="font-label text-label text-secondary">total</span>
+</div>
+<div class="mt-3 flex items-center gap-2 font-label text-label">
+<span class="text-emerald-700 font-semibold flex items-center gap-0.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> 8 Active
+              </span>
+<span class="text-secondary">•</span>
+<span class="text-amber-700">1 Provisioning</span>
+<span class="text-secondary">•</span>
+<span class="text-secondary">2 Archived</span>
+</div>
+</div>
+<!-- Stat 2: Total Provisioned Seats -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Provisioned Seats</span>
+<span class="material-symbols-outlined text-primary">badge</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-page-title text-page-title font-bold text-on-surface">48 <span class="font-body text-body text-secondary font-normal">/ 60</span></span>
+<span class="font-label text-label text-amber-700 bg-amber-50 border border-amber-200 px-1.5 rounded">80% quota</span>
+</div>
+<!-- Progress bar -->
+<div class="mt-3 w-full bg-surface-container rounded-full h-1.5 overflow-hidden">
+<div class="bg-primary-container h-1.5 rounded-full" style="width: 80%"></div>
+</div>
+</div>
+<!-- Stat 3: Pending Invites -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Pending Invitations</span>
+<span class="material-symbols-outlined text-secondary">mail</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-page-title text-page-title font-bold text-on-surface">4</span>
+<span class="font-label text-label text-secondary">awaiting accept</span>
+</div>
+<div class="mt-3 flex items-center justify-between font-label text-label text-secondary">
+<span>Avg acceptance: 14 hours</span>
+<a class="text-primary hover:underline font-semibold" href="#resend">Review all</a>
+</div>
+</div>
+<!-- Stat 4: Security & Compliance -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-card-padding">
+<div class="flex items-center justify-between text-secondary">
+<span class="font-label text-label">Compliance Status</span>
+<span class="material-symbols-outlined text-emerald-600">verified_user</span>
+</div>
+<div class="mt-2 flex items-baseline gap-2">
+<span class="font-page-title text-card-title font-bold text-emerald-700">100% Enforced</span>
+</div>
+<div class="mt-3 font-label text-label text-secondary flex items-center gap-1.5">
+<span class="material-symbols-outlined text-emerald-600" style="font-size: 16px;">lock</span>
+<span>MFA mandatory on all 48 accounts</span>
+</div>
+</div>
+</div>
+<!-- Capacity Guardrail Banner -->
+<div class="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container flex items-center justify-center text-primary shrink-0 border border-outline-variant">
+<span class="material-symbols-outlined">cloud_sync</span>
+</div>
+<div>
+<p class="font-body text-body font-medium text-on-surface">
+                Storage quota <span class="font-bold text-primary">42.8 GB / 100 GB</span> used across 8 active brand workspaces.
+              </p>
+<p class="font-label text-label text-secondary">
+                Auto-cleaning non-rendered TikTok drafts older than 180 days. SLA retention policy active.
+              </p>
+</div>
+</div>
+<button class="self-start sm:self-auto font-button text-table-dense text-primary hover:text-primary-container px-3 py-1.5 rounded-lg border border-outline-variant hover:bg-surface-container-lowest transition-colors whitespace-nowrap">
+            Manage storage tiers
+          </button>
+</div>
+<!-- 3. Workspaces Management Section -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-none overflow-hidden">
+<!-- Segmented Filter Tabs -->
+<div class="px-card-padding pt-3 border-b border-outline-variant flex items-center justify-between flex-wrap gap-2">
+<div class="flex items-center space-x-1 overflow-x-auto">
+<button class="px-3.5 py-2 font-button text-table-dense border-b-2 border-primary text-primary font-semibold flex items-center gap-1.5">
+<span>All workspaces</span>
+<span class="px-1.5 py-0.2 rounded-full bg-secondary-container text-primary text-[11px]">11</span>
+</button>
+<button class="px-3.5 py-2 font-button text-table-dense border-b-2 border-transparent text-secondary hover:text-on-surface flex items-center gap-1.5">
+<span>Active</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container text-secondary text-[11px]">8</span>
+</button>
+<button class="px-3.5 py-2 font-button text-table-dense border-b-2 border-transparent text-secondary hover:text-on-surface flex items-center gap-1.5">
+<span>Provisioning</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container text-secondary text-[11px]">1</span>
+</button>
+<button class="px-3.5 py-2 font-button text-table-dense border-b-2 border-transparent text-secondary hover:text-on-surface flex items-center gap-1.5">
+<span>Archived</span>
+<span class="px-1.5 py-0.2 rounded-full bg-surface-container text-secondary text-[11px]">2</span>
+</button>
+<button class="px-3.5 py-2 font-button text-table-dense border-b-2 border-transparent text-secondary hover:text-on-surface flex items-center gap-1.5">
+<span>Requires review</span>
+<span class="px-1.5 py-0.2 rounded-full bg-error-container text-error text-[11px]">1</span>
+</button>
+</div>
+<div class="flex items-center gap-2 pb-2">
+<button class="p-1.5 rounded-lg border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low" title="Export CSV">
+<span class="material-symbols-outlined" style="font-size: 18px;">download</span>
+</button>
+<button class="p-1.5 rounded-lg border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low" title="View Options">
+<span class="material-symbols-outlined" style="font-size: 18px;">view_column</span>
+</button>
+</div>
+</div>
+<!-- Search & Secondary Filter Bar -->
+<div class="p-card-padding bg-surface-container-lowest border-b border-outline-variant flex flex-col md:flex-row items-center justify-between gap-3">
+<div class="relative w-full md:w-80">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary pointer-events-none" style="font-size: 18px;">search</span>
+<input class="w-full bg-surface border border-outline-variant rounded-lg pl-9 pr-3 py-1.5 font-body text-table-dense text-on-surface placeholder:text-secondary focus:ring-1 focus:ring-primary-container focus:outline-none" placeholder="Filter by workspace name or slug..." type="text"/>
+</div>
+<div class="flex items-center gap-2 w-full md:w-auto overflow-x-auto">
+<!-- Filter by Lead -->
+<select class="bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:ring-1 focus:ring-primary-container">
+<option>Lead: All Team Leads</option>
+<option>Sarah Jenkins</option>
+<option>Elena Rostova</option>
+<option>Liam Vance</option>
+<option>Marcus Chen</option>
+</select>
+<!-- Filter by Plan / Tier -->
+<select class="bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:ring-1 focus:ring-primary-container">
+<option>Tier: Enterprise Dedicated</option>
+<option>Growth Tier</option>
+<option>Trial</option>
+</select>
+<!-- Sort by -->
+<select class="bg-surface border border-outline-variant rounded-lg px-2.5 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:ring-1 focus:ring-primary-container">
+<option>Sort: Last activity (newest)</option>
+<option>Sort: Name (A-Z)</option>
+<option>Sort: Member count</option>
+<option>Sort: Storage consumption</option>
+</select>
+</div>
+</div>
+<!-- Comprehensive Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-surface-container-low border-b border-outline-variant font-label text-[12px] text-secondary select-none">
+<th class="py-3 px-4 font-medium">WORKSPACE &amp; BRAND</th>
+<th class="py-3 px-3 font-medium">SLUG / ID</th>
+<th class="py-3 px-3 font-medium">STATUS</th>
+<th class="py-3 px-3 font-medium">LEAD &amp; TEAM</th>
+<th class="py-3 px-3 font-medium">CHANNELS</th>
+<th class="py-3 px-3 font-medium">STORAGE &amp; POSTS</th>
+<th class="py-3 px-3 font-medium">LAST ACTIVITY</th>
+<th class="py-3 px-4 text-right font-medium">ACTIONS</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant font-body text-table-dense">
+<!-- Row 1: Northstar Coffee (Selected / Inspected) -->
+<tr class="hover:bg-surface-container-low transition-colors bg-secondary-container/25">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-amber-900/10 text-amber-900 flex items-center justify-center font-bold text-sm border border-amber-900/20">
+                        NC
+                      </div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-table-dense font-semibold text-on-surface">Northstar Coffee</span>
+<span class="material-symbols-outlined text-primary" style="font-size: 16px;" title="Currently Inspected">visibility</span>
+</div>
+<span class="text-secondary text-[12px]">Specialty Roastery &amp; DTC</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<code class="px-1.5 py-0.5 rounded bg-surface border border-outline-variant font-mono text-[11px] text-secondary">ws_northstar_01</code>
+</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Active
+                    </span>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-primary-fixed text-primary flex items-center justify-center text-[10px] font-bold">
+                        SJ
+                      </div>
+<div>
+<p class="font-medium text-on-surface leading-none">Sarah Jenkins</p>
+<p class="text-[11px] text-secondary mt-0.5">8 assigned members</p>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black text-white" title="TikTok Connected">TT</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-600 text-white" title="Instagram Connected">IG</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-700 text-white" title="LinkedIn Connected">IN</span>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-on-surface">14.2 GB</p>
+<p class="text-[11px] text-secondary">184 published / 24 queued</p>
+</div>
+</td>
+<td class="py-3.5 px-3 text-secondary">
+                    4m ago
+                  </td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 rounded bg-primary-container hover:bg-primary text-on-primary font-button text-[12px] transition-colors">
+                        Launch workspace
+                      </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 2: Aura Beauty Group -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-pink-500/10 text-pink-700 flex items-center justify-center font-bold text-sm border border-pink-500/20">
+                        AB
+                      </div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-table-dense font-semibold text-on-surface">Aura Beauty Group</span>
+</div>
+<span class="text-secondary text-[12px]">Cosmetics &amp; Skincare Brand</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<code class="px-1.5 py-0.5 rounded bg-surface border border-outline-variant font-mono text-[11px] text-secondary">ws_aura_global</code>
+</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Active
+                    </span>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary text-on-secondary flex items-center justify-center text-[10px] font-bold">
+                        ER
+                      </div>
+<div>
+<p class="font-medium text-on-surface leading-none">Elena Rostova</p>
+<p class="text-[11px] text-secondary mt-0.5">12 assigned members</p>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black text-white">TT</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-600 text-white">IG</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-red-600 text-white">YT</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-500 text-white">FB</span>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-on-surface">18.6 GB</p>
+<p class="text-[11px] text-secondary">310 published / 42 queued</p>
+</div>
+</td>
+<td class="py-3.5 px-3 text-secondary">
+                    18m ago
+                  </td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface font-button text-[12px] transition-colors">
+                        Launch workspace
+                      </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 3: Vanguard Media (Provisioning) -->
+<tr class="hover:bg-surface-container-low transition-colors bg-amber-50/30">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-amber-500/10 text-amber-700 flex items-center justify-center font-bold text-sm border border-amber-500/20">
+                        VM
+                      </div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-table-dense font-semibold text-on-surface">Vanguard Media</span>
+</div>
+<span class="text-amber-800 text-[12px] flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                          Configuring TikTok Graph API...
+                        </span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<code class="px-1.5 py-0.5 rounded bg-surface border border-outline-variant font-mono text-[11px] text-secondary">ws_vanguard_ent</code>
+</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium bg-amber-100 text-amber-900 border border-amber-300">
+<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      Provisioning
+                    </span>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-secondary-container text-primary flex items-center justify-center text-[10px] font-bold">
+                        LV
+                      </div>
+<div>
+<p class="font-medium text-on-surface leading-none">Liam Vance</p>
+<p class="text-[11px] text-secondary mt-0.5">4 members invited</p>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-secondary text-[12px] italic">Tokens syncing</span>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-on-surface">0.4 GB</p>
+<p class="text-[11px] text-secondary">Awaiting initial import</p>
+</div>
+</td>
+<td class="py-3.5 px-3 text-secondary">
+                    Just now
+                  </td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 rounded bg-amber-700 hover:bg-amber-800 text-white font-button text-[12px] transition-colors">
+                        Complete setup
+                      </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 4: Velocity Digital -->
+<tr class="hover:bg-surface-container-low transition-colors">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-blue-500/10 text-blue-700 flex items-center justify-center font-bold text-sm border border-blue-500/20">
+                        VD
+                      </div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-table-dense font-semibold text-on-surface">Velocity Digital</span>
+</div>
+<span class="text-secondary text-[12px]">Performance Fitness App</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<code class="px-1.5 py-0.5 rounded bg-surface border border-outline-variant font-mono text-[11px] text-secondary">ws_velocity_fit</code>
+</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[12px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                      Active
+                    </span>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-2">
+<div class="w-6 h-6 rounded-full bg-surface-container text-on-surface flex items-center justify-center text-[10px] font-bold">
+                        MC
+                      </div>
+<div>
+<p class="font-medium text-on-surface leading-none">Marcus Chen</p>
+<p class="text-[11px] text-secondary mt-0.5">6 assigned members</p>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div class="flex items-center gap-1">
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-black text-white">TT</span>
+<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-pink-600 text-white">IG</span>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-on-surface">9.6 GB</p>
+<p class="text-[11px] text-secondary">92 published / 15 queued</p>
+</div>
+</td>
+<td class="py-3.5 px-3 text-secondary">
+                    2h ago
+                  </td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 rounded border border-outline-variant hover:bg-surface-container text-on-surface font-button text-[12px] transition-colors">
+                        Launch workspace
+                      </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+<!-- Row 5: Kinetic Studios (Archived - Safe 90-day retention) -->
+<tr class="hover:bg-surface-container-low transition-colors bg-surface-container-low/40 opacity-80">
+<td class="py-3.5 px-4">
+<div class="flex items-center gap-3">
+<div class="w-9 h-9 rounded-lg bg-surface-container text-secondary flex items-center justify-center font-bold text-sm border border-outline-variant">
+                        KS
+                      </div>
+<div>
+<div class="flex items-center gap-1.5">
+<span class="font-card-title text-table-dense font-semibold text-secondary line-through">Kinetic Studios</span>
+</div>
+<span class="text-secondary text-[12px]">Retention lock: 64 days remaining</span>
+</div>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<code class="px-1.5 py-0.5 rounded bg-surface-container border border-outline-variant font-mono text-[11px] text-secondary">ws_kinetic_arch</code>
+</td>
+<td class="py-3.5 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[12px] font-medium bg-surface-container text-secondary border border-outline-variant">
+<span class="material-symbols-outlined" style="font-size: 14px;">archive</span>
+                      Archived
+                    </span>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-secondary leading-none">Archived Workspace</p>
+<p class="text-[11px] text-secondary mt-0.5">0 active sessions</p>
+</div>
+</td>
+<td class="py-3.5 px-3">
+<span class="text-secondary text-[12px]">Disconnected</span>
+</td>
+<td class="py-3.5 px-3">
+<div>
+<p class="font-medium text-secondary">4.1 GB</p>
+<p class="text-[11px] text-secondary">Cold storage snapshot</p>
+</div>
+</td>
+<td class="py-3.5 px-3 text-secondary">
+                    26d ago
+                  </td>
+<td class="py-3.5 px-4 text-right">
+<div class="flex items-center justify-end gap-1.5">
+<button class="px-2.5 py-1 rounded border border-outline hover:bg-surface text-secondary hover:text-on-surface font-button text-[12px] transition-colors">
+                        Restore workspace
+                      </button>
+<button class="w-7 h-7 flex items-center justify-center rounded hover:bg-surface-container text-secondary hover:text-on-surface">
+<span class="material-symbols-outlined" style="font-size: 18px;">more_vert</span>
+</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Table Footer Pagination & Operational Safety Notice -->
+<div class="p-card-padding bg-surface-container-low border-t border-outline-variant flex flex-col md:flex-row items-center justify-between gap-3 font-body text-table-dense">
+<div class="flex items-center gap-2 text-secondary">
+<span class="material-symbols-outlined text-primary" style="font-size: 16px;">verified_user</span>
+<span><strong>Archive-first policy enforced:</strong> Workspaces enter a 90-day recoverable archive state before administrative retirement. Permanent deletion is disabled for compliance.</span>
+</div>
+<div class="flex items-center gap-2 shrink-0">
+<span class="text-secondary">Showing 1 to 5 of 11 workspaces</span>
+<div class="flex items-center gap-1 ml-2">
+<button class="w-8 h-8 rounded border border-outline-variant bg-surface flex items-center justify-center text-secondary disabled:opacity-40" disabled="">
+<span class="material-symbols-outlined" style="font-size: 16px;">chevron_left</span>
+</button>
+<button class="w-8 h-8 rounded border border-outline-variant bg-surface flex items-center justify-center text-secondary hover:bg-surface-container">
+<span class="material-symbols-outlined" style="font-size: 16px;">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- ================= 4. EMBEDDED / DOCKED CONTEXTUAL DRAWER (Northstar Coffee Access) ================= -->
+<aside class="w-96 shrink-0 bg-surface-container-lowest border-l border-outline-variant flex flex-col justify-between hidden xl:flex z-10">
+<!-- Drawer Header -->
+<div class="p-card-padding border-b border-outline-variant space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-label text-[11px] font-semibold border border-amber-300">Selected Context</span>
+<span class="text-secondary font-label text-[12px]">Tenant #8812</span>
+</div>
+<button class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-surface-container text-secondary hover:text-on-surface" title="Close Panel">
+<span class="material-symbols-outlined" style="font-size: 18px;">close</span>
+</button>
+</div>
+<div>
+<h3 class="font-section-title text-card-title text-on-surface font-semibold flex items-center gap-2">
+              Northstar Coffee
+              <span class="material-symbols-outlined text-emerald-600" style="font-size: 18px;">check_circle</span>
+</h3>
+<p class="font-label text-label text-secondary mt-0.5">Workspace Access &amp; Roles Management</p>
+</div>
+<!-- Drawer Navigation Tabs -->
+<div class="flex border-b border-outline-variant -mb-4 pt-1">
+<button class="pb-2 px-3 border-b-2 border-primary text-primary font-button text-table-dense font-semibold">
+              Assigned (8)
+            </button>
+<button class="pb-2 px-3 border-b-2 border-transparent text-secondary hover:text-on-surface font-button text-table-dense">
+              Pending Invites (2)
+            </button>
+<button class="pb-2 px-3 border-b-2 border-transparent text-secondary hover:text-on-surface font-button text-table-dense">
+              Security &amp; Roles
+            </button>
+</div>
+</div>
+<!-- Drawer Body: Members & Role Management (Scrollable) -->
+<div class="flex-1 overflow-y-auto p-card-padding space-y-4">
+<!-- Add Member Quick Row -->
+<div class="bg-surface-container-low p-3 rounded-lg border border-outline-variant space-y-2.5">
+<span class="font-label text-[11px] text-secondary font-semibold uppercase tracking-wider">Add Team Member</span>
+<div class="flex gap-2">
+<input class="flex-1 bg-surface-container-lowest border border-outline-variant rounded-lg px-2.5 py-1.5 font-body text-table-dense text-on-surface placeholder:text-secondary focus:ring-1 focus:ring-primary-container focus:outline-none" placeholder="colleague@agency.com" type="email"/>
+<select class="bg-surface-container-lowest border border-outline-variant rounded-lg px-2 py-1.5 font-body text-table-dense text-on-surface focus:outline-none">
+<option>Producer</option>
+<option>Approver</option>
+<option>Admin</option>
+<option>Viewer</option>
+</select>
+</div>
+<button class="w-full bg-primary-container hover:bg-primary text-on-primary font-button text-table-dense py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 16px;">send</span>
+<span>Send Workspace Invite</span>
+</button>
+</div>
+<!-- Member List -->
+<div class="space-y-3">
+<div class="flex items-center justify-between text-secondary font-label text-[11px] uppercase tracking-wider font-semibold">
+<span>Active Members (8)</span>
+<span>Role Permissions</span>
+</div>
+<!-- Member 1: Sarah Jenkins (Lead) -->
+<div class="p-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest flex items-center justify-between hover:border-primary transition-colors">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-primary-container text-on-primary flex items-center justify-center font-bold text-xs shrink-0">
+                  SJ
+                </div>
+<div class="min-w-0">
+<p class="font-body text-table-dense font-semibold text-on-surface truncate">Sarah Jenkins</p>
+<p class="font-label text-[11px] text-secondary truncate">Lead Administrator • 2FA Enforced</p>
+</div>
+</div>
+<select class="bg-surface border border-outline-variant rounded px-2 py-1 font-body text-[12px] text-on-surface focus:ring-1 focus:ring-primary-container">
+<option selected="">Admin</option>
+<option>Producer</option>
+<option>Approver</option>
+<option>Viewer</option>
+</select>
+</div>
+<!-- Member 2: Daniel K. (Producer) -->
+<div class="p-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest flex items-center justify-between hover:border-primary transition-colors">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-bold text-xs shrink-0">
+                  DK
+                </div>
+<div class="min-w-0">
+<p class="font-body text-table-dense font-semibold text-on-surface truncate">Daniel Koroma</p>
+<p class="font-label text-[11px] text-secondary truncate">Active 12m ago • 2FA Verified</p>
+</div>
+</div>
+<select class="bg-surface border border-outline-variant rounded px-2 py-1 font-body text-[12px] text-on-surface focus:ring-1 focus:ring-primary-container">
+<option>Admin</option>
+<option selected="">Producer</option>
+<option>Approver</option>
+<option>Viewer</option>
+</select>
+</div>
+<!-- Member 3: Rachel Zane (Approver) -->
+<div class="p-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest flex items-center justify-between hover:border-primary transition-colors">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-bold text-xs shrink-0">
+                  RZ
+                </div>
+<div class="min-w-0">
+<p class="font-body text-table-dense font-semibold text-on-surface truncate">Rachel Zane</p>
+<p class="font-label text-[11px] text-secondary truncate">Client Contact • Approver</p>
+</div>
+</div>
+<select class="bg-surface border border-outline-variant rounded px-2 py-1 font-body text-[12px] text-on-surface focus:ring-1 focus:ring-primary-container">
+<option>Admin</option>
+<option>Producer</option>
+<option selected="">Approver</option>
+<option>Viewer</option>
+</select>
+</div>
+<!-- Member 4: Mateo Perez (Viewer) -->
+<div class="p-2.5 rounded-lg border border-outline-variant bg-surface-container-lowest flex items-center justify-between hover:border-primary transition-colors">
+<div class="flex items-center gap-2.5 min-w-0">
+<div class="w-8 h-8 rounded-full bg-surface-container text-on-surface flex items-center justify-center font-bold text-xs shrink-0">
+                  MP
+                </div>
+<div class="min-w-0">
+<p class="font-body text-table-dense font-semibold text-on-surface truncate">Mateo Perez</p>
+<p class="font-label text-[11px] text-secondary truncate">Active yesterday • 2FA Enforced</p>
+</div>
+</div>
+<select class="bg-surface border border-outline-variant rounded px-2 py-1 font-body text-[12px] text-on-surface focus:ring-1 focus:ring-primary-container">
+<option>Admin</option>
+<option>Producer</option>
+<option>Approver</option>
+<option selected="">Viewer</option>
+</select>
+</div>
+</div>
+<!-- Pending Invitation Card -->
+<div class="pt-2">
+<span class="font-label text-[11px] text-secondary font-semibold uppercase tracking-wider block mb-2">Pending Invitation</span>
+<div class="p-3 rounded-lg border border-amber-300 bg-amber-50/50 space-y-2">
+<div class="flex items-start justify-between">
+<div>
+<p class="font-body text-table-dense font-semibold text-on-surface">dave.k@northstarcoffee.com</p>
+<p class="font-label text-[11px] text-secondary">Brand Approver • Invited 2d ago by Sarah Jenkins</p>
+</div>
+<span class="material-symbols-outlined text-amber-700" style="font-size: 18px;">pending</span>
+</div>
+<div class="flex items-center gap-2 pt-1">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest border border-outline-variant hover:bg-surface font-button text-[11px] text-primary transition-colors">
+                  Resend invite
+                </button>
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest border border-outline-variant hover:bg-error-container hover:text-error font-button text-[11px] text-secondary transition-colors">
+                  Revoke
+                </button>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Footer: Quick Workspace Controls -->
+<div class="p-card-padding border-t border-outline-variant bg-surface-container-low space-y-2">
+<button class="w-full bg-primary-container hover:bg-primary text-on-primary font-button text-button py-2 rounded-lg transition-colors flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined" style="font-size: 18px;">open_in_new</span>
+<span>Launch Northstar Workspace</span>
+</button>
+<div class="flex items-center justify-between pt-1 font-label text-[11px] text-secondary">
+<span>SLA Tier: Enterprise Dedicated</span>
+<button class="text-error hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined" style="font-size: 14px;">archive</span>
+              Archive workspace
+            </button>
+</div>
+</div>
+</aside>
+</main>
+</div>
+</body></html>

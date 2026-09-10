@@ -232,7 +232,7 @@ export function BrandKitHealth({ section, slug, count, breakdown }: BrandKitHeal
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
               <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-              <CardTitle className="text-base">Brand Kit Health</CardTitle>
+              <CardTitle className="text-base">{t("brandKit.health.title")}</CardTitle>
               <span
                 className={cn(
                   "text-label inline-flex items-center gap-1 font-semibold",

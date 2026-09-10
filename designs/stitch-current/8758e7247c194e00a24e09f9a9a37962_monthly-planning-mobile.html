@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Northstar Coffee • Planning - LaraTik Planner</title>
+<!-- Google Fonts: Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#464555",
+            "inverse-primary": "#c3c0ff",
+            "outline-variant": "#c7c4d8",
+            "on-tertiary-fixed": "#001d32",
+            "tertiary-fixed-dim": "#94ccff",
+            "on-secondary": "#ffffff",
+            "surface-bright": "#f9f9ff",
+            "on-primary-container": "#dad7ff",
+            "tertiary-container": "#00659c",
+            "outline": "#777587",
+            "surface-variant": "#d9e2fc",
+            "surface": "#f9f9ff",
+            "on-primary-fixed": "#0f0069",
+            "surface-container-high": "#e1e8ff",
+            "primary-container": "#4f46e5",
+            "on-error": "#ffffff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-tertiary-container": "#bfdfff",
+            "on-secondary-fixed": "#131c2b",
+            "surface-container-low": "#f1f3ff",
+            "secondary-fixed-dim": "#bec7db",
+            "primary-fixed": "#e2dfff",
+            "surface-container-highest": "#d9e2fc",
+            "on-surface": "#121b2e",
+            "surface-container-lowest": "#ffffff",
+            "on-secondary-container": "#5a6375",
+            "on-error-container": "#93000a",
+            "surface-dim": "#d1daf4",
+            "on-secondary-fixed-variant": "#3e4758",
+            "error-container": "#ffdad6",
+            "surface-container": "#e9edff",
+            "on-tertiary": "#ffffff",
+            "primary": "#3525cd",
+            "on-primary-fixed-variant": "#3323cc",
+            "secondary-fixed": "#dae3f8",
+            "on-primary": "#ffffff",
+            "background": "#f9f9ff",
+            "secondary-container": "#d7e0f5",
+            "tertiary": "#004c77",
+            "error": "#ba1a1a",
+            "inverse-surface": "#273044",
+            "on-background": "#121b2e",
+            "primary-fixed-dim": "#c3c0ff",
+            "tertiary-fixed": "#cde5ff",
+            "surface-tint": "#4d44e3",
+            "secondary": "#565f70",
+            "inverse-on-surface": "#edf0ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "gutter": "16px",
+            "touch-target-min": "44px",
+            "topbar-height": "64px",
+            "screen-padding": "24px",
+            "sidebar-collapsed": "72px",
+            "base": "4px",
+            "card-padding": "16px",
+            "sidebar-expanded": "248px"
+          },
+          "fontFamily": {
+            "label": ["Inter"],
+            "card-title": ["Inter"],
+            "table-dense": ["Inter"],
+            "section-title": ["Inter"],
+            "page-title": ["Inter"],
+            "body": ["Inter"],
+            "button": ["Inter"]
+          },
+          "fontSize": {
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    body {
+      background-color: #f9f9ff;
+      color: #121b2e;
+      -webkit-tap-highlight-color: transparent;
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface font-body antialiased min-h-screen pb-28 selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- Top App Bar (Shared Component JSON anchor) -->
+<header class="fixed top-0 left-0 w-full h-topbar-height z-50 flex items-center justify-between px-4 bg-surface shadow-[0_1px_3px_0_rgba(0,0,0,0.04)]">
+<!-- Leading Workspace Switcher Trigger -->
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high border border-outline-variant flex items-center justify-center text-primary font-section-title text-section-title font-bold shrink-0">
+        N
+      </div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1.5">
+<span class="text-card-title font-card-title text-on-surface tracking-tight">Northstar Coffee</span>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant cursor-pointer">unfold_more</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span class="text-[11px] leading-[14px] text-on-surface-variant font-label">Specialty Roastery • Active</span>
+</div>
+</div>
+</div>
+<!-- Trailing Action: Notifications with unread badge -->
+<div class="flex items-center gap-1">
+<button aria-label="Notifications" class="relative w-touch-target-min h-touch-target-min flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors duration-200 active:scale-95 text-on-surface">
+<span class="material-symbols-outlined text-[24px]">notifications</span>
+<span class="absolute top-2 right-2 flex h-4 w-4 items-center justify-center rounded-full bg-error text-[10px] font-bold text-on-error">
+          3
+        </span>
+</button>
+</div>
+</header>
+<!-- Main Viewport Container (Fixed 375px max layout on mobile) -->
+<main class="max-w-[420px] mx-auto px-4 pt-20 space-y-4">
+<!-- Screen Header & Context -->
+<section class="space-y-1 pt-1">
+<div class="flex items-center justify-between">
+<h1 class="text-page-title font-page-title text-on-surface tracking-tight">Planning</h1>
+<span class="px-2.5 py-1 rounded-full bg-surface-container-high text-primary font-label text-label font-medium border border-outline-variant">
+          Oct 2024
+        </span>
+</div>
+<p class="text-body font-body text-on-surface-variant">Northstar Coffee • Content pipeline &amp; monthly schedule</p>
+</section>
+<!-- Month Selector & Dominant Primary Action -->
+<section class="space-y-3">
+<div class="flex items-center justify-between bg-surface-container-lowest border border-outline-variant rounded-xl p-1.5">
+<button aria-label="Previous month" class="w-touch-target-min h-touch-target-min flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]">chevron_left</span>
+</button>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[18px]">calendar_month</span>
+<span class="text-card-title font-card-title text-on-surface">October 2024</span>
+</div>
+<button aria-label="Next month" class="w-touch-target-min h-touch-target-min flex items-center justify-center rounded-lg hover:bg-surface-container-low text-on-surface transition-colors active:scale-95">
+<span class="material-symbols-outlined text-[20px]">chevron_right</span>
+</button>
+</div>
+<!-- Primary Dominant Action CTA -->
+<button class="w-full h-touch-target-min bg-primary text-on-primary rounded-xl font-button text-button shadow-sm flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[20px]">add</span>
+<span>Create content</span>
+</button>
+<!-- Monthly Cadence Metric Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 space-y-3">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-baseline gap-2">
+<span class="text-page-title font-page-title text-on-surface font-bold">18</span>
+<span class="text-body font-body text-on-surface-variant">/ 24 posts goal</span>
+</div>
+<p class="text-label font-label text-on-surface-variant mt-0.5">Cadence pace: 4.5 posts/wk (On track)</p>
+</div>
+<span class="inline-flex items-center px-2 py-1 rounded-full bg-secondary-container text-on-secondary-container text-label font-label font-semibold">
+            75% coverage
+          </span>
+</div>
+<!-- Progress Bar -->
+<div class="w-full bg-surface-container-high rounded-full h-2 overflow-hidden">
+<div class="bg-primary h-2 rounded-full transition-all duration-500" style="width: 75%"></div>
+</div>
+<!-- Warning / Attention Callout -->
+<div class="flex items-center gap-2 p-2.5 rounded-lg bg-error-container/30 border border-error-container text-on-error-container">
+<span class="material-symbols-outlined text-[18px] text-error">priority_high</span>
+<span class="text-label font-label font-medium">1 draft overdue: Single Origin Ethiopia asset delay</span>
+</div>
+</div>
+</section>
+<!-- Controls: Segmented View & Quick Filters -->
+<section class="space-y-3">
+<!-- Segmented View Toggle -->
+<div class="grid grid-cols-3 bg-surface-container-high p-1 rounded-xl gap-1">
+<button class="h-10 rounded-lg bg-surface-container-lowest text-primary font-button text-button shadow-sm flex items-center justify-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[18px]">view_agenda</span>
+<span>List</span>
+</button>
+<button class="h-10 rounded-lg text-on-surface-variant font-button text-button hover:text-on-surface flex items-center justify-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[18px]">view_kanban</span>
+<span>Board</span>
+</button>
+<button class="h-10 rounded-lg text-on-surface-variant font-button text-button hover:text-on-surface flex items-center justify-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+<span>Calendar</span>
+</button>
+</div>
+<!-- Search & Filters Trigger Row -->
+<div class="flex items-center gap-2">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant text-[20px]">search</span>
+<input class="w-full h-touch-target-min pl-10 pr-3 rounded-xl border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant text-body font-body focus:outline-none focus:ring-2 focus:ring-primary/20" placeholder="Search posts, tags..." type="text"/>
+</div>
+<button class="h-touch-target-min px-3.5 bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center gap-1.5 text-on-surface font-button text-button hover:bg-surface-container-low active:scale-95 transition-all shrink-0">
+<span class="material-symbols-outlined text-[18px] text-primary">filter_list</span>
+<span>Filters (3)</span>
+</button>
+</div>
+<!-- Quick Filter Chips Scrollable Row -->
+<div class="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
+<button class="px-3 py-1.5 rounded-full bg-primary text-on-primary text-label font-label whitespace-nowrap shrink-0">
+          All (18)
+        </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface text-label font-label whitespace-nowrap hover:bg-surface-container-low shrink-0">
+          Awaiting review (3)
+        </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface text-label font-label whitespace-nowrap hover:bg-surface-container-low shrink-0">
+          In production (5)
+        </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-on-surface text-label font-label whitespace-nowrap hover:bg-surface-container-low shrink-0">
+          Ready (6)
+        </button>
+</div>
+</section>
+<!-- Main Content: Native Mobile Post Cards (Full-width, readable, no horizontal squishing) -->
+<section class="space-y-3.5 pt-1">
+<!-- Card 1: Autumn Cold Brew Reel -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-primary">Fall Beverage Launch</span>
+<h2 class="text-card-title font-card-title text-on-surface">Autumn Cold Brew Reel – Final Cut</h2>
+</div>
+<button aria-label="Post actions" class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span>Today, Oct 24 • 4:00 PM EST</span>
+</div>
+<!-- Tags & Platforms -->
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Reels</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">TikTok &amp; IG</span>
+</div>
+<!-- Status & Assignee Bar -->
+<div class="pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-amber-700 bg-amber-50 px-2.5 py-1 rounded-md text-label font-label font-medium border border-amber-200/60">
+<span class="material-symbols-outlined text-[16px] text-amber-600">hourglass_top</span>
+<span>Awaiting review</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-on-surface-variant">Elena Rostova</span>
+<div class="w-7 h-7 rounded-full bg-primary-fixed text-on-primary-fixed font-semibold text-[11px] flex items-center justify-center ring-2 ring-surface-container-lowest">
+              ER
+            </div>
+</div>
+</div>
+<!-- Next Action Button (44px target) -->
+<button class="w-full h-touch-target-min bg-primary text-on-primary rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-primary-container active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[18px]">rate_review</span>
+<span>Open review</span>
+</button>
+</article>
+<!-- Card 2: Single Origin Ethiopia Launch Carousel -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-secondary">Harvest Series • 4/6 slides</span>
+<h2 class="text-card-title font-card-title text-on-surface">Single Origin Ethiopia Launch Carousel</h2>
+</div>
+<button aria-label="Post actions" class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span>Tomorrow, Oct 25 • 11:00 AM EST</span>
+</div>
+<!-- Tags & Platforms -->
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Carousel</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">LinkedIn &amp; IG</span>
+</div>
+<!-- Status & Assignee Bar -->
+<div class="pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-sky-800 bg-sky-50 px-2.5 py-1 rounded-md text-label font-label font-medium border border-sky-200">
+<span class="material-symbols-outlined text-[16px] text-sky-600">brush</span>
+<span>In production</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-on-surface-variant">Marcus Chen</span>
+<div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container font-semibold text-[11px] flex items-center justify-center ring-2 ring-surface-container-lowest">
+              MC
+            </div>
+</div>
+</div>
+<!-- Next Action Button -->
+<button class="w-full h-touch-target-min bg-surface-container-high text-primary rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-surface-container active:scale-[0.98] transition-all border border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">edit_document</span>
+<span>View draft</span>
+</button>
+</article>
+<!-- Card 3: Barista Tips: Dialing Espresso (Asset Missing Warning) -->
+<article class="bg-surface-container-lowest border-2 border-error/30 rounded-xl p-4 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<div class="flex items-center gap-2">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-error">Due soon</span>
+<span class="text-outline-variant">•</span>
+<span class="text-[11px] font-medium text-on-surface-variant">Education Hub</span>
+</div>
+<h2 class="text-card-title font-card-title text-on-surface">Barista Tips: Dialing Espresso</h2>
+</div>
+<button aria-label="Post actions" class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-error font-medium">
+<span class="material-symbols-outlined text-[16px]">alarm</span>
+<span>Sat, Oct 26 • 2:00 PM EST (Due soon)</span>
+</div>
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Stories</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">IG Stories</span>
+</div>
+<!-- Missing Warning Callout -->
+<div class="p-2.5 rounded-lg bg-error-container/40 border border-error/20 flex items-start gap-2 text-on-error-container">
+<span class="material-symbols-outlined text-[18px] text-error shrink-0 mt-0.5">warning</span>
+<div class="text-label font-label">
+<strong class="font-semibold">Asset missing:</strong> Missing 9:16 vertical b-roll footage from bar baristas
+          </div>
+</div>
+<!-- Status & Assignee Bar -->
+<div class="pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-error bg-error-container/20 px-2 py-0.5 rounded text-label font-label font-medium">
+<span class="material-symbols-outlined text-[16px]">error_outline</span>
+<span>Asset missing</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-on-surface-variant">Sarah Jenkins</span>
+<div class="w-7 h-7 rounded-full bg-secondary-fixed text-on-secondary-fixed font-semibold text-[11px] flex items-center justify-center ring-2 ring-surface-container-lowest">
+              SJ
+            </div>
+</div>
+</div>
+<!-- Next Action Button -->
+<button class="w-full h-touch-target-min bg-error text-on-error rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-red-700 active:scale-[0.98] transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">cloud_upload</span>
+<span>Upload media</span>
+</button>
+</article>
+<!-- Card 4: Halloween Roast Promo – Caption Approval -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-secondary">Holiday Seasonal • 2 client comments</span>
+<h2 class="text-card-title font-card-title text-on-surface">Halloween Roast Promo – Caption Approval</h2>
+</div>
+<button aria-label="Post actions" class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">schedule</span>
+<span>Sun, Oct 27 • 3:30 PM EST</span>
+</div>
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Static</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Facebook &amp; X</span>
+</div>
+<!-- Status & Assignee Bar -->
+<div class="pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-amber-800 bg-amber-100/60 px-2.5 py-1 rounded-md text-label font-label font-medium border border-amber-300">
+<span class="material-symbols-outlined text-[16px] text-amber-700">chat_bubble</span>
+<span>Client feedback</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-on-surface-variant">Elena Rostova</span>
+<div class="w-7 h-7 rounded-full bg-primary-fixed text-on-primary-fixed font-semibold text-[11px] flex items-center justify-center ring-2 ring-surface-container-lowest">
+              ER
+            </div>
+</div>
+</div>
+<!-- Next Action Button -->
+<button class="w-full h-touch-target-min bg-surface-container-high text-on-surface rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-surface-container active:scale-[0.98] transition-all border border-outline-variant">
+<span class="material-symbols-outlined text-[18px] text-primary">forum</span>
+<span>Resolve notes</span>
+</button>
+</article>
+<!-- Card 5: Coffee Tasting Flight Announcement -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-sm space-y-3">
+<div class="flex items-start justify-between gap-2">
+<div class="space-y-1">
+<span class="text-[11px] font-semibold uppercase tracking-wider text-emerald-700">In-Store Events</span>
+<h2 class="text-card-title font-card-title text-on-surface">Coffee Tasting Flight Announcement</h2>
+</div>
+<button aria-label="Post actions" class="w-8 h-8 flex items-center justify-center text-on-surface-variant hover:text-on-surface rounded-lg">
+<span class="material-symbols-outlined text-[20px]">more_vert</span>
+</button>
+</div>
+<div class="flex items-center gap-2 text-label font-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-emerald-600">event_available</span>
+<span>Mon, Oct 28 • 9:00 AM EST</span>
+</div>
+<div class="flex flex-wrap items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Carousel</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface text-[11px] font-medium font-label">Instagram</span>
+</div>
+<!-- Status & Assignee Bar -->
+<div class="pt-2 border-t border-outline-variant/60 flex items-center justify-between">
+<div class="flex items-center gap-1.5 text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-md text-label font-label font-medium border border-emerald-200">
+<span class="material-symbols-outlined text-[16px] text-emerald-600">check_circle</span>
+<span>Ready to publish</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-label font-label text-on-surface-variant">Marcus Chen</span>
+<div class="w-7 h-7 rounded-full bg-secondary-container text-on-secondary-container font-semibold text-[11px] flex items-center justify-center ring-2 ring-surface-container-lowest">
+              MC
+            </div>
+</div>
+</div>
+<!-- Next Action Button -->
+<button class="w-full h-touch-target-min bg-surface-container-high text-on-surface rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-surface-container active:scale-[0.98] transition-all border border-outline-variant">
+<span class="material-symbols-outlined text-[18px]">publish</span>
+<span>Preview queue</span>
+</button>
+</article>
+</section>
+<!-- Pagination & Load More Affordance -->
+<section class="pt-2 pb-4 space-y-3 text-center">
+<p class="text-label font-label text-on-surface-variant">
+        Showing 5 of 18 posts for October 2024
+      </p>
+<button class="w-full h-touch-target-min bg-surface-container-lowest border border-outline-variant text-on-surface rounded-xl font-button text-button flex items-center justify-center gap-2 hover:bg-surface-container-low active:scale-[0.98] transition-all shadow-sm">
+<span class="material-symbols-outlined text-[18px]">expand_more</span>
+<span>Load more posts</span>
+</button>
+<span class="inline-block text-[11px] font-medium text-outline">Page 1 of 4</span>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Mandated by Shared Component JSON: Planning active) -->
+<!-- Executed with style_shell_layout, style_active_navigation, and style_inactive_navigation -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-base py-base bg-surface shadow-[0_-1px_3px_0_rgba(0,0,0,0.04)]">
+<!-- Item 1: Overview -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label min-h-touch-target-min transition-transform duration-150 active:scale-95 px-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined text-[24px]">dashboard</span>
+<span class="text-label font-label mt-1">Overview</span>
+</a>
+<!-- Item 2: Planning (ACTIVE TARGET) -->
+<a class="flex flex-col items-center justify-center text-primary font-label min-h-touch-target-min transition-transform duration-150 active:scale-95 px-2" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">calendar_today</span>
+<span class="text-label font-label mt-1 font-semibold">Planning</span>
+</a>
+<!-- Item 3: Reviews (With unread count '3') -->
+<a class="relative flex flex-col items-center justify-center text-on-surface-variant font-label min-h-touch-target-min transition-transform duration-150 active:scale-95 px-2 hover:text-primary" href="#">
+<div class="relative">
+<span class="material-symbols-outlined text-[24px]">rate_review</span>
+<span class="absolute -top-1 -right-1.5 w-3.5 h-3.5 bg-error text-on-error rounded-full text-[9px] font-bold flex items-center justify-center">
+          3
+        </span>
+</div>
+<span class="text-label font-label mt-1">Reviews</span>
+</a>
+<!-- Item 4: Media -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label min-h-touch-target-min transition-transform duration-150 active:scale-95 px-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined text-[24px]">perm_media</span>
+<span class="text-label font-label mt-1">Media</span>
+</a>
+<!-- Item 5: Settings -->
+<a class="flex flex-col items-center justify-center text-on-surface-variant font-label min-h-touch-target-min transition-transform duration-150 active:scale-95 px-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined text-[24px]">settings</span>
+<span class="text-label font-label mt-1">Settings</span>
+</a>
+</nav>
+</body></html>

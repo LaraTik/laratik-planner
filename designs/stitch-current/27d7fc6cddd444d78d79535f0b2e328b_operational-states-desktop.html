@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik Planner - Operational States Reference</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Google Font Inter -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary-container": "#00659c",
+            "on-error": "#ffffff",
+            "primary-fixed": "#e2dfff",
+            "surface-container-low": "#f1f3ff",
+            "on-primary-fixed": "#0f0069",
+            "primary-fixed-dim": "#c3c0ff",
+            "secondary-fixed-dim": "#bec7db",
+            "inverse-primary": "#c3c0ff",
+            "surface-tint": "#4d44e3",
+            "surface-variant": "#d9e2fc",
+            "error-container": "#ffdad6",
+            "tertiary-fixed": "#cde5ff",
+            "tertiary": "#004c77",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-surface-variant": "#464555",
+            "surface-bright": "#f9f9ff",
+            "surface-container": "#e9edff",
+            "tertiary-fixed-dim": "#94ccff",
+            "secondary-container": "#d7e0f5",
+            "on-primary": "#ffffff",
+            "inverse-on-surface": "#edf0ff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-tertiary-fixed": "#001d32",
+            "background": "#f9f9ff",
+            "secondary": "#565f70",
+            "on-background": "#121b2e",
+            "surface-container-lowest": "#ffffff",
+            "outline-variant": "#c7c4d8",
+            "inverse-surface": "#273044",
+            "error": "#ba1a1a",
+            "surface": "#f9f9ff",
+            "surface-container-high": "#e1e8ff",
+            "secondary-fixed": "#dae3f8",
+            "primary-container": "#4f46e5",
+            "on-surface": "#121b2e",
+            "on-secondary-container": "#5a6375",
+            "on-secondary-fixed": "#131c2b",
+            "surface-container-highest": "#d9e2fc",
+            "on-tertiary-container": "#bfdfff",
+            "on-tertiary": "#ffffff",
+            "on-primary-container": "#dad7ff",
+            "surface-dim": "#d1daf4",
+            "on-tertiary-fixed-variant": "#004b74",
+            "on-secondary": "#ffffff",
+            "on-error-container": "#93000a",
+            "primary": "#3525cd",
+            "outline": "#777587"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "screen-padding": "24px",
+            "card-padding": "16px",
+            "topbar-height": "64px",
+            "sidebar-expanded": "248px",
+            "gutter": "16px",
+            "touch-target-min": "44px",
+            "sidebar-collapsed": "72px",
+            "base": "4px"
+          },
+          "fontFamily": {
+            "section-title": ["Inter"],
+            "body": ["Inter"],
+            "table-dense": ["Inter"],
+            "page-title": ["Inter"],
+            "label": ["Inter"],
+            "card-title": ["Inter"],
+            "button": ["Inter"]
+          },
+          "fontSize": {
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+    }
+  </style>
+</head>
+<body class="bg-[#F7F7F5] text-on-surface font-body antialiased min-h-screen flex flex-col">
+<!-- ================= TOP NAV BAR ================= -->
+<header class="w-full h-16 px-6 flex items-center justify-between z-40 bg-surface-container-lowest border-b border-outline-variant fixed top-0 left-0 right-0">
+<!-- Left cluster: Brand & Breadcrumb Search Context -->
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="w-7 h-7 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-button text-button shadow-sm">L</span>
+<span class="font-card-title text-card-title text-on-surface tracking-tight font-semibold">LaraTik Planner</span>
+</div>
+<div class="hidden lg:flex items-center text-secondary font-label text-label gap-2 ps-4 border-l border-outline-variant">
+<span>Workspaces</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-button text-button">Operational States Reference</span>
+</div>
+</div>
+<!-- Center Navigation Links -->
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-secondary hover:text-on-surface font-body text-body transition-colors duration-150" href="#">Workspaces</a>
+<a class="text-secondary hover:text-on-surface font-body text-body transition-colors duration-150" href="#">Calendars</a>
+<a class="border-b-2 border-primary text-primary font-button text-button pb-1" href="#">States Matrix</a>
+<a class="text-secondary hover:text-on-surface font-body text-body transition-colors duration-150" href="#">Audit Logs</a>
+</nav>
+<!-- Trailing Action Cluster -->
+<div class="flex items-center gap-3">
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors duration-150">
+<span class="material-symbols-outlined text-[18px]">swap_horiz</span>
+        Switch Client
+      </button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors duration-150 shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">add</span>
+        Create Brief
+      </button>
+<div class="h-5 w-px bg-outline-variant mx-1"></div>
+<button class="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container-low transition-colors" title="Notifications">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<button class="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container-low transition-colors" title="Settings">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="text-secondary hover:text-on-surface p-1.5 rounded-lg hover:bg-surface-container-low transition-colors" title="Help">
+<span class="material-symbols-outlined">help</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center font-button text-button ml-2" title="Northstar Coffee Lead Producer avatar">
+        NC
+      </div>
+</div>
+</header>
+<!-- ================= APP SHELL LAYOUT ================= -->
+<div class="flex pt-16 min-h-screen">
+<!-- SIDE NAV BAR (Fixed 248px desktop) -->
+<aside class="w-64 h-[calc(100vh-64px)] fixed top-16 left-0 z-30 flex flex-col justify-between p-4 border-r border-outline-variant bg-surface-container-lowest overflow-y-auto">
+<div>
+<!-- Client Brand Emblem -->
+<div class="flex items-center gap-3 p-2 rounded-lg bg-surface-container-low mb-6 border border-outline-variant/60">
+<div class="w-9 h-9 rounded-md bg-[#172033] text-[#ffffff] flex items-center justify-center font-semibold text-[15px]">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">local_cafe</span>
+</div>
+<div class="flex flex-col min-w-0">
+<span class="font-section-title text-[15px] font-semibold text-on-surface truncate leading-tight">Northstar Coffee</span>
+<span class="font-label text-label text-secondary truncate">Agency Client • Prod</span>
+</div>
+</div>
+<!-- Quick Upload Action -->
+<button class="w-full mb-6 py-2 px-3 rounded-lg border border-primary text-primary font-button text-button flex items-center justify-center gap-2 hover:bg-surface-container-low transition-colors active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">upload</span>
+          Quick Upload
+        </button>
+<!-- Primary Navigation Links -->
+<div class="space-y-1">
+<a class="bg-primary-container text-on-primary font-button text-button rounded-lg px-3 py-2 flex items-center gap-3 shadow-sm" href="#">
+<span class="material-symbols-outlined text-[18px]">dashboard</span>
+            Overview Matrix
+          </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">calendar_today</span>
+            Campaign Queue
+          </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">video_library</span>
+            Asset Pipeline
+          </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">verified_user</span>
+            Approvals
+          </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">groups</span>
+            Team Roles
+          </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">analytics</span>
+            Telemetry Logs
+          </a>
+</div>
+</div>
+<!-- Footer Sub-Navigation -->
+<div class="pt-4 border-t border-outline-variant space-y-1">
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">settings</span>
+          Workspace Settings
+        </a>
+<a class="text-secondary hover:bg-surface-container-low font-body text-body rounded-lg px-3 py-2 flex items-center gap-3 transition-colors" href="#">
+<span class="material-symbols-outlined text-[18px]">support_agent</span>
+          Support &amp; SLA
+        </a>
+</div>
+</aside>
+<!-- ================= MAIN CONTENT CANVAS ================= -->
+<main class="flex-1 ml-64 p-8 max-w-[1400px] overflow-x-hidden">
+<!-- MAIN PAGE HEADER -->
+<section class="mb-8">
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-outline-variant">
+<div>
+<div class="flex items-center gap-2 text-primary font-label text-label uppercase tracking-wider font-semibold mb-1">
+<span class="material-symbols-outlined text-[16px]">rule</span>
+              System Design Framework
+            </div>
+<h1 class="font-page-title text-page-title text-on-surface">Operational states &amp; fallback patterns</h1>
+<p class="font-body text-body text-secondary mt-1 max-w-3xl">
+              Canonical error boundaries, empty slates, permission barriers, and sync states adhering to LaraTik's calm operational guidelines. Designed for zero layout shift, clear next steps, and quiet efficiency.
+            </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg border border-outline-variant bg-surface-container-lowest text-on-surface font-button text-button hover:bg-surface-container-low transition-colors shadow-sm">
+<span class="material-symbols-outlined text-[18px]">code</span>
+              Inspect Token Rules
+            </button>
+<button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors shadow-sm active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">download</span>
+              Export Guidelines
+            </button>
+</div>
+</div>
+<!-- QUICK STATE SWITCHER / FILTER TABS -->
+<div class="flex items-center gap-2 mt-4 overflow-x-auto pb-1">
+<button class="px-3 py-1.5 rounded-full bg-[#121B2E] text-on-primary font-button text-button text-xs whitespace-nowrap shadow-sm">
+            All States (7)
+          </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low font-body text-body text-xs whitespace-nowrap transition-colors">
+            Empty &amp; Zero Results
+          </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low font-body text-body text-xs whitespace-nowrap transition-colors">
+            Errors &amp; Failures
+          </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low font-body text-body text-xs whitespace-nowrap transition-colors">
+            Permissions &amp; Archival
+          </button>
+<button class="px-3 py-1.5 rounded-full bg-surface-container-lowest border border-outline-variant text-secondary hover:text-on-surface hover:bg-surface-container-low font-body text-body text-xs whitespace-nowrap transition-colors">
+            Stale &amp; Degradation
+          </button>
+</div>
+</section>
+<!-- TOP ALERT: Stale Data & Telemetry Sync Banner -->
+<div class="mb-8 rounded-xl bg-[#FFFBEB] border border-[#FDE68A] p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm" role="alert">
+<div class="flex items-start gap-3.5">
+<div class="w-8 h-8 rounded-lg bg-[#FEF3C7] text-[#92400E] flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">sync_problem</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="font-card-title text-card-title text-[#92400E]">TikTok API Telemetry Degraded</span>
+<span class="px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] font-label text-[11px] border border-[#FCD34D]">Sync Lag: 42m</span>
+</div>
+<p class="font-body text-body text-[#78350F] mt-0.5">
+              Live automated queue ingestion is currently operating in cache mode. Automated retry scheduled in <span class="font-semibold" id="retry-timer">02:44</span>.
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-2 shrink-0 self-end md:self-center">
+<button class="px-3 py-1.5 rounded-lg border border-[#D97706] text-[#92400E] font-button text-button hover:bg-[#FEF3C7] transition-colors text-xs">
+            View API logs
+          </button>
+<button class="px-3.5 py-1.5 rounded-lg bg-[#D97706] text-[#FFFFFF] font-button text-button hover:bg-[#B45309] transition-colors shadow-sm text-xs flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px]">refresh</span>
+            Sync now
+          </button>
+</div>
+</div>
+<!-- MAIN OPERATIONAL STATES GRID -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-8">
+<!-- LEFT COLUMN: STATE EXAMPLES (xl:col-span-8) -->
+<div class="xl:col-span-8 space-y-8">
+<!-- 1. ARCHIVED WORKSPACE BANNER & VIEWPORT GUARD -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 01</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Tenant-Level Guard</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label text-xs">Read-Only</span>
+</div>
+<div class="p-6">
+<div class="rounded-lg bg-surface-container-low border border-outline-variant p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+<div class="flex items-start gap-3.5">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[24px]">archive</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h3 class="font-card-title text-card-title text-on-surface">This workspace was archived on Oct 14, 2024</h3>
+<span class="font-label text-label text-secondary">by Governance Admin</span>
+</div>
+<p class="font-body text-body text-secondary mt-1">
+                      All scheduled dispatches are paused and publishing pipelines are in read-only mode. Content assets remain preserved in cold tier storage.
+                    </p>
+</div>
+</div>
+<div class="flex items-center gap-2.5 shrink-0">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-lowest transition-colors text-xs">
+                    Download workspace audit trail
+                  </button>
+<button class="px-3.5 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors text-xs shadow-sm">
+                    Request unarchive review
+                  </button>
+</div>
+</div>
+</div>
+</div>
+<!-- 2. EMPTY PLANNING LIST (CANVAS EMPTY SLATE) -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 02</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Planning Canvas Zero Slate</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container text-primary font-label text-xs">Zero State</span>
+</div>
+<div class="p-10 flex flex-col items-center text-center max-w-lg mx-auto">
+<!-- Stylized Calm Operational Graphic -->
+<div class="w-16 h-16 rounded-2xl bg-surface-container-low border border-outline-variant flex items-center justify-center mb-4 text-primary">
+<span class="material-symbols-outlined text-[32px]">calendar_add_on</span>
+</div>
+<h3 class="font-section-title text-section-title text-on-surface mb-2">No posts scheduled for November 2024</h3>
+<p class="font-body text-body text-secondary mb-6 leading-relaxed">
+                The monthly sprint calendar has not been populated yet. Import verified templates from the campaign library or create your first post brief.
+              </p>
+<div class="flex flex-wrap items-center justify-center gap-3">
+<button class="px-4 py-2.5 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors shadow-sm flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px]">add</span>
+                  Create first post brief
+                </button>
+<button class="px-4 py-2.5 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors">
+                  Browse template library
+                </button>
+</div>
+<div class="mt-8 pt-4 border-t border-outline-variant/60 w-full flex items-center justify-center gap-6 text-secondary font-label text-label">
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">check_circle</span> 12 Brand Presets</span>
+<span class="flex items-center gap-1.5"><span class="material-symbols-outlined text-[16px] text-primary">auto_fix_high</span> AI Copilot Ready</span>
+</div>
+</div>
+</div>
+<!-- 3. FAILED CONTENT LOAD & EXECUTION ERROR -->
+<div class="rounded-xl border border-[#FCA5A5] bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#FEF2F2] border-b border-[#FCA5A5] px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-error uppercase tracking-wider font-semibold">State Pattern 03</span>
+<span class="text-[#FCA5A5]">•</span>
+<span class="font-label text-label text-error font-semibold">Recoverable Pipeline Fault</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label text-xs font-mono">503-E: MEDIA_TIMEOUT</span>
+</div>
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-error-container text-error flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">error_outline</span>
+</div>
+<div class="flex-1">
+<div class="flex items-baseline gap-2">
+<h3 class="font-card-title text-card-title text-on-surface">Unable to render 4K video preview</h3>
+<span class="font-label text-label text-secondary">Asset ID: #VID-9821</span>
+</div>
+<p class="font-body text-body text-secondary mt-1">
+                    The ProRes transcode worker timed out while fetching media chunk #14 from the S3 media bucket. Master asset remains intact and untampered.
+                  </p>
+<!-- Technical Diagnostic Accordion -->
+<div class="mt-4 rounded-lg bg-[#172033] text-[#F3F4F6] p-3 font-mono text-[12px] leading-relaxed border border-[#374151]">
+<div class="flex items-center justify-between pb-1 mb-1 border-b border-[#374151] text-[#9CA3AF] text-[11px]">
+<span>DIAGNOSTIC TRACE • REGION us-west-2</span>
+<span>Worker: transcode-node-04b</span>
+</div>
+<code class="text-[#F87171]">ERROR: ETIMEDOUT s3://laratik-prod-media/chunks/c9821_14.ts (Attempt 3/3)</code><br/>
+<span class="text-[#9CA3AF]">Payload Hash: 49fa7b889e2... status: RECOVERABLE_TASK_ABORT</span>
+</div>
+<!-- Actions -->
+<div class="mt-5 flex flex-wrap items-center gap-3">
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors shadow-sm flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px]">replay</span>
+                      Retry transcode worker
+                    </button>
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors">
+                      Download raw master file
+                    </button>
+<button class="px-3.5 py-2 rounded-lg text-secondary hover:text-on-surface font-button text-button text-xs ml-auto">
+                      Contact DevOps on-call
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 4. READ-ONLY PERMISSION BOUNDARY -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 04</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Permission &amp; Clearance Guard</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label text-xs">Role: Client Reviewer</span>
+</div>
+<div class="p-6">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container-high text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">lock</span>
+</div>
+<div class="flex-1">
+<h3 class="font-card-title text-card-title text-on-surface">Publishing dispatch requires Lead Producer clearance</h3>
+<p class="font-body text-body text-secondary mt-1">
+                    Your account is configured with Brand Reviewer permissions. You can inspect drafts and sign off on creative copy, but direct API dispatch requires Sarah Jenkins (Production Lead).
+                  </p>
+<!-- Capability Matrix Indicator -->
+<div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/60 flex items-center gap-2.5">
+<span class="material-symbols-outlined text-primary text-[18px]">check_circle</span>
+<span class="font-table-dense text-table-dense text-on-surface">Creative copy signoff permitted</span>
+</div>
+<div class="p-3 rounded-lg bg-surface-container-low border border-outline-variant/60 flex items-center gap-2.5 opacity-60">
+<span class="material-symbols-outlined text-secondary text-[18px]">block</span>
+<span class="font-table-dense text-table-dense text-secondary">TikTok API channel publishing restricted</span>
+</div>
+</div>
+<!-- Actions -->
+<div class="mt-5 flex items-center gap-3">
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors shadow-sm">
+                      Request elevated permissions
+                    </button>
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors">
+                      Return to approval view
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. ANALYTICS NO-DATA / ZERO SIGNAL STATE -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 05</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Telemetry Zero Signal</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-tertiary-container/10 text-tertiary font-label text-xs">Channel: YouTube Shorts</span>
+</div>
+<div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low text-tertiary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">query_stats</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">No performance telemetry found for selected window</h3>
+<p class="font-body text-body text-secondary mt-1 max-w-xl">
+                    YouTube Shorts integration was connected 2 days ago. Engagement metrics require at least 24h of active impressions and daily rollups.
+                  </p>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors text-xs">
+                  Verify connection status
+                </button>
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors text-xs shadow-sm">
+                  Expand date range
+                </button>
+</div>
+</div>
+</div>
+<!-- 6. SEARCH & FILTER ZERO-RESULTS FALLBACK -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 06</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Filtered Query Miss</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-mono text-[11px]">tag:podcast</span>
+<span class="px-2 py-0.5 rounded bg-surface-container text-on-surface font-mono text-[11px]">status:urgent</span>
+</div>
+</div>
+<div class="p-6 flex flex-col md:flex-row md:items-center justify-between gap-6">
+<div class="flex items-start gap-4">
+<div class="w-10 h-10 rounded-lg bg-surface-container-low text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined text-[22px]">filter_alt_off</span>
+</div>
+<div>
+<h3 class="font-card-title text-card-title text-on-surface">No briefs matching current filters</h3>
+<p class="font-body text-body text-secondary mt-1">
+                    Try adjusting your keywords or clearing active filters to view 18 scheduled posts in this workspace.
+                  </p>
+</div>
+</div>
+<div class="flex items-center gap-3 shrink-0">
+<button class="px-3.5 py-2 rounded-lg border border-outline-variant text-on-surface font-button text-button hover:bg-surface-container-low transition-colors text-xs">
+                  Search archived sprints
+                </button>
+<button class="px-4 py-2 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors text-xs shadow-sm">
+                  Clear all filters
+                </button>
+</div>
+</div>
+</div>
+<!-- 7. LOADING & ASYNC HYDRATION SKELETON -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest overflow-hidden shadow-sm">
+<div class="bg-[#F3F4F6] border-b border-outline-variant px-5 py-3 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-secondary uppercase tracking-wider font-semibold">State Pattern 07</span>
+<span class="text-outline-variant">•</span>
+<span class="font-label text-label text-[#4B5563] font-semibold">Calm Async Hydration</span>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-surface-container-high text-secondary font-label text-xs animate-pulse">Hydrating Ticket Tree...</span>
+</div>
+<div class="p-6 space-y-4">
+<!-- Skeleton Card Item 1 -->
+<div class="p-4 rounded-lg border border-outline-variant/60 bg-surface-bright flex items-center justify-between animate-pulse">
+<div class="flex items-center gap-4 w-2/3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest shrink-0"></div>
+<div class="space-y-2 w-full">
+<div class="h-4 bg-surface-container-highest rounded w-3/4"></div>
+<div class="flex items-center gap-2">
+<div class="h-3 bg-surface-container rounded w-16"></div>
+<div class="h-3 bg-surface-container rounded w-24"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest"></div>
+<div class="h-8 w-24 bg-surface-container-highest rounded-lg"></div>
+</div>
+</div>
+<!-- Skeleton Card Item 2 -->
+<div class="p-4 rounded-lg border border-outline-variant/60 bg-surface-bright flex items-center justify-between animate-pulse opacity-75">
+<div class="flex items-center gap-4 w-2/3">
+<div class="w-10 h-10 rounded-lg bg-surface-container-highest shrink-0"></div>
+<div class="space-y-2 w-full">
+<div class="h-4 bg-surface-container-highest rounded w-1/2"></div>
+<div class="flex items-center gap-2">
+<div class="h-3 bg-surface-container rounded w-20"></div>
+<div class="h-3 bg-surface-container rounded w-28"></div>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-surface-container-highest"></div>
+<div class="h-8 w-24 bg-surface-container-highest rounded-lg"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- RIGHT COLUMN: OPERATIONAL GUIDELINES & TOKEN AUDIT (xl:col-span-4) -->
+<aside class="xl:col-span-4 space-y-6">
+<!-- LaraTik State Principles Card -->
+<div class="rounded-xl border border-outline-variant bg-surface-container-lowest p-6 shadow-sm sticky top-24">
+<div class="flex items-center gap-2 text-primary font-label text-label uppercase tracking-wider font-semibold mb-2">
+<span class="material-symbols-outlined text-[18px]">verified</span>
+              Canonical Standards
+            </div>
+<h2 class="font-section-title text-section-title text-on-surface mb-3">LaraTik State Principles</h2>
+<p class="font-body text-body text-secondary mb-6 leading-relaxed">
+              Operational states must respect the user's focus. Fallbacks provide immediate semantic clarity and an explicit path forward without alarming the user.
+            </p>
+<ul class="space-y-4">
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div>
+<h4 class="font-button text-button text-on-surface">Explanatory Title (Sentence Case)</h4>
+<p class="font-table-dense text-table-dense text-secondary mt-0.5">State what occurred directly without dramatic exclamation points or ambiguous codes.</p>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div>
+<h4 class="font-button text-button text-on-surface">Humane Message without Jargon</h4>
+<p class="font-table-dense text-table-dense text-secondary mt-0.5">Translate technical stack traces into agency operations impact (e.g., assets preserved).</p>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div>
+<h4 class="font-button text-button text-on-surface">Single Dominant Next Action</h4>
+<p class="font-table-dense text-table-dense text-secondary mt-0.5">Only one primary filled action button per container to eliminate decision fatigue.</p>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div>
+<h4 class="font-button text-button text-on-surface">Non-Destructive Escape Hatch</h4>
+<p class="font-table-dense text-table-dense text-secondary mt-0.5">Secondary actions offer audit exports, log inspection, or return to safe states.</p>
+</div>
+</li>
+<li class="flex items-start gap-3">
+<div class="w-6 h-6 rounded-full bg-primary-container/10 text-primary flex items-center justify-center shrink-0 mt-0.5">
+<span class="material-symbols-outlined text-[16px]">check</span>
+</div>
+<div>
+<h4 class="font-button text-button text-on-surface">WCAG AA Contrast Compliant</h4>
+<p class="font-table-dense text-table-dense text-secondary mt-0.5">#172033 on #FFFFFF yields a 14.8:1 ratio, significantly surpassing 4.5:1 requirements.</p>
+</div>
+</li>
+</ul>
+<!-- Token Quick Audit Spec -->
+<div class="mt-6 pt-6 border-t border-outline-variant space-y-3">
+<span class="font-label text-label uppercase text-secondary font-semibold">Active Token Bindings</span>
+<div class="grid grid-cols-2 gap-2 font-mono text-[11px]">
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant">
+<span class="text-secondary block">Canvas BG</span>
+<span class="text-on-surface font-semibold">#F7F7F5</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant">
+<span class="text-secondary block">Card Surface</span>
+<span class="text-on-surface font-semibold">#FFFFFF</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant">
+<span class="text-secondary block">Structural Line</span>
+<span class="text-on-surface font-semibold">#DDE1E6</span>
+</div>
+<div class="p-2 rounded bg-surface-container-low border border-outline-variant">
+<span class="text-secondary block">Primary Accent</span>
+<span class="text-primary font-semibold">#4F46E5</span>
+</div>
+</div>
+</div>
+<!-- Footer Badge -->
+<div class="mt-6 pt-4 border-t border-outline-variant/60 flex items-center justify-between text-secondary font-label text-label">
+<span>LaraTik Core v4.8</span>
+<span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Standard Enforced</span>
+</div>
+</div>
+</aside>
+</div>
+</main>
+</div>
+<!-- Interactive Demo Timer Script -->
+<script>
+    // Lightweight countdown interaction for live operational banner
+    let secondsLeft = 164;
+    const timerDisplay = document.getElementById('retry-timer');
+    if (timerDisplay) {
+      setInterval(() => {
+        if (secondsLeft > 0) {
+          secondsLeft--;
+          const m = Math.floor(secondsLeft / 60).toString().padStart(2, '0');
+          const s = (secondsLeft % 60).toString().padStart(2, '0');
+          timerDisplay.textContent = `${m}:${s}`;
+        } else {
+          secondsLeft = 180;
+        }
+      }, 1000);
+    }
+  </script>
+</body></html>

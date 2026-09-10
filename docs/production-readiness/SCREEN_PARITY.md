@@ -1,6 +1,11 @@
-# Canonical Stitch screen parity
+# Historical Stitch screen parity
 
-Project `5403097764334458790`; design system `assets/e2bbd2e84f524a5eb7e1aa20a22d7531`.
+The 27-row matrix below records the archived 2026-08-20 baseline from project
+`5403097764334458790` and design system
+`assets/e2bbd2e84f524a5eb7e1aa20a22d7531`. The current-state source is the new
+project `16083107078886291815`, design system
+`assets/14000568228937989951`, and the inventory in
+[`docs/visual-parity/CURRENT_SYNC.md`](../visual-parity/CURRENT_SYNC.md).
 
 Status values: `Missing`, `Partial`, `Implemented`, `Tested`, `Verified`. Only independent review assigns `Verified`.
 

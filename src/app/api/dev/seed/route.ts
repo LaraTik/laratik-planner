@@ -18,6 +18,7 @@ import {
   workspaceMembershipRoles,
   workspaceMemberships,
   workspaces,
+  aiFeatureSettings,
 } from "@/lib/db/schema";
 import { and, eq, sql } from "drizzle-orm";
 import {
@@ -100,6 +101,8 @@ type SeedBody = {
   socialAnalyticsFixture?: boolean;
   /** Add the ready private asset used by the stored-delivery E2E journey. */
   includeDeliveryMediaFixture?: boolean;
+  /** Enable the gated Trend Radar surface for visual/onboarding fixtures. */
+  enableTrendRadar?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -163,6 +166,7 @@ export async function POST(req: NextRequest) {
       explicitPlatformRole?.data ?? (body.platformAdmin ? ("platform_owner" as const) : null),
     socialAnalyticsFixture: body.socialAnalyticsFixture ?? false,
     includeDeliveryMediaFixture: body.includeDeliveryMediaFixture ?? false,
+    enableTrendRadar: body.enableTrendRadar ?? false,
   };
 
   try {
@@ -199,6 +203,7 @@ async function seedInternal(f: {
   platformRole: PlatformRole | null;
   socialAnalyticsFixture: boolean;
   includeDeliveryMediaFixture: boolean;
+  enableTrendRadar: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -296,6 +301,28 @@ async function seedInternal(f: {
         set: { planTemplateId: plan.id },
       });
   }
+
+  // Keep visual and E2E fixtures order-independent. A Trends test enables
+  // the capability, so every ordinary seed must explicitly restore the
+  // default disabled state instead of leaking that setting into the next
+  // screen. Secret metadata is intentionally preserved on conflict.
+  await db
+    .insert(aiFeatureSettings)
+    .values({
+      agencyId,
+      enabled: f.enableTrendRadar,
+      enabledCapabilities: f.enableTrendRadar ? ["trend_radar"] : [],
+      updatedBy: userId,
+    })
+    .onConflictDoUpdate({
+      target: aiFeatureSettings.agencyId,
+      set: {
+        enabled: f.enableTrendRadar,
+        enabledCapabilities: f.enableTrendRadar ? ["trend_radar"] : [],
+        updatedBy: userId,
+        updatedAt: new Date(),
+      },
+    });
 
   // ─── Agency membership (admin) ──────────────────────────────────────────
   await db

@@ -49,6 +49,24 @@
   "templatesSectionTypographyBlurb": "Headline + body face pairings. Each click adds every face in the pair that isn't already catalogued.",
   "templatesSectionPublishing": "Publishing rules",
   "templatesSectionPublishingBlurb": "Editorial guardrails for the team. Each click adds the rule to your publishing rules list.",
+  "templatesPermission": {
+    "managerRequired": "You need workspace-manager access to add templates.",
+    "askManager": "Ask a manager to apply these."
+  },
+  "templatesMeta": {
+    "swatchOne": "{count} swatch",
+    "swatchMany": "{count} swatches",
+    "faceOne": "{count} face",
+    "faceMany": "{count} faces"
+  },
+  "templateCard": {
+    "error": "Failed to add template.",
+    "addedOne": "Added 1 entry.",
+    "addedMany": "Added {count} entries. The rest were already in your brand kit.",
+    "alreadyAdded": "Already in your brand kit — no change.",
+    "added": "Added",
+    "addToBrandKit": "Add to brand kit"
+  },
   "empty": {
     "logosTitle": "No logo assets yet",
     "logosDescription": "Upload a PNG, JPG, or SVG — or paste an external URL — so every planner, designer, and reviewer has the same starting point.",
@@ -92,6 +110,15 @@
     "archiveAria": "Archive {label} {name}"
   },
   "overview": {
+    "identityAria": "Brand identity",
+    "latestLogo": "Latest logo",
+    "assetOne": "asset",
+    "assetMany": "assets",
+    "identityDescription": "The shared source for visual assets and writing guidance. Update the logo, color palette, and typography so every planner, designer, and reviewer ships in one voice.",
+    "emptyTitle": "No assets yet — start with a logo",
+    "emptyDescription": "The hero preview, the Add menu, and the brand identity card all show your first logo once it is uploaded.",
+    "addFirstLogo": "Add your first logo",
+    "timezone": "Timezone",
     "downloadZip": "Download ZIP",
     "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
     "browseTemplates": "Browse templates",
@@ -101,6 +128,7 @@
     "noActivity": "No activity yet"
   },
   "health": {
+    "title": "Brand Kit Health",
     "label": "health",
     "entry": "entry in this section.",
     "entries": "entries in this section.",

@@ -59,7 +59,7 @@ export default function TermsPage() {
         <div className="mt-10 grid gap-8 lg:grid-cols-[16rem_1fr]">
           <Toc sections={SECTIONS} />
 
-          <article className="text-body text-fg-secondary min-w-0 space-y-6 leading-relaxed">
+          <article className="text-body text-fg-secondary min-w-0 space-y-6 leading-relaxed [&_a]:underline [&_a]:underline-offset-2">
             <Section id="operator" icon={<ScrollText className="h-4 w-4" aria-hidden />}>
               <h2 id="operator" className="text-title-section text-fg-primary font-semibold">
                 1. Who we are

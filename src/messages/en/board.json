@@ -8,6 +8,7 @@
   "emptyFilterDescription": "No items match {filter}. Try clearing the filter to see everything.",
   "emptyNothingTitle": "Nothing on the board yet",
   "emptyNothingDescription": "Use Quick Create to add a draft — it'll show up here when it lands in the workflow.",
+  "emptyNothingDescriptionReadOnly": "Content will appear here when a planner or workspace manager adds the first draft.",
   "clearFilters": "Clear filters",
   "quickCreate": "Quick Create",
   "columnIdeas": "Ideas",

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Check, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import {
   addColorPaletteAction,
   addPillarTemplateAction,
@@ -59,6 +60,7 @@ export function TemplateCard({
 }: TemplateCardProps) {
   const [status, setStatus] = React.useState<Status>("idle");
   const [message, setMessage] = React.useState<string | null>(null);
+  const t = useLocaleT();
 
   async function onAdd() {
     setStatus("loading");
@@ -83,18 +85,18 @@ export function TemplateCard({
     }
     if (!res?.ok) {
       setStatus("error");
-      setMessage(res?.error ?? "Failed to add template.");
+      setMessage(res?.error ?? t("brandKit.templateCard.error"));
       return;
     }
     setStatus("added");
     if (typeof res.added === "number" && res.added > 0) {
       setMessage(
         res.added === 1
-          ? "Added 1 entry."
-          : `Added ${res.added} entries. (${res.added === 1 ? "1" : res.added} new; the rest were already in your brand kit.)`,
+          ? t("brandKit.templateCard.addedOne")
+          : t("brandKit.templateCard.addedMany", { count: res.added }),
       );
     } else {
-      setMessage("Already in your brand kit — no change.");
+      setMessage(t("brandKit.templateCard.alreadyAdded"));
     }
   }
 
@@ -118,7 +120,7 @@ export function TemplateCard({
             data-testid={`template-card-${test}-added`}
           >
             <Check className="h-3.5 w-3.5" aria-hidden="true" />
-            {message ?? "Added."}
+            {message ?? t("brandKit.templateCard.added")}
           </span>
         ) : status === "error" ? (
           <span
@@ -146,7 +148,9 @@ export function TemplateCard({
           ) : (
             <Plus className="h-3.5 w-3.5" aria-hidden="true" />
           )}
-          {status === "added" ? "Added" : "Add to brand kit"}
+          {status === "added"
+            ? t("brandKit.templateCard.added")
+            : t("brandKit.templateCard.addToBrandKit")}
         </Button>
       </div>
     </div>

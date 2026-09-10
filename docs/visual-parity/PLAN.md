@@ -1,8 +1,12 @@
 # StudioFlow → laratik-planner visual parity refactor plan
 
-> **Source of truth:** Google Stitch project `5403097764334458790` (`projects/5403097764334458790`).
-> Captured 2026-08-20 via the Stitch MCP (`https://stitch.googleapis.com/mcp`).
-> All 49 PNGs + 49 HTMLs + the canonical `DESIGN.md` live in `./designs/stitch/`.
+> **Historical baseline:** Google Stitch project `5403097764334458790` (`projects/5403097764334458790`).
+> The current design source is documented in
+> [`CURRENT_SYNC.md`](./CURRENT_SYNC.md) and lives in Stitch project
+> `16083107078886291815` with design system
+> `assets/14000568228937989951`.
+> The captured files in `./designs/stitch/` remain a traceable archive of the
+> 2026-08-20 baseline until the current project is captured locally.
 > The Stitch thumbnail (`f2bf40ae…`) is the canonical Workspace Overview.
 >
 > **Refreshing the captured copy:** see [`MCP.md`](./MCP.md) for the auth, tools,

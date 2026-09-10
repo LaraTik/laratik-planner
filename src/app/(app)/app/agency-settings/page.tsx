@@ -1,6 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { Building2, KeyRound, Server, Users2 } from "lucide-react";
+import type { ReactNode } from "react";
+import {
+  Activity,
+  ArrowUpRight,
+  Building2,
+  CheckCircle2,
+  Cloud,
+  FileText,
+  KeyRound,
+  Server,
+  Users2,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -17,6 +28,7 @@ import { EditAgencyForm } from "@/components/forms/edit-agency-form";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { getSocialStatus } from "@/lib/social/service";
 import { getActiveApiKey } from "@/lib/ai";
+import { listInstructionPacks } from "@/lib/ai/instruction-packs";
 
 /**
  * Agency-level identity and operational configuration (M3.4 — agency CRUD).
@@ -44,7 +56,7 @@ export default async function AgencySettingsPage() {
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const isAdmin = await isAgencyAdmin(actor, agencyId);
   if (!isAdmin) {
     return (
@@ -63,7 +75,7 @@ export default async function AgencySettingsPage() {
     );
   }
 
-  const [[agency], [workspaceCount], [memberCount]] = await Promise.all([
+  const [[agency], [workspaceCount], [memberCount], packs] = await Promise.all([
     db
       .select({
         id: agencies.id,
@@ -80,6 +92,7 @@ export default async function AgencySettingsPage() {
       .select({ value: count() })
       .from(agencyMemberships)
       .where(eq(agencyMemberships.agencyId, agencyId)),
+    listInstructionPacks(agencyId),
   ]);
   if (!agency) redirect("/setup");
 
@@ -107,18 +120,33 @@ export default async function AgencySettingsPage() {
 
   return (
     <div className="space-y-6" data-testid="agency-settings">
-      <PageHeader title={t("agencySettings.title")} description={t("agencySettings.description")} />
+      <PageHeader
+        eyebrow={t("agencySettings.hubEyebrow")}
+        title={
+          <span className="flex flex-wrap items-center gap-2">
+            {t("agencySettings.title")}
+            <Badge variant="primary">{t("agencySettings.hubBadge")}</Badge>
+          </span>
+        }
+        description={t("agencySettings.hubDescription")}
+        action={
+          <Badge variant="success" className="min-h-[var(--control-touch)] px-3 py-2">
+            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+            {t("agencySettings.healthOperational")}
+          </Badge>
+        }
+      />
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card data-testid="agency-settings-footprint">
+      <div className="grid gap-3 sm:grid-cols-3" aria-label={t("agencySettings.snapshotLabel")}>
+        <Card padding="sm" data-testid="agency-settings-footprint">
           <div className="text-primary mb-2 flex items-center gap-2">
             <Building2 className="h-5 w-5" aria-hidden="true" />
             <CardTitle>{t("agencySettings.footprint")}</CardTitle>
           </div>
-          <CardDescription className="mb-4">
+          <CardDescription className="mb-3">
             {t("agencySettings.footprintDescription")}
           </CardDescription>
-          <dl className="space-y-3">
+          <dl className="grid grid-cols-2 gap-3">
             <Row
               label={t("agencySettings.workspaces")}
               value={String(workspaceCount?.value ?? 0)}
@@ -132,12 +160,12 @@ export default async function AgencySettingsPage() {
           </dl>
         </Card>
 
-        <Card data-testid="agency-settings-plan-link">
+        <Card padding="sm" data-testid="agency-settings-plan-link">
           <div className="text-primary mb-2 flex items-center gap-2">
             <Users2 className="h-5 w-5" aria-hidden="true" />
             <CardTitle>{t("agencySettings.plan")}</CardTitle>
           </div>
-          <CardDescription className="mb-4">{t("agencySettings.planDescription")}</CardDescription>
+          <CardDescription className="mb-3">{t("agencySettings.planDescription")}</CardDescription>
           <Link
             href="/app/agency-settings/plan"
             className="text-primary focus-visible:ring-focus-ring text-body inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
@@ -147,12 +175,12 @@ export default async function AgencySettingsPage() {
           </Link>
         </Card>
 
-        <Card data-testid="agency-settings-services">
+        <Card padding="sm" data-testid="agency-settings-services">
           <div className="text-primary mb-2 flex items-center gap-2">
             <Server className="h-5 w-5" aria-hidden="true" />
             <CardTitle>{t("agencySettings.services")}</CardTitle>
           </div>
-          <CardDescription className="mb-4">
+          <CardDescription className="mb-3">
             {t("agencySettings.servicesDescription")}
           </CardDescription>
           <div className="space-y-3">
@@ -209,14 +237,197 @@ export default async function AgencySettingsPage() {
         </Card>
       </div>
 
-      <EditAgencyForm
-        initialName={agency.name}
-        initialSlug={agency.slug}
-        initialLocale={agency.locale}
-        initialTimezone={agency.timezone}
-      />
+      <section id="general" aria-labelledby="agency-settings-general-title">
+        <EditAgencyForm
+          initialName={agency.name}
+          initialSlug={agency.slug}
+          initialLocale={agency.locale}
+          initialTimezone={agency.timezone}
+        />
+      </section>
+
+      <section id="social" aria-labelledby="agency-settings-social-title">
+        <Card padding="lg" data-testid="agency-settings-social-summary">
+          <SectionHeading
+            icon={<Activity className="h-5 w-5" aria-hidden="true" />}
+            title={t("agencySettings.socialTitle")}
+            description={t("agencySettings.socialDescription")}
+            action={
+              <Link
+                href="/app/agency-settings/social"
+                className="bg-primary text-primary-foreground focus-visible:ring-focus-ring inline-flex min-h-[var(--control-touch)] items-center justify-center gap-1.5 rounded-[var(--radius-control)] px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              >
+                {t("agencySettings.manageSocial")}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            }
+            titleId="agency-settings-social-title"
+          />
+          <div className="bg-surface-subtle mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3">
+            <div>
+              <p className="text-body text-fg-primary font-semibold">
+                {socialStatus.enabled
+                  ? t("agencySettings.socialEnabled")
+                  : t("agencySettings.socialDisabled")}
+              </p>
+              <p className="text-label text-fg-secondary mt-1">
+                {t("agencySettings.socialConnections", {
+                  count: socialStatus.connectionCount,
+                })}
+              </p>
+            </div>
+            <Badge variant={socialStatus.enabled ? "success" : "outline"}>
+              {socialStatus.enabled
+                ? t("agencySettings.serviceConfigured")
+                : t("agencySettings.serviceDisabled")}
+            </Badge>
+          </div>
+        </Card>
+      </section>
+
+      <section id="storage" aria-labelledby="agency-settings-storage-title">
+        <Card padding="lg" data-testid="agency-settings-storage-summary">
+          <SectionHeading
+            icon={<Cloud className="h-5 w-5" aria-hidden="true" />}
+            title={t("agencySettings.storageTitle")}
+            description={t("agencySettings.storageDescription")}
+            action={
+              <Link
+                href="/app/agency-settings/storage"
+                className="text-primary focus-visible:ring-focus-ring border-border inline-flex min-h-[var(--control-touch)] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              >
+                {t("agencySettings.manageStorage")}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            }
+            titleId="agency-settings-storage-title"
+          />
+          <div className="bg-surface-subtle mt-5 space-y-3 rounded-[var(--radius-control)] border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-body text-fg-primary font-semibold">
+                {t("agencySettings.storageUsage", {
+                  used: formatBytes(storageSummary.projectedBytes, code),
+                })}
+              </p>
+              <Badge
+                variant={storageReady ? "success" : storageNeedsAttention ? "warning" : "outline"}
+              >
+                {storageReady
+                  ? t("storage.healthCheckPassed")
+                  : storageNeedsAttention
+                    ? t("storage.providerUnavailableShort")
+                    : t("storage.notConfiguredShort")}
+              </Badge>
+            </div>
+            <div
+              className="bg-surface border-border h-3 overflow-hidden rounded-full border"
+              role="progressbar"
+              aria-label={t("agencySettings.storageUsageLabel")}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={Math.min(100, Math.round(storageSummary.projectedPercentUsed))}
+            >
+              <div
+                className="bg-primary h-full rounded-full transition-[width]"
+                style={{ width: `${Math.min(100, storageSummary.projectedPercentUsed)}%` }}
+              />
+            </div>
+            <p className="text-label text-fg-secondary">
+              {storageSummary.quotaBytes == null
+                ? t("agencySettings.storageUnlimited")
+                : t("agencySettings.storageQuota", {
+                    quota: formatBytes(storageSummary.quotaBytes, code),
+                  })}
+            </p>
+          </div>
+        </Card>
+      </section>
+
+      <section id="planning-packs" aria-labelledby="agency-settings-packs-title">
+        <Card padding="lg" data-testid="agency-settings-planning-packs-summary">
+          <SectionHeading
+            icon={<FileText className="h-5 w-5" aria-hidden="true" />}
+            title={t("agencySettings.packsTitle")}
+            description={t("agencySettings.packsDescription")}
+            action={
+              <Link
+                href="/app/agency-settings/planning-packs"
+                className="text-primary focus-visible:ring-focus-ring border-border inline-flex min-h-[var(--control-touch)] items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+              >
+                {t("agencySettings.managePacks")}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            }
+            titleId="agency-settings-packs-title"
+          />
+          {packs.length ? (
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              {packs.slice(0, 3).map((pack) => (
+                <div
+                  key={pack.id}
+                  className="border-border bg-surface-subtle flex flex-col gap-3 rounded-[var(--radius-control)] border p-4"
+                >
+                  <Badge variant={pack.status === "published" ? "success" : "outline"}>
+                    {t(`planningPacks.status.${pack.status}`)}
+                  </Badge>
+                  <h3 className="text-body text-fg-primary font-semibold break-words">
+                    {pack.name}
+                  </h3>
+                  <p className="text-label text-fg-muted mt-auto">
+                    {t("planningPacks.revision", { revision: pack.revision })}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-body text-fg-muted bg-surface-subtle mt-5 rounded-[var(--radius-control)] border border-dashed p-4">
+              {t("planningPacks.empty")}
+            </p>
+          )}
+        </Card>
+      </section>
     </div>
   );
+}
+
+function SectionHeading({
+  icon,
+  title,
+  description,
+  action,
+  titleId,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  action: ReactNode;
+  titleId: string;
+}) {
+  return (
+    <div className="border-border flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="bg-primary-subtle text-primary flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2
+            id={titleId}
+            className="text-section-title text-fg-primary font-semibold text-balance"
+          >
+            {title}
+          </h2>
+          <p className="text-label text-fg-secondary mt-1 max-w-3xl text-pretty">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
+}
+
+function formatBytes(bytes: number, locale: "en" | "ar") {
+  if (bytes === 0) return "0 GB";
+  const gigabytes = bytes / 1024 ** 3;
+  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: 1, numberingSystem: "latn" }).format(gigabytes)} GB`;
 }
 
 function Row({

@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>LaraTik - Reviews: Northstar Coffee</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Verbatim Tailwind Config -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "tertiary": "#004c77",
+            "on-secondary": "#ffffff",
+            "tertiary-container": "#00659c",
+            "surface-dim": "#d1daf4",
+            "surface-container-low": "#f1f3ff",
+            "on-secondary-fixed": "#131c2b",
+            "outline": "#777587",
+            "on-tertiary-container": "#bfdfff",
+            "on-primary-fixed-variant": "#3323cc",
+            "on-background": "#121b2e",
+            "error": "#ba1a1a",
+            "on-secondary-container": "#5a6375",
+            "surface": "#f9f9ff",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-primary-container": "#dad7ff",
+            "error-container": "#ffdad6",
+            "surface-container-lowest": "#ffffff",
+            "surface-bright": "#f9f9ff",
+            "secondary-fixed": "#dae3f8",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-primary-fixed": "#0f0069",
+            "on-tertiary": "#ffffff",
+            "inverse-surface": "#273044",
+            "on-surface-variant": "#464555",
+            "surface-container": "#e9edff",
+            "on-tertiary-fixed-variant": "#004b74",
+            "tertiary-fixed-dim": "#94ccff",
+            "primary-fixed": "#e2dfff",
+            "secondary-container": "#d7e0f5",
+            "primary-container": "#4f46e5",
+            "outline-variant": "#c7c4d8",
+            "surface-container-highest": "#d9e2fc",
+            "tertiary-fixed": "#cde5ff",
+            "on-error": "#ffffff",
+            "inverse-primary": "#c3c0ff",
+            "on-primary": "#ffffff",
+            "inverse-on-surface": "#edf0ff",
+            "background": "#f9f9ff",
+            "primary": "#3525cd",
+            "surface-variant": "#d9e2fc",
+            "surface-container-high": "#e1e8ff",
+            "secondary-fixed-dim": "#bec7db",
+            "surface-tint": "#4d44e3",
+            "on-tertiary-fixed": "#001d32",
+            "secondary": "#565f70",
+            "on-surface": "#121b2e",
+            "on-error-container": "#93000a"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "touch-target-min": "44px",
+            "screen-padding": "24px",
+            "topbar-height": "64px",
+            "sidebar-expanded": "248px",
+            "card-padding": "16px",
+            "base": "4px",
+            "sidebar-collapsed": "72px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "page-title": ["Inter"],
+            "label": ["Inter"],
+            "table-dense": ["Inter"],
+            "section-title": ["Inter"],
+            "card-title": ["Inter"],
+            "button": ["Inter"],
+            "body": ["Inter"]
+          },
+          "fontSize": {
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    /* Operational subtle scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body text-body antialiased min-h-screen">
+<!-- ========================================================================= -->
+<!-- SHARED COMPONENT: SideNavBar (Strict implementation from JSON Blueprint) -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded z-40 bg-surface-container-lowest border-r border-outline-variant">
+<div class="flex flex-col justify-between h-full p-4 w-sidebar-expanded">
+<!-- Top Section -->
+<div class="space-y-4">
+<!-- Client Brand & Header -->
+<div class="flex items-center gap-3 px-2 py-2">
+<div class="w-9 h-9 rounded-lg bg-surface-container-high text-primary flex items-center justify-center font-card-title text-card-title border border-outline-variant font-bold">
+            NC
+          </div>
+<div class="flex flex-col">
+<span class="font-section-title text-section-title text-on-surface font-semibold tracking-tight leading-tight">Northstar Coffee</span>
+<span class="font-label text-label text-on-surface-variant flex items-center gap-1">
+              Agency Client
+              <span class="w-1.5 h-1.5 rounded-full bg-primary-container inline-block"></span>
+</span>
+</div>
+</div>
+<!-- Primary Action CTA Button -->
+<button class="w-full py-2 px-3 rounded-lg bg-primary-container text-on-primary font-button text-button flex items-center justify-center gap-2 hover:bg-primary transition-colors active:scale-[0.99] duration-100 ease-out">
+<span class="material-symbols-outlined text-[18px]">add</span>
+          New Deliverable
+        </button>
+<!-- Navigation items mapped from JSON Blueprint (Dashboard, Briefs, Production, Reviews, Publishing) -->
+<nav aria-label="Main Navigation" class="space-y-1 pt-1">
+<!-- Dashboard (Inactive) -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">dashboard</span>
+<span>Dashboard</span>
+</a>
+<!-- Briefs (Inactive) -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">description</span>
+<span>Briefs</span>
+</a>
+<!-- Production (Inactive) -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]">movie_creation</span>
+<span>Production</span>
+</div>
+<span class="font-label text-label px-1.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant">2</span>
+</a>
+<!-- Reviews (ACTIVE STATE: Matches current page intent strictly) -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-high text-primary font-button text-button active:scale-[0.99]" href="#">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">rate_review</span>
+<span>Reviews</span>
+</div>
+<span class="font-label text-label px-1.5 py-0.5 rounded-full bg-primary-container text-on-primary">3</span>
+</a>
+<!-- Publishing (Inactive) -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">send</span>
+<span>Publishing</span>
+</a>
+</nav>
+</div>
+<!-- Footer Section: Settings & Support -->
+<div class="border-t border-outline-variant pt-3 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+<span>Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container-low font-body text-body transition-colors active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span>Support</span>
+</a>
+<div class="px-3 pt-2 text-on-surface-variant font-label text-label flex items-center justify-between">
+<span class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Operational
+          </span>
+<span class="text-[11px] text-secondary">v2.14.0</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- SHARED COMPONENT: TopNavBar (Strict implementation from JSON Blueprint)  -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 right-0 left-sidebar-expanded h-topbar-height z-30 bg-surface-container-lowest border-b border-outline-variant">
+<div class="flex justify-between items-center h-topbar-height px-screen-padding w-full">
+<!-- Search Bar on Left (as indicated in JSON) & Breadcrumbs -->
+<div class="flex items-center gap-4 flex-1 max-w-2xl">
+<!-- Breadcrumb tracking -->
+<nav class="flex items-center gap-2 font-label text-label text-on-surface-variant pe-2">
+<span>Workspaces</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span>Northstar Coffee</span>
+<span class="material-symbols-outlined text-[14px]">chevron_right</span>
+<span class="text-on-surface font-semibold">Reviews</span>
+</nav>
+<div class="h-4 w-px bg-outline-variant"></div>
+<!-- Search Input with Keyboard Shortcut -->
+<div class="relative w-72">
+<span class="material-symbols-outlined absolute start-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant text-[18px]">search</span>
+<input class="w-full ps-9 pe-8 py-1.5 bg-surface rounded-lg border border-outline-variant font-body text-table-dense text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container transition-all" placeholder="Search reviews, assets... (⌘K)" type="text"/>
+<span class="absolute end-2 top-1/2 -translate-y-1/2 font-label text-[10px] px-1 py-0.5 rounded bg-surface-container text-secondary border border-outline-variant">⌘K</span>
+</div>
+</div>
+<!-- Trailing Actions & User Cluster -->
+<div class="flex items-center gap-3">
+<!-- Trailing secondary action from JSON: Tenant Switcher / Indicator -->
+<div class="hidden lg:flex items-center gap-2 px-2.5 py-1 rounded bg-surface border border-outline-variant font-label text-label text-on-surface-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">storefront</span>
+<span>Tenant: Northstar Coffee</span>
+</div>
+<!-- Trailing icon actions from JSON: sync, notifications -->
+<button class="w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors duration-150 active:scale-[0.98]" title="Sync deliverables">
+<span class="material-symbols-outlined text-[20px]">sync</span>
+</button>
+<button class="relative w-9 h-9 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container-low transition-colors duration-150 active:scale-[0.98]" title="Notifications">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary"></span>
+</button>
+<!-- Trailing Primary Action from JSON: Approve All (4) -->
+<button class="px-3 py-1.5 rounded-lg bg-surface-container text-primary hover:bg-surface-container-high border border-outline-variant font-button text-button flex items-center gap-1.5 active:scale-[0.98] transition-all">
+<span class="material-symbols-outlined text-[18px]">done_all</span>
+          Approve All (4)
+        </button>
+<!-- Profile Avatar for Sarah Jenkins (Production Lead) -->
+<div class="flex items-center gap-2 ps-2 border-s border-outline-variant">
+<div class="w-8 h-8 rounded-full bg-surface-container-high border border-outline-variant flex items-center justify-center text-primary font-semibold text-xs">
+            SJ
+          </div>
+<div class="hidden xl:flex flex-col text-start">
+<span class="font-button text-table-dense text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="font-label text-[11px] text-on-surface-variant">Production Lead</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE CONTENT: Reviews Surface (/app/w/northstar-coffee/reviews) -->
+<!-- ========================================================================= -->
+<main class="ms-sidebar-expanded pt-topbar-height min-h-screen bg-background pb-12">
+<div class="px-screen-padding py-6 max-w-[1680px] mx-auto">
+<!-- Reviews Page Header Section -->
+<header class="mb-6 space-y-4">
+<!-- Title & Subtitle + View Mode Switcher -->
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div>
+<h1 class="font-page-title text-page-title text-on-surface tracking-tight">Reviews</h1>
+<p class="font-body text-body text-on-surface-variant mt-0.5">
+              Review and approve deliverables across internal QA and client sign-off gates.
+            </p>
+</div>
+<!-- Mode Switcher / View Controls: Internal vs Client Preview -->
+<div class="inline-flex items-center p-1 rounded-lg bg-surface-container border border-outline-variant self-start md:self-auto">
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface-container-lowest text-primary font-button text-button shadow-sm">
+<span class="material-symbols-outlined text-[16px]">visibility</span>
+              Internal agency view
+            </button>
+<button class="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-on-surface-variant hover:text-on-surface font-body text-table-dense">
+<span class="material-symbols-outlined text-[16px]">group</span>
+              Client-visible preview
+            </button>
+</div>
+</div>
+<!-- KPI / Summary Status Chips Bar -->
+<div class="flex flex-wrap items-center gap-2 pt-1">
+<!-- 3 awaiting your review (highlighted pill) -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-primary-container text-on-primary font-label text-label">
+<span class="material-symbols-outlined text-[14px]">pending_actions</span>
+<span>3 awaiting your review</span>
+</div>
+<!-- 1 client gate blocking (amber warning pill) -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-label text-label">
+<span class="material-symbols-outlined text-[14px] text-amber-700">warning</span>
+<span>1 client gate blocking</span>
+</div>
+<!-- 14 approved this month (neutral pill) -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container-lowest text-on-surface-variant border border-outline-variant font-label text-label">
+<span class="material-symbols-outlined text-[14px] text-emerald-600">check_circle</span>
+<span>14 approved this month</span>
+</div>
+<!-- Avg turnaround 3.2 hrs -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface-container text-on-surface-variant font-label text-label">
+<span class="material-symbols-outlined text-[14px]">speed</span>
+<span>Avg turnaround 3.2 hrs</span>
+</div>
+</div>
+<!-- Filter Tabs & Filter Bar -->
+<div class="border-b border-outline-variant pt-2">
+<!-- Filter Tabs -->
+<div class="flex items-center gap-6 overflow-x-auto">
+<button class="pb-3 border-b-2 border-primary-container font-button text-button text-primary flex items-center gap-2">
+              Needs my review
+              <span class="px-1.5 py-0.5 rounded-full bg-primary text-on-primary font-label text-[11px]">3</span>
+</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-body text-body flex items-center gap-2">
+              Client-visible
+              <span class="px-1.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label text-[11px]">2</span>
+</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-body text-body flex items-center gap-2">
+              All reviews
+              <span class="px-1.5 py-0.5 rounded-full bg-surface-container text-on-surface-variant font-label text-[11px]">8</span>
+</button>
+<button class="pb-3 border-b-2 border-transparent text-on-surface-variant hover:text-on-surface font-body text-body">
+              Approved &amp; archived
+            </button>
+</div>
+</div>
+<!-- Secondary Filter Controls Row -->
+<div class="flex flex-wrap items-center justify-between gap-3 pt-1">
+<div class="flex flex-wrap items-center gap-2.5">
+<!-- Gate dropdown -->
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:border-primary-container cursor-pointer">
+<option>All gates</option>
+<option>Internal QA</option>
+<option>Client review</option>
+</select>
+<span class="material-symbols-outlined absolute end-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+</div>
+<!-- Channel dropdown -->
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:border-primary-container cursor-pointer">
+<option>All channels</option>
+<option>Instagram Reels</option>
+<option>TikTok</option>
+<option>Carousel</option>
+</select>
+<span class="material-symbols-outlined absolute end-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+</div>
+<!-- Requester dropdown -->
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 font-body text-table-dense text-on-surface focus:outline-none focus:border-primary-container cursor-pointer">
+<option>All requesters</option>
+<option>Elena Rostova</option>
+<option>Marcus Chen</option>
+<option>Liam Vance</option>
+</select>
+<span class="material-symbols-outlined absolute end-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Sort dropdown -->
+<div class="flex items-center gap-2">
+<span class="font-label text-label text-on-surface-variant">Sort by:</span>
+<div class="relative">
+<select class="appearance-none bg-surface-container-lowest border border-outline-variant rounded-lg ps-3 pe-8 py-1.5 font-button text-table-dense text-on-surface focus:outline-none focus:border-primary-container cursor-pointer">
+<option>Due date (soonest first)</option>
+<option>Latest activity</option>
+<option>Gate priority</option>
+</select>
+<span class="material-symbols-outlined absolute end-2 top-1/2 -translate-y-1/2 text-on-surface-variant text-[16px] pointer-events-none">expand_more</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- TWO-COLUMN OPERATIONAL REVIEW WORKSPACE (~50% / ~50% Desktop split)       -->
+<!-- ========================================================================= -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ===================================================================== -->
+<!-- LEFT COLUMN: Review Queue Card List (~50% width -> col-span-6)        -->
+<!-- ===================================================================== -->
+<section aria-label="Review Queue" class="lg:col-span-6 space-y-3">
+<!-- Card 1: Selected / Inspecting State (Bold Indigo Outline) -->
+<article class="bg-surface-container-lowest rounded-xl border-2 border-primary shadow-sm p-4 relative transition-all">
+<div class="flex items-start justify-between gap-3 mb-2">
+<div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-label text-label mb-1.5">
+<span class="material-symbols-outlined text-[13px] text-amber-700">schedule</span>
+                  Client review
+                </span>
+<h3 class="font-card-title text-card-title text-on-surface">Autumn Cold Brew Reel — Final Cut</h3>
+<p class="font-label text-label text-on-surface-variant mt-0.5">
+                  Reels / 9:16 Vertical Video • TikTok &amp; Instagram
+                </p>
+</div>
+<!-- Primary selected indicator button -->
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary-container text-on-primary font-button text-[12px]">
+<span class="material-symbols-outlined text-[14px]">visibility</span>
+                Reviewing now
+              </span>
+</div>
+<!-- Meta details & due timing -->
+<div class="grid grid-cols-2 gap-2 py-2.5 my-2 border-y border-outline-variant font-label text-label text-on-surface-variant">
+<div>
+<span class="text-secondary">Version:</span> <span class="text-on-surface font-medium">v2 (Final Cut)</span>
+<br/>
+<span class="text-secondary">Requester:</span> <span class="text-on-surface">Elena Rostova</span>
+</div>
+<div>
+<span class="text-secondary">Due:</span>
+<span class="text-error font-semibold flex items-center gap-1 inline-flex">
+<span class="material-symbols-outlined text-[14px]">timer</span>
+                  Today, 5:00 PM EST (Due in 3h)
+                </span>
+</div>
+</div>
+<!-- Dual Approval Gate Progress -->
+<div class="flex items-center justify-between font-label text-label pt-1">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-amber-600">how_to_reg</span>
+<span class="text-on-surface font-medium">1 of 2 required client sign-offs completed</span>
+</div>
+<span class="text-secondary text-[11px]">Dave K. approved • Awaiting Mia T.</span>
+</div>
+</article>
+<!-- Card 2: Single Origin Ethiopia Launch Carousel -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant hover:border-outline p-4 transition-all hover:bg-surface">
+<div class="flex items-start justify-between gap-3 mb-2">
+<div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-50 text-blue-800 border border-blue-200 font-label text-label mb-1.5">
+<span class="material-symbols-outlined text-[13px] text-blue-700">verified_user</span>
+                  Internal QA
+                </span>
+<h3 class="font-card-title text-card-title text-on-surface">Single Origin Ethiopia Launch Carousel</h3>
+<p class="font-label text-label text-on-surface-variant mt-0.5">
+                  Carousel • Instagram &amp; LinkedIn (6 slides)
+                </p>
+</div>
+<button class="px-3 py-1 rounded-md border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-table-dense transition-colors">
+                Review
+              </button>
+</div>
+<div class="grid grid-cols-2 gap-2 py-2.5 my-2 border-y border-outline-variant font-label text-label text-on-surface-variant">
+<div>
+<span class="text-secondary">Version:</span> <span class="text-on-surface font-medium">v3</span>
+<br/>
+<span class="text-secondary">Requester:</span> <span class="text-on-surface">Marcus Chen (Copywriter)</span>
+</div>
+<div>
+<span class="text-secondary">Due:</span>
+<span class="text-on-surface">Tomorrow, 11:00 AM EST</span>
+</div>
+</div>
+<div class="flex items-center justify-between font-label text-label pt-1">
+<span class="text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-emerald-600">check</span>
+                Copy deck &amp; visual assets ready
+              </span>
+<span class="text-secondary text-[11px]">3 comments</span>
+</div>
+</article>
+<!-- Card 3: Halloween Roast Promo — Motion Teaser -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant hover:border-outline p-4 transition-all hover:bg-surface">
+<div class="flex items-start justify-between gap-3 mb-2">
+<div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 font-label text-label mb-1.5">
+<span class="material-symbols-outlined text-[13px] text-amber-700">schedule</span>
+                  Client review
+                </span>
+<h3 class="font-card-title text-card-title text-on-surface">Halloween Roast Promo — Motion Teaser</h3>
+<p class="font-label text-label text-on-surface-variant mt-0.5">
+                  Stories / Short Video • Instagram Stories
+                </p>
+</div>
+<button class="px-3 py-1 rounded-md border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-table-dense transition-colors">
+                Review
+              </button>
+</div>
+<div class="grid grid-cols-2 gap-2 py-2.5 my-2 border-y border-outline-variant font-label text-label text-on-surface-variant">
+<div>
+<span class="text-secondary">Version:</span> <span class="text-on-surface font-medium">v1</span>
+<br/>
+<span class="text-secondary">Requester:</span> <span class="text-on-surface">Elena Rostova</span>
+</div>
+<div>
+<span class="text-secondary">Due:</span>
+<span class="text-on-surface">Oct 27, 2024</span>
+</div>
+</div>
+<div class="flex items-center justify-between font-label text-label pt-1">
+<span class="text-secondary flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">music_note</span>
+                Sound licensed &amp; cleared
+              </span>
+<span class="text-secondary text-[11px]">0 of 2 approvals</span>
+</div>
+</article>
+<!-- Card 4: Barista Tips: Dialing Espresso (Stories) -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant hover:border-outline p-4 transition-all hover:bg-surface">
+<div class="flex items-start justify-between gap-3 mb-2">
+<div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-800 border border-rose-200 font-label text-label mb-1.5">
+<span class="material-symbols-outlined text-[13px] text-rose-700">error</span>
+                  Internal QA • Needs changes
+                </span>
+<h3 class="font-card-title text-card-title text-on-surface">Barista Tips: Dialing Espresso (Stories)</h3>
+<p class="font-label text-label text-on-surface-variant mt-0.5">
+                  Vertical Video • 9:16 b-roll
+                </p>
+</div>
+<button class="px-3 py-1 rounded-md border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-table-dense transition-colors">
+                Review
+              </button>
+</div>
+<div class="grid grid-cols-2 gap-2 py-2.5 my-2 border-y border-outline-variant font-label text-label text-on-surface-variant">
+<div>
+<span class="text-secondary">Version:</span> <span class="text-on-surface font-medium">v1.1</span>
+<br/>
+<span class="text-secondary">Requester:</span> <span class="text-on-surface">Liam Vance</span>
+</div>
+<div>
+<span class="text-secondary">Due:</span>
+<span class="text-on-surface">Oct 28, 2024</span>
+</div>
+</div>
+<div class="flex items-center justify-between font-label text-label pt-1">
+<span class="text-rose-700 flex items-center gap-1 font-medium">
+<span class="material-symbols-outlined text-[16px]">warning</span>
+                Color grade clipped on second shot
+              </span>
+<span class="text-secondary text-[11px]">Blocked QA</span>
+</div>
+</article>
+</section>
+<!-- ===================================================================== -->
+<!-- RIGHT COLUMN: Selected Review Contextual Inspection Panel (~50%)      -->
+<!-- ===================================================================== -->
+<section aria-label="Deliverable Inspector" class="lg:col-span-6 bg-surface-container-lowest rounded-xl border border-outline-variant overflow-hidden flex flex-col">
+<!-- Inspection Header -->
+<div class="p-4 border-b border-outline-variant space-y-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-label text-label px-2 py-0.5 rounded bg-surface-container text-on-surface font-semibold">
+                  v2 (Current) - Oct 24, 11:30 AM
+                </span>
+<!-- Version Comparison Dropdown -->
+<div class="relative">
+<select class="appearance-none bg-surface border border-outline-variant rounded px-2 py-0.5 pe-6 font-label text-label text-on-surface-variant cursor-pointer">
+<option>Compare v1</option>
+<option>Side-by-side diff</option>
+</select>
+<span class="material-symbols-outlined absolute end-1 top-1/2 -translate-y-1/2 text-on-surface-variant text-[14px] pointer-events-none">expand_more</span>
+</div>
+</div>
+<!-- Safe Zone Toggle -->
+<button class="inline-flex items-center gap-1 px-2 py-1 rounded border border-outline-variant bg-surface font-label text-label text-on-surface-variant hover:text-on-surface">
+<span class="material-symbols-outlined text-[14px]">grid_4x4</span>
+<span>Safe zones: On</span>
+</button>
+</div>
+<div>
+<h2 class="font-section-title text-section-title text-on-surface">Autumn Cold Brew Reel — Final Cut</h2>
+</div>
+<!-- Gate Alert Banner -->
+<div class="p-2.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 font-label text-label flex items-start gap-2">
+<span class="material-symbols-outlined text-[18px] text-amber-700 shrink-0">info</span>
+<div>
+<strong class="font-semibold">Client review gate active:</strong> 1 of 2 approved (Dave K. signed off, awaiting Mia T.). Both required for auto-publish.
+              </div>
+</div>
+</div>
+<!-- Scrollable Body Container for Media & Metadata -->
+<div class="p-4 space-y-5 overflow-y-auto max-h-[calc(100vh-280px)]">
+<!-- Media Inspection Section: 9:16 Vertical Video Player Container -->
+<div class="bg-surface rounded-xl border border-outline-variant p-4 flex flex-col items-center">
+<div class="relative w-full max-w-[280px] aspect-[9/16] bg-black rounded-lg overflow-hidden border border-outline-variant shadow-sm group">
+<!-- Preview Image with high-detail data-alt prompt -->
+<img class="w-full h-full object-cover" data-alt="Cinematic commercial shot of cold brew coffee in a clear fluted glass on a clean wooden countertop. Thick, velvety Madagascar vanilla foam is being poured from a stainless steel beaker, cascading softly down the dark ice cubes. The lighting is warm morning studio illumination with soft shadows and crisp condensation droplets on the glass surface. Modern corporate coffee advertising aesthetic with vibrant, natural earthy tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-ullkAcwF2IANDP2Jfwz_SMi2ze1-6R54Fu6R8laLDdSc_j9ax9xhaCwmGjtx7Odw3E-yQ-GUooaNK7zCWJucXfQcfubxR7qXsfbuBdjUsRwviOSWB2EYWie4qZWB2OK-1e_3rzdOztuyBxZvJD7HmYx1sNtdoJttrfq_dQ-0g9Y7gZ4xl_TwQyOOki5Wu9xAnBcdJgCucTLPzQYoSAstyg2h0F371VUOVBoNgloGs9627M70a3WzY5rXEa762v3LKy0lt82-SRX4"/>
+<!-- UI Safe Zone Overlay grid representation -->
+<div class="absolute inset-0 pointer-events-none border border-dashed border-primary/40 m-4 rounded flex flex-col justify-between p-2">
+<div class="flex justify-between items-center text-[10px] text-white/70 font-mono">
+<span>9:16 SAFE AREA</span>
+<span>TIKTOK / REELS</span>
+</div>
+<div class="text-[10px] text-white/70 font-mono text-center">
+                    CAPTION BOUNDARY
+                  </div>
+</div>
+<!-- Video Controls Mockup Overlay -->
+<div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-3 text-white">
+<!-- Progress Bar -->
+<div class="w-full h-1 bg-white/30 rounded-full mb-2 cursor-pointer">
+<div class="w-1/2 h-full bg-primary-container rounded-full"></div>
+</div>
+<div class="flex items-center justify-between text-xs font-mono">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] cursor-pointer">pause</span>
+<span>0:14 / 0:28</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="px-1 py-0.5 rounded bg-white/20 text-[10px]">4K 60fps</span>
+<span class="material-symbols-outlined text-[16px] cursor-pointer">fullscreen</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Audio tag info -->
+<div class="mt-3 flex items-center gap-1.5 font-label text-label text-on-surface-variant bg-surface-container px-3 py-1.5 rounded-lg border border-outline-variant">
+<span class="material-symbols-outlined text-[16px] text-primary">graphic_eq</span>
+<span>Audio: Autumn Jazz Beats #TRK-8812 (Cleared for commercial use)</span>
+</div>
+</div>
+<!-- Accompanying Copy & Brief Checklist -->
+<div class="space-y-4">
+<!-- Caption card -->
+<div class="rounded-lg border border-outline-variant p-3 bg-surface">
+<div class="flex items-center justify-between mb-1">
+<span class="font-button text-label text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">notes</span>
+                    Social Caption
+                  </span>
+<button class="font-label text-[11px] text-primary hover:underline flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">content_copy</span>
+                    Copy text
+                  </button>
+</div>
+<p class="font-body text-table-dense text-on-surface">
+                  Crisp mornings call for slow-steeped cold brew crowned with Madagascar vanilla cold foam. 🍂✨ Steeped for 18 hours, finished in seconds. Available at all Seattle roasteries &amp; order ahead.
+                </p>
+<div class="mt-2 text-primary font-body text-table-dense font-medium">
+                  #ColdBrewSeason #NorthstarCoffee #SpecialtyCoffee
+                </div>
+</div>
+<!-- Production Brief Alignment -->
+<div class="rounded-lg border border-outline-variant p-3 bg-surface">
+<span class="font-button text-label text-on-surface flex items-center gap-1.5 mb-1.5">
+<span class="material-symbols-outlined text-[16px] text-secondary">fact_check</span>
+                  Production Brief Alignment
+                </span>
+<p class="font-body text-table-dense text-on-surface-variant">
+<strong class="text-on-surface">Target Audience:</strong> Urban morning commuters (Ages 21–36).<br/>
+<strong class="text-on-surface">Key deliverable:</strong> Focus on Madagascar vanilla foam cascade over 18h cold brew.
+                </p>
+<!-- Technical QA verification chips -->
+<div class="flex flex-wrap gap-2 mt-2.5 pt-2 border-t border-outline-variant">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-label text-[11px]">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                    4K Master Render ✓
+                  </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-label text-[11px]">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                    Caption QA Passed ✓
+                  </span>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200 font-label text-[11px]">
+<span class="material-symbols-outlined text-[12px]">check</span>
+                    Sync Rights OK ✓
+                  </span>
+</div>
+</div>
+<!-- Discussion & Review Notes Section -->
+<div class="space-y-3 pt-2">
+<div class="flex items-center justify-between border-b border-outline-variant pb-2">
+<h4 class="font-card-title text-table-dense text-on-surface flex items-center gap-1.5 font-semibold">
+<span class="material-symbols-outlined text-[16px]">chat_bubble_outline</span>
+                    Review Notes &amp; Activity
+                  </h4>
+<div class="flex items-center gap-2">
+<button class="font-label text-label px-2 py-0.5 rounded bg-surface-container text-primary font-semibold">All (4)</button>
+<button class="font-label text-label px-2 py-0.5 text-on-surface-variant hover:text-on-surface">Client (2)</button>
+<button class="font-label text-label px-2 py-0.5 text-on-surface-variant hover:text-on-surface">Internal (2)</button>
+</div>
+</div>
+<!-- Threaded Comment 1: Internal QA -->
+<div class="flex items-start gap-3 p-2.5 rounded-lg bg-surface border border-outline-variant">
+<div class="w-7 h-7 rounded-full bg-primary text-on-primary text-xs flex items-center justify-center font-semibold shrink-0">
+                    SJ
+                  </div>
+<div class="space-y-1 flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-button text-table-dense text-on-surface">Sarah Jenkins</span>
+<span class="font-label text-[10px] px-1.5 py-0.2 rounded bg-surface-container text-secondary">Internal QA</span>
+</div>
+<span class="font-label text-[11px] text-on-surface-variant">Today, 11:45 AM</span>
+</div>
+<p class="font-body text-table-dense text-on-surface-variant">
+                      Checked color contrast on OLED mobile displays; foam separation looks crisp and legible against background. Good to proceed to client gate.
+                    </p>
+</div>
+</div>
+<!-- Threaded Comment 2: Client Sign-off -->
+<div class="flex items-start gap-3 p-2.5 rounded-lg bg-amber-50/50 border border-amber-200">
+<div class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs flex items-center justify-center font-semibold shrink-0">
+                    DK
+                  </div>
+<div class="space-y-1 flex-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="font-button text-table-dense text-on-surface">Dave K.</span>
+<span class="font-label text-[10px] px-1.5 py-0.2 rounded bg-amber-100 text-amber-800">Client Approver</span>
+</div>
+<span class="font-label text-[11px] text-on-surface-variant">Today, 1:15 PM</span>
+</div>
+<p class="font-body text-table-dense text-on-surface-variant">
+                      Looks fantastic. The slow pour shot is delicious and on-brand. Approved on our side! Awaiting Mia's final branding review.
+                    </p>
+</div>
+</div>
+<!-- Add Note Input Field -->
+<div class="border border-outline-variant rounded-lg p-2.5 bg-surface-container-lowest focus-within:border-primary-container transition-all">
+<textarea class="w-full bg-transparent border-0 p-0 font-body text-table-dense text-on-surface placeholder:text-on-surface-variant focus:ring-0 resize-none" placeholder="Leave a review note or request specific revisions..." rows="2"></textarea>
+<div class="flex items-center justify-between pt-2 border-t border-outline-variant mt-1">
+<label class="flex items-center gap-1.5 font-label text-[12px] text-on-surface-variant cursor-pointer">
+<input checked="" class="rounded border-outline-variant text-primary-container focus:ring-primary-container h-3.5 w-3.5" type="checkbox"/>
+                      Make visible to Northstar Coffee client
+                    </label>
+<button class="px-2.5 py-1 rounded bg-surface-container text-on-surface hover:bg-surface-container-high font-button text-label">
+                      Post Note
+                    </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Deliberate Decisions Bar (Sticky at Bottom of Panel) -->
+<footer class="p-4 border-t border-outline-variant bg-surface-container-lowest space-y-2">
+<div class="flex items-center gap-3">
+<!-- Primary Dominant Action Button -->
+<button class="flex-1 py-2.5 px-4 rounded-lg bg-primary-container text-on-primary font-button text-button flex items-center justify-center gap-2 hover:bg-primary transition-all active:scale-[0.98] shadow-sm">
+<span class="material-symbols-outlined text-[20px]">check_circle</span>
+                Approve deliverable
+              </button>
+<!-- Secondary Action Button -->
+<button class="py-2.5 px-4 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface font-button text-button flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-[18px]">edit_note</span>
+                Request changes
+              </button>
+<!-- Tertiary Action Button -->
+<button class="py-2.5 px-3 rounded-lg text-secondary hover:text-on-surface hover:bg-surface-container-low font-button text-button transition-all">
+                Keep in review
+              </button>
+</div>
+<!-- Helper Subtext for Context -->
+<p class="font-label text-label text-center text-on-surface-variant">
+              Publishing scheduled for Oct 24, 5:00 PM EST upon approval. Step 2 of 2.
+            </p>
+</footer>
+</section>
+</div>
+</div>
+</main>
+</body></html>

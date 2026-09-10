@@ -93,8 +93,8 @@ export function MediaLibraryPage({
     return `${basePath}?${params.toString()}`;
   };
   return (
-    <div className="space-y-6" data-testid="media-library">
-      <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
+    <div className="flex flex-col gap-6" data-testid="media-library">
+      <header className="order-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
           <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
           <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
@@ -113,7 +113,12 @@ export function MediaLibraryPage({
           ) : null}
         </div>
       </header>
-      <Card variant="subtle" padding="md" data-testid="media-storage-destination">
+      <Card
+        variant="subtle"
+        padding="md"
+        className="order-3 sm:order-2"
+        data-testid="media-storage-destination"
+      >
         <div className="min-w-0">
           <h2 className="text-title-card text-fg-primary font-semibold">
             {t("media.storageDestinationTitle")}
@@ -147,7 +152,7 @@ export function MediaLibraryPage({
         <p className="text-label text-fg-muted mt-4">{t("media.storageFileNameRule")}</p>
       </Card>
       {canUpload ? (
-        <div id="media-upload" className="scroll-mt-4">
+        <div id="media-upload" className="order-2 scroll-mt-4 sm:order-3">
           <MediaSourcePicker
             workspaceOptions={workspaceOptions}
             folderOptionsByWorkspace={folderOptionsByWorkspace}
@@ -155,7 +160,7 @@ export function MediaLibraryPage({
           />
         </div>
       ) : null}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+      <div className="order-4 flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="grid gap-3 lg:w-56 lg:shrink-0">
           {folderWorkspaceOptions.map((workspace) => (
             <MediaFolderSidebar

@@ -119,28 +119,34 @@ export default async function BrandKitTemplatesPage({
         testId="template-section-colors"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {colorTemplates.map((t) => (
+          {colorTemplates.map((template) => (
             <TemplateCard
-              key={t.id}
+              key={template.id}
               kind="palette"
               slug={slug}
-              templateId={t.id}
-              title={t.name}
-              blurb={t.blurb}
+              templateId={template.id}
+              title={template.name}
+              blurb={template.blurb}
               preview={
                 <>
-                  {t.swatches.map((s) => (
+                  {template.swatches.map((s) => (
                     <span
-                      key={s.hex}
+                      key={`${s.role}-${s.hex}`}
                       className="border-border h-6 w-6 rounded-full border"
                       style={{ backgroundColor: s.hex }}
                       title={`${s.name} (${s.hex})`}
+                      role="img"
                       aria-label={`${s.name} ${s.hex}`}
                     />
                   ))}
                 </>
               }
-              meta={`${t.swatches.length} swatches`}
+              meta={t(
+                template.swatches.length === 1
+                  ? "brandKit.templatesMeta.swatchOne"
+                  : "brandKit.templatesMeta.swatchMany",
+                { count: template.swatches.length },
+              )}
             />
           ))}
         </div>
@@ -153,19 +159,19 @@ export default async function BrandKitTemplatesPage({
         testId="template-section-typography"
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {typographyTemplates.map((t) => (
+          {typographyTemplates.map((template) => (
             <TemplateCard
-              key={t.id}
+              key={template.id}
               kind="typography"
               slug={slug}
-              templateId={t.id}
-              title={t.name}
-              blurb={t.blurb}
+              templateId={template.id}
+              title={template.name}
+              blurb={template.blurb}
               preview={
                 <>
-                  {t.faces.map((f) => (
+                  {template.faces.map((f) => (
                     <span
-                      key={f.family}
+                      key={`${f.family}-${f.role}`}
                       className={cn(
                         "border-border bg-surface-subtle text-label rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold",
                         fontClassFor(f.family) ?? "",
@@ -176,7 +182,12 @@ export default async function BrandKitTemplatesPage({
                   ))}
                 </>
               }
-              meta={`${t.faces.length} face${t.faces.length === 1 ? "" : "s"}`}
+              meta={t(
+                template.faces.length === 1
+                  ? "brandKit.templatesMeta.faceOne"
+                  : "brandKit.templatesMeta.faceMany",
+                { count: template.faces.length },
+              )}
             />
           ))}
         </div>
@@ -209,8 +220,8 @@ export default async function BrandKitTemplatesPage({
 
       {!canManage ? (
         <p className="text-label text-fg-muted text-center" role="status">
-          You need workspace-manager access to add templates.{" "}
-          {canEdit ? "Ask a manager to apply these." : ""}
+          {t("brandKit.templatesPermission.managerRequired")}{" "}
+          {canEdit ? t("brandKit.templatesPermission.askManager") : ""}
         </p>
       ) : null}
     </div>

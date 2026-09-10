@@ -1,7 +1,8 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
-import { Clock } from "lucide-react";
+import { CalendarDays, Clock } from "lucide-react";
+import { EmptyState } from "@/components/feedback/empty-state";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -75,21 +76,30 @@ export default async function ClientCalendarPage({
         }
       />
       <Card padding="none">
-        <ul className="divide-border divide-y">
-          {rows.map((row) => (
-            <li key={row.id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
-              <time className="bg-surface-subtle text-label flex h-12 w-12 flex-col items-center justify-center rounded-[var(--radius-control)]">
-                <strong className="text-title-card">{row.plannedPublishAt.getDate()}</strong>
-                {formatDate(row.plannedPublishAt, code, { month: "short" })}
-              </time>
-              <div className="min-w-0 flex-1">
-                <p className="text-body font-semibold">{row.title}</p>
-                <p className="text-label text-fg-secondary">{humanFormat(row.format)}</p>
-              </div>
-              <StatusBadge status={row.status} />
-            </li>
-          ))}
-        </ul>
+        {rows.length > 0 ? (
+          <ul className="divide-border divide-y">
+            {rows.map((row) => (
+              <li key={row.id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
+                <time className="bg-surface-subtle text-label flex h-12 w-12 flex-col items-center justify-center rounded-[var(--radius-control)]">
+                  <strong className="text-title-card">{row.plannedPublishAt.getDate()}</strong>
+                  {formatDate(row.plannedPublishAt, code, { month: "short" })}
+                </time>
+                <div className="min-w-0 flex-1">
+                  <p className="text-body font-semibold">{row.title}</p>
+                  <p className="text-label text-fg-secondary">{humanFormat(row.format)}</p>
+                </div>
+                <StatusBadge status={row.status} />
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            className="rounded-none border-0"
+            icon={<CalendarDays className="h-8 w-8" aria-hidden="true" />}
+            title={t("sidebar.clientCalendarPage.emptyTitle")}
+            description={t("sidebar.clientCalendarPage.emptyDescription")}
+          />
+        )}
       </Card>
     </div>
   );

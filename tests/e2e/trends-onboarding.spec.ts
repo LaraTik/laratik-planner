@@ -23,7 +23,11 @@ import { bootstrapTestSession } from "./_helpers";
 test.describe("Trend Radar — first-run onboarding", () => {
   const workspaceSlug = "trend-onboarding";
   test.beforeEach(async ({ page }) => {
-    await bootstrapTestSession(page, { agencySlug: "trend-onboarding-agency", workspaceSlug });
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-onboarding-agency",
+      workspaceSlug,
+      enableTrendRadar: true,
+    });
   });
 
   test("wizard → 4 sources → trends page", async ({ page }: { page: Page }) => {

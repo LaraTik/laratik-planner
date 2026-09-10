@@ -1,12 +1,11 @@
-# Google Stitch MCP — how to access the design
+# Google Stitch MCP — how to access the current design
 
-> **Source design system:** `https://stitch.withgoogle.com/projects/5403097764334458790`
-> (StudioFlow Production Development Master Prompt — 27 canonical screens).
+> **Current source design system:** `https://stitch.withgoogle.com/projects/16083107078886291815`
+> (LaraTik Planner current product flow — 25 curated screens).
 >
-> **Captured artefacts:** `./designs/stitch/` — 49 PNGs + 49 HTMLs + `DESIGN.md`
-> (color/typography/spacing tokens). The captured copy is the local source of
-> truth for visual parity work; the Stitch MCP is the live upstream when the
-> project is updated.
+> **Captured artefacts:** `./designs/stitch-current/` — 25 PNGs + 25 HTMLs +
+> `manifest.json`. The historical `./designs/stitch/` capture and project
+> remain archived for traceability; they are not the current parity target.
 
 This document explains how to reach the live Stitch design when the captured
 copy is stale (new screens, revised flows, updated tokens). It is a quick
@@ -14,10 +13,9 @@ recipe, not a tutorial — the Stitch team owns the canonical MCP docs.
 
 ## When to refresh from the live MCP
 
-Refresh **only** when the user reports an upstream change (new Stitch screen,
-token change, layout change). The repo already carries a frozen copy; rebuilding
-that copy on every session is wasteful and the captured PNGs are the visual
-regression baselines.
+Refresh when the current repo flow changes, or when the user reports an upstream
+Stitch change (new screen, token change, layout change). The current project and
+its capture are the parity target; keep the historical project untouched.
 
 Refresh triggers in priority order:
 
@@ -29,13 +27,13 @@ Refresh triggers in priority order:
 
 ## Endpoints and auth
 
-| Resource      | Value                                                        |
-| ------------- | ------------------------------------------------------------ |
-| MCP URL       | `https://stitch.googleapis.com/mcp`                          |
-| Auth header   | `X-Goog-Api-Key: <key>` (NOT `Authorization: Bearer`)        |
-| Project ID    | `5403097764334458790` (digits only — see "Gotchas" below)    |
-| Design system | `assets/e2bbd2e84f524a5eb7e1aa20a22d7531`                    |
-| Stitch UI     | `https://stitch.withgoogle.com/projects/5403097764334458790` |
+| Resource      | Value                                                         |
+| ------------- | ------------------------------------------------------------- |
+| MCP URL       | `https://stitch.googleapis.com/mcp`                           |
+| Auth header   | `X-Goog-Api-Key: <key>` (NOT `Authorization: Bearer`)         |
+| Project ID    | `16083107078886291815` (digits only — see "Gotchas" below)    |
+| Design system | `assets/14000568228937989951`                                 |
+| Stitch UI     | `https://stitch.withgoogle.com/projects/16083107078886291815` |
 
 The API key is the same one that powers the Stitch web app for the project
 owner. Treat it as a personal secret — do **not** commit it, do **not** paste
@@ -46,11 +44,11 @@ copy in `./designs/stitch/` is the canonical artifact for the build.
 
 Three MCP tools cover everything you need for visual parity work:
 
-| Tool                  | Param shape                                         | Returns                                  |
-| --------------------- | --------------------------------------------------- | ---------------------------------------- |
-| `list_screens`        | `projectId: "5403097764334458790"`                  | All screens in the project (id + title)  |
-| `get_screen`          | `name: "projects/5403097764334458790/screens/<id>"` | Full HTML + design tokens for one screen |
-| `list_design_systems` | (no params)                                         | Available design systems (id + name)     |
+| Tool                  | Param shape                                          | Returns                                  |
+| --------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| `list_screens`        | `projectId: "16083107078886291815"`                  | All screens in the project (id + title)  |
+| `get_screen`          | `name: "projects/16083107078886291815/screens/<id>"` | Full HTML + design tokens for one screen |
+| `list_design_systems` | (no params)                                          | Available design systems (id + name)     |
 
 There is no `get_project` tool that takes the project ID directly. Use
 `list_screens` first to enumerate, then `get_screen` per ID.
@@ -58,13 +56,13 @@ There is no `get_project` tool that takes the project ID directly. Use
 ## Recipe — re-capture one screen
 
 ```text
-1. list_screens({ projectId: "5403097764334458790" })
-   → [{ id: "f2bf40ae...", title: "Workspace Overview" }, ...]
+1. list_screens({ projectId: "16083107078886291815" })
+   → [{ id: "9821d2eb...", title: "Workspace Overview" }, ...]
 
-2. get_screen({ name: "projects/5403097764334458790/screens/f2bf40ae..." })
+2. get_screen({ name: "projects/16083107078886291815/screens/9821d2eb..." })
    → HTML string, design tokens, screen dimensions
 
-3. Save the HTML to designs/stitch/<id>_<slug>.html
+3. Save the HTML to designs/stitch-current/<id>_<slug>.html
 4. If a PNG is needed, the get_screen response includes a download URL
    served from a CDN — these are 512px thumbnails, not 2560px originals.
    The 2560px PNG requires authenticated access; do not assume the
@@ -78,12 +76,13 @@ regression harness screenshots against when `--update-snapshots` is run.
 ## Recipe — re-capture all screens
 
 ```text
-1. list_screens  → 49 screen IDs
+1. Read `designs/stitch-current/manifest.json` to identify the 25 current
+   screen references, then verify them with `get_screen`.
 2. for each id: get_screen
-3. write designs/stitch/<id>_<slug>.html
-4. update designs/stitch/DESIGN.md if tokens changed
-5. add the new screen to SCREEN_PARITY.md
-6. commit with:  chore(design): refresh stitch capture
+3. write designs/stitch-current/<id>_<slug>.html and the matching PNG
+4. update `manifest.json` when screens are added, removed, or replaced
+5. update `docs/visual-parity/CURRENT_SYNC.md` with route and rationale changes
+6. commit with:  chore(design): refresh current stitch capture
 7. run pnpm format:check  (the captured HTML is auto-generated, do not
    let prettier touch it — make sure designs/ is in .prettierignore)
 ```
@@ -92,8 +91,9 @@ regression harness screenshots against when `--update-snapshots` is run.
 
 ## Tokens — what `DESIGN.md` is for
 
-`designs/stitch/DESIGN.md` is the human-readable token reference. After
-refreshing from the MCP, regenerate the relevant sections:
+The current design system is documented in `docs/visual-parity/CURRENT_SYNC.md`.
+After refreshing from the MCP, update that document if tokens or responsive
+rules change. The historical `designs/stitch/DESIGN.md` remains an archive.
 
 | Token category  | Source                                                                 |
 | --------------- | ---------------------------------------------------------------------- |
@@ -108,7 +108,7 @@ them — never hardcode a Stitch token name in a component.
 
 ## Gotchas (learned the hard way)
 
-1. **Project ID is digits only.** Passing `"projects/5403097764334458790"`
+1. **Project ID is digits only.** Passing `"projects/16083107078886291815"`
    to `list_screens` returns "Request contains an invalid argument". Pass
    the bare integer string.
 
@@ -130,7 +130,7 @@ them — never hardcode a Stitch token name in a component.
 
 5. **Do not commit the API key.** Even though the Stitch project is
    single-owner, the key is a personal secret. The captured copy in
-   `./designs/stitch/` is the in-repo canonical artifact; the MCP is
+   `./designs/stitch-current/` is the in-repo current artifact; the MCP is
    only needed for refreshes.
 
 ## Related files
@@ -141,6 +141,9 @@ them — never hardcode a Stitch token name in a component.
   that identified which screens needed the M2/M3 refactor
 - `docs/production-readiness/SCREEN_PARITY.md` — the 27-row matrix
   that tracks each Stitch screen against the laratik-planner route
-- `designs/stitch/DESIGN.md` — the captured token reference
+- `docs/visual-parity/CURRENT_SYNC.md` — the current source, inventory, and
+  responsive visual contract
+- `designs/stitch-current/manifest.json` — current screen IDs and routes
+- `designs/stitch/DESIGN.md` — the historical token reference
 - `tests/e2e/visual-regression.spec.ts` — the harness that uses
   captured HTML to mask dynamic data

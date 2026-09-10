@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Media library · Northstar Coffee — LaraTik Planner</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-surface-variant": "#464555",
+            "primary-container": "#4f46e5",
+            "secondary-fixed": "#dae3f8",
+            "on-primary": "#ffffff",
+            "on-secondary-fixed-variant": "#3e4758",
+            "on-primary-fixed-variant": "#3323cc",
+            "secondary": "#565f70",
+            "on-tertiary-fixed-variant": "#004b74",
+            "surface-variant": "#d9e2fc",
+            "surface-tint": "#4d44e3",
+            "surface-bright": "#f9f9ff",
+            "outline-variant": "#c7c4d8",
+            "outline": "#777587",
+            "surface-container": "#e9edff",
+            "surface": "#f9f9ff",
+            "surface-dim": "#d1daf4",
+            "on-error": "#ffffff",
+            "surface-container-high": "#e1e8ff",
+            "inverse-primary": "#c3c0ff",
+            "on-secondary": "#ffffff",
+            "primary-fixed": "#e2dfff",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-fixed": "#0f0069",
+            "tertiary-fixed-dim": "#94ccff",
+            "on-secondary-container": "#5a6375",
+            "on-tertiary-container": "#bfdfff",
+            "surface-container-low": "#f1f3ff",
+            "tertiary-container": "#00659c",
+            "on-secondary-fixed": "#131c2b",
+            "on-error-container": "#93000a",
+            "primary-fixed-dim": "#c3c0ff",
+            "on-tertiary-fixed": "#001d32",
+            "secondary-container": "#d7e0f5",
+            "secondary-fixed-dim": "#bec7db",
+            "primary": "#3525cd",
+            "error-container": "#ffdad6",
+            "on-primary-container": "#dad7ff",
+            "on-background": "#121b2e",
+            "background": "#f9f9ff",
+            "on-tertiary": "#ffffff",
+            "tertiary-fixed": "#cde5ff",
+            "surface-container-highest": "#d9e2fc",
+            "inverse-surface": "#273044",
+            "on-surface": "#121b2e",
+            "inverse-on-surface": "#edf0ff",
+            "error": "#ba1a1a",
+            "tertiary": "#004c77"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "spacing": {
+            "screen-padding": "24px",
+            "gutter": "16px",
+            "card-padding": "16px",
+            "topbar-height": "64px",
+            "sidebar-collapsed": "72px",
+            "sidebar-expanded": "248px",
+            "base": "4px",
+            "touch-target-min": "44px"
+          },
+          "fontFamily": {
+            "table-dense": ["Inter"],
+            "page-title": ["Inter"],
+            "section-title": ["Inter"],
+            "body": ["Inter"],
+            "card-title": ["Inter"],
+            "button": ["Inter"],
+            "label": ["Inter"]
+          },
+          "fontSize": {
+            "table-dense": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "page-title": ["28px", { "lineHeight": "36px", "fontWeight": "600" }],
+            "section-title": ["20px", { "lineHeight": "28px", "fontWeight": "600" }],
+            "body": ["14px", { "lineHeight": "21px", "fontWeight": "400" }],
+            "card-title": ["16px", { "lineHeight": "24px", "fontWeight": "600" }],
+            "button": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "label": ["12px", { "lineHeight": "16px", "fontWeight": "500" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: 'liga';
+      -webkit-font-smoothing: antialiased;
+    }
+    /* Scrollbar refinement for calm dense SaaS */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #c7c4d8;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #777587;
+    }
+  </style>
+</head>
+<body class="bg-[#F7F7F5] text-on-surface antialiased h-full overflow-hidden flex font-body">
+<!-- ==================== FIXED LEFT SIDEBAR (248px) ==================== -->
+<aside class="fixed top-0 left-0 h-screen w-sidebar-expanded z-40 flex flex-col justify-between bg-surface-container-lowest border-r border-outline-variant select-none">
+<!-- Top section: Workspace Switcher & Main Nav -->
+<div class="flex flex-col">
+<!-- Agency & Workspace Brand Header -->
+<div class="p-4 border-b border-outline-variant">
+<div class="flex items-center gap-2.5 mb-2">
+<div class="w-7 h-7 rounded-lg bg-primary-container text-on-primary flex items-center justify-center font-semibold text-xs shadow-xs">
+            LT
+          </div>
+<div class="flex flex-col min-w-0">
+<span class="font-card-title text-card-title text-on-surface font-semibold truncate leading-tight">LaraTik Agency</span>
+<span class="font-label text-[11px] text-on-surface-variant truncate">Global Workspace</span>
+</div>
+</div>
+<!-- Active Client Workspace Switcher Capsule -->
+<button class="w-full mt-2 flex items-center justify-between p-2 rounded-lg bg-surface-container-low hover:bg-surface-container-high border border-outline-variant transition-colors duration-150 text-left" type="button">
+<div class="flex items-center gap-2 min-w-0">
+<div class="w-5 h-5 rounded-full bg-[#38220f] text-[#f5ebd7] flex items-center justify-center text-[10px] font-bold">
+              ☕
+            </div>
+<div class="truncate">
+<p class="text-xs font-semibold text-on-surface truncate leading-tight">Northstar Coffee</p>
+<p class="text-[10px] text-secondary truncate leading-tight">Specialty Roastery</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-secondary text-base">unfold_more</span>
+</button>
+</div>
+<!-- Quick Action: New Post button -->
+<div class="px-3 pt-3 pb-1">
+<button class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary-container text-on-primary font-button text-button hover:bg-primary transition-colors duration-150 active:scale-[0.98]" type="button">
+<span class="material-symbols-outlined text-lg">add</span>
+<span>New Post</span>
+</button>
+</div>
+<!-- Nav Items List -->
+<nav aria-label="Main Navigation" class="p-2 space-y-0.5 overflow-y-auto max-h-[calc(100vh-270px)]">
+<!-- Overview -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">dashboard</span>
+<span class="truncate">Overview</span>
+</a>
+<!-- Planning -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">calendar_today</span>
+<span class="truncate">Planning</span>
+</a>
+<!-- Board -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">view_kanban</span>
+<span class="truncate">Board</span>
+</a>
+<!-- Calendar -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">event</span>
+<span class="truncate">Calendar</span>
+</a>
+<!-- Reviews with badge 3 -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-3 min-w-0">
+<span class="material-symbols-outlined text-secondary">rate_review</span>
+<span class="truncate">Reviews</span>
+</div>
+<span class="px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-secondary-container text-on-secondary-container">3</span>
+</a>
+<!-- Media (ACTIVE TAB) -->
+<a aria-current="page" class="flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-high text-primary font-button text-button shadow-xs" href="#">
+<div class="flex items-center gap-3 min-w-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">perm_media</span>
+<span class="truncate">Media</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+</a>
+<!-- Design queue with badge 2 -->
+<a class="flex items-center justify-between px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<div class="flex items-center gap-3 min-w-0">
+<span class="material-symbols-outlined text-secondary">palette</span>
+<span class="truncate">Design queue</span>
+</div>
+<span class="px-1.5 py-0.5 text-[11px] font-semibold rounded-full bg-surface-container-highest text-secondary">2</span>
+</a>
+<!-- Channels -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">share</span>
+<span class="truncate">Channels</span>
+</a>
+<!-- Brand kit -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">auto_stories</span>
+<span class="truncate">Brand kit</span>
+</a>
+<!-- Team -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">group</span>
+<span class="truncate">Team</span>
+</a>
+</nav>
+</div>
+<!-- Bottom section: Settings & Workspace status badge -->
+<div class="p-3 border-t border-outline-variant space-y-2">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-body text-body hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-secondary">settings</span>
+<span class="truncate">Settings</span>
+</a>
+<!-- Operational seat & sync badge -->
+<div class="px-3 py-2 rounded-lg bg-surface-container-low border border-outline-variant">
+<div class="flex items-center gap-1.5 mb-1">
+<span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+<span class="font-label text-[11px] text-on-surface font-medium">Workspace active</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-secondary">
+<span>5 of 8 seats used</span>
+<span class="hover:underline cursor-pointer text-primary">Manage</span>
+</div>
+</div>
+</div>
+</aside>
+<!-- ==================== FIXED TOP NAVBAR (64px) ==================== -->
+<header class="fixed top-0 right-0 left-sidebar-expanded h-topbar-height z-30 flex items-center justify-between px-screen-padding bg-surface-container-lowest border-b border-outline-variant select-none">
+<!-- Left: Breadcrumb trail + Universal asset/campaign search -->
+<div class="flex items-center gap-5 flex-1 max-w-2xl">
+<!-- Breadcrumb -->
+<nav class="flex items-center space-x-1.5 text-xs text-secondary font-label whitespace-nowrap">
+<span class="hover:text-on-surface cursor-pointer">Workspaces</span>
+<span class="material-symbols-outlined text-sm text-outline">chevron_right</span>
+<span class="hover:text-on-surface cursor-pointer">Northstar Coffee</span>
+<span class="material-symbols-outlined text-sm text-outline">chevron_right</span>
+<span class="font-semibold text-on-surface">Media</span>
+</nav>
+<span class="h-4 w-[1px] bg-outline-variant"></span>
+<!-- Topbar Fast Search Field -->
+<div class="relative w-full max-w-md">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">search</span>
+<input class="w-full pl-8 pr-8 py-1.5 text-xs bg-surface-container-low border border-outline-variant rounded-md text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container" placeholder="Search assets, tags, campaigns..." type="text"/>
+<kbd class="absolute right-2 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-[10px] text-secondary bg-surface-container-lowest border border-outline-variant rounded font-mono">⌘K</kbd>
+</div>
+</div>
+<!-- Right: Operational indicators & User actions -->
+<div class="flex items-center gap-3">
+<!-- System status indicator pill -->
+<div class="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-label">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+<span>All systems operational</span>
+</div>
+<!-- Quick Icon Actions -->
+<div class="flex items-center border-l border-outline-variant pl-3 space-x-1">
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150 relative" title="Notifications" type="button">
+<span class="material-symbols-outlined text-xl">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary ring-2 ring-surface-container-lowest"></span>
+</button>
+<button class="p-2 rounded-lg text-secondary hover:bg-surface-container-low hover:text-on-surface transition-colors duration-150" title="Help &amp; documentation" type="button">
+<span class="material-symbols-outlined text-xl">help</span>
+</button>
+</div>
+<!-- User Profile Capsule -->
+<div class="flex items-center gap-2.5 pl-2 border-l border-outline-variant cursor-pointer hover:opacity-90">
+<div class="w-8 h-8 rounded-full bg-primary-fixed text-on-primary-fixed flex items-center justify-center font-semibold text-xs">
+          SJ
+        </div>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-xs font-semibold text-on-surface leading-tight">Sarah Jenkins</span>
+<span class="text-[11px] text-secondary leading-tight">Production Lead</span>
+</div>
+<span class="material-symbols-outlined text-secondary text-base">expand_more</span>
+</div>
+</div>
+</header>
+<!-- ==================== MAIN WORKSPACE CONTAINER ==================== -->
+<main class="ml-sidebar-expanded mt-topbar-height flex-1 h-[calc(100vh-64px)] flex overflow-hidden">
+<!-- LEFT & CENTER SCROLLABLE CANVAS (Asset Grid + Controls) -->
+<section class="flex-1 flex flex-col h-full overflow-y-auto border-r border-outline-variant">
+<!-- 1. PAGE HEADER -->
+<div class="px-6 pt-5 pb-4 bg-surface-container-lowest border-b border-outline-variant shrink-0">
+<div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div>
+<div class="flex items-center gap-3">
+<h1 class="font-page-title text-2xl font-bold tracking-tight text-on-surface">Media library</h1>
+<span class="px-2.5 py-0.5 text-xs font-medium rounded-md bg-surface-container text-secondary">
+                Northstar Roastery Library
+              </span>
+</div>
+<p class="font-body text-xs text-secondary mt-1">
+              Find, organize, preview, and safely reuse approved brand media assets.
+            </p>
+</div>
+<!-- Header Right Actions & Storage Indicator -->
+<div class="flex items-center gap-3">
+<!-- Storage usage capsule -->
+<div class="hidden sm:flex flex-col items-end text-right px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-on-surface">
+<span class="material-symbols-outlined text-secondary text-sm">cloud_done</span>
+<span>42.8 GB / 100 GB</span>
+</div>
+<div class="w-28 bg-surface-container-high h-1 rounded-full mt-1 overflow-hidden">
+<div class="bg-primary-container h-full rounded-full" style="width: 42%;"></div>
+</div>
+<span class="text-[10px] text-secondary mt-0.5">384 assets · 42% used</span>
+</div>
+<!-- Action buttons -->
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface text-xs font-semibold hover:bg-surface-container-low transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-base">create_new_folder</span>
+<span>New folder</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface text-xs font-semibold hover:bg-surface-container-low transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-base">drive_file_move</span>
+<span>Bulk operations</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-primary-container text-on-primary text-xs font-button hover:bg-primary transition-colors duration-150 shadow-xs" type="button">
+<span class="material-symbols-outlined text-base">cloud_upload</span>
+<span>Upload media</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 2. FILTER & ACTION CONTROL STRIP -->
+<div class="bg-surface-container-lowest border-b border-outline-variant px-6 py-3 shrink-0 space-y-3">
+<!-- Top row: Media Search & Filter Dropdowns -->
+<div class="flex flex-wrap items-center justify-between gap-3">
+<!-- Specific Filter Input -->
+<div class="relative w-full sm:w-72">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-secondary text-sm">filter_list</span>
+<input class="w-full pl-8 pr-3 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container focus:ring-1 focus:ring-primary-container" placeholder="Filter by filename, tag, or SKU..." type="text"/>
+</div>
+<!-- Dropdown Selectors Group -->
+<div class="flex flex-wrap items-center gap-2">
+<!-- Type Selector -->
+<div class="relative">
+<select class="appearance-none pl-2.5 pr-7 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface font-medium hover:bg-surface-container-low focus:outline-none focus:border-primary cursor-pointer">
+<option>All types</option>
+<option>Video (.mp4, .mov)</option>
+<option>Image (.png, .jpg)</option>
+<option>Vector (.svg, .ai)</option>
+<option>Audio (.wav, .mp3)</option>
+<option>Document</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-secondary text-sm">arrow_drop_down</span>
+</div>
+<!-- Aspect Ratio Selector -->
+<div class="relative">
+<select class="appearance-none pl-2.5 pr-7 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface font-medium hover:bg-surface-container-low focus:outline-none focus:border-primary cursor-pointer">
+<option>All ratios</option>
+<option>9:16 Vertical (Reels/TikTok)</option>
+<option>1:1 Square (Feed)</option>
+<option>16:9 Landscape</option>
+<option>4:5 Portrait</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-secondary text-sm">arrow_drop_down</span>
+</div>
+<!-- Usage Status Selector -->
+<div class="relative">
+<select class="appearance-none pl-2.5 pr-7 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface font-medium hover:bg-surface-container-low focus:outline-none focus:border-primary cursor-pointer">
+<option>All statuses</option>
+<option>In active campaign</option>
+<option>Approved master</option>
+<option>Unlinked / Unused</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-secondary text-sm">arrow_drop_down</span>
+</div>
+<!-- Sort By -->
+<div class="relative">
+<select class="appearance-none pl-2.5 pr-7 py-1.5 text-xs bg-surface-container-lowest border border-outline-variant rounded-md text-on-surface font-medium hover:bg-surface-container-low focus:outline-none focus:border-primary cursor-pointer">
+<option>Recently updated</option>
+<option>Name A-Z</option>
+<option>File size (Largest)</option>
+<option>Oldest upload</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-secondary text-sm">arrow_drop_down</span>
+</div>
+<!-- Divider -->
+<span class="h-4 w-[1px] bg-outline-variant hidden sm:block"></span>
+<!-- Grid vs List View Toggle -->
+<div class="flex items-center border border-outline-variant rounded-md bg-surface-container-low p-0.5">
+<button class="p-1 rounded bg-surface-container-lowest text-primary shadow-2xs" title="Grid view" type="button">
+<span class="material-symbols-outlined text-base">grid_view</span>
+</button>
+<button class="p-1 rounded text-secondary hover:text-on-surface" title="Table list view" type="button">
+<span class="material-symbols-outlined text-base">view_list</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Bottom row: Folder categories & Smart hygiene chip -->
+<div class="flex items-center justify-between gap-3 overflow-x-auto pt-1 no-scrollbar">
+<!-- Folder Chips -->
+<div class="flex items-center gap-1.5 text-xs whitespace-nowrap">
+<button class="px-2.5 py-1 rounded-full bg-on-surface text-surface font-semibold text-xs">
+              All assets <span class="ml-1 opacity-70 font-normal">384</span>
+</button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high text-secondary hover:text-on-surface font-medium text-xs hover:bg-surface-container-highest transition-colors">
+              Autumn Campaign 2024 <span class="ml-1 opacity-70">48</span>
+</button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high text-secondary hover:text-on-surface font-medium text-xs hover:bg-surface-container-highest transition-colors">
+              Product Shots &amp; Packshots <span class="ml-1 opacity-70">112</span>
+</button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high text-secondary hover:text-on-surface font-medium text-xs hover:bg-surface-container-highest transition-colors">
+              B-Roll &amp; Raw Cuts <span class="ml-1 opacity-70">94</span>
+</button>
+<button class="px-2.5 py-1 rounded-full bg-surface-container-high text-secondary hover:text-on-surface font-medium text-xs hover:bg-surface-container-highest transition-colors">
+              Logos &amp; Brand Vectors <span class="ml-1 opacity-70">32</span>
+</button>
+</div>
+<!-- Clean-up / Deduplication affordance chip -->
+<div class="shrink-0 flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-medium cursor-pointer hover:bg-amber-100 transition-colors">
+<span class="material-symbols-outlined text-amber-700 text-sm">auto_delete</span>
+<span>18 unused or duplicate assets detected · <strong>Review clean-up</strong></span>
+</div>
+</div>
+</div>
+<!-- 3. MULTI-SELECT BAR & BATCH ACTION STRIP -->
+<div class="bg-[#F2F3F5] px-6 py-2 border-b border-outline-variant flex items-center justify-between shrink-0 text-xs">
+<div class="flex items-center gap-3">
+<label class="flex items-center gap-2 cursor-pointer text-on-surface font-medium">
+<input checked="" class="rounded border-outline text-primary focus:ring-primary h-3.5 w-3.5" type="checkbox"/>
+<span><strong>1 item selected</strong> (cold-brew-slow-pour-v2.mp4)</span>
+</label>
+<span class="text-secondary">·</span>
+<button class="text-secondary hover:text-on-surface underline">Select all 384</button>
+</div>
+<div class="flex items-center gap-2">
+<button class="px-2 py-1 bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container-low text-secondary hover:text-on-surface flex items-center gap-1 text-[11px]" type="button">
+<span class="material-symbols-outlined text-xs">add_to_photos</span>
+<span>Add to campaign</span>
+</button>
+<button class="px-2 py-1 bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container-low text-secondary hover:text-on-surface flex items-center gap-1 text-[11px]" type="button">
+<span class="material-symbols-outlined text-xs">label</span>
+<span>Tag</span>
+</button>
+<button class="px-2 py-1 bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container-low text-secondary hover:text-on-surface flex items-center gap-1 text-[11px]" type="button">
+<span class="material-symbols-outlined text-xs">folder_open</span>
+<span>Move</span>
+</button>
+<button class="px-2 py-1 bg-surface-container-lowest border border-outline-variant rounded hover:bg-surface-container-low text-error hover:bg-red-50 flex items-center gap-1 text-[11px]" type="button">
+<span class="material-symbols-outlined text-xs">archive</span>
+<span>Archive</span>
+</button>
+</div>
+</div>
+<!-- 4. ASSET GRID (CONTENT CARDS) -->
+<div class="p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
+<!-- ASSET CARD 1: Selected (cold-brew-slow-pour-v2.mp4) -->
+<article class="group relative bg-surface-container-lowest border-2 border-primary rounded-xl overflow-hidden shadow-xs hover:border-primary transition-all flex flex-col cursor-pointer">
+<!-- Thumbnail Container -->
+<div class="relative w-full aspect-[4/3] bg-neutral-900 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Cinematic macro shot of cold brew coffee slowly cascading down a clear glass filled with pure artisanal ice spheres. Moody natural morning light illuminates the rich amber condensation and swirling coffee layers against a neutral minimalist cafe countertop. Crisp studio photography, ultra-realistic commercial quality, clean palette of deep umber, golden honey, and frosted glass." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC4F_3FE7a3mrKu-4uiBIRuC3uA0ifPJh6BQ2VP6LyRATynVWsC1NQDcxUN_LGeKb0ogVxiTEzpJoazvMbjbVxLWgkGEoHrpvgvZBObkEzsSAQI9sUeYENuDiNUYvX7qFI6zZuDZYvss4TsiPXecW_NV6P27wu3ZdlZWuwSZ2-sGL_cnNCbXeQF0Oz-YR4R4OJ2E6-9jkpG5M9hEXu1-EgbWLDg-O5GMVBIN1vNNQnGLuMueVzMC9k89ehVsNCNlZLuluT4ftqzKrP0"/>
+<!-- Checkbox pill -->
+<div class="absolute top-2.5 left-2.5 z-10">
+<input checked="" class="h-4 w-4 rounded border-outline text-primary focus:ring-primary" type="checkbox"/>
+</div>
+<!-- Type badge -->
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              9:16 MP4
+            </div>
+<!-- Play icon overlay -->
+<div class="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors">
+<span class="w-10 h-10 rounded-full bg-white/90 text-primary flex items-center justify-center shadow-md">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</span>
+</div>
+<!-- Duration tag -->
+<div class="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+              0:24
+            </div>
+</div>
+<!-- Content Metadata -->
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="cold-brew-slow-pour-v2.mp4">
+                  cold-brew-slow-pour-v2.mp4
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>1080 × 1920</span>
+<span>·</span>
+<span>84.2 MB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">link</span>
+<span>Linked in 2 posts</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">ER</span>
+<span>2 hours ago</span>
+</div>
+</div>
+</div>
+</article>
+<!-- ASSET CARD 2: ethiopia-yirgacheffe-bag-hero.png -->
+<article class="group relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-2xs hover:border-secondary hover:shadow-xs transition-all flex flex-col cursor-pointer">
+<div class="relative w-full aspect-[4/3] bg-neutral-100 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Editorial product packshot of a matte cream craft coffee bag labeled Northstar Ethiopia Yirgacheffe on a warm textured slate base. Soft diffuse studio lighting with crisp geometric shadows casts a calm modern Scandinavian aesthetic. Clean composition, rich coffee beans scattered purposefully, palette of muted beige, roasted chestnut, and deep charcoal." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsxKq9IZPgQKtwQSws_eVGK0WNIJL_chJEHwZGz5fd7wcZ8lFe3Z-MAVZN7w7XK72AEAkdqi-Qc10AqjuYNFb8ooLupYo-2nJtikagTvHObiPth26WBi-xljHaHelfWlJ2Pvz09YLsMfxFGnpGOWiolex8x-bc9bvhL-RW871JAACxQJtqZNfOOLVKdd6zP0Ue-Qy5686rGjof0YVV1IPjprCg-6RKqOaJxbm0_pSdfDaJ4YTonapVpq42vbpJx8f3I7O5En3zvf-Z"/>
+<div class="absolute top-2.5 left-2.5 z-10">
+<input class="h-4 w-4 rounded border-outline text-primary focus:ring-primary opacity-80 group-hover:opacity-100" type="checkbox"/>
+</div>
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              1:1 PNG
+            </div>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="ethiopia-yirgacheffe-bag-hero.png">
+                  ethiopia-yirgacheffe-bag-hero.png
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>2400 × 2400</span>
+<span>·</span>
+<span>12.4 MB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">verified</span>
+<span>Approved master</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">MK</span>
+<span>Yesterday</span>
+</div>
+</div>
+</div>
+</article>
+<!-- ASSET CARD 3: barista-steaming-latte-cut03.mp4 -->
+<article class="group relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-2xs hover:border-secondary hover:shadow-xs transition-all flex flex-col cursor-pointer">
+<div class="relative w-full aspect-[4/3] bg-neutral-900 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Close-up footage frame of a professional barista in a dark linen apron expertly texturing silky microfoam milk with a chrome espresso machine steam wand. Warm cafe ambient lighting with atmospheric steam swirls in the air, creating a rich sensory coffee roastery environment. Palette of brushed stainless steel, warm espresso crema, and deep midnight blue." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA5ilUvWLrkR34qY7EcXYFsqeMO8oj9PPjY8wzrXMFbvcVEr0KY20lUoNAyipa9Z3i54ZV9Z7YZw-fJe1YQrevt40f_Imgs8PkGCrEPARq8s72InilYXtPDhVV5rFlCKUem14FwWi_DXvAvdfURp24XWEaeprZuNGmaD_IuHSUhkgdPzbzcdhhXxjq4tXyhnkRPfQE8pJ55EuRJk4nWfGbjpQ4YSD9prfTela79hXd5HfRy64Xs_STCV81lDiuE_kpykNmLmYkKekuW"/>
+<div class="absolute top-2.5 left-2.5 z-10">
+<input class="h-4 w-4 rounded border-outline text-primary focus:ring-primary opacity-80 group-hover:opacity-100" type="checkbox"/>
+</div>
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              4K ProRes
+            </div>
+<div class="absolute bottom-2 right-2 bg-black/75 text-white text-[10px] font-mono px-1.5 py-0.5 rounded">
+              0:18
+            </div>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="barista-steaming-latte-cut03.mp4">
+                  barista-steaming-latte-cut03.mp4
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>3840 × 2160</span>
+<span>·</span>
+<span>342.1 MB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-purple-50 text-purple-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">campaign</span>
+<span>Used in Autumn Reel</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">ER</span>
+<span>Oct 22</span>
+</div>
+</div>
+</div>
+</article>
+<!-- ASSET CARD 4: northstar-monogram-white.svg -->
+<article class="group relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-2xs hover:border-secondary hover:shadow-xs transition-all flex flex-col cursor-pointer">
+<div class="relative w-full aspect-[4/3] bg-[#273044] flex items-center justify-center p-8">
+<!-- Vector graphic preview representation -->
+<div class="flex flex-col items-center">
+<span class="material-symbols-outlined text-white text-5xl">explore</span>
+<span class="text-white font-bold tracking-widest text-xs mt-2 uppercase">Northstar</span>
+</div>
+<div class="absolute top-2.5 left-2.5 z-10">
+<input class="h-4 w-4 rounded border-outline text-primary focus:ring-primary opacity-80 group-hover:opacity-100" type="checkbox"/>
+</div>
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              SVG
+            </div>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="northstar-monogram-white.svg">
+                  northstar-monogram-white.svg
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>Scalable Vector</span>
+<span>·</span>
+<span>48 KB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">verified</span>
+<span>Brand kit verified</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">DA</span>
+<span>Oct 18</span>
+</div>
+</div>
+</div>
+</article>
+<!-- ASSET CARD 5: autumn-spice-lifestyle-04.jpg -->
+<article class="group relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-2xs hover:border-secondary hover:shadow-xs transition-all flex flex-col cursor-pointer">
+<div class="relative w-full aspect-[4/3] bg-neutral-100 overflow-hidden">
+<img class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" data-alt="Lifestyle editorial scene of a handcrafted ceramic mug steaming with cinnamon spiced latte beside an open notebook and freshly roasted Ethiopian coffee beans. Soft autumn afternoon light streams across a blonde oak cafe table, evoking a quiet reflective aesthetic. Warm palette of terracotta, cinnamon brown, creamy oats, and soft natural sunlight." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDlUt7YZ-p_8vK9d9mg0rwrNv1y7prEmjmF8RMoSf9l1hX29hyVcd7uwUAPTpWIHwpTckTE5fa7EG15O-PVJoLMpZO1DwBP3r8pI3C8VjQg1sAozBT-3SRTYtkHg3yzuBiTa7VjBOu6th0PwiqTAeGWX8-cLSShDv2zCjP46SopJkyr_-R4nBlWV2udsI-40bhuNieovtN8Ty8v0AtEkJaV6t4TskhlIRs-GTINWVCwQugcQ9L36ywSUDcbzXGk0ppZlyZ3nnIV5Aji"/>
+<div class="absolute top-2.5 left-2.5 z-10">
+<input class="h-4 w-4 rounded border-outline text-primary focus:ring-primary opacity-80 group-hover:opacity-100" type="checkbox"/>
+</div>
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              JPG
+            </div>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="autumn-spice-lifestyle-04.jpg">
+                  autumn-spice-lifestyle-04.jpg
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>3000 × 2000</span>
+<span>·</span>
+<span>4.1 MB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">link</span>
+<span>Linked in 1 post</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">MK</span>
+<span>Oct 15</span>
+</div>
+</div>
+</div>
+</article>
+<!-- ASSET CARD 6: iced-pour-over-soundtrack.wav -->
+<article class="group relative bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-2xs hover:border-secondary hover:shadow-xs transition-all flex flex-col cursor-pointer">
+<div class="relative w-full aspect-[4/3] bg-surface-container-low flex flex-col items-center justify-center p-4">
+<span class="material-symbols-outlined text-secondary text-4xl mb-2">graphic_eq</span>
+<!-- Fake audio waveform bars -->
+<div class="flex items-center gap-1 w-3/4 h-8">
+<span class="w-1 bg-secondary rounded-full h-3"></span>
+<span class="w-1 bg-secondary rounded-full h-6"></span>
+<span class="w-1 bg-secondary rounded-full h-4"></span>
+<span class="w-1 bg-primary rounded-full h-7"></span>
+<span class="w-1 bg-primary rounded-full h-8"></span>
+<span class="w-1 bg-primary rounded-full h-5"></span>
+<span class="w-1 bg-secondary rounded-full h-3"></span>
+<span class="w-1 bg-secondary rounded-full h-6"></span>
+<span class="w-1 bg-secondary rounded-full h-2"></span>
+<span class="w-1 bg-secondary rounded-full h-4"></span>
+</div>
+<div class="absolute top-2.5 left-2.5 z-10">
+<input class="h-4 w-4 rounded border-outline text-primary focus:ring-primary opacity-80 group-hover:opacity-100" type="checkbox"/>
+</div>
+<div class="absolute top-2.5 right-2.5 bg-black/75 backdrop-blur-xs text-white text-[10px] font-semibold px-2 py-0.5 rounded tracking-wide uppercase">
+              WAV
+            </div>
+<div class="absolute bottom-2 right-2 bg-neutral-200 text-on-surface text-[10px] font-mono px-1.5 py-0.5 rounded">
+              1:45
+            </div>
+</div>
+<div class="p-3 flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between gap-1">
+<h3 class="font-card-title text-xs font-semibold text-on-surface truncate" title="iced-pour-over-soundtrack.wav">
+                  iced-pour-over-soundtrack.wav
+                </h3>
+<span class="material-symbols-outlined text-secondary text-sm hover:text-on-surface">more_vert</span>
+</div>
+<p class="text-[11px] text-secondary mt-0.5 flex items-center gap-1.5">
+<span>48kHz / 24-bit</span>
+<span>·</span>
+<span>18.6 MB</span>
+</p>
+</div>
+<div class="pt-3 mt-2 border-t border-outline-variant flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 text-[10px] font-medium">
+<span class="material-symbols-outlined text-xs">warning</span>
+<span>Unused duplicate</span>
+</span>
+<div class="flex items-center gap-1 text-[11px] text-secondary">
+<span class="w-4 h-4 rounded-full bg-neutral-200 text-neutral-700 text-[9px] font-bold flex items-center justify-center">SJ</span>
+<span>Oct 12</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+</section>
+<!-- RIGHT FIXED-WIDTH DETAIL DRAWER (380px) -->
+<aside class="w-[380px] h-full bg-surface-container-lowest flex flex-col shrink-0 overflow-y-auto border-l border-outline-variant">
+<!-- Drawer Header -->
+<div class="p-4 border-b border-outline-variant flex items-center justify-between shrink-0 bg-surface-container-lowest sticky top-0 z-10">
+<div class="flex items-center gap-2 min-w-0">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<h2 class="font-card-title text-xs font-semibold text-on-surface truncate">Selected asset details</h2>
+</div>
+<div class="flex items-center gap-1">
+<button class="p-1 rounded hover:bg-surface-container-low text-secondary hover:text-on-surface" title="Open full-screen preview" type="button">
+<span class="material-symbols-outlined text-base">open_in_new</span>
+</button>
+<button class="p-1 rounded hover:bg-surface-container-low text-secondary hover:text-on-surface" title="Deselect" type="button">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+</div>
+<!-- Drawer Body -->
+<div class="p-4 space-y-4">
+<!-- Asset High-Fidelity Preview Frame -->
+<div class="space-y-2">
+<div class="relative w-full aspect-[9/16] max-h-[320px] mx-auto rounded-lg overflow-hidden bg-black border border-outline-variant group">
+<img class="w-full h-full object-cover" data-alt="Cinematic high-contrast vertical shot of cold brew dripping slowly through artisanal glass coils into a frosty beaker. Rich roasted amber hues, subtle backlighting, delicate condensation droplets on smooth crystal glass. Professional agency production standard with deep shadows, rich espresso accents, and calm modern studio aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJhUBJmzPDIQjB7X1qWbd5yIc7AMTLXcsuFMJH7CDcn0d8IKmBSma_s7cT6dgBnh5xw3oKhxN_s5fJPmxs-W92nXFPcKSiVsqoKqBJRm7AVZ25i_nGzvsUcZ2CGC35F5p_XdojKAfp1STJlAheLBdiUUDjBlFw_Oh0IT4hJ5Y_Ze3cFIhVhB9u2x8eUzWLkZrXov-P4yDp_G51_QKBpnYS6b4XeTVEC40Db5IK6_8yVLpNXjdhfKBmH7ijrmAU3d0X85rXb2Tff0W7"/>
+<!-- Video Play Controller Overlay -->
+<div class="absolute inset-0 flex items-center justify-center bg-black/25">
+<button class="w-12 h-12 rounded-full bg-white/95 text-primary flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
+<span class="material-symbols-outlined text-2xl" style="font-variation-settings: 'FILL' 1;">play_arrow</span>
+</button>
+</div>
+<!-- Safe-zone guidelines toggle button -->
+<div class="absolute top-2 left-2">
+<button class="px-2 py-1 rounded bg-black/70 text-white text-[10px] font-medium flex items-center gap-1 backdrop-blur-xs hover:bg-black/90" type="button">
+<span class="material-symbols-outlined text-xs">grid_3x3</span>
+<span>TikTok/Reels safe zone</span>
+</button>
+</div>
+<!-- Badges at bottom -->
+<div class="absolute bottom-2 left-2 right-2 flex items-center justify-between text-[11px] text-white bg-black/60 backdrop-blur-xs px-2.5 py-1 rounded">
+<span class="font-mono">00:00 / 00:24</span>
+<span class="font-medium">1080 × 1920 @ 60fps</span>
+</div>
+</div>
+<div class="flex items-center justify-between px-1">
+<p class="text-xs font-semibold text-on-surface truncate">cold-brew-slow-pour-v2.mp4</p>
+<span class="text-[11px] text-secondary font-mono">H.264 / 84.2 MB</span>
+</div>
+</div>
+<!-- License & Clearance Alert Banner -->
+<div class="p-3 rounded-lg bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 space-y-1">
+<div class="flex items-center gap-1.5 text-xs font-semibold text-emerald-800">
+<span class="material-symbols-outlined text-emerald-700 text-base">verified_user</span>
+<span>Commercial license verified</span>
+</div>
+<p class="text-[11px] text-emerald-700 leading-snug">
+            All organic &amp; paid channels cleared until Oct 2025. Talent release on file (Model Release #ER-2024-09).
+          </p>
+</div>
+<!-- Asset Metadata Specifications -->
+<div class="space-y-2 pt-1 border-t border-outline-variant">
+<h3 class="text-xs font-semibold text-on-surface">Specifications &amp; metadata</h3>
+<dl class="space-y-1.5 text-xs">
+<div class="flex justify-between py-1 border-b border-outline-variant/60">
+<dt class="text-secondary">Uploaded by</dt>
+<dd class="text-on-surface font-medium flex items-center gap-1">
+<span class="w-3.5 h-3.5 rounded-full bg-neutral-200 text-[8px] font-bold flex items-center justify-center">ER</span>
+<span>Elena Rostova</span>
+</dd>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/60">
+<dt class="text-secondary">Upload date</dt>
+<dd class="text-on-surface font-medium">Oct 24, 2024 · 11:20 AM</dd>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/60">
+<dt class="text-secondary">Format</dt>
+<dd class="text-on-surface font-medium">QuickTime / MP4 (Progressive)</dd>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/60">
+<dt class="text-secondary">Color profile</dt>
+<dd class="text-on-surface font-medium">Rec.709 (sRGB compatible)</dd>
+</div>
+<div class="flex justify-between py-1 border-b border-outline-variant/60">
+<dt class="text-secondary">Audio track</dt>
+<dd class="text-on-surface font-medium truncate max-w-[180px]">Autumn Jazz Beats (Licensed)</dd>
+</div>
+</dl>
+</div>
+<!-- Tags Module -->
+<div class="space-y-2 pt-1 border-t border-outline-variant">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-semibold text-on-surface">Tags &amp; taxonomy</h3>
+<button class="text-xs text-primary font-medium hover:underline flex items-center gap-0.5">
+<span class="material-symbols-outlined text-xs">add</span>
+<span>Add tag</span>
+</button>
+</div>
+<div class="flex flex-wrap gap-1.5">
+<span class="px-2 py-0.5 rounded-md bg-surface-container-high text-secondary text-xs font-mono">#ColdBrew</span>
+<span class="px-2 py-0.5 rounded-md bg-surface-container-high text-secondary text-xs font-mono">#SlowPour</span>
+<span class="px-2 py-0.5 rounded-md bg-surface-container-high text-secondary text-xs font-mono">#ReelsMaster</span>
+<span class="px-2 py-0.5 rounded-md bg-surface-container-high text-secondary text-xs font-mono">#Autumn2024</span>
+</div>
+</div>
+<!-- Linked Content & Usage Feed -->
+<div class="space-y-2 pt-1 border-t border-outline-variant">
+<div class="flex items-center justify-between">
+<h3 class="text-xs font-semibold text-on-surface">Active campaign links (2)</h3>
+<span class="text-[11px] text-secondary">All safe</span>
+</div>
+<div class="space-y-2">
+<!-- Linked Item 1 -->
+<div class="p-2.5 rounded-lg border border-outline-variant hover:border-secondary bg-surface-container-lowest transition-colors flex items-start gap-2.5">
+<span class="material-symbols-outlined text-primary text-lg mt-0.5">schedule_send</span>
+<div class="min-w-0 flex-1">
+<p class="text-xs font-semibold text-on-surface truncate">Autumn Cold Brew Reel — Final Cut</p>
+<p class="text-[11px] text-secondary mt-0.5">Instagram &amp; TikTok · Scheduled</p>
+<p class="text-[10px] text-primary-container font-medium mt-1">Oct 24, 5:00 PM EST</p>
+</div>
+</div>
+<!-- Linked Item 2 -->
+<div class="p-2.5 rounded-lg border border-outline-variant hover:border-secondary bg-surface-container-lowest transition-colors flex items-start gap-2.5">
+<span class="material-symbols-outlined text-secondary text-lg mt-0.5">edit_note</span>
+<div class="min-w-0 flex-1">
+<p class="text-xs font-semibold text-on-surface truncate">Barista Tips: Dialing Espresso</p>
+<p class="text-[11px] text-secondary mt-0.5">YouTube Shorts · In review draft</p>
+<p class="text-[10px] text-secondary font-medium mt-1">Awaiting client sign-off</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Drawer Sticky Footer Actions -->
+<div class="p-4 border-t border-outline-variant mt-auto space-y-2 bg-surface-container-lowest sticky bottom-0 z-10">
+<button class="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-primary-container text-on-primary font-button text-xs hover:bg-primary transition-colors duration-150" type="button">
+<span class="material-symbols-outlined text-base">post_add</span>
+<span>Use in new post</span>
+</button>
+<div class="grid grid-cols-2 gap-2">
+<button class="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface text-xs font-medium hover:bg-surface-container-low transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">download</span>
+<span>Download</span>
+</button>
+<button class="flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg bg-surface-container-lowest border border-outline-variant text-on-surface text-xs font-medium hover:bg-surface-container-low transition-colors" type="button">
+<span class="material-symbols-outlined text-sm">link</span>
+<span>Copy CDN URL</span>
+</button>
+</div>
+<button class="w-full text-center text-xs text-error hover:text-red-700 py-1 font-medium transition-colors" type="button">
+          Archive asset from library
+        </button>
+</div>
+</aside>
+</main>
+</body></html>

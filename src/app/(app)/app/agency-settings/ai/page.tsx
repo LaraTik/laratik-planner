@@ -115,17 +115,6 @@ export default async function AgencyAiSettingsPage() {
         </p>
       </div>
 
-      <AiDiagnosticPanel
-        envHasKey={envHasKey}
-        hasManagedSecret={hasManagedSecret}
-        managedSecretSuffix={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
-        masterSwitch={feature?.enabled ?? false}
-        anyCapabilityOn={anyCapabilityOn}
-        effectiveLive={effectiveLive}
-        aiEntryHref="/app"
-        t={t}
-      />
-
       <AiSettingsForm
         initialEnabled={feature?.enabled ?? false}
         initialModel={feature?.model ?? envModel}
@@ -139,6 +128,17 @@ export default async function AgencyAiSettingsPage() {
         }
         lastTestOk={feature?.lastConnectionTestOk ?? null}
         usage={usage}
+      />
+
+      <AiDiagnosticPanel
+        envHasKey={envHasKey}
+        hasManagedSecret={hasManagedSecret}
+        managedSecretSuffix={secretStatus.keySource === "missing" ? null : secretStatus.lastFour}
+        masterSwitch={feature?.enabled ?? false}
+        anyCapabilityOn={anyCapabilityOn}
+        effectiveLive={effectiveLive}
+        aiEntryHref="/app"
+        t={t}
       />
 
       <div className="border-border bg-surface-subtle text-body text-fg-secondary flex flex-wrap items-start gap-2 rounded-[var(--radius-control)] border p-3">

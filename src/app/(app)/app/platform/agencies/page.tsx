@@ -194,7 +194,7 @@ export default async function PlatformAgenciesPage() {
         {t("platform.investigateHelp")}{" "}
         <Link
           href="/app/platform/agencies"
-          className="text-primary underline-offset-4 hover:underline"
+          className="text-primary font-semibold underline underline-offset-4"
         >
           {t("platform.detailPageLink")}
         </Link>{" "}

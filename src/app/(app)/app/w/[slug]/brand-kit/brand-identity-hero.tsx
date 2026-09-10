@@ -78,7 +78,7 @@ export function BrandIdentityHero({
     <Card
       id="overview"
       className="scroll-mt-20 lg:col-span-12"
-      aria-label="Brand identity"
+      aria-label={tr("brandKit.overview.identityAria", "Brand identity")}
       data-testid="brand-kit-hero"
     >
       <div className="flex flex-col items-start gap-6 sm:flex-row sm:items-center">
@@ -112,19 +112,25 @@ export function BrandIdentityHero({
             <div className="flex flex-wrap gap-2">
               {logoCount > 0 ? (
                 <Badge variant="primary" data-testid="brand-kit-hero-latest-logo">
-                  Latest logo
+                  {tr("brandKit.overview.latestLogo", "Latest logo")}
                 </Badge>
               ) : null}
               {assetCount > 0 ? (
                 <Badge variant="outline">
-                  {assetCount} {assetCount === 1 ? "asset" : "assets"}
+                  {assetCount}{" "}
+                  {tr(
+                    assetCount === 1 ? "brandKit.overview.assetOne" : "brandKit.overview.assetMany",
+                    assetCount === 1 ? "asset" : "assets",
+                  )}
                 </Badge>
               ) : null}
             </div>
           </div>
           <p className="text-body text-fg-secondary mb-4 max-w-2xl">
-            The shared source for visual assets and writing guidance. Update the logo, color
-            palette, and typography so every planner, designer, and reviewer ships in one voice.
+            {tr(
+              "brandKit.overview.identityDescription",
+              "The shared source for visual assets and writing guidance. Update the logo, color palette, and typography so every planner, designer, and reviewer ships in one voice.",
+            )}
           </p>
           {assetCount === 0 ? (
             <div
@@ -134,16 +140,18 @@ export function BrandIdentityHero({
               <Sparkles className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
               <div className="min-w-0 flex-1">
                 <p className="text-body text-fg-primary font-semibold">
-                  No assets yet — start with a logo
+                  {tr("brandKit.overview.emptyTitle", "No assets yet — start with a logo")}
                 </p>
                 <p className="text-label text-fg-muted">
-                  The hero preview, the Add menu, and the brand identity card all show your first
-                  logo once it is uploaded.
+                  {tr(
+                    "brandKit.overview.emptyDescription",
+                    "The hero preview, the Add menu, and the brand identity card all show your first logo once it is uploaded.",
+                  )}
                 </p>
               </div>
               {onAddFirstAsset ? (
                 <Button type="button" size="sm" onClick={onAddFirstAsset} variant="default">
-                  Add your first logo
+                  {tr("brandKit.overview.addFirstLogo", "Add your first logo")}
                 </Button>
               ) : null}
             </div>
@@ -151,7 +159,7 @@ export function BrandIdentityHero({
           <div className="flex flex-wrap gap-6">
             <div className="flex flex-col gap-1">
               <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
-                Timezone
+                {tr("brandKit.overview.timezone", "Timezone")}
               </span>
               <span className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold">
                 <Clock className="text-fg-muted h-4 w-4" aria-hidden="true" />

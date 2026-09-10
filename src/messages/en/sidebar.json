@@ -112,7 +112,9 @@
   },
   "clientCalendarPage": {
     "title": "Client calendar",
-    "subtitle": "Read-only approved and review-stage content for this month."
+    "subtitle": "Read-only approved and review-stage content for this month.",
+    "emptyTitle": "Nothing scheduled this month",
+    "emptyDescription": "Approved and review-stage content will appear here when it has a planned publish date in this month."
   },
   "clientCalendar": "Calendar",
   "pendingBadge": "{label}: {count} pending",

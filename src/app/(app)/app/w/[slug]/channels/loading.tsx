@@ -17,7 +17,7 @@ const COLUMNS = ["Platform", "Account", "URL", "State", "Owner"];
 
 export default function Loading() {
   return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
+    <div className="space-y-6" aria-busy="true" aria-live="polite" role="status">
       <div className="flex items-center justify-between gap-3">
         <div className="space-y-2">
           <Skeleton className="h-7 w-40" />
