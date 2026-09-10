@@ -148,7 +148,10 @@ export function MobileNav({
   const createHref = onPlatformRoute
     ? null
     : currentWorkspace
-      ? !clientOnly && pathname !== wsBase && workspaceCanCreateContent[currentWorkspace.id]
+      ? !clientOnly &&
+        pathname !== wsBase &&
+        pathname !== `${wsBase}/planning` &&
+        workspaceCanCreateContent[currentWorkspace.id]
         ? `${wsBase}/planning/new`
         : null
       : canCreateWorkspace

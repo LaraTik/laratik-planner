@@ -134,10 +134,7 @@ describe("MobileNav", () => {
       "/app/w/northstar",
     );
     expect(screen.getByRole("link", { name: "Planning" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByTestId("mobile-primary-create")).toHaveAttribute(
-      "href",
-      "/app/w/northstar/planning/new",
-    );
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
     expect(screen.queryByRole("link", { name: "Workspaces" })).toBeNull();
 
     await user.click(screen.getByTestId("mobile-navigation-more"));
@@ -158,6 +155,16 @@ describe("MobileNav", () => {
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }
+  });
+
+  it("keeps the mobile create action on workspace surfaces without a page-level action", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/board");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.getByTestId("mobile-primary-create")).toHaveAttribute(
+      "href",
+      "/app/w/northstar/planning/new",
+    );
   });
 
   it("keeps client navigation restricted and removes the create action", async () => {
