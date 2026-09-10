@@ -73,10 +73,10 @@ export const DirAwareTextarea = React.forwardRef<HTMLTextAreaElement, DirAwareTe
         defaultValue={defaultValue}
         onChange={handleChange}
         className={cn(
-          // Logical properties: text-start/text-end align with
-          // the input's own `dir` so the caret + scrollbar
-          // mirror correctly when dir flips mid-keystroke.
-          dir === "rtl" ? "text-end" : "text-start",
+          // `text-start` means the inline start for the element's
+          // own direction: right for RTL and left for LTR. Keep
+          // alignment content-driven rather than locale-driven.
+          "text-start",
           className,
         )}
         {...props}
@@ -124,7 +124,9 @@ export const DirAwareInput = React.forwardRef<HTMLInputElement, DirAwareInputPro
           "placeholder:text-fg-muted",
           "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
           "disabled:cursor-not-allowed disabled:opacity-50",
-          dir === "rtl" ? "text-end" : "text-start",
+          // `text-start` follows the content direction above:
+          // Arabic starts on the right, English on the left.
+          "text-start",
           className,
         )}
         {...props}
