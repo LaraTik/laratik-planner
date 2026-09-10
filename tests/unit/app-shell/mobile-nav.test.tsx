@@ -193,6 +193,13 @@ describe("MobileNav", () => {
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
+  it("keeps the Overview to one primary create action", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar");
+    render(<MobileNav {...baseProps} />);
+
+    expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
+  });
+
   it.each([
     ["Owner", ownerAccess, true, true],
     [
