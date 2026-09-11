@@ -15,7 +15,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { localizedPlatformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
 import { WorkspaceRowActions } from "@/components/workspace/workspace-row-actions";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 
@@ -288,7 +288,7 @@ function workspacesColumns(props: {
                 <span
                   key={p}
                   className="border-border bg-surface ring-surface inline-flex h-6 w-6 items-center justify-center rounded-full border ring-1"
-                  title={platformLabel(p)}
+                  title={localizedPlatformLabel(p, props.t)}
                 >
                   <PlatformIcon platform={p} className="h-3 w-3" />
                 </span>
