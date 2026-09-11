@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
+import { isAgencyAdmin } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { contentItems, workspaces } from "@/lib/db/schema";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -71,6 +72,7 @@ export default async function MyWorkPage() {
   const ctx = await resolveActiveAgencyContext({ actor: { id: userId } });
   const activeAgencyId = ctx?.agencyId ?? null;
   if (!activeAgencyId) return null;
+  const canCreateWorkspace = await isAgencyAdmin({ id: userId }, activeAgencyId);
 
   // Pull every item I have any stake in (owner / designer / reviewer)
   // WITHIN the active agency, archive-free. Capped at 200 to keep the
@@ -186,12 +188,14 @@ export default async function MyWorkPage() {
         title={t("myWork.title")}
         description={headerDate}
         action={
-          <Button asChild variant="secondary" size="sm">
-            <Link href="/app/workspaces/new">
-              <Plus className="h-4 w-4" aria-hidden="true" />
-              {t("myWork.newWorkspace")}
-            </Link>
-          </Button>
+          canCreateWorkspace ? (
+            <Button asChild variant="secondary" size="sm">
+              <Link href="/app/workspaces/new">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                {t("myWork.newWorkspace")}
+              </Link>
+            </Button>
+          ) : null
         }
       />
 
@@ -231,14 +235,18 @@ export default async function MyWorkPage() {
           <EmptyState
             icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
             title={t("myWork.emptyTitle")}
-            description={t("myWork.emptyDescription")}
+            description={t(
+              canCreateWorkspace ? "myWork.emptyDescriptionAdmin" : "myWork.emptyDescriptionMember",
+            )}
             action={
-              <Button asChild>
-                <Link href="/app/workspaces/new">
-                  <Plus className="h-4 w-4" aria-hidden="true" />
-                  {t("myWork.emptyAction")}
-                </Link>
-              </Button>
+              canCreateWorkspace ? (
+                <Button asChild>
+                  <Link href="/app/workspaces/new">
+                    <Plus className="h-4 w-4" aria-hidden="true" />
+                    {t("myWork.emptyAction")}
+                  </Link>
+                </Button>
+              ) : null
             }
           />
         </Card>

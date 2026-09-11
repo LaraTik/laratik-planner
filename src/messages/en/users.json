@@ -139,7 +139,7 @@
       "waiting": "Waiting for first sync"
     },
     "title": "Channels",
-    "description": "Keep the brand's account information in one place. Connections and analytics are planned for a future version.",
+    "description": "Manage the brand's account connections and publishing readiness in one place. View performance in Social Analytics.",
     "colPlatform": "Platform",
     "colAccount": "Account",
     "colUrl": "Profile URL",
