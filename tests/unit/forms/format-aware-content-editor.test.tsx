@@ -53,6 +53,7 @@ describe("FormatAwareContentEditor", () => {
   it("renders Strategy and Creative sections without a duplicate Copy surface for static_post", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
     expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
+    expect(screen.getAllByText("Core creative fields").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
     expect(screen.getByTestId("format-section-strategy-optional")).toBeInTheDocument();
@@ -132,6 +133,12 @@ describe("FormatAwareContentEditor", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
     // The English catalog label is "Short-form video".
     expect(screen.getByText(/Short-form video content/i)).toBeInTheDocument();
+  });
+
+  it("labels the core creative tier in Arabic", () => {
+    render(<FormatAwareContentEditor {...baseProps} t={tFor("ar")} format="static_post" />);
+    expect(screen.getAllByText("الحقول الإبداعية الأساسية").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/ابدأ هنا لتحديد الاتجاه الإبداعي/).length).toBeGreaterThan(0);
   });
 
   it("keeps audience copy out of Content while preserving the format save contract", () => {

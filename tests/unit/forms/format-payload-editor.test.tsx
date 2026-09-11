@@ -68,6 +68,7 @@ describe("FormatPayloadEditor", () => {
     );
     await user.click(screen.getByTestId("format-payload-toggle"));
     const body = await screen.findByTestId("format-payload-editor-body");
+    expect(within(body).getByText("Core creative fields")).toBeInTheDocument();
     // Essential fields are present.
     const essentialTier = within(body).getByTestId("essential-tier");
     expect(within(essentialTier).getByTestId("essential-field-caption")).toBeInTheDocument();

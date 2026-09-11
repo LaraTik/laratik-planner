@@ -599,9 +599,14 @@ export function FormatAwareContentEditor({
               </header>
               <p className="text-label text-fg-muted mb-3">{resolveDescription(section)}</p>
               <div className="space-y-4">
-                <p className="text-label text-fg-secondary font-semibold">
-                  {t("formatEditor.editor.startHere")}
-                </p>
+                <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border px-3 py-2">
+                  <p className="text-body text-fg-primary font-semibold">
+                    {t("formatEditor.editor.coreFields")}
+                  </p>
+                  <p className="text-label text-fg-secondary mt-1">
+                    {t("formatEditor.editor.coreFieldsDescription")}
+                  </p>
+                </div>
                 {hasObjectiveAudience && !objectiveAudienceOptional
                   ? renderObjectiveAudience()
                   : null}

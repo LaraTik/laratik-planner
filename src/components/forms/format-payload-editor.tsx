@@ -286,13 +286,23 @@ export function FormatPayloadEditor({
           ) : null}
 
           {/* Essential tier. Rendered directly, no disclosure. */}
-          <div className="space-y-6" data-testid="essential-tier">
-            {hasObjectiveAudience ? renderObjectiveAudience() : null}
-            {essentialWithoutOA.map((f) => (
-              <div key={f.key} data-testid={`essential-field-${f.key}`}>
-                {renderField(f)}
-              </div>
-            ))}
+          <div className="space-y-3" data-testid="essential-tier">
+            <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border px-3 py-2">
+              <p className="text-body text-fg-primary font-semibold">
+                {t("formatEditor.editor.coreFields")}
+              </p>
+              <p className="text-label text-fg-secondary mt-1">
+                {t("formatEditor.editor.coreFieldsDescription")}
+              </p>
+            </div>
+            <div className="space-y-6">
+              {hasObjectiveAudience ? renderObjectiveAudience() : null}
+              {essentialWithoutOA.map((f) => (
+                <div key={f.key} data-testid={`essential-field-${f.key}`}>
+                  {renderField(f)}
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Advanced tier. Behind a disclosure; populated fields
