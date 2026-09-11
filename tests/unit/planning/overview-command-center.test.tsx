@@ -202,4 +202,18 @@ describe("OverviewCommandCenter", () => {
     expect(within(summary).getByText(/Acme Main/)).toBeInTheDocument();
     expect(within(summary).getByText(/2026-09-01 09:00/)).toBeInTheDocument();
   });
+
+  it("localizes the single-channel platform label", () => {
+    render(
+      <OverviewCommandCenter
+        {...baseProps}
+        channels={[{ id: "ch-1", platform: "other", accountName: "Acme Main", configured: true }]}
+        t={tFor("ar")}
+      />,
+    );
+
+    expect(
+      within(screen.getByTestId("overview-content-summary-list")).getByText(/مخصص/),
+    ).toBeInTheDocument();
+  });
 });

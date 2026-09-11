@@ -9,6 +9,7 @@ import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { localizedPlatformLabel } from "@/components/workspace/platform-icon";
 
 /**
  * OverviewCommandCenter — the at-a-glance summary that lives
@@ -650,7 +651,10 @@ function channelSummary(
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   if (channels.length === 0) return t("contentDetail.overview.noChannels");
-  if (channels.length === 1) return `${channels[0]!.platform} · ${channels[0]!.accountName}`;
+  if (channels.length === 1) {
+    const channel = channels[0]!;
+    return `${localizedPlatformLabel(channel.platform, t)} · ${channel.accountName}`;
+  }
   const configured = channels.filter((c) => c.configured).length;
   return t("contentDetail.overview.channelsConfigured", {
     count: channels.length,
