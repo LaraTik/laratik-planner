@@ -30,7 +30,7 @@ export default async function BrandKitActivityPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -52,7 +52,7 @@ export default async function BrandKitActivityPage({
         title={
           <>
             <History className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            Recent updates
+            {t("brandKit.overview.recentUpdates")}
           </>
         }
         count={recent.length}
@@ -60,7 +60,7 @@ export default async function BrandKitActivityPage({
         aria-label={t("brandKit.recentUpdatesAria")}
         data-testid="brand-kit-section-activity"
       >
-        <RecentUpdatesTable rows={recent} />
+        <RecentUpdatesTable rows={recent} t={t} locale={code} />
       </SectionCard>
     </div>
   );

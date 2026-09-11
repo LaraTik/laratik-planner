@@ -123,6 +123,10 @@
     "downloadZipEmpty": "أضف شعارًا أو لونًا أو خطًا واحدًا على الأقل قبل التنزيل.",
     "browseTemplates": "استعراض القوالب",
     "recentUpdates": "آخر التحديثات",
+    "recentWhen": "متى",
+    "recentWhat": "ما الذي حدث",
+    "recentBy": "بواسطة",
+    "unknownActor": "غير معروف",
     "seeAllActivity": "← عرض كل النشاط",
     "lastUpdatedLabel": "آخر تحديث",
     "noActivity": "لا يوجد نشاط بعد"

@@ -55,7 +55,10 @@ function absoluteDateLabel(d: Date, locale: LocaleCode): string {
 }
 
 export function RecentUpdatesTable({ rows, t, locale = "en" }: RecentUpdatesTableProps) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const tr = (key: string, fallback: string) => {
+    const value = t?.(key);
+    return !value || value === key || value.startsWith(`[${key}]`) ? fallback : value;
+  };
   if (rows.length === 0) {
     return (
       <SectionEmptyState
@@ -75,13 +78,13 @@ export function RecentUpdatesTable({ rows, t, locale = "en" }: RecentUpdatesTabl
         <thead>
           <tr className="text-label text-fg-muted">
             <th className="pe-3 pb-2 font-semibold" scope="col">
-              When
+              {tr("brandKit.overview.recentWhen", "When")}
             </th>
             <th className="pe-3 pb-2 font-semibold" scope="col">
-              What
+              {tr("brandKit.overview.recentWhat", "What")}
             </th>
             <th className="pb-2 font-semibold" scope="col">
-              By
+              {tr("brandKit.overview.recentBy", "By")}
             </th>
           </tr>
         </thead>
@@ -111,7 +114,9 @@ export function RecentUpdatesTable({ rows, t, locale = "en" }: RecentUpdatesTabl
                       <span className="text-label text-fg-secondary">{row.actor.displayName}</span>
                     </span>
                   ) : (
-                    <span className="text-label text-fg-muted">Unknown</span>
+                    <span className="text-label text-fg-muted">
+                      {tr("brandKit.overview.unknownActor", "Unknown")}
+                    </span>
                   )}
                 </td>
               </tr>

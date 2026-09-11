@@ -123,6 +123,10 @@
     "downloadZipEmpty": "Add at least one logo, color, or font before downloading.",
     "browseTemplates": "Browse templates",
     "recentUpdates": "Recent updates",
+    "recentWhen": "When",
+    "recentWhat": "What",
+    "recentBy": "By",
+    "unknownActor": "Unknown",
     "seeAllActivity": "See all activity →",
     "lastUpdatedLabel": "Last updated",
     "noActivity": "No activity yet"
