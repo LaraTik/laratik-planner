@@ -23,6 +23,7 @@ import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
 import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
 /**
@@ -50,13 +51,12 @@ export async function generateMetadata() {
 }
 
 export default async function MyWorkPage() {
-  const { t, dir } = await tForActive();
+  const { t, code } = await tForActive();
   const session = await auth();
   if (!session?.user?.id) return null;
   const userId = session.user.id;
   const now = new Date();
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const weekEnd = new Date(todayStart.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekEnd = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
   const nowMs = now.getTime();
 
   // My Work is scoped to the ACTIVE agency only. A user who belongs
@@ -87,6 +87,7 @@ export default async function MyWorkPage() {
       plannedPublishAt: contentItems.plannedPublishAt,
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      workspaceTimezone: workspaces.timezone,
       ownerId: contentItems.contentOwnerId,
       designerId: contentItems.designerId,
       contentReviewerId: contentItems.contentReviewerId,
@@ -170,17 +171,19 @@ export default async function MyWorkPage() {
   // is rendered in Arabic script with Western digits (the format
   // helper from `src/lib/i18n/format-locale.ts` enforces the
   // latn numbering contract).
-  const headerDate = new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
+  const headerDate = formatDate(now, code, {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
-  }).format(now);
-  const itemDateFmt = new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
   });
+  const formatItemDate = (date: Date, timeZone: string) =>
+    formatDate(date, code, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      timeZone,
+    });
 
   return (
     <div className="space-y-6">
@@ -275,7 +278,7 @@ export default async function MyWorkPage() {
                         <span aria-hidden="true"> · </span>
                         <span className="inline-flex shrink-0 items-center gap-1 align-middle">
                           <Clock className="h-3 w-3" aria-hidden="true" />
-                          {itemDateFmt.format(item.plannedPublishAt)}
+                          {formatItemDate(item.plannedPublishAt, item.workspaceTimezone)}
                         </span>
                       </>
                     }
@@ -307,7 +310,7 @@ export default async function MyWorkPage() {
                       <>
                         <span className="truncate">{item.workspaceName}</span>
                         <span aria-hidden="true"> · </span>
-                        <span>{itemDateFmt.format(item.plannedPublishAt)}</span>
+                        <span>{formatItemDate(item.plannedPublishAt, item.workspaceTimezone)}</span>
                       </>
                     }
                     trailing={<StatusBadge status={item.status} />}
