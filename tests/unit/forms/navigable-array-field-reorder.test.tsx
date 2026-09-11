@@ -30,6 +30,60 @@ afterEach(() => {
 });
 
 describe("NavigableArrayField — reorder & duplicate", () => {
+  it("localizes empty, add, counter, and row action copy", () => {
+    const onField = vi.fn();
+    const t = (key: string, params?: Record<string, string | number>) => {
+      const values: Record<string, string> = {
+        "formatEditor.editor.structuredArrayEmpty": "لا توجد {label} بعد.",
+        "formatEditor.editor.structuredArrayAddFirst": "إضافة أول {entity}",
+        "formatEditor.editor.structuredArrayCounter": "{entity} {index} من {count}",
+        "formatEditor.editor.structuredArrayItemOf": "من {count}",
+        "formatEditor.editor.structuredArrayAdd": "إضافة {entity}",
+        "formatEditor.editor.structuredArrayRemoveAria": "إزالة {entity} {index}",
+        "formatEditor.editor.structuredArrayRemove": "إزالة",
+      };
+      const value = values[key] ?? key;
+      return value.replace(/\{(\w+)\}/g, (_, name: string) => String(params?.[name] ?? ""));
+    };
+
+    const { rerender } = render(
+      <NavigableArrayField
+        fieldKey="slideOutline"
+        label="الشرائح"
+        rows={[]}
+        columns={COLUMNS}
+        locale="ar"
+        editable
+        layout="slider"
+        entity="شريحة"
+        t={t}
+        onField={onField}
+      />,
+    );
+
+    expect(screen.getByTestId("slideOutline-empty")).toHaveTextContent("لا توجد الشرائح بعد.");
+    expect(screen.getByRole("button", { name: "إضافة أول شريحة" })).toBeInTheDocument();
+
+    rerender(
+      <NavigableArrayField
+        fieldKey="slideOutline"
+        label="الشرائح"
+        rows={[makeRow(1, "A")]}
+        columns={COLUMNS}
+        locale="ar"
+        editable
+        layout="slider"
+        entity="شريحة"
+        t={t}
+        onField={onField}
+      />,
+    );
+
+    expect(screen.getByTestId("slideOutline-counter")).toHaveTextContent("شريحة 1 من 1");
+    expect(screen.getByRole("button", { name: "إضافة شريحة" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "إزالة شريحة 1" })).toBeInTheDocument();
+  });
+
   it("moves a row up with the explicit 'Move up' button", () => {
     const onField = vi.fn();
     const rows = [makeRow(1, "A"), makeRow(2, "B"), makeRow(3, "C")];

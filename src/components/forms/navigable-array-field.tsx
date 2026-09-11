@@ -89,10 +89,8 @@ export interface NavigableArrayFieldProps {
    */
   entity?: string | undefined;
   /**
-   * Optional translator. When provided, the per-row toolbar
-   * button tooltips ("Move up (Alt+ArrowUp)", "Move down
-   * (Alt+ArrowDown)", "Duplicate (Ctrl/Cmd+D)") render from
-   * `common.{moveUpShortcut,moveDownShortcut,duplicateShortcut}`;
+   * Optional translator. When provided, all control labels and
+   * accessibility names render from `formatEditor.editor.*`;
    * when omitted, the hard-coded English copy is used.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -113,7 +111,11 @@ export function NavigableArrayField({
   t,
 }: NavigableArrayFieldProps) {
   const [activeIndex, setActiveIndex] = React.useState(0);
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>): string => {
+    if (!t) return fallback;
+    const value = t(key, params);
+    return value === key ? fallback : value;
+  };
 
   // Clamp the active index when the row count changes
   // (e.g. the user removed the active row, or initial
@@ -219,7 +221,16 @@ export function NavigableArrayField({
     columns.find((c) => c.kind === "text") ??
     columns[0];
 
-  const noun = entity ?? "Entry";
+  const noun = entity ?? tr("formatEditor.editor.structuredArrayEntryEntity", "Entry");
+  const itemCounter = (index: number) =>
+    tr("formatEditor.editor.structuredArrayCounter", `${noun} ${index} of ${rows.length}`, {
+      entity: noun,
+      index,
+      count: rows.length,
+    });
+  const itemOfCounter = tr("formatEditor.editor.structuredArrayItemOf", `of ${rows.length}`, {
+    count: rows.length,
+  });
 
   if (layout === "slider") {
     return (
@@ -233,7 +244,7 @@ export function NavigableArrayField({
           </label>
           {rows.length > 0 ? (
             <p className="text-label text-fg-muted" data-testid={`${fieldKey}-counter`}>
-              {noun} {activeIndex + 1} of {rows.length}
+              {itemCounter(activeIndex + 1)}
             </p>
           ) : null}
         </div>
@@ -250,7 +261,7 @@ export function NavigableArrayField({
               className="text-label text-fg-muted px-2 py-3 text-center"
               data-testid={`${fieldKey}-empty`}
             >
-              No {noun.toLowerCase()}s yet.
+              {tr("formatEditor.editor.structuredArrayEmpty", "No {label} yet.", { label })}
             </p>
           ) : (
             <ol className="flex scrollbar-thin items-center gap-1.5 overflow-x-auto pb-1">
@@ -352,7 +363,11 @@ export function NavigableArrayField({
                         {idx + 1}
                       </span>
                       <span className="truncate">
-                        {previewVal || <span className="text-fg-muted italic">Untitled</span>}
+                        {previewVal || (
+                          <span className="text-fg-muted italic">
+                            {tr("formatEditor.editor.structuredArrayUntitled", "Untitled")}
+                          </span>
+                        )}
                       </span>
                     </button>
                   </li>
@@ -365,11 +380,16 @@ export function NavigableArrayField({
                     size="sm"
                     variant="ghost"
                     onClick={append}
-                    aria-label={`Add ${noun.toLowerCase()}`}
+                    aria-label={tr("formatEditor.editor.structuredArrayAdd", `Add ${noun}`, {
+                      entity: noun,
+                    })}
                     data-testid={`${fieldKey}-add`}
                     className="rounded-full"
                   >
-                    <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add {noun.toLowerCase()}
+                    <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                    {tr("formatEditor.editor.structuredArrayAdd", `Add ${noun}`, {
+                      entity: noun,
+                    })}
                   </Button>
                 </li>
               ) : null}
@@ -385,7 +405,10 @@ export function NavigableArrayField({
                 onClick={append}
                 data-testid={`${fieldKey}-add-empty`}
               >
-                <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add first {noun.toLowerCase()}
+                <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("formatEditor.editor.structuredArrayAddFirst", `Add first ${noun}`, {
+                  entity: noun,
+                })}
               </Button>
             </div>
           ) : null}
@@ -406,7 +429,7 @@ export function NavigableArrayField({
                   className="text-fg-muted ms-1 font-normal"
                   data-testid={`${fieldKey}-active-counter`}
                 >
-                  of {rows.length}
+                  {itemOfCounter}
                 </span>
               </p>
               <div className="flex items-center gap-1">
@@ -438,9 +461,16 @@ export function NavigableArrayField({
                       variant="ghost"
                       onClick={() => moveTo(activeIndex, activeIndex - 1)}
                       disabled={activeIndex === 0}
-                      aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} up`}
+                      aria-label={tr(
+                        "formatEditor.editor.structuredArrayMoveUpAria",
+                        `Move ${noun} ${activeIndex + 1} up`,
+                        { entity: noun, index: activeIndex + 1 },
+                      )}
                       data-testid={`${fieldKey}-move-up`}
-                      title={tr("common.moveUpShortcut", "Move up (Alt+ArrowUp)")}
+                      title={tr(
+                        "formatEditor.editor.structuredArrayMoveUpShortcut",
+                        "Move up (Alt+ArrowUp)",
+                      )}
                     >
                       <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
@@ -450,9 +480,16 @@ export function NavigableArrayField({
                       variant="ghost"
                       onClick={() => moveTo(activeIndex, activeIndex + 1)}
                       disabled={activeIndex >= rows.length - 1}
-                      aria-label={`Move ${noun.toLowerCase()} ${activeIndex + 1} down`}
+                      aria-label={tr(
+                        "formatEditor.editor.structuredArrayMoveDownAria",
+                        `Move ${noun} ${activeIndex + 1} down`,
+                        { entity: noun, index: activeIndex + 1 },
+                      )}
                       data-testid={`${fieldKey}-move-down`}
-                      title={tr("common.moveDownShortcut", "Move down (Alt+ArrowDown)")}
+                      title={tr(
+                        "formatEditor.editor.structuredArrayMoveDownShortcut",
+                        "Move down (Alt+ArrowDown)",
+                      )}
                     >
                       <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
@@ -461,9 +498,16 @@ export function NavigableArrayField({
                       size="sm"
                       variant="ghost"
                       onClick={() => duplicateAt(activeIndex)}
-                      aria-label={`Duplicate ${noun.toLowerCase()} ${activeIndex + 1}`}
+                      aria-label={tr(
+                        "formatEditor.editor.structuredArrayDuplicateAria",
+                        `Duplicate ${noun} ${activeIndex + 1}`,
+                        { entity: noun, index: activeIndex + 1 },
+                      )}
                       data-testid={`${fieldKey}-duplicate`}
-                      title={tr("common.duplicateShortcut", "Duplicate (Ctrl/Cmd+D)")}
+                      title={tr(
+                        "formatEditor.editor.structuredArrayDuplicateShortcut",
+                        "Duplicate (Ctrl/Cmd+D)",
+                      )}
                     >
                       <Copy className="h-3.5 w-3.5" aria-hidden="true" />
                     </Button>
@@ -472,11 +516,16 @@ export function NavigableArrayField({
                       size="sm"
                       variant="ghost"
                       onClick={() => removeAt(activeIndex)}
-                      aria-label={`Remove ${noun.toLowerCase()} ${activeIndex + 1}`}
+                      aria-label={tr(
+                        "formatEditor.editor.structuredArrayRemoveAria",
+                        `Remove ${noun} ${activeIndex + 1}`,
+                        { entity: noun, index: activeIndex + 1 },
+                      )}
                       data-testid={`${fieldKey}-remove`}
                       className="text-fg-muted hover:text-danger"
                     >
-                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" /> Remove
+                      <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+                      {tr("formatEditor.editor.structuredArrayRemove", "Remove")}
                     </Button>
                   </>
                 ) : null}
@@ -556,7 +605,11 @@ export function NavigableArrayField({
       </label>
       {hint ? <p className="text-label text-fg-muted">{hint}</p> : null}
       <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
-        {rows.length === 0 ? <p className="text-label text-fg-muted">No entries yet.</p> : null}
+        {rows.length === 0 ? (
+          <p className="text-label text-fg-muted">
+            {tr("formatEditor.editor.structuredArrayEmpty", "No {label} yet.", { label })}
+          </p>
+        ) : null}
         <ul className="space-y-2">
           {rows.map((row, idx) => {
             const r =
@@ -622,7 +675,11 @@ export function NavigableArrayField({
                       size="sm"
                       variant="ghost"
                       onClick={() => removeAt(idx)}
-                      aria-label={`Remove row ${idx + 1}`}
+                      aria-label={tr(
+                        "formatEditor.editor.structuredArrayRemoveAria",
+                        `Remove ${noun} ${idx + 1}`,
+                        { entity: noun, index: idx + 1 },
+                      )}
                       className="text-fg-muted hover:text-danger"
                     >
                       <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -637,7 +694,8 @@ export function NavigableArrayField({
         </ul>
         {editable ? (
           <Button type="button" size="sm" variant="ghost" className="mt-2" onClick={append}>
-            <Plus className="h-3.5 w-3.5" aria-hidden="true" /> Add {noun.toLowerCase()}
+            <Plus className="h-3.5 w-3.5" aria-hidden="true" />
+            {tr("formatEditor.editor.structuredArrayAdd", `Add ${noun}`, { entity: noun })}
           </Button>
         ) : null}
       </div>

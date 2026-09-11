@@ -638,6 +638,7 @@ function OutlineFieldRenderer({
         locale={locale}
         editable={editable}
         layout="list"
+        t={t}
         onField={onField}
       />
     </div>

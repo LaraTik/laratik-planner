@@ -439,6 +439,7 @@ export function FormatAwareContentEditor({
         editable={isFieldEditable(fieldKey)}
         layout="slider"
         entity={entity}
+        t={t}
         onField={setField}
       />
     );
