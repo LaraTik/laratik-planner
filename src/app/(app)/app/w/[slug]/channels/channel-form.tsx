@@ -56,16 +56,32 @@ export function ChannelForm({ slug }: { slug: string }) {
             defaultValue="instagram"
             className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
-            <option value="instagram">Instagram</option>
-            <option value="facebook">Facebook</option>
-            <option value="tiktok">TikTok</option>
-            <option value="linkedin">LinkedIn</option>
-            <option value="youtube">YouTube</option>
-            <option value="x">X (Twitter)</option>
-            <option value="pinterest">Pinterest</option>
-            <option value="threads">Threads</option>
+            <option value="instagram">
+              {tr("contentDetail.publishForm.platformLabels.instagram", "Instagram")}
+            </option>
+            <option value="facebook">
+              {tr("contentDetail.publishForm.platformLabels.facebook", "Facebook")}
+            </option>
+            <option value="tiktok">
+              {tr("contentDetail.publishForm.platformLabels.tiktok", "TikTok")}
+            </option>
+            <option value="linkedin">
+              {tr("contentDetail.publishForm.platformLabels.linkedin", "LinkedIn")}
+            </option>
+            <option value="youtube">
+              {tr("contentDetail.publishForm.platformLabels.youtube", "YouTube")}
+            </option>
+            <option value="x">
+              {tr("contentDetail.publishForm.platformLabels.x", "X (Twitter)")}
+            </option>
+            <option value="pinterest">
+              {tr("contentDetail.publishForm.platformLabels.pinterest", "Pinterest")}
+            </option>
+            <option value="threads">
+              {tr("contentDetail.publishForm.platformLabels.threads", "Threads")}
+            </option>
             <option value="other">
-              {tr("users.channels.colPlatform", "Platform") === "Platform" ? "Custom" : "مخصّص"}
+              {tr("contentDetail.publishForm.platformLabels.other", "Custom")}
             </option>
           </select>
         </div>

@@ -21,6 +21,7 @@ vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
 
 import { useFormStatus } from "react-dom";
 import { ChannelForm } from "@/app/(app)/app/w/[slug]/channels/channel-form";
+import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 
@@ -72,5 +73,16 @@ describe("ChannelForm", () => {
     const card = screen.getByTestId("channel-add-card");
     expect(card).toBeInTheDocument();
     expect(card.tagName.toLowerCase()).toBe("div");
+  });
+
+  it("renders platform options from the active Arabic catalog", () => {
+    mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
+    render(
+      <LocaleProvider locale="ar">
+        <ChannelForm slug="acme" />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByRole("option", { name: "مخصص" })).toBeInTheDocument();
   });
 });
