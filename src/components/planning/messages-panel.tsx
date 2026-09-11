@@ -274,13 +274,36 @@ export function AudienceCopyPanel({
       </form>
 
       <Card padding="lg" data-testid="copy-channel-readiness">
-        <CardTitle>{tr("contentDetail.copy.readinessTitle", "Channel readiness")}</CardTitle>
-        <p className="text-label text-fg-muted mt-1">
-          {tr(
-            "contentDetail.copy.readinessDescription",
-            "Review the shared copy before opening Publishing for language, metadata, and final approval.",
-          )}
-        </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle>{tr("contentDetail.copy.readinessTitle", "Channel readiness")}</CardTitle>
+            <p className="text-label text-fg-muted mt-1">
+              {tr(
+                "contentDetail.copy.readinessDescription",
+                "Review the shared copy before opening Publishing for language, metadata, and final approval.",
+              )}
+            </p>
+          </div>
+          {channels.length > 0 ? (
+            <Button asChild size="sm" variant="outline">
+              <Link href={`/app/w/${workspaceSlug}/planning/${contentItemId}/publish`}>
+                {tr("contentDetail.copy.openPublishing", "Review in Publishing")}
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+        <div
+          className="border-info bg-info-subtle text-fg-primary mt-4 rounded-[var(--radius-control)] border p-3"
+          role="note"
+          data-testid="copy-version-explanation"
+        >
+          <p className="text-label">
+            {tr(
+              "contentDetail.copy.versionExplanation",
+              "Shared copy is the starting point. Inherited channels use it as-is; custom overrides are the channel's final version. Review the final result in Publishing.",
+            )}
+          </p>
+        </div>
         {channels.length === 0 ? (
           <div
             className="border-border bg-surface-subtle mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"

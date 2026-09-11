@@ -38,6 +38,13 @@ describe("AudienceCopyPanel localization", () => {
     expect(screen.getByTestId("messages-per-channel-row-social-1")).not.toHaveTextContent(
       "instagram_reel",
     );
+    expect(screen.getByTestId("copy-version-explanation")).toHaveTextContent(
+      "النسخة المشتركة هي نقطة البداية",
+    );
+    expect(screen.getByRole("link", { name: "مراجعة النشر" })).toHaveAttribute(
+      "href",
+      "/app/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",
+    );
   });
 
   it("gives channel managers a direct Details recovery action", () => {

@@ -395,6 +395,8 @@
     "unsavedGuard": "You have unsaved changes in Copy. Leave and lose them?",
     "readinessTitle": "Channel readiness",
     "readinessDescription": "Review the shared copy before opening Publishing for language, metadata, and final approval.",
+    "openPublishing": "Review in Publishing",
+    "versionExplanation": "Shared copy is the starting point. Inherited channels use it as-is; custom overrides are the channel's final version. Review the final result in Publishing.",
     "noChannelsDescription": "No destination channels are selected yet. Add them from Details before configuring publishing.",
     "noChannelsOwner": "No destination channels are selected yet. A workspace manager or planner must add one from Details before publishing can be configured.",
     "openDetails": "Open Details",
