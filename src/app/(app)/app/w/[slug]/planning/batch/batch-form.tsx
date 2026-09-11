@@ -50,6 +50,7 @@ import {
 import { CONTENT_FORMAT_DEFINITIONS, formatDefinitionFor } from "@/lib/content/format-catalog";
 import { BATCH_TEMPLATE_ROWS, buildBatchTemplateTsv } from "@/lib/content/batch-template";
 import { BatchFormatPayloadFields } from "@/components/forms/batch-format-payload-fields";
+import { platformLabel } from "@/components/workspace/platform-icon";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import type { LocaleCode } from "@/lib/i18n/locales";
 
@@ -82,6 +83,12 @@ export interface BatchDefaults {
 }
 
 const EMPTY_STATE: { error?: string; fieldErrors?: Record<string, string> } = {};
+
+function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
+}
 
 function newRow(
   id: string,
@@ -257,7 +264,8 @@ function DefaultChannelPicker({
                     }
                   />
                   <span className="text-label">
-                    <bdi>{channel.platform}</bdi> · <bdi>{channel.accountName}</bdi>
+                    <bdi>{localizedPlatformLabel(t, channel.platform)}</bdi> ·{" "}
+                    <bdi>{channel.accountName}</bdi>
                   </span>
                 </label>
               );
@@ -1169,7 +1177,8 @@ function ChannelPicker({
                 }
               />
               <span className="text-label">
-                <bdi>{channel.platform}</bdi> · <bdi>{channel.accountName}</bdi>
+                <bdi>{localizedPlatformLabel(t, channel.platform)}</bdi> ·{" "}
+                <bdi>{channel.accountName}</bdi>
               </span>
             </label>
           ))

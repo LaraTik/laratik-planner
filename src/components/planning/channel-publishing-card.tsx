@@ -6,7 +6,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
-import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { platformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -72,6 +72,12 @@ const STATUS_VARIANT: Record<
   skipped: "default",
 };
 
+function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
+}
+
 export function ChannelPublishingCard({
   workspaceSlug,
   channel,
@@ -94,7 +100,9 @@ export function ChannelPublishingCard({
             <CardTitle className="text-body text-fg-primary truncate font-semibold">
               {channel.accountName}
             </CardTitle>
-            <CardDescription className="truncate">{channel.platform}</CardDescription>
+            <CardDescription className="truncate">
+              {localizedPlatformLabel(t, channel.platform)}
+            </CardDescription>
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">

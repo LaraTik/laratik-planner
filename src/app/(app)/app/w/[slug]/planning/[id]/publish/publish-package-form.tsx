@@ -1114,6 +1114,11 @@ function Checkbox({
 
 function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform: string }) {
   const t = useLocaleT();
+  const displayPlatform = (() => {
+    const key = `contentDetail.publishForm.platformLabels.${platform}`;
+    const value = t(key);
+    return value === key ? platformLabel(platform) : value;
+  })();
   const caption = (payload as { caption?: string }).caption ?? "";
   const hashtags = (payload as { hashtags?: string[] }).hashtags ?? [];
   return (
@@ -1121,7 +1126,7 @@ function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform
       className="border-border rounded-[var(--radius-control)] border p-3"
       data-testid="publish-preview-pane"
     >
-      <p className="text-label text-fg-muted uppercase">{platform}</p>
+      <p className="text-label text-fg-muted uppercase">{displayPlatform}</p>
       <p
         className="text-body text-fg-primary mt-1 whitespace-pre-wrap"
         data-testid="publish-preview-caption"

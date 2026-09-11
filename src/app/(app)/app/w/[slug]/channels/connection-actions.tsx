@@ -19,6 +19,7 @@ import {
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { TEST_ERROR_COPY, type TestErrorCode } from "@/lib/social/test-error-codes";
+import { platformLabel } from "@/components/workspace/platform-icon";
 
 /**
  * M4 — connection lifecycle client component.
@@ -93,6 +94,11 @@ export function ConnectionActions({
   const locale = useLocaleCode();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : localeT(key, params) || fallback;
+  const localizedPlatformLabel = (platform: string) => {
+    const key = `contentDetail.publishForm.platformLabels.${platform}`;
+    const value = t ? t(key) : localeT(key);
+    return value === key ? platformLabel(platform) : value;
+  };
   const [pending, startTransition] = useTransition();
   const [flash, setFlash] = useState<TestFlash | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -265,7 +271,9 @@ export function ConnectionActions({
             >
               {otherChannels.map((c) => (
                 <li key={c.id} className="text-body text-fg-primary flex items-center gap-2">
-                  <span className="text-fg-muted text-label uppercase">{c.platform}</span>
+                  <span className="text-fg-muted text-label">
+                    {localizedPlatformLabel(c.platform)}
+                  </span>
                   <span className="truncate">{c.accountName}</span>
                 </li>
               ))}

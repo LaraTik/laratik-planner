@@ -18,6 +18,7 @@ import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
 import { channelCopyStatus, isAudienceCopyKey } from "@/lib/content/audience-copy";
 import { type ContentFormat } from "@/lib/format-payload/schemas";
 import { type ActionState } from "@/lib/validation/action-state";
+import { platformLabel } from "@/components/workspace/platform-icon";
 
 const initial: ActionState<"contentItemId" | "format" | "formatPayload"> = {};
 
@@ -60,6 +61,11 @@ export function AudienceCopyPanel({
     return result === key
       ? fallback.replace(/\{(\w+)\}/g, (_, name) => String(params?.[name] ?? `{${name}}`))
       : result;
+  };
+  const localizedPlatformLabel = (platform: string) => {
+    const key = `contentDetail.publishForm.platformLabels.${platform}`;
+    const value = t(key);
+    return value === key ? platformLabel(platform) : value;
   };
   const [payload, setPayload] = React.useState<Record<string, unknown>>(initialPayload);
   const initialJson = React.useMemo(() => JSON.stringify(initialPayload), [initialPayload]);
@@ -323,7 +329,8 @@ export function AudienceCopyPanel({
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <p className="text-label text-fg-secondary font-semibold">
-                      <bdi>{channel.platform}</bdi> · <bdi>{channel.accountName}</bdi>
+                      <bdi>{localizedPlatformLabel(channel.platform)}</bdi> ·{" "}
+                      <bdi>{channel.accountName}</bdi>
                     </p>
                     <span className="text-label bg-surface rounded-full px-2 py-0.5 font-semibold">
                       {copyStatus === "stale"

@@ -78,6 +78,8 @@ describe("ConnectionActions revoke dialog", () => {
     await user.click(screen.getByTestId("revoke-button"));
     const list = await screen.findByTestId("revoke-affected-list");
     expect(list).toHaveTextContent("@brand-second");
+    expect(list).toHaveTextContent("Facebook");
+    expect(list).not.toHaveTextContent("facebook");
   });
 
   it("closes when Escape is pressed (Radix primitive handles it)", async () => {

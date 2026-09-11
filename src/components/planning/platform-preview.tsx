@@ -23,6 +23,7 @@ import { AspectRatioDiagnosticView } from "@/components/preview/aspect-ratio-dia
 import { SafeAreaOverlay, type SafeAreaShape } from "@/components/preview/safe-area-overlay";
 import { LinkifyText } from "@/components/ui/linkify-text";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { platformLabel } from "@/components/workspace/platform-icon";
 
 /**
  * PlatformPreview — a recognisable, format-aware preview of a
@@ -110,6 +111,12 @@ function safeAreaShapeFor(format: PreviewFormat): SafeAreaShape | null {
   return null;
 }
 
+function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
+}
+
 export function PlatformPreview({
   platform,
   accountName,
@@ -121,6 +128,7 @@ export function PlatformPreview({
   contentFormat,
 }: PlatformPreviewProps) {
   const t = useLocaleT();
+  const displayPlatform = localizedPlatformLabel(t, platform);
   const options = formatOptionsFor(platform);
   const [format, setFormat] = React.useState<PreviewFormat>(
     initialFormat && options.includes(initialFormat) ? initialFormat : options[0]!,
@@ -186,7 +194,7 @@ export function PlatformPreview({
       role="figure"
       aria-label={t("contentDetail.preview.ariaLabel", {
         account: accountName,
-        platform,
+        platform: displayPlatform,
       })}
     >
       {options.length > 1 ? (
@@ -233,7 +241,7 @@ export function PlatformPreview({
         <div className="min-w-0 flex-1">
           <p className="text-label text-fg-primary truncate font-semibold">{accountName}</p>
           <p className="text-label text-fg-muted truncate">
-            <bdi>{platform}</bdi>
+            <bdi>{displayPlatform}</bdi>
           </p>
         </div>
         <MoreHorizontal className="text-fg-muted h-4 w-4" aria-hidden="true" />
