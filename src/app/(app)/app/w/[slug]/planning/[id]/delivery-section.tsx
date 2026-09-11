@@ -372,6 +372,8 @@ export function DeliverySection({
                       size="sm"
                       variant="outline"
                       ref={mediaSearchTriggerRef}
+                      aria-expanded={showMediaSearch}
+                      aria-controls="delivery-media-search-panel"
                       onClick={() => setShowMediaSearch((value) => !value)}
                     >
                       <Search className="h-3.5 w-3.5" aria-hidden="true" />
@@ -385,6 +387,8 @@ export function DeliverySection({
                         size="sm"
                         variant="secondary"
                         ref={uploaderTriggerRef}
+                        aria-expanded={showUploader}
+                        aria-controls="delivery-media-uploader-panel"
                         onClick={() => setShowUploader((value) => !value)}
                       >
                         <Upload className="h-3.5 w-3.5" aria-hidden="true" />
@@ -396,7 +400,10 @@ export function DeliverySection({
                   </div>
                 </div>
                 {showMediaSearch ? (
-                  <div className="border-border bg-surface-subtle mt-3 space-y-3 rounded-[var(--radius-control)] border p-3">
+                  <div
+                    id="delivery-media-search-panel"
+                    className="border-border bg-surface-subtle mt-3 space-y-3 rounded-[var(--radius-control)] border p-3"
+                  >
                     <label
                       htmlFor="delivery-media-search"
                       className="text-label text-fg-primary block font-semibold"
@@ -454,7 +461,7 @@ export function DeliverySection({
                   </div>
                 ) : null}
                 {showUploader && canUploadInline ? (
-                  <div className="mt-3">
+                  <div id="delivery-media-uploader-panel" className="mt-3">
                     <MediaUploadForm
                       compact
                       workspaceOptions={[{ id: workspaceId, name: workspaceName }]}

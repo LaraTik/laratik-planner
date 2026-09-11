@@ -144,9 +144,20 @@ describe("DeliverySection media search", () => {
     );
 
     expect(screen.getByText("Existing hero image")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Search media library" }));
+    const searchButton = screen.getByRole("button", { name: "Search media library" });
+    expect(searchButton).toHaveAttribute("aria-expanded", "false");
+    expect(searchButton).toHaveAttribute("aria-controls", "delivery-media-search-panel");
+    await user.click(searchButton);
+    expect(screen.getByRole("button", { name: "Close media search" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     expect(screen.getByLabelText("Search the media library")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Close media search" }));
+    expect(screen.getByRole("button", { name: "Search media library" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     expect(screen.getByRole("button", { name: "Search media library" })).toHaveFocus();
   });
 
@@ -168,8 +179,19 @@ describe("DeliverySection media search", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Upload and attach media" }));
+    const uploadButton = screen.getByRole("button", { name: "Upload and attach media" });
+    expect(uploadButton).toHaveAttribute("aria-expanded", "false");
+    expect(uploadButton).toHaveAttribute("aria-controls", "delivery-media-uploader-panel");
+    await user.click(uploadButton);
+    expect(screen.getByRole("button", { name: "Hide uploader" })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
     await user.click(screen.getByRole("button", { name: "Hide uploader" }));
+    expect(screen.getByRole("button", { name: "Upload and attach media" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
     expect(screen.getByRole("button", { name: "Upload and attach media" })).toHaveFocus();
   });
 
