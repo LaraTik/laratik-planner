@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { localizedPlatformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -109,6 +109,8 @@ export function ChannelEditDrawer({
   const localeT = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : localeT(key, params) || fallback;
+  const labelFor = (platform: string) =>
+    localizedPlatformLabel(platform, t ?? ((key) => localeT(key)));
   const boundAction = React.useMemo(
     () => updateChannelAction.bind(null, slug, channel.id),
     [slug, channel.id],
@@ -185,13 +187,13 @@ export function ChannelEditDrawer({
                 {channel.handle
                   ? tr(
                       "users.channelsEdit.editingLabel",
-                      `Editing ${platformLabel(channel.platform)}@${channel.handle}`,
-                      { platform: platformLabel(channel.platform), handle: channel.handle },
+                      `Editing ${labelFor(channel.platform)}@${channel.handle}`,
+                      { platform: labelFor(channel.platform), handle: channel.handle },
                     )
                   : tr(
                       "users.channelsEdit.editingNoHandle",
-                      `Editing ${platformLabel(channel.platform)}`,
-                      { platform: platformLabel(channel.platform) },
+                      `Editing ${labelFor(channel.platform)}`,
+                      { platform: labelFor(channel.platform) },
                     )}
               </p>
             </div>
@@ -222,7 +224,7 @@ export function ChannelEditDrawer({
               >
                 {PLATFORM_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
-                    {opt.label}
+                    {labelFor(opt.value)}
                   </option>
                 ))}
               </select>
