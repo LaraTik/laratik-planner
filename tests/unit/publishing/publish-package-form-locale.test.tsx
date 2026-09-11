@@ -186,4 +186,72 @@ describe("PublishPackageForm localization", () => {
       window.history.replaceState(null, "", "#");
     }
   });
+
+  it("opens the lazy delivery stage before focusing its blocker target", () => {
+    const target = document.createElement("section");
+    target.id = "assets-versions";
+    target.tabIndex = -1;
+    target.scrollIntoView = vi.fn();
+    const requestAnimationFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => {
+        document.body.appendChild(target);
+        callback(0);
+        return 1;
+      });
+
+    try {
+      render(
+        <LocaleProvider locale="en">
+          <PublishPackageForm
+            workspaceId="33333333-3333-4333-8333-333333333333"
+            workspaceSlug="food-game"
+            contentItemId={contentItemId}
+            itemTitle="Autumn campaign"
+            itemFormat="static_post"
+            channels={[
+              {
+                id: "44444444-4444-4444-8444-444444444444",
+                socialChannelId,
+                platform: "instagram",
+                accountName: "Food Game",
+                payload: null,
+              },
+            ]}
+            deliveryVersions={[]}
+            readiness={{
+              ...readiness,
+              channels: [
+                {
+                  ...readiness.channels[0]!,
+                  blockerCount: 1,
+                  issues: [
+                    {
+                      path: "channels[0].approvedDeliveryVersion",
+                      code: "delivery_not_approved",
+                      severity: "blocker",
+                      message: "Approve a delivery version.",
+                    },
+                  ],
+                },
+              ],
+            }}
+            canEdit={false}
+            canApproveFinalCopy={false}
+            canConfirmReadiness={false}
+          />
+        </LocaleProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("publish-readiness-fix-delivery_not_approved"));
+
+      expect(window.location.hash).toBe("#assets-versions");
+      expect(target).toHaveFocus();
+      expect(requestAnimationFrame).toHaveBeenCalled();
+    } finally {
+      requestAnimationFrame.mockRestore();
+      target.remove();
+      window.history.replaceState(null, "", "#");
+    }
+  });
 });
