@@ -18,6 +18,7 @@ import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
 import { formatDate } from "@/lib/i18n/format-locale";
+import { currentWorkspaceMonthRange } from "@/lib/i18n/workspace-month";
 
 export default async function ClientCalendarPage({
   params,
@@ -32,10 +33,7 @@ export default async function ClientCalendarPage({
   if (!workspace) notFound();
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["client_reviewer"])))
     notFound();
-  const start = new Date();
-  start.setDate(1);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  const { start, end } = currentWorkspaceMonthRange(new Date(), workspace.timezone);
   const rows = await db
     .select({
       id: contentItems.id,
@@ -80,8 +78,16 @@ export default async function ClientCalendarPage({
             {rows.map((row) => (
               <li key={row.id} className="flex flex-wrap items-center gap-3 p-4 sm:gap-4">
                 <time className="bg-surface-subtle text-label flex h-12 w-12 flex-col items-center justify-center rounded-[var(--radius-control)]">
-                  <strong className="text-title-card">{row.plannedPublishAt.getDate()}</strong>
-                  {formatDate(row.plannedPublishAt, code, { month: "short" })}
+                  <strong className="text-title-card">
+                    {formatDate(row.plannedPublishAt, code, {
+                      day: "numeric",
+                      timeZone: workspace.timezone,
+                    })}
+                  </strong>
+                  {formatDate(row.plannedPublishAt, code, {
+                    month: "short",
+                    timeZone: workspace.timezone,
+                  })}
                 </time>
                 <div className="min-w-0 flex-1">
                   <p className="text-body font-semibold">{row.title}</p>

@@ -1,0 +1,24 @@
+import { describe, expect, it } from "vitest";
+import { currentWorkspaceMonthRange } from "@/lib/i18n/workspace-month";
+
+describe("currentWorkspaceMonthRange", () => {
+  it("uses the workspace month when UTC is still the previous local day", () => {
+    const { start, end } = currentWorkspaceMonthRange(
+      new Date("2026-09-01T00:30:00.000Z"),
+      "America/Los_Angeles",
+    );
+
+    expect(start.toISOString()).toBe("2026-08-01T07:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-09-01T07:00:00.000Z");
+  });
+
+  it("handles a workspace that has already entered the next month", () => {
+    const { start, end } = currentWorkspaceMonthRange(
+      new Date("2026-08-31T15:30:00.000Z"),
+      "Asia/Tokyo",
+    );
+
+    expect(start.toISOString()).toBe("2026-08-31T15:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-09-30T15:00:00.000Z");
+  });
+});
