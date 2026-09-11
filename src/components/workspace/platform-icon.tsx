@@ -78,3 +78,13 @@ const PLATFORM_LABELS: Record<string, string> = {
 export function platformLabel(platform: string): string {
   return PLATFORM_LABELS[platform] ?? platform;
 }
+
+/**
+ * Resolve a platform label through the active interface catalog while
+ * retaining a readable fallback for a newly introduced enum value.
+ */
+export function localizedPlatformLabel(platform: string, t: (key: string) => string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key || value.startsWith(`[${key}]`) ? platformLabel(platform) : value;
+}

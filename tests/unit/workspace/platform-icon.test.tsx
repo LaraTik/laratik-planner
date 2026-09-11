@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
 import { Camera, Facebook, Linkedin, Music2, PlayCircle, Twitter } from "lucide-react";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import {
+  localizedPlatformLabel,
+  PlatformIcon,
+  platformLabel,
+} from "@/components/workspace/platform-icon";
 
 describe("platformLabel", () => {
   it("returns human-friendly names for the canonical enums", () => {
@@ -16,6 +20,19 @@ describe("platformLabel", () => {
   it("falls back to the raw value for unknown platforms", () => {
     expect(platformLabel("myspace")).toBe("myspace");
     expect(platformLabel("")).toBe("");
+  });
+});
+
+describe("localizedPlatformLabel", () => {
+  it("uses the active catalog for known platforms", () => {
+    const t = (key: string) =>
+      key === "contentDetail.publishForm.platformLabels.instagram" ? "إنستغرام" : key;
+    expect(localizedPlatformLabel("instagram", t)).toBe("إنستغرام");
+  });
+
+  it("falls back to the human-friendly label for unknown catalog entries", () => {
+    expect(localizedPlatformLabel("instagram", (key) => key)).toBe("Instagram");
+    expect(localizedPlatformLabel("future_network", (key) => `[${key}]`)).toBe("future_network");
   });
 });
 

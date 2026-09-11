@@ -15,7 +15,7 @@ import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { PageHeader } from "@/components/workspace/page-header";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import { PlatformIcon, localizedPlatformLabel } from "@/components/workspace/platform-icon";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { ConnectionStatusBadge } from "./connection-status-badge";
@@ -60,7 +60,7 @@ function channelsColumns(props: {
         <div className="flex items-center gap-3">
           <PlatformIcon platform={row.platform} tile />
           <span className="text-body text-fg-primary font-medium">
-            {platformLabel(row.platform)}
+            {localizedPlatformLabel(row.platform, props.t)}
           </span>
         </div>
       ),
