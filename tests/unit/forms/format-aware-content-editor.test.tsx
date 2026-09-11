@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { render, screen, cleanup, within } from "@testing-library/react";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { tFor } from "@/messages";
 
@@ -56,6 +56,9 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getAllByText("Core creative fields").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("format-section-creative")).queryByText("Core creative fields"),
+    ).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-strategy-optional")).toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative-optional")).toBeInTheDocument();
     expect(screen.getByTestId("format-section-strategy-optional")).not.toHaveAttribute("open");

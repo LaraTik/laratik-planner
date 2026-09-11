@@ -128,7 +128,7 @@
       },
       "sync_error": {
         "label": "Sync delayed",
-        "description": "Transient provider error. The cron will retry."
+        "description": "A temporary provider error occurred. Automatic sync will retry."
       },
       "disconnected": {
         "label": "Disconnected",

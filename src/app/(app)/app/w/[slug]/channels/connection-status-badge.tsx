@@ -57,6 +57,8 @@ const STATUS_COPY: Record<
   },
 };
 
+const SYNC_STALE_AFTER_MS = 36 * 60 * 60 * 1000;
+
 export function ConnectionStatusBadge({
   status,
   lastSyncedAt,
@@ -70,13 +72,16 @@ export function ConnectionStatusBadge({
   locale?: LocaleCode;
   t?: Translator;
 }) {
-  // `Date.now()` is impure; we read the staleness from a prop-derived
-  // computation only. The parent server component passes a
-  // pre-computed `stale` boolean when it cares; the component itself
-  // treats staleness as a hint, not a hard rule. (The actual "is
-  // this still syncing?" question is decided at the cron layer, not
-  // here.)
-  const stale = false;
+  // A connected channel that has not synced within the documented 36-hour
+  // window must not look healthy. The page is refreshed when the user visits
+  // it, so a render-time check is enough and keeps the status derived from
+  // the same timestamp shown below.
+  const now = new Date();
+  const stale =
+    status === "connected" &&
+    lastSyncedAt !== null &&
+    lastSyncedAt !== undefined &&
+    now.getTime() - lastSyncedAt.getTime() > SYNC_STALE_AFTER_MS;
   const effective: ConnectionStatus = stale ? "sync_error" : status;
   const effectiveMeta = STATUS_COPY[effective];
   const label = t ? t(`users.channels.connectionStatus.${effective}.label`) : effectiveMeta.label;
@@ -96,16 +101,16 @@ export function ConnectionStatusBadge({
           aria-label={
             t
               ? t("users.channels.connectionStatus.lastSynced", {
-                  when: formatRelativeDate(lastSyncedAt, new Date(), locale),
+                  when: formatRelativeDate(lastSyncedAt, now, locale),
                 })
-              : `Last synced ${formatRelativeDate(lastSyncedAt, new Date(), locale)}`
+              : `Last synced ${formatRelativeDate(lastSyncedAt, now, locale)}`
           }
         >
           {t
             ? t("users.channels.connectionStatus.synced", {
-                when: formatRelativeDate(lastSyncedAt, new Date(), locale),
+                when: formatRelativeDate(lastSyncedAt, now, locale),
               })
-            : `Synced ${formatRelativeDate(lastSyncedAt, new Date(), locale)}`}
+            : `Synced ${formatRelativeDate(lastSyncedAt, now, locale)}`}
         </span>
       ) : status === "connected" ? (
         <span className="text-label text-fg-muted">
@@ -123,7 +128,7 @@ export function ConnectionStatusDot({ status, t }: { status: ConnectionStatus; t
   return (
     <span
       className="inline-flex h-3 w-3 items-center justify-center"
-      title={STATUS_COPY[status].label}
+      title={t ? t(`users.channels.connectionStatus.${status}.label`) : STATUS_COPY[status].label}
       aria-label={
         t
           ? t(`users.channels.connectionStatus.${status}.description`)
