@@ -177,17 +177,22 @@ export function WorkspaceShell({
 
   return (
     <>
-      <div className="border-border bg-surface sticky top-0 z-20 -mx-1 mb-3 flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-2 py-1.5 backdrop-blur-sm">
-        <WorkspaceTabs
-          tabs={primaryTabs}
-          secondaryTabs={secondaryTabs}
-          secondaryLabel={t("contentDetail.navigation.moreSections")}
-          ariaLabel={t("contentDetail.navigation.workspaceSections")}
-          value={activeId}
-          onValueChange={setActiveId}
-          className="static border-b-0"
-        />
-        <div className="flex items-center gap-1.5 pe-1">
+      <div className="border-border bg-surface sticky top-0 z-20 -mx-1 mb-3 flex flex-col gap-2 rounded-[var(--radius-control)] border px-2 py-1.5 backdrop-blur-sm md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0 md:flex-1">
+          <WorkspaceTabs
+            tabs={primaryTabs}
+            secondaryTabs={secondaryTabs}
+            secondaryLabel={t("contentDetail.navigation.moreSections")}
+            ariaLabel={t("contentDetail.navigation.workspaceSections")}
+            value={activeId}
+            onValueChange={setActiveId}
+            className="static w-full border-b-0"
+          />
+        </div>
+        <div
+          className="flex shrink-0 items-center justify-end gap-1.5 pe-1"
+          data-testid="workspace-header-actions"
+        >
           <DiscussionTrigger
             count={openCommentCount}
             mentionCount={mentionCount}
