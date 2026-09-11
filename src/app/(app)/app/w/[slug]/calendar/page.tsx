@@ -2,6 +2,8 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Clock } from "lucide-react";
+import type { LocaleCode } from "@/lib/i18n/locales";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/lib/content/service";
@@ -16,7 +18,6 @@ export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
   return { title: t("sidebar.planningCalendar") };
 }
-import type { LocaleCode } from "@/lib/i18n/locales";
 
 /**
  * Build the locale-aware weekday headers for the calendar
@@ -39,7 +40,7 @@ export default async function EditorialCalendarPage({
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ month?: string }>;
 }) {
-  const { t, code, dir } = await tForActive();
+  const { t, code } = await tForActive();
   const weekdays = buildWeekdays(code as LocaleCode);
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
@@ -76,25 +77,6 @@ export default async function EditorialCalendarPage({
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
-  // Locale-aware date / weekday formatters. The mobile
-  // agenda uses the abbreviated day + month form; the
-  // grid's "Today" badge uses the long weekday + month
-  // + day form. Both follow the active `dir` so Arabic
-  // dates render Arabic script + Western `0–9` digits.
-  const bcp47 = dir === "rtl" ? "ar" : "en";
-  const agendaDateFmt = new Intl.DateTimeFormat(bcp47, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: workspace.timezone,
-  });
-  const todayLongFmt = new Intl.DateTimeFormat(bcp47, {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: workspace.timezone,
-  });
-
   return (
     <div className="space-y-6" data-testid="workspace-calendar">
       <PageHeader
@@ -137,7 +119,12 @@ export default async function EditorialCalendarPage({
                   {...(isTodayItem ? { "aria-current": "date" as const } : {})}
                   className="text-label text-fg-secondary font-semibold"
                 >
-                  {agendaDateFmt.format(item.plannedPublishAt)}
+                  {formatDate(item.plannedPublishAt, code as LocaleCode, {
+                    weekday: "short",
+                    month: "short",
+                    day: "numeric",
+                    timeZone: workspace.timezone,
+                  })}
                 </time>
                 <CalendarEventCard
                   id={item.id}
@@ -209,11 +196,18 @@ export default async function EditorialCalendarPage({
                     // — fails WCAG AA. White-on-indigo is 5.85:1.
                     <span
                       aria-label={t("calendar.todayAriaLabel", {
-                        date: todayLongFmt.format(
+                        date: formatDate(
                           fromZonedTime(
                             new Date(calendarYear, calendarMonth, day, 12),
                             workspace.timezone,
                           ),
+                          code as LocaleCode,
+                          {
+                            weekday: "long",
+                            month: "long",
+                            day: "numeric",
+                            timeZone: workspace.timezone,
+                          },
                         ),
                       })}
                       className="text-label bg-primary rounded-full px-1.5 font-semibold text-white"

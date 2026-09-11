@@ -35,6 +35,7 @@ import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { socialChannels, users, workspaceMemberships } from "@/lib/db/schema";
 import { toZonedTime } from "date-fns-tz";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { parsePlanningFilterParams } from "@/lib/planning/filter-params";
@@ -98,7 +99,7 @@ export default async function PlanningPage({
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
 
-  const { t, code, dir } = await tForActive();
+  const { t, code } = await tForActive();
   const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
   const canCreate = await hasWorkspaceRole({ id: session.user.id }, ws.id, [
@@ -323,10 +324,11 @@ export default async function PlanningPage({
             <span>
               {t(totalCount === 1 ? "planning.descriptionOne" : "planning.descriptionMany", {
                 count: totalCount,
-                month: new Intl.DateTimeFormat(dir === "rtl" ? "ar" : "en", {
+                month: formatDate(now, code as LocaleCode, {
                   month: "long",
                   year: "numeric",
-                }).format(now),
+                  timeZone: ws.timezone,
+                }),
               })}
             </span>
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
