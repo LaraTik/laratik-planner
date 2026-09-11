@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
-import { humanFormat, humanStatus } from "@/lib/content/status";
+import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -582,7 +582,10 @@ function DetailsSection({
             </span>
           }
         />
-        <SummaryRow label={t("contentDetail.overview.format")} value={humanFormat(format)} />
+        <SummaryRow
+          label={t("contentDetail.overview.format")}
+          value={t(`planningFilters.formatLabels.${format}`)}
+        />
         <SummaryRow
           label={t("contentDetail.overview.channels")}
           value={channelSummary(channels, t)}

@@ -198,7 +198,7 @@ describe("OverviewCommandCenter", () => {
   it("renders the content summary with format, channels, and date", () => {
     render(<OverviewCommandCenter {...baseProps} />);
     const summary = screen.getByTestId("overview-content-summary-list");
-    expect(within(summary).getByText("Static Post")).toBeInTheDocument();
+    expect(within(summary).getByText("Static post")).toBeInTheDocument();
     expect(within(summary).getByText(/Acme Main/)).toBeInTheDocument();
     expect(within(summary).getByText(/2026-09-01 09:00/)).toBeInTheDocument();
   });
