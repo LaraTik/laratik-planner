@@ -14,6 +14,7 @@ import type { ReadinessReport } from "@/lib/publishing/readiness";
 
 const contentItemId = "11111111-1111-4111-8111-111111111111";
 const socialChannelId = "22222222-2222-4222-8222-222222222222";
+const secondSocialChannelId = "55555555-5555-4555-8555-555555555555";
 
 const readiness: ReadinessReport = {
   contentItemId,
@@ -29,6 +30,8 @@ const readiness: ReadinessReport = {
       socialChannelId,
       platform: "instagram",
       hasPayload: false,
+      requiredTotal: 4,
+      requiredCompleted: 0,
       blockerCount: 0,
       recommendationCount: 0,
       issues: [],
@@ -124,6 +127,77 @@ describe("PublishPackageForm localization", () => {
       "href",
       "#assets-versions",
     );
+  });
+
+  it("shows readiness progress for the selected channel", () => {
+    render(
+      <LocaleProvider locale="en">
+        <PublishPackageForm
+          workspaceId="33333333-3333-4333-8333-333333333333"
+          workspaceSlug="food-game"
+          workspaceTimezone="Europe/Berlin"
+          contentItemId={contentItemId}
+          itemTitle="Autumn campaign"
+          itemFormat="static_post"
+          channels={[
+            {
+              id: "44444444-4444-4444-8444-444444444444",
+              socialChannelId,
+              platform: "instagram",
+              accountName: "Food Game",
+              payload: null,
+            },
+            {
+              id: "66666666-6666-4666-8666-666666666666",
+              socialChannelId: secondSocialChannelId,
+              platform: "facebook",
+              accountName: "Food Game Facebook",
+              payload: null,
+            },
+          ]}
+          deliveryVersions={[]}
+          readiness={{
+            ...readiness,
+            requiredTotal: 99,
+            requiredCompleted: 88,
+            channels: [
+              {
+                ...readiness.channels[0]!,
+                requiredTotal: 2,
+                requiredCompleted: 1,
+              },
+              {
+                socialChannelId: secondSocialChannelId,
+                platform: "facebook",
+                hasPayload: false,
+                requiredTotal: 5,
+                requiredCompleted: 4,
+                blockerCount: 1,
+                recommendationCount: 0,
+                issues: [
+                  {
+                    path: "channels[1].payload.caption",
+                    code: "missing_caption",
+                    severity: "blocker",
+                    message: "Add a caption before publishing.",
+                  },
+                ],
+              },
+            ],
+          }}
+          canEdit={false}
+          canApproveFinalCopy={false}
+          canConfirmReadiness={false}
+        />
+      </LocaleProvider>,
+    );
+
+    const checklist = screen.getByTestId("publish-readiness-checklist");
+    expect(checklist).toHaveTextContent("1 of 2 required checks complete for this channel.");
+
+    fireEvent.click(screen.getByTestId(`publish-channel-tab-${secondSocialChannelId}`));
+    expect(checklist).toHaveTextContent("4 of 5 required checks complete for this channel.");
+    expect(checklist).not.toHaveTextContent("88 of 99");
   });
 
   it("moves focus to the publish blocker resolution section", () => {

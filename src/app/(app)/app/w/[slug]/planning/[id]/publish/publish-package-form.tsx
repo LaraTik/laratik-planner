@@ -552,11 +552,7 @@ export function PublishPackageForm({
             </div>
           ) : null}
           {currentReadiness ? (
-            <PublishReadinessChecklist
-              readiness={readiness}
-              currentReadiness={currentReadiness}
-              t={t}
-            />
+            <PublishReadinessChecklist currentReadiness={currentReadiness} t={t} />
           ) : null}
           {/* Left column — destination + caption/discovery */}
           <Card padding="lg" className="space-y-3">
@@ -1006,11 +1002,9 @@ function readinessIssueText(
 }
 
 function PublishReadinessChecklist({
-  readiness,
   currentReadiness,
   t,
 }: {
-  readiness: ReadinessReport;
   currentReadiness: ReadinessReport["channels"][number];
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -1042,8 +1036,8 @@ function PublishReadinessChecklist({
           </h2>
           <p className="text-label mt-1">
             {t("contentDetail.publishReadiness.progress", {
-              completed: readiness.requiredCompleted,
-              total: readiness.requiredTotal,
+              completed: currentReadiness.requiredCompleted,
+              total: currentReadiness.requiredTotal,
             })}
           </p>
         </div>

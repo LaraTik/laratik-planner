@@ -77,6 +77,8 @@ export const ChannelReadinessSchema = z.object({
   socialChannelId: z.string().uuid(),
   platform: z.string().nullable(),
   hasPayload: z.boolean(),
+  requiredTotal: z.number().int().min(0),
+  requiredCompleted: z.number().int().min(0),
   blockerCount: z.number().int().min(0),
   recommendationCount: z.number().int().min(0),
   issues: z.array(ReadinessIssueSchema),
@@ -474,6 +476,7 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
     let completedCount = 0;
     const raw = row.platformPayload;
     if (!raw) {
+      requiredCount += 1;
       issues.push({
         path: `${channelPath}.payload`,
         code: "missing_payload",
@@ -484,6 +487,7 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
     } else {
       const candidate = raw as { platform?: string };
       if (!candidate.platform) {
+        requiredCount += 1;
         issues.push({
           path: `${channelPath}.payload`,
           code: "missing_platform",
@@ -498,6 +502,7 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
         // channel as a blocker.
         const parsed = PlatformPayloadSchema.safeParse(raw);
         if (!parsed.success) {
+          requiredCount += 1;
           issues.push({
             path: `${channelPath}.payload`,
             code: "invalid_payload",
@@ -567,6 +572,8 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
       socialChannelId: row.socialChannelId,
       platform: row.platform,
       hasPayload: raw !== null,
+      requiredTotal: requiredCount,
+      requiredCompleted: completedCount,
       blockerCount,
       recommendationCount,
       issues,

@@ -55,6 +55,8 @@ describe("M4.4 — readiness pure helpers (unit)", () => {
           socialChannelId: "a",
           platform: "instagram",
           hasPayload: true,
+          requiredTotal: 4,
+          requiredCompleted: 4,
           blockerCount: 0,
           recommendationCount: 1,
           issues: [],

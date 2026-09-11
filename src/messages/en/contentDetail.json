@@ -723,7 +723,7 @@
   },
   "publishReadiness": {
     "title": "Publishing requirements",
-    "progress": "{completed} of {total} required checks complete for this item.",
+    "progress": "{completed} of {total} required checks complete for this channel.",
     "blockersOne": "{count} blocker",
     "blockersMany": "{count} blockers",
     "recommendationsOne": "{count} recommendation",

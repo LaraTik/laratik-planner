@@ -723,7 +723,7 @@
   },
   "publishReadiness": {
     "title": "متطلبات النشر",
-    "progress": "تم إكمال {completed} من أصل {total} فحصًا مطلوبًا لهذا العنصر.",
+    "progress": "تم إكمال {completed} من أصل {total} فحصًا مطلوبًا لهذه القناة.",
     "blockersOne": "{count} عائق",
     "blockersMany": "{count} عوائق",
     "recommendationsOne": "{count} توصية",

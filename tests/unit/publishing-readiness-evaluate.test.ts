@@ -186,6 +186,8 @@ describe("evaluateReadiness", () => {
     expect(report.canPublish).toBe(false);
     expect(report.blockers).toBe(1);
     expect(report.channels[0]?.issues.find((i) => i.code === "missing_payload")).toBeDefined();
+    expect(report.channels[0]?.requiredTotal).toBe(2);
+    expect(report.channels[0]?.requiredCompleted).toBe(1);
   });
 
   it("flags an invalid (schema-rejected) payload as a single blocker", async () => {
