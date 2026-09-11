@@ -127,6 +127,7 @@ export function PlanningDetailShell({
         <aside
           className="sticky top-16 hidden self-start lg:block"
           id="workflow"
+          tabIndex={-1}
           data-testid="planning-detail-rail"
           aria-label={t("common.workflowRail")}
         >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type MouseEvent } from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Info, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -926,6 +926,65 @@ function readinessAnchorForPath(path: string): string {
   return "#publishing";
 }
 
+function focusReadinessTarget(target: HTMLElement): void {
+  target.focus({ preventScroll: true });
+  const reduceMotion =
+    typeof window.matchMedia === "function" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  target.scrollIntoView?.({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+}
+
+function isHiddenReadinessTarget(target: HTMLElement): boolean {
+  return (
+    target.hidden ||
+    target.getAttribute("aria-hidden") === "true" ||
+    Boolean(target.closest('[hidden], [aria-hidden="true"]')) ||
+    window.getComputedStyle(target).display === "none" ||
+    window.getComputedStyle(target).visibility === "hidden"
+  );
+}
+
+function focusReadinessLinkTarget(event: MouseEvent<HTMLAnchorElement>, anchor: string): void {
+  const directTarget = document.querySelector<HTMLElement>(anchor);
+  const mobileWorkflowTrigger =
+    anchor === "#workflow"
+      ? document.querySelector<HTMLElement>('[data-testid="workflow-mobile-trigger"]')
+      : null;
+  const target =
+    directTarget && !isHiddenReadinessTarget(directTarget)
+      ? directTarget
+      : mobileWorkflowTrigger && !isHiddenReadinessTarget(mobileWorkflowTrigger)
+        ? mobileWorkflowTrigger
+        : null;
+
+  if (target) {
+    event.preventDefault();
+    window.history.replaceState(null, "", anchor);
+    focusReadinessTarget(target);
+    return;
+  }
+
+  // Delivery is a lazily mounted workspace panel. Select it first, then
+  // focus the exact section once React has mounted the target. This keeps
+  // blocker recovery usable from both pointer and keyboard activation.
+  if (anchor === "#assets-versions") {
+    event.preventDefault();
+    window.location.hash = "#delivery";
+    let attempts = 0;
+    const retry = () => {
+      const deliveryTarget = document.querySelector<HTMLElement>(anchor);
+      if (deliveryTarget && !isHiddenReadinessTarget(deliveryTarget)) {
+        window.history.replaceState(null, "", anchor);
+        focusReadinessTarget(deliveryTarget);
+        return;
+      }
+      attempts += 1;
+      if (attempts < 10) window.requestAnimationFrame(retry);
+    };
+    window.requestAnimationFrame(retry);
+  }
+}
+
 function readinessIssueText(
   t: (key: string, params?: Record<string, string | number>) => string,
   code: string,
@@ -1003,14 +1062,20 @@ function PublishReadinessChecklist({
               <span className="min-w-0 flex-1">
                 {readinessIssueText(t, issue.code, issue.message)}
               </span>
-              <Link
-                href={readinessAnchorForPath(issue.path)}
-                aria-label={`${readinessFixLabel(issue.path, t)}: ${readinessIssueText(t, issue.code, issue.message)}`}
-                className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                data-testid={`publish-readiness-fix-${issue.code}`}
-              >
-                {readinessFixLabel(issue.path, t)}
-              </Link>
+              {(() => {
+                const anchor = readinessAnchorForPath(issue.path);
+                return (
+                  <Link
+                    href={anchor}
+                    onClick={(event) => focusReadinessLinkTarget(event, anchor)}
+                    aria-label={`${readinessFixLabel(issue.path, t)}: ${readinessIssueText(t, issue.code, issue.message)}`}
+                    className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    data-testid={`publish-readiness-fix-${issue.code}`}
+                  >
+                    {readinessFixLabel(issue.path, t)}
+                  </Link>
+                );
+              })()}
             </li>
           ))}
         </ul>

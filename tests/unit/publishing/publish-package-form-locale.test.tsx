@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
@@ -122,5 +122,68 @@ describe("PublishPackageForm localization", () => {
       "href",
       "#assets-versions",
     );
+  });
+
+  it("moves focus to the publish blocker resolution section", () => {
+    const target = document.createElement("section");
+    target.id = "assets-versions";
+    target.tabIndex = -1;
+    target.scrollIntoView = vi.fn();
+    document.body.appendChild(target);
+
+    try {
+      render(
+        <LocaleProvider locale="en">
+          <PublishPackageForm
+            workspaceId="33333333-3333-4333-8333-333333333333"
+            workspaceSlug="food-game"
+            contentItemId={contentItemId}
+            itemTitle="Autumn campaign"
+            itemFormat="static_post"
+            channels={[
+              {
+                id: "44444444-4444-4444-8444-444444444444",
+                socialChannelId,
+                platform: "instagram",
+                accountName: "Food Game",
+                payload: null,
+              },
+            ]}
+            deliveryVersions={[]}
+            readiness={{
+              ...readiness,
+              channels: [
+                {
+                  ...readiness.channels[0]!,
+                  blockerCount: 1,
+                  issues: [
+                    {
+                      path: "channels[0].approvedDeliveryVersion",
+                      code: "delivery_not_approved",
+                      severity: "blocker",
+                      message: "Approve a delivery version.",
+                    },
+                  ],
+                },
+              ],
+            }}
+            canEdit={false}
+            canApproveFinalCopy={false}
+            canConfirmReadiness={false}
+          />
+        </LocaleProvider>,
+      );
+
+      fireEvent.click(screen.getByTestId("publish-readiness-fix-delivery_not_approved"));
+
+      expect(target).toHaveFocus();
+      expect(target.scrollIntoView).toHaveBeenCalledWith({
+        behavior: "smooth",
+        block: "start",
+      });
+    } finally {
+      target.remove();
+      window.history.replaceState(null, "", "#");
+    }
   });
 });

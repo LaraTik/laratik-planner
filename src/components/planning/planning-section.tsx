@@ -51,13 +51,23 @@ export function PlanningSection({
 }: PlanningSectionProps) {
   if (variant === "flat") {
     return (
-      <section id={id} data-testid={testId} className={cn("scroll-mt-24", className)}>
+      <section
+        id={id}
+        tabIndex={id ? -1 : undefined}
+        data-testid={testId}
+        className={cn("scroll-mt-24", className)}
+      >
         {children}
       </section>
     );
   }
   return (
-    <Card id={id} data-testid={testId} className={cn("scroll-mt-24", className)}>
+    <Card
+      id={id}
+      tabIndex={id ? -1 : undefined}
+      data-testid={testId}
+      className={cn("scroll-mt-24", className)}
+    >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <CardTitle className="text-body text-fg-primary font-semibold">{title}</CardTitle>
