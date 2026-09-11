@@ -146,6 +146,31 @@ describe("DeliverySection media search", () => {
     expect(screen.getByText("Existing hero image")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Search media library" }));
     expect(screen.getByLabelText("Search the media library")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close media search" }));
+    expect(screen.getByRole("button", { name: "Search media library" })).toHaveFocus();
+  });
+
+  it("restores focus to the uploader trigger when the uploader closes", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeliverySection
+        {...baseProps}
+        mediaAssets={[
+          {
+            id: "asset-existing",
+            title: "Existing hero image",
+            kind: "image",
+            byteSize: 1200,
+            workspaceName: "Northstar Coffee",
+            visibility: "workspace",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upload and attach media" }));
+    await user.click(screen.getByRole("button", { name: "Hide uploader" }));
+    expect(screen.getByRole("button", { name: "Upload and attach media" })).toHaveFocus();
   });
 
   it("loads matching image and video assets after an explicit search", async () => {

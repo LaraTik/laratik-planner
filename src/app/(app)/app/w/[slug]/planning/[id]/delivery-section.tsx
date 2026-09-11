@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { FileText, FolderOpen, Package, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -89,6 +89,10 @@ export function DeliverySection({
   const [hasSearched, setHasSearched] = useState(false);
   const [searchingMedia, setSearchingMedia] = useState(false);
   const [mediaSearchError, setMediaSearchError] = useState<string | null>(null);
+  const mediaSearchTriggerRef = useRef<HTMLButtonElement>(null);
+  const uploaderTriggerRef = useRef<HTMLButtonElement>(null);
+  const wasMediaSearchOpen = useRef(showMediaSearch);
+  const wasUploaderOpen = useRef(showUploader);
   const canUploadInline = workspaceId.length > 0;
   const previousAssetSet = new Set(previousAssetIds);
   const nextVersionNumber = (deliveries[0]?.versionNumber ?? 0) + 1;
@@ -117,6 +121,20 @@ export function DeliverySection({
     (contentStatus === "in_design" ||
       contentStatus === "creative_review" ||
       contentStatus === "changes_requested");
+
+  useEffect(() => {
+    if (wasMediaSearchOpen.current && !showMediaSearch) {
+      mediaSearchTriggerRef.current?.focus();
+    }
+    wasMediaSearchOpen.current = showMediaSearch;
+  }, [showMediaSearch]);
+
+  useEffect(() => {
+    if (wasUploaderOpen.current && !showUploader) {
+      uploaderTriggerRef.current?.focus();
+    }
+    wasUploaderOpen.current = showUploader;
+  }, [showUploader]);
 
   async function searchMediaLibrary() {
     const query = mediaQuery.trim();
@@ -353,6 +371,7 @@ export function DeliverySection({
                       type="button"
                       size="sm"
                       variant="outline"
+                      ref={mediaSearchTriggerRef}
                       onClick={() => setShowMediaSearch((value) => !value)}
                     >
                       <Search className="h-3.5 w-3.5" aria-hidden="true" />
@@ -365,6 +384,7 @@ export function DeliverySection({
                         type="button"
                         size="sm"
                         variant="secondary"
+                        ref={uploaderTriggerRef}
                         onClick={() => setShowUploader((value) => !value)}
                       >
                         <Upload className="h-3.5 w-3.5" aria-hidden="true" />
