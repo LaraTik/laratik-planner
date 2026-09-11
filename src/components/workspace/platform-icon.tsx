@@ -63,6 +63,7 @@ export function PlatformIcon({ platform, tile, className, ...props }: PlatformIc
  */
 const PLATFORM_LABELS: Record<string, string> = {
   instagram: "Instagram",
+  instagram_reel: "Instagram Reel",
   facebook: "Facebook",
   tiktok: "TikTok",
   linkedin: "LinkedIn",

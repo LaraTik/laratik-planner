@@ -66,6 +66,10 @@ describe("PublishPackageForm localization", () => {
 
     expect(screen.getByText("الوجهة والتعليق")).toBeInTheDocument();
     expect(screen.getByText("إضافة ملاحظة داخلية")).toBeInTheDocument();
+    expect(
+      screen.getByTestId("publish-channel-tab-22222222-2222-4222-8222-222222222222"),
+    ).toHaveTextContent("Instagram");
+    expect(screen.getByTestId("publish-item-format")).toHaveValue("منشور ثابت");
     expect(screen.getByLabelText("النص البديل وإمكانية الوصول")).toHaveAttribute("dir", "rtl");
     expect(screen.getByTestId("publish-save-draft")).toHaveTextContent("حفظ المسودة");
     expect(screen.getByTestId("publish-ready")).toHaveTextContent("جاهز للنشر");

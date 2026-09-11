@@ -21,6 +21,8 @@ import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { platformLabel } from "@/components/workspace/platform-icon";
+import { humanFormat } from "@/lib/content/status";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import type { MetaPublishingReadiness } from "@/lib/db/schema";
@@ -244,17 +246,26 @@ export function PublishPackageForm({
    * Bound translator from the parent. Phase 6e (2026-09-01)
    * migrates the top-level chrome (empty state, status
    * messages, save / ready buttons, last-saved label) through
-   * `contentDetail.publish.*`. The per-field labels inside
-   * the Destination & caption / Media & disclosures /
-   * Preview & approval sections (Phase {hashtag} /
-   * First comment / etc.) are still English and belong to a
-   * follow-up commit.
+   * `contentDetail.publish.*`. Per-field labels inside the
+   * Destination & caption / Media & disclosures /
+   * Preview & approval sections are resolved from the active
+   * catalog as well.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const localeT = useLocaleT();
   const locale = useLocaleCode();
   const t = tProp ?? localeT;
+  const localizedPlatformLabel = (platform: string) => {
+    const key = `contentDetail.publishForm.platformLabels.${platform}`;
+    const value = t(key);
+    return value === key ? platformLabel(platform) : value;
+  };
+  const localizedFormatLabel = (format: string) => {
+    const key = `planningFilters.formatLabels.${format}`;
+    const value = t(key);
+    return value === key ? humanFormat(format) : value;
+  };
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
     const initial: Record<string, PlatformPayload> = {};
@@ -488,7 +499,9 @@ export function PublishPackageForm({
               data-testid={`publish-channel-tab-${ch.socialChannelId}`}
             >
               <span>{ch.accountName}</span>
-              <span className="text-label text-fg-muted ms-2 uppercase">{ch.platform}</span>
+              <span className="text-label text-fg-muted ms-2">
+                {localizedPlatformLabel(ch.platform)}
+              </span>
               {blockers > 0 ? (
                 <Badge variant="danger" className="ms-2">
                   {blockers}
@@ -566,7 +579,7 @@ export function PublishPackageForm({
             />
             <Field
               label={t("contentDetail.publishForm.format")}
-              value={itemFormat}
+              value={localizedFormatLabel(itemFormat)}
               readOnly
               testId="publish-item-format"
             />
