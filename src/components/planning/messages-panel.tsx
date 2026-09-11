@@ -229,7 +229,7 @@ export function AudienceCopyPanel({
         </div>
 
         <div
-          className="bg-surface sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:-mx-6 sm:px-6"
+          className="bg-surface sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:-mx-6 sm:px-6"
           data-testid="copy-save-bar"
         >
           <p className="text-label text-fg-secondary" aria-live="polite">

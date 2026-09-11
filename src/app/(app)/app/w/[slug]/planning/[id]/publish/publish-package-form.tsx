@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Save, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -829,7 +829,7 @@ export function PublishPackageForm({
 
       {/* Sticky action bar — bottom of the form on every viewport */}
       <div
-        className="bg-surface border-border sticky bottom-0 z-10 -mx-4 flex flex-col items-stretch gap-2 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between md:mx-0 md:px-0"
+        className="bg-surface border-border sticky bottom-0 z-10 -mx-4 flex flex-col items-stretch gap-2 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between md:mx-0 md:px-0"
         data-testid="publish-action-bar"
       >
         <div className="flex items-center gap-2">
@@ -933,9 +933,15 @@ function PublishReadinessChecklist({
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const hasBlockers = currentReadiness.blockerCount > 0;
+  const hasRecommendations = currentReadiness.recommendationCount > 0;
+  const tone = hasBlockers
+    ? "border-danger bg-danger-container"
+    : hasRecommendations
+      ? "border-warning bg-warning-subtle"
+      : "border-success bg-success-container";
   return (
     <section
-      className={`${hasBlockers ? "border-danger bg-danger-container" : "border-success bg-success-container"} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-3`}
+      className={`${tone} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-3`}
       aria-labelledby="publish-readiness-title"
       data-testid="publish-readiness-checklist"
       data-blockers={currentReadiness.blockerCount}
@@ -943,6 +949,8 @@ function PublishReadinessChecklist({
       <div className="flex items-start gap-2">
         {hasBlockers ? (
           <AlertTriangle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        ) : hasRecommendations ? (
+          <Info className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         ) : (
           <CheckCircle2 className="text-success mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
         )}
@@ -959,8 +967,20 @@ function PublishReadinessChecklist({
         </div>
         <span className="text-label shrink-0 font-semibold" data-testid="publish-readiness-count">
           {hasBlockers
-            ? t("contentDetail.publishReadiness.blockers", { count: currentReadiness.blockerCount })
-            : t("contentDetail.publishReadiness.ready")}
+            ? t(
+                currentReadiness.blockerCount === 1
+                  ? "contentDetail.publishReadiness.blockersOne"
+                  : "contentDetail.publishReadiness.blockersMany",
+                { count: currentReadiness.blockerCount },
+              )
+            : hasRecommendations
+              ? t(
+                  currentReadiness.recommendationCount === 1
+                    ? "contentDetail.publishReadiness.recommendationsOne"
+                    : "contentDetail.publishReadiness.recommendationsMany",
+                  { count: currentReadiness.recommendationCount },
+                )
+              : t("contentDetail.publishReadiness.ready")}
         </span>
       </div>
       {currentReadiness.issues.length > 0 ? (
@@ -983,7 +1003,9 @@ function PublishReadinessChecklist({
         </ul>
       ) : (
         <p className="text-label mt-3" data-testid="publish-readiness-clear">
-          {t("contentDetail.publishReadiness.clearDescription")}
+          {hasRecommendations
+            ? t("contentDetail.publishReadiness.recommendationsDescription")
+            : t("contentDetail.publishReadiness.clearDescription")}
         </p>
       )}
     </section>

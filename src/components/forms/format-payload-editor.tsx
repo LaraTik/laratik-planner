@@ -303,6 +303,11 @@ export function FormatPayloadEditor({
               fields={advancedWithoutOA}
               format={format}
               payload={payload}
+              label={t("formatEditor.editor.advancedDetails")}
+              hideLabel={t("formatEditor.editor.hideAdvanced")}
+              alwaysShowLabel={t("formatEditor.editor.alwaysShow")}
+              hideAlwaysLabel={t("formatEditor.editor.hideAlways")}
+              emptyCountLabel={t("formatEditor.editor.emptyCount", { count: "{count}" })}
               renderField={(f) => (
                 <div key={`adv-${f.key}`} data-testid={`advanced-tier-${f.key}`}>
                   {renderField(f)}

@@ -1452,7 +1452,7 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
             data-testid="workflow-mobile-backdrop"
           />
           <div
-            className="border-border bg-surface absolute start-0 end-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-control)] border shadow-2xl"
+            className="border-border bg-surface absolute start-0 end-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[var(--radius-control)] border pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl"
             data-testid="workflow-mobile-panel"
           >
             <header className="border-border bg-surface sticky top-0 z-10 flex items-center justify-between border-b px-3 py-2">

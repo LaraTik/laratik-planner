@@ -51,6 +51,10 @@ export interface AdvancedDisclosureProps {
    * "Advanced details".
    */
   label?: string;
+  hideLabel?: string;
+  alwaysShowLabel?: string;
+  hideAlwaysLabel?: string;
+  emptyCountLabel?: string;
 }
 
 function readPreference(format: string): boolean {
@@ -94,6 +98,10 @@ export function AdvancedDisclosure({
   payload,
   renderField,
   label = "Advanced details",
+  hideLabel = "Hide advanced",
+  alwaysShowLabel = "Always show",
+  hideAlwaysLabel = "Hide always",
+  emptyCountLabel = "{count} empty",
 }: AdvancedDisclosureProps) {
   // The disclosure is collapsed by default; the always-show
   // preference overrides that. We read the preference on mount
@@ -169,7 +177,7 @@ export function AdvancedDisclosure({
               data-testid="advanced-disclosure-collapse"
             >
               <ChevronDown className="h-3.5 w-3.5 rotate-180" aria-hidden="true" />
-              Hide advanced
+              {hideLabel}
             </button>
             <button
               type="button"
@@ -183,7 +191,7 @@ export function AdvancedDisclosure({
               ) : (
                 <Eye className="h-3.5 w-3.5" aria-hidden="true" />
               )}
-              {alwaysShow ? "Hide always" : "Always show"}
+              {alwaysShow ? hideAlwaysLabel : alwaysShowLabel}
             </button>
           </div>
         </div>
@@ -200,7 +208,9 @@ export function AdvancedDisclosure({
             {`${label} (${fields.length})`}
           </button>
           {empty.length > 0 ? (
-            <span className="text-label text-fg-muted">{empty.length} empty</span>
+            <span className="text-label text-fg-muted">
+              {emptyCountLabel.replace("{count}", String(empty.length))}
+            </span>
           ) : null}
         </div>
       )}

@@ -120,6 +120,10 @@ export function BatchFormatPayloadFields({
           payload={value}
           renderField={renderField}
           label={t("batchAdd.form.advancedDetails")}
+          hideLabel={t("formatEditor.editor.hideAdvanced")}
+          alwaysShowLabel={t("formatEditor.editor.alwaysShow")}
+          hideAlwaysLabel={t("formatEditor.editor.hideAlways")}
+          emptyCountLabel={t("formatEditor.editor.emptyCount", { count: "{count}" })}
         />
       ) : null}
     </div>
