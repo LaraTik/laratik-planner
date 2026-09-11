@@ -131,6 +131,7 @@ export default async function TrendsPage({ params }: { params: Promise<{ slug: s
       />
       <TrendsPageClient
         workspaceSlug={ws.slug}
+        workspaceTimezone={ws.timezone}
         isAdmin={isAdmin}
         enabledKeys={enabledKeys}
         health={healthRows.map((h) => ({

@@ -21,6 +21,7 @@ import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { humanFormat } from "@/lib/content/status";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
@@ -200,6 +201,7 @@ function defaultPayloadFor(platform: string, socialChannelId: string): PlatformP
 export function PublishPackageForm({
   workspaceId,
   workspaceSlug,
+  workspaceTimezone,
   contentItemId,
   itemTitle,
   itemFormat,
@@ -218,6 +220,7 @@ export function PublishPackageForm({
 }: {
   workspaceId: string;
   workspaceSlug: string;
+  workspaceTimezone: string;
   contentItemId: string;
   itemTitle: string;
   itemFormat: string;
@@ -809,7 +812,14 @@ export function PublishPackageForm({
               {currentDraft.approval.approvedAt ? (
                 <p className="text-label text-fg-muted mt-1">
                   {t("contentDetail.publishForm.approvedAt", {
-                    time: new Date(currentDraft.approval.approvedAt).toLocaleString(),
+                    time: formatDate(new Date(currentDraft.approval.approvedAt), locale, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      timeZone: workspaceTimezone,
+                    }),
                   })}
                 </p>
               ) : null}

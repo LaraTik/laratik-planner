@@ -234,6 +234,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       title: t("auth.chrome.notifications.title"),
       markAllRead: t("auth.chrome.notifications.markAllRead"),
       empty: t("auth.chrome.notifications.empty"),
+      today: t("auth.chrome.notifications.today"),
+      yesterday: t("auth.chrome.notifications.yesterday"),
     },
     // Sidebar labels: flat key→string map indexed by the
     // navigation-model spec `key`. The sidebar component

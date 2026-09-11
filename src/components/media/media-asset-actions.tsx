@@ -22,7 +22,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 type FolderOption = { id: string; name: string };
 
@@ -46,6 +47,7 @@ export function MediaAssetActions({
   canManage: boolean;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [shared, setShared] = React.useState(visibility === "agency");
@@ -206,10 +208,12 @@ export function MediaAssetActions({
 
   const expiryLabel = publicExpiresAt
     ? t("media.publicLinkExpires", {
-        date: new Intl.DateTimeFormat("en-GB", {
-          dateStyle: "medium",
+        date: formatDate(new Date(publicExpiresAt), locale, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
           numberingSystem: "latn",
-        }).format(new Date(publicExpiresAt)),
+        }),
       })
     : null;
 

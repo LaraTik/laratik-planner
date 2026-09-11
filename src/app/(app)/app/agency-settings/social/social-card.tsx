@@ -23,7 +23,8 @@ import {
   rotateSocialDekAction,
   type SocialActionState,
 } from "./actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 /**
  * M4.5 — social analytics card on the agency settings page.
@@ -429,6 +430,7 @@ function EnabledBody({
   onResetRecoveryClick: () => void;
   tr: (key: string, fallback: string, params?: Record<string, string | number>) => string;
 }) {
+  const locale = useLocaleCode();
   return (
     <form onSubmit={rotateAction} className="space-y-4">
       <dl className="text-body space-y-2">
@@ -437,7 +439,15 @@ function EnabledBody({
             <dt className="text-fg-secondary">
               {tr("agencySocial.enabledSince", "Enabled since")}
             </dt>
-            <dd className="font-semibold">{new Date(status.enabledAt).toLocaleString()}</dd>
+            <dd className="font-semibold">
+              {formatDate(new Date(status.enabledAt), locale, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </dd>
           </div>
         )}
         <div className="flex justify-between gap-2">
@@ -449,7 +459,15 @@ function EnabledBody({
         {status.lastRotatedAt && (
           <div className="flex justify-between gap-2">
             <dt className="text-fg-secondary">{tr("agencySocial.lastRotated", "Last rotated")}</dt>
-            <dd className="font-semibold">{new Date(status.lastRotatedAt).toLocaleString()}</dd>
+            <dd className="font-semibold">
+              {formatDate(new Date(status.lastRotatedAt), locale, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </dd>
           </div>
         )}
         <div className="flex justify-between gap-2">

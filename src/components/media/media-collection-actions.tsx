@@ -12,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 
 export function MediaCollectionActions({
   assetIds,
@@ -34,6 +35,7 @@ export function MediaCollectionActions({
   shareLabelKey?: string;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [shareOpen, setShareOpen] = React.useState(false);
@@ -213,10 +215,12 @@ export function MediaCollectionActions({
               <p className="text-label text-fg-muted">
                 {expiresAt
                   ? t("media.publicLinkExpires", {
-                      date: new Intl.DateTimeFormat("en-GB", {
-                        dateStyle: "medium",
+                      date: formatDate(new Date(expiresAt), locale, {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
                         numberingSystem: "latn",
-                      }).format(new Date(expiresAt)),
+                      }),
                     })
                   : null}
               </p>

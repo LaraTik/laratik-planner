@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { getSourceDefinition } from "@/lib/trends/source-catalog";
 import { formatTrendFreshness, trendLifecycleMessageKey } from "@/lib/trends/presentation";
 
@@ -50,7 +50,7 @@ export function TrendCard({
   boards?: Board[];
 }) {
   const t = useLocaleT();
-  const locale = typeof document !== "undefined" ? document.documentElement.lang || "en" : "en";
+  const locale = useLocaleCode();
   const def = getSourceDefinition(signal.sourceKey);
   const displayName =
     t(`trends.sources.${signal.sourceKey}`) || def?.displayName || signal.sourceKey;

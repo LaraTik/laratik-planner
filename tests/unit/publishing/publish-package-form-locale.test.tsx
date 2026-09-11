@@ -43,6 +43,7 @@ describe("PublishPackageForm localization", () => {
         <PublishPackageForm
           workspaceId="33333333-3333-4333-8333-333333333333"
           workspaceSlug="food-game"
+          workspaceTimezone="Europe/Berlin"
           contentItemId={contentItemId}
           itemTitle="حملة الخريف"
           itemFormat="static_post"
@@ -81,6 +82,7 @@ describe("PublishPackageForm localization", () => {
         <PublishPackageForm
           workspaceId="33333333-3333-4333-8333-333333333333"
           workspaceSlug="food-game"
+          workspaceTimezone="Europe/Berlin"
           contentItemId={contentItemId}
           itemTitle="Autumn campaign"
           itemFormat="static_post"
@@ -137,6 +139,7 @@ describe("PublishPackageForm localization", () => {
           <PublishPackageForm
             workspaceId="33333333-3333-4333-8333-333333333333"
             workspaceSlug="food-game"
+            workspaceTimezone="Europe/Berlin"
             contentItemId={contentItemId}
             itemTitle="Autumn campaign"
             itemFormat="static_post"
@@ -206,6 +209,7 @@ describe("PublishPackageForm localization", () => {
           <PublishPackageForm
             workspaceId="33333333-3333-4333-8333-333333333333"
             workspaceSlug="food-game"
+            workspaceTimezone="Europe/Berlin"
             contentItemId={contentItemId}
             itemTitle="Autumn campaign"
             itemFormat="static_post"

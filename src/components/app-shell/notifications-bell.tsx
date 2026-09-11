@@ -27,6 +27,8 @@ export type NotificationsCopy = {
   title: string;
   markAllRead: string;
   empty: string;
+  today?: string;
+  yesterday?: string;
 };
 
 /**
@@ -250,6 +252,7 @@ export function NotificationsBell({
               items={items}
               onMarkOne={(id) => void markOne(id)}
               onActionClick={() => setOpen(false)}
+              copy={copy}
             />
           )}
         </div>
@@ -267,7 +270,13 @@ export function NotificationsBell({
  * recipient's locale). The grouping is computed in render —
  * cheap (O(n)) and only runs when the popover is open.
  */
-function dayBucketLabel(date: Date, now: Date, locale: string): string {
+function dayBucketLabel(
+  date: Date,
+  now: Date,
+  locale: string,
+  todayLabel: string,
+  yesterdayLabel: string,
+): string {
   const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const diffDays = Math.floor(
     (startOfDay(now).getTime() - startOfDay(date).getTime()) / (1000 * 60 * 60 * 24),
@@ -277,8 +286,8 @@ function dayBucketLabel(date: Date, now: Date, locale: string): string {
     month: "short",
     day: "numeric",
   });
-  if (diffDays === 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
+  if (diffDays === 0) return todayLabel;
+  if (diffDays === 1) return yesterdayLabel;
   if (diffDays < 7) return t.format(date);
   return t.format(date);
 }
@@ -287,10 +296,12 @@ function R13GroupedNotificationList({
   items,
   onMarkOne,
   onActionClick,
+  copy,
 }: {
   items: NotificationRow[];
   onMarkOne: (id: string) => void;
   onActionClick: (id: string) => void;
+  copy: Pick<NotificationsCopy, "today" | "yesterday">;
 }) {
   const locale = useLocaleCode();
   // Group by the day-bucket label, preserving the items' original
@@ -298,7 +309,13 @@ function R13GroupedNotificationList({
   const groups: { label: string; rows: NotificationRow[] }[] = [];
   const now = new Date();
   for (const n of items) {
-    const label = dayBucketLabel(new Date(n.createdAt), now, locale);
+    const label = dayBucketLabel(
+      new Date(n.createdAt),
+      now,
+      locale,
+      copy.today ?? "Today",
+      copy.yesterday ?? "Yesterday",
+    );
     const last = groups[groups.length - 1];
     if (last && last.label === label) last.rows.push(n);
     else groups.push({ label, rows: [n] });

@@ -3,10 +3,18 @@
 import * as React from "react";
 import Link from "next/link";
 import { FileText } from "lucide-react";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { formatDate } from "@/lib/i18n/format-locale";
 
-export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSlug: string }) {
+export function TrendsBriefsTab({
+  workspaceSlug: _workspaceSlug,
+  workspaceTimezone,
+}: {
+  workspaceSlug: string;
+  workspaceTimezone: string;
+}) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [briefs, setBriefs] = React.useState<
     Array<{
       id: string;
@@ -18,7 +26,6 @@ export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSl
       createdAt: string;
     }>
   >([]);
-  const locale = typeof document !== "undefined" ? document.documentElement.lang || "en" : "en";
   React.useEffect(() => {
     void fetch(`/api/trends/briefs?workspace=${encodeURIComponent(_workspaceSlug)}`)
       .then((response) => (response.ok ? response.json() : { briefs: [] }))
@@ -63,9 +70,12 @@ export function TrendsBriefsTab({ workspaceSlug: _workspaceSlug }: { workspaceSl
               </p>
               <p className="text-label text-fg-muted mt-1">
                 {t("trends.briefs.created", {
-                  value: new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(
-                    new Date(brief.createdAt),
-                  ),
+                  value: formatDate(new Date(brief.createdAt), locale, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                    timeZone: workspaceTimezone,
+                  }),
                 })}
               </p>
               <span className="sr-only">{t("trends.briefs.open") || "Open brief"}</span>

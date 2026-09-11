@@ -1200,6 +1200,7 @@ export default async function ContentDetailPage({
                     <PublishPackageForm
                       workspaceId={ws.id}
                       workspaceSlug={slug}
+                      workspaceTimezone={ws.timezone}
                       contentItemId={item.id}
                       itemTitle={item.title}
                       itemFormat={item.format}

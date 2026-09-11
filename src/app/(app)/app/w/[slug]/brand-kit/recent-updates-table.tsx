@@ -1,6 +1,7 @@
 import * as React from "react";
 import type { BrandRecentUpdate } from "@/lib/brand/service";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
+import { formatDate } from "@/lib/i18n/format-locale";
 import { SectionEmptyState } from "@/components/workspace/section-empty-state";
 import { History } from "lucide-react";
 import { UserAvatar } from "./user-avatar";
@@ -44,7 +45,7 @@ export interface RecentUpdatesTableProps {
 }
 
 function absoluteDateLabel(d: Date, locale: LocaleCode): string {
-  return d.toLocaleString(locale, {
+  return formatDate(d, locale, {
     year: "numeric",
     month: "short",
     day: "numeric",

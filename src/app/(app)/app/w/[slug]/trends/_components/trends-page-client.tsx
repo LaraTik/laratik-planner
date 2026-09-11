@@ -84,6 +84,7 @@ type Optout = {
  */
 export function TrendsPageClient({
   workspaceSlug,
+  workspaceTimezone,
   isAdmin,
   enabledKeys,
   health,
@@ -93,6 +94,7 @@ export function TrendsPageClient({
   showReadOnlySetup,
 }: {
   workspaceSlug: string;
+  workspaceTimezone: string;
   isAdmin: boolean;
   enabledKeys: string[];
   health: SourceHealth[];
@@ -228,7 +230,7 @@ export function TrendsPageClient({
           <TrendsBoardsTab workspaceSlug={workspaceSlug} onBoardsChange={setBoards} />
         </TabsContent>
         <TabsContent value="briefs">
-          <TrendsBriefsTab workspaceSlug={workspaceSlug} />
+          <TrendsBriefsTab workspaceSlug={workspaceSlug} workspaceTimezone={workspaceTimezone} />
         </TabsContent>
       </Tabs>
 
