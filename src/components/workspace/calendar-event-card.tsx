@@ -19,7 +19,11 @@ export type CalendarEventCardProps = {
   href: string;
   title: string;
   status: string;
+  /** Optional locale-resolved status label. */
+  statusLabel?: string;
   format: string;
+  /** Optional locale-resolved format label. */
+  formatLabel?: string;
 };
 
 const LEFT_BORDER_BY_VARIANT: Record<string, string> = {
@@ -31,7 +35,15 @@ const LEFT_BORDER_BY_VARIANT: Record<string, string> = {
   default: "border-s-border",
 };
 
-export function CalendarEventCard({ id, href, title, status, format }: CalendarEventCardProps) {
+export function CalendarEventCard({
+  id,
+  href,
+  title,
+  status,
+  statusLabel,
+  format,
+  formatLabel,
+}: CalendarEventCardProps) {
   const variant = statusBadgeVariant(status);
   const leftBorder = LEFT_BORDER_BY_VARIANT[variant] ?? LEFT_BORDER_BY_VARIANT.default;
   return (
@@ -52,9 +64,11 @@ export function CalendarEventCard({ id, href, title, status, format }: CalendarE
       </p>
       <div className="mt-1 flex items-center gap-1.5">
         <Badge variant={variant} className="text-[10px]">
-          {humanStatus(status)}
+          {statusLabel ?? humanStatus(status)}
         </Badge>
-        <span className="text-label text-fg-muted truncate">{humanFormat(format)}</span>
+        <span className="text-label text-fg-muted truncate">
+          {formatLabel ?? humanFormat(format)}
+        </span>
       </div>
     </Link>
   );

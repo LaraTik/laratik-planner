@@ -357,6 +357,7 @@
     "format": "Format",
     "channels": "Channels",
     "noChannels": "No channels",
+    "channelsCount": "Channels: {count}",
     "channelsConfigured": "{count} channels ({configured} configured)",
     "plannedPublish": "Planned publish",
     "owner": "Owner",

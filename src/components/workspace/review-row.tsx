@@ -14,6 +14,8 @@ export type ReviewRowItem = {
   contentId: string;
   title: string;
   format: string;
+  /** Optional locale-resolved format label. */
+  formatLabel?: string;
   /** Date the review was requested. */
   requestedAt: Date | string;
   /** Optional due date; renders "due …" when present. */
@@ -78,7 +80,7 @@ export function ReviewRow({
             {item.title}
           </p>
           <p className="text-label text-fg-muted mt-1">
-            {humanFormat(item.format)} ·{" "}
+            {item.formatLabel ?? humanFormat(item.format)} ·{" "}
             {t("reviews.rowRequested", { date: formatDate(requested, locale, DateFormat.short) })}
             {due
               ? ` · ${t("reviews.rowDue", { date: formatDate(due, locale, DateFormat.short) })}`

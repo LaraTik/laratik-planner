@@ -101,7 +101,7 @@ export default async function ReviewsQueuePage({
         }
       />
 
-      <section aria-label="Reviews KPIs" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <section aria-label={t("reviews.kpisAria")} className="grid grid-cols-2 gap-3 sm:grid-cols-3">
         <KpiTile
           icon={<Inbox className="h-3.5 w-3.5" aria-hidden="true" />}
           label={t("reviews.pending")}
@@ -141,6 +141,7 @@ export default async function ReviewsQueuePage({
                     contentId: row.contentId,
                     title: row.title,
                     format: row.format,
+                    formatLabel: t(`planningFilters.formatLabels.${row.format}`),
                     requestedAt: row.requestedAt,
                     dueAt: row.dueAt,
                     gate: row.gate,

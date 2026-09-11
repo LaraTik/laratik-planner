@@ -141,7 +141,7 @@ export function DesignQueueList({
                     className="text-label text-fg-muted mt-1 font-semibold tracking-wide uppercase"
                     data-testid="design-queue-row-format"
                   >
-                    {humanFormat(item.format)}
+                    {t(`planningFilters.formatLabels.${item.format}`) || humanFormat(item.format)}
                   </p>
                   <p
                     className="text-label text-fg-muted my-3"

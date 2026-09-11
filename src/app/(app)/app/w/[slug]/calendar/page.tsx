@@ -134,7 +134,9 @@ export default async function EditorialCalendarPage({
                   href={`/app/w/${slug}/planning/${item.id}`}
                   title={item.title}
                   status={item.status}
+                  statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
                   format={item.format}
+                  formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
                 />
               </div>
             );
@@ -206,7 +208,9 @@ export default async function EditorialCalendarPage({
                       href={`/app/w/${slug}/planning/${item.id}`}
                       title={item.title}
                       status={item.status}
+                      statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
                       format={item.format}
+                      formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
                     />
                   ))}
                 </div>

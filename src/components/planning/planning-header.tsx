@@ -30,8 +30,14 @@ export interface PlanningHeaderProps {
   contentItemId: string;
   title: string;
   format: string;
+  /** Locale-resolved format label from the page's active catalog. */
+  formatLabel?: string;
   status: string;
+  /** Locale-resolved status label from the page's active catalog. */
+  statusLabel?: string;
   channels: { platform: string; accountName: string }[];
+  /** Locale-resolved channel summary. */
+  channelsSummary?: string;
   plannedPublishAt: string;
   owner?: { id: string; displayName: string } | null;
   /** Optional block: render alongside the title on the right. */
@@ -49,8 +55,11 @@ export function PlanningHeader({
   contentItemId,
   title,
   format,
+  formatLabel,
   status,
+  statusLabel,
   channels,
+  channelsSummary,
   plannedPublishAt,
   owner,
   primaryAction,
@@ -73,24 +82,25 @@ export function PlanningHeader({
               {title}
             </CardTitle>
             <Badge variant={statusBadgeVariant(status)} data-testid="planning-header-status">
-              {humanStatus(status)}
+              {statusLabel ?? humanStatus(status)}
             </Badge>
           </div>
           <div className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span className="inline-flex items-center gap-1.5" data-testid="planning-header-format">
               <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-              {humanFormat(format)}
+              {formatLabel ?? humanFormat(format)}
             </span>
             <span
               className="inline-flex items-center gap-1.5"
               data-testid="planning-header-channels"
             >
               <Users className="h-3.5 w-3.5" aria-hidden="true" />
-              {channels.length === 0
-                ? "No channels"
-                : channels.length === 1
-                  ? channels[0]!.accountName
-                  : `${channels.length} channels`}
+              {channelsSummary ??
+                (channels.length === 0
+                  ? "No channels"
+                  : channels.length === 1
+                    ? channels[0]!.accountName
+                    : `${channels.length} channels`)}
             </span>
             <span className="inline-flex items-center gap-1.5" data-testid="planning-header-date">
               <Calendar className="h-3.5 w-3.5" aria-hidden="true" />

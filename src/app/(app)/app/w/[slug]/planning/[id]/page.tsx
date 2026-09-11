@@ -677,11 +677,20 @@ export default async function ContentDetailPage({
               contentItemId={item.id}
               title={item.title}
               format={item.format}
+              formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
               status={item.status}
+              statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
               channels={item.channels.map((ch) => ({
                 platform: ch.platform,
                 accountName: ch.accountName,
               }))}
+              channelsSummary={
+                item.channels.length === 0
+                  ? t("contentDetail.overview.noChannels")
+                  : item.channels.length === 1
+                    ? item.channels[0]!.accountName
+                    : t("contentDetail.overview.channelsCount", { count: item.channels.length })
+              }
               plannedPublishAt={formatDate(item.plannedPublishAt, code, {
                 dateStyle: "medium",
                 timeStyle: "short",

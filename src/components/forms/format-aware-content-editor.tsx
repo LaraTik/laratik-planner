@@ -16,7 +16,6 @@ import {
   type FieldRendererProps,
 } from "./format-payload-field-renderers";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
-import { humanFormat } from "@/lib/content/status";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { isAudienceCopyKey } from "@/lib/content/audience-copy";
 
@@ -331,6 +330,7 @@ export function FormatAwareContentEditor({
 }: FormatAwareContentEditorProps) {
   const localeT = useLocaleT();
   const t = tProp ?? localeT;
+  const formatLabel = t(`planningFilters.formatLabels.${format}`);
   const [payload, setPayload] = React.useState<Record<string, unknown>>(initialPayload);
   const initialJson = React.useMemo(() => JSON.stringify(initialPayload), [initialPayload]);
   // Reset the payload only when the initial changes (e.g.
@@ -449,7 +449,7 @@ export function FormatAwareContentEditor({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <CardTitle>
-            {t("formatEditor.editor.creativeBriefTitle", { format: humanFormat(format) })}
+            {t("formatEditor.editor.creativeBriefTitle", { format: formatLabel })}
           </CardTitle>
           <CardDescription>{t("formatEditor.editor.creativeBriefDescription")}</CardDescription>
         </div>
@@ -457,7 +457,7 @@ export function FormatAwareContentEditor({
           className="text-label text-fg-secondary border-border bg-surface-subtle inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-semibold"
           data-testid="format-aware-format-pill"
         >
-          {humanFormat(format)}
+          {formatLabel}
         </span>
       </div>
 
@@ -638,7 +638,7 @@ export function FormatAwareContentEditor({
                     className="text-label text-fg-muted"
                     data-testid={`format-section-${section.id}-empty`}
                   >
-                    {t("formatEditor.editor.emptySection", { format: humanFormat(format) })}
+                    {t("formatEditor.editor.emptySection", { format: formatLabel })}
                   </p>
                 ) : null}
               </div>

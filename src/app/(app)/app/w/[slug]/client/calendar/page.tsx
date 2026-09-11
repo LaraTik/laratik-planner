@@ -17,7 +17,6 @@ export async function generateMetadata(): Promise<Metadata> {
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { StatusBadge } from "@/components/content/status-badge";
-import { humanFormat } from "@/lib/content/status";
 import { formatDate } from "@/lib/i18n/format-locale";
 
 export default async function ClientCalendarPage({
@@ -86,9 +85,11 @@ export default async function ClientCalendarPage({
                 </time>
                 <div className="min-w-0 flex-1">
                   <p className="text-body font-semibold">{row.title}</p>
-                  <p className="text-label text-fg-secondary">{humanFormat(row.format)}</p>
+                  <p className="text-label text-fg-secondary">
+                    {t(`planningFilters.formatLabels.${row.format}`)}
+                  </p>
                 </div>
-                <StatusBadge status={row.status} />
+                <StatusBadge status={row.status} t={t} />
               </li>
             ))}
           </ul>

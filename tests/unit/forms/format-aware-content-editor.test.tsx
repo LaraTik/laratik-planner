@@ -128,10 +128,10 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getByTestId("chapters-add-empty")).toBeInTheDocument();
   });
 
-  it("uses the humanised format name in the editor title", () => {
+  it("uses the locale-resolved format name in the editor title", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
-    // humanFormat("short_form_video") → "Short Form Video"
-    expect(screen.getByText(/Short Form Video content/i)).toBeInTheDocument();
+    // The English catalog label is "Short-form video".
+    expect(screen.getByText(/Short-form video content/i)).toBeInTheDocument();
   });
 
   it("keeps audience copy out of Content while preserving the format save contract", () => {
