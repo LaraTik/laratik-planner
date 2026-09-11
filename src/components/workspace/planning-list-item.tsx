@@ -196,6 +196,7 @@ export function PlanningListItem({
                 channels={item.channels}
                 max={3}
                 emptyLabel={tr("planning.noChannels", "No channels")}
+                {...(t ? { t } : {})}
               />
             </div>
           </div>

@@ -1,5 +1,9 @@
 import * as React from "react";
-import { PlatformIcon, platformLabel } from "@/components/workspace/platform-icon";
+import {
+  localizedPlatformLabel,
+  PlatformIcon,
+  platformLabel,
+} from "@/components/workspace/platform-icon";
 import { cn } from "@/lib/utils";
 import type { EnrichedChannel } from "@/lib/content/enriched-list";
 
@@ -20,6 +24,8 @@ export interface ChannelIconsProps {
   className?: string;
   /** Localized fallback for items without connected channels. */
   emptyLabel?: string;
+  /** Active interface translator for platform tooltips and screen-reader names. */
+  t?: (key: string) => string;
 }
 
 export function ChannelIcons({
@@ -27,6 +33,7 @@ export function ChannelIcons({
   max = 3,
   className,
   emptyLabel = "No channels",
+  t,
 }: ChannelIconsProps) {
   if (channels.length === 0) {
     return (
@@ -43,6 +50,8 @@ export function ChannelIcons({
   }
   const visible = channels.slice(0, max);
   const overflow = Math.max(0, channels.length - visible.length);
+  const labelFor = (platform: string) =>
+    t ? localizedPlatformLabel(platform, t) : platformLabel(platform);
   return (
     <span
       className={cn("inline-flex items-center gap-1.5", className)}
@@ -52,8 +61,8 @@ export function ChannelIcons({
       {visible.map((c) => (
         <span
           key={c.id}
-          title={platformLabel(c.platform)}
-          aria-label={platformLabel(c.platform)}
+          title={labelFor(c.platform)}
+          aria-label={labelFor(c.platform)}
           role="img"
           className="inline-flex"
         >
@@ -65,14 +74,14 @@ export function ChannelIcons({
           className="border-border bg-surface-subtle text-label text-fg-secondary inline-flex h-5 items-center rounded-full border px-1.5 text-[10px] font-semibold"
           title={channels
             .slice(max)
-            .map((c) => platformLabel(c.platform))
+            .map((c) => labelFor(c.platform))
             .join(", ")}
           data-testid="channel-overflow"
         >
           +{overflow}
         </span>
       ) : null}
-      <span className="sr-only">{channels.map((c) => platformLabel(c.platform)).join(", ")}</span>
+      <span className="sr-only">{channels.map((c) => labelFor(c.platform)).join(", ")}</span>
     </span>
   );
 }
