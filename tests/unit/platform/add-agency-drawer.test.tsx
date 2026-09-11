@@ -83,5 +83,13 @@ describe("AddAgencyDrawer", () => {
     expect(screen.getByRole("region", { name: "تفاصيل المؤسسة" })).toBeInTheDocument();
     expect(screen.getByLabelText("اسم الوكالة")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "متابعة" })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("اسم الوكالة"), "وكالة أكمي");
+    await user.type(screen.getByLabelText("المعرّف"), "acme");
+    await user.click(screen.getByRole("button", { name: "متابعة" }));
+    await user.type(screen.getByLabelText("اسم المسؤول"), "مسؤول أكمي");
+    await user.type(screen.getByLabelText("البريد الإلكتروني للمسؤول"), "admin@acme.example");
+    await user.click(screen.getByRole("button", { name: "متابعة" }));
+    expect(screen.getByLabelText("Instagram")).toBeInTheDocument();
   });
 });

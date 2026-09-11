@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { platformLabel } from "@/components/workspace/platform-icon";
 import { createAgencyAction, type PlatformActionState } from "./actions";
 
 type PlanOption = { id: string; name: string; description: string | null };
@@ -33,6 +34,12 @@ const platforms = [
 ] as const;
 
 const initialState: PlatformActionState = {};
+
+function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
+}
 
 export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
   const t = useLocaleT();
@@ -250,7 +257,7 @@ export function AddAgencyDrawer({ plans }: { plans: PlanOption[] }) {
                   {platforms.map((platform) => (
                     <Field
                       key={platform}
-                      label={platform.charAt(0).toUpperCase() + platform.slice(1)}
+                      label={localizedPlatformLabel(t, platform)}
                       name={platform}
                       type="number"
                       value={values[platform] ?? ""}

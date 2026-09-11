@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from "react";
 import { TrendingDown, TrendingUp, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import { platformLabel } from "@/components/workspace/platform-icon";
 
 /** A single dated value in a channel's selected analytics window. */
 export type GrowthPoint = {
@@ -41,6 +42,12 @@ function lineSegments(
   return segments;
 }
 
+function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
+}
+
 export function SocialGrowthChart({
   title,
   platform,
@@ -62,6 +69,7 @@ export function SocialGrowthChart({
   testId?: string;
 }) {
   const t = useLocaleT();
+  const displayPlatform = localizedPlatformLabel(t, platform);
   const locale = useLocaleCode();
   const formatValue = (value: number) =>
     new Intl.NumberFormat(locale, { numberingSystem: "latn", maximumFractionDigits: 0 }).format(
@@ -149,7 +157,7 @@ export function SocialGrowthChart({
         <div className="min-w-0">
           <h3 className="text-body text-fg-primary font-semibold">{title}</h3>
           <p className="text-label text-fg-muted">
-            {platform} · {profileName} · {metricLabel}
+            {displayPlatform} · <bdi>{profileName}</bdi> · {metricLabel}
           </p>
           <p className="text-body text-fg-secondary mt-2 font-medium" id={descId}>
             {changeSummary}
