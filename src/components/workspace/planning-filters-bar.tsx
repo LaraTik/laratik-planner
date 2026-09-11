@@ -121,13 +121,16 @@ export function PlanningFiltersBar({
   }, [urlSearch]);
 
   const activeCount = countActive(searchParams);
+  const advancedFilterCount = ["format", "channel", "owner", "health", "density"].filter((key) =>
+    searchParams.get(key),
+  ).length;
   const healthFilter = (searchParams.get("health") ?? "")
     .split(",")
     .filter(Boolean) as HealthSnapshot[];
 
   return (
     <div className="space-y-2" data-testid="planning-filters-bar">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
         <div className="relative min-w-0">
           <Search
             className="text-fg-muted pointer-events-none absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2"
@@ -169,21 +172,6 @@ export function PlanningFiltersBar({
         </select>
 
         <select
-          aria-label={tr("planningFilters.formatAria", "Filter by format")}
-          value={searchParams.get("format") ?? ""}
-          onChange={(e) => pushParam("format", e.target.value || null)}
-          className={selectClass}
-          data-testid="planning-format-filter"
-        >
-          <option value="">{tr("planningFilters.allFormats", "All formats")}</option>
-          {ALL_FORMATS.map((f) => (
-            <option key={f} value={f}>
-              {tr(`planningFilters.formatLabels.${f}`, humanFormat(f))}
-            </option>
-          ))}
-        </select>
-
-        <select
           aria-label={tr("planningFilters.stageAria", "Filter by workflow stage")}
           value={searchParams.get("stage") ?? ""}
           onChange={(e) => pushParam("stage", e.target.value || null)}
@@ -198,70 +186,102 @@ export function PlanningFiltersBar({
           ))}
         </select>
 
-        <select
-          aria-label={tr("planningFilters.channelAria", "Filter by channel")}
-          value={searchParams.get("channel") ?? ""}
-          onChange={(e) => pushParam("channel", e.target.value || null)}
-          className={selectClass}
-          data-testid="planning-channel-filter"
+        <details
+          className="border-border bg-surface-subtle rounded-[var(--radius-control)] border sm:col-span-3"
+          open={advancedFilterCount > 0}
+          data-testid="planning-more-filters"
         >
-          <option value="">{tr("planningFilters.allChannels", "All channels")}</option>
-          {channels.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.accountName}
-            </option>
-          ))}
-        </select>
+          <summary className="text-body text-fg-primary flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden">
+            <span>
+              {tr("planningFilters.moreFilters", "More filters")}
+              {advancedFilterCount > 0 ? ` (${advancedFilterCount})` : ""}
+            </span>
+            <span aria-hidden="true">⌄</span>
+          </summary>
+          <div className="grid grid-cols-1 gap-2 border-t border-[color:var(--border)] p-2 sm:grid-cols-2 lg:grid-cols-3">
+            <select
+              aria-label={tr("planningFilters.formatAria", "Filter by format")}
+              value={searchParams.get("format") ?? ""}
+              onChange={(e) => pushParam("format", e.target.value || null)}
+              className={selectClass}
+              data-testid="planning-format-filter"
+            >
+              <option value="">{tr("planningFilters.allFormats", "All formats")}</option>
+              {ALL_FORMATS.map((f) => (
+                <option key={f} value={f}>
+                  {tr(`planningFilters.formatLabels.${f}`, humanFormat(f))}
+                </option>
+              ))}
+            </select>
 
-        <select
-          aria-label={tr("planningFilters.ownerAria", "Filter by owner")}
-          value={searchParams.get("owner") ?? ""}
-          onChange={(e) => pushParam("owner", e.target.value || null)}
-          className={selectClass}
-          data-testid="planning-owner-filter"
-        >
-          <option value="">{tr("planningFilters.allOwners", "All owners")}</option>
-          {members.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+            <select
+              aria-label={tr("planningFilters.channelAria", "Filter by channel")}
+              value={searchParams.get("channel") ?? ""}
+              onChange={(e) => pushParam("channel", e.target.value || null)}
+              className={selectClass}
+              data-testid="planning-channel-filter"
+            >
+              <option value="">{tr("planningFilters.allChannels", "All channels")}</option>
+              {channels.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.accountName}
+                </option>
+              ))}
+            </select>
 
-        <select
-          aria-label={tr("planningFilters.healthAria", "Filter by health")}
-          value={healthFilter[0] ?? ""}
-          onChange={(e) => pushParam("health", e.target.value || null)}
-          className={selectClass}
-          data-testid="planning-health-filter"
-        >
-          <option value="">{tr("planningFilters.allHealth", "All health")}</option>
-          {ATTENTION_HEALTHS.map((h) => (
-            <option key={h} value={h}>
-              {tr(`planningFilters.healthLabels.${h}`, HEALTH_LABEL[h])}
-            </option>
-          ))}
-          <option value="ready">{tr("planningFilters.healthLabels.ready", "Ready")}</option>
-          <option value="not_started">
-            {tr("planningFilters.healthLabels.not_started", "Not started")}
-          </option>
-          <option value="scheduled">
-            {tr("planningFilters.healthLabels.scheduled", "Scheduled")}
-          </option>
-        </select>
+            <select
+              aria-label={tr("planningFilters.ownerAria", "Filter by owner")}
+              value={searchParams.get("owner") ?? ""}
+              onChange={(e) => pushParam("owner", e.target.value || null)}
+              className={selectClass}
+              data-testid="planning-owner-filter"
+            >
+              <option value="">{tr("planningFilters.allOwners", "All owners")}</option>
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.label}
+                </option>
+              ))}
+            </select>
 
-        <select
-          aria-label={tr("planningFilters.densityAria", "List density")}
-          value={searchParams.get("density") ?? "comfortable"}
-          onChange={(e) =>
-            pushParam("density", e.target.value === "comfortable" ? null : e.target.value)
-          }
-          className={selectClass}
-          data-testid="planning-density-filter"
-        >
-          <option value="comfortable">{tr("planningFilters.comfortable", "Comfortable")}</option>
-          <option value="compact">{tr("planningFilters.compact", "Compact")}</option>
-        </select>
+            <select
+              aria-label={tr("planningFilters.healthAria", "Filter by health")}
+              value={healthFilter[0] ?? ""}
+              onChange={(e) => pushParam("health", e.target.value || null)}
+              className={selectClass}
+              data-testid="planning-health-filter"
+            >
+              <option value="">{tr("planningFilters.allHealth", "All health")}</option>
+              {ATTENTION_HEALTHS.map((h) => (
+                <option key={h} value={h}>
+                  {tr(`planningFilters.healthLabels.${h}`, HEALTH_LABEL[h])}
+                </option>
+              ))}
+              <option value="ready">{tr("planningFilters.healthLabels.ready", "Ready")}</option>
+              <option value="not_started">
+                {tr("planningFilters.healthLabels.not_started", "Not started")}
+              </option>
+              <option value="scheduled">
+                {tr("planningFilters.healthLabels.scheduled", "Scheduled")}
+              </option>
+            </select>
+
+            <select
+              aria-label={tr("planningFilters.densityAria", "List density")}
+              value={searchParams.get("density") ?? "comfortable"}
+              onChange={(e) =>
+                pushParam("density", e.target.value === "comfortable" ? null : e.target.value)
+              }
+              className={selectClass}
+              data-testid="planning-density-filter"
+            >
+              <option value="comfortable">
+                {tr("planningFilters.comfortable", "Comfortable")}
+              </option>
+              <option value="compact">{tr("planningFilters.compact", "Compact")}</option>
+            </select>
+          </div>
+        </details>
       </div>
       <div className="text-label text-fg-secondary flex flex-wrap items-center gap-2">
         {activeCount > 0 ? (

@@ -55,6 +55,22 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
+    expect(screen.getByTestId("format-section-strategy-optional")).toBeInTheDocument();
+    expect(screen.getByTestId("format-section-creative-optional")).toBeInTheDocument();
+    expect(screen.getByTestId("format-section-strategy-optional")).not.toHaveAttribute("open");
+  });
+
+  it("keeps populated optional details visible for returning planners", () => {
+    render(
+      <FormatAwareContentEditor
+        {...baseProps}
+        format="static_post"
+        initial={{ schemaVersion: 1, objective: "Conversion", visualDirection: "Warm and bright" }}
+      />,
+    );
+
+    expect(screen.getByTestId("format-section-strategy-optional")).toHaveAttribute("open");
+    expect(screen.getByTestId("format-section-creative-optional")).toHaveAttribute("open");
   });
 
   it("renders Strategy and Creative sections for carousel", () => {

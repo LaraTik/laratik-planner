@@ -8,6 +8,7 @@
   "ownerAria": "Filter by owner",
   "healthAria": "Filter by health",
   "densityAria": "List density",
+  "moreFilters": "More filters",
   "allStatuses": "All statuses",
   "allFormats": "All formats",
   "allWorkflowStages": "All workflow stages",

@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { Save, Send } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Save, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -355,11 +355,6 @@ export function PublishPackageForm({
     });
   }
 
-  function readinessIssueText(code: string, fallback: string) {
-    const localized = t(`contentDetail.publishReadiness.${code}`);
-    return localized.startsWith("[contentDetail.publishReadiness.") ? fallback : localized;
-  }
-
   function updateDraft(channelId: string, patch: Partial<PlatformPayload>) {
     setDrafts((prev) => {
       const base =
@@ -540,37 +535,23 @@ export function PublishPackageForm({
               />
             </div>
           ) : null}
-          {currentReadiness && currentReadiness.issues.length > 0 ? (
-            <div
-              role="alert"
-              aria-labelledby="publish-readiness-title"
-              className="border-danger bg-danger-container text-on-danger-container rounded-[var(--radius-control)] border p-3 lg:col-span-3"
-              data-testid="publish-readiness-issues"
-            >
-              <p id="publish-readiness-title" className="text-body font-semibold">
-                {t("contentDetail.publishReadiness.title")}
-              </p>
-              <ul className="text-label mt-1 list-disc space-y-1 ps-5">
-                {currentReadiness.issues.map((issue, index) => (
-                  <li key={`${issue.code}-${index}`} className="flex flex-wrap items-start gap-2">
-                    <span className="min-w-0 flex-1">
-                      {readinessIssueText(issue.code, issue.message)}
-                    </span>
-                    <Link
-                      href={readinessAnchorForPath(issue.path)}
-                      className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                      data-testid={`publish-readiness-fix-${issue.code}`}
-                    >
-                      {readinessFixLabel(issue.path, t)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+          {currentReadiness ? (
+            <PublishReadinessChecklist
+              readiness={readiness}
+              currentReadiness={currentReadiness}
+              t={t}
+            />
           ) : null}
           {/* Left column — destination + caption/discovery */}
           <Card padding="lg" className="space-y-3">
             <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
+            <div
+              className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
+              role="note"
+              data-testid="publish-shared-copy-hint"
+            >
+              <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
+            </div>
             <Field
               label={t("contentDetail.publishForm.channel")}
               value={current.accountName}
@@ -930,6 +911,83 @@ function readinessAnchorForPath(path: string): string {
   }
   if (/^approvals\./.test(path)) return "#workflow";
   return "#publishing";
+}
+
+function readinessIssueText(
+  t: (key: string, params?: Record<string, string | number>) => string,
+  code: string,
+  fallback: string,
+): string {
+  const key = `contentDetail.publishReadiness.${code}`;
+  const localized = t(key);
+  return localized.startsWith("[contentDetail.publishReadiness.") ? fallback : localized;
+}
+
+function PublishReadinessChecklist({
+  readiness,
+  currentReadiness,
+  t,
+}: {
+  readiness: ReadinessReport;
+  currentReadiness: ReadinessReport["channels"][number];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const hasBlockers = currentReadiness.blockerCount > 0;
+  return (
+    <section
+      className={`${hasBlockers ? "border-danger bg-danger-container" : "border-success bg-success-container"} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-3`}
+      aria-labelledby="publish-readiness-title"
+      data-testid="publish-readiness-checklist"
+      data-blockers={currentReadiness.blockerCount}
+    >
+      <div className="flex items-start gap-2">
+        {hasBlockers ? (
+          <AlertTriangle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        ) : (
+          <CheckCircle2 className="text-success mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+        )}
+        <div className="min-w-0 flex-1">
+          <h2 id="publish-readiness-title" className="text-body font-semibold">
+            {t("contentDetail.publishReadiness.title")}
+          </h2>
+          <p className="text-label mt-1">
+            {t("contentDetail.publishReadiness.progress", {
+              completed: readiness.requiredCompleted,
+              total: readiness.requiredTotal,
+            })}
+          </p>
+        </div>
+        <span className="text-label shrink-0 font-semibold" data-testid="publish-readiness-count">
+          {hasBlockers
+            ? t("contentDetail.publishReadiness.blockers", { count: currentReadiness.blockerCount })
+            : t("contentDetail.publishReadiness.ready")}
+        </span>
+      </div>
+      {currentReadiness.issues.length > 0 ? (
+        <ul className="text-label mt-3 space-y-2" data-testid="publish-readiness-issues">
+          {currentReadiness.issues.map((issue, index) => (
+            <li key={`${issue.code}-${index}`} className="flex flex-wrap items-start gap-2">
+              <span className="min-w-0 flex-1">
+                {readinessIssueText(t, issue.code, issue.message)}
+              </span>
+              <Link
+                href={readinessAnchorForPath(issue.path)}
+                aria-label={`${readinessFixLabel(issue.path, t)}: ${readinessIssueText(t, issue.code, issue.message)}`}
+                className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                data-testid={`publish-readiness-fix-${issue.code}`}
+              >
+                {readinessFixLabel(issue.path, t)}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-label mt-3" data-testid="publish-readiness-clear">
+          {t("contentDetail.publishReadiness.clearDescription")}
+        </p>
+      )}
+    </section>
+  );
 }
 
 function readinessFixLabel(

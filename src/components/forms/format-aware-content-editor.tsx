@@ -53,11 +53,9 @@ import { isAudienceCopyKey } from "@/lib/content/audience-copy";
  * Localization (Phase 5b, 2026-09-01): section titles,
  * section descriptions, and field labels are resolved
  * through the active message catalog at render time. The
- * parent passes a bound translator via the `t` prop. Per-
- * format description overrides (carousel slide manager,
- * reel scene manager) live in `descriptionFallback` so the
- * editor can keep the per-format copy without bloating the
- * catalog with format-specific keys in v1.
+ * parent passes a bound translator via the `t` prop. Format-
+ * specific descriptions are catalog keys as well, so the
+ * section guidance remains bilingual in the active locale.
  *
  * Backwards compatibility: `FormatPayloadEditor` is still
  * exported and the planning detail page's "Creative brief"
@@ -67,6 +65,14 @@ import { isAudienceCopyKey } from "@/lib/content/audience-copy";
  */
 
 const initial: { error?: string; ok?: boolean } = {};
+
+function isFilled(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === "string") return value.trim().length > 0;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === "object") return Object.keys(value as object).length > 0;
+  return true;
+}
 
 export interface FormatAwareContentEditorProps {
   /** Bound translator from `tForActive()`. Resolves the field's
@@ -94,12 +100,6 @@ interface SectionDef {
   id: "strategy" | "copy" | "creative";
   titleKey: string;
   descriptionKey: string;
-  /** Optional per-format description override; falls back to
-   *  the descriptionKey when omitted. The carousel "Slides"
-   *  section uses this for the per-format "Add, reorder…" copy
-   *  that lives outside the catalog for now (a future
-   *  per-format catalog key can promote it). */
-  descriptionFallback?: string;
   icon: React.ComponentType<{ className?: string }>;
   keys: ReadonlyArray<string>;
 }
@@ -146,9 +146,7 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
     {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
-      descriptionKey: "formatEditor.sections.creative.description",
-      descriptionFallback:
-        "Add, reorder, and edit each slide. Drag chips or use Alt + ↑ / ↓ to reorder; ⌘D to duplicate.",
+      descriptionKey: "formatEditor.sections.creativeCarousel.description",
       icon: Palette,
       // The slide outline gets first-class treatment; we
       // render the structured array field directly, with
@@ -176,8 +174,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       id: "creative",
       titleKey: "formatEditor.sections.creativeDirection.title",
       descriptionKey: "formatEditor.sections.creativeDirection.description",
-      descriptionFallback:
-        "Scenes, cover, on-screen text, voice-over and audio reference. Use Alt + ↑ / ↓ to reorder scenes.",
       icon: Palette,
       keys: [
         "ratio",
@@ -388,13 +384,8 @@ export function FormatAwareContentEditor({
   const translations =
     (payload.translations as Record<string, Record<string, unknown>> | undefined) ?? {};
 
-  // Resolve a section description: prefer the per-format
-  // `descriptionFallback` when present, otherwise the
-  // catalog's `descriptionKey`. The fallback is English-only
-  // in v1 (noted limitation; future pass moves per-format
-  // copy to the catalog).
+  // Resolve every section description from the active catalog.
   function resolveDescription(section: SectionDef): string {
-    if (section.descriptionFallback) return section.descriptionFallback;
     return t(section.descriptionKey);
   }
 
@@ -499,6 +490,102 @@ export function FormatAwareContentEditor({
               !isObjectiveAudienceKey(f.key),
           );
           const hasObjectiveAudience = section.keys.some((k) => isObjectiveAudienceKey(k));
+          const coreFields = sectionFields.filter((field) => field.group === "essential");
+          const optionalFields = sectionFields.filter((field) => field.group === "advanced");
+          const objectiveAudienceOptional = fields.some(
+            (field) => isObjectiveAudienceKey(field.key) && field.group === "advanced",
+          );
+          const objectiveAudienceHasContent = ["objective", "audience"].some((key) =>
+            isFilled(payload[key]),
+          );
+          const optionalHasContent =
+            optionalFields.some((field) => isFilled(payload[field.key])) ||
+            (objectiveAudienceOptional && objectiveAudienceHasContent);
+          const renderObjectiveAudience = () => (
+            <div data-testid={`format-section-${section.id}-objective-audience`}>
+              {(() => {
+                const renderer = rendererFor("objective");
+                return renderer({
+                  fieldKey: "objective",
+                  label: t("formatEditor.editor.goalAudience"),
+                  payload,
+                  translations,
+                  locale,
+                  editable: isFieldEditable("objective") && isFieldEditable("audience"),
+                  aiEnabled,
+                  contentItemId,
+                  t,
+                  onField: setField,
+                  onTranslation: setFieldTranslation,
+                } as FieldRendererProps);
+              })()}
+            </div>
+          );
+          const renderSectionFields = (fieldsToRender: ReadonlyArray<FieldDef>, prefix: string) =>
+            fieldsToRender.map((f) => {
+              // Carousel slide outline → dedicated array manager
+              if (format === "carousel" && f.key === "slideOutline") {
+                return (
+                  <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
+                    {renderStructuredArray(
+                      "creative",
+                      "slideOutline",
+                      t("formatEditor.editor.structuredArraySlideOutline"),
+                      t("formatEditor.editor.structuredArraySlideEntity"),
+                      [
+                        {
+                          key: "position",
+                          label: t("formatEditor.fields.positionTag"),
+                          kind: "number",
+                        },
+                        { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+                        {
+                          key: "visual",
+                          label: t("formatEditor.fields.visual"),
+                          kind: "text",
+                          optional: true,
+                        },
+                      ],
+                    )}
+                  </div>
+                );
+              }
+              // Reel scenes → dedicated array manager
+              if (format === "short_form_video" && f.key === "scenes") {
+                return (
+                  <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
+                    {renderStructuredArray(
+                      "creative",
+                      "scenes",
+                      t("formatEditor.editor.structuredArrayScenes"),
+                      t("formatEditor.editor.structuredArraySceneEntity"),
+                      [
+                        {
+                          key: "position",
+                          label: t("formatEditor.fields.scenePosition"),
+                          kind: "number",
+                        },
+                        { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+                        {
+                          key: "durationSeconds",
+                          label: t("formatEditor.fields.durationSeconds"),
+                          kind: "number",
+                          optional: true,
+                        },
+                      ],
+                    )}
+                  </div>
+                );
+              }
+              return (
+                <div
+                  key={`${prefix}-${f.key}`}
+                  data-testid={`format-section-${section.id}-${f.key}`}
+                >
+                  {renderField(f)}
+                </div>
+              );
+            });
           return (
             <section
               key={section.id}
@@ -511,97 +598,41 @@ export function FormatAwareContentEditor({
               </header>
               <p className="text-label text-fg-muted mb-3">{resolveDescription(section)}</p>
               <div className="space-y-4">
-                {/* The objective+audience pair is rendered as one
-                    composite block via its dedicated renderer. */}
-                {hasObjectiveAudience ? (
-                  <div data-testid={`format-section-${section.id}-objective-audience`}>
-                    {(() => {
-                      const renderer = rendererFor("objective");
-                      return renderer({
-                        fieldKey: "objective",
-                        label: t("formatEditor.editor.goalAudience"),
-                        payload,
-                        translations,
-                        locale,
-                        editable: isFieldEditable("objective") && isFieldEditable("audience"),
-                        aiEnabled,
-                        contentItemId,
-                        t,
-                        onField: setField,
-                        onTranslation: setFieldTranslation,
-                      } as FieldRendererProps);
-                    })()}
-                  </div>
-                ) : null}
-                {sectionFields.map((f) => {
-                  // Carousel slide outline → dedicated array manager
-                  if (format === "carousel" && f.key === "slideOutline") {
-                    return (
-                      <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
-                        {renderStructuredArray(
-                          "creative",
-                          "slideOutline",
-                          t("formatEditor.editor.structuredArraySlideOutline"),
-                          t("formatEditor.editor.structuredArraySlideEntity"),
-                          [
-                            {
-                              key: "position",
-                              label: t("formatEditor.fields.positionTag"),
-                              kind: "number",
-                            },
-                            {
-                              key: "summary",
-                              label: t("formatEditor.fields.summary"),
-                              kind: "text",
-                            },
-                            {
-                              key: "visual",
-                              label: t("formatEditor.fields.visual"),
-                              kind: "text",
-                              optional: true,
-                            },
-                          ],
-                        )}
-                      </div>
-                    );
-                  }
-                  // Reel scenes → dedicated array manager
-                  if (format === "short_form_video" && f.key === "scenes") {
-                    return (
-                      <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
-                        {renderStructuredArray(
-                          "creative",
-                          "scenes",
-                          t("formatEditor.editor.structuredArrayScenes"),
-                          t("formatEditor.editor.structuredArraySceneEntity"),
-                          [
-                            {
-                              key: "position",
-                              label: t("formatEditor.fields.scenePosition"),
-                              kind: "number",
-                            },
-                            {
-                              key: "summary",
-                              label: t("formatEditor.fields.summary"),
-                              kind: "text",
-                            },
-                            {
-                              key: "durationSeconds",
-                              label: t("formatEditor.fields.durationSeconds"),
-                              kind: "number",
-                              optional: true,
-                            },
-                          ],
-                        )}
-                      </div>
-                    );
-                  }
-                  return (
-                    <div key={f.key} data-testid={`format-section-${section.id}-${f.key}`}>
-                      {renderField(f)}
+                <p className="text-label text-fg-secondary font-semibold">
+                  {t("formatEditor.editor.startHere")}
+                </p>
+                {hasObjectiveAudience && !objectiveAudienceOptional
+                  ? renderObjectiveAudience()
+                  : null}
+                {renderSectionFields(coreFields, "core")}
+                {optionalFields.length > 0 ||
+                (hasObjectiveAudience && objectiveAudienceOptional) ? (
+                  <details
+                    className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                    open={optionalHasContent}
+                    data-testid={`format-section-${section.id}-optional`}
+                  >
+                    <summary className="text-body text-fg-primary flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-semibold [&::-webkit-details-marker]:hidden">
+                      <span>
+                        {t("formatEditor.editor.optionalDetails", {
+                          count:
+                            optionalFields.length +
+                            (hasObjectiveAudience && objectiveAudienceOptional ? 1 : 0),
+                        })}
+                      </span>
+                      <span aria-hidden="true">⌄</span>
+                    </summary>
+                    <p className="text-label text-fg-muted mt-2">
+                      {t("formatEditor.editor.optionalDetailsDescription")}
+                    </p>
+                    <div className="mt-4 space-y-4">
+                      {hasObjectiveAudience && objectiveAudienceOptional
+                        ? renderObjectiveAudience()
+                        : null}
+                      {renderSectionFields(optionalFields, "optional")}
                     </div>
-                  );
-                })}
+                  </details>
+                ) : null}
                 {sectionFields.length === 0 && !hasObjectiveAudience ? (
                   <p
                     className="text-label text-fg-muted"

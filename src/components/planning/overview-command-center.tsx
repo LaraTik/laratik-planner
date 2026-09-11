@@ -146,6 +146,7 @@ export function OverviewCommandCenter({
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
       />
       <ReadinessSummary
+        contentStatus={contentStatus}
         blockers={readinessBlockers}
         canPublish={readinessCanPublish}
         lines={readiness}
@@ -258,7 +259,12 @@ function nextHeadline(
   blockers: number,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
-  if (blockers > 0) {
+  // Publishing checks can be evaluated early so the team can see what
+  // will eventually be required, but they are not the current job while
+  // an item is still being planned, reviewed, or designed. Calling them
+  // the next blocker on a draft makes a future concern feel actionable
+  // now and competes with the workflow transition owned by the rail.
+  if (blockers > 0 && publishingChecksAreActive(status)) {
     return t(
       blockers === 1
         ? "contentDetail.overview.blockersToPublish"
@@ -292,6 +298,10 @@ function nextHeadline(
     default:
       return humanStatus(status);
   }
+}
+
+function publishingChecksAreActive(status: string): boolean {
+  return ["ready_to_publish", "partially_published"].includes(status);
 }
 
 function nextBody(
@@ -341,18 +351,21 @@ function safeExplain(status: string) {
  * ────────────────────────────────────────────────────────────────────── */
 
 function ReadinessSummary({
+  contentStatus,
   blockers,
   canPublish,
   lines,
   onNavigate,
   t,
 }: {
+  contentStatus: string;
   blockers: number;
   canPublish: boolean;
   lines: OverviewReadinessLine[];
   onNavigate: ((href: string) => void) | undefined;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const publishingChecksActive = publishingChecksAreActive(contentStatus);
   return (
     <section
       aria-labelledby="overview-readiness-heading"
@@ -367,7 +380,7 @@ function ReadinessSummary({
         >
           {t("contentDetail.overview.readiness")}
         </h2>
-        {blockers > 0 ? (
+        {blockers > 0 && publishingChecksActive ? (
           <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
             <AlertTriangle className="text-danger h-3.5 w-3.5" aria-hidden="true" />
             <span data-testid="overview-readiness-blocker-count">
@@ -379,6 +392,18 @@ function ReadinessSummary({
               )}
             </span>
           </p>
+        ) : blockers > 0 ? (
+          <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
+            <Info className="text-warning h-3.5 w-3.5" aria-hidden="true" />
+            <span data-testid="overview-readiness-future-checks">
+              {t(
+                blockers === 1
+                  ? "contentDetail.overview.futurePublishingCheckOne"
+                  : "contentDetail.overview.futurePublishingChecksMany",
+                { count: blockers },
+              )}
+            </span>
+          </p>
         ) : canPublish ? (
           <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
             <CheckCircle2 className="text-success h-3.5 w-3.5" aria-hidden="true" />
@@ -386,6 +411,11 @@ function ReadinessSummary({
           </p>
         ) : null}
       </header>
+      {!publishingChecksActive && blockers > 0 ? (
+        <p className="text-label text-fg-muted mb-2" data-testid="overview-readiness-stage-hint">
+          {t("contentDetail.overview.futureReadinessHint")}
+        </p>
+      ) : null}
       <ul
         className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border"
         data-testid="overview-readiness-list"

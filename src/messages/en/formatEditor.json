@@ -15,6 +15,10 @@
     "creativeDirection": {
       "title": "Creative direction",
       "description": "Format-specific creative direction fields."
+    },
+    "creativeCarousel": {
+      "title": "Slides",
+      "description": "Add, reorder, and edit each slide. Use the keyboard controls when dragging is not convenient."
     }
   },
   "fields": {
@@ -172,6 +176,9 @@
     "moreDetails": "More details",
     "moreDetailsSubtitle": "Per-format creative contract — caption, hashtags, scenes, visual direction, translations. Everything is optional.",
     "optionalGuidance": "These creative fields are optional while drafting. Publishing requirements are shown in the Readiness and Publishing sections.",
+    "startHere": "Start with these fields",
+    "optionalDetails": "Optional details ({count})",
+    "optionalDetailsDescription": "Add these details when they help the writer, designer, or publisher. They are not required to save a draft.",
     "totalFilledSuffix": "total filled",
     "essentialSuffix": "essential",
     "totalFilledAria": "{filled} of {total} fields filled",

@@ -119,6 +119,30 @@ describe("OverviewCommandCenter", () => {
     // gets a single obvious primary action in the rail, not
     // two competing ones. We assert the CTA is gone here.
     expect(screen.queryByTestId("overview-next-action-cta")).toBeNull();
+    expect(screen.getByTestId("overview-next-action")).not.toHaveTextContent("blocker to publish");
+  });
+
+  it("keeps future publishing checks separate from the current draft action", () => {
+    render(
+      <OverviewCommandCenter
+        {...baseProps}
+        contentStatus="draft"
+        readinessBlockers={2}
+        readiness={baseProps.readiness.map((row) => ({
+          ...row,
+          status: "warning" as const,
+          detail: "Will be checked before publishing",
+        }))}
+      />,
+    );
+
+    expect(screen.getByTestId("overview-readiness-future-checks")).toHaveTextContent(
+      "publishing checks are tracked for later",
+    );
+    expect(screen.getByTestId("overview-readiness-stage-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("overview-next-action")).toHaveTextContent(
+      "Ready to submit for review",
+    );
   });
 
   it("hides the Next Action card when the item is fully ready", () => {
