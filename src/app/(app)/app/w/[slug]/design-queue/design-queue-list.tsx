@@ -91,7 +91,11 @@ export function DesignQueueList({
         <EmptyState
           icon={<Paintbrush className="h-8 w-8" />}
           title={t("sidebar.designQueuePage.emptyTitle")}
-          description={t("sidebar.designQueuePage.emptyDescription")}
+          description={t(
+            canBulkArchive
+              ? "sidebar.designQueuePage.emptyDescriptionManager"
+              : "sidebar.designQueuePage.emptyDescriptionDesigner",
+          )}
         />
       </Card>
     );

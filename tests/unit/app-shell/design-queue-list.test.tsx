@@ -59,6 +59,20 @@ function makeItem(overrides: Partial<DesignQueueListItem> = {}): DesignQueueList
 }
 
 describe("DesignQueueList — designer-facing context (P3.2)", () => {
+  it("explains the manager next step when the queue is empty", () => {
+    render(<DesignQueueList workspaceId="ws" items={[]} canBulkArchive t={t} />);
+
+    expect(screen.queryByTestId("design-queue-row")).not.toBeInTheDocument();
+    expect(screen.getByText(/Approve an idea, then assign a designer/)).toBeInTheDocument();
+  });
+
+  it("explains the approval and assignment dependency to a designer", () => {
+    render(<DesignQueueList workspaceId="ws" items={[]} canBulkArchive={false} t={t} />);
+
+    expect(screen.getByText(/Nothing is waiting for you yet/)).toBeInTheDocument();
+    expect(screen.getByText(/must approve an idea and assign it/)).toBeInTheDocument();
+  });
+
   it("renders format + title + 'Required by' + brief + owner + status for a brief-ready item", () => {
     render(<DesignQueueList workspaceId="ws" items={[makeItem()]} canBulkArchive={false} t={t} />);
     const card = screen.getByTestId("design-queue-row");
