@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { workspaceRoleSchema, type WorkspaceRole } from "@/lib/auth/invitation-command";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * Shared per-workspace role multi-selector used by the "Send invitation",
@@ -55,6 +56,14 @@ export function WorkspaceRoleMatrix({
   defaultSelectedRoles?: Record<string, string[]>;
   showNoAccessAction?: boolean;
 }) {
+  const t = useLocaleT();
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
+    if (value !== key && !value.startsWith(`[${key}]`)) return value;
+    return fallback.replace(/\{(\w+)\}/g, (_, name) => String(params?.[name] ?? `{${name}}`));
+  };
+  const localizedRoleLabel = (role: WorkspaceRole) =>
+    tr(`users.memberEdit.roleLabels.${role}`, roleLabel(role));
   const seed = React.useMemo<Record<string, string[]>>(() => {
     const next: Record<string, string[]> = {};
     for (const w of workspaces) {
@@ -127,17 +136,29 @@ export function WorkspaceRoleMatrix({
                   type="button"
                   onClick={() => clearWorkspace(w.id)}
                   className="text-fg-muted hover:text-fg-primary text-label focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-                  aria-label={`Remove all access from ${w.name}`}
+                  aria-label={tr(
+                    "users.memberEdit.removeAllAccessAria",
+                    "Remove all access from {name}",
+                    {
+                      name: w.name,
+                    },
+                  )}
                   data-testid={testId ? `${testId}-clear-${w.id}` : undefined}
                 >
                   <X className="h-3.5 w-3.5" aria-hidden="true" />
-                  Remove all
+                  {tr("users.memberEdit.removeAll", "Remove all")}
                 </button>
               ) : null}
             </div>
             <fieldset>
-              <legend className="sr-only">{`Roles for ${w.name}`}</legend>
-              <div className="flex flex-wrap gap-2" role="group" aria-label={`Roles for ${w.name}`}>
+              <legend className="sr-only">
+                {tr("users.memberEdit.rolesFor", "Roles for {name}", { name: w.name })}
+              </legend>
+              <div
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label={tr("users.memberEdit.rolesFor", "Roles for {name}", { name: w.name })}
+              >
                 {workspaceRoleSchema.options.map((role) => {
                   const isOn = selected.includes(role);
                   return (
@@ -155,10 +176,13 @@ export function WorkspaceRoleMatrix({
                         className="sr-only"
                         checked={isOn}
                         onCheckedChange={() => toggleRole(w.id, role)}
-                        aria-label={`${roleLabel(role)} for ${w.name}`}
+                        aria-label={tr("users.memberEdit.roleForWorkspace", "{role} for {name}", {
+                          role: localizedRoleLabel(role),
+                          name: w.name,
+                        })}
                       />
                       <label htmlFor={`workspace-role-${w.id}-${role}`} className="cursor-pointer">
-                        {roleLabel(role)}
+                        {localizedRoleLabel(role)}
                       </label>
                     </div>
                   );
@@ -167,19 +191,25 @@ export function WorkspaceRoleMatrix({
             </fieldset>
             {selected.length > 0 ? (
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-label text-fg-muted">Active:</span>
+                <span className="text-label text-fg-muted">
+                  {tr("users.memberEdit.activeRoles", "Active:")}
+                </span>
                 {selected.map((role) => (
                   <Badge
                     key={role}
                     variant="primary"
                     data-testid={`${testId ?? "role-matrix"}-active-${w.id}-${role}`}
                   >
-                    {roleLabel(role as WorkspaceRole)}
+                    {localizedRoleLabel(role as WorkspaceRole)}
                     <button
                       type="button"
                       onClick={() => toggleRole(w.id, role)}
                       className="hover:text-primary-foreground focus-visible:ring-focus-ring ms-1 inline-flex h-4 w-4 items-center justify-center rounded-full focus:outline-none focus-visible:ring-2"
-                      aria-label={`Remove ${roleLabel(role as WorkspaceRole)} from ${w.name}`}
+                      aria-label={tr(
+                        "users.memberEdit.removeRoleAria",
+                        "Remove {role} from {name}",
+                        { role: localizedRoleLabel(role as WorkspaceRole), name: w.name },
+                      )}
                     >
                       <X className="h-3 w-3" aria-hidden="true" />
                     </button>
@@ -191,7 +221,10 @@ export function WorkspaceRoleMatrix({
                 className="text-label text-fg-muted"
                 data-testid={`${testId ?? "role-matrix"}-empty-${w.id}`}
               >
-                No access — pick a role to grant access to this workspace.
+                {tr(
+                  "users.memberEdit.noAccessWorkspace",
+                  "No access — pick a role to grant access to this workspace.",
+                )}
               </p>
             )}
           </div>

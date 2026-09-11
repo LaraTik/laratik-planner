@@ -312,6 +312,22 @@
     "noWorkspacesInAgency": "لا توجد مساحات عمل في هذه الوكالة بعد.",
     "roleHelp": "ماذا يفعل كل دور؟",
     "saveChanges": "حفظ التغييرات",
+    "roleLabels": {
+      "workspace_manager": "مسؤول مساحة العمل",
+      "content_planner": "مخطط المحتوى",
+      "designer": "المصمم",
+      "internal_reviewer": "المراجع الداخلي",
+      "client_reviewer": "مراجع العميل",
+      "publisher": "الناشر",
+      "viewer": "المشاهد"
+    },
+    "activeRoles": "الأدوار النشطة:",
+    "removeAll": "إزالة الكل",
+    "removeAllAccessAria": "إزالة كل الصلاحيات من {name}",
+    "rolesFor": "أدوار {name}",
+    "roleForWorkspace": "{role} في {name}",
+    "removeRoleAria": "إزالة {role} من {name}",
+    "noAccessWorkspace": "لا توجد صلاحية — اختر دورًا لمنح صلاحية على مساحة العمل هذه.",
     "saving": "جارٍ الحفظ…"
   },
   "colorForm": {

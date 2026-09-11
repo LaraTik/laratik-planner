@@ -312,6 +312,22 @@
     "noWorkspacesInAgency": "No workspaces in this agency yet.",
     "roleHelp": "What does each role do?",
     "saveChanges": "Save changes",
+    "roleLabels": {
+      "workspace_manager": "Workspace Manager",
+      "content_planner": "Content Planner",
+      "designer": "Designer",
+      "internal_reviewer": "Internal Reviewer",
+      "client_reviewer": "Client Reviewer",
+      "publisher": "Publisher",
+      "viewer": "Viewer"
+    },
+    "activeRoles": "Active:",
+    "removeAll": "Remove all",
+    "removeAllAccessAria": "Remove all access from {name}",
+    "rolesFor": "Roles for {name}",
+    "roleForWorkspace": "{role} for {name}",
+    "removeRoleAria": "Remove {role} from {name}",
+    "noAccessWorkspace": "No access — pick a role to grant access to this workspace.",
     "saving": "Saving…"
   },
   "colorForm": {
