@@ -1,5 +1,6 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -8,6 +9,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { cn } from "@/lib/utils";
+import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { tForActive } from "@/lib/i18n/t-for-active";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -46,24 +48,30 @@ export default async function EditorialCalendarPage({
   if (!workspace) notFound();
   const requested = (await searchParams).month;
   const valid = requested?.match(/^(\d{4})-(\d{2})$/);
-  const reference = valid ? new Date(Number(valid[1]), Number(valid[2]) - 1, 1) : new Date();
-  const monthStart = new Date(reference.getFullYear(), reference.getMonth(), 1);
-  const monthEnd = new Date(reference.getFullYear(), reference.getMonth() + 1, 1);
+  const zonedNow = toZonedTime(new Date(), workspace.timezone);
+  const calendarYear = valid ? Number(valid[1]) : zonedNow.getFullYear();
+  const calendarMonth = valid ? Number(valid[2]) - 1 : zonedNow.getMonth();
+  const reference = new Date(calendarYear, calendarMonth, 1);
+  const { start: monthStart, end: monthEnd } = workspaceMonthRange(
+    calendarYear,
+    calendarMonth,
+    workspace.timezone,
+  );
   const items = await listWorkspaceContent({ id: session.user.id }, workspace.id, {
     monthStart,
     monthEnd,
   });
-  const firstWeekday = monthStart.getDay();
-  const days = new Date(reference.getFullYear(), reference.getMonth() + 1, 0).getDate();
+  const firstWeekday = new Date(calendarYear, calendarMonth, 1).getDay();
+  const days = new Date(calendarYear, calendarMonth + 1, 0).getDate();
   const cells = Array.from(
     { length: Math.ceil((firstWeekday + days) / 7) * 7 },
     (_, index) => index - firstWeekday + 1,
   );
   const monthParam = (offset: number) => {
-    const d = new Date(reference.getFullYear(), reference.getMonth() + offset, 1);
+    const d = new Date(calendarYear, calendarMonth + offset, 1);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
   };
-  const today = new Date();
+  const today = toZonedTime(new Date(), workspace.timezone);
   const isSameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
@@ -78,11 +86,13 @@ export default async function EditorialCalendarPage({
     weekday: "short",
     month: "short",
     day: "numeric",
+    timeZone: workspace.timezone,
   });
   const todayLongFmt = new Intl.DateTimeFormat(bcp47, {
     weekday: "long",
     month: "long",
     day: "numeric",
+    timeZone: workspace.timezone,
   });
 
   return (
@@ -155,11 +165,18 @@ export default async function EditorialCalendarPage({
             </div>
           ))}
           {cells.map((day, index) => {
-            const cellDate = new Date(reference.getFullYear(), reference.getMonth(), day);
+            const cellDate = new Date(calendarYear, calendarMonth, day);
             const inMonth = day >= 1 && day <= days;
             const isToday = inMonth && isSameDay(cellDate, today);
             const cellItems = inMonth
-              ? items.filter((item) => item.plannedPublishAt.getDate() === day)
+              ? items.filter((item) => {
+                  const itemDate = toZonedTime(item.plannedPublishAt, workspace.timezone);
+                  return (
+                    itemDate.getFullYear() === calendarYear &&
+                    itemDate.getMonth() === calendarMonth &&
+                    itemDate.getDate() === day
+                  );
+                })
               : [];
             return (
               <div
@@ -172,7 +189,7 @@ export default async function EditorialCalendarPage({
                 <div className="flex items-center justify-between">
                   {inMonth ? (
                     <time
-                      dateTime={cellDate.toISOString().slice(0, 10)}
+                      dateTime={`${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`}
                       {...(isToday ? { "aria-current": "date" as const } : {})}
                       className={cn(
                         "text-label",
@@ -192,7 +209,12 @@ export default async function EditorialCalendarPage({
                     // — fails WCAG AA. White-on-indigo is 5.85:1.
                     <span
                       aria-label={t("calendar.todayAriaLabel", {
-                        date: todayLongFmt.format(cellDate),
+                        date: todayLongFmt.format(
+                          fromZonedTime(
+                            new Date(calendarYear, calendarMonth, day, 12),
+                            workspace.timezone,
+                          ),
+                        ),
                       })}
                       className="text-label bg-primary rounded-full px-1.5 font-semibold text-white"
                     >

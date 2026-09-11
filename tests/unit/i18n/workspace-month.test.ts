@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentWorkspaceMonthRange } from "@/lib/i18n/workspace-month";
+import { currentWorkspaceMonthRange, workspaceMonthRange } from "@/lib/i18n/workspace-month";
 
 describe("currentWorkspaceMonthRange", () => {
   it("uses the workspace month when UTC is still the previous local day", () => {
@@ -20,5 +20,12 @@ describe("currentWorkspaceMonthRange", () => {
 
     expect(start.toISOString()).toBe("2026-08-31T15:00:00.000Z");
     expect(end.toISOString()).toBe("2026-09-30T15:00:00.000Z");
+  });
+
+  it("builds a requested month in the workspace timezone", () => {
+    const { start, end } = workspaceMonthRange(2026, 8, "America/Los_Angeles");
+
+    expect(start.toISOString()).toBe("2026-09-01T07:00:00.000Z");
+    expect(end.toISOString()).toBe("2026-10-01T07:00:00.000Z");
   });
 });

@@ -34,9 +34,11 @@ import {
 import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
 import { socialChannels, users, workspaceMemberships } from "@/lib/db/schema";
+import { toZonedTime } from "date-fns-tz";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { parsePlanningFilterParams } from "@/lib/planning/filter-params";
+import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -112,9 +114,15 @@ export default async function PlanningPage({
       : null;
   const parsedFilters = parsePlanningFilterParams(filters);
   const match = filters.month?.match(/^(\d{4})-(\d{2})$/);
-  const now = match ? new Date(Number(match[1]), Number(match[2]) - 1, 1) : new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  const zonedNow = toZonedTime(new Date(), ws.timezone);
+  const calendarYear = match ? Number(match[1]) : zonedNow.getFullYear();
+  const calendarMonth = match ? Number(match[2]) - 1 : zonedNow.getMonth();
+  const now = new Date(calendarYear, calendarMonth, 1);
+  const { start: monthStart, end: monthEnd } = workspaceMonthRange(
+    calendarYear,
+    calendarMonth,
+    ws.timezone,
+  );
   const selectedStatus = parsedFilters.status;
   const selectedFormat = parsedFilters.format;
   const selectedStage = parsedFilters.stage;
