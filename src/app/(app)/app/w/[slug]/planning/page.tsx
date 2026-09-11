@@ -459,9 +459,12 @@ export default async function PlanningPage({
                         risk: filters.risk,
                       }).filter(([, v]) => v != null),
                     ) as Parameters<typeof describeActiveFilter>[0],
+                    t,
                   ),
                 })
-              : t("planning.emptyNothingDescription")
+              : canCreate
+                ? t("planning.emptyNothingDescription")
+                : t("planning.emptyNothingDescriptionReadOnly")
           }
           action={
             hasFilter ? (

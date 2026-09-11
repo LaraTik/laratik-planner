@@ -41,6 +41,7 @@ describe("planning page empty-state structure (UX-04)", () => {
   const en = tFor("en");
   const filterTitle = en("planning.emptyFilterTitle");
   const nothingTitle = en("planning.emptyNothingTitle");
+  const readOnlyDescription = en("planning.emptyNothingDescriptionReadOnly");
   const clearFilters = en("planning.clearFilters");
   const quickCreate = en("planning.quickCreate");
 
@@ -77,6 +78,12 @@ describe("planning page empty-state structure (UX-04)", () => {
       ),
     );
     expect(quickCreate).toBe("Quick Create");
+  });
+
+  it("uses a truthful description for read-only users", () => {
+    expect(source).toContain('t("planning.emptyNothingDescriptionReadOnly")');
+    expect(readOnlyDescription).toContain("workspace manager");
+    expect(readOnlyDescription).not.toContain("Create an idea");
   });
 
   it("wires the empty-state description through describeActiveFilter", () => {

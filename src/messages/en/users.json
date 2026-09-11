@@ -73,6 +73,13 @@
     "templates": "Templates",
     "templatesEmpty": "No templates yet",
     "templatesEmptyDescription": "Create a template below to speed up drafting with a proven format.",
+    "statusLabels": {
+      "active": "Active",
+      "draft": "Draft",
+      "archived": "Archived",
+      "scheduled": "Scheduled",
+      "ongoing": "Ongoing"
+    },
     "colPillar": "Pillar",
     "colDescription": "Description",
     "colActions": "Actions",

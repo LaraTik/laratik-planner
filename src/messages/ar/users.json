@@ -73,6 +73,13 @@
     "templates": "القوالب",
     "templatesEmpty": "لا توجد قوالب بعد",
     "templatesEmptyDescription": "أنشئ قالبًا أدناه لتسريع إعداد المسودات باستخدام تنسيق مجرّب.",
+    "statusLabels": {
+      "active": "نشط",
+      "draft": "مسودة",
+      "archived": "مؤرشف",
+      "scheduled": "مجدول",
+      "ongoing": "جارٍ"
+    },
     "colPillar": "العمود",
     "colDescription": "الوصف",
     "colActions": "إجراءات",

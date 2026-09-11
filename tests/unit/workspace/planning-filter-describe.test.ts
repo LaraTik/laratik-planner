@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { describeActiveFilter } from "@/app/(app)/app/w/[slug]/planning/filter-describe";
+import { tFor } from "@/messages";
 
 /**
  * UX-04 (GAP-FULL-REVIEW-2026-08-25) — the Planning empty state used
@@ -82,5 +83,25 @@ describe("describeActiveFilter", () => {
     expect(result).toBe(
       'status "Ready To Publish", format "Static Post", the selected owner, search "winter", and "at risk"',
     );
+  });
+
+  it("localizes filter explanations for Arabic empty states", () => {
+    const ar = tFor("ar");
+    expect(describeActiveFilter({ status: "draft", format: "carousel", ownerId: "u-1" }, ar)).toBe(
+      "الحالة «تخطيط»، التنسيق «منشور متتابع»، و المالك المحدد",
+    );
+  });
+
+  it("does not leak English filter vocabulary when a localized translator is provided", () => {
+    const ar = tFor("ar");
+    const result = describeActiveFilter(
+      { stage: "approved_for_design", channelId: "ch-1", health: "needs_review" },
+      ar,
+    );
+    expect(result).toContain("المرحلة");
+    expect(result).toContain("القناة المحددة");
+    expect(result).toContain("الحالة");
+    expect(result).not.toContain("stage");
+    expect(result).not.toContain("selected channel");
   });
 });

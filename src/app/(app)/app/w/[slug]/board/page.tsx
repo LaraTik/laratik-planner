@@ -216,6 +216,7 @@ export default async function WorkflowBoardPage({
                         search: searchTerm,
                       }).filter(([, v]) => v != null),
                     ) as Parameters<typeof describeActiveFilter>[0],
+                    t,
                   ),
                 })
               : canCreate

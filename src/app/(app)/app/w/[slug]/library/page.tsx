@@ -22,7 +22,6 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { SectionHeader } from "@/components/workspace/section-header";
-import { humanFormat } from "@/lib/content/status";
 import {
   ArchiveCampaignButton,
   ArchivePillarButton,
@@ -151,7 +150,9 @@ export default async function PlanningLibraryPage({
                   <CalendarRange className="h-3 w-3" aria-hidden="true" />
                   {formatCampaignWindow(row.startDate, row.endDate, t, code)}
                 </div>
-                <Badge variant={STATUS_VARIANT[row.status] ?? "outline"}>{row.status}</Badge>
+                <Badge variant={STATUS_VARIANT[row.status] ?? "outline"}>
+                  {t(`users.library.statusLabels.${row.status}`)}
+                </Badge>
                 {canEditLibrary ? <ArchiveCampaignButton slug={slug} id={row.id} /> : null}
               </li>
             ))}
@@ -246,7 +247,9 @@ export default async function PlanningLibraryPage({
               >
                 <div className="min-w-0">
                   <p className="text-body text-fg-primary font-semibold">{row.name}</p>
-                  <p className="text-label text-fg-muted mt-0.5">{humanFormat(row.format)}</p>
+                  <p className="text-label text-fg-muted mt-0.5">
+                    {t(`planningFilters.formatLabels.${row.format}`)}
+                  </p>
                 </div>
                 {canEditLibrary ? <ArchiveTemplateButton slug={slug} id={row.id} /> : null}
               </li>
