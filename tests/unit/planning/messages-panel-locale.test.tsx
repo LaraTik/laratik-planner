@@ -39,4 +39,45 @@ describe("AudienceCopyPanel localization", () => {
       "instagram_reel",
     );
   });
+
+  it("gives channel managers a direct Details recovery action", () => {
+    render(
+      <LocaleProvider locale="en">
+        <AudienceCopyPanel
+          workspaceSlug="acme"
+          contentItemId="11111111-1111-4111-8111-111111111111"
+          format="static_post"
+          initialPayload={{ schemaVersion: 1, caption: "Caption" }}
+          contentLocale="en"
+          channels={[]}
+          canEdit
+          canManageChannels
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("copy-no-channels")).toHaveTextContent(
+      "Add them from Details before configuring publishing.",
+    );
+    expect(screen.getByRole("link", { name: "Open Details" })).toHaveAttribute("href", "#overview");
+  });
+
+  it("explains ownership without exposing an unsafe action to restricted users", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <AudienceCopyPanel
+          workspaceSlug="acme"
+          contentItemId="11111111-1111-4111-8111-111111111111"
+          format="static_post"
+          initialPayload={{ schemaVersion: 1, caption: "نص" }}
+          contentLocale="ar"
+          channels={[]}
+          canEdit={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("copy-no-channels")).toHaveTextContent("مدير مساحة العمل");
+    expect(screen.queryByRole("link", { name: "فتح التفاصيل" })).not.toBeInTheDocument();
+  });
 });

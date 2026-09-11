@@ -2,17 +2,18 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Clock, Eye, Pencil, Sparkles } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 
-/**
- * Localised platform name. We render the raw platform key in
- * title case; a future pass can extend this with a more
- * comprehensive vocabulary when the channel catalog grows.
- */
-function humanPlatform(platform: string | undefined): string {
-  if (!platform) return "platform";
-  return platform.charAt(0).toUpperCase() + platform.slice(1);
+function humanPlatform(
+  platform: string | undefined,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string {
+  if (!platform) return t("contentDetail.preview.noChannel");
+  const key = `contentDetail.publishForm.platformLabels.${platform}`;
+  const value = t(key);
+  return value === key ? platformLabel(platform) : value;
 }
 import { auth } from "@/lib/auth/config";
 import {
@@ -845,7 +846,7 @@ export default async function ContentDetailPage({
                       >
                         <span className="font-medium">
                           {t("contentDetail.previewShortcut", {
-                            platform: humanPlatform(item.channels[0]?.platform),
+                            platform: humanPlatform(item.channels[0]?.platform, t),
                             account:
                               item.channels[0]?.accountName ??
                               t("contentDetail.previewShortcutNoAccount"),
@@ -1033,6 +1034,7 @@ export default async function ContentDetailPage({
                     currentRevision: item.revision,
                   }))}
                   canEdit={canEditCopy}
+                  canManageChannels={canEditAll}
                 />
               </section>
             ),
@@ -1059,7 +1061,16 @@ export default async function ContentDetailPage({
                     <h3 className="text-title-card text-fg-primary mb-1 font-semibold">
                       {t("contentDetail.preview.noChannelsTitle")}
                     </h3>
-                    <p className="text-body">{t("contentDetail.preview.noChannelsBody")}</p>
+                    <p className="text-body">
+                      {canEditAll
+                        ? t("contentDetail.copy.noChannelsDescription")
+                        : t("contentDetail.copy.noChannelsOwner")}
+                    </p>
+                    {canEditAll ? (
+                      <Button asChild size="sm" variant="outline" className="mt-3">
+                        <Link href="#overview">{t("contentDetail.copy.openDetails")}</Link>
+                      </Button>
+                    ) : null}
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -1070,7 +1081,7 @@ export default async function ContentDetailPage({
                         </h2>
                         <p className="text-body text-fg-secondary">
                           {t("contentDetail.preview.description", {
-                            platform: humanPlatform(item.channels[0]?.platform),
+                            platform: humanPlatform(item.channels[0]?.platform, t),
                             account:
                               item.channels[0]?.accountName ?? t("contentDetail.preview.noChannel"),
                           })}
@@ -1145,9 +1156,22 @@ export default async function ContentDetailPage({
                 redirect (see `publish/page.tsx`).
               */}
                 {item.channels.length === 0 ? (
-                  <p className="text-body text-fg-muted">
-                    {t("contentDetail.publish.noChannelsBody")}
-                  </p>
+                  <div
+                    className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-4"
+                    role="status"
+                    data-testid="publishing-empty-no-channels"
+                  >
+                    <p className="text-body text-fg-secondary">
+                      {canEditAll
+                        ? t("contentDetail.copy.noChannelsDescription")
+                        : t("contentDetail.copy.noChannelsOwner")}
+                    </p>
+                    {canEditAll ? (
+                      <Button asChild size="sm" variant="outline" className="mt-3">
+                        <Link href="#overview">{t("contentDetail.copy.openDetails")}</Link>
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : (
                   <div className="space-y-3" data-testid="publishing-cards">
                     {item.channels.map((ch) => {

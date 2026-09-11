@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Info, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -40,6 +41,8 @@ export interface MessagesPanelProps {
   contentLocale: string;
   channels: Channel[];
   canEdit: boolean;
+  /** Managers/planners can select destinations from the Details surface. */
+  canManageChannels?: boolean;
 }
 
 /** Canonical shared-copy editor. The legacy component name remains exported
@@ -53,6 +56,7 @@ export function AudienceCopyPanel({
   contentLocale,
   channels,
   canEdit,
+  canManageChannels = false,
 }: MessagesPanelProps) {
   const locale = useLocaleCode();
   const t = useLocaleT();
@@ -278,9 +282,28 @@ export function AudienceCopyPanel({
           )}
         </p>
         {channels.length === 0 ? (
-          <p className="text-body text-fg-muted mt-3 italic" role="status">
-            {tr("contentDetail.messages.noChannels", "No channels selected yet.")}
-          </p>
+          <div
+            className="border-border bg-surface-subtle mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+            role="status"
+            data-testid="copy-no-channels"
+          >
+            <p className="text-body text-fg-secondary">
+              {canManageChannels
+                ? tr(
+                    "contentDetail.copy.noChannelsDescription",
+                    "No destination channels are selected yet. Add them from Details before configuring publishing.",
+                  )
+                : tr(
+                    "contentDetail.copy.noChannelsOwner",
+                    "No destination channels are selected yet. A workspace manager or planner must add one from Details before publishing can be configured.",
+                  )}
+            </p>
+            {canManageChannels ? (
+              <Button asChild size="sm" variant="outline">
+                <Link href="#overview">{tr("contentDetail.copy.openDetails", "Open Details")}</Link>
+              </Button>
+            ) : null}
+          </div>
         ) : (
           <ul className="mt-3 space-y-2" data-testid="messages-per-channel-list">
             {channels.map((channel) => {
