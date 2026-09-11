@@ -103,4 +103,24 @@ describe("PlanningHeader", () => {
     const breadcrumb = screen.getByTestId("planning-header-breadcrumb");
     expect(breadcrumb).toHaveAttribute("href", "/app/w/acme/planning");
   });
+
+  it("accepts a locale-resolved breadcrumb label", () => {
+    render(
+      <PlanningHeader
+        workspaceSlug="acme"
+        workspaceName="Acme"
+        workspaceTimezone="Europe/Berlin"
+        contentItemId="ci-1"
+        title="Title"
+        backLabel="العودة إلى التخطيط"
+        format="static_post"
+        status="draft"
+        channels={[]}
+        plannedPublishAt="2026-09-01 09:00"
+      />,
+    );
+    expect(screen.getByTestId("planning-header-breadcrumb")).toHaveTextContent(
+      "العودة إلى التخطيط",
+    );
+  });
 });

@@ -676,6 +676,7 @@ export default async function ContentDetailPage({
               workspaceTimezone={ws.timezone}
               contentItemId={item.id}
               title={item.title}
+              backLabel={t("contentDetail.copy.backToPlanning")}
               format={item.format}
               formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
               status={item.status}

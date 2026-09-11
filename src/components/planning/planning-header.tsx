@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Calendar, FileText, Hash, Users } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { humanFormat, humanStatus, statusBadgeVariant } from "@/lib/content/status";
 
 /**
@@ -29,6 +30,8 @@ export interface PlanningHeaderProps {
   workspaceTimezone: string;
   contentItemId: string;
   title: string;
+  /** Locale-resolved breadcrumb label. */
+  backLabel?: string;
   format: string;
   /** Locale-resolved format label from the page's active catalog. */
   formatLabel?: string;
@@ -54,6 +57,7 @@ export function PlanningHeader({
   workspaceTimezone,
   contentItemId,
   title,
+  backLabel,
   format,
   formatLabel,
   status,
@@ -75,7 +79,8 @@ export function PlanningHeader({
             className="text-label text-fg-muted hover:text-fg-secondary inline-flex items-center gap-1"
             data-testid="planning-header-breadcrumb"
           >
-            ← {workspaceName}
+            <DirAwareArrowLeft className="h-3.5 w-3.5" />
+            {backLabel ?? `Back to ${workspaceName}`}
           </Link>
           <div className="mt-1 flex flex-wrap items-center gap-2">
             <CardTitle className="text-title-page text-fg-primary font-bold break-words">
