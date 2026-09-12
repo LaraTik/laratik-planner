@@ -103,3 +103,24 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   await gotoStable(page, "/app/agency-settings/planning-packs");
   await expect(page.getByRole("heading", { name: "حزم تعليمات التخطيط", level: 1 })).toBeVisible();
 });
+
+test("agency storage billing reference renders Arabic RTL without overflow @a11y", async ({
+  page,
+}) => {
+  await bootstrapTestSession(page, { locale: "ar" });
+  await gotoStable(page, "/app/agency-settings/storage");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { name: "تخزين الوسائط", level: 1 })).toBeVisible();
+  const billing = page.getByTestId("cloudflare-r2-pricing");
+  await expect(billing).toContainText("10 جيجابايت-شهر / شهرياً");
+  await expect(billing).toContainText("1,000,000 طلب / شهرياً");
+  await expect(billing).toContainText("10,000,000 طلب / شهرياً");
+  await expect(billing).toContainText("حدود الرفع في LaraTik");
+
+  const overflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflowsHorizontally).toBe(false);
+});

@@ -23,6 +23,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { CloudflareR2PricingCard } from "@/components/storage/cloudflare-r2-pricing-card";
 import { StorageToggle } from "./storage-toggle";
 import { StorageHealthCheck } from "./storage-health-check";
 import { AgencyOwnedStorageForm } from "./agency-owned-storage-form";
@@ -419,6 +420,27 @@ export default async function AgencyStoragePage() {
           </div>
         </Card>
       </div>
+
+      <CloudflareR2PricingCard
+        locale={code}
+        copy={{
+          title: t("storage.billingTitle"),
+          description: t("storage.billingDescription"),
+          standard: t("storage.billingStandard"),
+          notConnected: t("storage.billingNotConnected"),
+          metric: t("storage.billingMetric"),
+          included: t("storage.billingIncluded"),
+          price: t("storage.billingPrice"),
+          storage: t("storage.billingStorage"),
+          classA: t("storage.billingClassA"),
+          classB: t("storage.billingClassB"),
+          gbMonth: t("storage.billingGbMonth"),
+          requests: t("storage.billingRequests"),
+          millionRequests: t("storage.billingMillionRequests"),
+          note: t("storage.billingNote"),
+          source: t("storage.billingSource"),
+        }}
+      />
     </div>
   );
 }

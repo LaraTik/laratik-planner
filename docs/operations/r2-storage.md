@@ -21,6 +21,26 @@ The application performs a temporary write/read/delete probe before replacing
 the encrypted credential pair. It never stores the secret in plaintext or
 returns it to the browser.
 
+## Billing reference versus LaraTik quota
+
+The agency storage page intentionally shows two separate concepts:
+
+- **LaraTik upload quota** is the application-enforced `storage_bytes` limit
+  from the agency plan and any platform-approved override. It controls whether
+  a new upload can reserve capacity.
+- **Cloudflare R2 billing reference** shows the published Standard free tier
+  and prices: 10 GB-month of storage, 1 million Class A operations, and 10
+  million Class B operations free each month; paid usage is $0.015 / GB-month,
+  $4.50 / million Class A requests, and $0.36 / million Class B requests.
+
+The Cloudflare values are account-level billing allowances, not LaraTik upload
+limits. LaraTik does not currently ingest live Cloudflare billing metrics, so
+the page labels provider usage as not connected and links to the official
+[Cloudflare R2 pricing](https://developers.cloudflare.com/r2/pricing/) page.
+Do not derive `storage_bytes` or upload enforcement from the Cloudflare free
+tier. Cloudflare billing alerts and account usage remain an operator-level
+control in the Cloudflare dashboard.
+
 Agency-owned mode uses the same private object keys, quota reservations, direct
 signed uploads, authorization checks, and cleanup jobs as managed mode. It is
 not a Cloudflare subscription or billing operation: the agency owns that
