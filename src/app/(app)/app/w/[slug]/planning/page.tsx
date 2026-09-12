@@ -307,6 +307,9 @@ export default async function PlanningPage({
               count: batchCreated,
             })}
           </span>
+          <span className="text-label w-full basis-full font-normal sm:w-auto sm:basis-auto">
+            {t("batchAdd.form.successNext")}
+          </span>
           <Link
             href={`?month=${monthParam(0)}&status=draft`}
             className="text-label focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"

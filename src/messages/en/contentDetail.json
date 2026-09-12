@@ -378,6 +378,10 @@
     "editDrawerDescription": "Change the title, format, planned publish date, channels, or brief.",
     "openFullEditor": "Open the full editor"
   },
+  "createdBanner": {
+    "title": "Draft created",
+    "description": "You are viewing the new draft in Content detail. It is currently in the Draft stage. Next: complete the creative brief, then submit it for content review."
+  },
   "copy": {
     "fixCopy": "Edit copy",
     "fixCopyHint": "Edit the shared audience copy in one place.",

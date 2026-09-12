@@ -112,7 +112,7 @@ export async function quickCreateAction(
     return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  redirect(`/app/w/${workspaceSlug}/planning/${id}`);
+  redirect(`/app/w/${workspaceSlug}/planning/${id}?created=1`);
 }
 
 // ─── Update content item ──────────────────────────────────────────────

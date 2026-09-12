@@ -47,6 +47,7 @@
     "importRows": "Import rows",
     "successOne": "Created {count} draft successfully.",
     "successMany": "Created {count} drafts successfully.",
+    "successNext": "They are now in Planning as drafts. Next: complete the brief and submit them for content review.",
     "viewDrafts": "View drafts",
     "selectFormat": "Select format",
     "titleForRow": "Title for row {row}",

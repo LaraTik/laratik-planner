@@ -127,11 +127,15 @@ function nextActionLabel(status: string, canEdit: boolean, t: (key: string) => s
 
 export default async function ContentDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string; id: string }>;
+  searchParams?: Promise<{ created?: string }>;
 }) {
   const { t, code } = await tForActive();
   const { slug, id } = await params;
+  const query = (await searchParams) ?? {};
+  const justCreated = query.created === "1";
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const actor = await currentActor();
@@ -631,6 +635,17 @@ export default async function ContentDetailPage({
 
   return (
     <div data-testid="workspace-content-detail">
+      {justCreated ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border-success/30 bg-success-container text-on-success-container mb-4 rounded-[var(--radius-control)] border px-3 py-3"
+          data-testid="content-created-banner"
+        >
+          <p className="text-body font-semibold">{t("contentDetail.createdBanner.title")}</p>
+          <p className="text-label mt-1">{t("contentDetail.createdBanner.description")}</p>
+        </div>
+      ) : null}
       {/* Three-zone application shell: header (top, spans the
           center column) + center workspace + sticky right rail.
           The `PlanningDetailShell` is a thin client wrapper that
