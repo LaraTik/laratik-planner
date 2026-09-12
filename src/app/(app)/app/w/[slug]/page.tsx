@@ -60,8 +60,9 @@ import { formatDate } from "@/lib/i18n/format-locale";
  * source of truth and are guaranteed to sum to 100% / total.
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { t } = await tForActive();
   const { slug } = await params;
-  return { title: `${slug} — Overview` };
+  return { title: `${slug} — ${t("workspaceOverview.title")}` };
 }
 
 export default async function WorkspaceOverviewPage({
@@ -199,44 +200,44 @@ export default async function WorkspaceOverviewPage({
 
   const kpiTiles = [
     {
-      label: "Planned",
+      label: t("workspaceOverviewDashboard.kpi.planned"),
       value: dashboard.total,
       href: buildPlanningHref({ status: null, risk: null }),
       icon: OVERVIEW_KPI_ICONS.planned,
       tone: "default" as const,
-      description: "All non-cancelled items in the selected month.",
+      description: t("workspaceOverviewDashboard.kpi.plannedDescription"),
     },
     {
-      label: "On track",
+      label: t("workspaceOverviewDashboard.kpi.onTrack"),
       value: dashboard.onTrack,
       href: buildPlanningHref({ status: null, risk: null }),
       icon: OVERVIEW_KPI_ICONS.onTrack,
       tone: "success" as const,
-      description: "Items that are not overdue and not blocked.",
+      description: t("workspaceOverviewDashboard.kpi.onTrackDescription"),
     },
     {
-      label: "At risk",
+      label: t("workspaceOverviewDashboard.kpi.atRisk"),
       value: dashboard.atRisk,
       href: buildPlanningHref({ risk: "at_risk" }),
       icon: OVERVIEW_KPI_ICONS.atRisk,
       tone: "warning" as const,
-      description: "Items past their planned publish date that haven't shipped.",
+      description: t("workspaceOverviewDashboard.kpi.atRiskDescription"),
     },
     {
-      label: "Needs review",
+      label: t("workspaceOverviewDashboard.kpi.needsReview"),
       value: dashboard.needsReview,
       href: buildPlanningHref({ status: "content_review" }),
       icon: OVERVIEW_KPI_ICONS.needsReview,
       tone: "info" as const,
-      description: "Items waiting on content, creative, or changes.",
+      description: t("workspaceOverviewDashboard.kpi.needsReviewDescription"),
     },
     {
-      label: "Published",
+      label: t("workspaceOverviewDashboard.kpi.published"),
       value: dashboard.published,
       href: buildPlanningHref({ status: "published" }),
       icon: OVERVIEW_KPI_ICONS.published,
       tone: "muted" as const,
-      description: "Items fully published this month.",
+      description: t("workspaceOverviewDashboard.kpi.publishedDescription"),
     },
   ];
 
@@ -261,7 +262,7 @@ export default async function WorkspaceOverviewPage({
     other: buildPlanningHref({ risk: "at_risk" }),
   };
   const riskReasons = dashboard.riskReasonCounts.map((r) => ({
-    label: r.label,
+    label: t(`workspaceOverviewDashboard.riskReasons.${r.reason}`),
     count: r.count,
     href: riskReasonHrefs[r.reason] ?? buildPlanningHref({ risk: "at_risk" }),
   }));
@@ -369,7 +370,10 @@ export default async function WorkspaceOverviewPage({
             total={dashboard.total}
             monthlyTarget={dashboard.monthlyTarget}
             coveragePercent={dashboard.coveragePercent}
-            formatBreakdown={dashboard.formatBreakdown}
+            formatBreakdown={dashboard.formatBreakdown.map((entry) => ({
+              ...entry,
+              label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
+            }))}
             buildFormatHref={formatHref}
             settingsHref={`/app/w/${slug}/settings`}
             t={t}
@@ -398,7 +402,7 @@ export default async function WorkspaceOverviewPage({
       <WorkflowPipeline
         stages={dashboard.workflowStages.map((s) => ({
           stage: s.stage,
-          label: s.label,
+          label: t(`workspaceOverviewDashboard.workflowStages.${s.stage}`),
           count: s.count,
         }))}
         buildHref={stageHref}

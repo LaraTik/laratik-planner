@@ -70,6 +70,41 @@
     "setTargetHint": "لا يوجد هدف شهري — عيّن هدفًا لرؤية تقدم التغطية.",
     "coverageAria": "{percent} بالمئة من الهدف الشهري"
   },
+  "kpi": {
+    "planned": "مخطط",
+    "plannedDescription": "جميع العناصر غير الملغاة في الشهر المحدد.",
+    "onTrack": "في المسار",
+    "onTrackDescription": "العناصر التي لم تتأخر ولم تُحظر.",
+    "atRisk": "في خطر",
+    "atRiskDescription": "العناصر التي تجاوزت تاريخ النشر المخطط ولم تُنشر.",
+    "needsReview": "يحتاج مراجعة",
+    "needsReviewDescription": "العناصر التي تنتظر المحتوى أو الإبداع أو التعديلات.",
+    "published": "منشور",
+    "publishedDescription": "العناصر المنشورة بالكامل هذا الشهر."
+  },
+  "workflowStages": {
+    "planning": "تخطيط",
+    "review": "مراجعة",
+    "design": "تصميم",
+    "publish": "نشر"
+  },
+  "riskReasons": {
+    "past_due": "متأخر",
+    "awaiting_review": "بانتظار المراجعة",
+    "design_in_progress": "التصميم قيد التنفيذ",
+    "needs_creative": "يحتاج إلى إبداع",
+    "other": "أخرى"
+  },
+  "formatLabels": {
+    "static_post": "صورة",
+    "short_form_video": "ريلز",
+    "long_form_video": "فيديو",
+    "carousel": "منشور متعدد الشرائح",
+    "story": "قصة",
+    "live_content": "بث مباشر",
+    "article": "مقال",
+    "other": "أخرى"
+  },
   "overviewKpiAria": "مؤشرات أداء المساحة",
   "planningKpiAria": "مؤشرات أداء التخطيط",
   "planningKpiTotal": "إجمالي المُخطَّط",

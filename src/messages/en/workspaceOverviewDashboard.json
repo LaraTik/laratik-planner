@@ -70,6 +70,41 @@
     "setTargetHint": "No monthly target — set one to see coverage progress.",
     "coverageAria": "{percent} percent of monthly target"
   },
+  "kpi": {
+    "planned": "Planned",
+    "plannedDescription": "All non-cancelled items in the selected month.",
+    "onTrack": "On track",
+    "onTrackDescription": "Items that are not overdue and not blocked.",
+    "atRisk": "At risk",
+    "atRiskDescription": "Items past their planned publish date that haven't shipped.",
+    "needsReview": "Needs review",
+    "needsReviewDescription": "Items waiting on content, creative, or changes.",
+    "published": "Published",
+    "publishedDescription": "Items fully published this month."
+  },
+  "workflowStages": {
+    "planning": "Planning",
+    "review": "Review",
+    "design": "Design",
+    "publish": "Publish"
+  },
+  "riskReasons": {
+    "past_due": "Past due",
+    "awaiting_review": "Awaiting review",
+    "design_in_progress": "Design in progress",
+    "needs_creative": "Needs creative",
+    "other": "Other"
+  },
+  "formatLabels": {
+    "static_post": "Image",
+    "short_form_video": "Reel",
+    "long_form_video": "Video",
+    "carousel": "Carousel",
+    "story": "Story",
+    "live_content": "Live",
+    "article": "Article",
+    "other": "Other"
+  },
   "overviewKpiAria": "Workspace KPIs",
   "planningKpiAria": "Planning KPIs",
   "planningKpiTotal": "Total Planned",
