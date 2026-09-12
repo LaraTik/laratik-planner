@@ -36,4 +36,25 @@ test.describe("Batch Add spreadsheet workflow", () => {
     );
     expect(mobileOverflow).toBe(false);
   });
+
+  test("explains the next step after saving a batch", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/planning/batch");
+
+    await page.getByRole("textbox", { name: "Title for row 1" }).fill("Batch completion test");
+    await page.getByRole("combobox", { name: "Format for row 1" }).selectOption("static_post");
+    await page.getByRole("textbox", { name: "Date and time for row 1" }).fill("2026-09-20T10:00");
+    await page.getByRole("textbox", { name: "Short brief for row 1" }).fill("A clear next step");
+    await page.getByRole("button", { name: /Save all as drafts/i }).click();
+
+    await page.waitForURL(/\/app\/w\/acme\/planning\?batchCreated=1$/, {
+      timeout: 20_000,
+      waitUntil: "load",
+    });
+    const completion = page.getByTestId("planning-batch-success");
+    await expect(completion).toContainText("Created 1 draft successfully.");
+    await expect(completion).toContainText("They are now in Planning as drafts.");
+    await expect(completion).toContainText("submit them for content review");
+    await expect(page.getByTestId("planning-batch-success-view-drafts")).toBeVisible();
+  });
 });

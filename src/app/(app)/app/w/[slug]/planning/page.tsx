@@ -300,6 +300,7 @@ export default async function PlanningPage({
           role="status"
           aria-live="polite"
           className="border-success/30 bg-success-container text-on-success-container flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold"
+          data-testid="planning-batch-success"
         >
           <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span className="flex-1">
