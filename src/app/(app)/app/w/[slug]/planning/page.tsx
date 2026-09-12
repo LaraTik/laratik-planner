@@ -39,7 +39,7 @@ import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { parsePlanningFilterParams } from "@/lib/planning/filter-params";
-import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
+import { workspaceMonthDisplayDate, workspaceMonthRange } from "@/lib/i18n/workspace-month";
 
 /**
  * Planning list (Goal 6 master prompt §3 Monthly Planning List).
@@ -118,7 +118,7 @@ export default async function PlanningPage({
   const zonedNow = toZonedTime(new Date(), ws.timezone);
   const calendarYear = match ? Number(match[1]) : zonedNow.getFullYear();
   const calendarMonth = match ? Number(match[2]) - 1 : zonedNow.getMonth();
-  const now = new Date(calendarYear, calendarMonth, 1);
+  const now = workspaceMonthDisplayDate(calendarYear, calendarMonth);
   const { start: monthStart, end: monthEnd } = workspaceMonthRange(
     calendarYear,
     calendarMonth,

@@ -1,7 +1,24 @@
 import { describe, expect, it } from "vitest";
-import { currentWorkspaceMonthRange, workspaceMonthRange } from "@/lib/i18n/workspace-month";
+import { formatDate } from "@/lib/i18n/format-locale";
+import {
+  currentWorkspaceMonthRange,
+  workspaceMonthDisplayDate,
+  workspaceMonthRange,
+} from "@/lib/i18n/workspace-month";
 
 describe("currentWorkspaceMonthRange", () => {
+  it("keeps a displayed month stable when formatted in a western timezone", () => {
+    const displayDate = workspaceMonthDisplayDate(2026, 8);
+
+    expect(
+      formatDate(displayDate, "en", {
+        month: "long",
+        year: "numeric",
+        timeZone: "America/Los_Angeles",
+      }),
+    ).toBe("September 2026");
+  });
+
   it("uses the workspace month when UTC is still the previous local day", () => {
     const { start, end } = currentWorkspaceMonthRange(
       new Date("2026-09-01T00:30:00.000Z"),
