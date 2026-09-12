@@ -34,7 +34,7 @@ async function createDraft(page: import("@playwright/test").Page, title: string)
   await page.goto("/app/w/acme/planning/new");
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
     timeout: 20_000,
     waitUntil: "commit",
   });
