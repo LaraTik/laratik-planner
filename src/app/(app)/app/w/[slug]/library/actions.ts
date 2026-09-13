@@ -10,6 +10,18 @@ import { archiveCampaign, createCampaign } from "@/lib/planning/campaigns";
 import { archivePillar, createPillar } from "@/lib/planning/pillars";
 import { archiveTemplate, createTemplate } from "@/lib/planning/templates";
 import { duplicateContentItem } from "@/lib/planning/content-clone";
+import type { ContentFormat } from "@/lib/format-payload/schemas";
+
+const ContentFormatSchema = z.enum([
+  "static_post",
+  "carousel",
+  "story",
+  "short_form_video",
+  "long_form_video",
+  "live_content",
+  "article",
+  "other",
+]);
 
 /**
  * Planning library server actions (FEAT-06).
@@ -258,11 +270,18 @@ export async function archiveTemplateAction(
 export async function duplicateContentItemAction(
   slug: string,
   sourceContentItemId: string,
+  format?: ContentFormat,
 ): Promise<LibraryActionState & { newId?: string }> {
   const authed = await authedContext(slug);
   if ("error" in authed) return { error: authed.error };
+  const parsedFormat = format === undefined ? undefined : ContentFormatSchema.safeParse(format);
+  if (parsedFormat && !parsedFormat.success) return { error: "Invalid content format." };
   try {
-    const out = await duplicateContentItem(authed.actor, sourceContentItemId);
+    const out = await duplicateContentItem(
+      authed.actor,
+      sourceContentItemId,
+      parsedFormat?.success ? { format: parsedFormat.data } : undefined,
+    );
     revalidatePath(`/app/w/${slug}/library`);
     return { success: true, newId: out.id };
   } catch (e) {

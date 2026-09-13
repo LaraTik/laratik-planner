@@ -1,11 +1,19 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, ClipboardPaste, Copy, Plus, Trash2 } from "lucide-react";
 import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 
 import { Button } from "@/components/ui/button";
-import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
+import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 /**
@@ -94,7 +102,60 @@ export interface NavigableArrayFieldProps {
    * when omitted, the hard-coded English copy is used.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
+  /** Show the fast multi-row paste affordance for slider fields. */
+  bulkPaste?: boolean;
+  /** Maximum number of rows accepted by the fast paste affordance. */
+  bulkPasteMaxRows?: number;
   onField: (key: string, value: unknown) => void;
+}
+
+/**
+ * Parse one structured row per line. The compact format is intentionally
+ * creative-editor specific (not the spreadsheet importer):
+ * `summary | optional visual direction`.
+ *
+ * A leading position is also accepted (`1 | summary | visual`), but
+ * positions are normalized to the pasted order so reusing an old outline
+ * cannot create duplicate or out-of-range positions.
+ */
+export function parseStructuredArrayPaste(
+  input: string,
+  columns: ReadonlyArray<NavigableArrayColumn>,
+  maxRows = 50,
+): unknown[] {
+  const lines = input
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxRows);
+  const positionColumn = columns.find((column) => column.key === "position");
+
+  return lines.map((line, index) => {
+    const cells = line.split("|").map((cell) => cell.trim());
+    const hasExplicitPosition = Boolean(
+      positionColumn && cells.length === columns.length && /^\d+$/.test(cells[0] ?? ""),
+    );
+    let cellIndex = 0;
+    const row: Record<string, unknown> = {};
+
+    for (const column of columns) {
+      if (column.key === "position" && column.kind === "number") {
+        if (hasExplicitPosition) cellIndex += 1;
+        row[column.key] = index + 1;
+        continue;
+      }
+      const raw = cells[cellIndex] ?? "";
+      cellIndex += 1;
+      if (!raw) continue;
+      if (column.kind === "number") {
+        const number = Number(raw);
+        if (Number.isFinite(number)) row[column.key] = number;
+      } else {
+        row[column.key] = raw;
+      }
+    }
+    return row;
+  });
 }
 
 export function NavigableArrayField({
@@ -109,8 +170,13 @@ export function NavigableArrayField({
   entity,
   onField,
   t,
+  bulkPaste = false,
+  bulkPasteMaxRows = 50,
 }: NavigableArrayFieldProps) {
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [pasteOpen, setPasteOpen] = React.useState(false);
+  const [paste, setPaste] = React.useState("");
+  const [pasteError, setPasteError] = React.useState<string | null>(null);
   const tr = (key: string, fallback: string, params?: Record<string, string | number>): string => {
     if (!t) return fallback;
     const value = t(key, params);
@@ -137,6 +203,19 @@ export function NavigableArrayField({
 
   function update(next: unknown[]) {
     onField(fieldKey, next.length > 0 ? next : undefined);
+  }
+
+  function applyPastedRows() {
+    const parsed = parseStructuredArrayPaste(paste, columns, bulkPasteMaxRows);
+    if (parsed.length === 0) {
+      setPasteError(tr("formatEditor.editor.structuredArrayPasteError", "Add at least one row."));
+      return;
+    }
+    update(parsed);
+    setActiveIndex(0);
+    setPaste("");
+    setPasteError(null);
+    setPasteOpen(false);
   }
 
   function append() {
@@ -236,17 +315,29 @@ export function NavigableArrayField({
     return (
       <div className="space-y-1.5" data-testid={`navigable-array-slider-${fieldKey}`}>
         <div className="flex items-baseline justify-between gap-2">
-          <label
-            htmlFor={`${fieldKey}-active`}
-            className="text-body text-fg-primary block font-semibold"
-          >
-            {label}
-          </label>
-          {rows.length > 0 ? (
-            <p className="text-label text-fg-muted" data-testid={`${fieldKey}-counter`}>
-              {itemCounter(activeIndex + 1)}
-            </p>
-          ) : null}
+          <span className="text-body text-fg-primary block font-semibold">{label}</span>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {rows.length > 0 ? (
+              <p className="text-label text-fg-muted" data-testid={`${fieldKey}-counter`}>
+                {itemCounter(activeIndex + 1)}
+              </p>
+            ) : null}
+            {editable && bulkPaste ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPasteError(null);
+                  setPasteOpen(true);
+                }}
+                data-testid={`${fieldKey}-paste`}
+              >
+                <ClipboardPaste className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("formatEditor.editor.structuredArrayPaste", "Paste list")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         {hint ? <p className="text-label text-fg-muted">{hint}</p> : null}
 
@@ -413,6 +504,56 @@ export function NavigableArrayField({
             </div>
           ) : null}
         </div>
+
+        {editable && bulkPaste ? (
+          <Dialog open={pasteOpen} onOpenChange={setPasteOpen}>
+            <DialogContent data-testid={`${fieldKey}-paste-dialog`}>
+              <DialogHeader>
+                <DialogTitle>
+                  {tr("formatEditor.editor.structuredArrayPasteTitle", `Paste ${noun} list`, {
+                    entity: noun,
+                  })}
+                </DialogTitle>
+                <DialogDescription>
+                  {tr(
+                    "formatEditor.editor.structuredArrayPasteDescription",
+                    "One row per line: summary | optional visual direction. Positions are generated automatically.",
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-2">
+                <DirAwareTextarea
+                  id={`${fieldKey}-paste-input`}
+                  locale={locale}
+                  value={paste}
+                  onChange={(event) => setPaste(event.target.value)}
+                  rows={7}
+                  autoFocus
+                  aria-label={tr("formatEditor.editor.structuredArrayPasteInput", "Rows")}
+                />
+                <p className="text-label text-fg-muted">
+                  {tr("formatEditor.editor.structuredArrayPasteLimit", "Up to {count} rows.", {
+                    count: bulkPasteMaxRows,
+                  })}
+                </p>
+                {pasteError ? (
+                  <p className="text-label text-danger font-semibold" role="alert">
+                    {pasteError}
+                  </p>
+                ) : null}
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setPasteOpen(false)}>
+                  {tr("formatEditor.editor.structuredArrayPasteCancel", "Cancel")}
+                </Button>
+                <Button type="button" onClick={applyPastedRows}>
+                  <ClipboardPaste className="h-3.5 w-3.5" aria-hidden="true" />
+                  {tr("formatEditor.editor.structuredArrayPasteApply", "Apply rows")}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        ) : null}
 
         {/* Active content pane */}
         {rows.length > 0 ? (

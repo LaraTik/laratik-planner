@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { MoreHorizontal, Pencil, Archive, RotateCcw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { MoreHorizontal, Pencil, Archive, RotateCcw, Copy, FilePlus2 } from "lucide-react";
 import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm-dialog";
 import { DiscussionDrawer } from "@/components/planning/discussion-drawer";
 import {
@@ -24,6 +25,17 @@ import {
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { duplicateContentItemAction } from "@/app/(app)/app/w/[slug]/library/actions";
+import { CONTENT_FORMAT_DEFINITIONS } from "@/lib/content/format-catalog";
+import type { ContentFormat } from "@/lib/format-payload/schemas";
 
 /**
  * WorkspaceShell — the client-side shell that:
@@ -78,6 +90,9 @@ export interface WorkspaceShellProps {
   /** Total open / mentioning comment counts (for the trigger). */
   openCommentCount: number;
   mentionCount: number;
+  /** Manager/planner actions that preserve the original item. */
+  canManageContentActions?: boolean;
+  sourceFormat?: ContentFormat;
   /**
    * Bound translator from the parent planning detail page.
    * Threaded to the embedded `<DiscussionDrawer>` so the
@@ -104,8 +119,11 @@ export function WorkspaceShell({
   resetCounts,
   openCommentCount,
   mentionCount,
+  canManageContentActions = false,
+  sourceFormat = "static_post",
 }: WorkspaceShellProps) {
   const t = useLocaleT();
+  const router = useRouter();
   // Keep the first render identical on the server and client. The URL hash is
   // browser-only, so reading it in the state initializer causes hydration
   // mismatches for deep links such as `#publishing`. The first effect below
@@ -113,6 +131,14 @@ export function WorkspaceShell({
   const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => tabs[0]?.id ?? "overview");
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
+  const [replacementOpen, setReplacementOpen] = React.useState(false);
+  const [replacementFormat, setReplacementFormat] = React.useState<ContentFormat>(
+    () =>
+      CONTENT_FORMAT_DEFINITIONS.find((definition) => definition.value !== sourceFormat)?.value ??
+      sourceFormat,
+  );
+  const [actionError, setActionError] = React.useState<string | null>(null);
+  const [actionPending, setActionPending] = React.useState(false);
   const initialHashAdoptedRef = React.useRef(false);
   const primaryTabs = tabs.filter((tab) => PRIMARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id));
   const secondaryTabs = tabs.filter((tab) =>
@@ -198,7 +224,24 @@ export function WorkspaceShell({
             mentionCount={mentionCount}
             onClick={() => setDrawerOpen(true)}
           />
-          {canResetIdea ? <OverflowMenu onReset={() => setResetOpen(true)} t={t} /> : null}
+          {canResetIdea || canManageContentActions ? (
+            <OverflowMenu
+              onReset={() => setResetOpen(true)}
+              onDuplicate={() => void duplicate()}
+              onReplacement={() => {
+                setActionError(null);
+                setReplacementOpen(true);
+              }}
+              canResetIdea={canResetIdea}
+              canManageContentActions={canManageContentActions}
+              t={t}
+            />
+          ) : null}
+          {actionError && !replacementOpen ? (
+            <p className="text-label text-danger max-w-56 font-semibold" role="alert">
+              {actionError}
+            </p>
+          ) : null}
         </div>
       </div>
 
@@ -225,16 +268,124 @@ export function WorkspaceShell({
         />
       ) : null}
 
+      {canManageContentActions ? (
+        <Dialog
+          open={replacementOpen}
+          onOpenChange={(open) => {
+            if (!open && !actionPending) setReplacementOpen(false);
+          }}
+        >
+          <DialogContent data-testid="replacement-draft-dialog">
+            <DialogHeader>
+              <DialogTitle>{t("contentDetail.navigation.replacementTitle")}</DialogTitle>
+              <DialogDescription>
+                {t("contentDetail.navigation.replacementDescription")}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <label
+                htmlFor="replacement-format"
+                className="text-label text-fg-secondary block font-semibold"
+              >
+                {t("contentDetail.navigation.replacementFormat")}
+              </label>
+              <select
+                id="replacement-format"
+                value={replacementFormat}
+                onChange={(event) => setReplacementFormat(event.target.value as ContentFormat)}
+                disabled={actionPending}
+                className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-11 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none"
+              >
+                {CONTENT_FORMAT_DEFINITIONS.filter(
+                  (definition) => definition.value !== sourceFormat,
+                ).map((definition) => (
+                  <option key={definition.value} value={definition.value}>
+                    {t(definition.labelKey)}
+                  </option>
+                ))}
+              </select>
+              <p className="text-label text-fg-muted">
+                {t("contentDetail.navigation.replacementNotice")}
+              </p>
+              {actionError ? (
+                <p className="text-label text-danger font-semibold" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <button
+                type="button"
+                className="border-border bg-surface text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 cursor-pointer items-center justify-center rounded-[var(--radius-control)] border px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none"
+                onClick={() => setReplacementOpen(false)}
+                disabled={actionPending}
+              >
+                {t("contentDetail.navigation.replacementCancel")}
+              </button>
+              <button
+                type="button"
+                className="bg-primary text-on-primary hover:bg-primary-hover focus-visible:ring-focus-ring inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-[var(--radius-control)] px-4 text-sm font-semibold focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => void createReplacement()}
+                disabled={actionPending || replacementFormat === sourceFormat}
+              >
+                <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+                {actionPending
+                  ? t("contentDetail.navigation.replacementCreating")
+                  : t("contentDetail.navigation.replacementCreate")}
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      ) : null}
+
       <WorkspacePanels panels={panels} value={activeId} />
     </>
   );
+
+  async function duplicate() {
+    if (actionPending) return;
+    setActionPending(true);
+    setActionError(null);
+    const result = await duplicateContentItemAction(workspaceSlug, contentItemId);
+    if (result.newId) {
+      router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+      return;
+    }
+    setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));
+    setActionPending(false);
+  }
+
+  async function createReplacement() {
+    if (actionPending || replacementFormat === sourceFormat) return;
+    setActionPending(true);
+    setActionError(null);
+    const result = await duplicateContentItemAction(
+      workspaceSlug,
+      contentItemId,
+      replacementFormat,
+    );
+    if (result.newId) {
+      router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+      return;
+    }
+    setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));
+    setActionPending(false);
+  }
 }
 
 function OverflowMenu({
   onReset,
+  onDuplicate,
+  onReplacement,
+  canResetIdea,
+  canManageContentActions,
   t,
 }: {
   onReset: () => void;
+  onDuplicate: () => void;
+  onReplacement: () => void;
+  canResetIdea: boolean;
+  canManageContentActions: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // Radix portals the menu outside the sticky header and any panel
@@ -259,23 +410,37 @@ function OverflowMenu({
         className="w-56"
         data-testid="workspace-overflow-content"
       >
-        <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
-          <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-          {t("contentDetail.navigation.duplicate")}
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
-          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-          {t("contentDetail.navigation.archive")}
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onSelect={onReset}
-          variant="destructive"
-          data-testid="workspace-overflow-reset"
-        >
-          <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-          {t("contentDetail.navigation.reset")}
-        </DropdownMenuItem>
+        {canManageContentActions ? (
+          <DropdownMenuItem onSelect={onDuplicate} data-testid="workspace-overflow-duplicate">
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("contentDetail.navigation.duplicate")}
+          </DropdownMenuItem>
+        ) : null}
+        {canManageContentActions ? (
+          <DropdownMenuItem onSelect={onReplacement} data-testid="workspace-overflow-replacement">
+            <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("contentDetail.navigation.replacement")}
+          </DropdownMenuItem>
+        ) : null}
+        {canResetIdea ? (
+          <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
+            <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("contentDetail.navigation.archive")}
+          </DropdownMenuItem>
+        ) : null}
+        {canResetIdea ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onSelect={onReset}
+              variant="destructive"
+              data-testid="workspace-overflow-reset"
+            >
+              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("contentDetail.navigation.reset")}
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   );

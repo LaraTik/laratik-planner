@@ -415,4 +415,43 @@ describe("duplicateContentItem", () => {
       newDate.toISOString(),
     );
   });
+  it("creates a replacement in the requested format and keeps compatible creative fields", async () => {
+    state.selectResults.push([
+      {
+        id: sourceId,
+        workspaceId,
+        title: "Original",
+        format: "long_form_video",
+        brief: "Say no without guilt",
+        formatPayload: {
+          schemaVersion: 1,
+          caption: "Caption",
+          hook: "Hook",
+          description: "Long-form description",
+          chapters: [{ position: 1, title: "Intro", startsAtSeconds: 0 }],
+        },
+        plannedPublishAt: new Date("2026-09-01T00:00:00Z"),
+        priority: "normal",
+        contentOwnerId: "owner-1",
+        campaignId: null,
+        contentPillarId: null,
+      },
+    ]);
+    state.insertReturningIds.push({ id: "replacement-1" });
+    state.selectResults.push([]);
+
+    const out = await duplicateContentItem(actor, sourceId, { format: "short_form_video" });
+    expect(out.id).toBe("replacement-1");
+
+    const cloneInsert = state.insertCalls[0]!.values as Record<string, unknown>;
+    expect(cloneInsert["title"]).toBe("Original (replacement)");
+    expect(cloneInsert["format"]).toBe("short_form_video");
+    expect(cloneInsert["formatPayload"]).toMatchObject({
+      schemaVersion: 1,
+      caption: "Caption",
+      hook: "Hook",
+    });
+    expect(cloneInsert["formatPayload"]).not.toHaveProperty("description");
+    expect(cloneInsert["formatPayload"]).not.toHaveProperty("chapters");
+  });
 });

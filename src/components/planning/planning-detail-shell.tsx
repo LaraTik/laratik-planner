@@ -6,6 +6,7 @@ import { WorkspaceShell } from "@/app/(app)/app/w/[slug]/planning/[id]/workspace
 import type { WorkspaceTab, WorkspaceTabId } from "./workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
+import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -34,6 +35,8 @@ export interface PlanningDetailShellWorkspaceProps {
   activityCount: number;
   openCommentCount: number;
   mentionCount: number;
+  canManageContentActions?: boolean;
+  sourceFormat?: ContentFormat;
 }
 
 /**

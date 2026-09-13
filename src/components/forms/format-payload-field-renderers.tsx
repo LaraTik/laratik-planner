@@ -508,6 +508,8 @@ function ScenesFieldRenderer({ label, payload, locale, editable, t, onField }: F
         editable={editable}
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySceneEntity")}
+        bulkPaste
+        bulkPasteMaxRows={20}
         onField={onField}
         t={t}
       />
@@ -540,6 +542,8 @@ function SlideOutlineFieldRenderer({
         editable={editable}
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySlideEntity")}
+        bulkPaste
+        bulkPasteMaxRows={10}
         onField={onField}
         t={t}
       />
@@ -572,6 +576,8 @@ function VisualSlidesFieldRenderer({
         editable={editable}
         layout="slider"
         entity={t("formatEditor.editor.structuredArraySlideEntity")}
+        bulkPaste
+        bulkPasteMaxRows={20}
         onField={onField}
         t={t}
       />
@@ -608,6 +614,8 @@ function ChaptersFieldRenderer({
         editable={editable}
         layout="slider"
         entity={t("formatEditor.editor.structuredArrayChapterEntity")}
+        bulkPaste
+        bulkPasteMaxRows={50}
         onField={onField}
         t={t}
       />

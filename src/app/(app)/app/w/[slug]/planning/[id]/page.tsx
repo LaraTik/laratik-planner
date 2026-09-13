@@ -1316,6 +1316,9 @@ export default async function ContentDetailPage({
           activityCount: activityEvents.length,
           openCommentCount: openCommentsCount,
           mentionCount,
+          canManageContentActions:
+            (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled",
+          sourceFormat: item.format as ContentFormat,
         }}
         footer={
           <p className="text-label text-fg-muted text-center">

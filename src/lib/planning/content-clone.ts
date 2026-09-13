@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { contentItemChannels, contentItems } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { revalidatePath } from "next/cache";
+import type { ContentFormat } from "@/lib/format-payload/schemas";
+import { parseFormatPayload } from "@/lib/format-payload/schemas";
 
 /**
  * Planning library — content-item clone (FEAT-06).
@@ -47,6 +49,13 @@ export interface DuplicateContentItemOptions {
    * push the copy to today + 7 days.
    */
   plannedPublishAt?: Date | null;
+  /**
+   * Optional format override for a replacement draft. When the
+   * format changes, the source payload is parsed through the target
+   * schema so incompatible fields are dropped instead of leaking a
+   * stale format contract into the new item.
+   */
+  format?: ContentFormat;
 }
 
 export async function duplicateContentItem(
@@ -67,6 +76,11 @@ export async function duplicateContentItem(
   );
 
   const planned = opts.plannedPublishAt ?? undefined;
+  const targetFormat = opts.format ?? (source.format as ContentFormat);
+  const isReplacement = targetFormat !== source.format;
+  const replacementPayload = isReplacement
+    ? parseFormatPayload(targetFormat, source.formatPayload)
+    : source.formatPayload;
 
   return await db.transaction(async (tx) => {
     const [clone] = await tx
@@ -75,10 +89,10 @@ export async function duplicateContentItem(
         workspaceId: source.workspaceId,
         campaignId: source.campaignId,
         contentPillarId: source.contentPillarId,
-        title: `${source.title} (copy)`,
-        format: source.format,
+        title: `${source.title} (${isReplacement ? "replacement" : "copy"})`,
+        format: targetFormat,
         brief: source.brief,
-        formatPayload: source.formatPayload,
+        formatPayload: replacementPayload,
         // The default for the new copy is the source's date, unless
         // the caller explicitly passed a different one (or null to
         // push it to next week).

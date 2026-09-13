@@ -25,6 +25,12 @@ vi.mock("@/components/forms/destructive-confirm-dialog", () => ({
 vi.mock("@/components/planning/discussion-drawer", () => ({
   DiscussionDrawer: () => null,
 }));
+vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
+  duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
 
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
@@ -177,6 +183,8 @@ describe("WorkspaceShell — initial hash handoff", () => {
         activityCount={0}
         openCommentCount={0}
         mentionCount={0}
+        canManageContentActions={true}
+        sourceFormat="long_form_video"
       />,
     );
 
@@ -190,6 +198,10 @@ describe("WorkspaceShell — initial hash handoff", () => {
     const portal = menu.closest("[data-radix-popper-content-wrapper]");
     expect(portal?.parentElement).toBe(document.body);
     expect(screen.getByRole("menuitem", { name: "Reset content" })).toBeInTheDocument();
+    expect(screen.getByRole("menuitem", { name: "Create replacement draft" })).toBeInTheDocument();
+    await user.click(screen.getByRole("menuitem", { name: "Create replacement draft" }));
+    expect(screen.getByTestId("replacement-draft-dialog")).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: "Long-form video" })).not.toBeInTheDocument();
   });
 
   it("keeps a user-selected tab after hydration has finished", async () => {
