@@ -159,6 +159,7 @@ const {
   transitionContent,
   claimAsDesigner,
   assignDesigner,
+  assignContentOwner,
   AssignDesignerSchema,
   listWorkspaceDesigners,
   UPDATEABLE_STATUSES,
@@ -593,6 +594,37 @@ describe("listUnassignedDesignWork (FEAT-12)", () => {
     policyMock.hasWorkspaceRole.mockResolvedValue(false);
     await expect(listUnassignedDesignWork(actor, workspaceId)).rejects.toThrow(
       /permission denied/i,
+    );
+  });
+});
+
+describe("assignContentOwner", () => {
+  it("updates the current owner and records assignment history", async () => {
+    dbMock.state.selectResults.push([
+      {
+        workspaceId,
+        contentOwnerId: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb",
+        title: "Spring drop",
+      },
+    ]);
+
+    await assignContentOwner(actor, {
+      contentItemId,
+      ownerId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+    });
+
+    expect(dbMock.state.transactionCalls).toBe(1);
+    expect(dbMock.state.updateCalls).toHaveLength(2);
+    expect(dbMock.state.insertCalls).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          values: expect.objectContaining({
+            assignmentType: "owner",
+            userId: "cccccccc-cccc-cccc-cccc-cccccccccccc",
+            active: true,
+          }),
+        }),
+      ]),
     );
   });
 });

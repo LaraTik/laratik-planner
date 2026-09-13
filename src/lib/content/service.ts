@@ -1607,6 +1607,113 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
 }
 
 /**
+ * Planner changes the content owner without changing the workflow stage.
+ * Workspace manager / content planner only. The current owner column and
+ * assignment history are updated together so the list, detail view, and
+ * audit trail cannot drift apart.
+ */
+export const AssignContentOwnerSchema = z.object({
+  contentItemId: z.string().uuid(),
+  ownerId: z.string().uuid(),
+});
+export type AssignContentOwnerInput = z.infer<typeof AssignContentOwnerSchema>;
+
+export async function assignContentOwner(actor: Actor, input: AssignContentOwnerInput) {
+  const parsed = AssignContentOwnerSchema.safeParse(input);
+  if (!parsed.success) {
+    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
+  }
+  const [item] = await db
+    .select({
+      workspaceId: contentItems.workspaceId,
+      contentOwnerId: contentItems.contentOwnerId,
+      title: contentItems.title,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, parsed.data.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "assign_content_owner",
+  );
+  await requirePolicy(
+    hasWorkspaceRole({ id: parsed.data.ownerId }, item.workspaceId, [
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+    ]),
+    "assign_content_owner_target",
+  );
+  if (item.contentOwnerId === parsed.data.ownerId) return;
+
+  const previousOwner = item.contentOwnerId;
+  await db.transaction(async (tx) => {
+    await tx
+      .update(contentItems)
+      .set({ contentOwnerId: parsed.data.ownerId, updatedAt: new Date() })
+      .where(eq(contentItems.id, parsed.data.contentItemId));
+    await tx
+      .update(contentAssignments)
+      .set({ active: false, releasedAt: new Date() })
+      .where(
+        and(
+          eq(contentAssignments.contentItemId, parsed.data.contentItemId),
+          eq(contentAssignments.assignmentType, "owner"),
+          eq(contentAssignments.active, true),
+        ),
+      );
+    await tx.insert(contentAssignments).values({
+      contentItemId: parsed.data.contentItemId,
+      assignmentType: "owner",
+      userId: parsed.data.ownerId,
+      assignedBy: actor.id,
+      active: true,
+    });
+    await tx.insert(activityEvents).values({
+      workspaceId: item.workspaceId,
+      contentItemId: parsed.data.contentItemId,
+      actorId: actor.id,
+      kind: "assignment",
+      summary: `Changed owner of "${item.title}"`,
+      beforeData: { contentOwnerId: previousOwner },
+      afterData: { contentOwnerId: parsed.data.ownerId },
+    });
+    if (parsed.data.ownerId !== actor.id) {
+      await enqueueAssignmentNotification(
+        {
+          userId: parsed.data.ownerId,
+          workspaceId: item.workspaceId,
+          contentItemId: parsed.data.contentItemId,
+          title: `You were assigned "${item.title}"`,
+          body: "You are now responsible for coordinating this content item.",
+          messageKey: "notifications.events.assignment",
+          messageParams: { title: item.title },
+        },
+        tx,
+      );
+    }
+    if (previousOwner && previousOwner !== actor.id && previousOwner !== parsed.data.ownerId) {
+      await enqueueReleaseNotification(
+        {
+          userId: previousOwner,
+          workspaceId: item.workspaceId,
+          contentItemId: parsed.data.contentItemId,
+          title: `Content owner changed: "${item.title}"`,
+          body: "This content item was assigned to another owner.",
+          messageKey: "notifications.events.designer_reassigned",
+          messageParams: { title: item.title },
+        },
+        tx,
+      );
+    }
+  });
+  revalidatePath(`/app/w/`);
+}
+
+/**
  * Planner releases a designer's hold on an item. Sets designer_id to
  * null and rolls the item back to `approved_for_design` so it shows
  * up in the unassigned queue. workspace_manager / content_planner.

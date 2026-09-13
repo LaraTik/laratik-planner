@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { listWorkspaceContent } from "@/lib/content/service";
@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
+import type { PlanningOwnerOption } from "@/components/workspace/change-owner-dialog";
 import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
 import { PlanningFiltersBar } from "@/components/workspace/planning-filters-bar";
 import { MonthNav } from "@/components/workspace/month-nav";
@@ -33,7 +34,12 @@ import {
 } from "@/lib/dashboard/kpis";
 import { aggregateHealth } from "@/lib/dashboard/health";
 import { db } from "@/lib/db";
-import { socialChannels, users, workspaceMemberships } from "@/lib/db/schema";
+import {
+  socialChannels,
+  users,
+  workspaceMembershipRoles,
+  workspaceMemberships,
+} from "@/lib/db/schema";
 import { toZonedTime } from "date-fns-tz";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -238,6 +244,36 @@ export default async function PlanningPage({
     .innerJoin(users, eq(users.id, workspaceMemberships.userId))
     .where(eq(workspaceMemberships.workspaceId, ws.id))
     .orderBy(asc(users.displayName), asc(users.name));
+
+  const ownerRows = await db
+    .select({ id: users.id, name: users.name, displayName: users.displayName })
+    .from(workspaceMemberships)
+    .innerJoin(users, eq(users.id, workspaceMemberships.userId))
+    .innerJoin(
+      workspaceMembershipRoles,
+      eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
+    )
+    .where(
+      and(
+        eq(workspaceMemberships.workspaceId, ws.id),
+        eq(workspaceMemberships.status, "active"),
+        inArray(workspaceMembershipRoles.role, [
+          "workspace_manager",
+          "content_planner",
+          "designer",
+          "internal_reviewer",
+        ]),
+      ),
+    )
+    .orderBy(asc(users.displayName), asc(users.name));
+  const ownerOptions: PlanningOwnerOption[] = Array.from(
+    new Map(
+      ownerRows.map((m) => [
+        m.id,
+        { id: m.id, label: m.displayName ?? m.name ?? m.id.slice(0, 8) },
+      ]),
+    ).values(),
+  );
 
   const channelRows = await db
     .select({
@@ -567,6 +603,9 @@ export default async function PlanningPage({
                 canSubmit={canCreate}
                 canDuplicate={canCreate}
                 canArchive={canCreate}
+                canChangeOwner={canCreate}
+                currentOwnerId={it.owner?.id ?? null}
+                ownerOptions={ownerOptions}
               />
             )}
           />

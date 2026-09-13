@@ -22,6 +22,10 @@ import { cn } from "@/lib/utils";
 import type { ContentStatus } from "@/lib/content/status";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { getErrorMessage } from "@/lib/utils/error";
+import {
+  ChangeOwnerDialog,
+  type PlanningOwnerOption,
+} from "@/components/workspace/change-owner-dialog";
 
 /**
  * PlanningListActions — three-dot quick actions menu for a
@@ -48,6 +52,9 @@ export interface PlanningListActionsProps {
   canSubmit: boolean;
   canDuplicate: boolean;
   canArchive: boolean;
+  canChangeOwner: boolean;
+  currentOwnerId: string | null;
+  ownerOptions: PlanningOwnerOption[];
   /** Tailwind class additions. */
   className?: string;
   /**
@@ -67,12 +74,16 @@ export function PlanningListActions({
   canSubmit,
   canDuplicate,
   canArchive,
+  canChangeOwner,
+  currentOwnerId,
+  ownerOptions,
   className,
 }: PlanningListActionsProps) {
   const t = useLocaleT();
   const router = useRouter();
   const [archivePending, startArchiveTransition] = React.useTransition();
   const [duplicatePending, startDuplicateTransition] = React.useTransition();
+  const [ownerDialogOpen, setOwnerDialogOpen] = React.useState(false);
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t(key, params) === key ? fallback : t(key, params);
   const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
@@ -129,87 +140,102 @@ export function PlanningListActions({
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          aria-label={tr("common.rowActionsAria", `Actions for ${itemTitle}`, { title: itemTitle })}
-          data-testid="row-actions-trigger"
-          className={cn(
-            "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
-            className,
-          )}
-        >
-          <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
-        </button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuLabel>{itemTitle}</DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href={detailHref} data-testid="row-action-open">
-            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-            {tr("common.rowActionOpen", "Open")}
-          </Link>
-        </DropdownMenuItem>
-        {canEdit ? (
-          <DropdownMenuItem asChild>
-            <Link
-              href={`/app/w/${workspaceSlug}/planning/edit/${itemId}`}
-              data-testid="row-action-edit"
-            >
-              <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
-              {tr("common.rowActionEdit", "Edit")}
-            </Link>
-          </DropdownMenuItem>
-        ) : null}
-        {canDuplicate ? (
-          <DropdownMenuItem
-            disabled={duplicatePending}
-            onSelect={duplicate}
-            data-testid="row-action-duplicate"
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label={tr("common.rowActionsAria", `Actions for ${itemTitle}`, {
+              title: itemTitle,
+            })}
+            data-testid="row-actions-trigger"
+            className={cn(
+              "border-border bg-surface text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex h-11 w-11 items-center justify-center rounded-[var(--radius-control)] border transition-colors focus:outline-none focus-visible:ring-2",
+              className,
+            )}
           >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-            {duplicatePending
-              ? tr("common.rowActionDuplicating", "Duplicating…")
-              : tr("common.rowActionDuplicate", "Duplicate")}
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem disabled data-testid="row-action-change-owner">
-          <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
-          {tr("common.rowActionChangeOwner", "Change owner")}
-          <span className="text-label text-fg-muted ms-auto text-[10px]">
-            {tr("common.rowActionSoon", "soon")}
-          </span>
-        </DropdownMenuItem>
-        {canSubmit && isSubmittable ? (
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          <DropdownMenuLabel>{itemTitle}</DropdownMenuLabel>
+          <DropdownMenuSeparator />
           <DropdownMenuItem asChild>
-            <Link
-              href={`${detailHref}#workflow`}
-              data-testid="row-action-submit"
-              data-action="submit-for-review"
-            >
-              <Send className="h-3.5 w-3.5" aria-hidden="true" />
-              {isChangesRequested
-                ? tr("common.rowActionResubmit", "Resubmit for review")
-                : tr("common.rowActionSubmit", "Submit for review")}
+            <Link href={detailHref} data-testid="row-action-open">
+              <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+              {tr("common.rowActionOpen", "Open")}
             </Link>
           </DropdownMenuItem>
-        ) : null}
-        {canArchive ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              disabled={archivePending}
-              onSelect={archive}
-              data-testid="row-action-archive"
-            >
-              <Archive className="h-3.5 w-3.5" aria-hidden="true" />
-              {tr("common.rowActionArchive", "Archive")}
+          {canEdit ? (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`/app/w/${workspaceSlug}/planning/edit/${itemId}`}
+                data-testid="row-action-edit"
+              >
+                <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("common.rowActionEdit", "Edit")}
+              </Link>
             </DropdownMenuItem>
-          </>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          ) : null}
+          {canDuplicate ? (
+            <DropdownMenuItem
+              disabled={duplicatePending}
+              onSelect={duplicate}
+              data-testid="row-action-duplicate"
+            >
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              {duplicatePending
+                ? tr("common.rowActionDuplicating", "Duplicating…")
+                : tr("common.rowActionDuplicate", "Duplicate")}
+            </DropdownMenuItem>
+          ) : null}
+          {canChangeOwner ? (
+            <DropdownMenuItem
+              onSelect={() => setOwnerDialogOpen(true)}
+              data-testid="row-action-change-owner"
+            >
+              <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
+              {tr("common.rowActionChangeOwner", "Change owner")}
+            </DropdownMenuItem>
+          ) : null}
+          {canSubmit && isSubmittable ? (
+            <DropdownMenuItem asChild>
+              <Link
+                href={`${detailHref}#workflow`}
+                data-testid="row-action-submit"
+                data-action="submit-for-review"
+              >
+                <Send className="h-3.5 w-3.5" aria-hidden="true" />
+                {isChangesRequested
+                  ? tr("common.rowActionResubmit", "Resubmit for review")
+                  : tr("common.rowActionSubmit", "Submit for review")}
+              </Link>
+            </DropdownMenuItem>
+          ) : null}
+          {canArchive ? (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                disabled={archivePending}
+                onSelect={archive}
+                data-testid="row-action-archive"
+              >
+                <Archive className="h-3.5 w-3.5" aria-hidden="true" />
+                {tr("common.rowActionArchive", "Archive")}
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <ChangeOwnerDialog
+        workspaceSlug={workspaceSlug}
+        itemId={itemId}
+        itemTitle={itemTitle}
+        currentOwnerId={currentOwnerId}
+        ownerOptions={ownerOptions}
+        open={ownerDialogOpen}
+        onOpenChange={setOwnerDialogOpen}
+      />
+    </>
   );
 }

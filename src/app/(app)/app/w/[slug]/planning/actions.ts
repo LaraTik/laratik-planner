@@ -14,6 +14,8 @@ import {
   UpdateContentSchema,
   assignDesigner,
   AssignDesignerSchema,
+  assignContentOwner,
+  AssignContentOwnerSchema,
   quickCreateContentItem,
   transitionContent,
   claimAsDesigner,
@@ -66,6 +68,7 @@ type UpdateContentFields = QuickCreateFields;
 type BatchCreateFields = "rows";
 type TransitionFields = "action" | "reason";
 type AssignDesignerFields = "designerId";
+type AssignContentOwnerFields = "ownerId";
 type ApplyAiDraftFields = "draftText" | "mode";
 type SubmitDeliveryFields = "description" | "designerNote" | "mediaAssetId";
 type DecideApprovalFields = "decision" | "feedback";
@@ -99,6 +102,29 @@ export async function restoreContentItemAction(workspaceSlug: string, contentIte
   await restoreContentItem(actor, { workspaceId: workspace.id, contentItemId });
   revalidatePath(`/app/w/${workspaceSlug}/planning`);
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+}
+
+export async function changeContentOwnerAction(input: {
+  workspaceSlug: string;
+  contentItemId: string;
+  ownerId: string;
+}): Promise<ActionState<AssignContentOwnerFields>> {
+  const parsed = AssignContentOwnerSchema.safeParse({
+    contentItemId: input.contentItemId,
+    ownerId: input.ownerId,
+  });
+  if (!parsed.success) {
+    return fieldErrorsFromZod<AssignContentOwnerFields>(parsed.error);
+  }
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    await assignContentOwner(actor, parsed.data);
+  } catch (error) {
+    return actionFailure<AssignContentOwnerFields>(error, "The owner could not be changed.");
+  }
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
+  return { ok: true };
 }
 
 // ─── Quick create ─────────────────────────────────────────────────────

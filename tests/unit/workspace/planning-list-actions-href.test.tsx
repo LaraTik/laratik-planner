@@ -4,10 +4,12 @@ import userEvent from "@testing-library/user-event";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
+import { changeContentOwnerAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   archiveContentItemAction: vi.fn(async () => undefined),
   restoreContentItemAction: vi.fn(async () => undefined),
+  changeContentOwnerAction: vi.fn(async () => ({ ok: true })),
 }));
 vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
   duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
@@ -41,6 +43,9 @@ describe("PlanningListActions — Edit href", () => {
           canSubmit
           canDuplicate
           canArchive={false}
+          canChangeOwner={false}
+          currentOwnerId={null}
+          ownerOptions={[]}
         />
       </LocaleProvider>,
     );
@@ -71,6 +76,9 @@ describe("PlanningListActions — Edit href", () => {
           canSubmit={false}
           canDuplicate={false}
           canArchive={false}
+          canChangeOwner={false}
+          currentOwnerId={null}
+          ownerOptions={[]}
         />
       </LocaleProvider>,
     );
@@ -93,6 +101,9 @@ describe("PlanningListActions — Edit href", () => {
           canSubmit={false}
           canDuplicate={false}
           canArchive={false}
+          canChangeOwner={false}
+          currentOwnerId={null}
+          ownerOptions={[]}
         />
       </LocaleProvider>,
     );
@@ -115,12 +126,50 @@ describe("PlanningListActions — Edit href", () => {
           canSubmit={false}
           canDuplicate
           canArchive={false}
+          canChangeOwner={false}
+          currentOwnerId={null}
+          ownerOptions={[]}
         />
       </LocaleProvider>,
     );
     await user.click(screen.getByTestId("row-actions-trigger"));
     expect(screen.getByTestId("row-action-duplicate")).toBeEnabled();
     await user.click(screen.getByTestId("row-action-duplicate"));
+  });
+
+  it("opens the owner picker and saves a different owner", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <PlanningListActions
+          workspaceSlug="acme"
+          itemId="11111111-2222-3333-4444-555555555555"
+          itemTitle="Spring drop"
+          status="draft"
+          canEdit={false}
+          canSubmit={false}
+          canDuplicate={false}
+          canArchive={false}
+          canChangeOwner
+          currentOwnerId="owner-1"
+          ownerOptions={[
+            { id: "owner-1", label: "Current owner" },
+            { id: "owner-2", label: "Next owner" },
+          ]}
+        />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByTestId("row-actions-trigger"));
+    await user.click(screen.getByTestId("row-action-change-owner"));
+    expect(screen.getByTestId("change-owner-dialog")).toBeVisible();
+    await user.selectOptions(screen.getByTestId("change-owner-select"), "owner-2");
+    await user.click(screen.getByTestId("change-owner-submit"));
+    expect(vi.mocked(changeContentOwnerAction)).toHaveBeenCalledWith({
+      workspaceSlug: "acme",
+      contentItemId: "11111111-2222-3333-4444-555555555555",
+      ownerId: "owner-2",
+    });
   });
 });
 
