@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat, humanStatus } from "@/lib/content/status";
 import { ATTENTION_HEALTHS, type HealthSnapshot } from "@/lib/dashboard/health";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { PLANNING_STAGE_VALUES } from "@/lib/planning/filter-params";
+import { canonicalPlanningStageValue, PLANNING_STAGE_VALUES } from "@/lib/planning/filter-params";
 
 /**
  * PlanningFiltersBar — instant-update filter bar for the planning
@@ -119,6 +119,7 @@ export function PlanningFiltersBar({
   const healthFilter = (searchParams.get("health") ?? "")
     .split(",")
     .filter(Boolean) as HealthSnapshot[];
+  const stageFilter = canonicalPlanningStageValue(searchParams.get("stage"));
 
   return (
     <div className="space-y-2" data-testid="planning-filters-bar">
@@ -165,7 +166,7 @@ export function PlanningFiltersBar({
 
         <select
           aria-label={tr("planningFilters.stageAria", "Filter by workflow stage")}
-          value={searchParams.get("stage") ?? ""}
+          value={stageFilter}
           onChange={(e) => pushParam("stage", e.target.value || null)}
           className={selectClass}
           data-testid="planning-stage-filter"

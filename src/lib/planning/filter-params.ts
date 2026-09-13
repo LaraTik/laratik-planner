@@ -26,8 +26,28 @@ export const LEGACY_PLANNING_STAGE_VALUES = [
   "creative_review",
   "ready_to_publish",
 ] as const satisfies readonly string[];
+const LEGACY_STAGE_TO_CANONICAL: Record<string, (typeof PLANNING_STAGE_VALUES)[number]> = {
+  draft: "planning",
+  review: "content_review",
+  design: "creative_production",
+  publish: "publishing_setup",
+  approved_for_design: "creative_production",
+  creative_review: "creative_approval",
+  ready_to_publish: "publishing_setup",
+};
 export type PlanningStage =
   (typeof PLANNING_STAGE_VALUES)[number] | (typeof LEGACY_PLANNING_STAGE_VALUES)[number];
+
+/** Normalize a historical URL value for controls that expose canonical stages. */
+export function canonicalPlanningStageValue(
+  value: string | null | undefined,
+): (typeof PLANNING_STAGE_VALUES)[number] | "" {
+  if (!value) return "";
+  if ((PLANNING_STAGE_VALUES as readonly string[]).includes(value)) {
+    return value as (typeof PLANNING_STAGE_VALUES)[number];
+  }
+  return LEGACY_STAGE_TO_CANONICAL[value] ?? "";
+}
 
 const HEALTH_VALUES: readonly HealthSnapshot[] = [
   "at_risk",

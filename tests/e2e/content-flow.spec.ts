@@ -20,6 +20,10 @@ function workflowSurface(page: Parameters<typeof bootstrapRoleSession>[0]): Loca
     : page.getByTestId("workflow-rail");
 }
 
+function workflowStage(page: Parameters<typeof bootstrapRoleSession>[0], stage: string): Locator {
+  return workflowSurface(page).locator(`[data-stage="${stage}"]`);
+}
+
 /**
  * Content flow E2E tests — the master prompt §10 state machine.
  *
@@ -65,9 +69,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       .first();
     await submitReview.click();
     // Wait for the badge to update
-    await expect(
-      page.locator('[data-testid="workflow-stepper-compact"][data-status="content_review"]'),
-    ).toBeVisible({
+    await expect(workflowStage(page, "content_review")).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -118,7 +120,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     // waits for the action redirect to settle before the list navigation,
     // which is important in WebKit where a hard navigation can race the
     // final server-action redirect.
-    await page.getByRole("link", { name: /← Acme/ }).click();
+    await page.getByTestId("planning-header-breadcrumb").click();
     await expect(page).toHaveURL(/\/app\/w\/acme\/planning(?:\?.*)?$/);
     await page.getByTestId("planning-search-input").fill(title);
     await expect(page).toHaveURL(/\/app\/w\/acme\/planning\?[^#]*search=/);
@@ -151,9 +153,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       .getByRole("button", { name: /submit.*review/i })
       .first()
       .click();
-    await expect(
-      page.locator('[data-testid="workflow-stepper-compact"][data-status="content_review"]'),
-    ).toBeVisible({
+    await expect(workflowStage(page, "content_review")).toBeVisible({
       timeout: 10_000,
     });
 
@@ -169,11 +169,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         .first();
       await expect(approveBtn).toBeVisible({ timeout: 10_000 });
       await approveBtn.click();
-      await expect(
-        reviewerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="approved_for_design"]',
-        ),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(workflowStage(reviewerPage, "creative_production")).toBeVisible({
+        timeout: 10_000,
+      });
     } finally {
       await reviewerContext.close();
     }
@@ -201,18 +199,22 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     // across contexts so each actor lands on the same content item.
     const plannerContext = await context.browser()!.newContext();
     const reviewerContext = await context.browser()!.newContext();
+    const clientContext = await context.browser()!.newContext();
     const designerContext = await context.browser()!.newContext();
     const publisherContext = await context.browser()!.newContext();
 
     const plannerPage = await plannerContext.newPage();
     const reviewerPage = await reviewerContext.newPage();
+    const clientPage = await clientContext.newPage();
     const designerPage = await designerContext.newPage();
     const publisherPage = await publisherContext.newPage();
     let designerSeeded: SeedResult;
 
     try {
       // ─── 1. Planner: create a draft ───
-      await bootstrapRoleSession(plannerPage, "content_planner");
+      await bootstrapRoleSession(plannerPage, "content_planner", "acme", {
+        approvalMode: "simple",
+      });
       await plannerPage.goto("/app/w/acme/planning/new");
       const title = `E2E §23 full ${Date.now()}`;
       await plannerPage.getByLabel(/Title/i).first().fill(title);
@@ -246,11 +248,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         .getByRole("button", { name: /submit.*review/i })
         .first()
         .click();
-      await expect(
-        plannerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="content_review"]',
-        ),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(workflowStage(plannerPage, "content_review")).toBeVisible({
+        timeout: 10_000,
+      });
 
       // ─── 3. Internal reviewer: approve content → approved_for_design ───
       await bootstrapRoleSession(reviewerPage, "internal_reviewer");
@@ -260,11 +260,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         .getByRole("button", { name: /approve/i })
         .first()
         .click();
-      await expect(
-        reviewerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="approved_for_design"]',
-        ),
-      ).toBeVisible({ timeout: 10_000 });
+      await expect(workflowStage(reviewerPage, "creative_production")).toBeVisible({
+        timeout: 10_000,
+      });
 
       // ─── 3b. Seed a designer in the workspace BEFORE the manager
       // picks. The dev seed (`/api/dev/seed`) is idempotent on the
@@ -312,11 +310,13 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         // (the only element with `data-testid="status-current"`)
         // must now carry the `in_design` status. This is the test
         // the original version skipped.
-        const currentBadge = managerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="in_design"]',
+        await expect(workflowStage(managerPage, "creative_production")).toBeVisible({
+          timeout: 10_000,
+        });
+        await expect(workflowStage(managerPage, "creative_production")).toHaveAttribute(
+          "data-status",
+          "in_design",
         );
-        await expect(currentBadge).toBeVisible({ timeout: 10_000 });
-        await expect(currentBadge).toHaveAttribute("data-status", "in_design");
       } finally {
         await managerContext.close();
       }
@@ -353,15 +353,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       await deliveryForm.getByRole("checkbox").first().check();
       await deliveryForm.getByRole("button", { name: /Submit for creative review/i }).click();
       // The status should advance to creative_review.
-      await expect(
-        designerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="creative_review"]',
-        ),
-      ).toBeVisible({
+      await expect(workflowStage(designerPage, "creative_approval")).toBeVisible({
         timeout: 15_000,
       });
 
-      // ─── 6. Internal reviewer: approve internal creative → ready_to_publish ───
+      // ─── 6. Internal reviewer: approve the internal creative gate ───
       await reviewerPage.goto(detailUrl);
       await openWorkflowSurface(reviewerPage);
       // The ApprovalTimeline is rendered when an approval is pending.
@@ -371,13 +367,43 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         .first();
       await expect(approveCreativeBtn).toBeVisible({ timeout: 10_000 });
       await approveCreativeBtn.click();
-      await expect(
-        reviewerPage.locator(
-          '[data-testid="workflow-stepper-compact"][data-status="ready_to_publish"]',
-        ),
-      ).toBeVisible({
-        timeout: 15_000,
-      });
+      // Wait for the refreshed server-rendered approval state before reading
+      // the resulting workflow stage. The action can take longer than the
+      // button's client transition, especially on a cold dev server.
+      const internalApproval = workflowSurface(reviewerPage).getByTestId(
+        "approval-request-creative_internal",
+      );
+      await expect(internalApproval).toContainText(/Approved/i, { timeout: 15_000 });
+      await reviewerPage.goto(`${detailUrl}?approval=${Date.now()}`, { waitUntil: "load" });
+      await openWorkflowSurface(reviewerPage);
+      const stageAfterInternalApproval = await workflowSurface(reviewerPage)
+        .locator("[data-stage]")
+        .getAttribute("data-stage");
+
+      if (stageAfterInternalApproval === "creative_approval") {
+        // The seeded workspace may use the internal-then-client approval
+        // mode. In that mode, internal approval intentionally keeps the
+        // item in Creative approval and opens a second client gate. Client
+        // reviewers use the client-safe portal rather than the Planning
+        // detail route.
+        await bootstrapRoleSession(clientPage, "client_reviewer");
+        await clientPage.goto("/app/w/acme/client");
+        const clientReviewCard = clientPage.getByTestId("workspace-client-review");
+        await expect(clientReviewCard).toBeVisible({ timeout: 10_000 });
+        const approveClientCreativeBtn = clientReviewCard.getByRole("button", {
+          name: /Approve delivery/i,
+        });
+        await expect(approveClientCreativeBtn).toBeVisible({ timeout: 10_000 });
+        await approveClientCreativeBtn.click();
+        await plannerPage.goto(detailUrl);
+        await expect(workflowStage(plannerPage, "publishing_setup")).toBeVisible({
+          timeout: 15_000,
+        });
+      } else {
+        await expect(workflowStage(reviewerPage, "publishing_setup")).toBeVisible({
+          timeout: 15_000,
+        });
+      }
 
       // ─── 7. Publisher: record publications for each of the 3 channels → published ───
       await bootstrapRoleSession(publisherPage, "publisher");
@@ -433,15 +459,14 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       await publisherPage.goto(`${detailUrl}?published=${Date.now()}`, {
         waitUntil: "commit",
       });
-      await expect(
-        publisherPage.locator('[data-testid="workflow-stepper-compact"][data-status="published"]'),
-      ).toBeVisible({
+      await expect(workflowStage(publisherPage, "published")).toBeVisible({
         timeout: 15_000,
       });
     } finally {
       await Promise.all([
         plannerContext.close(),
         reviewerContext.close(),
+        clientContext.close(),
         designerContext.close(),
         publisherContext.close(),
       ]);
@@ -488,7 +513,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.goto(filteredUrl);
     await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toBeVisible();
     await expect(page.getByTestId("planning-status-filter")).toHaveValue("");
-    await expect(page.getByTestId("planning-stage-filter")).toHaveValue("draft");
+    await expect(page.getByTestId("planning-stage-filter")).toHaveValue("planning");
     await expect(page.getByTestId("planning-channel-filter")).toHaveValue(seeded.channelIds[0]!);
     await expect(page.getByTestId("planning-owner-filter")).toHaveValue(seeded.userId);
 

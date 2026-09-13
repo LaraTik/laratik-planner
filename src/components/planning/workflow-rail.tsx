@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
 import {
   DirAwareArrowRight,
@@ -370,6 +371,7 @@ function WorkflowRailBody({
   designer?: AssignedDesigner | null;
 }) {
   const t = useLocaleT();
+  const router = useRouter();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
     return value === key ? fallback : value;
@@ -681,23 +683,43 @@ function WorkflowRailBody({
             onApprove={(approvalRequestId) =>
               start(async () => {
                 setActionError(null);
-                const result = await decideApprovalAction({
-                  workspaceSlug,
-                  approvalRequestId,
-                  decision: "approved",
-                });
-                if (result?.error) setActionError(result.error);
+                try {
+                  const result = await decideApprovalAction({
+                    workspaceSlug,
+                    approvalRequestId,
+                    decision: "approved",
+                  });
+                  if (result?.error) {
+                    setActionError(result.error);
+                  } else {
+                    router.refresh();
+                  }
+                } catch {
+                  setActionError(
+                    tr("contentDetail.workflow.approvalFailed", "The approval action failed."),
+                  );
+                }
               })
             }
             onRequestChanges={async (approvalRequestId, feedback) => {
               setActionError(null);
-              const result = await decideApprovalAction({
-                workspaceSlug,
-                approvalRequestId,
-                decision: "changes_requested",
-                feedback,
-              });
-              if (result?.error) setActionError(result.error);
+              try {
+                const result = await decideApprovalAction({
+                  workspaceSlug,
+                  approvalRequestId,
+                  decision: "changes_requested",
+                  feedback,
+                });
+                if (result?.error) {
+                  setActionError(result.error);
+                } else {
+                  router.refresh();
+                }
+              } catch {
+                setActionError(
+                  tr("contentDetail.workflow.approvalFailed", "The approval action failed."),
+                );
+              }
             }}
           />
         </div>

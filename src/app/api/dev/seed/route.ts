@@ -17,6 +17,7 @@ import {
   users,
   workspaceMembershipRoles,
   workspaceMemberships,
+  workspaceSettings,
   workspaces,
   aiFeatureSettings,
 } from "@/lib/db/schema";
@@ -74,6 +75,8 @@ type SeedBody = {
   workspaceSlug?: string;
   contentItemTitle?: string;
   locale?: "en" | "ar";
+  /** Test-only workspace approval mode override for deterministic flows. */
+  approvalMode?: "simple" | "internal_then_client" | undefined;
   agencyAdmin?: boolean;
   workspaceRoles?: (
     | "workspace_manager"
@@ -159,6 +162,7 @@ export async function POST(req: NextRequest) {
     workspaceSlug: body.workspaceSlug ?? FIXTURES.workspaceSlug,
     contentItemTitle: body.contentItemTitle ?? FIXTURES.contentItemTitle,
     locale: explicitLocale?.data ?? "en",
+    approvalMode: body.approvalMode,
     agencyAdmin: body.agencyAdmin ?? true,
     workspaceRoles: body.workspaceRoles ?? [],
     platformAdmin: body.platformAdmin ?? false,
@@ -189,6 +193,7 @@ async function seedInternal(f: {
   workspaceSlug: string;
   contentItemTitle: string;
   locale: "en" | "ar";
+  approvalMode?: "simple" | "internal_then_client" | undefined;
   agencyAdmin: boolean;
   workspaceRoles: (
     | "workspace_manager"
@@ -399,6 +404,18 @@ async function seedInternal(f: {
       if (!racedWorkspace) throw new Error("Seed workspace conflict could not be resolved");
       workspaceId = racedWorkspace.id;
     }
+  }
+
+  // Test-only override: keep workflow fixtures deterministic without
+  // changing the production settings contract or adding a schema field.
+  if (f.approvalMode) {
+    await db
+      .insert(workspaceSettings)
+      .values({ workspaceId, approvalMode: f.approvalMode })
+      .onConflictDoUpdate({
+        target: workspaceSettings.workspaceId,
+        set: { approvalMode: f.approvalMode, updatedAt: new Date() },
+      });
   }
 
   // ─── Workspace membership (manager) ─────────────────────────────────────

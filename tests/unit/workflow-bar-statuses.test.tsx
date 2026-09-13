@@ -10,6 +10,10 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   assignDesignerAction: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 /**
  * Regression guard for the WorkflowRail's "View workflow" disclosure.
  *
@@ -99,7 +103,7 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
   });
 
   it("keeps manager-only destructive actions collapsed by default", () => {
-    const { getByTestId } = render(
+    const { container } = render(
       <WorkflowRail
         workspaceSlug="acme"
         contentItemId="ci-1"
@@ -112,7 +116,11 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
       />,
     );
 
-    const disclosure = getByTestId("workflow-destructive-actions");
+    const disclosure = container.querySelector<HTMLElement>(
+      '[data-testid="workflow-destructive-actions"]',
+    );
+    expect(disclosure).toBeInTheDocument();
+    if (!disclosure) throw new Error("Destructive actions disclosure was not rendered");
     expect(disclosure).not.toHaveAttribute("open");
     fireEvent.click(disclosure.querySelector("summary")!);
     expect(disclosure).toHaveAttribute("open");

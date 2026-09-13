@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { parsePlanningFilterParams } from "@/lib/planning/filter-params";
+import {
+  canonicalPlanningStageValue,
+  parsePlanningFilterParams,
+} from "@/lib/planning/filter-params";
 
 const ownerId = "11111111-1111-4111-8111-111111111111";
 const channelId = "22222222-2222-4222-8222-222222222222";
@@ -9,6 +12,13 @@ describe("parsePlanningFilterParams", () => {
     expect(parsePlanningFilterParams({ stage: "creative_production" }).stage).toBe(
       "creative_production",
     );
+  });
+
+  it("normalizes legacy stage URLs for the canonical selector", () => {
+    expect(canonicalPlanningStageValue("draft")).toBe("planning");
+    expect(canonicalPlanningStageValue("design")).toBe("creative_production");
+    expect(canonicalPlanningStageValue("creative_review")).toBe("creative_approval");
+    expect(canonicalPlanningStageValue("unknown")).toBe("");
   });
   it("parses every supported planning filter and trims search text", () => {
     expect(

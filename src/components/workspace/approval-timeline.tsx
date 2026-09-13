@@ -101,6 +101,7 @@ export function ApprovalTimeline({
           <div
             key={a.id}
             className="border-border bg-surface-subtle text-body flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-2"
+            data-testid={`approval-request-${a.gate}`}
           >
             <span className="font-semibold">
               {translateKnown(`contentDetail.workflow.approvalGates.${a.gate}`, humanize(a.gate))}

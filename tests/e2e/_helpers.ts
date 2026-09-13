@@ -149,6 +149,7 @@ export async function devSeed(
     workspaceName?: string;
     workspaceSlug?: string;
     locale?: "en" | "ar";
+    approvalMode?: "simple" | "internal_then_client";
     agencyAdmin?: boolean;
     workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
     /**
@@ -175,6 +176,7 @@ export async function devSeed(
         ...(options.workspaceName ? { workspaceName: options.workspaceName } : {}),
         workspaceSlug: options.workspaceSlug ?? "acme",
         ...(options.locale ? { locale: options.locale } : {}),
+        ...(options.approvalMode ? { approvalMode: options.approvalMode } : {}),
         ...(options.agencyAdmin !== undefined ? { agencyAdmin: options.agencyAdmin } : {}),
         ...(options.workspaceRoles ? { workspaceRoles: options.workspaceRoles } : {}),
         ...(options.platformAdmin !== undefined ? { platformAdmin: options.platformAdmin } : {}),
@@ -347,6 +349,7 @@ export async function bootstrapRoleSession(
     socialAnalyticsFixture?: boolean;
     includeDeliveryMediaFixture?: boolean;
     locale?: "en" | "ar";
+    approvalMode?: "simple" | "internal_then_client";
   } = {},
 ): Promise<SeedResult> {
   const email = `e2e-${role}@laratik.local`;
@@ -357,6 +360,7 @@ export async function bootstrapRoleSession(
     workspaceRoles: role === "agency_admin" ? [] : [role],
     ...(options.socialAnalyticsFixture ? { socialAnalyticsFixture: true } : {}),
     ...(options.includeDeliveryMediaFixture ? { includeDeliveryMediaFixture: true } : {}),
+    ...(options.approvalMode ? { approvalMode: options.approvalMode } : {}),
     ...(options.locale ? { locale: options.locale } : {}),
   });
   await setAuthCookie(page, page.request, {

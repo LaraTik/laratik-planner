@@ -20,6 +20,10 @@ vi.mock("react-dom", async (importOriginal) => {
   return { ...actual, useFormStatus: vi.fn(() => ({ pending: false })) };
 });
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 import { WorkflowRail } from "@/components/planning/workflow-rail";
 import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
