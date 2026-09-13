@@ -313,6 +313,21 @@ export default async function ContentDetailPage({
   const canEditAll =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
+  // The overview's inline title/date/brief editors intentionally support
+  // later workflow stages than the full draft editor. Keep that surface
+  // available wherever the inline server actions accept an update, without
+  // widening `canEdit` and accidentally reopening the full editor.
+  const canEditOverview =
+    (actorRoles.isManager || actorRoles.isPlanner) &&
+    [
+      "draft",
+      "content_review",
+      "changes_requested",
+      "approved_for_design",
+      "in_design",
+      "creative_review",
+      "ready_to_publish",
+    ].includes(item.status);
   const canEditProduction =
     actorRoles.isDesigner &&
     item.designerId === actor.id &&
@@ -790,6 +805,7 @@ export default async function ContentDetailPage({
                   recentActivity={recentActivity}
                   totalActivityCount={activityEvents.length}
                   canEdit={canEdit}
+                  canEditOverview={canEditOverview}
                   editHref={editHref}
                   primaryActionLabel={primaryActionLabel}
                   reviewChangesHref={reviewChangesHref}

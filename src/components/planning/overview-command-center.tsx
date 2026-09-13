@@ -92,6 +92,8 @@ export interface OverviewCommandCenterProps {
   totalActivityCount: number;
   /** Whether the user can edit content. */
   canEdit: boolean;
+  /** Whether inline overview fields remain editable in later workflow stages. */
+  canEditOverview?: boolean;
   /** Edit-content href (the "Edit content" CTA in the header). */
   editHref: string;
   /**
@@ -133,6 +135,7 @@ export function OverviewCommandCenter({
   recentActivity,
   totalActivityCount,
   canEdit,
+  canEditOverview = canEdit,
   editHref,
   onReadinessNavigate,
   primaryActionLabel,
@@ -174,7 +177,7 @@ export function OverviewCommandCenter({
         ownerName={ownerName ?? null}
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
-        canEdit={canEdit}
+        canEdit={canEditOverview}
         editHref={editHref}
         t={t}
       />
