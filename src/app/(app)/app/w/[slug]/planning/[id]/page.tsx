@@ -770,6 +770,7 @@ export default async function ContentDetailPage({
                     timeStyle: "short",
                     timeZone: ws.timezone,
                   })}
+                  plannedPublishAtIso={item.plannedPublishAt.toISOString()}
                   workspaceTimezone={ws.timezone}
                   channels={item.channels.map((ch) => {
                     const cfg = channelConfigs.find((c) => c.id === ch.id);

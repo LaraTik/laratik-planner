@@ -1,7 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
 import { tFor } from "@/messages";
+
+vi.mock("@/lib/content/inline-update", () => ({
+  inlineUpdateBriefAction: vi.fn(async () => ({ ok: true as const })),
+  inlineUpdateTitleAction: vi.fn(async () => ({ ok: true as const })),
+  inlineUpdateDateAction: vi.fn(async () => ({ ok: true as const })),
+}));
 
 const t = tFor("en");
 
@@ -34,6 +40,7 @@ const baseProps = {
   brief: "Summer teaser",
   format: "static_post",
   plannedPublishAt: "2026-09-01 09:00",
+  plannedPublishAtIso: "2026-09-01T07:00:00.000Z",
   workspaceTimezone: "Europe/Berlin",
   channels: [{ id: "ch-1", platform: "instagram", accountName: "Acme Main", configured: true }],
   ownerName: "Ada Lovelace",
@@ -188,11 +195,11 @@ describe("OverviewCommandCenter", () => {
     expect(screen.getByTestId("overview-recent-activity-empty")).toBeInTheDocument();
   });
 
-  it("does not render the inline brief editor", () => {
+  it("renders inline editors for editable metadata", () => {
     render(<OverviewCommandCenter {...baseProps} />);
-    // Overview is a command center, not an editor. The brief
-    // editor is rendered under the Content tab.
-    expect(screen.queryByTestId("open-full-edit")).toBeNull();
+    expect(screen.getByTestId("inline-edit-title")).toBeInTheDocument();
+    expect(screen.getByTestId("inline-edit-date")).toBeInTheDocument();
+    expect(screen.getByTestId("inline-edit-brief")).toBeInTheDocument();
   });
 
   it("renders the content summary with format, channels, and date", () => {
@@ -200,7 +207,7 @@ describe("OverviewCommandCenter", () => {
     const summary = screen.getByTestId("overview-content-summary-list");
     expect(within(summary).getByText("Static post")).toBeInTheDocument();
     expect(within(summary).getByText(/Acme Main/)).toBeInTheDocument();
-    expect(within(summary).getByText(/2026-09-01 09:00/)).toBeInTheDocument();
+    expect(within(summary).getByText(/Sep 1, 2026, 9:00 AM/)).toBeInTheDocument();
   });
 
   it("localizes the single-channel platform label", () => {

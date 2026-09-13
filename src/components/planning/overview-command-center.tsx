@@ -10,6 +10,11 @@ import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { localizedPlatformLabel } from "@/components/workspace/platform-icon";
+import {
+  InlineBriefEditor,
+  InlineDateEditor,
+  InlineTitleEditor,
+} from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
 
 /**
  * OverviewCommandCenter — the at-a-glance summary that lives
@@ -59,6 +64,7 @@ export interface OverviewCommandCenterProps {
   brief: string;
   format: string;
   plannedPublishAt: string;
+  plannedPublishAtIso: string;
   workspaceTimezone: string;
   channels: OverviewSummaryChannel[];
   /**
@@ -115,6 +121,7 @@ export function OverviewCommandCenter({
   brief,
   format,
   plannedPublishAt,
+  plannedPublishAtIso,
   workspaceTimezone,
   channels,
   ownerName,
@@ -155,16 +162,19 @@ export function OverviewCommandCenter({
         t={t}
       />
       <DetailsSection
+        workspaceSlug={workspaceSlug}
         contentItemId={contentItemId}
         title={title}
         brief={brief}
         format={format}
         channels={channels}
         plannedPublishAt={plannedPublishAt}
+        plannedPublishAtIso={plannedPublishAtIso}
         workspaceTimezone={workspaceTimezone}
         ownerName={ownerName ?? null}
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
+        canEdit={canEdit}
         editHref={editHref}
         t={t}
       />
@@ -526,29 +536,35 @@ function StatusIcon({ status }: { status: OverviewReadinessLine["status"] }) {
  * ────────────────────────────────────────────────────────────────────── */
 
 function DetailsSection({
+  workspaceSlug,
   contentItemId,
   title,
   brief,
   format,
   channels,
   plannedPublishAt,
+  plannedPublishAtIso,
   workspaceTimezone,
   ownerName,
   deliveryCount,
   finalApprovedCount,
+  canEdit,
   editHref,
   t,
 }: {
+  workspaceSlug: string;
   contentItemId: string;
   title: string;
   brief: string;
   format: string;
   channels: OverviewSummaryChannel[];
   plannedPublishAt: string;
+  plannedPublishAtIso: string;
   workspaceTimezone: string;
   ownerName: string | null;
   deliveryCount: number;
   finalApprovedCount: number;
+  canEdit: boolean;
   editHref: string;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -578,9 +594,17 @@ function DetailsSection({
         <SummaryRow
           label={t("contentDetail.overview.title")}
           value={
-            <span className="text-body text-fg-primary font-semibold break-words" dir="auto">
-              {title}
-            </span>
+            canEdit ? (
+              <InlineTitleEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={title}
+              />
+            ) : (
+              <span className="text-body text-fg-primary font-semibold break-words" dir="auto">
+                {title}
+              </span>
+            )
           }
         />
         <SummaryRow
@@ -594,10 +618,19 @@ function DetailsSection({
         <SummaryRow
           label={t("contentDetail.overview.plannedPublish")}
           value={
-            <>
-              {plannedPublishAt}{" "}
-              <span className="text-label text-fg-muted">· {workspaceTimezone}</span>
-            </>
+            canEdit ? (
+              <InlineDateEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={plannedPublishAtIso}
+                timezone={workspaceTimezone}
+              />
+            ) : (
+              <>
+                {plannedPublishAt}{" "}
+                <span className="text-label text-fg-muted">· {workspaceTimezone}</span>
+              </>
+            )
           }
         />
         {ownerName ? (
@@ -610,7 +643,13 @@ function DetailsSection({
         <SummaryRow
           label={t("contentDetail.overview.brief")}
           value={
-            brief ? (
+            canEdit ? (
+              <InlineBriefEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={brief}
+              />
+            ) : brief ? (
               <span className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
                 {brief}
               </span>

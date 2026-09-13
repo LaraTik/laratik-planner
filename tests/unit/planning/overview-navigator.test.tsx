@@ -4,6 +4,12 @@ import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import type { OverviewReadinessLine } from "@/components/planning/overview-command-center";
 import { tFor } from "@/messages";
 
+vi.mock("@/lib/content/inline-update", () => ({
+  inlineUpdateBriefAction: vi.fn(async () => ({ ok: true as const })),
+  inlineUpdateTitleAction: vi.fn(async () => ({ ok: true as const })),
+  inlineUpdateDateAction: vi.fn(async () => ({ ok: true as const })),
+}));
+
 const t = tFor("en");
 
 /**
@@ -34,6 +40,7 @@ const baseProps = {
   brief: "Summer teaser",
   format: "static_post",
   plannedPublishAt: "2026-09-01 09:00",
+  plannedPublishAtIso: "2026-09-01T07:00:00.000Z",
   workspaceTimezone: "Europe/Berlin",
   channels: [{ id: "ch-1", platform: "instagram", accountName: "Acme Main", configured: true }],
   ownerName: "Ada Lovelace",
