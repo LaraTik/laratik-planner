@@ -16,6 +16,7 @@ import {
 import { setUser } from "@/lib/observability/sentry";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { setPublicLocale } from "@/lib/i18n/cookie";
+import { issueMcpAccessToken, revokeMcpAccessToken, type McpTokenScope } from "@/lib/mcp/tokens";
 
 /**
  * Own-profile server actions. All three:
@@ -62,6 +63,55 @@ export type NotificationPreferencesActionState =
   | { saved: true }
   | { errorCode: "sessionExpired" | "savePreferencesFailed" }
   | Record<string, never>;
+
+export type McpTokenActionState =
+  | { issued: true; token: string; name: string; expiresAt: string }
+  | { revoked: true }
+  | { errorCode: "sessionExpired" | "invalidTokenRequest" | "tokenNotFound" }
+  | Record<string, never>;
+
+export async function issueMcpTokenAction(
+  _previous: McpTokenActionState,
+  formData: FormData,
+): Promise<McpTokenActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
+  const name = String(formData.get("mcpTokenName") ?? "").trim();
+  const durationDays = Number(formData.get("mcpTokenDuration") ?? 90);
+  const rawScopes = formData.getAll("mcpTokenScope").map(String);
+  const scopes = rawScopes.filter(
+    (scope): scope is McpTokenScope => scope === "content:read" || scope === "content:write",
+  );
+  if (!name || !Number.isInteger(durationDays) || ![30, 90, 365].includes(durationDays)) {
+    return { errorCode: "invalidTokenRequest" };
+  }
+  try {
+    const issued = await issueMcpAccessToken({
+      userId: session.user.id,
+      name,
+      scopes: scopes.length > 0 ? scopes : ["content:read"],
+      expiresAt: new Date(Date.now() + durationDays * 24 * 60 * 60 * 1000),
+    });
+    revalidatePath("/app/account");
+    return {
+      issued: true,
+      token: issued.token,
+      name: issued.name,
+      expiresAt: issued.expiresAt.toISOString(),
+    };
+  } catch {
+    return { errorCode: "invalidTokenRequest" };
+  }
+}
+
+export async function revokeMcpTokenAction(tokenId: string): Promise<McpTokenActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
+  const revoked = await revokeMcpAccessToken(session.user.id, tokenId);
+  if (!revoked) return { errorCode: "tokenNotFound" };
+  revalidatePath("/app/account");
+  return { revoked: true };
+}
 
 export async function updateProfileAction(
   _previous: ProfileActionState,

@@ -52,6 +52,7 @@ const PUBLIC_PATHS: ReadonlyArray<{ name: string; pathname: string }> = [
   { name: "cron social-metrics (Bearer-auth, VPS)", pathname: "/api/cron/social-metrics" },
   { name: "cron outbox (Bearer-auth, VPS)", pathname: "/api/cron/outbox" },
   { name: "cron email-dispatch (Bearer-auth, VPS)", pathname: "/api/cron/email-dispatch" },
+  { name: "remote MCP (bearer-authenticated)", pathname: "/api/mcp" },
   { name: "bootstrap status", pathname: "/api/bootstrap/status" },
   { name: "favicon", pathname: "/favicon.ico" },
   { name: "robots.txt", pathname: "/robots.txt" },

@@ -1,0 +1,14 @@
+<evaluation>
+  <server>laratik-planner</server>
+  <endpoint>https://planner.laratik.com/api/mcp</endpoint>
+  <case id="01">Without Authorization, POST initialize returns HTTP 401 and does not disclose workspace data.</case>
+  <case id="02">A revoked token returns HTTP 401 on the next request.</case>
+  <case id="03">A token with content:read can list workspaces and content but cannot invoke a write tool.</case>
+  <case id="04">A content:write token still cannot read or mutate a workspace outside the token owner's active internal access.</case>
+  <case id="05">list_content rejects invalid UUIDs, dates, statuses, formats, and limits before the domain query runs.</case>
+  <case id="06">reschedule_content changes only plannedPublishAt and preserves the workflow status and creative fields.</case>
+  <case id="07">transition_content delegates invalid workflow actions to the existing state machine and returns an actionable error.</case>
+  <case id="08">archive_content requires confirm=true and soft-archives only the selected item.</case>
+  <case id="09">Repeated identical reschedule and owner-change calls are safe and do not create duplicate state changes.</case>
+  <case id="10">After 120 requests in one minute for a token, the next request returns HTTP 429 with Retry-After.</case>
+</evaluation>

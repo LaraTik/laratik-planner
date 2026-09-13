@@ -20,3 +20,7 @@ designs/stitch-current/
 
 # pnpm lockfile is auto-generated and shouldn't be hand-formatted
 pnpm-lock.yaml
+
+# Evaluation contracts use XML and are maintained as machine-readable
+# fixtures; Prettier has no XML parser in this project.
+docs/api/*.xml

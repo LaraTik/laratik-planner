@@ -550,3 +550,42 @@ From-zero, upgrade, backup/restore, and failed-migration drill evidence is
 **pending** for the exact clean commit. The readiness unit suite covers the
 status state machine; integration migration evidence must be recorded in
 `MIGRATION_DRILL_RESULTS.md` before this migration is marked release-ready.
+
+## Migration 0046 — MCP access tokens
+
+**Filename:** `src/lib/db/migrations/0046_magenta_blue_shield.sql`
+
+**SHA-256:** `fb8e95fb3984647e174276e865fd5172fe5487d2bd31ad73e4262a5fd9ce3cbe`
+
+**Journal tag:** `0046_magenta_blue_shield` (`when: 1790030000005`)
+
+### Forward behavior
+
+Additive only. Creates `mcp_access_token`, linked to `user` with cascade on
+user deletion. The table stores a token digest and display prefix, never the
+plaintext credential, plus owner, name, allowed scopes, expiry, last use, and
+revocation timestamps. CHECK constraints restrict names, expiry, and scopes;
+the digest has a unique index and owner listing has a supporting index.
+
+The SQL is guarded with `IF NOT EXISTS` / a constraint-existence block because
+the repository's skipped-migration repair drill reruns newer migrations while
+retaining later additive schema. Replaying the migration therefore does not
+duplicate the table, foreign key, or indexes.
+
+### Compatibility, backup, and rollback
+
+Older application images do not read the table and remain compatible. Before
+deployment, take the standard verified Postgres backup. Normal application
+rollback pins the previous image and leaves the additive token table in place;
+tokens remain unusable without the new endpoint. Destructive schema removal is
+not part of normal rollback and requires restoring that verified backup or a
+reviewed forward-fix migration with explicit approval.
+
+### Evidence
+
+`pnpm migration-drill` passed all five drills on disposable Postgres 16 on
+2026-09-13: from-zero ledger 47/47, skipped-migration repair, in-place
+upgrade, backup/restore, and failed-migration abort. The exact clean release
+SHA must be recorded again after commit/deploy, together with the MCP
+unauthenticated transport smoke test and authenticated `initialize` / `tools/list`
+check.

@@ -19,7 +19,8 @@ export type RateLimitScope =
   | "media_duplicate_lookup"
   | "media_public_view"
   | "support_access_request"
-  | "support_access_decision";
+  | "support_access_decision"
+  | "mcp_request";
 
 const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = {
   bootstrap: { limit: 5, windowSeconds: 15 * 60 },
@@ -70,6 +71,9 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // per hour. Both are tunable in production if abuse appears.
   support_access_request: { limit: 10, windowSeconds: 60 * 60 },
   support_access_decision: { limit: 30, windowSeconds: 60 * 60 },
+  // Remote MCP calls are authenticated, but a leaked credential must not
+  // become an unbounded database query or mutation channel.
+  mcp_request: { limit: 120, windowSeconds: 60 },
 };
 
 export function rateLimitRuleFor(scope: RateLimitScope) {

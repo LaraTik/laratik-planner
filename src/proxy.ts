@@ -101,6 +101,9 @@ export async function proxy(req: NextRequest) {
     // route handler's timing-safe `safeEqual` check is the actual auth;
     // missing/wrong secrets still get a 401 with no worker invocation.
     pathname.startsWith("/api/cron/") ||
+    // The remote MCP endpoint authenticates with its own bearer token; it
+    // must reach the route without an Auth.js browser session cookie.
+    pathname === "/api/mcp" ||
     pathname === "/api/bootstrap/status" ||
     // Dev/test-only helpers — guarded server-side by NODE_ENV !== "production".
     // The dev/* endpoints refuse to run in production builds, so allowing

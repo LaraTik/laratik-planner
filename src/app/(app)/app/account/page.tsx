@@ -17,6 +17,8 @@ import { ApplicationInfoCard } from "@/components/build-info/application-info-ca
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
 import { getNotificationPreferencesForUser } from "@/lib/notifications/service";
+import { listMcpAccessTokens } from "@/lib/mcp/tokens";
+import { McpAccessTokensCard } from "./mcp-access-tokens-card";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
@@ -42,7 +44,7 @@ export default async function AccountPage() {
   // Read the user row + agency + workspace count + password state
   // in parallel. `getPasswordState` is a small helper that returns
   // { hasPassword } so the Password card can pick the right copy.
-  const [[profile], agencyRows, hasPassword, notificationPrefs] = await Promise.all([
+  const [[profile], agencyRows, hasPassword, notificationPrefs, mcpTokens] = await Promise.all([
     db
       .select({
         id: users.id,
@@ -74,6 +76,7 @@ export default async function AccountPage() {
       .limit(1),
     getPasswordState(userId),
     getNotificationPreferencesForUser(userId),
+    listMcpAccessTokens(userId),
   ]);
 
   // `getPasswordState` returns null when the user row has vanished
@@ -164,6 +167,10 @@ export default async function AccountPage() {
         ) : (
           <p className="text-body text-fg-muted mt-2">{t("account.noAgencyYet")}</p>
         )}
+      </Card>
+
+      <Card>
+        <McpAccessTokensCard tokens={mcpTokens} />
       </Card>
 
       <ApplicationInfoCard buildInfo={buildInfo} t={t} />
