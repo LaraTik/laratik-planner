@@ -62,6 +62,18 @@ describe("SignInOptions", () => {
     expect(screen.getByRole("button", { name: /sign in$/i })).toBeVisible();
   });
 
+  it("preserves the entered email when switching sign-in methods", () => {
+    renderOptions();
+    const email = screen.getByRole("textbox", { name: /email address/i });
+
+    fireEvent.change(email, { target: { value: "person@agency.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /use a sign-in link instead/i }));
+
+    expect(screen.getByRole("textbox", { name: /email address/i })).toHaveValue(
+      "person@agency.com",
+    );
+  });
+
   it("switches to the magic-link form instead of adding a second email form", () => {
     renderOptions();
 

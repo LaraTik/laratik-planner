@@ -64,6 +64,7 @@ export function SignInOptions({
   initialMethod: SignInMethod;
 }) {
   const [method, setMethod] = useState<SignInMethod>(initialMethod);
+  const [email, setEmail] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   return (
@@ -77,6 +78,8 @@ export function SignInOptions({
               autoComplete="email"
               autoFocus
               required
+              value={email}
+              onChange={(event) => setEmail(event.currentTarget.value)}
               placeholder={copy.emailPlaceholder}
               className="h-11"
             />
@@ -153,6 +156,8 @@ export function SignInOptions({
                 autoComplete="email"
                 autoFocus
                 required
+                value={email}
+                onChange={(event) => setEmail(event.currentTarget.value)}
                 placeholder={copy.emailPlaceholder}
                 className="h-11"
               />
