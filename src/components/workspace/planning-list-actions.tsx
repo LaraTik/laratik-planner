@@ -3,6 +3,12 @@
 import * as React from "react";
 import Link from "next/link";
 import { MoreHorizontal, Edit3, Copy, UserCog, Send, Archive, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import {
+  archiveContentItemAction,
+  restoreContentItemAction,
+} from "@/app/(app)/app/w/[slug]/planning/actions";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -14,6 +20,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { ContentStatus } from "@/lib/content/status";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { getErrorMessage } from "@/lib/utils/error";
 
 /**
  * PlanningListActions — three-dot quick actions menu for a
@@ -63,12 +70,49 @@ export function PlanningListActions({
   className,
 }: PlanningListActionsProps) {
   const t = useLocaleT();
+  const router = useRouter();
+  const [archivePending, startArchiveTransition] = React.useTransition();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t(key, params) === key ? fallback : t(key, params);
   const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
   const isDraft = status === "draft";
   const isChangesRequested = status === "changes_requested";
   const isSubmittable = isDraft || isChangesRequested;
+
+  function archive() {
+    if (archivePending) return;
+    startArchiveTransition(async () => {
+      try {
+        await archiveContentItemAction(workspaceSlug, itemId);
+        toast.success(t("contentDetail.navigation.archiveArchived", { name: itemTitle }), {
+          description: t("contentDetail.navigation.archiveDescription"),
+          duration: 5000,
+          action: {
+            label: t("contentDetail.navigation.archiveUndo"),
+            onClick: () => {
+              startArchiveTransition(async () => {
+                try {
+                  await restoreContentItemAction(workspaceSlug, itemId);
+                  toast.success(t("contentDetail.navigation.archiveRestored", { name: itemTitle }));
+                  router.refresh();
+                } catch (error) {
+                  toast.error(t("contentDetail.navigation.archiveCouldNotRestore"), {
+                    description: getErrorMessage(error),
+                  });
+                }
+              });
+            },
+          },
+        });
+        router.refresh();
+      } catch (error) {
+        toast.error(t("contentDetail.navigation.archiveCouldNotArchive"), {
+          description: getErrorMessage(error),
+        });
+      }
+    });
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -135,12 +179,13 @@ export function PlanningListActions({
         {canArchive ? (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem disabled data-testid="row-action-archive">
+            <DropdownMenuItem
+              disabled={archivePending}
+              onSelect={archive}
+              data-testid="row-action-archive"
+            >
               <Archive className="h-3.5 w-3.5" aria-hidden="true" />
               {tr("common.rowActionArchive", "Archive")}
-              <span className="text-label text-fg-muted ms-auto text-[10px]">
-                {tr("common.rowActionSoon", "soon")}
-              </span>
             </DropdownMenuItem>
           </>
         ) : null}

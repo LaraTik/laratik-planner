@@ -28,6 +28,10 @@ vi.mock("@/components/planning/discussion-drawer", () => ({
 vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
   duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
 }));
+vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+  archiveContentItemAction: vi.fn(async () => undefined),
+  restoreContentItemAction: vi.fn(async () => undefined),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));

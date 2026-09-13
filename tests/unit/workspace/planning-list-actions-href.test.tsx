@@ -5,6 +5,14 @@ import userEvent from "@testing-library/user-event";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
 
+vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+  archiveContentItemAction: vi.fn(async () => undefined),
+  restoreContentItemAction: vi.fn(async () => undefined),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 /**
  * Regression: the list-view row's "Edit" link used to be
  * `/app/w/{slug}/planning/{id}/edit` (inverted path), which

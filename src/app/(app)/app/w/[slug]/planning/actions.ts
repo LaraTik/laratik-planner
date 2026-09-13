@@ -26,6 +26,8 @@ import {
   type UpdateContentInput,
   batchCreateContentItems,
   mergeAiDraftIntoBrief,
+  archiveContentItem,
+  restoreContentItem,
 } from "@/lib/content/service";
 import {
   BatchClientRowSchema,
@@ -83,6 +85,20 @@ async function requireWorkspaceContext(workspaceSlug: string) {
   const workspace = await getAccessibleWorkspace(actor, workspaceSlug, agencyContext.agencyId);
   if (!workspace) throw new Error("Workspace not found");
   return { actor, workspace };
+}
+
+export async function archiveContentItemAction(workspaceSlug: string, contentItemId: string) {
+  const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
+  await archiveContentItem(actor, { workspaceId: workspace.id, contentItemId });
+  revalidatePath(`/app/w/${workspaceSlug}/planning`);
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+}
+
+export async function restoreContentItemAction(workspaceSlug: string, contentItemId: string) {
+  const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
+  await restoreContentItem(actor, { workspaceId: workspace.id, contentItemId });
+  revalidatePath(`/app/w/${workspaceSlug}/planning`);
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
 // ─── Quick create ─────────────────────────────────────────────────────

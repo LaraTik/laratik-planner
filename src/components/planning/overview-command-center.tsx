@@ -86,6 +86,8 @@ export interface OverviewCommandCenterProps {
   /** Total delivery versions, with the final-approved count. */
   deliveryCount: number;
   finalApprovedCount: number;
+  /** Creative references surfaced for fast review and handoff. */
+  references?: string[];
   /** Last N activity events (typically 3-5). */
   recentActivity: ActivityEventView[];
   /** Total activity events on record. */
@@ -132,6 +134,7 @@ export function OverviewCommandCenter({
   readiness,
   deliveryCount,
   finalApprovedCount,
+  references = [],
   recentActivity,
   totalActivityCount,
   canEdit,
@@ -177,6 +180,7 @@ export function OverviewCommandCenter({
         ownerName={ownerName ?? null}
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
+        references={references}
         canEdit={canEditOverview}
         editHref={editHref}
         t={t}
@@ -551,6 +555,7 @@ function DetailsSection({
   ownerName,
   deliveryCount,
   finalApprovedCount,
+  references,
   canEdit,
   editHref,
   t,
@@ -567,6 +572,7 @@ function DetailsSection({
   ownerName: string | null;
   deliveryCount: number;
   finalApprovedCount: number;
+  references: string[];
   canEdit: boolean;
   editHref: string;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -642,6 +648,37 @@ function DetailsSection({
         <SummaryRow
           label={t("contentDetail.overview.versions")}
           value={versionsSummary(deliveryCount, finalApprovedCount, t)}
+        />
+        <SummaryRow
+          label={t("contentDetail.overview.references")}
+          value={
+            references.length > 0 ? (
+              <ul className="space-y-1" data-testid="overview-references">
+                {references.slice(0, 3).map((reference) => (
+                  <li key={reference} className="min-w-0">
+                    <a
+                      href={reference}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary focus-visible:ring-focus-ring inline-flex min-h-11 max-w-full items-center rounded-[var(--radius-control)] underline underline-offset-2 focus:outline-none focus-visible:ring-2"
+                      dir="ltr"
+                    >
+                      <span className="truncate">{reference}</span>
+                    </a>
+                  </li>
+                ))}
+                {references.length > 3 ? (
+                  <li className="text-label text-fg-muted">
+                    {t("contentDetail.overview.moreReferences", { count: references.length - 3 })}
+                  </li>
+                ) : null}
+              </ul>
+            ) : (
+              <span className="text-body text-fg-muted">
+                {t("contentDetail.overview.noReferences")}
+              </span>
+            )
+          }
         />
         <SummaryRow
           label={t("contentDetail.overview.brief")}

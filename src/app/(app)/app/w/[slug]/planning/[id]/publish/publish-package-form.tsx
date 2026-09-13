@@ -301,8 +301,11 @@ export function PublishPackageForm({
   const [error, setError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Record<string, number>>({});
-  const [dirty, setDirty] = useState(false);
+  const [dirtyChannels, setDirtyChannels] = useState<Record<string, boolean>>({});
+  const [bulkLanguage, setBulkLanguage] = useState(contentLocale ?? locale);
   const formRef = useRef<HTMLFormElement | null>(null);
+  const dirty = channels.some((channel) => dirtyChannels[channel.id]);
+  const dirtyCount = channels.filter((channel) => dirtyChannels[channel.id]).length;
   useBeforeunloadDirtyGuard(formRef, !dirty);
   useNavigationDirtyGuard({
     formRef,
@@ -346,14 +349,13 @@ export function PublishPackageForm({
   function applySharedCopy(channelId: string, language: string) {
     const shared =
       audienceCopy?.resolvedByLocale[language] ?? audienceCopy?.resolved ?? formatPayloadPreFill;
-    if (!shared) return;
     const existing = drafts[channelId] as Record<string, unknown> | undefined;
     updateDraft(channelId, {
-      ...(shared.caption !== undefined ? { caption: shared.caption } : {}),
-      ...(shared.hashtags !== undefined ? { hashtags: shared.hashtags } : {}),
-      ...(shared.firstComment !== undefined ? { firstComment: shared.firstComment } : {}),
-      ...(shared.description !== undefined ? { description: shared.description } : {}),
-      ...(shared.callToAction
+      ...(shared?.caption !== undefined ? { caption: shared.caption } : {}),
+      ...(shared?.hashtags !== undefined ? { hashtags: shared.hashtags } : {}),
+      ...(shared?.firstComment !== undefined ? { firstComment: shared.firstComment } : {}),
+      ...(shared?.description !== undefined ? { description: shared.description } : {}),
+      ...(shared?.callToAction
         ? {
             callToAction: {
               ...shared.callToAction,
@@ -364,9 +366,14 @@ export function PublishPackageForm({
             },
           }
         : {}),
-      ...(shared.location !== undefined ? { location: shared.location } : {}),
+      ...(shared?.location !== undefined ? { location: shared.location } : {}),
       contentLanguage: language,
     });
+  }
+
+  function applyLanguageToAll() {
+    for (const channel of channels) applySharedCopy(channel.id, bulkLanguage);
+    setStatusMessage(t("contentDetail.publish.statusLanguageApplied", { count: channels.length }));
   }
 
   function updateDraft(channelId: string, patch: Partial<PlatformPayload>) {
@@ -393,11 +400,12 @@ export function PublishPackageForm({
         } as PlatformPayload,
       };
     });
-    setDirty(true);
+    setDirtyChannels((previous) => ({ ...previous, [channelId]: true }));
   }
 
   function handleSave(channelId: string) {
-    if (!currentDraft) return;
+    const draft = drafts[channelId];
+    if (!draft) return;
     start(async () => {
       setError(null);
       setStatusMessage(null);
@@ -405,7 +413,7 @@ export function PublishPackageForm({
         workspaceSlug,
         contentItemId,
         socialChannelId: channels.find((c) => c.id === channelId)?.socialChannelId ?? "",
-        payload: JSON.stringify(currentDraft),
+        payload: JSON.stringify(draft),
       });
       if (!result.ok) {
         setError(translatePublishError(t, result, "saveFailed"));
@@ -413,8 +421,45 @@ export function PublishPackageForm({
       }
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
-      setDirty(false);
+      setDirtyChannels((previous) => ({ ...previous, [channelId]: false }));
       setStatusMessage(t("contentDetail.publish.statusDraftSaved"));
+    });
+  }
+
+  function handleSaveAll() {
+    const dirtyIds = channels
+      .filter((channel) => dirtyChannels[channel.id])
+      .map((channel) => channel.id);
+    if (dirtyIds.length === 0) return;
+    start(async () => {
+      setError(null);
+      setStatusMessage(null);
+      let savedCount = 0;
+      let failedCount = 0;
+      for (const channelId of dirtyIds) {
+        const channel = channels.find((candidate) => candidate.id === channelId);
+        const draft = drafts[channelId];
+        if (!channel || !draft) continue;
+        const result = await savePublishPackageAction({
+          workspaceSlug,
+          contentItemId,
+          socialChannelId: channel.socialChannelId,
+          payload: JSON.stringify(draft),
+        });
+        if (!result.ok) {
+          failedCount += 1;
+          continue;
+        }
+        savedCount += 1;
+        setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
+        setSavedAt((previous) => ({ ...previous, [channelId]: Date.now() }));
+        setDirtyChannels((previous) => ({ ...previous, [channelId]: false }));
+      }
+      if (failedCount > 0) {
+        setError(t("contentDetail.publish.statusSaveAllPartial", { count: failedCount }));
+      } else {
+        setStatusMessage(t("contentDetail.publish.statusSaveAll", { count: savedCount }));
+      }
     });
   }
 
@@ -445,7 +490,7 @@ export function PublishPackageForm({
         return;
       }
       setDrafts((previous) => ({ ...previous, [current.id]: result.payload }));
-      setDirty(false);
+      setDirtyChannels((previous) => ({ ...previous, [current.id]: false }));
       setStatusMessage(
         approved
           ? t("contentDetail.publish.statusFinalCopyApproved")
@@ -514,6 +559,47 @@ export function PublishPackageForm({
           );
         })}
       </div>
+
+      {channels.length > 1 ? (
+        <div
+          className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-end sm:justify-between"
+          data-testid="publish-language-all"
+        >
+          <div>
+            <label
+              htmlFor="publish-language-all-select"
+              className="text-body text-fg-primary mb-1 block font-semibold"
+            >
+              {t("contentDetail.publishForm.applyLanguageToAll")}
+            </label>
+            <p className="text-label text-fg-muted">
+              {t("contentDetail.publishForm.applyLanguageToAllHint")}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              id="publish-language-all-select"
+              value={bulkLanguage}
+              onChange={(event) => setBulkLanguage(event.target.value)}
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+              data-testid="publish-language-all-select"
+            >
+              <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
+              <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
+            </select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={applyLanguageToAll}
+              disabled={pending || !canEdit}
+              className="min-h-11"
+              data-testid="publish-apply-language-all"
+            >
+              {t("contentDetail.publishForm.applyLanguageToAllButton")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       {error ? (
         <div
@@ -899,6 +985,19 @@ export function PublishPackageForm({
             <Save className="me-1 h-4 w-4" aria-hidden="true" />
             {t("contentDetail.publish.saveDraft")}
           </Button>
+          {channels.length > 1 ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleSaveAll}
+              disabled={pending || dirtyCount === 0 || !canEdit}
+              className="min-h-11"
+              data-testid="publish-save-all"
+            >
+              <Save className="me-1 h-4 w-4" aria-hidden="true" />
+              {t("contentDetail.publish.saveAll", { count: dirtyCount })}
+            </Button>
+          ) : null}
           <Button
             type="button"
             onClick={handleConfirmReadiness}

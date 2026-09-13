@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pencil, Archive, RotateCcw, Copy, FilePlus2 } from "lucide-react";
+import { toast } from "sonner";
 import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm-dialog";
 import { DiscussionDrawer } from "@/components/planning/discussion-drawer";
 import {
@@ -34,8 +35,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { duplicateContentItemAction } from "@/app/(app)/app/w/[slug]/library/actions";
+import {
+  archiveContentItemAction,
+  restoreContentItemAction,
+} from "@/app/(app)/app/w/[slug]/planning/actions";
 import { CONTENT_FORMAT_DEFINITIONS } from "@/lib/content/format-catalog";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
+import { getErrorMessage } from "@/lib/utils/error";
 
 /**
  * WorkspaceShell — the client-side shell that:
@@ -232,6 +238,7 @@ export function WorkspaceShell({
                 setActionError(null);
                 setReplacementOpen(true);
               }}
+              onArchive={() => void archive()}
               canResetIdea={canResetIdea}
               canManageContentActions={canManageContentActions}
               t={t}
@@ -355,6 +362,39 @@ export function WorkspaceShell({
     setActionPending(false);
   }
 
+  async function archive() {
+    if (actionPending) return;
+    setActionPending(true);
+    setActionError(null);
+    try {
+      await archiveContentItemAction(workspaceSlug, contentItemId);
+      toast.success(t("contentDetail.navigation.archiveArchived", { name: ideaTitle }), {
+        description: t("contentDetail.navigation.archiveDescription"),
+        duration: 5000,
+        action: {
+          label: t("contentDetail.navigation.archiveUndo"),
+          onClick: () => {
+            void (async () => {
+              try {
+                await restoreContentItemAction(workspaceSlug, contentItemId);
+                toast.success(t("contentDetail.navigation.archiveRestored", { name: ideaTitle }));
+                router.push(`/app/w/${workspaceSlug}/planning/${contentItemId}#overview`);
+              } catch (error) {
+                toast.error(t("contentDetail.navigation.archiveCouldNotRestore"), {
+                  description: getErrorMessage(error),
+                });
+              }
+            })();
+          },
+        },
+      });
+      router.push(`/app/w/${workspaceSlug}/planning`);
+    } catch (error) {
+      setActionError(getErrorMessage(error));
+      setActionPending(false);
+    }
+  }
+
   async function createReplacement() {
     if (actionPending || replacementFormat === sourceFormat) return;
     setActionPending(true);
@@ -377,6 +417,7 @@ function OverflowMenu({
   onReset,
   onDuplicate,
   onReplacement,
+  onArchive,
   canResetIdea,
   canManageContentActions,
   t,
@@ -384,6 +425,7 @@ function OverflowMenu({
   onReset: () => void;
   onDuplicate: () => void;
   onReplacement: () => void;
+  onArchive: () => void;
   canResetIdea: boolean;
   canManageContentActions: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
@@ -422,8 +464,8 @@ function OverflowMenu({
             {t("contentDetail.navigation.replacement")}
           </DropdownMenuItem>
         ) : null}
-        {canResetIdea ? (
-          <DropdownMenuItem disabled title={t("planning.comingSoon")} className="text-fg-muted">
+        {canManageContentActions ? (
+          <DropdownMenuItem onSelect={onArchive} data-testid="workspace-overflow-archive">
             <Archive className="h-3.5 w-3.5" aria-hidden="true" />
             {t("contentDetail.navigation.archive")}
           </DropdownMenuItem>

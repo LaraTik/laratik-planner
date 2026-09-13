@@ -243,6 +243,14 @@ export default async function ContentDetailPage({
   ]);
 
   const agencyId = ws.agencyId;
+  const references = (() => {
+    const payload = (item as { formatPayload?: unknown }).formatPayload;
+    if (!payload || typeof payload !== "object") return [];
+    const values = (payload as { references?: unknown }).references;
+    return Array.isArray(values)
+      ? values.filter((value): value is string => typeof value === "string")
+      : [];
+  })();
   const [feature, activeApiKey] = await Promise.all([
     db
       .select()
@@ -802,6 +810,7 @@ export default async function ContentDetailPage({
                   readiness={overviewReadinessLines}
                   deliveryCount={deliveryCount}
                   finalApprovedCount={finalApprovedCount}
+                  references={references}
                   recentActivity={recentActivity}
                   totalActivityCount={activityEvents.length}
                   canEdit={canEdit}
