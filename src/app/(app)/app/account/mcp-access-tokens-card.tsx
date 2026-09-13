@@ -7,8 +7,18 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { issueMcpTokenAction, revokeMcpTokenAction, type McpTokenActionState } from "./actions";
+
+const MCP_ENDPOINT = "https://planner.laratik.com/api/mcp";
 
 type TokenRow = {
   id: string;
@@ -25,23 +35,45 @@ const initialState: McpTokenActionState = {};
 
 export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [state, formAction] = useActionState(issueMcpTokenAction, initialState);
-  const [copied, setCopied] = React.useState(false);
+  const [copied, setCopied] = React.useState<"token" | "endpoint" | null>(null);
   const [revoking, setRevoking] = React.useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = React.useState<TokenRow | null>(null);
+  const [revokeError, setRevokeError] = React.useState<string | null>(null);
+  const dateFormatter = React.useMemo(
+    () =>
+      new Intl.DateTimeFormat(locale, {
+        dateStyle: "medium",
+        numberingSystem: "latn",
+        timeZone: "Europe/Berlin",
+      }),
+    [locale],
+  );
 
-  async function copyToken() {
-    if (!("issued" in state) || !state.issued) return;
-    await navigator.clipboard.writeText(state.token);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1800);
+  async function copyValue(value: string, kind: "token" | "endpoint") {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 1800);
+    } catch {
+      setCopied(null);
+    }
   }
 
-  async function revoke(id: string) {
-    if (!window.confirm(t("account.mcpConfirmRevoke"))) return;
-    setRevoking(id);
-    await revokeMcpTokenAction(id);
+  async function revoke() {
+    if (!revokeTarget) return;
+    setRevoking(revokeTarget.id);
+    setRevokeError(null);
+    const result = await revokeMcpTokenAction(revokeTarget.id);
+    if ("revoked" in result && result.revoked) {
+      window.location.reload();
+      return;
+    }
+    if ("errorCode" in result && result.errorCode) {
+      setRevokeError(t(`account.errors.${result.errorCode}`));
+    }
     setRevoking(null);
-    window.location.reload();
   }
 
   return (
@@ -54,6 +86,35 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
           </h2>
           <p className="text-body text-fg-muted mt-1">{t("account.mcpDescription")}</p>
         </div>
+      </div>
+
+      <div className="border-border bg-surface-subtle mb-5 rounded-[var(--radius-control)] border p-3">
+        <div className="mb-2 flex items-start justify-between gap-3">
+          <div>
+            <p className="text-body text-fg-primary font-semibold">
+              {t("account.mcpEndpointLabel")}
+            </p>
+            <p id="mcp-endpoint-help" className="text-label text-fg-muted mt-0.5">
+              {t("account.mcpEndpointHelp")}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => void copyValue(MCP_ENDPOINT, "endpoint")}
+            aria-label={t("account.mcpCopyEndpoint")}
+          >
+            <Copy className="h-4 w-4" aria-hidden="true" />
+            {copied === "endpoint" ? t("account.mcpCopied") : t("account.mcpCopyEndpoint")}
+          </Button>
+        </div>
+        <code
+          className="bg-surface text-body text-fg-primary block overflow-x-auto rounded border px-2 py-2"
+          dir="ltr"
+        >
+          {MCP_ENDPOINT}
+        </code>
       </div>
 
       {"errorCode" in state && state.errorCode ? (
@@ -86,11 +147,11 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
               type="button"
               variant="secondary"
               size="sm"
-              onClick={copyToken}
+              onClick={() => void copyValue(state.token, "token")}
               aria-label={t("account.mcpCopy")}
             >
               <Copy className="h-4 w-4" aria-hidden="true" />
-              {copied ? t("account.mcpCopied") : t("account.mcpCopy")}
+              {copied === "token" ? t("account.mcpCopied") : t("account.mcpCopy")}
             </Button>
           </div>
         </div>
@@ -110,6 +171,7 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
           <label className="text-body text-fg-primary space-y-1 font-semibold">
             <span>{t("account.mcpDurationLabel")}</span>
             <select
+              id="mcp-token-duration"
               name="mcpTokenDuration"
               defaultValue="90"
               className="border-border bg-surface text-body text-fg-primary h-10 w-full rounded-[var(--radius-control)] border px-3"
@@ -126,8 +188,17 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
             {t("account.mcpReadScope")}
           </label>
           <label className="text-body text-fg-primary flex min-h-11 items-center gap-2 font-semibold">
-            <Checkbox name="mcpTokenScope" value="content:write" />
-            {t("account.mcpWriteScope")}
+            <Checkbox
+              name="mcpTokenScope"
+              value="content:write"
+              aria-describedby="mcp-write-scope-help"
+            />
+            <span>
+              {t("account.mcpWriteScope")}
+              <span id="mcp-write-scope-help" className="text-label text-fg-muted mt-0.5 block">
+                {t("account.mcpWriteScopeHelp")}
+              </span>
+            </span>
           </label>
         </div>
         <FormSubmitButton label={t("account.mcpCreate")} pendingLabel={t("account.mcpCreating")} />
@@ -146,7 +217,7 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
               <p className="text-body text-fg-primary font-semibold">{token.name}</p>
               <p className="text-label text-fg-muted" dir="ltr">
                 {token.tokenPrefix}… ·{" "}
-                {t("account.mcpExpires", { date: new Date(token.expiresAt).toLocaleDateString() })}
+                {t("account.mcpExpires", { date: dateFormatter.format(token.expiresAt) })}
               </p>
             </div>
             {token.revokedAt ? (
@@ -156,7 +227,10 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => revoke(token.id)}
+                onClick={() => {
+                  setRevokeError(null);
+                  setRevokeTarget(token);
+                }}
                 disabled={revoking === token.id}
               >
                 <Trash2 className="h-4 w-4" aria-hidden="true" />
@@ -166,6 +240,54 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
           </div>
         ))}
       </div>
+
+      <Dialog
+        open={revokeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !revoking) {
+            setRevokeTarget(null);
+            setRevokeError(null);
+          }
+        }}
+      >
+        <DialogContent closeAriaLabel={t("common.close")} data-testid="mcp-revoke-dialog">
+          <DialogHeader>
+            <DialogTitle>{t("account.mcpRevokeTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("account.mcpConfirmRevoke")}
+              {revokeTarget ? ` ${revokeTarget.name}` : ""}
+            </DialogDescription>
+          </DialogHeader>
+          {revokeError ? (
+            <p
+              role="alert"
+              className="border-danger/30 bg-danger-subtle text-danger rounded border p-3"
+            >
+              {revokeError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setRevokeTarget(null)}
+              disabled={Boolean(revoking)}
+            >
+              {t("account.mcpCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void revoke()}
+              disabled={Boolean(revoking)}
+              aria-busy={Boolean(revoking) || undefined}
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+              {revoking ? t("account.mcpRevoking") : t("account.mcpRevoke")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
