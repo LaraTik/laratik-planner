@@ -413,6 +413,39 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 
 Every agent modifying user-facing UI in this repository — pages, components, layout, navigation, copy, color, motion, or interaction — MUST follow these rules. They are the durable UX contract that survives across PRs, branches, and goals. They are deliberately opinionated so future agents converge on a consistent product rather than re-deriving conventions per change.
 
+### Planning UX contract
+
+Planning keeps five production tabs: Overview, Creative brief, Audience copy,
+Assets, and Publish. Preview and Activity remain secondary utilities. The
+compatibility hashes are part of the public UI contract and must not be removed.
+
+- Use the six active workflow stages everywhere: Planning, Content review,
+  Creative production, Creative approval, Publishing setup, and Published.
+- `blocked` and `cancelled` are conditions, not inferred stages. Blocked items
+  belong in a separate Board grouping; cancelled items are not active Board
+  work but remain available through List filters and direct links.
+- `src/lib/planning/presentation.ts` is a projection of authoritative
+  server/domain state. It may classify, explain, group, and route users, but
+  must not reimplement authorization, readiness, approval materiality,
+  publishing eligibility, or lifecycle transitions.
+- Overview summarizes state and routes users. Workflow controls lifecycle
+  state. Overview must not duplicate the full workflow controls.
+- `Readiness` describes requirements and completeness; `Attention` describes
+  operational risk. Do not combine them under a vague Health label.
+- Required-field grouping and requiredness come from the shared format-field
+  definitions. Do not repeat format-specific field rules in UI components.
+- Audience Copy owns shared/channel-specific copy. Creative Brief must not
+  duplicate caption, hashtags, CTA, first comment, description, or location.
+- Current blockers, warnings, and future requirements must have distinct
+  severity. Every blocker needs a deterministic resolver destination.
+- List/Board use compact projections; Detail/Assets/Publish may use full
+  projections. Shared semantics do not require identical data payloads.
+- Material saves remain explicit and approval-impacting changes explain their
+  consequence before commit where technically possible. Server responses stay
+  authoritative for revision, readiness, permissions, and approvals.
+- Do not add schema, public API, provider, or unrelated architecture changes
+  to a Planning UX refactor without a separately scoped proposal.
+
 ### A. Understand the screen before modifying it
 
 Before implementation, write a one-paragraph "screen review" covering: SCREEN, PURPOSE, PRIMARY USER, PRIMARY QUESTION, PRIMARY ACTION, CURRENT UX PROBLEMS, PROPOSED CHANGE, RESPONSIVE BEHAVIOR, REUSED COMPONENTS, NEW COMPONENTS, RISKS. The list page templates live next to the route. Never start by simply moving cards around.
@@ -434,10 +467,10 @@ Move secondary metadata and advanced settings behind tabs, expandable sections, 
 These concepts must look consistent everywhere they appear. Do not invent a new badge, color, or icon treatment on a per-screen basis — extract a shared primitive instead.
 
 - **Content status** — `draft` / `in_design` / `content_review` / `creative_review` / `changes_requested` / `approved` / `ready_to_publish` / `partially_published` / `published` / `blocked` / `cancelled`. Source: `src/components/content/status-badge.tsx`. Map: `ALL_STATUSES` in `src/lib/content/status.ts`. Color: muted/primary/warning/danger variants. Never re-derive the mapping inside a page.
-- **Workflow stage** — current step in the stage machine (Planning, Content Review, Design, Creative Review, Publishing). Source: `src/components/planning/workflow-stepper.tsx`. Stage count "3 / 5" is the only inline format allowed in list rows; full stepper is a popover or detail view.
+- **Workflow stage** — current step in the six-stage Planning model (Planning, Content review, Creative production, Creative approval, Publishing setup, Published). Source: `src/lib/planning/presentation.ts`. Stage count is an inline summary only; the full stepper belongs in the detail view.
 - **Approval state** — `pending` / `approved` / `changes_requested` / `rejected`. Source: `src/lib/deliveries/service.ts`. Visual: distinct from content status; never share a color with the corresponding content status unless intentional and documented in `docs/decisions/`.
 - **Publishing state** — `not_started` / `pending` / `succeeded` / `failed` / `partially_failed`. Source: `src/lib/publishing`. Visual: success/warning/danger variants. Always paired with the channel name so the failure is actionable.
-- **Health / risk** — `on_track` / `at_risk` / `blocked` / `not_started`. Source: `aggregateHealth` in `src/lib/dashboard/health.ts`. Use the strict definition (excludes drafts, cancelled, blocked from "at risk") so the KPI tile and the row badge cannot disagree.
+- **Readiness / attention** — readiness requirements and operational risk are separate concepts. Readiness comes from the authoritative publishing/readiness result; Attention comes from operational risk/overdue signals. Do not present either as a content status or collapse both into a generic Health label.
 - **Ownership** — Owner, Designer, Reviewer. Three different responsibilities. Never collapse into a generic "assignee" — see `src/components/planning/overview-command-center.tsx` for the canonical role display.
 - **Due / overdue** — always pair a planned date with its health state. Use the shared `DateBadge` primitive (if present) or the pattern in `src/components/planning/planning-list-grouped.tsx`. "Overdue" must be a color + an icon + a label, never color alone.
 
@@ -570,13 +603,13 @@ Reuse the `EmptyState` component from `src/components/feedback/empty-state.tsx`.
 
 These are five distinct state enums. They MUST be modeled separately, queried separately, and rendered with separate primitives. The temptation to collapse them for UI convenience is a known bug pattern; the audit fixture in `tests/unit/workspace-kpis.test.ts` pins the rule.
 
-| Dimension        | Enum                                                                                                                                                                                 | Source                                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| Content status   | draft / content_review / changes_requested / approved_for_design / in_design / creative_review / approved / ready_to_publish / partially_published / published / blocked / cancelled | `ALL_STATUSES` in `src/lib/content/status.ts`                                                             |
-| Workflow stage   | Planning → Content Review → Design → Creative Review → Publishing (the stage-machine view)                                                                                           | `src/lib/content/workflow.ts`                                                                             |
-| Approval state   | pending / approved / changes_requested / rejected (per delivery version)                                                                                                             | `src/lib/deliveries/service.ts`                                                                           |
-| Publishing state | not_started / pending / succeeded / failed / partially_failed (per channel)                                                                                                          | `src/lib/publishing`                                                                                      |
-| Health / risk    | on_track / at_risk / blocked / not_started                                                                                                                                           | `aggregateHealth` in `src/lib/dashboard/health.ts` (strict, excludes drafts and `blocked` from "at risk") |
+| Dimension             | Enum                                                                                                                                                                                 | Source                                                       |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Content status        | draft / content_review / changes_requested / approved_for_design / in_design / creative_review / approved / ready_to_publish / partially_published / published / blocked / cancelled | `ALL_STATUSES` in `src/lib/content/status.ts`                |
+| Workflow stage        | Planning → Content review → Creative production → Creative approval → Publishing setup → Published (the user-facing projection)                                                      | `src/lib/planning/presentation.ts`                           |
+| Approval state        | pending / approved / changes_requested / rejected (per delivery version)                                                                                                             | `src/lib/deliveries/service.ts`                              |
+| Publishing state      | not_started / pending / succeeded / failed / partially_failed (per channel)                                                                                                          | `src/lib/publishing`                                         |
+| Readiness / attention | Requirements/completeness and operational risk, kept separate from content status                                                                                                    | Authoritative readiness result plus operational risk signals |
 
 If a future agent is tempted to render "At risk" as a status badge, or to filter by "at risk" using the content status enum, that is a bug. The five dimensions live in `docs/content/state-model.md` (or this section) and the unit test fixture in `tests/unit/workspace-kpis.test.ts` pins the boundary.
 

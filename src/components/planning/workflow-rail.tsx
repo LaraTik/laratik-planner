@@ -34,6 +34,8 @@ import {
   explainStatus,
   localizeStepExplanation,
 } from "@/lib/content/workflow-explanations";
+import { planningStageForStatus } from "@/lib/planning/presentation";
+import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
 import { type WorkflowStage, stageForStatus } from "./workflow-stepper";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -121,12 +123,9 @@ const STAGE_LABEL: Record<WorkflowStage, string> = {
  *   5. publishing_setup   ready_to_publish, partially_published
  *   6. published          published
  *
- * `blocked` and `cancelled` are special cases: the rail marks
- * them as `attention` against the most-relevant user-facing
- * stage (planning by default — the user can return to the
- * content item from there) but surfaces the system state as a
- * separate "Blocked" / "Cancelled" pill so the user is never
- * silently mis-led.
+ * `blocked` and `cancelled` are conditions rather than stages.
+ * They do not activate or anchor to Planning. The rail shows a
+ * separate condition banner and leaves lifecycle stages inactive.
  */
 export type RailStage =
   | "planning"
@@ -146,33 +145,15 @@ const RAIL_STAGES: ReadonlyArray<{ id: RailStage; label: string }> = [
 ];
 
 export function railStageForStatus(status: string): {
-  stage: RailStage;
+  stage: RailStage | null;
   /** "linear" or "blocked" / "cancelled" special states. */
   variant: "linear" | "blocked" | "cancelled";
 } {
-  switch (status) {
-    case "draft":
-      return { stage: "planning", variant: "linear" };
-    case "content_review":
-    case "changes_requested":
-      return { stage: "content_review", variant: "linear" };
-    case "approved_for_design":
-    case "in_design":
-      return { stage: "creative_production", variant: "linear" };
-    case "creative_review":
-      return { stage: "creative_approval", variant: "linear" };
-    case "ready_to_publish":
-    case "partially_published":
-      return { stage: "publishing_setup", variant: "linear" };
-    case "published":
-      return { stage: "published", variant: "linear" };
-    case "blocked":
-      return { stage: "planning", variant: "blocked" };
-    case "cancelled":
-      return { stage: "planning", variant: "cancelled" };
-    default:
-      return { stage: "planning", variant: "linear" };
-  }
+  const stage = planningStageForStatus(status as Parameters<typeof planningStageForStatus>[0]);
+  if (stage) return { stage, variant: "linear" };
+  if (status === "blocked") return { stage: null, variant: "blocked" };
+  if (status === "cancelled") return { stage: null, variant: "cancelled" };
+  return { stage: null, variant: "linear" };
 }
 
 /**
@@ -428,37 +409,23 @@ function WorkflowRailBody({
     }
   })();
 
-  const currentEligibleRoles: Role[] = (() => {
-    switch (status) {
-      case "draft":
-      case "changes_requested":
-        return ["isManager", "isPlanner"];
-      case "content_review":
-        return ["isInternalReviewer", "isManager"];
-      case "approved_for_design":
-        return ["isManager", "isPlanner", "isDesigner"];
-      case "in_design":
-        return ["isManager", "isPlanner", "isDesigner"];
-      case "creative_review":
-        return ["isInternalReviewer", "isClientReviewer", "isManager"];
-      case "ready_to_publish":
-      case "partially_published":
-        return ["isManager", "isPublisher"];
-      case "blocked":
-        return ["isManager"];
-      case "cancelled":
-        return ["isManager"];
-      case "published":
-        return ["isManager", "isPublisher"];
-      default:
-        return [];
-    }
-  })();
+  const roleFlagByName: Record<WorkspaceRole, Role> = {
+    workspace_manager: "isManager",
+    content_planner: "isPlanner",
+    designer: "isDesigner",
+    internal_reviewer: "isInternalReviewer",
+    client_reviewer: "isClientReviewer",
+    publisher: "isPublisher",
+    viewer: "isPlanner",
+  };
+  const currentEligibleRoles: Role[] = responsibleRolesForStatus(
+    status as Parameters<typeof responsibleRolesForStatus>[0],
+  ).map((role) => roleFlagByName[role]);
   const canActOnCurrentStep = currentEligibleRoles.some((r) => roles[r]);
   const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
 
-  const { stage: currentStage } = stageForStatus(status);
   const { stage: railCurrentStage } = railStageForStatus(status);
+  const condition = status === "blocked" || status === "cancelled" ? status : null;
   const hasAnyButton =
     (status === "draft" && can(["isManager", "isPlanner"])) ||
     (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
@@ -477,7 +444,11 @@ function WorkflowRailBody({
       roles.isManager);
 
   return (
-    <div data-status={status} data-stage={currentStage}>
+    <div
+      data-status={status}
+      data-stage={railCurrentStage ?? undefined}
+      data-condition={condition ?? undefined}
+    >
       <div className="border-border flex items-center justify-end border-b px-3 py-1.5">
         <Badge
           variant={canActOnCurrentStep ? "primary" : "outline"}
@@ -488,6 +459,37 @@ function WorkflowRailBody({
             : tr("contentDetail.workflow.awaiting", "Awaiting")}
         </Badge>
       </div>
+      {condition ? (
+        <div
+          className={cn(
+            "border-b px-3 py-2",
+            condition === "blocked"
+              ? "border-danger/30 bg-danger-subtle text-danger"
+              : "border-border bg-surface-subtle text-fg-secondary",
+          )}
+          role="status"
+          data-testid="workflow-rail-condition"
+        >
+          <p className="text-body font-semibold">
+            {tr(`contentDetail.workflow.statusLabels.${condition}`, humanStatus(condition))}
+          </p>
+          <p className="text-label mt-0.5">
+            {condition === "blocked"
+              ? tr(
+                  "contentDetail.workflow.blockedReason",
+                  blockedReason ? `Blocked: ${blockedReason}` : "This item is blocked.",
+                  blockedReason ? { reason: blockedReason } : undefined,
+                )
+              : tr(
+                  "contentDetail.workflow.cancelledReason",
+                  cancellationReason
+                    ? `Cancelled: ${cancellationReason}`
+                    : "This item is cancelled.",
+                  cancellationReason ? { reason: cancellationReason } : undefined,
+                )}
+          </p>
+        </div>
+      ) : null}
       <ol
         className="relative px-3 py-2"
         aria-label={tr("contentDetail.workflow.railStages", "Workflow stages")}
@@ -789,7 +791,7 @@ type StageState = { kind: "complete" | "current" | "blocked" | "upcoming" };
 function stageState(stage: WorkflowStage, status: string): StageState {
   const { stage: currentStage, variant } = stageForStatus(status);
   if (variant === "blocked" || variant === "cancelled") {
-    return { kind: stage === "draft" ? "current" : "upcoming" };
+    return { kind: "upcoming" };
   }
   if (stage === currentStage) return { kind: "current" };
   // Compare positions in the canonical stage order.
@@ -812,13 +814,9 @@ function stageState(stage: WorkflowStage, status: string): StageState {
 function railStageState(stage: RailStage, status: string): StageState {
   const { stage: currentStage, variant } = railStageForStatus(status);
   if (variant === "blocked" || variant === "cancelled") {
-    if (stage === currentStage) return { kind: "blocked" };
-    const order: RailStage[] = RAIL_STAGES.map((s) => s.id);
-    const sIdx = order.indexOf(stage);
-    const cIdx = order.indexOf(currentStage);
-    if (sIdx < cIdx) return { kind: "complete" };
     return { kind: "upcoming" };
   }
+  if (!currentStage) return { kind: "upcoming" };
   if (stage === currentStage) return { kind: "current" };
   const order: RailStage[] = RAIL_STAGES.map((s) => s.id);
   const sIdx = order.indexOf(stage);
@@ -1380,32 +1378,23 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
     };
   }, [open]);
 
-  const { stage: currentStage } = stageForStatus(props.status);
-  const canAct = (() => {
-    switch (props.status) {
-      case "draft":
-      case "changes_requested":
-        return props.roles.isManager || props.roles.isPlanner;
-      case "content_review":
-        return props.roles.isInternalReviewer || props.roles.isManager;
-      case "approved_for_design":
-      case "in_design":
-        return props.roles.isManager || props.roles.isDesigner;
-      case "creative_review":
-        return (
-          props.roles.isInternalReviewer || props.roles.isClientReviewer || props.roles.isManager
-        );
-      case "ready_to_publish":
-      case "partially_published":
-      case "published":
-        return props.roles.isManager || props.roles.isPublisher;
-      case "blocked":
-      case "cancelled":
-        return props.roles.isManager;
-      default:
-        return false;
-    }
-  })();
+  const currentStage = planningStageForStatus(
+    props.status as Parameters<typeof planningStageForStatus>[0],
+  );
+  const roleFlagByName: Record<WorkspaceRole, Role> = {
+    workspace_manager: "isManager",
+    content_planner: "isPlanner",
+    designer: "isDesigner",
+    internal_reviewer: "isInternalReviewer",
+    client_reviewer: "isClientReviewer",
+    publisher: "isPublisher",
+    viewer: "isPlanner",
+  };
+  const canAct = responsibleRolesForStatus(
+    props.status as Parameters<typeof responsibleRolesForStatus>[0],
+  ).some((role) => props.roles[roleFlagByName[role]]);
+  const condition =
+    props.status === "blocked" || props.status === "cancelled" ? props.status : null;
 
   return (
     <>
@@ -1422,7 +1411,14 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
           {tr("contentDetail.workflow.label", "Workflow")}
         </span>
         <span className="text-body text-fg-primary font-semibold">
-          {tr(`contentDetail.workflow.stageLabels.${currentStage}`, STAGE_LABEL[currentStage])}
+          {condition
+            ? tr(`contentDetail.workflow.statusLabels.${condition}`, humanStatus(condition))
+            : currentStage
+              ? tr(
+                  `contentDetail.workflow.railStageLabels.${currentStage}`,
+                  RAIL_STAGES.find((stage) => stage.id === currentStage)?.label ?? currentStage,
+                )
+              : tr("contentDetail.workflow.awaiting", "Awaiting")}
         </span>
         <Badge
           variant={canAct ? "primary" : "outline"}

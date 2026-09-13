@@ -16,15 +16,14 @@ import { ALL_STATUSES, type ContentStatus } from "@/lib/content/status";
 
 describe("StagePill", () => {
   it.each([
-    ["draft", "planning", "1/4"],
-    ["content_review", "planning", "1/4"],
-    ["changes_requested", "planning", "1/4"],
-    ["approved_for_design", "design", "3/4"],
-    ["in_design", "design", "3/4"],
-    ["creative_review", "design", "3/4"],
-    ["ready_to_publish", "publish", "4/4"],
-    ["partially_published", "publish", "4/4"],
-    ["published", "publish", "4/4"],
+    ["draft", "planning", "1/6"],
+    ["changes_requested", "content_review", "2/6"],
+    ["approved_for_design", "creative_production", "3/6"],
+    ["in_design", "creative_production", "3/6"],
+    ["creative_review", "creative_approval", "4/6"],
+    ["ready_to_publish", "publishing_setup", "5/6"],
+    ["partially_published", "publishing_setup", "5/6"],
+    ["published", "published", "6/6"],
   ] as const)("maps %s to the %s stage at position %s", (status, stage, position) => {
     render(<StagePill status={status as ContentStatus} />);
     const pill = screen.getByTestId("stage-pill");
@@ -32,20 +31,26 @@ describe("StagePill", () => {
     expect(pill).toHaveTextContent(position);
   });
 
-  it("lands blocked on the Review stage so the row never shows nothing", () => {
+  it("keeps blocked as a condition without claiming a lifecycle stage", () => {
     render(<StagePill status="blocked" />);
-    expect(screen.getByTestId("stage-pill")).toHaveAttribute("data-stage", "review");
+    const pill = screen.getByTestId("stage-pill");
+    expect(pill).not.toHaveAttribute("data-stage");
+    expect(pill).toHaveAttribute("data-condition", "blocked");
+    expect(pill).toHaveTextContent(/Blocked/);
   });
 
-  it("lands cancelled on the Publish stage", () => {
+  it("keeps cancelled as a condition without claiming a lifecycle stage", () => {
     render(<StagePill status="cancelled" />);
-    expect(screen.getByTestId("stage-pill")).toHaveAttribute("data-stage", "publish");
+    const pill = screen.getByTestId("stage-pill");
+    expect(pill).not.toHaveAttribute("data-stage");
+    expect(pill).toHaveAttribute("data-condition", "cancelled");
+    expect(pill).toHaveTextContent(/Cancelled/);
   });
 
   it("exposes a tooltip with the human-readable stage + position", () => {
     render(<StagePill status="in_design" />);
     const pill = screen.getByTestId("stage-pill");
-    expect(pill).toHaveAttribute("title", "Current stage: Design (3 of 4)");
+    expect(pill).toHaveAttribute("title", "Current stage: Creative production (3 of 6)");
   });
 
   it("covers every content status without crashing", () => {
@@ -56,7 +61,11 @@ describe("StagePill", () => {
       const { unmount } = render(<StagePill status={status} />);
       const pill = screen.getByTestId("stage-pill");
       expect(pill).toHaveAttribute("data-status", status);
-      expect(pill.getAttribute("data-stage")).toBeTruthy();
+      if (status === "blocked" || status === "cancelled") {
+        expect(pill).not.toHaveAttribute("data-stage");
+      } else {
+        expect(pill.getAttribute("data-stage")).toBeTruthy();
+      }
       unmount();
     }
   });

@@ -5,6 +5,7 @@ import { humanFormat, statusBadgeVariant, type ContentStatus } from "@/lib/conte
 import { formatDate } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
+import { planningStageForStatus } from "@/lib/planning/presentation";
 
 /**
  * One column on the workflow board. `label` is the human header,
@@ -63,6 +64,9 @@ export interface WorkflowBoardProps {
    * this for the owner filter; the board just reuses it.
    */
   memberDirectory?: Readonly<Record<string, BoardMemberEntry>>;
+  /** Blocked items are conditions, so the page may render them in a
+   * dedicated grouping outside the active six-stage board. */
+  blockedItems?: readonly WorkflowBoardItem[];
 }
 
 /**
@@ -104,53 +108,87 @@ export function WorkflowBoard({
   workspaceTimezone,
   t,
   memberDirectory,
+  blockedItems = [],
 }: WorkflowBoardProps) {
   const activeLocale = locale ?? "en";
   const activeTimezone = workspaceTimezone ?? "UTC";
   return (
-    <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-7">
-      {columns.map((column) => {
-        const rows = items.filter((item) =>
-          (column.statuses as readonly string[]).includes(item.status),
-        );
-        const testIdKey = column.label.toLowerCase().replace(/\s+/g, "-");
-        return (
-          <section
-            key={column.label}
-            className="border-border bg-surface-subtle min-w-0 overflow-hidden rounded-[var(--radius-card)] border p-3"
-            data-testid={`board-column-${testIdKey}`}
-          >
-            <header className="mb-3 flex items-center justify-between">
-              <h2 className="text-label text-fg-primary font-semibold">{column.label}</h2>
-              <span
-                className="text-label text-fg-muted bg-surface border-border min-w-6 rounded-full border px-1.5 text-center font-semibold"
-                data-testid={`board-column-count-${testIdKey}`}
-              >
-                {rows.length}
-              </span>
-            </header>
-            <div className="space-y-2">
-              {rows.length ? (
-                rows.map((item) => (
-                  <BoardCard
-                    key={item.id}
-                    item={item}
-                    workspaceSlug={workspaceSlug}
-                    {...(memberDirectory ? { memberDirectory } : {})}
-                    locale={activeLocale}
-                    workspaceTimezone={activeTimezone}
-                    {...(t ? { t } : {})}
-                  />
-                ))
-              ) : (
-                <p className="text-label text-fg-muted py-4 text-center">
-                  {t ? t("board.noItems") : "No items"}
-                </p>
-              )}
-            </div>
-          </section>
-        );
-      })}
+    <div className="space-y-3">
+      <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-6">
+        {columns.map((column) => {
+          const rows = items.filter((item) =>
+            (column.statuses as readonly string[]).includes(item.status),
+          );
+          const testIdKey = column.label.toLowerCase().replace(/\s+/g, "-");
+          return (
+            <section
+              key={column.label}
+              className="border-border bg-surface-subtle min-w-0 overflow-hidden rounded-[var(--radius-card)] border p-3"
+              data-testid={`board-column-${testIdKey}`}
+            >
+              <header className="mb-3 flex items-center justify-between">
+                <h2 className="text-label text-fg-primary font-semibold">{column.label}</h2>
+                <span
+                  className="text-label text-fg-muted bg-surface border-border min-w-6 rounded-full border px-1.5 text-center font-semibold"
+                  data-testid={`board-column-count-${testIdKey}`}
+                >
+                  {rows.length}
+                </span>
+              </header>
+              <div className="space-y-2">
+                {rows.length ? (
+                  rows.map((item) => (
+                    <BoardCard
+                      key={item.id}
+                      item={item}
+                      workspaceSlug={workspaceSlug}
+                      {...(memberDirectory ? { memberDirectory } : {})}
+                      locale={activeLocale}
+                      workspaceTimezone={activeTimezone}
+                      {...(t ? { t } : {})}
+                    />
+                  ))
+                ) : (
+                  <p className="text-label text-fg-muted py-4 text-center">
+                    {t ? t("board.noItems") : "No items"}
+                  </p>
+                )}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+      {blockedItems.length > 0 ? (
+        <section
+          className="border-danger/30 bg-danger-subtle/30 rounded-[var(--radius-card)] border p-3"
+          data-testid="board-blocked-group"
+        >
+          <header className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-label text-danger font-semibold">
+              {t ? t("planningFilters.statusLabels.blocked") : "Blocked"}
+            </h2>
+            <span
+              className="text-label text-danger border-danger/30 bg-surface min-w-6 rounded-full border px-1.5 text-center font-semibold"
+              data-testid="board-blocked-count"
+            >
+              {blockedItems.length}
+            </span>
+          </header>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {blockedItems.map((item) => (
+              <BoardCard
+                key={item.id}
+                item={item}
+                workspaceSlug={workspaceSlug}
+                {...(memberDirectory ? { memberDirectory } : {})}
+                locale={activeLocale}
+                workspaceTimezone={activeTimezone}
+                {...(t ? { t } : {})}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }
@@ -244,6 +282,14 @@ function BoardCard({
   const designerName = displayNameFor(memberDirectory, item.designerId);
   const statusBorder =
     STATUS_BORDER_CLASSES[statusBadgeVariant(item.status)] ?? STATUS_BORDER_CLASSES.default;
+  const stage = planningStageForStatus(item.status);
+  const stageLabel = stage
+    ? t
+      ? t(`contentDetail.workflow.railStageLabels.${stage}`)
+      : stage
+    : t
+      ? t(`planningFilters.statusLabels.${item.status}`)
+      : item.status;
   return (
     <Link
       href={`/app/w/${workspaceSlug}/planning/${item.id}`}
@@ -262,6 +308,9 @@ function BoardCard({
       </div>
       <p className="text-title-card text-fg-primary mt-2 line-clamp-2 min-w-0 font-semibold">
         <bdi dir="auto">{item.title}</bdi>
+      </p>
+      <p className="text-label text-fg-secondary mt-1 font-semibold" data-testid="board-card-stage">
+        {stageLabel}
       </p>
       <div className="text-label text-fg-muted mt-2 flex min-w-0 items-center gap-1.5" dir="auto">
         <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />

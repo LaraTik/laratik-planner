@@ -17,6 +17,7 @@
 import { explainStatus, type StepExplanation } from "@/lib/content/workflow-explanations";
 import type { HealthSnapshot } from "@/lib/dashboard/health";
 import type { ContentStatus } from "@/lib/content/status";
+import { responsibleRolesForStatus } from "@/lib/content/workflow";
 import type { WorkspaceRole } from "@/lib/auth/invitation-command";
 
 /**
@@ -35,42 +36,6 @@ const IN_PROGRESS_STATUSES: ReadonlySet<ContentStatus> = new Set([
   "approved_for_design",
   "in_design",
 ]);
-
-/**
- * Roles that can move the item forward from a given status. Mirrors
- * the workflow engine (`WORKFLOW_RULES`) but is read-only — it does
- * not transition state, it only answers "could the actor push this?".
- *
- * This intentionally duplicates the role table from `workflow.ts`
- * because the workflow table also encodes `from` state and the
- * `requiresReason` flag, neither of which the next-action hint
- * needs. Keeping the role subset inline lets this file stay
- * testable without importing the workflow module's transition
- * resolver (which throws on invalid input).
- */
-function rolesThatCanActForStatus(status: ContentStatus): ReadonlySet<WorkspaceRole> {
-  switch (status) {
-    case "draft":
-    case "changes_requested":
-      return new Set<WorkspaceRole>(["workspace_manager", "content_planner"]);
-    case "content_review":
-      return new Set<WorkspaceRole>(["internal_reviewer", "workspace_manager"]);
-    case "approved_for_design":
-    case "in_design":
-      return new Set<WorkspaceRole>(["workspace_manager", "designer"]);
-    case "creative_review":
-      return new Set<WorkspaceRole>(["internal_reviewer", "client_reviewer", "workspace_manager"]);
-    case "ready_to_publish":
-    case "partially_published":
-      return new Set<WorkspaceRole>(["workspace_manager", "publisher"]);
-    case "blocked":
-      return new Set<WorkspaceRole>(["workspace_manager"]);
-    case "published":
-    case "cancelled":
-      // Terminal — no next action.
-      return new Set<WorkspaceRole>();
-  }
-}
 
 export interface NextAction {
   /** One-line label suitable for a row (≤ 36 chars where possible). */
@@ -129,7 +94,7 @@ export function deriveNextAction(input: {
   if (status === "blocked") {
     return {
       label: "Resolve blocker",
-      canCurrentUserAct: canAct(new Set<WorkspaceRole>(["workspace_manager"])),
+      canCurrentUserAct: canAct(new Set(responsibleRolesForStatus(status))),
       tab: "workflow",
       translationKey: "planning.nextAction.blocked",
     };
@@ -142,9 +107,7 @@ export function deriveNextAction(input: {
     if (openApprovalCount > 0) {
       return {
         label: `Resolve ${openApprovalCount} approval${openApprovalCount === 1 ? "" : "s"}`,
-        canCurrentUserAct: canAct(
-          new Set<WorkspaceRole>(["internal_reviewer", "client_reviewer", "workspace_manager"]),
-        ),
+        canCurrentUserAct: canAct(new Set(responsibleRolesForStatus("creative_review"))),
         tab: "publishing",
         translationKey:
           openApprovalCount === 1
@@ -173,7 +136,7 @@ export function deriveNextAction(input: {
     );
     return {
       label: `${days} day${days === 1 ? "" : "s"} overdue — ${explanation.next}`,
-      canCurrentUserAct: canAct(rolesThatCanActForStatus(status)),
+      canCurrentUserAct: canAct(new Set(responsibleRolesForStatus(status))),
       tab: REVIEW_STATUSES.has(status) || IN_PROGRESS_STATUSES.has(status) ? "workflow" : "content",
       translationKey:
         days === 1 ? "planning.nextAction.overdueOne" : "planning.nextAction.overdueMany",
@@ -185,7 +148,7 @@ export function deriveNextAction(input: {
   // 4. Default — use the step explanation's `next` string verbatim.
   return {
     label: explanation.next,
-    canCurrentUserAct: canAct(rolesThatCanActForStatus(status)),
+    canCurrentUserAct: canAct(new Set(responsibleRolesForStatus(status))),
     tab: REVIEW_STATUSES.has(status)
       ? "workflow"
       : IN_PROGRESS_STATUSES.has(status)

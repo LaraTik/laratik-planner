@@ -40,7 +40,7 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
     isPublisher: false,
   };
 
-  it("renders a primary 'current' badge for every canonical ContentStatus", () => {
+  it("renders a primary current badge for active statuses and a condition for blocked/cancelled", () => {
     expect(ALL_STATUSES.length).toBeGreaterThan(0);
 
     for (const status of ALL_STATUSES) {
@@ -57,6 +57,14 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
         />,
       );
 
+      if (status === "blocked" || status === "cancelled") {
+        expect(
+          container.querySelector('[data-testid="workflow-rail-condition"]'),
+        ).toBeInTheDocument();
+        expect(container.querySelector('[data-stage="planning"]')).not.toBeInTheDocument();
+        unmount();
+        continue;
+      }
       // `bg-primary-subtle` is the class the `primary` Badge
       // variant uses (per components/ui/badge.tsx). The
       // current status's badge should carry it; if the

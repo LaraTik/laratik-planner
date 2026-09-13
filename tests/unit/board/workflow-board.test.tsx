@@ -30,19 +30,16 @@ function makeItem(overrides: Partial<WorkflowBoardItem> & { id: string }): Workf
 }
 
 describe("WorkflowBoard", () => {
-  it("renders 7 columns at the xl breakpoint (UX-06, GAP-FULL-REVIEW-2026-08-25)", () => {
-    // The design contract is 7 columns at xl+ (the 1280-1535px laptop
-    // range is the most common viewport per Stitch's capture set).
-    // A previous version used `xl:grid-cols-4 2xl:grid-cols-7`, which
-    // collapsed to 4+3 on row-wrap. We pin the 7-col class here so
-    // the regression does not return.
+  it("renders six active stage columns at the xl breakpoint", () => {
+    // The Planning contract is six active stages at xl+. Blocked items
+    // render in a separate grouping and do not create a seventh stage.
     render(<WorkflowBoard items={[]} columns={COLUMNS} workspaceSlug="acme" />);
     // The grid root carries the layout classes (Tailwind 4 keeps the
     // class literal on the element for static analysis). We assert the
-    // 7-col class is present and the old 4-col class is not.
+    // Six-column class is present and the old four-column class is not.
     const root = document.querySelector("div.grid.gap-3");
     expect(root).not.toBeNull();
-    expect(root!.className).toMatch(/\bxl:grid-cols-7\b/);
+    expect(root!.className).toMatch(/\bxl:grid-cols-6\b/);
     expect(root!.className).not.toMatch(/\bxl:grid-cols-4\b/);
     expect(root!.className).toMatch(/\bitems-start\b/);
   });
@@ -99,6 +96,29 @@ describe("WorkflowBoard", () => {
     const ideas = screen.getByTestId("board-column-ideas");
     expect(within(ideas).getAllByRole("link")).toHaveLength(3);
     expect(within(ideas).getByTestId("board-column-count-ideas").textContent).toBe("3");
+  });
+
+  it("renders blocked items in a separate condition group when requested", () => {
+    const blocked = makeItem({ id: "blocked", status: "blocked" });
+    render(
+      <WorkflowBoard
+        items={[blocked]}
+        blockedItems={[blocked]}
+        columns={[
+          { label: "Planning", statuses: ["draft"] },
+          { label: "Content review", statuses: ["content_review", "changes_requested"] },
+          { label: "Creative production", statuses: ["approved_for_design", "in_design"] },
+          { label: "Creative approval", statuses: ["creative_review"] },
+          { label: "Publishing setup", statuses: ["ready_to_publish", "partially_published"] },
+          { label: "Published", statuses: ["published"] },
+        ]}
+        workspaceSlug="acme"
+      />,
+    );
+    expect(screen.getByTestId("board-blocked-group")).toBeInTheDocument();
+    expect(screen.getByTestId("board-blocked-count")).toHaveTextContent("1");
+    expect(screen.getByTestId("board-blocked-group")).toHaveTextContent("Blocked");
+    expect(screen.getByTestId("board-column-planning")).not.toHaveTextContent("Item blocked");
   });
 
   it("renders the 'No items' placeholder in empty columns", () => {

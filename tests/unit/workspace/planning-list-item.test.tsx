@@ -97,7 +97,7 @@ describe("PlanningListItem", () => {
     // in a single line (AGENTS.md §B + §C).
     expect(screen.getByTestId("stage-pill")).toHaveAttribute("data-stage", "planning");
     expect(screen.getByTestId("stage-pill")).toHaveTextContent(/Planning/);
-    expect(screen.getByTestId("stage-pill")).toHaveTextContent(/1\/4/);
+    expect(screen.getByTestId("stage-pill")).toHaveTextContent(/1\/6/);
     expect(screen.getByTestId("readiness-indicator")).toBeInTheDocument();
     expect(screen.getByTestId("next-action-chip")).toBeInTheDocument();
   });

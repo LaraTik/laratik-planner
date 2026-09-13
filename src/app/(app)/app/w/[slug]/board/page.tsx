@@ -35,13 +35,24 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 function buildColumns(t: (key: string) => string): readonly WorkflowBoardColumn[] {
   return [
-    { label: t("board.columnIdeas"), statuses: ["draft", "changes_requested", "blocked"] },
-    { label: t("board.columnContentReview"), statuses: ["content_review"] },
-    { label: t("board.columnApproved"), statuses: ["approved_for_design"] },
-    { label: t("board.columnDesign"), statuses: ["in_design"] },
-    { label: t("board.columnCreativeReview"), statuses: ["creative_review"] },
-    { label: t("board.columnReady"), statuses: ["ready_to_publish"] },
-    { label: t("board.columnPublished"), statuses: ["partially_published", "published"] },
+    { label: t("contentDetail.workflow.railStageLabels.planning"), statuses: ["draft"] },
+    {
+      label: t("contentDetail.workflow.railStageLabels.content_review"),
+      statuses: ["content_review", "changes_requested"],
+    },
+    {
+      label: t("contentDetail.workflow.railStageLabels.creative_production"),
+      statuses: ["approved_for_design", "in_design"],
+    },
+    {
+      label: t("contentDetail.workflow.railStageLabels.creative_approval"),
+      statuses: ["creative_review"],
+    },
+    {
+      label: t("contentDetail.workflow.railStageLabels.publishing_setup"),
+      statuses: ["ready_to_publish", "partially_published"],
+    },
+    { label: t("contentDetail.workflow.railStageLabels.published"), statuses: ["published"] },
   ];
 }
 
@@ -248,6 +259,7 @@ export default async function WorkflowBoardPage({
           memberDirectory={Object.fromEntries(
             memberRows.map((m) => [m.id, m satisfies BoardMemberEntry]),
           )}
+          blockedItems={items.filter((item) => item.status === "blocked")}
         />
       )}
     </div>

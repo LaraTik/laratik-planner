@@ -112,6 +112,10 @@ export interface OverviewCommandCenterProps {
   /** Why is the primary action what it is. Used to render the
    *  contextual CTA copy in the Next Action card. */
   primaryActionLabel?: string;
+  /** Localized fields projected by the shared planning presentation model. */
+  workflowStageLabel?: string;
+  nextActionHeadline?: string;
+  nextActionDescription?: string;
   /** When present, links to the delivery version in the Creative
    *  tab. Used to deep-link from "review changes" copy. */
   reviewChangesHref?: string;
@@ -142,6 +146,9 @@ export function OverviewCommandCenter({
   editHref,
   onReadinessNavigate,
   primaryActionLabel,
+  workflowStageLabel,
+  nextActionHeadline,
+  nextActionDescription,
   reviewChangesHref,
   t: tProp,
 }: OverviewCommandCenterProps) {
@@ -157,6 +164,9 @@ export function OverviewCommandCenter({
         editHref={editHref}
         t={t}
         {...(primaryActionLabel ? { primaryActionLabel } : {})}
+        {...(workflowStageLabel ? { workflowStageLabel } : {})}
+        {...(nextActionHeadline ? { nextActionHeadline } : {})}
+        {...(nextActionDescription ? { nextActionDescription } : {})}
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
       />
       <ReadinessSummary
@@ -205,6 +215,9 @@ function NextActionCard({
   readinessBlockers,
   readinessCanPublish,
   primaryActionLabel,
+  workflowStageLabel,
+  nextActionHeadline,
+  nextActionDescription,
   reviewChangesHref,
   t,
 }: {
@@ -214,6 +227,9 @@ function NextActionCard({
   canEdit: boolean;
   editHref: string;
   primaryActionLabel?: string;
+  workflowStageLabel?: string;
+  nextActionHeadline?: string;
+  nextActionDescription?: string;
   reviewChangesHref?: string;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -229,8 +245,9 @@ function NextActionCard({
   // the work that needs attention and links each item to the
   // relevant workspace section. The right rail handles the
   // actual transition.
-  const headline = nextHeadline(contentStatus, readinessBlockers, t);
-  const body = nextBody(contentStatus, safeExplain(contentStatus)?.next, t);
+  const headline = nextActionHeadline ?? nextHeadline(contentStatus, readinessBlockers, t);
+  const body =
+    nextActionDescription ?? nextBody(contentStatus, safeExplain(contentStatus)?.next, t);
 
   const tone =
     readinessBlockers > 0
@@ -245,6 +262,11 @@ function NextActionCard({
         <p className="text-label text-fg-muted font-semibold uppercase">
           {t("contentDetail.overview.actionRequired")}
         </p>
+        {workflowStageLabel ? (
+          <p className="text-label text-fg-secondary" data-testid="overview-workflow-stage">
+            {workflowStageLabel}
+          </p>
+        ) : null}
         <CardTitle className="text-body text-fg-primary text-lg font-semibold">
           {headline}
         </CardTitle>

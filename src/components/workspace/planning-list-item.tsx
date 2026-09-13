@@ -35,7 +35,7 @@ import type { LocaleCode } from "@/lib/i18n/locales";
  *   Mobile (< 768px)  Stacked:
  *                     [format icon]  Title · Status badge
  *                     Owner  ·  Channels
- *                     Schedule  ·  Health
+ *                     Schedule  ·  Readiness / Attention
  *                     Workflow mini  ·  Next action
  *                     💬 2  📎 3  ⋯
  *
@@ -46,7 +46,7 @@ import type { LocaleCode } from "@/lib/i18n/locales";
  *                     Row 4: counters + actions
  *
  *   Desktop (>= 1280) 5-col grid:
- *                     Title (truncate) | Schedule | Owner | Workflow | Health/Next
+ *                     Title (truncate) | Schedule | Owner | Workflow | Readiness/Next
  *
  * RSC safety: NO function props on the rendered DOM tree. The row
  * itself is a `<Link>` (server component compatible), the channel /
@@ -254,14 +254,25 @@ export function PlanningListItem({
           <StagePill status={item.status} {...(t ? { t } : {})} />
         </div>
 
-        {/* HEALTH + NEXT ACTION */}
+        {/* READINESS + ATTENTION + NEXT ACTION */}
         <div className="text-label flex flex-col gap-1 lg:flex-row lg:items-center lg:gap-2">
+          <span className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only">
+            {tr("planningFilters.readinessLabel", "Readiness")}
+          </span>
           <ReadinessIndicator
             health={item.health}
             overdueDays={opDate.overdueDays}
             openApprovalCount={item.openApprovalCount}
             {...(t ? { t } : {})}
           />
+          {item.health === "at_risk" || item.health === "overdue" || item.health === "blocked" ? (
+            <span
+              className="text-fg-muted font-semibold tracking-wide uppercase lg:sr-only"
+              data-testid="row-attention-label"
+            >
+              {tr("planningFilters.attentionLabel", "Attention")}
+            </span>
+          ) : null}
           <NextActionChip action={item.nextAction} detailHref={detailHref} {...(t ? { t } : {})} />
         </div>
 

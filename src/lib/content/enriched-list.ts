@@ -37,6 +37,7 @@ import { deriveNextAction, type ActorRoles, type NextAction } from "@/lib/conten
 import { getWorkspaceRoles, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { INTERNAL_WORKSPACE_ROLES } from "@/lib/auth/policy";
 import type { ContentStatus, ContentFormat } from "@/lib/content/status";
+import { statusesForPlanningStage } from "@/lib/planning/presentation";
 
 export interface EnrichedOwner {
   id: string;
@@ -140,7 +141,12 @@ export async function listWorkspaceContentEnriched(
     conditions.push(sql`${contentItems.status} = ${opts.status}`);
   }
   if (opts.stage) {
-    conditions.push(sql`${contentItems.status} = ${opts.stage}`);
+    const statuses = statusesForPlanningStage(opts.stage);
+    conditions.push(
+      statuses
+        ? inArray(contentItems.status, statuses)
+        : sql`${contentItems.status} = ${opts.stage}`,
+    );
   }
   if (opts.ownerId) {
     conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));
@@ -393,7 +399,12 @@ async function countWorkspaceContentEnriched(
     conditions.push(sql`${contentItems.status} = ${opts.status}`);
   }
   if (opts.stage) {
-    conditions.push(sql`${contentItems.status} = ${opts.stage}`);
+    const statuses = statusesForPlanningStage(opts.stage);
+    conditions.push(
+      statuses
+        ? inArray(contentItems.status, statuses)
+        : sql`${contentItems.status} = ${opts.stage}`,
+    );
   }
   if (opts.ownerId) {
     conditions.push(eq(contentItems.contentOwnerId, opts.ownerId));

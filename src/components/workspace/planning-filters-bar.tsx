@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ALL_FORMATS, ALL_STATUSES, humanFormat, humanStatus } from "@/lib/content/status";
 import { ATTENTION_HEALTHS, type HealthSnapshot } from "@/lib/dashboard/health";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { PLANNING_STAGE_VALUES } from "@/lib/planning/filter-params";
 
 /**
  * PlanningFiltersBar — instant-update filter bar for the planning
@@ -46,15 +47,6 @@ const HEALTH_LABEL: Record<HealthSnapshot, string> = {
   cancelled: "Cancelled",
   scheduled: "Scheduled",
 };
-
-const WORKFLOW_STAGES: { value: string; label: string }[] = [
-  { value: "draft", label: "Planning" },
-  { value: "content_review", label: "Review" },
-  { value: "approved_for_design", label: "Design" },
-  { value: "creative_review", label: "Creative Review" },
-  { value: "ready_to_publish", label: "Ready to publish" },
-  { value: "published", label: "Published" },
-];
 
 const selectClass =
   "border-border bg-surface text-body h-10 w-full min-w-0 rounded-[var(--radius-control)] border px-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-1";
@@ -179,9 +171,9 @@ export function PlanningFiltersBar({
           data-testid="planning-stage-filter"
         >
           <option value="">{tr("planningFilters.allWorkflowStages", "All workflow stages")}</option>
-          {WORKFLOW_STAGES.map((s) => (
-            <option key={s.value} value={s.value}>
-              {tr(`planningFilters.stageLabels.${s.value}`, s.label)}
+          {PLANNING_STAGE_VALUES.map((stage) => (
+            <option key={stage} value={stage}>
+              {tr(`planningFilters.stageLabels.${stage}`, stage)}
             </option>
           ))}
         </select>
@@ -245,13 +237,13 @@ export function PlanningFiltersBar({
             </select>
 
             <select
-              aria-label={tr("planningFilters.healthAria", "Filter by health")}
+              aria-label={tr("planningFilters.readinessAria", "Filter by readiness")}
               value={healthFilter[0] ?? ""}
               onChange={(e) => pushParam("health", e.target.value || null)}
               className={selectClass}
               data-testid="planning-health-filter"
             >
-              <option value="">{tr("planningFilters.allHealth", "All health")}</option>
+              <option value="">{tr("planningFilters.allReadiness", "All readiness")}</option>
               {ATTENTION_HEALTHS.map((h) => (
                 <option key={h} value={h}>
                   {tr(`planningFilters.healthLabels.${h}`, HEALTH_LABEL[h])}

@@ -100,7 +100,7 @@ describe("describeActiveFilter", () => {
     );
     expect(result).toContain("المرحلة");
     expect(result).toContain("القناة المحددة");
-    expect(result).toContain("الحالة");
+    expect(result).toContain("الجاهزية");
     expect(result).not.toContain("stage");
     expect(result).not.toContain("selected channel");
   });

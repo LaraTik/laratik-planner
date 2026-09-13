@@ -134,6 +134,26 @@ export const WORKFLOW_RULES: Record<Exclude<WorkflowAction, "unblock">, Workflow
   },
 };
 
+/**
+ * Returns the roles that own an actionable transition from a status.
+ *
+ * This is intentionally derived from WORKFLOW_RULES so presentation code
+ * does not maintain a second copy of the workflow permission table. The
+ * result is descriptive only; transition authorization still happens in
+ * resolveWorkflowTransition and the server service.
+ */
+export function responsibleRolesForStatus(status: ContentStatus): WorkspaceRole[] {
+  if (status === "approved_for_design") return ["workspace_manager", "designer"];
+  if (status === "blocked") return ["workspace_manager"];
+  const roles = new Set<WorkspaceRole>();
+  for (const rule of Object.values(WORKFLOW_RULES)) {
+    if (rule.from.includes(status)) {
+      for (const role of rule.roles) roles.add(role);
+    }
+  }
+  return [...roles];
+}
+
 const SAFE_RETURN_TARGETS = new Set<ContentStatus>([
   "draft",
   "content_review",

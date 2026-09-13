@@ -5,6 +5,11 @@ const ownerId = "11111111-1111-4111-8111-111111111111";
 const channelId = "22222222-2222-4222-8222-222222222222";
 
 describe("parsePlanningFilterParams", () => {
+  it("accepts canonical six-stage values", () => {
+    expect(parsePlanningFilterParams({ stage: "creative_production" }).stage).toBe(
+      "creative_production",
+    );
+  });
   it("parses every supported planning filter and trims search text", () => {
     expect(
       parsePlanningFilterParams({

@@ -82,6 +82,9 @@ import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
 import { listMediaAssetsForContentItem, listMediaFolders } from "@/lib/media/service";
+import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/planning/presentation";
+import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
+import type { ContentStatus } from "@/lib/content/status";
 
 export async function generateMetadata({
   params,
@@ -91,39 +94,6 @@ export async function generateMetadata({
   const { id } = await params;
   const { t } = await tForActive();
   return { title: t("contentDetail.metaTitle", { id: id.slice(0, 8) }) };
-}
-
-/**
- * Primary CTA copy for the Next-Action card in the Overview.
- * Mirrors the contextual button in the workspace header so the
- * two are never out of sync. The override hook (e.g. when the
- * server already determined a different primary action) is the
- * `primaryActionLabel` prop in `OverviewCommandCenter`.
- */
-function nextActionLabel(status: string, canEdit: boolean, t: (key: string) => string): string {
-  switch (status) {
-    case "draft":
-      return canEdit
-        ? t("contentDetail.nextAction.draftEditable")
-        : t("contentDetail.nextAction.draftReadOnly");
-    case "content_review":
-      return t("contentDetail.nextAction.contentReview");
-    case "changes_requested":
-      return t("contentDetail.nextAction.changesRequested");
-    case "approved_for_design":
-    case "in_design":
-    case "creative_review":
-      return t("contentDetail.nextAction.creative");
-    case "ready_to_publish":
-    case "partially_published":
-      return t("contentDetail.nextAction.publishing");
-    case "blocked":
-      return t("contentDetail.nextAction.blocked");
-    case "published":
-      return t("contentDetail.nextAction.published");
-    default:
-      return t("contentDetail.nextAction.draftReadOnly");
-  }
 }
 
 export default async function ContentDetailPage({
@@ -317,6 +287,29 @@ export default async function ContentDetailPage({
       }
     : null;
 
+  const presentationRoles: WorkspaceRole[] = [
+    ...(actorRoles.isManager ? (["workspace_manager"] as const) : []),
+    ...(actorRoles.isPlanner ? (["content_planner"] as const) : []),
+    ...(actorRoles.isDesigner ? (["designer"] as const) : []),
+    ...(actorRoles.isInternalReviewer ? (["internal_reviewer"] as const) : []),
+    ...(actorRoles.isClientReviewer ? (["client_reviewer"] as const) : []),
+    ...(actorRoles.isPublisher ? (["publisher"] as const) : []),
+  ];
+  const planningPresentation: PlanningPresentation = buildPlanningPresentation({
+    status: item.status as ContentStatus,
+    actorRoles: presentationRoles,
+    blockedReason: item.blockedReason,
+    cancellationReason: item.cancellationReason,
+    readiness,
+    approvals: approvals.map((approval) => ({
+      gate: approval.gate as ApprovalGate,
+      status: approval.status as "pending" | "approved" | "changes_requested" | "cancelled",
+      ...(approval.deliveryVersionId !== undefined
+        ? { deliveryVersionId: approval.deliveryVersionId }
+        : {}),
+    })),
+  });
+
   const canEditAll =
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
@@ -477,9 +470,7 @@ export default async function ContentDetailPage({
   // blocker while an item is still being planned, reviewed, or designed.
   // The publishing surface remains available through its deep link, but
   // Overview should tell the user what they can do now.
-  const overviewBlockers = publishingIsFuture
-    ? Math.max(0, readiness.blockers - publishingBlockers)
-    : readiness.blockers;
+  const overviewBlockers = planningPresentation.readiness.currentBlockers.length;
   const overviewReadinessLines = [
     {
       id: "content",
@@ -553,7 +544,9 @@ export default async function ContentDetailPage({
   // glance, regardless of category.
   const recentActivity = activityEvents.slice(0, 5);
 
-  const primaryActionLabel = nextActionLabel(item.status, canEdit, t);
+  const primaryActionLabel = t(
+    planningPresentation.nextAction.descriptionKey ?? planningPresentation.nextAction.headlineKey,
+  );
   // Phase 3 of the planning-detail refactor (2026-08-30): the
   // "Creative" section merged into the Content tab as "Assets
   // & versions". The Next-Action CTA on Overview now scrolls
@@ -816,6 +809,12 @@ export default async function ContentDetailPage({
                   canEditOverview={canEditOverview}
                   editHref={editHref}
                   primaryActionLabel={primaryActionLabel}
+                  workflowStageLabel={t(planningPresentation.workflow.labelKey)}
+                  nextActionHeadline={t(planningPresentation.nextAction.headlineKey)}
+                  nextActionDescription={t(
+                    planningPresentation.nextAction.descriptionKey ??
+                      planningPresentation.workflow.descriptionKey,
+                  )}
                   reviewChangesHref={reviewChangesHref}
                 />
               </section>

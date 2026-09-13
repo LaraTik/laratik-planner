@@ -10,13 +10,24 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 
 /** Values exposed by the planning toolbar's workflow-stage selector. */
 export const PLANNING_STAGE_VALUES = [
-  "draft",
+  "planning",
   "content_review",
+  "creative_production",
+  "creative_approval",
+  "publishing_setup",
+  "published",
+] as const;
+export const LEGACY_PLANNING_STAGE_VALUES = [
+  "draft",
+  "review",
+  "design",
+  "publish",
   "approved_for_design",
   "creative_review",
   "ready_to_publish",
-] as const satisfies readonly ContentStatus[];
-export type PlanningStage = (typeof PLANNING_STAGE_VALUES)[number];
+] as const satisfies readonly string[];
+export type PlanningStage =
+  (typeof PLANNING_STAGE_VALUES)[number] | (typeof LEGACY_PLANNING_STAGE_VALUES)[number];
 
 const HEALTH_VALUES: readonly HealthSnapshot[] = [
   "at_risk",
@@ -79,7 +90,13 @@ export function parsePlanningFilterParams(input: PlanningFilterInput): PlanningF
   if (input.format && (ALL_FORMATS as readonly string[]).includes(input.format)) {
     result.format = input.format as ContentFormat;
   }
-  if (input.stage && (PLANNING_STAGE_VALUES as readonly string[]).includes(input.stage)) {
+  if (
+    input.stage &&
+    [
+      ...(PLANNING_STAGE_VALUES as readonly string[]),
+      ...(LEGACY_PLANNING_STAGE_VALUES as readonly string[]),
+    ].includes(input.stage)
+  ) {
     result.stage = input.stage as PlanningStage;
   }
   if (isUuid(input.owner)) result.ownerId = input.owner;
