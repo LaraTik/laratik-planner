@@ -155,6 +155,15 @@ If `pnpm` is missing on the VPS (fresh install), one-shot:
 - [ ] `docker ps` shows `laratik-planner-app-1` as `(healthy)`.
 - [ ] No new errors in `docker logs laratik-planner-app-1 --tail 200`.
 
+### Remote MCP verification
+
+When a release changes the Planner MCP, also follow the full
+[`MCP maintenance contract`](./mcp-maintenance.md). At minimum, confirm that
+the exact deployed SHA is healthy, an unauthenticated `POST /api/mcp` returns
+`401` with `WWW-Authenticate: Bearer`, and an authenticated temporary token
+can complete `initialize` and `tools/list` before it is revoked. Never record a
+plaintext MCP token in a command, log, screenshot, or ticket.
+
 ### Rollback
 
 `scripts/deploy.sh` captures the previous application image before

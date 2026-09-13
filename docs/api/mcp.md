@@ -12,6 +12,10 @@ Authorization: Bearer lpm_<token>
 Content-Type: application/json
 ```
 
+Keep this reference, the route catalog, evaluation cases, tests, Account UI,
+and production evidence synchronized. The mandatory change checklist is in
+[`docs/operations/mcp-maintenance.md`](../operations/mcp-maintenance.md).
+
 ## Create and manage a token
 
 Signed-in users create tokens from **Account → MCP access**. The plaintext
@@ -76,3 +80,7 @@ health endpoint is green and an authenticated MCP `initialize` plus
 `tools/list` smoke check succeeds. Roll back the application image and follow
 the standard database rollback procedure if a migration or MCP smoke check
 fails; do not delete the token table manually.
+
+For future tool, scope, transport, token-lifecycle, or client-setup changes,
+update this document in the same commit as the implementation and run the
+maintenance checklist before release.

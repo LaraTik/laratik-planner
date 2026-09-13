@@ -199,6 +199,7 @@ laratik-planner/
 - ✅ Pre-push hook runs the full unit suite and integration suite; critical E2E (`pnpm test:e2e:critical`) is an advisory signal and never blocks a normal push. Use `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_E2E=1` for trivial pushes.
 - ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
+- ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
 - ✅ Log rotation per container, not just daemon default (already in compose: 10m × 5)
