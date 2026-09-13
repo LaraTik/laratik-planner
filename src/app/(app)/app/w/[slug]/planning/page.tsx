@@ -565,6 +565,7 @@ export default async function PlanningPage({
                 status={it.status}
                 canEdit={canCreate && (it.status === "draft" || it.status === "changes_requested")}
                 canSubmit={canCreate}
+                canDuplicate={canCreate}
                 canArchive={canCreate}
               />
             )}

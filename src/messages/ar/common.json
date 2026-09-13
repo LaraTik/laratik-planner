@@ -46,6 +46,8 @@
   "rowActionOpen": "فتح",
   "rowActionEdit": "تعديل",
   "rowActionDuplicate": "تكرار",
+  "rowActionDuplicating": "جارٍ التكرار…",
+  "rowActionDuplicateFailed": "تعذّر تكرار هذا العنصر",
   "rowActionChangeOwner": "تغيير المالك",
   "rowActionSubmit": "إرسال للمراجعة",
   "rowActionResubmit": "إعادة إرسال للمراجعة",

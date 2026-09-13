@@ -4,6 +4,7 @@ import { Clock, Eye, Pencil, Sparkles } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { resolveContentLocale } from "@/lib/i18n/content-locale";
 import { formatDate } from "@/lib/i18n/format-locale";
 
 function humanPlatform(
@@ -268,12 +269,10 @@ export default async function ContentDetailPage({
         .limit(1)
     : [];
   const activeLocale = agencyRow?.locale ?? "en";
-  const contentLocale = (() => {
-    const payload = (item as { formatPayload?: unknown }).formatPayload;
-    if (!payload || typeof payload !== "object") return activeLocale;
-    const language = (payload as { contentLanguage?: unknown }).contentLanguage;
-    return language === "en" || language === "ar" ? language : activeLocale;
-  })();
+  const contentLocale = resolveContentLocale({
+    formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+    fallback: activeLocale,
+  });
   const captionDraftsEnabled = Boolean(
     feature?.enabled === true && feature.enabledCapabilities.includes("caption_drafts"),
   );

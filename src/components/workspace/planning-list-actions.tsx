@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MoreHorizontal, Edit3, Copy, UserCog, Send, Archive, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { duplicateContentItemAction } from "@/app/(app)/app/w/[slug]/library/actions";
 import {
   archiveContentItemAction,
   restoreContentItemAction,
@@ -33,12 +34,9 @@ import { getErrorMessage } from "@/lib/utils/error";
  * current user's role set and passes a `can*` boolean per action;
  * the menu only shows the actions the user can actually do.
  *
- * No `onClick` on the rendered DOM — every action is a `<Link>` or
- * a Radix-managed dropdown item with an `href`. Server-action
- * triggers (Duplicate, Move) are not yet wired (per the spec:
- * "Move/reschedule" needs a date picker UI; that ships in a follow-up).
- * The actions that ARE wired are real <Link>s so the row's RSC
- * safety is preserved.
+ * Navigation remains link-based. Mutating actions use Radix-managed
+ * menu items and call the same server actions as the detail view, so
+ * the list is a complete starting point for the common lifecycle moves.
  */
 export interface PlanningListActionsProps {
   workspaceSlug: string;
@@ -48,6 +46,7 @@ export interface PlanningListActionsProps {
   /** Permission flags derived server-side from the actor's role set. */
   canEdit: boolean;
   canSubmit: boolean;
+  canDuplicate: boolean;
   canArchive: boolean;
   /** Tailwind class additions. */
   className?: string;
@@ -66,12 +65,14 @@ export function PlanningListActions({
   status,
   canEdit,
   canSubmit,
+  canDuplicate,
   canArchive,
   className,
 }: PlanningListActionsProps) {
   const t = useLocaleT();
   const router = useRouter();
   const [archivePending, startArchiveTransition] = React.useTransition();
+  const [duplicatePending, startDuplicateTransition] = React.useTransition();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t(key, params) === key ? fallback : t(key, params);
   const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
@@ -113,6 +114,20 @@ export function PlanningListActions({
     });
   }
 
+  function duplicate() {
+    if (duplicatePending) return;
+    startDuplicateTransition(async () => {
+      const result = await duplicateContentItemAction(workspaceSlug, itemId);
+      if (result.newId) {
+        router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+        return;
+      }
+      toast.error(tr("common.rowActionDuplicateFailed", "Could not duplicate this item"), {
+        description: result.error,
+      });
+    });
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -148,13 +163,18 @@ export function PlanningListActions({
             </Link>
           </DropdownMenuItem>
         ) : null}
-        <DropdownMenuItem disabled data-testid="row-action-duplicate">
-          <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-          {tr("common.rowActionDuplicate", "Duplicate")}
-          <span className="text-label text-fg-muted ms-auto text-[10px]">
-            {tr("common.rowActionSoon", "soon")}
-          </span>
-        </DropdownMenuItem>
+        {canDuplicate ? (
+          <DropdownMenuItem
+            disabled={duplicatePending}
+            onSelect={duplicate}
+            data-testid="row-action-duplicate"
+          >
+            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            {duplicatePending
+              ? tr("common.rowActionDuplicating", "Duplicating…")
+              : tr("common.rowActionDuplicate", "Duplicate")}
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem disabled data-testid="row-action-change-owner">
           <UserCog className="h-3.5 w-3.5" aria-hidden="true" />
           {tr("common.rowActionChangeOwner", "Change owner")}

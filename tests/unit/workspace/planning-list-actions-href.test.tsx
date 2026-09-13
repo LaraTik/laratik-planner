@@ -9,8 +9,11 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   archiveContentItemAction: vi.fn(async () => undefined),
   restoreContentItemAction: vi.fn(async () => undefined),
 }));
+vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
+  duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: vi.fn(), push: vi.fn() }),
 }));
 
 /**
@@ -36,6 +39,7 @@ describe("PlanningListActions — Edit href", () => {
           status="draft"
           canEdit
           canSubmit
+          canDuplicate
           canArchive={false}
         />
       </LocaleProvider>,
@@ -65,6 +69,7 @@ describe("PlanningListActions — Edit href", () => {
           status="ready_to_publish"
           canEdit={false}
           canSubmit={false}
+          canDuplicate={false}
           canArchive={false}
         />
       </LocaleProvider>,
@@ -86,6 +91,7 @@ describe("PlanningListActions — Edit href", () => {
           status="draft"
           canEdit={false}
           canSubmit={false}
+          canDuplicate={false}
           canArchive={false}
         />
       </LocaleProvider>,
@@ -94,6 +100,27 @@ describe("PlanningListActions — Edit href", () => {
     const trigger = screen.getByTestId("row-actions-trigger");
     expect(trigger.className).toContain("h-11");
     expect(trigger.className).toContain("w-11");
+  });
+
+  it("offers Duplicate from the list and opens the created draft", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <PlanningListActions
+          workspaceSlug="acme"
+          itemId="11111111-2222-3333-4444-555555555555"
+          itemTitle="Spring drop"
+          status="draft"
+          canEdit={false}
+          canSubmit={false}
+          canDuplicate
+          canArchive={false}
+        />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByTestId("row-actions-trigger"));
+    expect(screen.getByTestId("row-action-duplicate")).toBeEnabled();
+    await user.click(screen.getByTestId("row-action-duplicate"));
   });
 });
 

@@ -47,6 +47,8 @@
   "rowActionOpen": "Open",
   "rowActionEdit": "Edit",
   "rowActionDuplicate": "Duplicate",
+  "rowActionDuplicating": "Duplicating…",
+  "rowActionDuplicateFailed": "Could not duplicate this item",
   "rowActionChangeOwner": "Change owner",
   "rowActionSubmit": "Submit for review",
   "rowActionResubmit": "Resubmit for review",
