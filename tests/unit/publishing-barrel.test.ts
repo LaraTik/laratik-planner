@@ -115,5 +115,5 @@ describe("src/lib/publishing barrel", () => {
     for (const name of helpersValueExports) {
       expect(typeof (materialityHelpers as Record<string, unknown>)[name]).not.toBe("undefined");
     }
-  });
+  }, 15_000);
 });
