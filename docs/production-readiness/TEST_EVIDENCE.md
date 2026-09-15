@@ -3,6 +3,27 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Planning workspace UX/IA refactor — 2026-09-15 @ `f992fb30`
+
+This implementation preserves the existing database schema, technical
+planning routes and client-review shell. It centralizes Planning lifecycle and
+next-action presentation, introduces the explicit publishing-package command
+`Mark publishing setup ready`, and refreshes only Planning visual baselines.
+
+| Command / check                                                                                                                               | Result                                                                                                                                            | Release interpretation                                                                                                                                                                              |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                                                 | Pass: Prettier, zero-warning ESLint, strict TypeScript, 377 unit files / 3,447 passing tests / 4 tracked todos, and the Next.js production build. | Repository baseline is green at the implementation commit.                                                                                                                                          |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:e2e:isolated -- tests/e2e/content-flow.spec.ts --project=chromium --grep 'full §23 path'`        | Pass: 1/1.                                                                                                                                        | The planner → review → design → creative approval → publishing setup → publication journey remains executable.                                                                                      |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:e2e:isolated -- tests/e2e/content-flow.spec.ts --project=chromium --grep 'planning URL filters'` | Pass: 1/1 in isolated execution. A combined run exposed existing shared-fixture order contamination; it was not reproduced in the isolated rerun. | URL/hash filter compatibility is covered without weakening the assertion.                                                                                                                           |
+| `TEST_DATABASE_URL=… NODE_ENV=test pnpm test:visual -- --grep '8ba7973deb6c4353aeb45ed1af2972d9\|responsive /app/w/acme/planning'`            | Pass: 29/29 strict Chromium assertions, including the exact Planning detail reference and 28 Planning responsive cases.                           | Planning baselines were refreshed after reviewing the rendered hierarchy; unrelated snapshots were not updated. The visual harness also completed its axe checks without critical/serious findings. |
+
+The focused browser evidence covers the explicit `Mark publishing setup
+ready` lifecycle command as a package-readiness transition only; it does not
+schedule or publish content. Automatic publishing capability remains
+independent from package readiness, and manual publication remains a separate
+fallback. Independent visual review, manual keyboard/screen-reader/zoom/UAT,
+full cross-engine browser gates and the shared production verdict remain open.
+
 ## Re-baseline — 2026-09-09, advisory-gate implementation @ `7c03ea8`
 
 Verification was run against the exact implementation commit after the

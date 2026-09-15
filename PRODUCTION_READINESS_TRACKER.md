@@ -1,5 +1,16 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-09-15 Planning workspace UX/IA refactor** — Exact clean implementation
+> commit `f992fb30` passes `pnpm verify` (377 unit files / 3,447 passing tests,
+> 4 tracked todos, production build). The focused §23 lifecycle browser path
+> passes 1/1, the Planning URL-filter case passes 1/1 when isolated, and the
+> Planning-only strict visual/a11y subset passes 29/29 after reviewed baseline
+> refresh. The new `Mark publishing setup ready` command validates the complete
+> publishing package and advances the existing lifecycle without scheduling or
+> publishing. Automatic publishing capability remains independent. Full
+> cross-engine browser gates, manual accessibility/UAT, independent visual
+> review and the shared `READY FOR INDEPENDENT REVIEW` verdict remain open.
+
 > **2026-09-08 Trend Radar v1 ships (Milestone 8)** — Multi-platform
 > trend intelligence lands behind the new `trend_radar` capability
 > flag and the agency database master-switch gate. 12 additive trend

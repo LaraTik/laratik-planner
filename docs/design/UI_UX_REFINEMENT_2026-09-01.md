@@ -19,6 +19,32 @@
 - The full notification + email rendering path (the message-key migration is the structural change; the per-screen review is a follow-up).
 - All system emails that form part of a user journey (invitation, password reset, magic link, mention, daily digest, delivery published, request changes, approval, scheduled publish failure).
 
+## Planning workspace UX/IA refactor — 2026-09-15
+
+The internal Planning workspace now uses six canonical destinations:
+`Overview`, `Brief`, `Copy`, `Assets`, `Publish`, and `Activity`. Technical
+route/hash identifiers remain compatible (`content`, `delivery`, and
+`publishing`), while Preview is a direct secondary action. The workflow rail
+is the sole lifecycle visualization, and a typed presentation model resolves
+milestones, substatuses, blockers, attention, ownership, viewer capability,
+destinations and the canonical next action.
+
+Overview is now an operational command center: Next action, unified Needs
+attention, compact readiness, linked workspace snapshots and recent activity.
+The publishing package has an explicit `Mark publishing setup ready` command
+that validates package completeness and records readiness without scheduling
+or publishing. Package readiness and automatic-publishing capability remain
+independent. Overdue dates support Reschedule or an explicit audit-recorded
+Keep past date acknowledgement.
+
+The implementation preserves StudioFlow tokens, existing persistence and
+client-review presentation. English/Arabic catalog keys were added in parity,
+mobile Planning uses an accessible section selector below 768px, and the
+Planning visual reference/responsive baselines were refreshed after review at
+exact implementation commit `f992fb30`. See the matching reproducible command
+record in `docs/production-readiness/TEST_EVIDENCE.md`. This is implementation
+evidence, not independent `Verified` sign-off.
+
 ## Status legend
 
 | Status         | Meaning                                                                                           |
