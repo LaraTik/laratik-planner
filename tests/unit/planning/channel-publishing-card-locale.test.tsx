@@ -45,7 +45,7 @@ describe("ChannelPublishingCard localization", () => {
     // Status badge from the en catalog
     expect(screen.getByTestId("channel-card-status")).toHaveTextContent("Published");
     // In-setup badge appears because the channel is unconfigured
-    expect(screen.getByTestId("channel-card-setup")).toHaveTextContent("In setup");
+    expect(screen.getByTestId("channel-card-setup")).toHaveTextContent("Needs setup");
     // Note prefix uses the locale-aware template
     expect(screen.getByText(/Note:\s*Scheduled slot/)).toBeInTheDocument();
   });
@@ -63,7 +63,7 @@ describe("ChannelPublishingCard localization", () => {
     );
 
     expect(screen.getByTestId("channel-card-status")).toHaveTextContent("منشور");
-    expect(screen.getByTestId("channel-card-setup")).toHaveTextContent("قيد الإعداد");
+    expect(screen.getByTestId("channel-card-setup")).toHaveTextContent("يتطلب الإعداد");
     // Arabic note prefix includes the value, no colon reordering.
     expect(screen.getByText(/ملاحظة:\s*Scheduled slot/)).toBeInTheDocument();
   });

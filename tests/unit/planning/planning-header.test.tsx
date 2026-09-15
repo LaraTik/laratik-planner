@@ -18,14 +18,12 @@ describe("PlanningHeader", () => {
           { platform: "tiktok", accountName: "Acme TikTok" },
         ]}
         plannedPublishAt="2026-09-01 09:00"
-        owner={{ id: "u-1", displayName: "Ada Lovelace" }}
       />,
     );
     expect(screen.getByText("Spring drop teaser")).toBeInTheDocument();
     expect(screen.getByText("Static Post")).toBeInTheDocument();
     expect(screen.getByText("2 channels")).toBeInTheDocument();
     expect(screen.getByText(/2026-09-01 09:00/i)).toBeInTheDocument();
-    expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
     expect(screen.getByText("Ready To Publish")).toBeInTheDocument();
   });
 
@@ -68,7 +66,7 @@ describe("PlanningHeader", () => {
     expect(screen.getByText("القنوات: 0")).toBeInTheDocument();
   });
 
-  it("renders the primary action slot when provided", () => {
+  it("keeps lifecycle actions out of the compact header", () => {
     render(
       <PlanningHeader
         workspaceSlug="acme"
@@ -80,10 +78,10 @@ describe("PlanningHeader", () => {
         status="draft"
         channels={[]}
         plannedPublishAt="2026-09-01 09:00"
-        primaryAction={<a href="/x">Edit</a>}
       />,
     );
-    expect(screen.getByRole("link", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
+    expect(screen.queryByTestId("planning-header-owner")).toBeNull();
   });
 
   it("links the breadcrumb back to the workspace's planning list", () => {

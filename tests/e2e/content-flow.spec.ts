@@ -367,13 +367,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         .first();
       await expect(approveCreativeBtn).toBeVisible({ timeout: 10_000 });
       await approveCreativeBtn.click();
-      // Wait for the refreshed server-rendered approval state before reading
-      // the resulting workflow stage. The action can take longer than the
-      // button's client transition, especially on a cold dev server.
+      // Completed approvals belong to Activity. The workflow rail only keeps
+      // the active gate visible, so the request row is removed after approval.
       const internalApproval = workflowSurface(reviewerPage).getByTestId(
         "approval-request-creative_internal",
       );
-      await expect(internalApproval).toContainText(/Approved/i, { timeout: 15_000 });
+      await expect(internalApproval).toHaveCount(0, { timeout: 15_000 });
       await reviewerPage.goto(`${detailUrl}?approval=${Date.now()}`, { waitUntil: "load" });
       await openWorkflowSurface(reviewerPage);
       const stageAfterInternalApproval = await workflowSurface(reviewerPage)

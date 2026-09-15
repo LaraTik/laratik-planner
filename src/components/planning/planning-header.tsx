@@ -1,6 +1,5 @@
-import * as React from "react";
 import Link from "next/link";
-import { Calendar, FileText, Hash, Users } from "lucide-react";
+import { Calendar, FileText, Users } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
@@ -13,15 +12,10 @@ import { humanFormat, humanStatus, statusBadgeVariant } from "@/lib/content/stat
  *
  *  1. What is this?  — title, format, channels
  *  2. When is it going?  — planned publish date
- *  3. Where is it?  — workflow status (rendered in the
- *     WorkflowProgress component, but mirrored here as a
- *     one-line badge)
- *  4. What do I do?  — primary action button
+ *  3. What is its current state? — one status badge
  *
- * The header is a Server Component; the primary action is
- * a slot the parent fills with whatever button matches the
- * current state (Submit for review, Approve, etc.). The
- * header itself doesn't know the state machine.
+ * Lifecycle, ownership, readiness, and actions belong to the
+ * workflow rail or their owning workspace destination.
  */
 
 export interface PlanningHeaderProps {
@@ -42,13 +36,6 @@ export interface PlanningHeaderProps {
   /** Locale-resolved channel summary. */
   channelsSummary?: string;
   plannedPublishAt: string;
-  owner?: { id: string; displayName: string } | null;
-  /** Optional block: render alongside the title on the right. */
-  primaryAction?: React.ReactNode;
-  /** Optional secondary actions (overrides the more menu). */
-  secondaryActions?: React.ReactNode;
-  /** Optional extra metadata row (e.g. last edited time, # of comments). */
-  meta?: React.ReactNode;
 }
 
 export function PlanningHeader({
@@ -65,10 +52,6 @@ export function PlanningHeader({
   channels,
   channelsSummary,
   plannedPublishAt,
-  owner,
-  primaryAction,
-  secondaryActions,
-  meta,
 }: PlanningHeaderProps) {
   return (
     <Card padding="md" data-testid="planning-header" data-content-item-id={contentItemId}>
@@ -111,22 +94,7 @@ export function PlanningHeader({
               <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
               {plannedPublishAt} <span className="text-fg-muted">· {workspaceTimezone}</span>
             </span>
-            {owner ? (
-              <span
-                className="inline-flex items-center gap-1.5"
-                data-testid="planning-header-owner"
-              >
-                <Hash className="h-3.5 w-3.5" aria-hidden="true" />
-                {owner.displayName}
-              </span>
-            ) : null}
           </div>
-          {meta ? <div className="mt-2">{meta}</div> : null}
-        </div>
-
-        <div className="flex items-center gap-2">
-          {primaryAction}
-          {secondaryActions}
         </div>
       </div>
     </Card>

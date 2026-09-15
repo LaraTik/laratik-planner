@@ -31,6 +31,7 @@ export async function listActivityEvents(actor: Actor, workspaceId: string, cont
       actorId: users.id,
       occurredAt: activityEvents.createdAt,
       metadata: activityEvents.metadata,
+      afterData: activityEvents.afterData,
     })
     .from(activityEvents)
     .leftJoin(users, eq(users.id, activityEvents.actorId))
@@ -44,5 +45,6 @@ export async function listActivityEvents(actor: Actor, workspaceId: string, cont
     actorName: r.actorName ?? r.actorId ?? "Unknown",
     occurredAt: r.occurredAt.toISOString(),
     metadata: r.metadata,
+    afterData: r.afterData,
   }));
 }

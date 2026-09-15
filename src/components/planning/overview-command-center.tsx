@@ -2,19 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Circle, Info, Pencil } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Circle, Info } from "lucide-react";
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { localizedPlatformLabel } from "@/components/workspace/platform-icon";
-import {
-  InlineBriefEditor,
-  InlineDateEditor,
-  InlineTitleEditor,
-} from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
+import type { PlanningAttentionItem } from "@/lib/planning/presentation";
 
 /**
  * OverviewCommandCenter — the at-a-glance summary that lives
@@ -25,19 +20,18 @@ import {
  * they open a record:
  *
  *   1. What's happening?     → Next Action card
- *   2. Is something wrong?    → Readiness summary
- *   3. What is this?         → Details (title, format, channels,
- *                              schedule, brief, owner)
- *   4. What just happened?    → Recent activity (last 5)
+ *   2. Is something wrong?    → Needs attention
+ *   3. How ready is it?       → Compact readiness summary
+ *   4. Where is the work?     → Workspace snapshots
+ *   5. What just happened?    → Recent activity (last 5)
  *
  * Every actionable row links to the section that resolves it
  * (Content / Publishing / Activity) so the user doesn't have
  * to hunt for the right tab.
  *
  * Server-renderable — the component is a Client Component
- * only because it embeds ActivityTimeline + the inline
- * editors (both of which are client components). The shape
- * of props is plain data.
+ * only because it embeds ActivityTimeline and the contextual
+ * overdue acknowledgement. The shape of props is plain data.
  */
 export interface OverviewSummaryChannel {
   id: string;
@@ -83,6 +77,8 @@ export interface OverviewCommandCenterProps {
   readinessCanPublish: boolean;
   /** Compact readiness summary, one line per workspace area. */
   readiness: OverviewReadinessLine[];
+  /** Unified attention model shared with the workflow rail. */
+  attention?: PlanningAttentionItem[];
   /** Total delivery versions, with the final-approved count. */
   deliveryCount: number;
   finalApprovedCount: number;
@@ -116,6 +112,12 @@ export interface OverviewCommandCenterProps {
   workflowStageLabel?: string;
   nextActionHeadline?: string;
   nextActionDescription?: string;
+  nextActionDestinationTab?: string;
+  nextActionExecutable?: boolean;
+  onAcknowledgeOverdue?: (input: {
+    workspaceSlug: string;
+    contentItemId: string;
+  }) => Promise<{ ok: boolean }>;
   /** When present, links to the delivery version in the Creative
    *  tab. Used to deep-link from "review changes" copy. */
   reviewChangesHref?: string;
@@ -125,20 +127,15 @@ export function OverviewCommandCenter({
   workspaceSlug,
   contentItemId,
   contentStatus,
-  title,
   brief,
-  format,
   plannedPublishAt,
-  plannedPublishAtIso,
-  workspaceTimezone,
   channels,
-  ownerName,
   readinessBlockers,
   readinessCanPublish,
   readiness,
+  attention = [],
   deliveryCount,
   finalApprovedCount,
-  references = [],
   recentActivity,
   totalActivityCount,
   canEdit,
@@ -149,6 +146,9 @@ export function OverviewCommandCenter({
   workflowStageLabel,
   nextActionHeadline,
   nextActionDescription,
+  nextActionDestinationTab,
+  nextActionExecutable,
+  onAcknowledgeOverdue,
   reviewChangesHref,
   t: tProp,
 }: OverviewCommandCenterProps) {
@@ -167,32 +167,32 @@ export function OverviewCommandCenter({
         {...(workflowStageLabel ? { workflowStageLabel } : {})}
         {...(nextActionHeadline ? { nextActionHeadline } : {})}
         {...(nextActionDescription ? { nextActionDescription } : {})}
+        {...(nextActionDestinationTab ? { nextActionDestinationTab } : {})}
+        {...(nextActionExecutable !== undefined ? { nextActionExecutable } : {})}
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
       />
+      <NeedsAttention
+        items={attention}
+        onNavigate={onReadinessNavigate}
+        workspaceSlug={workspaceSlug}
+        contentItemId={contentItemId}
+        plannedPublishAt={plannedPublishAt}
+        editHref={editHref}
+        canAcknowledgeOverdue={canEditOverview}
+        {...(onAcknowledgeOverdue ? { onAcknowledgeOverdue } : {})}
+        t={t}
+      />
       <ReadinessSummary
-        contentStatus={contentStatus}
         blockers={readinessBlockers}
         canPublish={readinessCanPublish}
         lines={readiness}
-        onNavigate={onReadinessNavigate}
         t={t}
       />
-      <DetailsSection
-        workspaceSlug={workspaceSlug}
-        contentItemId={contentItemId}
-        title={title}
+      <WorkspaceSnapshot
         brief={brief}
-        format={format}
-        channels={channels}
-        plannedPublishAt={plannedPublishAt}
-        plannedPublishAtIso={plannedPublishAtIso}
-        workspaceTimezone={workspaceTimezone}
-        ownerName={ownerName ?? null}
         deliveryCount={deliveryCount}
         finalApprovedCount={finalApprovedCount}
-        references={references}
-        canEdit={canEditOverview}
-        editHref={editHref}
+        channels={channels}
         t={t}
       />
       <RecentActivity
@@ -203,6 +203,206 @@ export function OverviewCommandCenter({
         t={t}
       />
     </div>
+  );
+}
+
+function WorkspaceSnapshot({
+  brief,
+  deliveryCount,
+  finalApprovedCount,
+  channels,
+  t,
+}: {
+  brief: string;
+  deliveryCount: number;
+  finalApprovedCount: number;
+  channels: OverviewSummaryChannel[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const cards = [
+    {
+      id: "brief",
+      label: t("contentDetail.tabs.content"),
+      fact: brief ? t("contentDetail.overview.snapshotReady") : t("contentDetail.overview.noBrief"),
+      href: "#content",
+    },
+    {
+      id: "copy",
+      label: t("contentDetail.tabs.copy"),
+      fact: t("contentDetail.overview.snapshotSharedCopy"),
+      href: "#copy",
+    },
+    {
+      id: "assets",
+      label: t("contentDetail.tabs.delivery"),
+      fact: t("contentDetail.overview.snapshotVersions", { count: deliveryCount }),
+      href: "#delivery",
+    },
+    {
+      id: "publish",
+      label: t("contentDetail.tabs.publishing"),
+      fact: t("contentDetail.overview.snapshotChannels", { count: channels.length }),
+      href: "#publishing",
+    },
+  ];
+  return (
+    <section aria-labelledby="overview-snapshot-heading" data-testid="overview-workspace-snapshot">
+      <h2
+        id="overview-snapshot-heading"
+        className="text-label text-fg-secondary mb-2 font-semibold uppercase"
+      >
+        {t("contentDetail.overview.workspaceSnapshot")}
+      </h2>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+        {cards.map((card) => (
+          <Link
+            key={card.id}
+            href={card.href}
+            className="border-border bg-surface hover:bg-surface-subtle focus-visible:ring-focus-ring min-h-20 rounded-[var(--radius-control)] border p-3 focus-visible:ring-2 focus-visible:outline-none"
+            data-testid={`overview-snapshot-${card.id}`}
+          >
+            <span className="text-body text-fg-primary block font-semibold">{card.label}</span>
+            <span className="text-label text-fg-muted mt-1 block">{card.fact}</span>
+            <span className="text-label text-primary mt-2 block font-semibold">
+              {t("contentDetail.overview.goTo")}
+            </span>
+          </Link>
+        ))}
+      </div>
+      {finalApprovedCount > 0 ? <span className="sr-only">{finalApprovedCount}</span> : null}
+    </section>
+  );
+}
+
+function NeedsAttention({
+  items,
+  onNavigate,
+  workspaceSlug,
+  contentItemId,
+  plannedPublishAt,
+  editHref,
+  canAcknowledgeOverdue,
+  onAcknowledgeOverdue,
+  t,
+}: {
+  items: PlanningAttentionItem[];
+  onNavigate: ((href: string) => void) | undefined;
+  workspaceSlug: string;
+  contentItemId: string;
+  plannedPublishAt: string;
+  editHref: string;
+  canAcknowledgeOverdue: boolean;
+  onAcknowledgeOverdue?: (input: {
+    workspaceSlug: string;
+    contentItemId: string;
+  }) => Promise<{ ok: boolean }>;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const [acknowledging, startAcknowledging] = React.useTransition();
+  const [acknowledged, setAcknowledged] = React.useState(false);
+  const openCount = items.reduce((total, item) => total + (item.count ?? 1), 0);
+  const visibleItems = acknowledged
+    ? items.filter((item) => item.code !== "schedule_overdue")
+    : items;
+  if (visibleItems.length === 0) return null;
+  return (
+    <section aria-labelledby="overview-attention-heading" data-testid="overview-needs-attention">
+      <header className="mb-2 flex items-baseline justify-between gap-2">
+        <h2
+          id="overview-attention-heading"
+          className="text-label text-fg-secondary font-semibold uppercase"
+        >
+          {t("contentDetail.overview.needsAttention")}
+        </h2>
+        <span className="text-label text-fg-muted">
+          {t("contentDetail.overview.attentionCount", { count: openCount })}
+        </span>
+      </header>
+      <ul className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border">
+        {visibleItems.map((item) => {
+          const destination = item.destinationTab ? `#${item.destinationTab}` : undefined;
+          const isOverdue = item.code === "schedule_overdue";
+          const message = item.messageKey ? t(item.messageKey) : item.message;
+          const content = (
+            <div className="flex min-w-0 flex-1 items-start gap-2">
+              {item.severity === "blocking" ? (
+                <AlertTriangle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              ) : item.severity === "attention" ? (
+                <Info className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              ) : (
+                <Circle className="text-fg-muted mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+              )}
+              <span className="text-body text-fg-primary min-w-0 break-words">
+                {item.count && item.count > 1 ? (
+                  <span className="text-fg-secondary me-1 font-semibold">
+                    {t("contentDetail.overview.issueCount", { count: item.count })}
+                  </span>
+                ) : null}
+                {message}
+                {isOverdue ? (
+                  <span className="text-label text-fg-muted mt-1 block">{plannedPublishAt}</span>
+                ) : null}
+              </span>
+            </div>
+          );
+          return (
+            <li key={`${item.path}:${item.code}`} data-testid={`overview-attention-${item.code}`}>
+              {isOverdue ? (
+                <div className="flex min-h-11 flex-wrap items-start gap-2 px-3 py-2">
+                  {content}
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Link
+                      href={editHref}
+                      className="text-label text-primary inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      {t("contentDetail.overview.reschedule")}
+                    </Link>
+                    {canAcknowledgeOverdue && onAcknowledgeOverdue ? (
+                      <button
+                        type="button"
+                        disabled={acknowledging}
+                        className="text-label text-fg-secondary inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-2 hover:underline focus-visible:ring-2 focus-visible:outline-none disabled:opacity-50"
+                        onClick={() =>
+                          startAcknowledging(async () => {
+                            const result = await onAcknowledgeOverdue({
+                              workspaceSlug,
+                              contentItemId,
+                            });
+                            if (result.ok) {
+                              setAcknowledged(true);
+                              window.location.reload();
+                            }
+                          })
+                        }
+                      >
+                        {t("contentDetail.overview.keepPastDate")}
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
+              ) : destination ? (
+                <button
+                  type="button"
+                  className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-11 w-full items-start gap-2 px-3 py-2 text-start focus-visible:ring-2 focus-visible:outline-none"
+                  data-testid={`overview-attention-link-${item.code}`}
+                  onClick={() =>
+                    onNavigate ? onNavigate(destination) : (window.location.hash = destination)
+                  }
+                >
+                  {content}
+                  <DirAwareArrowRight
+                    className="text-fg-muted mt-0.5 h-3.5 w-3.5 shrink-0"
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : (
+                <div className="flex min-h-11 items-start gap-2 px-3 py-2">{content}</div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 
@@ -218,6 +418,8 @@ function NextActionCard({
   workflowStageLabel,
   nextActionHeadline,
   nextActionDescription,
+  nextActionDestinationTab,
+  nextActionExecutable,
   reviewChangesHref,
   t,
 }: {
@@ -230,6 +432,8 @@ function NextActionCard({
   workflowStageLabel?: string;
   nextActionHeadline?: string;
   nextActionDescription?: string;
+  nextActionDestinationTab?: string;
+  nextActionExecutable?: boolean;
   reviewChangesHref?: string;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -276,6 +480,18 @@ function NextActionCard({
             <span className="font-semibold">{t("contentDetail.overview.nextActionLabel")}</span>{" "}
             {primaryActionLabel}
           </p>
+        ) : null}
+        {nextActionDestinationTab ? (
+          <Link
+            href={`#${nextActionDestinationTab}`}
+            className="text-label text-primary focus-visible:ring-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+            data-testid="overview-next-action-destination"
+          >
+            {nextActionExecutable
+              ? t("contentDetail.workflow.goToAction")
+              : t("contentDetail.workflow.viewAction")}
+            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+          </Link>
         ) : null}
         {contentStatus === "changes_requested" && reviewChangesHref ? (
           <Link
@@ -391,21 +607,17 @@ function safeExplain(status: string) {
  * ────────────────────────────────────────────────────────────────────── */
 
 function ReadinessSummary({
-  contentStatus,
   blockers,
   canPublish,
   lines,
-  onNavigate,
   t,
 }: {
-  contentStatus: string;
   blockers: number;
   canPublish: boolean;
   lines: OverviewReadinessLine[];
-  onNavigate: ((href: string) => void) | undefined;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const publishingChecksActive = publishingChecksAreActive(contentStatus);
+  const readyAreas = lines.filter((line) => line.status === "ready").length;
   return (
     <section
       aria-labelledby="overview-readiness-heading"
@@ -420,364 +632,37 @@ function ReadinessSummary({
         >
           {t("contentDetail.overview.readiness")}
         </h2>
-        {blockers > 0 && publishingChecksActive ? (
-          <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
-            <AlertTriangle className="text-danger h-3.5 w-3.5" aria-hidden="true" />
-            <span data-testid="overview-readiness-blocker-count">
-              {t(
-                blockers === 1
-                  ? "contentDetail.overview.blockerPreventsPublishing"
-                  : "contentDetail.overview.blockersPreventPublishing",
-                { count: blockers },
-              )}
-            </span>
-          </p>
+      </header>
+      <div
+        className="border-border bg-surface text-body flex min-h-14 items-center gap-2 rounded-[var(--radius-control)] border px-3 py-3"
+        data-testid="overview-readiness-summary"
+      >
+        {canPublish ? (
+          <CheckCircle2 className="text-success h-4 w-4 shrink-0" aria-hidden="true" />
         ) : blockers > 0 ? (
-          <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
-            <Info className="text-warning h-3.5 w-3.5" aria-hidden="true" />
-            <span data-testid="overview-readiness-future-checks">
-              {t(
-                blockers === 1
-                  ? "contentDetail.overview.futurePublishingCheckOne"
-                  : "contentDetail.overview.futurePublishingChecksMany",
-                { count: blockers },
-              )}
-            </span>
-          </p>
-        ) : canPublish ? (
-          <p className="text-label text-fg-muted inline-flex items-center gap-1.5">
-            <CheckCircle2 className="text-success h-3.5 w-3.5" aria-hidden="true" />
-            {t("contentDetail.overview.readyToPublish")}
-          </p>
+          <AlertTriangle className="text-warning h-4 w-4 shrink-0" aria-hidden="true" />
+        ) : (
+          <Info className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+        )}
+        <span className="text-fg-primary font-semibold">
+          {t("contentDetail.overview.readinessSummary", {
+            ready: readyAreas,
+            total: lines.length,
+          })}
+        </span>
+        {blockers > 0 ? (
+          <span className="text-label text-fg-muted ms-auto">
+            {t(
+              blockers === 1
+                ? "contentDetail.overview.blockerPreventsPublishing"
+                : "contentDetail.overview.blockersPreventPublishing",
+              { count: blockers },
+            )}
+          </span>
         ) : null}
-      </header>
-      {!publishingChecksActive && blockers > 0 ? (
-        <p className="text-label text-fg-muted mb-2" data-testid="overview-readiness-stage-hint">
-          {t("contentDetail.overview.futureReadinessHint")}
-        </p>
-      ) : null}
-      <ul
-        className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border"
-        data-testid="overview-readiness-list"
-      >
-        {lines.map((line) => (
-          <ReadinessRow key={line.id} line={line} onNavigate={onNavigate} />
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function ReadinessRow({
-  line,
-  onNavigate,
-}: {
-  line: OverviewReadinessLine;
-  onNavigate: ((href: string) => void) | undefined;
-}) {
-  const content = (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
-      <StatusIcon status={line.status} />
-      <div className="min-w-0 flex-1">
-        <p className="text-body text-fg-primary font-semibold">{line.label}</p>
-        {line.detail ? <p className="text-label text-fg-muted break-words">{line.detail}</p> : null}
       </div>
-    </div>
-  );
-  const className =
-    "flex min-h-11 items-center gap-2 px-3 py-2 hover:bg-surface-subtle focus-visible:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none";
-  if (line.href) {
-    // Phase 1 of the planning-workspace-v2 refactor (2026-08-30):
-    // when the parent supplies an `onNavigate` callback we
-    // render a real <button> that triggers it. The button
-    // still updates the URL hash via the same code path the
-    // <Link> used to, but the parent's callback also
-    // switches tabs and scrolls the target anchor into view
-    // (Next.js's <Link> with a same-page hash doesn't always
-    // scroll when the destination section just mounted).
-    if (onNavigate) {
-      return (
-        <li data-testid={`overview-readiness-row-${line.id}`} data-status={line.status}>
-          <button
-            type="button"
-            className={className + " w-full text-start"}
-            data-testid={`overview-readiness-link-${line.id}`}
-            onClick={() => onNavigate(line.href!)}
-          >
-            {content}
-            <DirAwareArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          </button>
-        </li>
-      );
-    }
-    return (
-      <li data-testid={`overview-readiness-row-${line.id}`} data-status={line.status}>
-        <Link
-          href={line.href}
-          className={className}
-          data-testid={`overview-readiness-link-${line.id}`}
-        >
-          {content}
-          <DirAwareArrowRight className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-        </Link>
-      </li>
-    );
-  }
-  return (
-    <li
-      data-testid={`overview-readiness-row-${line.id}`}
-      data-status={line.status}
-      className="min-h-11 px-3 py-2"
-    >
-      {content}
-    </li>
-  );
-}
-
-function StatusIcon({ status }: { status: OverviewReadinessLine["status"] }) {
-  if (status === "ready") {
-    return <CheckCircle2 className="text-success h-4 w-4 shrink-0" aria-hidden="true" />;
-  }
-  if (status === "warning") {
-    return <Info className="text-warning h-4 w-4 shrink-0" aria-hidden="true" />;
-  }
-  if (status === "danger") {
-    return <AlertTriangle className="text-danger h-4 w-4 shrink-0" aria-hidden="true" />;
-  }
-  return <Circle className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />;
-}
-
-/* ────────────────────────────────────────────────────────────────────── *
- * Details
- *
- * Phase 6 of the planning-detail refactor (2026-08-30) merged
- * the old "At a glance" card and the Content tab's "Basic
- * information" block into a single `DetailsSection` that lives
- * in the Overview. Editable fields render the existing
- * `Inline*Editor` components so routine edits (title, date,
- * brief) stay in the user's current context.
- *
- * The "Edit details" deep-link at the bottom opens the
- * `/edit/[id]` route, which the header's `EditDetailsDrawer`
- * also surfaces as a button. Both paths lead to the same form;
- * the deep-link is the fallback for users without JS / in a
- * preview environment.
- * ────────────────────────────────────────────────────────────────────── */
-
-function DetailsSection({
-  workspaceSlug,
-  contentItemId,
-  title,
-  brief,
-  format,
-  channels,
-  plannedPublishAt,
-  plannedPublishAtIso,
-  workspaceTimezone,
-  ownerName,
-  deliveryCount,
-  finalApprovedCount,
-  references,
-  canEdit,
-  editHref,
-  t,
-}: {
-  workspaceSlug: string;
-  contentItemId: string;
-  title: string;
-  brief: string;
-  format: string;
-  channels: OverviewSummaryChannel[];
-  plannedPublishAt: string;
-  plannedPublishAtIso: string;
-  workspaceTimezone: string;
-  ownerName: string | null;
-  deliveryCount: number;
-  finalApprovedCount: number;
-  references: string[];
-  canEdit: boolean;
-  editHref: string;
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  return (
-    <section aria-labelledby="overview-details-heading" data-testid="overview-content-summary">
-      <header className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-        <h2
-          id="overview-details-heading"
-          className="text-label text-fg-secondary font-semibold uppercase"
-        >
-          {t("contentDetail.overview.details")}
-        </h2>
-        <Link
-          href={editHref}
-          className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] px-2 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-          data-testid="overview-edit-details"
-          data-content-item-id={contentItemId}
-        >
-          <Pencil className="h-3 w-3" aria-hidden="true" />
-          {t("contentDetail.overview.editDetails")}
-        </Link>
-      </header>
-      <dl
-        className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border sm:grid sm:grid-cols-2 sm:divide-x sm:divide-y-0"
-        data-testid="overview-content-summary-list"
-      >
-        <SummaryRow
-          label={t("contentDetail.overview.title")}
-          value={
-            canEdit ? (
-              <InlineTitleEditor
-                workspaceSlug={workspaceSlug}
-                contentItemId={contentItemId}
-                value={title}
-              />
-            ) : (
-              <span className="text-body text-fg-primary font-semibold break-words" dir="auto">
-                {title}
-              </span>
-            )
-          }
-        />
-        <SummaryRow
-          label={t("contentDetail.overview.format")}
-          value={t(`planningFilters.formatLabels.${format}`)}
-        />
-        <SummaryRow
-          label={t("contentDetail.overview.channels")}
-          value={channelSummary(channels, t)}
-        />
-        <SummaryRow
-          label={t("contentDetail.overview.plannedPublish")}
-          value={
-            canEdit ? (
-              <InlineDateEditor
-                workspaceSlug={workspaceSlug}
-                contentItemId={contentItemId}
-                value={plannedPublishAtIso}
-                timezone={workspaceTimezone}
-              />
-            ) : (
-              <>
-                {plannedPublishAt}{" "}
-                <span className="text-label text-fg-muted">· {workspaceTimezone}</span>
-              </>
-            )
-          }
-        />
-        {ownerName ? (
-          <SummaryRow label={t("contentDetail.overview.owner")} value={ownerName} />
-        ) : null}
-        <SummaryRow
-          label={t("contentDetail.overview.versions")}
-          value={versionsSummary(deliveryCount, finalApprovedCount, t)}
-        />
-        <SummaryRow
-          label={t("contentDetail.overview.references")}
-          value={
-            references.length > 0 ? (
-              <ul className="space-y-1" data-testid="overview-references">
-                {references.slice(0, 3).map((reference) => (
-                  <li key={reference} className="min-w-0">
-                    <a
-                      href={reference}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-primary focus-visible:ring-focus-ring inline-flex min-h-11 max-w-full items-center rounded-[var(--radius-control)] underline underline-offset-2 focus:outline-none focus-visible:ring-2"
-                      dir="ltr"
-                    >
-                      <span className="truncate">{reference}</span>
-                    </a>
-                  </li>
-                ))}
-                {references.length > 3 ? (
-                  <li className="text-label text-fg-muted">
-                    {t("contentDetail.overview.moreReferences", { count: references.length - 3 })}
-                  </li>
-                ) : null}
-              </ul>
-            ) : (
-              <span className="text-body text-fg-muted">
-                {t("contentDetail.overview.noReferences")}
-              </span>
-            )
-          }
-        />
-        <SummaryRow
-          label={t("contentDetail.overview.brief")}
-          value={
-            canEdit ? (
-              <InlineBriefEditor
-                workspaceSlug={workspaceSlug}
-                contentItemId={contentItemId}
-                value={brief}
-              />
-            ) : brief ? (
-              <span className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
-                {brief}
-              </span>
-            ) : (
-              <span className="text-body text-fg-muted">{t("contentDetail.overview.noBrief")}</span>
-            )
-          }
-        />
-      </dl>
     </section>
   );
-}
-
-function SummaryRow({
-  label,
-  value,
-  children,
-}: {
-  label: string;
-  value?: React.ReactNode;
-  children?: React.ReactNode;
-}) {
-  // Per the HTML5 spec, a <dl> can contain a <div> wrapper but the
-  // wrapper must contain exactly one <dt> followed by one <dd>. No
-  // siblings, no presentational content. The icon was dropped from
-  // each row (it was decorative anyway) to satisfy axe-core's
-  // `definition-list` rule.
-  return (
-    <div className="min-h-11 px-3 py-2.5">
-      <dt className="text-label text-fg-muted font-semibold uppercase">{label}</dt>
-      <dd className="text-body text-fg-primary mt-0.5 break-words">{children ?? value}</dd>
-    </div>
-  );
-}
-
-function channelSummary(
-  channels: OverviewSummaryChannel[],
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  if (channels.length === 0) return t("contentDetail.overview.noChannels");
-  if (channels.length === 1) {
-    const channel = channels[0]!;
-    return `${localizedPlatformLabel(channel.platform, t)} · ${channel.accountName}`;
-  }
-  const configured = channels.filter((c) => c.configured).length;
-  return t("contentDetail.overview.channelsConfigured", {
-    count: channels.length,
-    configured,
-  });
-}
-
-function versionsSummary(
-  total: number,
-  finalApproved: number,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  if (total === 0) return t("contentDetail.overview.noVersions");
-  if (finalApproved === 0) {
-    return t(
-      total === 1
-        ? "contentDetail.overview.versionNoneApproved"
-        : "contentDetail.overview.versionsNoneApproved",
-      { count: total },
-    );
-  }
-  return t("contentDetail.overview.approvedOf", { approved: finalApproved, total });
 }
 
 /* ────────────────────────────────────────────────────────────────────── *

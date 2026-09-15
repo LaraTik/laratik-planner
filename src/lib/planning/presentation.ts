@@ -21,6 +21,7 @@ export type PlanningTabId =
   "overview" | "content" | "copy" | "delivery" | "publishing" | "preview" | "activity";
 
 export type PlanningNextActionType =
+  | "resolve_blocker"
   | "submit_content_review"
   | "approve_content"
   | "resubmit_content"
@@ -28,6 +29,7 @@ export type PlanningNextActionType =
   | "submit_delivery"
   | "approve_internal_creative"
   | "approve_client_creative"
+  | "mark_publishing_setup_ready"
   | "record_published"
   | "unblock"
   | "cancelled"
@@ -52,25 +54,57 @@ export interface PlanningReadiness {
   required: number;
 }
 
+export type PlanningAttentionSeverity = "blocking" | "attention" | "recommendation";
+
+export interface PlanningAttentionItem {
+  path: string;
+  code: string;
+  message: string;
+  messageKey?: string;
+  /** Number of equivalent channel/package issues represented by this row. */
+  count?: number;
+  severity: PlanningAttentionSeverity;
+  destinationTab?: PlanningTabId;
+  destinationAnchor?: string;
+}
+
+export type PlanningActionOwner =
+  | { kind: "current_user" }
+  | { kind: "person"; displayName: string }
+  | { kind: "role"; role: WorkspaceRole }
+  | { kind: "system" }
+  | { kind: "none" };
+
+export interface PlanningNextAction {
+  type: PlanningNextActionType;
+  headlineKey: string;
+  descriptionKey?: string;
+  responsibleRole?: WorkspaceRole;
+  destinationTab?: PlanningTabId;
+  destinationAnchor?: string;
+  ctaKey?: string;
+  blockedReason?: string;
+  canCurrentUserAct: boolean;
+  executable: boolean;
+  owner: PlanningActionOwner;
+}
+
 export interface PlanningPresentation {
   workflow: {
     internalStatus: ContentStatus;
     stage: PlanningWorkflowStage | null;
+    /** User-facing substatus for the current milestone. */
+    substatusKey: string;
+    /** A milestone can be complete while the persisted status remains its
+     * existing pre-publication value (for example ready_to_publish). */
+    stageComplete: boolean;
     condition: PlanningCondition;
     labelKey: string;
     descriptionKey: string;
   };
-  nextAction: {
-    type: PlanningNextActionType;
-    headlineKey: string;
-    descriptionKey?: string;
-    responsibleRole?: WorkspaceRole;
-    destinationTab?: PlanningTabId;
-    destinationAnchor?: string;
-    ctaKey?: string;
-    blockedReason?: string;
-  };
+  nextAction: PlanningNextAction;
   readiness: PlanningReadiness;
+  attention: PlanningAttentionItem[];
   approval: {
     creative?: ApprovalPresentation;
     copy?: ApprovalPresentation;
@@ -96,6 +130,9 @@ export interface BuildPlanningPresentationInput {
   cancellationReason?: string | null;
   readiness: PlanningReadinessInput;
   approvals?: readonly PlanningPresentationApprovalInput[];
+  publishingSetupReady?: boolean;
+  assignedOwner?: { displayName: string; role?: WorkspaceRole } | null;
+  plannedPublishAt?: Date;
   now?: Date;
 }
 
@@ -164,7 +201,7 @@ const ACTION_BY_STATUS: Record<ContentStatus, PlanningNextActionType> = {
   approved_for_design: "assign_designer",
   in_design: "submit_delivery",
   creative_review: "approve_internal_creative",
-  ready_to_publish: "record_published",
+  ready_to_publish: "mark_publishing_setup_ready",
   partially_published: "record_published",
   published: "none",
   blocked: "unblock",
@@ -172,11 +209,33 @@ const ACTION_BY_STATUS: Record<ContentStatus, PlanningNextActionType> = {
 };
 
 const CTA_KEY_BY_ACTION: Partial<Record<PlanningNextActionType, string>> = {
+  resolve_blocker: "contentDetail.workflow.resolveBlocker",
   submit_content_review: "contentDetail.workflow.submitForReview",
   approve_content: "contentDetail.workflow.approveContent",
   resubmit_content: "contentDetail.workflow.resubmitForReview",
   assign_designer: "contentDetail.workflow.assignDesigner",
+  mark_publishing_setup_ready: "contentDetail.publish.markPublishingSetupReady",
   unblock: "contentDetail.workflow.unblock",
+};
+
+const HEADLINE_KEY_BY_ACTION: Record<PlanningNextActionType, string> = {
+  resolve_blocker: "contentDetail.workflow.resolveBlocker",
+  submit_content_review: "contentDetail.workflow.submitForReview",
+  approve_content: "contentDetail.workflow.approveContent",
+  resubmit_content: "contentDetail.workflow.resubmitForReview",
+  assign_designer: "contentDetail.workflow.assignDesigner",
+  submit_delivery: "contentDetail.deliveries.submitDelivery",
+  approve_internal_creative: "contentDetail.workflow.approve",
+  approve_client_creative: "contentDetail.workflow.approve",
+  mark_publishing_setup_ready: "contentDetail.publish.markPublishingSetupReady",
+  record_published: "contentDetail.publish.recordOutcome",
+  unblock: "contentDetail.workflow.unblock",
+  cancelled: "contentDetail.workflow.cancel",
+  none: "contentDetail.workflow.close",
+};
+
+const ACTION_ROLES: Partial<Record<PlanningNextActionType, readonly WorkspaceRole[]>> = {
+  mark_publishing_setup_ready: ["workspace_manager", "content_planner", "publisher"],
 };
 
 function destinationForStatus(status: ContentStatus): {
@@ -193,8 +252,9 @@ function destinationForStatus(status: ContentStatus): {
     case "published":
       return { tab: "publishing", anchor: "publishing" };
     case "approved_for_design":
-    case "in_design":
       return { tab: "overview", anchor: "workflow" };
+    case "in_design":
+      return { tab: "delivery", anchor: "delivery" };
     case "content_review":
     case "creative_review":
     case "blocked":
@@ -226,7 +286,13 @@ function issueStageForPath(path: string): PlanningWorkflowStage {
     // actionable for a draft even though the next gate is content review.
     return "planning";
   }
-  if (lower.startsWith("delivery") || lower.startsWith("approval")) {
+  if (lower.startsWith("delivery")) {
+    // A delivery version is the prerequisite for entering the creative
+    // approval gate. While an item is being designed, missing delivery
+    // work belongs to the current milestone rather than a future one.
+    return "creative_production";
+  }
+  if (lower.startsWith("approval")) {
     return "creative_approval";
   }
   if (
@@ -268,6 +334,90 @@ function presentReadiness(status: ContentStatus, input: PlanningReadinessInput):
   };
 }
 
+function destinationForIssue(
+  path: string,
+): { destinationTab: PlanningTabId; destinationAnchor: string } | null {
+  const lower = path.toLowerCase();
+  if (lower.startsWith("delivery") || lower.startsWith("approval")) {
+    return { destinationTab: "delivery", destinationAnchor: "delivery" };
+  }
+  if (
+    lower.startsWith("channels") ||
+    lower.startsWith("publish") ||
+    lower.startsWith("disclosure") ||
+    lower.startsWith("schedule")
+  ) {
+    return { destinationTab: "publishing", destinationAnchor: "publishing" };
+  }
+  if (
+    lower.startsWith("content") ||
+    lower.startsWith("brief") ||
+    lower.startsWith("format") ||
+    lower.startsWith("objective") ||
+    lower.startsWith("audience")
+  ) {
+    return { destinationTab: "content", destinationAnchor: "brief" };
+  }
+  return null;
+}
+
+function presentAttention(
+  status: ContentStatus,
+  input: PlanningReadinessInput,
+  plannedPublishAt?: Date,
+  now = new Date(),
+): PlanningAttentionItem[] {
+  const readiness = presentReadiness(status, input);
+  const mapIssue = (
+    issue: ReadinessIssue,
+    severity: PlanningAttentionSeverity,
+  ): PlanningAttentionItem => {
+    const destination = destinationForIssue(issue.path);
+    return {
+      path: issue.path,
+      code: issue.code,
+      message: issue.message,
+      severity,
+      ...(destination ?? {}),
+    };
+  };
+  const rawAttention = [
+    ...readiness.currentBlockers.map((issue) => mapIssue(issue, "blocking")),
+    ...readiness.warnings.map((issue) => mapIssue(issue, "attention")),
+    ...readiness.futureRequirements.map((issue) => mapIssue(issue, "recommendation")),
+  ];
+  const shipped =
+    status === "published" || status === "partially_published" || status === "cancelled";
+  if (plannedPublishAt && plannedPublishAt.getTime() < now.getTime() && !shipped) {
+    rawAttention.push({
+      path: "schedule.plannedPublishAt",
+      code: "schedule_overdue",
+      message: "Planned date has passed.",
+      messageKey: "contentDetail.overview.plannedDatePassed",
+      severity: "attention",
+      destinationTab: "publishing",
+      destinationAnchor: "publishing",
+    });
+  }
+  // Readiness is evaluated per selected channel. Collapse equivalent rows so
+  // Overview remains an operational summary instead of repeating the same
+  // package problem once for every channel. The destination still points to
+  // the owning workspace, while the count explains the scope of the issue.
+  const grouped = new Map<string, PlanningAttentionItem>();
+  for (const item of rawAttention) {
+    const key = [item.code, item.message, item.severity, item.destinationTab, item.messageKey].join(
+      "|",
+    );
+    const existing = grouped.get(key);
+    if (existing) {
+      existing.count = (existing.count ?? 1) + 1;
+    } else {
+      grouped.set(key, { ...item });
+    }
+  }
+  return [...grouped.values()];
+}
+
 function approvalPresentation(input: PlanningPresentationApprovalInput): ApprovalPresentation {
   return {
     gate: input.gate,
@@ -294,31 +444,57 @@ function presentApprovals(approvals: readonly PlanningPresentationApprovalInput[
   return presentation;
 }
 
-function responsibleRoleFor(status: ContentStatus, actorRoles: readonly WorkspaceRole[]) {
-  const responsibleRoles = responsibleRolesForStatus(status);
-  return actorRoles.find((role) => responsibleRoles.includes(role)) ?? responsibleRoles[0];
-}
-
 export function buildPlanningPresentation(
   input: BuildPlanningPresentationInput,
 ): PlanningPresentation {
   const { status } = input;
   const stage = planningStageForStatus(status);
   const condition = conditionForStatus(status);
+  const readinessView = presentReadiness(status, input.readiness);
+  const attention = presentAttention(status, input.readiness, input.plannedPublishAt, input.now);
+  const blocker = readinessView.currentBlockers[0];
+  const actionType =
+    status === "ready_to_publish" && input.publishingSetupReady
+      ? "record_published"
+      : ACTION_BY_STATUS[status];
   const destination = destinationForStatus(status);
-  const actionType = ACTION_BY_STATUS[status];
   const actorRoles = input.actorRoles ?? [];
-  const responsibleRole = responsibleRoleFor(status, actorRoles);
-  const nextAction: PlanningPresentation["nextAction"] = {
-    type: actionType,
-    headlineKey: `planning.nextAction.${status}`,
-    descriptionKey: `contentDetail.workflow.explanations.${status}.next`,
-    ...(responsibleRole ? { responsibleRole } : {}),
-    ...(destination
-      ? { destinationTab: destination.tab, destinationAnchor: destination.anchor }
-      : {}),
-    ...(CTA_KEY_BY_ACTION[actionType] ? { ctaKey: CTA_KEY_BY_ACTION[actionType] } : {}),
-  };
+  const actionRoles = ACTION_ROLES[actionType] ?? responsibleRolesForStatus(status);
+  const responsibleRole = actorRoles.find((role) => actionRoles.includes(role)) ?? actionRoles[0];
+  const canCurrentUserAct = actionRoles.some((role) => actorRoles.includes(role));
+  const owner: PlanningActionOwner = canCurrentUserAct
+    ? { kind: "current_user" }
+    : input.assignedOwner
+      ? { kind: "person", displayName: input.assignedOwner.displayName }
+      : responsibleRole
+        ? { kind: "role", role: responsibleRole }
+        : { kind: "none" };
+  const nextAction: PlanningNextAction =
+    blocker && condition === "normal"
+      ? {
+          type: "resolve_blocker",
+          headlineKey: "contentDetail.workflow.resolveBlocker",
+          descriptionKey: "contentDetail.workflow.resolveBlockerDescription",
+          ...(responsibleRole ? { responsibleRole } : {}),
+          ...(destinationForIssue(blocker.path) ?? {}),
+          blockedReason: blocker.message,
+          canCurrentUserAct,
+          executable: canCurrentUserAct,
+          owner,
+        }
+      : {
+          type: actionType,
+          headlineKey: HEADLINE_KEY_BY_ACTION[actionType],
+          descriptionKey: `contentDetail.workflow.explanations.${status}.next`,
+          ...(responsibleRole ? { responsibleRole } : {}),
+          ...(destination
+            ? { destinationTab: destination.tab, destinationAnchor: destination.anchor }
+            : {}),
+          ...(CTA_KEY_BY_ACTION[actionType] ? { ctaKey: CTA_KEY_BY_ACTION[actionType] } : {}),
+          canCurrentUserAct,
+          executable: canCurrentUserAct && condition === "normal",
+          owner,
+        };
   if (condition === "blocked" && input.blockedReason) {
     nextAction.blockedReason = input.blockedReason;
   }
@@ -327,13 +503,16 @@ export function buildPlanningPresentation(
     workflow: {
       internalStatus: status,
       stage,
+      substatusKey: `contentDetail.workflow.statusLabels.${status}`,
+      stageComplete: status === "ready_to_publish" && input.publishingSetupReady === true,
       condition,
       labelKey:
         stage === null ? `contentDetail.workflow.statusLabels.${status}` : STAGE_LABEL_KEY[stage],
       descriptionKey: `contentDetail.workflow.explanations.${status}.description`,
     },
     nextAction,
-    readiness: presentReadiness(status, input.readiness),
+    readiness: readinessView,
+    attention,
     approval: presentApprovals(input.approvals ?? []),
   };
 }

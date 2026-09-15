@@ -12,7 +12,7 @@ import { CaptionField } from "@/components/forms/caption-field";
 import { HashtagEditor } from "@/components/forms/hashtag-editor";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import {
-  confirmPublishReadinessAction,
+  markPublishingSetupReadyAction,
   recordInternalNoteAction,
   savePublishPackageAction,
   setFinalCopyApprovalAction,
@@ -214,6 +214,7 @@ export function PublishPackageForm({
   canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
+  publishingSetupReady = false,
   metaPublishingReadiness,
   metaPublishingCopy,
   t: tProp,
@@ -243,6 +244,8 @@ export function PublishPackageForm({
   canEdit: boolean;
   canApproveFinalCopy: boolean;
   canConfirmReadiness: boolean;
+  /** Package-level lifecycle gate, independent from platform capability. */
+  publishingSetupReady?: boolean;
   metaPublishingReadiness?: MetaPublishingReadiness;
   metaPublishingCopy?: MetaPublishingReadinessCopy;
   /**
@@ -503,7 +506,7 @@ export function PublishPackageForm({
     start(async () => {
       setError(null);
       setStatusMessage(null);
-      const result = await confirmPublishReadinessAction({ workspaceSlug, contentItemId });
+      const result = await markPublishingSetupReadyAction({ workspaceSlug, contentItemId });
       if (!result.ok) {
         setError(translatePublishError(t, result, "readinessFailed"));
         return;
@@ -616,6 +619,15 @@ export function PublishPackageForm({
           className="border-success bg-success-container text-on-success-container rounded-[var(--radius-control)] border px-3 py-2 text-sm"
         >
           {statusMessage}
+        </div>
+      ) : null}
+      {publishingSetupReady ? (
+        <div
+          className="border-success/30 bg-success-subtle text-success rounded-[var(--radius-control)] border px-3 py-2 text-sm"
+          role="status"
+          data-testid="publish-setup-ready"
+        >
+          {t("contentDetail.publish.markPublishingSetupReady")}
         </div>
       ) : null}
 
@@ -1001,12 +1013,18 @@ export function PublishPackageForm({
           <Button
             type="button"
             onClick={handleConfirmReadiness}
-            disabled={pending || dirty || !readiness.canPublish || !canConfirmReadiness}
+            disabled={
+              pending ||
+              dirty ||
+              publishingSetupReady ||
+              !readiness.canPublish ||
+              !canConfirmReadiness
+            }
             className="min-h-11"
             data-testid="publish-ready"
           >
             <Send className="me-1 h-4 w-4" aria-hidden="true" />
-            {t("contentDetail.publish.readyForPublishing")}
+            {t("contentDetail.publish.markPublishingSetupReady")}
           </Button>
         </div>
       </div>

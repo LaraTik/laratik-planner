@@ -52,9 +52,8 @@ export type WorkspaceTabId =
 export type WorkspaceTabHash = WorkspaceTabId | "messages";
 
 /**
- * The task workspace has five primary destinations. Preview and Activity
- * remain available without competing with the production flow; callers place
- * them in the secondary menu using these stable ids.
+ * The task workspace has six primary destinations. Preview remains available
+ * as a direct secondary action without competing with the production flow.
  *
  * Keep the internal ids unchanged: deep links and saved browser history use
  * `content`, `copy`, `delivery`, and `publishing` even though the visible
@@ -66,17 +65,15 @@ export const PRIMARY_WORKSPACE_TAB_IDS = [
   "copy",
   "delivery",
   "publishing",
-] as const satisfies readonly WorkspaceTabId[];
-
-export const SECONDARY_WORKSPACE_TAB_IDS = [
-  "preview",
   "activity",
 ] as const satisfies readonly WorkspaceTabId[];
+
+export const SECONDARY_WORKSPACE_TAB_IDS = ["preview"] as const satisfies readonly WorkspaceTabId[];
 
 /** `#messages` was public in shared links; keep it as a read-compatible alias. */
 export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
   // These aliases are kept for old bookmarks, readiness links, and
-  // shared review URLs. The visible workspace still uses the five
+  // shared review URLs. The visible workspace still uses the six
   // task-oriented tabs; aliases only resolve to their owning task.
   if (value === "messages") return "copy";
   if (value === "assets-versions") return "delivery";
@@ -114,10 +111,8 @@ export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
 export interface WorkspaceTabsProps {
   /** Tab order. Tabs are rendered in the order they are passed. */
   tabs: WorkspaceTab[];
-  /** Optional utility tabs kept behind a secondary menu on desktop. */
+  /** Optional direct secondary actions, such as Preview. */
   secondaryTabs?: WorkspaceTab[];
-  /** Localized label for the secondary tab menu. */
-  secondaryLabel?: string;
   ariaLabel: string;
   /** Controlled active id. Required — the parent owns the state. */
   value: WorkspaceTabId;
@@ -129,15 +124,11 @@ export interface WorkspaceTabsProps {
 export function WorkspaceTabs({
   tabs,
   secondaryTabs,
-  secondaryLabel = "More sections",
   ariaLabel,
   value,
   onValueChange,
   className,
 }: WorkspaceTabsProps) {
-  const [moreOpen, setMoreOpen] = React.useState(false);
-  const allTabs = secondaryTabs ? [...tabs, ...secondaryTabs] : tabs;
-
   return (
     <nav
       aria-label={ariaLabel}
@@ -158,7 +149,7 @@ export function WorkspaceTabs({
         className="border-border bg-surface text-fg-primary text-body focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 md:hidden"
         data-testid="workspace-tab-select"
       >
-        {allTabs.map((tab) => (
+        {tabs.map((tab) => (
           <option key={tab.id} value={tab.id}>
             {tab.label}
             {typeof tab.count === "number" ? ` (${tab.count})` : ""}
@@ -183,10 +174,7 @@ export function WorkspaceTabs({
                   aria-current={isActive ? "true" : undefined}
                   data-testid={`workspace-tab-${tab.id}`}
                   data-active={isActive || undefined}
-                  onClick={() => {
-                    onValueChange(tab.id);
-                    setMoreOpen(false);
-                  }}
+                  onClick={() => onValueChange(tab.id)}
                   className={cn(
                     "text-body inline-flex min-h-11 items-center gap-2 border-b-2 px-3 py-2 font-semibold transition-colors",
                     "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
@@ -214,66 +202,35 @@ export function WorkspaceTabs({
             );
           })}
         </ul>
-        {secondaryTabs?.length ? (
-          <div className="relative hidden shrink-0 md:block">
+        {secondaryTabs?.map((tab) => {
+          const Icon = WORKSPACE_TAB_ICONS[tab.id];
+          const isActive = tab.id === value;
+          return (
             <button
+              key={tab.id}
               type="button"
-              aria-expanded={moreOpen}
-              aria-haspopup="menu"
-              aria-label={secondaryLabel}
-              data-testid="workspace-more-sections"
-              onClick={() => setMoreOpen((current) => !current)}
+              aria-current={isActive ? "true" : undefined}
+              aria-label={tab.label}
+              data-testid={`workspace-secondary-tab-${tab.id}`}
+              onClick={() => onValueChange(tab.id)}
               className={cn(
                 "text-body inline-flex min-h-11 items-center gap-2 border-b-2 px-3 py-2 font-semibold transition-colors",
                 "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none",
-                secondaryTabs.some((tab) => tab.id === value)
+                isActive
                   ? "border-primary text-primary"
                   : "hover:text-fg-primary text-fg-secondary border-transparent",
               )}
             >
-              <span>{secondaryLabel}</span>
-              <span aria-hidden="true">⌄</span>
+              <Icon className="h-4 w-4" aria-hidden="true" />
+              <span>{tab.label}</span>
+              {typeof tab.count === "number" ? (
+                <span className="text-label bg-surface-subtle rounded-full px-1.5 py-0.5 font-mono tabular-nums">
+                  {tab.count}
+                </span>
+              ) : null}
             </button>
-            {moreOpen ? (
-              <div
-                role="menu"
-                aria-label={secondaryLabel}
-                className="border-border bg-surface absolute end-0 top-full z-30 mt-1 min-w-44 rounded-[var(--radius-control)] border p-1 shadow-lg"
-              >
-                {secondaryTabs.map((tab) => {
-                  const Icon = WORKSPACE_TAB_ICONS[tab.id];
-                  const isActive = tab.id === value;
-                  return (
-                    <button
-                      key={tab.id}
-                      type="button"
-                      role="menuitem"
-                      aria-current={isActive ? "true" : undefined}
-                      data-testid={`workspace-tab-${tab.id}`}
-                      onClick={() => {
-                        onValueChange(tab.id);
-                        setMoreOpen(false);
-                      }}
-                      className={cn(
-                        "text-body text-fg-primary flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 text-start",
-                        "hover:bg-surface-subtle focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none",
-                        isActive && "bg-primary-subtle text-primary",
-                      )}
-                    >
-                      <Icon className="h-4 w-4" aria-hidden="true" />
-                      <span>{tab.label}</span>
-                      {typeof tab.count === "number" ? (
-                        <span className="text-label ms-auto font-mono tabular-nums">
-                          {tab.count}
-                        </span>
-                      ) : null}
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
+          );
+        })}
       </div>
     </nav>
   );

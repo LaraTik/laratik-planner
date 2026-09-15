@@ -214,7 +214,6 @@ export function WorkspaceShell({
           <WorkspaceTabs
             tabs={primaryTabs}
             secondaryTabs={secondaryTabs}
-            secondaryLabel={t("contentDetail.navigation.moreSections")}
             ariaLabel={t("contentDetail.navigation.workspaceSections")}
             value={activeId}
             onValueChange={setActiveId}

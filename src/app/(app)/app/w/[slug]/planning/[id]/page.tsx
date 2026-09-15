@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Eye, Pencil, Sparkles } from "lucide-react";
-import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { Clock, Eye, Sparkles } from "lucide-react";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { resolveContentLocale } from "@/lib/i18n/content-locale";
@@ -62,22 +61,14 @@ import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import {
-  aiFeatureSettings,
-  agencies,
-  socialChannels,
-  trendBriefs,
-  trendSignals,
-  users,
-} from "@/lib/db/schema";
-import { and, eq, isNull } from "drizzle-orm";
-import { EditDetailsDrawer } from "@/components/planning/edit-details-drawer";
+import { aiFeatureSettings, agencies, trendBriefs, trendSignals, users } from "@/lib/db/schema";
+import { and, eq } from "drizzle-orm";
 import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
-import { WorkflowStepper } from "@/components/planning/workflow-stepper";
 import { PlatformPreview } from "@/components/planning/platform-preview";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
+import { acknowledgeOverdueScheduleAction } from "./publish/actions";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
@@ -149,7 +140,6 @@ export default async function ContentDetailPage({
     readiness,
     channelPayloads,
     channelPayloadStates,
-    activeChannels,
     canConfirmReadiness,
     canApproveFinalCopy,
     linkedMediaAssets,
@@ -178,26 +168,6 @@ export default async function ContentDetailPage({
     })),
     readAllChannelPayloads({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     readAllChannelPayloadStates({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
-    // Phase 5 of the planning-detail refactor (2026-08-30):
-    // the EditDetailsDrawer needs the same channel list as
-    // the standalone `/edit/[id]` page. We union the active
-    // workspace channels with the item's already-selected
-    // channels so a stale channel can still be deselected
-    // (mirrors `planning/edit/[id]/page.tsx`).
-    db
-      .select({
-        id: socialChannels.id,
-        accountName: socialChannels.accountName,
-        platform: socialChannels.platform,
-      })
-      .from(socialChannels)
-      .where(
-        and(
-          eq(socialChannels.workspaceId, ws.id),
-          eq(socialChannels.isActive, true),
-          isNull(socialChannels.archivedAt),
-        ),
-      ),
     // Phase 7 of the planning-detail refactor (2026-08-30):
     // these two role checks were previously computed inside
     // the standalone `/publish` route. With the publish form
@@ -295,12 +265,32 @@ export default async function ContentDetailPage({
     ...(actorRoles.isClientReviewer ? (["client_reviewer"] as const) : []),
     ...(actorRoles.isPublisher ? (["publisher"] as const) : []),
   ];
+  const publishingSetupReady = activityEvents.some((event) => {
+    const metadata = event.metadata;
+    const afterData = event.afterData;
+    const revision =
+      afterData !== null &&
+      typeof afterData === "object" &&
+      typeof (afterData as { revision?: unknown }).revision === "number"
+        ? (afterData as { revision: number }).revision
+        : null;
+    return (
+      metadata !== null &&
+      typeof metadata === "object" &&
+      (metadata as { resource?: unknown }).resource === "publish_readiness" &&
+      (event as { summary?: string }).summary === "Publish package confirmed ready" &&
+      (revision === null || revision === item.revision)
+    );
+  });
   const planningPresentation: PlanningPresentation = buildPlanningPresentation({
     status: item.status as ContentStatus,
     actorRoles: presentationRoles,
     blockedReason: item.blockedReason,
     cancellationReason: item.cancellationReason,
     readiness,
+    publishingSetupReady,
+    plannedPublishAt: item.plannedPublishAt,
+    ...(owner ? { assignedOwner: { displayName: owner.displayName } } : {}),
     approvals: approvals.map((approval) => ({
       gate: approval.gate as ApprovalGate,
       status: approval.status as "pending" | "approved" | "changes_requested" | "cancelled",
@@ -553,67 +543,10 @@ export default async function ContentDetailPage({
   // to the new anchor.
   const reviewChangesHref = `#assets-versions`;
 
-  // ── Primary action — exactly ONE "Edit content" entrypoint.
-  // Phase 5 of the planning-detail refactor (2026-08-30) replaced
-  // the previous `<Link>` to `/edit/[id]` with an
-  // `EditDetailsDrawer` so routine edits stay on the planning
-  // detail page. The standalone route is preserved as a deep-
-  // link fallback (the drawer has an "Open full editor" link to
-  // it). The `editHref` is still passed to the Overview's "Edit
-  // details" readiness row, which is left as a deep-link for
-  // now (will become a drawer open callback in phase 6).
+  // The compact header is intentionally identity-only. Editing is
+  // discoverable from the Overview details surface so it does not
+  // compete with lifecycle ownership in the workflow rail.
   const editHref = `/app/w/${slug}/planning/edit/${item.id}`;
-
-  // Channel list for the drawer's picker. Union the active
-  // channels with the item's already-selected channels so a
-  // stale channel can still be deselected (mirrors the
-  // standalone edit page).
-  const seenChannelIds = new Set(activeChannels.map((c) => c.id));
-  const missingSelected = item.channels
-    .filter((c) => !seenChannelIds.has(c.socialChannelId))
-    .map((c) => ({
-      id: c.socialChannelId,
-      accountName: c.accountName,
-      platform: c.platform,
-    }));
-  const editChannels = [...activeChannels, ...missingSelected];
-
-  const primaryAction = canEdit ? (
-    <EditDetailsDrawer
-      workspaceSlug={slug}
-      contentItemId={item.id}
-      channels={editChannels}
-      initial={{
-        title: item.title,
-        format: item.format as
-          | "static_post"
-          | "carousel"
-          | "story"
-          | "short_form_video"
-          | "long_form_video"
-          | "live_content"
-          | "article"
-          | "other",
-        brief: item.brief,
-        plannedPublishAtIso: item.plannedPublishAt.toISOString(),
-        channelIds: item.channels.map((c) => c.socialChannelId),
-      }}
-    />
-  ) : canEditCopy ? (
-    <Button variant="default" size="sm" asChild data-testid="planning-fix-copy">
-      <Link href={`/app/w/${slug}/planning/${item.id}#copy`}>
-        <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-        {t("contentDetail.copy.fixCopy")}
-      </Link>
-    </Button>
-  ) : (
-    <Button variant="ghost" asChild>
-      <Link href={`/app/w/${slug}/planning`} data-testid="planning-back-link">
-        <DirAwareArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
-        {t("contentDetail.copy.backToPlanning")}
-      </Link>
-    </Button>
-  );
 
   // ── Workspace tabs — order matters; counts feed the badges.
   // The icon for each tab is resolved inside the Client
@@ -694,6 +627,7 @@ export default async function ContentDetailPage({
                 {...(designer
                   ? { designer: { id: designer.id, label: designer.displayName } }
                   : {})}
+                planningPresentation={planningPresentation}
               />
             </div>
             {/* Compact header — answers the four questions at a
@@ -728,9 +662,6 @@ export default async function ContentDetailPage({
                 timeStyle: "short",
                 timeZone: ws.timezone,
               })}
-              owner={owner}
-              primaryAction={primaryAction}
-              meta={<WorkflowStepper status={item.status} size="compact" />}
             />
           </>
         }
@@ -750,6 +681,7 @@ export default async function ContentDetailPage({
           })),
           designers,
           ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
+          planningPresentation,
         }}
         workspace={{
           workspaceSlug: slug,
@@ -800,6 +732,7 @@ export default async function ContentDetailPage({
                   readinessBlockers={overviewBlockers}
                   readinessCanPublish={readiness.canPublish}
                   readiness={overviewReadinessLines}
+                  attention={planningPresentation.attention}
                   deliveryCount={deliveryCount}
                   finalApprovedCount={finalApprovedCount}
                   references={references}
@@ -808,6 +741,7 @@ export default async function ContentDetailPage({
                   canEdit={canEdit}
                   canEditOverview={canEditOverview}
                   editHref={editHref}
+                  onAcknowledgeOverdue={acknowledgeOverdueScheduleAction}
                   primaryActionLabel={primaryActionLabel}
                   workflowStageLabel={t(planningPresentation.workflow.labelKey)}
                   nextActionHeadline={t(planningPresentation.nextAction.headlineKey)}
@@ -815,6 +749,10 @@ export default async function ContentDetailPage({
                     planningPresentation.nextAction.descriptionKey ??
                       planningPresentation.workflow.descriptionKey,
                   )}
+                  {...(planningPresentation.nextAction.destinationTab
+                    ? { nextActionDestinationTab: planningPresentation.nextAction.destinationTab }
+                    : {})}
+                  nextActionExecutable={planningPresentation.nextAction.executable}
                   reviewChangesHref={reviewChangesHref}
                 />
               </section>
@@ -1279,6 +1217,7 @@ export default async function ContentDetailPage({
                       canEdit={canEdit}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
+                      publishingSetupReady={publishingSetupReady}
                       metaPublishingReadiness={metaPublishingReadiness}
                       metaPublishingCopy={metaPublishingCopy}
                     />

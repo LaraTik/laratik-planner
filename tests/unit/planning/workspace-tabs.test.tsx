@@ -89,15 +89,16 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
 }
 
 describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
-  it("keeps five task tabs primary and utilities secondary", () => {
+  it("keeps six task tabs primary and Preview outside the primary row", () => {
     expect(PRIMARY_WORKSPACE_TAB_IDS).toEqual([
       "overview",
       "content",
       "copy",
       "delivery",
       "publishing",
+      "activity",
     ]);
-    expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual(["preview", "activity"]);
+    expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual(["preview"]);
   });
 
   it("renders all seven tabs in the canonical order", () => {

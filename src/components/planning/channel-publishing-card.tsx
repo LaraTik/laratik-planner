@@ -63,13 +63,19 @@ export interface ChannelPublishingCardProps {
 }
 
 const STATUS_VARIANT: Record<
-  NonNullable<ChannelPublishingCardProps["publication"]>["status"],
+  | NonNullable<ChannelPublishingCardProps["publication"]>["status"]
+  | "needs_setup"
+  | "ready_to_publish"
+  | "needs_attention",
   "default" | "info" | "success" | "warning" | "danger"
 > = {
   pending: "info",
   published: "success",
   failed: "danger",
   skipped: "default",
+  needs_setup: "warning",
+  ready_to_publish: "info",
+  needs_attention: "danger",
 };
 
 function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
@@ -89,7 +95,13 @@ export function ChannelPublishingCard({
   const [open, setOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
-  const status = publication?.status ?? "pending";
+  const status = publication
+    ? publication.status === "failed" || publication.status === "skipped"
+      ? "needs_attention"
+      : publication.status
+    : channel.configured
+      ? "ready_to_publish"
+      : "needs_setup";
 
   return (
     <Card padding="md" data-testid="channel-publishing-card" data-channel-id={channel.id}>

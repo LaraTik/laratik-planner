@@ -15,24 +15,9 @@ vi.mock("next/navigation", () => ({
 }));
 
 /**
- * Regression guard for the WorkflowRail's "View workflow" disclosure.
- *
- * The rail renders an 11-step pipeline behind a `<details>`
- * toggle. Each step's badge uses a per-status variant — the
- * current step uses `primary`, past steps use `success`, and
- * future steps use `outline`. The `STATUSES.indexOf(status)`
- * lookup is the gate: if a status is missing from the ladder
- * the lookup returns -1, every `past` predicate is false, and
- * every badge collapses to `outline`. The current-step badge
- * disappears, the page renders without a "current" marker for
- * items in those states, and React #441 fires on the
- * post-`revalidatePath("/app/w/")` re-render because the server
- * HTML and the client re-render diverge.
- *
- * Phase 5 of the planning-detail refactor (2026-08-30) moved
- * the disclosure from the legacy `WorkflowBar` into the new
- * `WorkflowRail`. This test now guards the rail's STATUSES
- * ladder against the same defect class.
+ * Regression guard for the canonical six-stage WorkflowRail.
+ * Detailed backend statuses must always map to one visible
+ * lifecycle milestone; blocked/cancelled remain conditions.
  */
 describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
   const baseRoles = {
@@ -69,16 +54,11 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
         unmount();
         continue;
       }
-      // `bg-primary-subtle` is the class the `primary` Badge
-      // variant uses (per components/ui/badge.tsx). The
-      // current status's badge should carry it; if the
-      // status is missing from the ladder, no badge
-      // carries it and we fail.
-      const primaryBadges = container.querySelectorAll(".bg-primary-subtle");
+      const currentMarker = container.querySelector('[data-state="current"]');
       expect(
-        primaryBadges.length,
-        `expected at least one primary badge when status=${status}`,
-      ).toBeGreaterThanOrEqual(1);
+        currentMarker,
+        `expected a current six-stage marker when status=${status}`,
+      ).toBeInTheDocument();
       unmount();
     }
   });

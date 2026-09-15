@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
 import {
@@ -27,7 +28,7 @@ import {
   claimAction,
   assignDesignerAction,
 } from "@/app/(app)/app/w/[slug]/planning/actions";
-import { humanize, humanStatus } from "@/lib/content/status";
+import { humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import {
@@ -37,7 +38,7 @@ import {
 } from "@/lib/content/workflow-explanations";
 import { planningStageForStatus } from "@/lib/planning/presentation";
 import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
-import { type WorkflowStage, stageForStatus } from "./workflow-stepper";
+import type { PlanningPresentation } from "@/lib/planning/presentation";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -56,17 +57,20 @@ type AssignedDesigner = { id: string; label: string };
  * preference. The key is namespaced under `laratik-planner` so
  * it doesn't collide with anything else in `localStorage`. The
  * stored value is the string `"1"` for collapsed and `"0"` for
- * expanded; reading a missing/invalid value returns `false`
- * (default = expanded).
+ * expanded; reading a missing/invalid value uses a compact
+ * default at the 1024–1279px breakpoint.
  */
 const RAIL_COLLAPSED_KEY = "laratik-planner-workflow-rail-collapsed";
 
 function readCollapsedPreference(): boolean {
   if (typeof window === "undefined") return false;
   try {
-    return window.localStorage.getItem(RAIL_COLLAPSED_KEY) === "1";
+    const stored = window.localStorage.getItem(RAIL_COLLAPSED_KEY);
+    if (stored === "1") return true;
+    if (stored === "0") return false;
+    return window.matchMedia?.("(max-width: 1279px)").matches ?? false;
   } catch {
-    return false;
+    return window.matchMedia?.("(max-width: 1279px)").matches ?? false;
   }
 }
 
@@ -80,31 +84,6 @@ function writeCollapsedPreference(collapsed: boolean): void {
     // means the user gets the default on the next visit.
   }
 }
-
-// 11-state pipeline used by the "View full workflow" disclosure.
-// Mirrors `STATUSES` in `workflow-bar.tsx` — the rail re-uses the
-// same array so the disclosure behaves identically to the
-// previous top-of-page WorkflowBar.
-const STATUSES = [
-  "draft",
-  "content_review",
-  "changes_requested",
-  "approved_for_design",
-  "in_design",
-  "creative_review",
-  "ready_to_publish",
-  "partially_published",
-  "published",
-  "blocked",
-  "cancelled",
-] as const;
-
-const STAGE_LABEL: Record<WorkflowStage, string> = {
-  draft: "Planning",
-  review: "Content review",
-  design: "Creative production",
-  publish: "Publishing",
-};
 
 /**
  * Rail-stage model — a finer-grained 6-stage view used ONLY by
@@ -269,17 +248,21 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
           )}
           data-testid="workflow-rail-stages-collapsed"
         >
-          {(["draft", "review", "design", "publish"] as const).map((stage) => {
-            const state = stageState(stage, props.status);
+          {RAIL_STAGES.map(({ id: stage, label }) => {
+            const state = railStageState(
+              stage,
+              props.status,
+              props.planningPresentation?.workflow.stageComplete ?? false,
+            );
             return (
               <li
                 key={stage}
                 className="py-0.5"
                 data-stage-id={stage}
                 data-active={state.kind === "current" || undefined}
-                title={tr(`contentDetail.workflow.railStageLabels.${stage}`, STAGE_LABEL[stage])}
+                title={tr(`contentDetail.workflow.railStageLabels.${stage}`, label)}
               >
-                <StageIcon kind={state.kind} compact t={t} />
+                <RailStageIcon kind={state.kind} t={t} />
               </li>
             );
           })}
@@ -336,6 +319,8 @@ export interface WorkflowRailBodyProps {
   }[];
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
+  /** Canonical lifecycle/action presentation from the server. */
+  planningPresentation?: PlanningPresentation;
   /**
    * Optional translator. When provided, the workflow dialog titles
    * + descriptions render from `contentDetail.workflow.*`; when
@@ -353,6 +338,7 @@ function WorkflowRailBody({
   approvals,
   designers,
   designer,
+  planningPresentation,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -369,6 +355,7 @@ function WorkflowRailBody({
   }[];
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
+  planningPresentation?: PlanningPresentation;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -425,6 +412,8 @@ function WorkflowRailBody({
   ).map((role) => roleFlagByName[role]);
   const canActOnCurrentStep = currentEligibleRoles.some((r) => roles[r]);
   const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
+  const canonicalAction = planningPresentation?.nextAction;
+  const activeApprovals = approvals.filter((approval) => approval.status === "pending");
 
   const { stage: railCurrentStage } = railStageForStatus(status);
   const condition = status === "blocked" || status === "cancelled" ? status : null;
@@ -461,6 +450,40 @@ function WorkflowRailBody({
             : tr("contentDetail.workflow.awaiting", "Awaiting")}
         </Badge>
       </div>
+      {canonicalAction && canonicalAction.type !== "none" ? (
+        <div
+          className="border-border bg-surface-subtle space-y-1 border-b px-3 py-2"
+          data-testid="workflow-rail-next-action"
+        >
+          <p className="text-label text-fg-muted font-semibold uppercase">
+            {tr("contentDetail.overview.nextActionLabel", "Next action")}
+          </p>
+          <p className="text-body text-fg-primary font-semibold">
+            {tr(canonicalAction.headlineKey, humanStatus(status))}
+          </p>
+          {canonicalAction.owner.kind === "person" ? (
+            <p className="text-label text-fg-secondary">
+              {tr("contentDetail.workflow.waitingFor", "Waiting for {name}", {
+                name: canonicalAction.owner.displayName,
+              })}
+            </p>
+          ) : null}
+          {canonicalAction.destinationTab ? (
+            <Link
+              href={`#${canonicalAction.destinationTab}`}
+              className="text-label text-primary inline-flex min-h-11 items-center font-semibold underline-offset-2 hover:underline"
+            >
+              {tr(
+                canonicalAction.canCurrentUserAct
+                  ? "contentDetail.workflow.goToAction"
+                  : "contentDetail.workflow.viewAction",
+                canonicalAction.canCurrentUserAct ? "Go to action" : "View action",
+              )}
+              <DirAwareArrowRight className="ms-1 h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
       {condition ? (
         <div
           className={cn(
@@ -522,6 +545,7 @@ function WorkflowRailBody({
                 stage={stage}
                 label={tr(`contentDetail.workflow.railStageLabels.${stage}`, label)}
                 status={status}
+                stageComplete={planningPresentation?.workflow.stageComplete ?? false}
                 t={t}
               />
               {expanded ? (
@@ -631,6 +655,12 @@ function WorkflowRailBody({
                           });
                           if (result?.error) setActionError(result.error);
                         }}
+                        {...(canonicalAction?.type
+                          ? { canonicalActionType: canonicalAction.type }
+                          : {})}
+                        {...(canonicalAction?.destinationTab
+                          ? { canonicalDestinationTab: canonicalAction.destinationTab }
+                          : {})}
                         t={t}
                       />
 
@@ -670,10 +700,10 @@ function WorkflowRailBody({
         })}
       </ol>
 
-      {approvals.length > 0 ? (
+      {activeApprovals.length > 0 ? (
         <div className="border-border border-t px-3 py-2">
           <ApprovalTimeline
-            approvals={approvals}
+            approvals={activeApprovals}
             roles={{
               isManager: roles.isManager,
               isInternalReviewer: roles.isInternalReviewer,
@@ -724,43 +754,6 @@ function WorkflowRailBody({
           />
         </div>
       ) : null}
-
-      <details
-        className="border-border bg-surface-subtle border-t"
-        data-testid="workflow-pipeline-details"
-      >
-        <summary
-          className="text-label text-fg-secondary cursor-pointer list-none px-3 py-2 font-semibold [&::-webkit-details-marker]:hidden"
-          data-testid="workflow-pipeline-toggle"
-        >
-          {tr("contentDetail.workflow.viewFull", "View workflow ({count} steps)", {
-            count: STATUSES.length,
-          })}
-        </summary>
-        <div
-          className="flex flex-wrap items-center gap-1.5 border-t border-[color:var(--border)] px-3 py-2"
-          data-testid="workflow-pipeline"
-        >
-          {(() => {
-            const idx = STATUSES.indexOf(status as (typeof STATUSES)[number]);
-            return STATUSES.map((s) => {
-              const sIdx = STATUSES.indexOf(s);
-              const past = idx >= 0 && sIdx >= 0 && sIdx < idx;
-              const current = s === status;
-              return (
-                <Badge
-                  key={s}
-                  variant={current ? "primary" : past ? "success" : "outline"}
-                  data-testid={current ? "status-current" : undefined}
-                  data-status={s}
-                >
-                  {tr(`contentDetail.workflow.statusLabels.${s}`, humanize(s))}
-                </Badge>
-              );
-            });
-          })()}
-        </div>
-      </details>
     </div>
   );
 }
@@ -777,14 +770,16 @@ function RailStageRow({
   stage,
   label,
   status,
+  stageComplete,
   t,
 }: {
   stage: RailStage;
   label: string;
   status: string;
+  stageComplete?: boolean;
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
-  const state = railStageState(stage, status);
+  const state = railStageState(stage, status, stageComplete);
   return (
     <div
       className="flex items-center gap-3"
@@ -810,20 +805,6 @@ function RailStageRow({
 
 type StageState = { kind: "complete" | "current" | "blocked" | "upcoming" };
 
-function stageState(stage: WorkflowStage, status: string): StageState {
-  const { stage: currentStage, variant } = stageForStatus(status);
-  if (variant === "blocked" || variant === "cancelled") {
-    return { kind: "upcoming" };
-  }
-  if (stage === currentStage) return { kind: "current" };
-  // Compare positions in the canonical stage order.
-  const order: WorkflowStage[] = ["draft", "review", "design", "publish"];
-  const sIdx = order.indexOf(stage);
-  const cIdx = order.indexOf(currentStage);
-  if (sIdx < cIdx) return { kind: "complete" };
-  return { kind: "upcoming" };
-}
-
 /**
  * 6-stage equivalent of `stageState`. Uses the rail's own
  * `RAIL_STAGES` order and the `railStageForStatus` mapping. The
@@ -833,13 +814,13 @@ function stageState(stage: WorkflowStage, status: string): StageState {
  * expanded current block so the user is never silently
  * mis-led.
  */
-function railStageState(stage: RailStage, status: string): StageState {
+function railStageState(stage: RailStage, status: string, stageComplete = false): StageState {
   const { stage: currentStage, variant } = railStageForStatus(status);
   if (variant === "blocked" || variant === "cancelled") {
     return { kind: "upcoming" };
   }
   if (!currentStage) return { kind: "upcoming" };
-  if (stage === currentStage) return { kind: "current" };
+  if (stage === currentStage) return stageComplete ? { kind: "complete" } : { kind: "current" };
   const order: RailStage[] = RAIL_STAGES.map((s) => s.id);
   const sIdx = order.indexOf(stage);
   const cIdx = order.indexOf(currentStage);
@@ -912,77 +893,6 @@ function RailStageIcon({
   );
 }
 
-function StageIcon({
-  kind,
-  compact = false,
-  t,
-}: {
-  kind: StageState["kind"];
-  compact?: boolean;
-  t?: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
-  // Compact variant is used inside the collapsed rail
-  // (~56 px wide) and inside the mobile trigger. The full
-  // variant is used in the expanded rail's stage list.
-  const size = compact ? "h-5 w-5" : "h-6 w-6";
-  const iconClass = compact ? "h-3 w-3" : "h-3.5 w-3.5";
-  if (kind === "complete") {
-    return (
-      <span
-        className={cn(
-          "border-success/40 bg-success-subtle text-success inline-flex items-center justify-center rounded-full border",
-          size,
-        )}
-        aria-label={tr("contentDetail.workflow.stageComplete", "Complete")}
-        role="img"
-      >
-        <CheckCircle className={iconClass} aria-hidden="true" />
-      </span>
-    );
-  }
-  if (kind === "current") {
-    return (
-      <span
-        className={cn(
-          "border-primary bg-primary text-primary-foreground inline-flex items-center justify-center rounded-full border",
-          size,
-        )}
-        aria-label={tr("contentDetail.workflow.stageCurrentStep", "Current step")}
-        role="img"
-      >
-        <DirAwareChevronRight className={iconClass} aria-hidden="true" />
-      </span>
-    );
-  }
-  if (kind === "blocked") {
-    return (
-      <span
-        className={cn(
-          "border-danger/40 bg-danger-subtle text-danger inline-flex items-center justify-center rounded-full border",
-          size,
-        )}
-        aria-label={tr("contentDetail.workflow.stageBlocked", "Blocked")}
-        role="img"
-      >
-        <XCircle className={iconClass} aria-hidden="true" />
-      </span>
-    );
-  }
-  return (
-    <span
-      className={cn(
-        "border-border bg-surface text-fg-muted inline-flex items-center justify-center rounded-full border",
-        size,
-      )}
-      aria-label={tr("contentDetail.workflow.stageUpcoming", "Upcoming")}
-      role="img"
-    >
-      <span className="h-2 w-2 rounded-full bg-current" />
-    </span>
-  );
-}
-
 /**
  * ActionButtons — extracts the per-status action button tree
  * from the previous WorkflowBar into a focused subcomponent.
@@ -1001,6 +911,8 @@ function ActionButtons({
   onAssignDesigner,
   designers,
   designer,
+  canonicalActionType,
+  canonicalDestinationTab,
   t,
 }: {
   status: string;
@@ -1020,10 +932,27 @@ function ActionButtons({
   ) => Promise<void>;
   onClaim: () => Promise<void>;
   onAssignDesigner: (designerId: string) => Promise<void>;
+  canonicalActionType?: PlanningPresentation["nextAction"]["type"];
+  canonicalDestinationTab?: PlanningPresentation["nextAction"]["destinationTab"];
   t?: (key: string, params?: Record<string, string | number>) => string;
 }) {
   const tr = (key: string, fallback: string) => (t ? t(key) : fallback);
   const can = (allowed: Role[]) => allowed.some((r) => roles[r]);
+  if (
+    canonicalActionType === "resolve_blocker" ||
+    canonicalActionType === "mark_publishing_setup_ready"
+  ) {
+    return canonicalDestinationTab ? (
+      <Link
+        href={`#${canonicalDestinationTab}`}
+        className="text-body text-primary border-primary/30 bg-primary-subtle inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-3 py-2 font-semibold hover:underline"
+        data-testid="workflow-rail-owning-destination"
+      >
+        {tr("contentDetail.workflow.openOwningWorkspace", "Open owning workspace")}
+        <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+      </Link>
+    ) : null;
+  }
   return (
     <div className="flex flex-col gap-1.5" data-testid="workflow-rail-actions">
       {status === "draft" && can(["isManager", "isPlanner"]) ? (
@@ -1347,12 +1276,6 @@ function AssignDesignerDialog({
     </Dialog>
   );
 }
-
-// Public type export so consumers (e.g. a future
-// "where is this content in the workflow?" mini-component)
-// can share the same 4-stage vocabulary without re-declaring
-// the union.
-export type { WorkflowStage };
 
 /**
  * WorkflowSheet — mobile bottom-sheet companion to the desktop

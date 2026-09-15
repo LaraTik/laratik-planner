@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
-  confirmPublishReadinessAction: vi.fn(),
+  markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: vi.fn(),
   setFinalCopyApprovalAction: vi.fn(),
@@ -76,7 +76,7 @@ describe("PublishPackageForm localization", () => {
     expect(screen.getByTestId("publish-item-format")).toHaveValue("منشور ثابت");
     expect(screen.getByLabelText("النص البديل وإمكانية الوصول")).toHaveAttribute("dir", "rtl");
     expect(screen.getByTestId("publish-save-draft")).toHaveTextContent("حفظ المسودة");
-    expect(screen.getByTestId("publish-ready")).toHaveTextContent("جاهز للنشر");
+    expect(screen.getByTestId("publish-ready")).toHaveTextContent("تحديد إعداد النشر كجاهز");
   });
 
   it("links publish blockers to the section that resolves them", () => {

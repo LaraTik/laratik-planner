@@ -39,6 +39,7 @@ export interface ActivityEventView {
   actorName: string;
   occurredAt: string;
   metadata?: Record<string, unknown> | null;
+  afterData?: Record<string, unknown> | null;
 }
 
 export interface ActivityTimelineProps {

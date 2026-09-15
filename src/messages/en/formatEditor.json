@@ -45,7 +45,7 @@
     "visual": "Visual",
     "keyMessage": "Key message",
     "objective": "Objective",
-    "audience": "Audience",
+    "audience": "Target audience",
     "keyVisualHook": "Key visual hook",
     "ratio": "Ratio",
     "duration": "Duration",
@@ -131,7 +131,7 @@
     "saveSuccess": "Saved",
     "unsavedGuard": "You have unsaved changes in the Content tab. Leave and lose them?",
     "ai": {
-      "suggest": "AI suggest",
+      "suggest": "Suggest with AI",
       "suggestFieldAria": "Suggest {field} with AI",
       "drafting": "Drafting…",
       "draftReady": "Draft ready. Review it before applying.",
@@ -160,7 +160,7 @@
       "requestFailed": "Request failed ({status})"
     },
     "translations": {
-      "label": "Translations",
+      "label": "Manage translations",
       "buttonAria": "{field} translations ({count} added)",
       "popoverHeader": "Translations · {field}",
       "emptyState": "No translations yet. Add one when this post will publish in a second language.",

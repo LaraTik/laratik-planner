@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
 import { tFor } from "@/messages";
 
@@ -16,9 +16,8 @@ const t = tFor("en");
  * lives under the `Overview` tab. It must:
  *   1. Render a Next Action card when something needs attention
  *      (blockers, changes_requested, draft, etc).
- *   2. Render a 4-line readiness list (Content / Creative /
- *      Publishing / Schedule) with deep links to each section.
- *   3. Render a content summary (format, channels, planned date).
+ *   2. Render one compact readiness summary without a duplicate issue list.
+ *   3. Render linked workspace snapshots.
  *   4. Render the latest activity events with a "View all" link.
  *   5. Hide the Next Action card when the item is fully ready.
  *   6. Not duplicate the editor surface (no Brief editor here).
@@ -90,20 +89,16 @@ const baseProps = {
 };
 
 describe("OverviewCommandCenter", () => {
-  it("renders the four readiness rows with deep links", () => {
+  it("renders a compact readiness summary and linked workspace snapshots", () => {
     render(<OverviewCommandCenter {...baseProps} />);
-    const list = screen.getByTestId("overview-readiness-list");
-    expect(list).toBeInTheDocument();
-    const rows = within(list).getAllByRole("listitem");
-    expect(rows).toHaveLength(4);
-    // The Content row should be a link to #content
-    const contentLink = within(list).getByTestId("overview-readiness-link-content");
-    expect(contentLink).toHaveAttribute("href", "#content");
-    // Phase 3 (2026-08-30): the "Creative" row was renamed to
-    // "Assets & versions" and the href points to the new
-    // anchor inside the Content panel.
-    const assetsLink = within(list).getByTestId("overview-readiness-link-assets-versions");
-    expect(assetsLink).toHaveAttribute("href", "#assets-versions");
+    expect(screen.getByTestId("overview-readiness-summary")).toHaveTextContent(
+      "2 of 4 areas ready",
+    );
+    expect(screen.queryByTestId("overview-readiness-list")).toBeNull();
+    expect(screen.getByTestId("overview-snapshot-brief")).toHaveAttribute("href", "#content");
+    expect(screen.getByTestId("overview-snapshot-copy")).toHaveAttribute("href", "#copy");
+    expect(screen.getByTestId("overview-snapshot-assets")).toHaveAttribute("href", "#delivery");
+    expect(screen.getByTestId("overview-snapshot-publish")).toHaveAttribute("href", "#publishing");
   });
 
   it("renders the Next Action card for a draft item with blockers", () => {
@@ -129,7 +124,7 @@ describe("OverviewCommandCenter", () => {
     expect(screen.getByTestId("overview-next-action")).not.toHaveTextContent("blocker to publish");
   });
 
-  it("keeps future publishing checks separate from the current draft action", () => {
+  it("keeps future publishing checks out of the compact readiness summary", () => {
     render(
       <OverviewCommandCenter
         {...baseProps}
@@ -143,10 +138,10 @@ describe("OverviewCommandCenter", () => {
       />,
     );
 
-    expect(screen.getByTestId("overview-readiness-future-checks")).toHaveTextContent(
-      "publishing checks are tracked for later",
+    expect(screen.getByTestId("overview-readiness-summary")).toHaveTextContent(
+      "0 of 4 areas ready",
     );
-    expect(screen.getByTestId("overview-readiness-stage-hint")).toBeInTheDocument();
+    expect(screen.queryByTestId("overview-readiness-future-checks")).toBeNull();
     expect(screen.getByTestId("overview-next-action")).toHaveTextContent(
       "Ready to submit for review",
     );
@@ -195,32 +190,11 @@ describe("OverviewCommandCenter", () => {
     expect(screen.getByTestId("overview-recent-activity-empty")).toBeInTheDocument();
   });
 
-  it("renders inline editors for editable metadata", () => {
-    render(<OverviewCommandCenter {...baseProps} />);
-    expect(screen.getByTestId("inline-edit-title")).toBeInTheDocument();
-    expect(screen.getByTestId("inline-edit-date")).toBeInTheDocument();
-    expect(screen.getByTestId("inline-edit-brief")).toBeInTheDocument();
-  });
-
-  it("renders the content summary with format, channels, and date", () => {
-    render(<OverviewCommandCenter {...baseProps} />);
-    const summary = screen.getByTestId("overview-content-summary-list");
-    expect(within(summary).getByText("Static post")).toBeInTheDocument();
-    expect(within(summary).getByText(/Acme Main/)).toBeInTheDocument();
-    expect(within(summary).getByText(/Sep 1, 2026, 9:00 AM/)).toBeInTheDocument();
-  });
-
-  it("localizes the single-channel platform label", () => {
-    render(
-      <OverviewCommandCenter
-        {...baseProps}
-        channels={[{ id: "ch-1", platform: "other", accountName: "Acme Main", configured: true }]}
-        t={tFor("ar")}
-      />,
+  it("localizes compact readiness and snapshots", () => {
+    render(<OverviewCommandCenter {...baseProps} t={tFor("ar")} />);
+    expect(screen.getByTestId("overview-readiness-summary")).toHaveTextContent(
+      "2 من أصل 4 مناطق جاهزة",
     );
-
-    expect(
-      within(screen.getByTestId("overview-content-summary-list")).getByText(/مخصص/),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("overview-snapshot-copy")).toHaveTextContent("المصدر المشترك");
   });
 });

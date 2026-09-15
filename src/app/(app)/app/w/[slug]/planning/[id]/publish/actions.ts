@@ -142,6 +142,30 @@ const ReadinessFormSchema = z.object({
   contentItemId: z.string().uuid(),
 });
 
+/** Explicitly acknowledge an overdue plan without changing the timestamp.
+ * This is an audit-only action: it never schedules or publishes content. */
+export async function acknowledgeOverdueScheduleAction(input: z.input<typeof ReadinessFormSchema>) {
+  const actor = await currentActor();
+  if (!actor) return failure("authRequired");
+  const parsed = ReadinessFormSchema.safeParse(input);
+  if (!parsed.success) return failure("invalidReadinessRequest");
+  try {
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return failure("workspaceNotFound");
+    await recordNonMaterialityEvent({
+      actor,
+      contentItemId: parsed.data.contentItemId,
+      resource: "schedule",
+      summary: "Overdue planned date acknowledged",
+      metadata: { acknowledgement: "keep_past_date" },
+    });
+    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
+    return { ok: true as const };
+  } catch {
+    return failure("recordNoteFailed");
+  }
+}
+
 export async function confirmPublishReadinessAction(input: z.input<typeof ReadinessFormSchema>) {
   const actor = await currentActor();
   if (!actor) return failure("authRequired");
@@ -164,4 +188,14 @@ export async function confirmPublishReadinessAction(input: z.input<typeof Readin
     }
     return failure("readinessFailed");
   }
+}
+
+/**
+ * Explicit lifecycle command for leaving Publishing setup. The underlying
+ * service validates the package and records the audit event; it never calls
+ * a platform or creates a schedule. Keep the historical action export above
+ * for deep-link/server-action compatibility while new UI uses this name.
+ */
+export async function markPublishingSetupReadyAction(input: z.input<typeof ReadinessFormSchema>) {
+  return confirmPublishReadinessAction(input);
 }

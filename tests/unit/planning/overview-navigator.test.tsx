@@ -46,6 +46,15 @@ const baseProps = {
   ownerName: "Ada Lovelace",
   readinessBlockers: 1,
   readinessCanPublish: false,
+  attention: [
+    {
+      path: "publish.caption",
+      code: "caption_required",
+      message: "Caption is required",
+      severity: "blocking" as const,
+      destinationTab: "publishing" as const,
+    },
+  ],
   deliveryCount: 0,
   finalApprovedCount: 0,
   recentActivity: [],
@@ -93,12 +102,12 @@ afterEach(() => {
 });
 
 describe("OverviewNavigator", () => {
-  it("updates the URL hash and dispatches hashchange when a readiness row is clicked", () => {
+  it("updates the URL hash and dispatches hashchange when an attention row is clicked", () => {
     render(<OverviewNavigator {...baseProps} readiness={buildReadinessLines()} />);
     const hashListener = vi.fn();
     window.addEventListener("hashchange", hashListener);
 
-    fireEvent.click(screen.getByTestId("overview-readiness-link-publishing"));
+    fireEvent.click(screen.getByTestId("overview-attention-link-caption_required"));
     expect(window.location.hash).toBe("#publishing");
     expect(hashListener).toHaveBeenCalled();
     window.removeEventListener("hashchange", hashListener);
@@ -116,7 +125,7 @@ describe("OverviewNavigator", () => {
       </div>,
     );
     const scrollSpy = vi.spyOn(Element.prototype, "scrollIntoView");
-    fireEvent.click(screen.getByTestId("overview-readiness-link-publishing"));
+    fireEvent.click(screen.getByTestId("overview-attention-link-caption_required"));
     // The scroll is deferred to a requestAnimationFrame + setTimeout(50).
     // waitFor keeps the asynchronous React update inside act().
     await waitFor(() => expect(scrollSpy).toHaveBeenCalled());
@@ -126,13 +135,13 @@ describe("OverviewNavigator", () => {
     render(
       <div>
         <OverviewNavigator {...baseProps} readiness={buildReadinessLines()} />
-        <section id="content" data-testid="target-section">
-          <input data-testid="content-first-input" type="text" />
+        <section id="publishing" data-testid="target-section">
+          <input data-testid="publishing-first-input" type="text" />
         </section>
       </div>,
     );
-    fireEvent.click(screen.getByTestId("overview-readiness-link-content"));
-    const input = screen.getByTestId("content-first-input") as HTMLInputElement;
+    fireEvent.click(screen.getByTestId("overview-attention-link-caption_required"));
+    const input = screen.getByTestId("publishing-first-input") as HTMLInputElement;
     await waitFor(() => expect(document.activeElement).toBe(input));
   });
 
@@ -145,7 +154,7 @@ describe("OverviewNavigator", () => {
         </section>
       </div>,
     );
-    fireEvent.click(screen.getByTestId("overview-readiness-link-publishing"));
+    fireEvent.click(screen.getByTestId("overview-attention-link-caption_required"));
     const section = screen.getByTestId("target-section");
     await waitFor(() => expect(document.activeElement).toBe(section));
   });

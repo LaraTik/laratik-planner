@@ -78,10 +78,10 @@ describe("buildPlanningPresentation", () => {
       labelKey: "contentDetail.workflow.railStageLabels.planning",
     });
     expect(result.nextAction).toMatchObject({
-      type: "submit_content_review",
-      headlineKey: "planning.nextAction.draft",
+      type: "resolve_blocker",
       destinationTab: "content",
       destinationAnchor: "brief",
+      blockedReason: "Add a hook.",
       responsibleRole: "content_planner",
     });
     expect(result.readiness.currentBlockers).toHaveLength(1);
@@ -147,5 +147,96 @@ describe("buildPlanningPresentation", () => {
     });
     expect(result.nextAction.destinationTab).toBe("overview");
     expect(result.nextAction.destinationAnchor).toBe("workflow");
+  });
+
+  it("promotes the earliest current blocker to the canonical next action", () => {
+    const result = buildPlanningPresentation({
+      status: "in_design",
+      actorRoles: ["designer"],
+      readiness: readiness({
+        blockers: 1,
+        requiredCompleted: 3,
+        issues: [
+          {
+            path: "delivery.versions",
+            code: "delivery_missing",
+            severity: "blocker",
+            message: "Create a creative delivery version.",
+          },
+        ],
+      }),
+      now: NOW,
+    });
+
+    expect(result.nextAction).toMatchObject({
+      type: "resolve_blocker",
+      destinationTab: "delivery",
+      destinationAnchor: "delivery",
+      blockedReason: "Create a creative delivery version.",
+      canCurrentUserAct: true,
+      executable: true,
+    });
+    expect(result.attention).toEqual([
+      expect.objectContaining({
+        severity: "blocking",
+        code: "delivery_missing",
+        destinationTab: "delivery",
+      }),
+    ]);
+  });
+
+  it("uses the explicit publishing setup action after package validation", () => {
+    const result = buildPlanningPresentation({
+      status: "ready_to_publish",
+      actorRoles: ["publisher"],
+      publishingSetupReady: false,
+      readiness: readiness(),
+      now: NOW,
+    });
+
+    expect(result.nextAction).toMatchObject({
+      type: "mark_publishing_setup_ready",
+      headlineKey: "contentDetail.publish.markPublishingSetupReady",
+      destinationTab: "publishing",
+      destinationAnchor: "publishing",
+      canCurrentUserAct: true,
+      executable: true,
+    });
+  });
+
+  it("marks publishing setup complete without inventing a new persisted status", () => {
+    const result = buildPlanningPresentation({
+      status: "ready_to_publish",
+      actorRoles: ["publisher"],
+      publishingSetupReady: true,
+      readiness: readiness(),
+      now: NOW,
+    });
+
+    expect(result.workflow).toMatchObject({
+      stage: "publishing_setup",
+      substatusKey: "contentDetail.workflow.statusLabels.ready_to_publish",
+      stageComplete: true,
+    });
+    expect(result.nextAction.type).toBe("record_published");
+  });
+
+  it("keeps an overdue date as attention rather than replacing the lifecycle transition", () => {
+    const result = buildPlanningPresentation({
+      status: "draft",
+      actorRoles: ["content_planner"],
+      plannedPublishAt: new Date("2026-09-12T12:00:00.000Z"),
+      readiness: readiness(),
+      now: NOW,
+    });
+
+    expect(result.nextAction.type).toBe("submit_content_review");
+    expect(result.attention).toEqual([
+      expect.objectContaining({
+        code: "schedule_overdue",
+        messageKey: "contentDetail.overview.plannedDatePassed",
+        severity: "attention",
+      }),
+    ]);
   });
 });
