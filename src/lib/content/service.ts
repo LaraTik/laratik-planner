@@ -15,6 +15,7 @@ import {
   workspaceMembershipRoles,
   workspaceMemberships,
   workspaceSettings,
+  workspaces,
   trendBriefs,
   trendSignals,
 } from "@/lib/db/schema";
@@ -56,6 +57,7 @@ import {
   enqueueReleaseNotification,
   enqueueReviewRequestNotification,
 } from "@/lib/notifications/service";
+import { reconcileContentItemMediaFolders } from "@/lib/media/service";
 
 /**
  * Content service — the heart of the app.
@@ -251,8 +253,12 @@ export async function updateContentItem(
       id: contentItems.id,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
+      agencyId: workspaces.agencyId,
+      prevFormat: contentItems.format,
+      prevPlannedPublishAt: contentItems.plannedPublishAt,
     })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -267,6 +273,10 @@ export async function updateContentItem(
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
   }
+
+  const drift =
+    item.prevFormat !== input.format ||
+    item.prevPlannedPublishAt.getTime() !== input.plannedPublishAt.getTime();
 
   await db.transaction(async (tx) => {
     await tx
@@ -306,6 +316,29 @@ export async function updateContentItem(
       afterData: { title: input.title, format: input.format },
     });
   });
+
+  // FEAT-MEDIA-LIBRARY-2026-09-16 — silent folder reconcile when
+  // `plannedPublishAt` or `format` changed. Runs outside the
+  // transaction so a reconcile failure does not roll back the
+  // content-item update; the planner still gets a non-blocking warning.
+  if (drift) {
+    try {
+      await reconcileContentItemMediaFolders({
+        actor,
+        agencyId: item.agencyId,
+        workspaceId: item.workspaceId,
+        contentItemId: item.id,
+        prevFormat: item.prevFormat,
+        nextFormat: input.format,
+        prevPlannedPublishAt: item.prevPlannedPublishAt,
+        nextPlannedPublishAt: input.plannedPublishAt,
+      });
+    } catch {
+      // Reconcile is best-effort; the planner sees a banner in the
+      // planning page when the session-scoped "reconcile_failed" flag
+      // is set.
+    }
+  }
 
   revalidatePath(`/app/w/`);
 }
@@ -1824,8 +1857,11 @@ export async function rescheduleContentItem(actor: Actor, input: RescheduleConte
       designerId: contentItems.designerId,
       contentOwnerId: contentItems.contentOwnerId,
       title: contentItems.title,
+      format: contentItems.format,
+      agencyId: workspaces.agencyId,
     })
     .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -1850,6 +1886,22 @@ export async function rescheduleContentItem(actor: Actor, input: RescheduleConte
       afterData: { plannedPublishAt: parsed.data.plannedPublishAt.toISOString() },
     });
   });
+  // FEAT-MEDIA-LIBRARY-2026-09-16 — silent folder reconcile when the
+  // schedule changes (drag-to-reschedule on the board).
+  try {
+    await reconcileContentItemMediaFolders({
+      actor,
+      agencyId: item.agencyId,
+      workspaceId: item.workspaceId,
+      contentItemId: parsed.data.contentItemId,
+      prevFormat: item.format,
+      nextFormat: item.format,
+      prevPlannedPublishAt: item.plannedPublishAt,
+      nextPlannedPublishAt: parsed.data.plannedPublishAt,
+    });
+  } catch {
+    // Best-effort; planner sees a non-blocking banner.
+  }
   revalidatePath(`/app/w/`);
 }
 

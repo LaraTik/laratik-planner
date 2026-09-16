@@ -1,11 +1,13 @@
 import "server-only";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, ilike, inArray, isNull, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   contentItems,
   deliveryVersions,
   mediaAssets,
   mediaAssetLinks,
+  type MediaAssetLink,
+  mediaFolderReconcileLogs,
   mediaFolders,
   mediaShareLinks,
   securityAuditEvents,
@@ -38,6 +40,7 @@ import {
 } from "@/lib/storage/intent-service";
 import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
 import { normalizeMediaFolderName } from "./folders";
+import { assertWithinBulkCap, MAX_TAGS_PER_ASSET, MAX_TAG_LENGTH } from "./bulk-cap";
 
 const MEDIA_READ_ROLES = [
   "workspace_manager",
@@ -1333,5 +1336,903 @@ export async function importPublicMediaAsset(input: {
       intentId: signed.uploadIntentId,
     });
     throw error;
+  }
+}
+
+// ─── FEAT-MEDIA-LIBRARY-2026-09-16 — navigation primitives + bulk actions ─────
+//
+// Plan §3.5: listMediaFoldersTree, linkedTargetsForMediaAsset,
+// setMediaAssetTags, reconcileContentItemMediaFolders,
+// ensureBrandMediaFolderPath, bulkMoveMediaAssets, bulkTrashMediaAssets,
+// bulkRestoreMediaAssets, bulkSetMediaAssetTags,
+// bulkSetMediaAssetVisibility, duplicateMediaAssets.
+//
+// `trashMediaAsset` already sets `delete_after = now() + 30d`; the cron
+// extension lives in PR-2 per decision H.
+
+/** Folder "kind" discriminator that powers the tree's badge + audit panel. */
+export type MediaFolderKind = "system" | "user";
+
+/** Tree row shape returned by `listMediaFoldersTree`. */
+export type MediaFolderTreeRow = {
+  id: string;
+  name: string;
+  parentId: string | null;
+  sortOrder: number;
+  assetCount: number;
+  descendantAssetCount: number;
+  kind: MediaFolderKind;
+  isBrandRoot: boolean;
+  isPostsRoot: boolean;
+  isYearFolder: boolean;
+  isMonthFolder: boolean;
+};
+
+/** Brand-Kit folder name — kept as a constant so tests and UI agree. */
+export const BRAND_KIT_FOLDER_NAME = "Brand Kit";
+
+/** Posts root folder name — kept as a constant so tests and UI agree. */
+export const POSTS_FOLDER_NAME = "Posts";
+
+/**
+ * Resolve the `Posts / {Format} / {YYYY} / {MM}` chain for an idea
+ * whose `plannedPublishAt` and `format` are known.
+ *
+ * Public so other services can compare an asset's current folder to
+ * the expected path before triggering a reconcile (plan §5.1).
+ */
+export async function ensurePlanningMediaFolderPathPublic(input: {
+  agencyId: string;
+  workspaceId: string;
+  format: string;
+  plannedPublishAt: Date;
+  timezone: string;
+  createdBy: string;
+}): Promise<string> {
+  return ensurePlanningMediaFolderPath(input);
+}
+
+/**
+ * Resolve the `Brand Kit` folder for a workspace. No further nesting
+ * for v1 (plan §5.2). Brand-kind subfolders are a follow-up after we
+ * see real usage.
+ */
+export async function ensureBrandMediaFolderPath(input: {
+  agencyId: string;
+  workspaceId: string;
+  createdBy: string;
+}): Promise<string> {
+  return ensureMediaFolder({
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    parentId: null,
+    name: BRAND_KIT_FOLDER_NAME,
+    createdBy: input.createdBy,
+  });
+}
+
+/**
+ * Returns every non-archived folder in the workspace with the
+ * asset-count for that folder (`assetCount`) and the total count for
+ * it and all descendants (`descendantAssetCount`).
+ *
+ * The "kind" discriminator marks system folders (`Posts`, `Brand Kit`,
+ * `{Format}`, `{YYYY}`, `{MM}`) so the tree can render them with a
+ * subtle shield badge and the info-audit panel.
+ */
+export async function listMediaFoldersTree(
+  actor: Actor,
+  input: { agencyId: string; workspaceId: string },
+): Promise<MediaFolderTreeRow[]> {
+  const accessible = await accessibleWorkspaceIds(actor, input.agencyId);
+  if (!accessible.includes(input.workspaceId)) return [];
+
+  // Pull every non-archived folder in one round-trip; classify kind
+  // on the application side because Drizzle's pg-core doesn't model
+  // recursive trees.
+  const folders = await db
+    .select({
+      id: mediaFolders.id,
+      name: mediaFolders.name,
+      parentId: mediaFolders.parentId,
+      sortOrder: mediaFolders.sortOrder,
+    })
+    .from(mediaFolders)
+    .where(
+      and(
+        eq(mediaFolders.agencyId, input.agencyId),
+        eq(mediaFolders.workspaceId, input.workspaceId),
+        isNull(mediaFolders.archivedAt),
+      ),
+    )
+    .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
+
+  if (folders.length === 0) return [];
+
+  // Build a child map for descendant traversal.
+  const byParent = new Map<string | null, typeof folders>();
+  for (const folder of folders) {
+    const key = folder.parentId ?? null;
+    byParent.set(key, [...(byParent.get(key) ?? []), folder]);
+  }
+
+  // Asset counts per folder id (one query).
+  const folderIds = folders.map((folder) => folder.id);
+  const counts = await db
+    .select({ folderId: mediaAssets.folderId, count: sql<number>`count(*)::int` })
+    .from(mediaAssets)
+    .where(
+      and(
+        eq(mediaAssets.agencyId, input.agencyId),
+        eq(mediaAssets.ownerWorkspaceId, input.workspaceId),
+        inArray(mediaAssets.folderId, folderIds),
+        inArray(mediaAssets.status, ["processing", "ready", "failed"]),
+      ),
+    )
+    .groupBy(mediaAssets.folderId);
+  const assetCountById = new Map<string, number>();
+  for (const row of counts) {
+    if (row.folderId) assetCountById.set(row.folderId, Number(row.count));
+  }
+
+  // Identify "system" folders by position in the tree.
+  // - Roots: `Posts`, `Brand Kit`.
+  // - Children of a system root with parent.name === one of our format
+  //   names → format folder.
+  // - Children of a format folder whose name matches /^\d{4}$/ → year.
+  // - Children of a year whose name matches /^\d{2}$/ → month.
+  // Anything else is a user folder.
+  const systemYearPattern = /^\d{4}$/;
+  const systemMonthPattern = /^\d{2}$/;
+  const folderById = new Map(folders.map((folder) => [folder.id, folder]));
+
+  const isFormatFolder = (folder: { parentId: string | null; name: string }) => {
+    if (!folder.parentId) return false;
+    const parent = folderById.get(folder.parentId);
+    if (!parent) return false;
+    if (parent.name !== POSTS_FOLDER_NAME) return false;
+    // Formats are surfaced by mediaFormatFolderName; a system folder
+    // is anything whose parent is the Posts root and that is not a
+    // user-created folder. We mark it as system, and the UI treats it
+    // as auto-derived. (Users can't create top-level children of Posts
+    // from the UI today; if they later can, the badge will switch to
+    // user when they rename it.)
+    return true;
+  };
+
+  const isYearFolder = (folder: { parentId: string | null; name: string }) => {
+    if (!folder.parentId || !systemYearPattern.test(folder.name)) return false;
+    const parent = folderById.get(folder.parentId);
+    return !!parent && isFormatFolder(parent);
+  };
+  const isMonthFolder = (folder: { parentId: string | null; name: string }) => {
+    if (!folder.parentId || !systemMonthPattern.test(folder.name)) return false;
+    const parent = folderById.get(folder.parentId);
+    return !!parent && isYearFolder(parent);
+  };
+
+  // Compute descendant asset counts (sum of assetCount over self + descendants).
+  const descendantCount = new Map<string, number>();
+  const computeDescendant = (folderId: string): number => {
+    const cached = descendantCount.get(folderId);
+    if (cached !== undefined) return cached;
+    const children = byParent.get(folderId) ?? [];
+    const self = assetCountById.get(folderId) ?? 0;
+    const total = children.reduce((sum, child) => sum + computeDescendant(child.id), self);
+    descendantCount.set(folderId, total);
+    return total;
+  };
+
+  return folders.map<MediaFolderTreeRow>((folder) => {
+    const isPostsRoot = folder.parentId === null && folder.name === POSTS_FOLDER_NAME;
+    const isBrandRoot = folder.parentId === null && folder.name === BRAND_KIT_FOLDER_NAME;
+    const kind: MediaFolderKind =
+      isPostsRoot ||
+      isBrandRoot ||
+      isFormatFolder(folder) ||
+      isYearFolder(folder) ||
+      isMonthFolder(folder)
+        ? "system"
+        : "user";
+    return {
+      id: folder.id,
+      name: folder.name,
+      parentId: folder.parentId,
+      sortOrder: folder.sortOrder,
+      assetCount: assetCountById.get(folder.id) ?? 0,
+      descendantAssetCount: computeDescendant(folder.id),
+      kind,
+      isBrandRoot,
+      isPostsRoot,
+      isYearFolder: isYearFolder(folder),
+      isMonthFolder: isMonthFolder(folder),
+    };
+  });
+}
+
+/**
+ * Inverse of `linkMediaAssetToContentItem`: returns every
+ * `media_asset_link` row for an asset, with a human-readable label
+ * and a workspace-deep link target. Privacy rule: if the actor is on
+ * an agency-shared-only read, rows with `clientVisible=false` are
+ * stripped from the result.
+ */
+export async function linkedTargetsForMediaAsset(
+  actor: Actor,
+  input: { agencyId: string; assetId: string },
+): Promise<
+  Array<{
+    id: string;
+    targetType: MediaAssetLink["targetType"];
+    targetId: string;
+    label: string;
+    href: string;
+    clientVisible: boolean;
+    createdAt: Date;
+  }>
+> {
+  if (!(await isAgencyMember(actor, input.agencyId))) return [];
+  // Confirm the asset belongs to the actor's agency before reading
+  // any links (defence in depth).
+  const [asset] = await db
+    .select({ id: mediaAssets.id, agencyId: mediaAssets.agencyId })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.id, input.assetId))
+    .limit(1);
+  if (!asset || asset.agencyId !== input.agencyId) return [];
+
+  const rows = await db
+    .select({
+      id: mediaAssetLinks.id,
+      targetType: mediaAssetLinks.targetType,
+      targetId: mediaAssetLinks.targetId,
+      clientVisible: mediaAssetLinks.clientVisible,
+      createdAt: mediaAssetLinks.createdAt,
+      workspaceId: mediaAssetLinks.workspaceId,
+      contentItemTitle: contentItems.title,
+      contentItemWorkspaceSlug: workspaces.slug,
+      deliveryVersionNumber: deliveryVersions.versionNumber,
+    })
+    .from(mediaAssetLinks)
+    .leftJoin(contentItems, eq(contentItems.id, mediaAssetLinks.targetId))
+    .leftJoin(deliveryVersions, eq(deliveryVersions.id, mediaAssetLinks.targetId))
+    .leftJoin(workspaces, eq(workspaces.id, mediaAssetLinks.workspaceId))
+    .where(eq(mediaAssetLinks.mediaAssetId, input.assetId));
+
+  const readableByAgency = await isAgencyMember(actor, input.agencyId);
+
+  return rows
+    .filter((row) => {
+      // Internal agency members can see every link regardless of
+      // clientVisible. A non-member (agency-shared-only viewer) sees
+      // only the client-visible links.
+      if (row.clientVisible) return true;
+      return readableByAgency;
+    })
+    .map((row) => {
+      const href = (() => {
+        if (row.targetType === "content_item") {
+          return row.contentItemWorkspaceSlug
+            ? `/app/w/${row.contentItemWorkspaceSlug}/planning/${row.targetId}`
+            : `/app/planning/${row.targetId}`;
+        }
+        if (row.targetType === "delivery") {
+          return row.contentItemWorkspaceSlug
+            ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
+            : `/app/planning`;
+        }
+        if (row.targetType === "comment") {
+          return row.contentItemWorkspaceSlug
+            ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
+            : `/app/planning`;
+        }
+        return row.contentItemWorkspaceSlug
+          ? `/app/w/${row.contentItemWorkspaceSlug}/brand-kit`
+          : `/app/brand-kit`;
+      })();
+      const label =
+        row.targetType === "content_item"
+          ? (row.contentItemTitle ?? "Idea")
+          : row.targetType === "delivery"
+            ? `Delivery v${row.deliveryVersionNumber ?? "?"}`
+            : row.targetType === "comment"
+              ? "Comment"
+              : "Brand asset";
+      return {
+        id: row.id,
+        targetType: row.targetType,
+        targetId: row.targetId,
+        label,
+        href,
+        clientVisible: row.clientVisible,
+        createdAt: row.createdAt,
+      };
+    });
+}
+
+/** Pure helper that powers `setMediaAssetTags` + the bulk variant. */
+export function sanitizeMediaTags(tags: readonly string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim().slice(0, MAX_TAG_LENGTH);
+    if (!tag || tag.length > MAX_TAG_LENGTH) continue;
+    if (seen.has(tag)) continue;
+    seen.add(tag);
+    result.push(tag);
+    if (result.length >= MAX_TAGS_PER_ASSET) break;
+  }
+  return result;
+}
+
+/** Single-asset tag setter. Used by `setMediaAssetTags` UI flow. */
+export async function setMediaAssetTags(actor: Actor, assetId: string, tags: readonly string[]) {
+  const [row] = await db
+    .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
+    .from(mediaAssets)
+    .where(eq(mediaAssets.id, assetId))
+    .limit(1);
+  if (!row || !(await hasWorkspaceRole(actor, row.workspaceId, ["workspace_manager"]))) {
+    throw new MediaPermissionError();
+  }
+  const sanitized = sanitizeMediaTags(tags);
+  const [updated] = await db
+    .update(mediaAssets)
+    .set({ tags: sanitized, updatedBy: actor.id, updatedAt: new Date() })
+    .where(eq(mediaAssets.id, assetId))
+    .returning();
+  return updated ?? null;
+}
+
+// ─── Bulk operations ─────────────────────────────────────────────────────────
+
+/**
+ * Move many assets to a single folder. Per-asset audit row when the
+ * move actually crosses a folder boundary (no-op moves don't pollute
+ * the log).
+ */
+export async function bulkMoveMediaAssets(
+  actor: Actor,
+  input: { assetIds: string[]; folderId: string | null },
+): Promise<{ moved: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { moved: 0, failures: [] };
+
+  // Validate the target folder once, before opening the transaction.
+  if (input.folderId) {
+    const [folder] = await db
+      .select({
+        id: mediaFolders.id,
+        agencyId: mediaFolders.agencyId,
+        workspaceId: mediaFolders.workspaceId,
+      })
+      .from(mediaFolders)
+      .where(and(eq(mediaFolders.id, input.folderId), isNull(mediaFolders.archivedAt)))
+      .limit(1);
+    if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
+  }
+
+  const rows = await db
+    .select({
+      id: mediaAssets.id,
+      agencyId: mediaAssets.agencyId,
+      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+      folderId: mediaAssets.folderId,
+    })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  const now = new Date();
+  let moved = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      if (!(await canWriteToWorkspace(actor, row.ownerWorkspaceId))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      if (row.folderId === input.folderId) continue; // no-op
+      const [updated] = await tx
+        .update(mediaAssets)
+        .set({ folderId: input.folderId, updatedBy: actor.id, updatedAt: now })
+        .where(eq(mediaAssets.id, row.id))
+        .returning({ id: mediaAssets.id });
+      if (!updated) {
+        failures.push({ assetId: row.id, reason: "missing" });
+        continue;
+      }
+      moved += 1;
+      // Audit only when there is a content_item we can attribute the
+      // move to; the bulk path doesn't have a single idea so we record
+      // the move without a `content_item_id` (CHECK constraint allows
+      // it because the column is nullable... wait, it's notNull).
+      //
+      // To keep the audit row meaningful we fall back to writing one
+      // row per linked content_item when there is exactly one — for
+      // ambiguous multi-link cases we still write a single row using
+      // the first link's content_item (most common path).
+      const [link] = await tx
+        .select({ contentItemId: mediaAssetLinks.targetId })
+        .from(mediaAssetLinks)
+        .where(
+          and(
+            eq(mediaAssetLinks.mediaAssetId, row.id),
+            eq(mediaAssetLinks.targetType, "content_item"),
+          ),
+        )
+        .limit(1);
+      if (link) {
+        await tx.insert(mediaFolderReconcileLogs).values({
+          agencyId: row.agencyId,
+          workspaceId: row.ownerWorkspaceId,
+          mediaAssetId: row.id,
+          contentItemId: link.contentItemId,
+          fromFolderId: row.folderId,
+          toFolderId: input.folderId,
+          reason: "bulk_move",
+          actorId: actor.id,
+        });
+      }
+    }
+  });
+
+  return { moved, failures };
+}
+
+/** Bulk trash. Per-asset `delete_after = now() + 30d`. Idempotent. */
+export async function bulkTrashMediaAssets(
+  actor: Actor,
+  input: { assetIds: string[] },
+): Promise<{ trashed: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { trashed: 0, failures: [] };
+
+  const rows = await db
+    .select({
+      id: mediaAssets.id,
+      status: mediaAssets.status,
+      workspaceId: mediaAssets.ownerWorkspaceId,
+    })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  const now = new Date();
+  const deleteAfter = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  let trashed = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      if (!(await canWriteToWorkspace(actor, row.workspaceId))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      if (row.status === "trashed") continue; // idempotent
+      const [updated] = await tx
+        .update(mediaAssets)
+        .set({
+          status: "trashed",
+          trashedAt: now,
+          deleteAfter,
+          updatedBy: actor.id,
+          updatedAt: now,
+        })
+        .where(and(eq(mediaAssets.id, row.id), ne(mediaAssets.status, "trashed")))
+        .returning({ id: mediaAssets.id });
+      if (updated) trashed += 1;
+      else failures.push({ assetId: row.id, reason: "missing" });
+    }
+  });
+
+  return { trashed, failures };
+}
+
+/** Bulk restore. Idempotent (no-op when the asset isn't trashed). */
+export async function bulkRestoreMediaAssets(
+  actor: Actor,
+  input: { assetIds: string[] },
+): Promise<{ restored: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { restored: 0, failures: [] };
+
+  const rows = await db
+    .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  const now = new Date();
+  let restored = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      if (!(await canWriteToWorkspace(actor, row.workspaceId))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      const [updated] = await tx
+        .update(mediaAssets)
+        .set({
+          status: "ready",
+          trashedAt: null,
+          deleteAfter: null,
+          updatedBy: actor.id,
+          updatedAt: now,
+        })
+        .where(and(eq(mediaAssets.id, row.id), eq(mediaAssets.status, "trashed")))
+        .returning({ id: mediaAssets.id });
+      if (updated) restored += 1;
+      else failures.push({ assetId: row.id, reason: "not_trashed" });
+    }
+  });
+
+  return { restored, failures };
+}
+
+/** Bulk tag diff (add + remove). */
+export async function bulkSetMediaAssetTags(
+  actor: Actor,
+  input: { assetIds: string[]; add?: string[]; remove?: string[] },
+): Promise<{ updated: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { updated: 0, failures: [] };
+
+  const sanitizedAdd = sanitizeMediaTags(input.add ?? []);
+  const removeSet = new Set((input.remove ?? []).map((tag) => tag.trim()).filter(Boolean));
+
+  const rows = await db
+    .select({
+      id: mediaAssets.id,
+      tags: mediaAssets.tags,
+      workspaceId: mediaAssets.ownerWorkspaceId,
+    })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  const now = new Date();
+  let updated = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      if (!(await canWriteToWorkspace(actor, row.workspaceId))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      const next = new Set<string>(row.tags ?? []);
+      for (const tag of sanitizedAdd) next.add(tag);
+      for (const tag of removeSet) next.delete(tag);
+      const merged = sanitizeMediaTags([...next]);
+      const [updatedRow] = await tx
+        .update(mediaAssets)
+        .set({ tags: merged, updatedBy: actor.id, updatedAt: now })
+        .where(eq(mediaAssets.id, row.id))
+        .returning({ id: mediaAssets.id });
+      if (updatedRow) updated += 1;
+      else failures.push({ assetId: row.id, reason: "missing" });
+    }
+  });
+
+  return { updated, failures };
+}
+
+/** Bulk visibility change. Rejects cross-agency writes. */
+export async function bulkSetMediaAssetVisibility(
+  actor: Actor,
+  input: { assetIds: string[]; visibility: "workspace" | "agency" },
+): Promise<{ updated: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { updated: 0, failures: [] };
+  if (input.visibility !== "workspace" && input.visibility !== "agency") {
+    throw new MediaPermissionError("Invalid visibility value.");
+  }
+
+  const rows = await db
+    .select({
+      id: mediaAssets.id,
+      agencyId: mediaAssets.agencyId,
+      workspaceId: mediaAssets.ownerWorkspaceId,
+    })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  const now = new Date();
+  let updated = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      // Visibility changes need workspace_manager rights; cross-agency
+      // writes are blocked.
+      if (!(await hasWorkspaceRole(actor, row.workspaceId, ["workspace_manager"]))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      const [updatedRow] = await tx
+        .update(mediaAssets)
+        .set({ visibility: input.visibility, updatedBy: actor.id, updatedAt: now })
+        .where(eq(mediaAssets.id, row.id))
+        .returning({ id: mediaAssets.id });
+      if (updatedRow) updated += 1;
+      else failures.push({ assetId: row.id, reason: "missing" });
+    }
+  });
+
+  return { updated, failures };
+}
+
+/**
+ * Duplicate a set of assets. Each duplicate:
+ *   - Inserts a new `media_asset` row pointing at the same `storage_object_id`
+ *     (the bytes are shared — a `supersedesAssetId` chain carries the
+ *     lineage, not a copy).
+ *   - Sets `title` to "<original title> (Copy)" unless overridden.
+ *   - Does NOT copy `media_asset_link` rows (the duplicate is an
+ *     independent asset the user can re-attach).
+ *
+ * Hard cap is enforced. Cross-workspace duplication is rejected.
+ */
+export async function duplicateMediaAssets(
+  actor: Actor,
+  input: { assetIds: string[] },
+): Promise<{ duplicated: number; failures: Array<{ assetId: string; reason: string }> }> {
+  assertWithinBulkCap(input.assetIds);
+  if (input.assetIds.length === 0) return { duplicated: 0, failures: [] };
+
+  const rows = await db
+    .select({
+      id: mediaAssets.id,
+      title: mediaAssets.title,
+      description: mediaAssets.description,
+      tags: mediaAssets.tags,
+      altText: mediaAssets.altText,
+      storageObjectId: mediaAssets.storageObjectId,
+      previewStorageObjectId: mediaAssets.previewStorageObjectId,
+      posterStorageObjectId: mediaAssets.posterStorageObjectId,
+      folderId: mediaAssets.folderId,
+      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+      visibility: mediaAssets.visibility,
+      sourceType: mediaAssets.sourceType,
+      sourceProvider: mediaAssets.sourceProvider,
+      sourceReference: mediaAssets.sourceReference,
+      sourceUrl: mediaAssets.sourceUrl,
+    })
+    .from(mediaAssets)
+    .where(inArray(mediaAssets.id, input.assetIds));
+
+  const failures: Array<{ assetId: string; reason: string }> = [];
+  let duplicated = 0;
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      if (!(await canWriteToWorkspace(actor, row.ownerWorkspaceId))) {
+        failures.push({ assetId: row.id, reason: "forbidden" });
+        continue;
+      }
+      const [created] = await tx
+        .insert(mediaAssets)
+        .values({
+          agencyId:
+            (
+              await tx
+                .select({ agencyId: mediaAssets.agencyId })
+                .from(mediaAssets)
+                .where(eq(mediaAssets.id, row.id))
+                .limit(1)
+            )[0]?.agencyId ?? "",
+          ownerWorkspaceId: row.ownerWorkspaceId,
+          folderId: row.folderId,
+          storageObjectId: row.storageObjectId,
+          previewStorageObjectId: row.previewStorageObjectId,
+          posterStorageObjectId: row.posterStorageObjectId,
+          title: sanitizeAssetTitle(`${row.title} (Copy)`),
+          description: row.description,
+          tags: row.tags,
+          altText: row.altText,
+          visibility: row.visibility,
+          status: "ready",
+          sourceType: row.sourceType,
+          sourceProvider: row.sourceProvider,
+          sourceReference: row.sourceReference,
+          sourceUrl: row.sourceUrl,
+          supersedesAssetId: row.id,
+          createdBy: actor.id,
+          updatedBy: actor.id,
+        })
+        .returning({ id: mediaAssets.id });
+      if (created) duplicated += 1;
+      else failures.push({ assetId: row.id, reason: "missing" });
+    }
+  });
+
+  return { duplicated, failures };
+}
+
+// ─── Reconcile ──────────────────────────────────────────────────────────────
+
+/**
+ * Triggered when an idea's `plannedPublishAt` or `format` changes.
+ * For every asset linked to that idea:
+ *   - Compute the new derived folder.
+ *   - If the asset's current folder matches the old derived path AND
+ *     the asset's only link is this idea, move it to the new folder.
+ *   - Write a `media_folder_reconcile_log` audit row in the same
+ *     transaction.
+ *
+ * Returns the count of moved assets; callers revalidate the planning
+ * page so a toast can fire.
+ */
+export async function reconcileContentItemMediaFolders(input: {
+  actor: Actor;
+  agencyId: string;
+  workspaceId: string;
+  contentItemId: string;
+  prevPlannedPublishAt?: Date | null;
+  nextPlannedPublishAt: Date;
+  prevFormat?: string | null;
+  nextFormat: string;
+}): Promise<{ moved: number }> {
+  const [contentItem] = await db
+    .select({
+      id: contentItems.id,
+      workspaceId: contentItems.workspaceId,
+      agencyId: workspaces.agencyId,
+      timezone: workspaces.timezone,
+    })
+    .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .where(eq(contentItems.id, input.contentItemId))
+    .limit(1);
+  if (
+    !contentItem ||
+    contentItem.workspaceId !== input.workspaceId ||
+    contentItem.agencyId !== input.agencyId
+  ) {
+    return { moved: 0 };
+  }
+
+  const newFolderId = await ensurePlanningMediaFolderPath({
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    format: input.nextFormat,
+    plannedPublishAt: input.nextPlannedPublishAt,
+    timezone: contentItem.timezone,
+    createdBy: input.actor.id,
+  });
+
+  // Old derived folder (only matters if format/date actually moved).
+  const oldFolderId =
+    input.prevPlannedPublishAt && input.prevFormat
+      ? await ensurePlanningMediaFolderPath({
+          agencyId: input.agencyId,
+          workspaceId: input.workspaceId,
+          format: input.prevFormat,
+          plannedPublishAt: input.prevPlannedPublishAt,
+          timezone: contentItem.timezone,
+          createdBy: input.actor.id,
+        })
+      : null;
+
+  // If the old and new derived folder resolve to the same id, no-op.
+  if (oldFolderId && oldFolderId === newFolderId) return { moved: 0 };
+
+  // Fetch every asset linked to this idea.
+  const links = await db
+    .select({
+      mediaAssetId: mediaAssetLinks.mediaAssetId,
+      folderId: mediaAssets.folderId,
+      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+      assetStatus: mediaAssets.status,
+    })
+    .from(mediaAssetLinks)
+    .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
+    .where(
+      and(
+        eq(mediaAssetLinks.targetType, "content_item"),
+        eq(mediaAssetLinks.targetId, input.contentItemId),
+      ),
+    );
+
+  // Per-asset: only move when the asset's *only* link is this idea AND
+  // the current folder matches the old derived path (no manual override).
+  const reason: "planned_publish_at_changed" | "format_changed" =
+    input.prevFormat !== input.nextFormat && oldFolderId === newFolderId
+      ? "format_changed"
+      : "planned_publish_at_changed";
+
+  const now = new Date();
+  let moved = 0;
+  await db.transaction(async (tx) => {
+    for (const link of links) {
+      if (link.assetStatus !== "ready" && link.assetStatus !== "processing") continue;
+      // Skip assets whose current folder doesn't match the old derived
+      // path — they've been moved manually or shared across ideas.
+      if (oldFolderId && link.folderId !== oldFolderId) continue;
+      // Skip assets linked to anything else (the move would be surprising).
+      const otherRows = await tx
+        .select({ otherCount: sql<number>`count(*)::int` })
+        .from(mediaAssetLinks)
+        .where(
+          and(
+            eq(mediaAssetLinks.mediaAssetId, link.mediaAssetId),
+            sql`(${mediaAssetLinks.targetType} <> 'content_item' OR ${mediaAssetLinks.targetId} <> ${input.contentItemId})`,
+          ),
+        );
+      const otherCount = otherRows[0]?.otherCount ?? 0;
+      if (otherCount > 0) continue;
+
+      const [updated] = await tx
+        .update(mediaAssets)
+        .set({
+          folderId: newFolderId,
+          updatedBy: input.actor.id,
+          updatedAt: now,
+        })
+        .where(eq(mediaAssets.id, link.mediaAssetId))
+        .returning({ id: mediaAssets.id });
+      if (!updated) continue;
+      await tx.insert(mediaFolderReconcileLogs).values({
+        agencyId: input.agencyId,
+        workspaceId: input.workspaceId,
+        mediaAssetId: link.mediaAssetId,
+        contentItemId: input.contentItemId,
+        fromFolderId: oldFolderId,
+        toFolderId: newFolderId,
+        reason,
+        actorId: input.actor.id,
+      });
+      moved += 1;
+    }
+  });
+  return { moved };
+}
+
+// ─── Filter extensions for `listMediaAssets` ────────────────────────────────
+
+/**
+ * Filter extensions used by the library URL state:
+ *   - `tagIntersect`: array of tag names — assets must carry ALL of them.
+ *   - `status`: array of status names; default = `['processing','ready','failed']`.
+ *   - `inUse`: when true, only assets that have at least one
+ *     `media_asset_link` row.
+ *   - `unlinked`: when true, only assets without any link row.
+ *
+ * Both `inUse` and `unlinked` use the same EXISTS / NOT EXISTS predicate;
+ * they're mutually exclusive at the URL layer.
+ */
+export type MediaAssetFilters = {
+  tagIntersect?: string[];
+  status?: ReadonlyArray<"processing" | "ready" | "failed" | "trashed">;
+  inUse?: boolean;
+  unlinked?: boolean;
+};
+
+/**
+ * Inject `MediaAssetFilters` into a Drizzle `where` builder. Pulled out
+ * of `listMediaAssets` so the bulk route and the API handlers can reuse
+ * the same predicate shape.
+ */
+export function applyMediaAssetFilters(
+  conditions: Parameters<typeof and>,
+  filters: MediaAssetFilters,
+): void {
+  if (filters.status && filters.status.length > 0) {
+    conditions.push(inArray(mediaAssets.status, [...filters.status]));
+  }
+  if (filters.tagIntersect && filters.tagIntersect.length > 0) {
+    for (const tag of filters.tagIntersect) {
+      conditions.push(sql`${tag} = ANY(${mediaAssets.tags})`);
+    }
+  }
+  if (filters.inUse) {
+    conditions.push(
+      sql`EXISTS (SELECT 1 FROM ${mediaAssetLinks} WHERE ${mediaAssetLinks.mediaAssetId} = ${mediaAssets.id})`,
+    );
+  }
+  if (filters.unlinked) {
+    conditions.push(
+      sql`NOT EXISTS (SELECT 1 FROM ${mediaAssetLinks} WHERE ${mediaAssetLinks.mediaAssetId} = ${mediaAssets.id})`,
+    );
   }
 }

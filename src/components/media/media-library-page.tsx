@@ -1,27 +1,31 @@
 import Link from "next/link";
-import { FileText, Grid2X2, Image as ImageIcon, List, Video } from "lucide-react";
+import { Briefcase, FileText, Grid2X2, Image as ImageIcon, List, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { MediaAssetActions } from "./media-asset-actions";
 import { MediaAssetSelectionCheckbox, MediaSelectionToolbar } from "./media-selection-controls";
-import { MediaFolderSidebar } from "./media-folder-sidebar";
+import { MediaFolderTree } from "./media-folder-tree";
+import { MediaBreadcrumb } from "./media-breadcrumb";
+import { MediaBulkToolbar } from "./media-bulk-toolbar";
+import { MediaSelectionProvider } from "@/lib/media/selection-store";
 import { MediaSourcePicker } from "./media-source-picker";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
-import type { listMediaAssets } from "@/lib/media/service";
+import type { listMediaAssets, MediaFolderTreeRow } from "@/lib/media/service";
 
 type MediaRow = Awaited<ReturnType<typeof listMediaAssets>>[number];
 
+type WorkspaceOption = { id: string; name: string; slug: string };
+
+export type MediaLibraryMode = "workspace" | "agency";
+
 export function MediaLibraryPage({
-  title,
-  description,
+  mode,
+  workspace,
+  agencyWorkspaces,
   rows,
-  workspaceOptions,
-  folderWorkspaceOptions,
-  folderOptionsByWorkspace,
   basePath,
-  selectedWorkspaceId,
   selectedFolderId,
   sharedOnly,
   preserveParams,
@@ -36,18 +40,15 @@ export function MediaLibraryPage({
   initialSource = "device",
   t,
   storageSummary,
+  folderTree,
+  ancestors,
+  activeFolderLabel,
 }: {
-  title: string;
-  description: string;
+  mode: MediaLibraryMode;
+  workspace: WorkspaceOption | null;
+  agencyWorkspaces: WorkspaceOption[];
   rows: MediaRow[];
-  workspaceOptions: { id: string; name: string }[];
-  folderWorkspaceOptions: { id: string; name: string }[];
-  folderOptionsByWorkspace: Record<
-    string,
-    { id: string; name: string; parentId?: string | null }[]
-  >;
   basePath: string;
-  selectedWorkspaceId: string;
   selectedFolderId: string;
   sharedOnly: boolean;
   preserveParams: Record<string, string>;
@@ -66,7 +67,11 @@ export function MediaLibraryPage({
     bucket: string | null;
     keyPrefix: string;
   };
+  folderTree?: MediaFolderTreeRow[];
+  ancestors?: ReadonlyArray<{ id: string; name: string }>;
+  activeFolderLabel?: string;
 }) {
+  const selectedWorkspaceId = workspace?.id ?? "";
   const hasFilters = Boolean(search || kind || includeTrashed || selectedFolderId || sharedOnly);
   const viewHref = (nextView: "grid" | "list") => {
     const params = new URLSearchParams();
@@ -96,14 +101,48 @@ export function MediaLibraryPage({
     <div className="flex flex-col gap-6" data-testid="media-library">
       <header className="order-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
-          <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
-            {title}
-          </h1>
-          <p className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">{description}</p>
+          {mode === "agency" ? (
+            <>
+              <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
+              <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
+                {workspace?.name ?? t("media.library")}
+              </h1>
+              {activeFolderLabel && workspace ? (
+                <MediaBreadcrumb
+                  basePath={basePath}
+                  workspaceId={selectedWorkspaceId}
+                  workspaceName={workspace.name}
+                  ancestors={ancestors ?? []}
+                  currentLabel={activeFolderLabel}
+                />
+              ) : null}
+            </>
+          ) : (
+            <>
+              <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
+              <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
+                {workspace?.name ?? t("media.title")}
+              </h1>
+              {activeFolderLabel && workspace ? (
+                <MediaBreadcrumb
+                  basePath={basePath}
+                  workspaceId={selectedWorkspaceId}
+                  workspaceName={workspace.name}
+                  ancestors={ancestors ?? []}
+                  currentLabel={activeFolderLabel}
+                />
+              ) : null}
+            </>
+          )}
+          <p className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">
+            {t("media.description")}
+          </p>
         </div>
-        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
-          {canUpload ? (
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
+          {mode === "agency" && agencyWorkspaces.length > 1 ? (
+            <AgencyWorkspaceChip active={workspace} options={agencyWorkspaces} t={t} />
+          ) : null}
+          {canUpload && workspace ? (
             <a
               href="#media-upload"
               className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
@@ -154,44 +193,86 @@ export function MediaLibraryPage({
       {canUpload ? (
         <div id="media-upload" className="order-2 scroll-mt-4 sm:order-3">
           <MediaSourcePicker
-            workspaceOptions={workspaceOptions}
-            folderOptionsByWorkspace={folderOptionsByWorkspace}
+            workspaceOptions={mode === "agency" ? agencyWorkspaces : workspace ? [workspace] : []}
+            folderOptionsByWorkspace={
+              workspace
+                ? {
+                    [workspace.id]: (folderTree ?? []).map((f) => ({
+                      id: f.id,
+                      name: f.name,
+                      parentId: f.parentId,
+                    })),
+                  }
+                : {}
+            }
             initialSource={initialSource}
           />
         </div>
       ) : null}
       <div className="order-4 flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="grid gap-3 lg:w-56 lg:shrink-0">
-          {folderWorkspaceOptions.map((workspace) => (
-            <MediaFolderSidebar
-              key={workspace.id}
+        <div className="grid gap-3 lg:w-64 lg:shrink-0">
+          {workspace && folderTree ? (
+            <MediaFolderTree
               basePath={basePath}
-              preserveParams={preserveParams}
-              workspaceId={workspace.id}
+              workspaceId={selectedWorkspaceId}
               workspaceName={workspace.name}
-              folders={folderOptionsByWorkspace[workspace.id] ?? []}
-              activeFolder={selectedWorkspaceId === workspace.id ? selectedFolderId : ""}
-              sharedOnly={selectedWorkspaceId === workspace.id && sharedOnly}
-              canManage={managerWorkspaceIds.includes(workspace.id)}
+              folders={folderTree}
+              activeFolderId={
+                selectedFolderId === "unfiled" || !selectedFolderId ? null : selectedFolderId
+              }
+              sharedOnly={sharedOnly}
+              ancestors={ancestors ?? []}
+              canManage={managerWorkspaceIds.includes(selectedWorkspaceId)}
               labels={{
-                folders: t("media.folders"),
-                allMedia: t("media.allMedia"),
-                unfiled: t("media.unfiled"),
-                agencyShared: t("media.agencySharedFilter"),
+                tree: t("media.tree.label"),
+                allMedia: t("media.breadcrumb.allMedia"),
+                unfiled: t("media.breadcrumb.unfiled"),
+                agencyShared: t("media.breadcrumb.agencyShared"),
                 newFolder: t("media.newFolder"),
-                folderName: t("media.folderName"),
                 folderPlaceholder: t("media.folderNamePlaceholder"),
                 createFolder: t("media.createFolder"),
-                newSubfolder: t("media.newSubfolder"),
                 parentFolder: t("media.parentFolder"),
                 rootFolder: t("media.rootFolder"),
                 folderError: t("media.folderError"),
                 renameFolder: t("media.renameFolder"),
                 archiveFolder: t("media.archiveFolder"),
                 archiveConfirm: t("media.archiveConfirm"),
+                postBadge: t("media.tree.postBadge"),
+                brandBadge: t("media.tree.brandBadge"),
+                systemBadge: t("media.tree.systemBadge"),
+                info: t("media.tree.info"),
+                openInfo: t("media.tree.openInfo"),
               }}
             />
-          ))}
+          ) : mode === "agency" ? (
+            <Card padding="md" data-testid="agency-workspace-picker-card">
+              <h2 className="text-title-card text-fg-primary font-semibold">
+                {t("media.workspacePickerTitle")}
+              </h2>
+              <p className="text-label text-fg-secondary mt-1 max-w-3xl">
+                {t("media.workspacePickerDescription")}
+              </p>
+              <ul className="m-0 mt-3 list-none p-0">
+                {agencyWorkspaces.length === 0 ? (
+                  <li className="text-body text-fg-muted py-2">
+                    {t("media.workspacePickerEmpty")}
+                  </li>
+                ) : (
+                  agencyWorkspaces.map((option) => (
+                    <li key={option.id}>
+                      <Link
+                        href={`${basePath}?workspace=${option.id}`}
+                        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+                      >
+                        <Briefcase className="text-fg-muted h-4 w-4" aria-hidden="true" />
+                        <span className="min-w-0 truncate">{option.name}</span>
+                      </Link>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </Card>
+          ) : null}
         </div>
         <div className="min-w-0 flex-1">
           <form
@@ -291,6 +372,16 @@ export function MediaLibraryPage({
             </div>
           </div>
           <MediaSelectionToolbar />
+          {folderTree ? (
+            <MediaSelectionProvider canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}>
+              <MediaBulkToolbar
+                workspaceId={selectedWorkspaceId}
+                folders={folderTree}
+                canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}
+                hasTrashedSelected={includeTrashed}
+              />
+            </MediaSelectionProvider>
+          ) : null}
           {rows.length === 0 ? (
             <Card padding="lg">
               <EmptyState
@@ -309,7 +400,11 @@ export function MediaLibraryPage({
                   row={row}
                   t={t}
                   canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
-                  folderOptions={folderOptionsByWorkspace[row.asset.ownerWorkspaceId] ?? []}
+                  folderOptions={(folderTree ?? []).map((f) => ({
+                    id: f.id,
+                    name: f.name,
+                    parentId: f.parentId,
+                  }))}
                 />
               ))}
             </div>
@@ -322,7 +417,11 @@ export function MediaLibraryPage({
                     row={row}
                     t={t}
                     canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
-                    folderOptions={folderOptionsByWorkspace[row.asset.ownerWorkspaceId] ?? []}
+                    folderOptions={(folderTree ?? []).map((f) => ({
+                      id: f.id,
+                      name: f.name,
+                      parentId: f.parentId,
+                    }))}
                   />
                 ))}
               </ul>
@@ -679,4 +778,33 @@ function mediaSourceLabel(
     default:
       return t("media.sourceBrowser");
   }
+}
+
+/**
+ * Compact workspace chip that surfaces on the agency-wide media page
+ * header. Mirrors the visual rhythm of `<WorkspaceSwitcher>` but is a
+ * popover-triggered chip rather than a full button, so it doesn't
+ * dominate the page header.
+ *
+ * Used when there is more than one writable workspace in the agency;
+ * on a single-workspace agency the chip is omitted to avoid noise.
+ */
+function AgencyWorkspaceChip({
+  active,
+  options,
+  t,
+}: {
+  active: WorkspaceOption | null;
+  options: WorkspaceOption[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div className="border-border bg-surface-subtle text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-sm font-semibold">
+      <Briefcase className="text-fg-muted h-4 w-4" aria-hidden="true" />
+      <span className="truncate">{active?.name ?? t("media.workspacePickerEmpty")}</span>
+      <span className="bg-surface text-fg-muted rounded-full px-2 py-0.5 text-[10px] font-medium">
+        {t("media.workspaceCount", { count: options.length })}
+      </span>
+    </div>
+  );
 }

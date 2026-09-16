@@ -5,7 +5,12 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
-import { listMediaAssetsPage, listMediaFolders, type MediaSort } from "@/lib/media/service";
+import {
+  listMediaAssetsPage,
+  listMediaFolders,
+  listMediaFoldersTree,
+  type MediaSort,
+} from "@/lib/media/service";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -48,20 +53,35 @@ export default async function AgencyMediaPage({
   const sort: MediaSort =
     filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";
   const page = Math.max(Number.parseInt(filters.page ?? "1", 10) || 1, 1);
-  const folderOptionsByWorkspace = Object.fromEntries(
-    await Promise.all(
-      options.map(
-        async (workspace) =>
-          [
-            workspace.id,
-            await listMediaFolders(actor, {
-              agencyId: context.agencyId,
-              workspaceId: workspace.id,
-            }),
-          ] as const,
-      ),
-    ),
-  );
+  const activeWorkspace = options.find((workspace) => workspace.id === selectedWorkspaceId) ?? null;
+  const folderTree = selectedWorkspaceId
+    ? await listMediaFoldersTree(actor, {
+        agencyId: context.agencyId,
+        workspaceId: selectedWorkspaceId,
+      })
+    : [];
+  const flatFolders = selectedWorkspaceId
+    ? await listMediaFolders(actor, {
+        agencyId: context.agencyId,
+        workspaceId: selectedWorkspaceId,
+      })
+    : [];
+  const ancestors: { id: string; name: string }[] = [];
+  const folderById = new Map(flatFolders.map((f) => [f.id, f]));
+  let cursor = folderById.get(selectedFolderId);
+  while (cursor && cursor.parentId) {
+    const parent = folderById.get(cursor.parentId);
+    if (!parent) break;
+    ancestors.unshift({ id: parent.id, name: parent.name });
+    cursor = parent;
+  }
+  const activeFolderLabel = !activeWorkspace
+    ? t("media.allMedia")
+    : selectedFolderId === "unfiled"
+      ? t("media.unfiled")
+      : filters.shared === "1"
+        ? t("media.agencySharedFilter")
+        : (flatFolders.find((f) => f.id === selectedFolderId)?.name ?? t("media.allMedia"));
   const mediaPage = await listMediaAssetsPage(actor, {
     agencyId: context.agencyId,
     ...(selectedWorkspaceId ? { workspaceId: selectedWorkspaceId } : {}),
@@ -91,14 +111,19 @@ export default async function AgencyMediaPage({
 
   return (
     <MediaLibraryPage
-      title={t("media.title")}
-      description={t("media.description")}
+      mode="agency"
+      workspace={
+        activeWorkspace
+          ? { id: activeWorkspace.id, name: activeWorkspace.name, slug: activeWorkspace.slug }
+          : null
+      }
+      agencyWorkspaces={writableOptions.map((workspace) => ({
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+      }))}
       rows={mediaPage.rows}
-      workspaceOptions={writableOptions}
-      folderWorkspaceOptions={options}
-      folderOptionsByWorkspace={folderOptionsByWorkspace}
       basePath="/app/media"
-      selectedWorkspaceId={selectedWorkspaceId}
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}
       preserveParams={{
@@ -109,7 +134,7 @@ export default async function AgencyMediaPage({
         ...(sort !== "name" ? { sort } : {}),
       }}
       managerWorkspaceIds={managerWorkspaceIds}
-      canUpload={writable.some(Boolean)}
+      canUpload={writable.some(Boolean) && Boolean(activeWorkspace)}
       includeTrashed={filters.trash === "1"}
       view={filters.view === "list" ? "list" : "grid"}
       search={filters.q ?? ""}
@@ -122,6 +147,9 @@ export default async function AgencyMediaPage({
         bucket: storageSummary.bucket,
         keyPrefix: storageSummary.keyPrefix,
       }}
+      folderTree={folderTree}
+      ancestors={ancestors}
+      activeFolderLabel={activeFolderLabel}
     />
   );
 }

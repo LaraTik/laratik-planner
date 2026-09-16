@@ -4,7 +4,12 @@
   "sourceDevice": "From device",
   "sourceLink": "From link",
   "title": "Media",
+  "library": "Media library",
   "description": "Store, organize, and reuse production files securely.",
+  "workspacePickerTitle": "Pick a workspace",
+  "workspacePickerDescription": "Choose a workspace to see its folders. Folders stay scoped to the workspace so a brand-kit update doesn't pollute another workspace's post tree.",
+  "workspacePickerEmpty": "No workspaces are available",
+  "workspaceCount": "{count} workspace(s)",
   "workspaceDescription": "Files for {workspace} and media shared with this workspace.",
   "upload": "Upload media",
   "uploadTitle": "Add media",
@@ -183,5 +188,148 @@
   "publicCollectionEmpty": "No media is available in this collection.",
   "publicCollectionZipTooLarge": "ZIP download is unavailable above 500 MiB. Download assets individually instead.",
   "languageArabic": "العربية",
-  "languageEnglish": "English"
+  "languageEnglish": "English",
+  "tree": {
+    "label": "Folder tree",
+    "expand": "Expand {name}",
+    "collapse": "Collapse {name}",
+    "selectAllDescendants": "Select every asset in {name}",
+    "assetCount": "{count} assets",
+    "newCount": "{count} new",
+    "systemBadge": "Auto",
+    "brandBadge": "Brand",
+    "postBadge": "Posts",
+    "info": "Folder info",
+    "openInfo": "Show recent activity for {name}"
+  },
+  "breadcrumb": {
+    "label": "Folder path",
+    "allMedia": "All media",
+    "unfiled": "Unfiled",
+    "agencyShared": "Agency shared",
+    "home": "Media home"
+  },
+  "inUseBy": {
+    "title": "In use by",
+    "none": "Not linked anywhere yet",
+    "contentItem": "Idea",
+    "delivery": "Delivery",
+    "comment": "Comment",
+    "brandAsset": "Brand asset",
+    "openTarget": "Open {type}",
+    "clientVisibleOff": "Hidden from clients"
+  },
+  "filters": {
+    "title": "Filters",
+    "tag": "Tag",
+    "tagsLabel": "Tags",
+    "clearAll": "Clear all filters",
+    "inUse": "In use",
+    "unlinked": "Unlinked",
+    "includeAgency": "Include agency-shared",
+    "status": "Status",
+    "apply": "Apply filters",
+    "open": "Open filters",
+    "close": "Close filters",
+    "activeCount": "{count} filter(s) active"
+  },
+  "kebab": {
+    "label": "Asset actions",
+    "rename": "Rename",
+    "duplicate": "Duplicate",
+    "move": "Move to folder…",
+    "addTag": "Add tag…",
+    "removeTag": "Remove tag…",
+    "setVisibility": "Set access",
+    "copyShareLink": "Copy share link",
+    "revokeShareLink": "Revoke share link",
+    "trash": "Move to trash",
+    "restore": "Restore",
+    "openPost": "Open related post"
+  },
+  "bulk": {
+    "toolbarLabel": "Bulk actions",
+    "selected": "{count} selected",
+    "oneSelected": "1 asset selected",
+    "selectAll": "Select all on this page",
+    "selectAllMatching": "Select all {count} matching",
+    "clear": "Clear selection",
+    "move": "Move",
+    "trash": "Move to trash",
+    "restore": "Restore",
+    "deleteForever": "Delete permanently",
+    "tag": "Tag",
+    "visibility": "Access",
+    "share": "Share collection",
+    "undo": "Undo",
+    "moved": "Moved {count} asset(s) to {folder}",
+    "trashed": "Moved {count} asset(s) to trash",
+    "restored": "Restored {count} asset(s)",
+    "tagged": "Updated tags for {count} asset(s)",
+    "visibilityUpdated": "Updated access for {count} asset(s)",
+    "duplicated": "Duplicated {count} asset(s)",
+    "error": "Some actions could not be completed. Review the rows below and retry.",
+    "tooLarge": "Selection exceeds {max} assets. Act on a folder instead.",
+    "undoAvailable": "Available for {seconds}s",
+    "loading": "Working…",
+    "mixedStates": "Selection has mixed states; some actions are unavailable.",
+    "mixedStatesHint": "All selected assets must be in the same state to apply this action."
+  },
+  "confirmTrash": {
+    "title": "Move {count} asset(s) to trash?",
+    "body": "You can restore them for 30 days before they are permanently removed.",
+    "bodyOne": "You can restore this asset for 30 days before it is permanently removed.",
+    "confirm": "Move to trash",
+    "cancel": "Cancel"
+  },
+  "confirmMove": {
+    "title": "Move {count} asset(s) to a folder?",
+    "body": "Pick the destination folder. Originals stay linked to their original idea.",
+    "confirm": "Move",
+    "cancel": "Cancel",
+    "pickFolder": "Destination folder",
+    "currentFolder": "Currently in {folder}"
+  },
+  "confirmRestore": {
+    "title": "Restore {count} asset(s)?",
+    "body": "Restored assets return to the folder they came from.",
+    "confirm": "Restore",
+    "cancel": "Cancel"
+  },
+  "confirmDeleteForever": {
+    "title": "Delete {count} asset(s) permanently?",
+    "body": "This cannot be undone. The underlying file is removed from storage.",
+    "confirm": "Delete permanently",
+    "cancel": "Cancel"
+  },
+  "tagEditor": {
+    "addPlaceholder": "Add a tag",
+    "addLabel": "Add tag",
+    "removeLabel": "Remove {tag}",
+    "empty": "No tags",
+    "error": "This tag could not be saved. Try again.",
+    "maxReached": "Maximum {max} tags per asset."
+  },
+  "visibilityPicker": {
+    "workspace": "Workspace only",
+    "agency": "Share with agency",
+    "workspaceDescription": "Only members of this workspace can find and use this asset.",
+    "agencyDescription": "Members of any workspace in the agency can use this asset."
+  },
+  "reconcileToast": {
+    "title": "Assets moved to the new folder",
+    "body": "Linked assets were moved to match the new schedule. Open Media to review.",
+    "failed": "Asset folder reconcile failed",
+    "failedBody": "The idea was saved, but the linked assets could not be moved. Open Media to fix.",
+    "open": "Open Media"
+  },
+  "folderAudit": {
+    "title": "Folder activity",
+    "rename": "Renamed folder",
+    "reconcile": "Moved assets to follow an updated schedule",
+    "bulkMove": "Bulk move",
+    "empty": "No recent activity for this folder.",
+    "actor": "by {name}",
+    "timeAgo": "{when}"
+  }
 }

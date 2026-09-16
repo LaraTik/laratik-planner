@@ -4,7 +4,12 @@
   "sourceDevice": "من الجهاز",
   "sourceLink": "من رابط",
   "title": "الوسائط",
+  "library": "مكتبة الوسائط",
   "description": "خزّن ملفات الإنتاج ونظّمها وأعد استخدامها بأمان.",
+  "workspacePickerTitle": "اختر مساحة عمل",
+  "workspacePickerDescription": "اختر مساحة عمل لرؤية مجلداتها. تبقى المجلدات محصورة بمساحة العمل حتى لا يلوّث تحديث العلامة شجرة منشورات مساحة أخرى.",
+  "workspacePickerEmpty": "لا توجد مساحات عمل متاحة",
+  "workspaceCount": "{count} مساحة عمل",
   "workspaceDescription": "ملفات {workspace} والوسائط التي تمت مشاركتها مع مساحة العمل هذه.",
   "upload": "رفع الوسائط",
   "uploadTitle": "إضافة وسائط",
@@ -183,5 +188,148 @@
   "publicCollectionEmpty": "لا توجد وسائط متاحة في هذه المجموعة.",
   "publicCollectionZipTooLarge": "يتعذر تنزيل ZIP عندما يتجاوز الحجم 500 ميجابايت. نزّل الأصول بشكل فردي بدلًا من ذلك.",
   "languageArabic": "العربية",
-  "languageEnglish": "English"
+  "languageEnglish": "English",
+  "tree": {
+    "label": "شجرة المجلدات",
+    "expand": "توسيع {name}",
+    "collapse": "طي {name}",
+    "selectAllDescendants": "تحديد كل الأصول في {name}",
+    "assetCount": "{count} أصلًا",
+    "newCount": "{count} جديد",
+    "systemBadge": "تلقائي",
+    "brandBadge": "العلامة",
+    "postBadge": "المنشورات",
+    "info": "معلومات المجلد",
+    "openInfo": "إظهار النشاط الأخير لـ {name}"
+  },
+  "breadcrumb": {
+    "label": "مسار المجلد",
+    "allMedia": "كل الوسائط",
+    "unfiled": "غير مصنفة",
+    "agencyShared": "مشتركة مع الوكالة",
+    "home": "الصفحة الرئيسية للوسائط"
+  },
+  "inUseBy": {
+    "title": "مستخدمة في",
+    "none": "غير مرتبطة بأي مكان بعد",
+    "contentItem": "فكرة",
+    "delivery": "تسليم",
+    "comment": "تعليق",
+    "brandAsset": "أصل علامة تجارية",
+    "openTarget": "فتح {type}",
+    "clientVisibleOff": "مخفية عن العملاء"
+  },
+  "filters": {
+    "title": "عوامل التصفية",
+    "tag": "وسم",
+    "tagsLabel": "الوسوم",
+    "clearAll": "مسح جميع عوامل التصفية",
+    "inUse": "مستخدمة",
+    "unlinked": "غير مرتبطة",
+    "includeAgency": "تضمين المشتركة مع الوكالة",
+    "status": "الحالة",
+    "apply": "تطبيق عوامل التصفية",
+    "open": "فتح عوامل التصفية",
+    "close": "إغلاق عوامل التصفية",
+    "activeCount": "{count} من عوامل التصفية نشطة"
+  },
+  "kebab": {
+    "label": "إجراءات الأصل",
+    "rename": "إعادة تسمية",
+    "duplicate": "تكرار",
+    "move": "نقل إلى مجلد…",
+    "addTag": "إضافة وسم…",
+    "removeTag": "إزالة وسم…",
+    "setVisibility": "تحديد الوصول",
+    "copyShareLink": "نسخ رابط المشاركة",
+    "revokeShareLink": "إلغاء رابط المشاركة",
+    "trash": "نقل إلى المهملات",
+    "restore": "استعادة",
+    "openPost": "فتح المنشور المرتبط"
+  },
+  "bulk": {
+    "toolbarLabel": "إجراءات جماعية",
+    "selected": "تم تحديد {count}",
+    "oneSelected": "تم تحديد أصل واحد",
+    "selectAll": "تحديد كل الصفحة",
+    "selectAllMatching": "تحديد كل {count} المطابق",
+    "clear": "مسح التحديد",
+    "move": "نقل",
+    "trash": "نقل إلى المهملات",
+    "restore": "استعادة",
+    "deleteForever": "حذف نهائيًا",
+    "tag": "وسم",
+    "visibility": "الوصول",
+    "share": "مشاركة المجموعة",
+    "undo": "تراجع",
+    "moved": "تم نقل {count} أصلًا إلى {folder}",
+    "trashed": "تم نقل {count} أصلًا إلى المهملات",
+    "restored": "تمت استعادة {count} أصلًا",
+    "tagged": "تم تحديث وسوم {count} أصلًا",
+    "visibilityUpdated": "تم تحديث وصول {count} أصلًا",
+    "duplicated": "تم تكرار {count} أصلًا",
+    "error": "تعذر إكمال بعض الإجراءات. راجع الصفوف أدناه وأعد المحاولة.",
+    "tooLarge": "التحديد يتجاوز {max} أصلًا. اعمل على مجلد بالكامل بدلًا من ذلك.",
+    "undoAvailable": "متاح لمدة {seconds} ثانية",
+    "loading": "جارٍ العمل…",
+    "mixedStates": "التحديد يحتوي حالات مختلطة؛ بعض الإجراءات غير متاحة.",
+    "mixedStatesHint": "يجب أن تكون جميع الأصول المحددة في الحالة نفسها لتطبيق هذا الإجراء."
+  },
+  "confirmTrash": {
+    "title": "نقل {count} أصلًا إلى المهملات؟",
+    "body": "يمكنك استعادتها خلال 30 يومًا قبل إزالتها نهائيًا.",
+    "bodyOne": "يمكنك استعادة هذا الأصل خلال 30 يومًا قبل إزالته نهائيًا.",
+    "confirm": "نقل إلى المهملات",
+    "cancel": "إلغاء"
+  },
+  "confirmMove": {
+    "title": "نقل {count} أصلًا إلى مجلد؟",
+    "body": "اختر المجلد الوجهة. ستبقى النسخ الأصلية مرتبطة بفكرتها الأصلية.",
+    "confirm": "نقل",
+    "cancel": "إلغاء",
+    "pickFolder": "المجلد الوجهة",
+    "currentFolder": "حاليًا في {folder}"
+  },
+  "confirmRestore": {
+    "title": "استعادة {count} أصلًا؟",
+    "body": "تعود الأصول المستعادة إلى المجلد الذي جاءت منه.",
+    "confirm": "استعادة",
+    "cancel": "إلغاء"
+  },
+  "confirmDeleteForever": {
+    "title": "حذف {count} أصلًا نهائيًا؟",
+    "body": "لا يمكن التراجع. تتم إزالة الملف الأساسي من التخزين.",
+    "confirm": "حذف نهائيًا",
+    "cancel": "إلغاء"
+  },
+  "tagEditor": {
+    "addPlaceholder": "إضافة وسم",
+    "addLabel": "إضافة وسم",
+    "removeLabel": "إزالة {tag}",
+    "empty": "لا توجد وسوم",
+    "error": "تعذر حفظ هذا الوسم. حاول مرة أخرى.",
+    "maxReached": "الحد الأقصى {max} من الوسوم لكل أصل."
+  },
+  "visibilityPicker": {
+    "workspace": "مساحة العمل فقط",
+    "agency": "مشاركة مع الوكالة",
+    "workspaceDescription": "يمكن لأعضاء مساحة العمل هذه فقط العثور على هذا الأصل واستخدامه.",
+    "agencyDescription": "يمكن لأعضاء أي مساحة عمل في the agency استخدام هذا الأصل."
+  },
+  "reconcileToast": {
+    "title": "تم نقل الأصول إلى المجلد الجديد",
+    "body": "تم نقل الأصول المرتبطة لتطابق الجدول الجديد. افتح الوسائط للمراجعة.",
+    "failed": "فشل توفيق مجلد الأصول",
+    "failedBody": "تم حفظ الفكرة، لكن تعذر نقل الأصول المرتبطة. افتح الوسائط للإصلاح.",
+    "open": "افتح الوسائط"
+  },
+  "folderAudit": {
+    "title": "نشاط المجلد",
+    "rename": "تمت إعادة تسمية المجلد",
+    "reconcile": "تم نقل الأصول لمتابعة جدول محدّث",
+    "bulkMove": "نقل جماعي",
+    "empty": "لا يوجد نشاط حديث لهذا المجلد.",
+    "actor": "بواسطة {name}",
+    "timeAgo": "{when}"
+  }
 }

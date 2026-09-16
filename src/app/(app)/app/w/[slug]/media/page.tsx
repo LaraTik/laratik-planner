@@ -4,7 +4,12 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { canWriteToWorkspace, hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
-import { listMediaAssetsPage, listMediaFolders, type MediaSort } from "@/lib/media/service";
+import {
+  listMediaAssetsPage,
+  listMediaFolders,
+  listMediaFoldersTree,
+  type MediaSort,
+} from "@/lib/media/service";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -45,6 +50,10 @@ export default async function WorkspaceMediaPage({
     agencyId: workspace.agencyId,
     workspaceId: workspace.id,
   });
+  const folderTree = await listMediaFoldersTree(actor, {
+    agencyId: workspace.agencyId,
+    workspaceId: workspace.id,
+  });
   const selectedFolderId = filters.folder ?? "";
   const sort: MediaSort =
     filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";
@@ -65,16 +74,30 @@ export default async function WorkspaceMediaPage({
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
 
+  // Resolve the active folder's ancestor chain for the breadcrumb.
+  const ancestors: { id: string; name: string }[] = [];
+  const folderById = new Map(folders.map((f) => [f.id, f]));
+  let cursor = folderById.get(selectedFolderId);
+  while (cursor && cursor.parentId) {
+    const parent = folderById.get(cursor.parentId);
+    if (!parent) break;
+    ancestors.unshift({ id: parent.id, name: parent.name });
+    cursor = parent;
+  }
+  const activeFolderLabel =
+    selectedFolderId === "unfiled"
+      ? t("media.unfiled")
+      : filters.shared === "1"
+        ? t("media.agencySharedFilter")
+        : (folders.find((f) => f.id === selectedFolderId)?.name ?? t("media.allMedia"));
+
   return (
     <MediaLibraryPage
-      title={workspace.name}
-      description={t("media.workspaceDescription", { workspace: workspace.name })}
+      mode="workspace"
+      workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
+      agencyWorkspaces={[]}
       rows={mediaPage.rows}
-      workspaceOptions={[workspace]}
-      folderWorkspaceOptions={[workspace]}
-      folderOptionsByWorkspace={{ [workspace.id]: folders }}
       basePath={`/app/w/${workspace.slug}/media`}
-      selectedWorkspaceId={workspace.id}
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}
       preserveParams={{
@@ -102,6 +125,9 @@ export default async function WorkspaceMediaPage({
         bucket: storageSummary.bucket,
         keyPrefix: storageSummary.keyPrefix,
       }}
+      folderTree={folderTree}
+      ancestors={ancestors}
+      activeFolderLabel={activeFolderLabel}
     />
   );
 }

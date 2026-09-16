@@ -15,6 +15,7 @@ import { idColumn, timestamps } from "./_helpers";
 import { agencies, users } from "./identity";
 import { workspaces } from "./workspaces";
 import { storageObjects } from "./storage";
+import { contentItems } from "./content";
 
 /** Workspace-scoped media folders. `folder_id = NULL` is a root folder. */
 export const mediaFolders = pgTable(
@@ -247,6 +248,63 @@ export type MediaFolder = typeof mediaFolders.$inferSelect;
 export type NewMediaFolder = typeof mediaFolders.$inferInsert;
 export type MediaShareLink = typeof mediaShareLinks.$inferSelect;
 export type NewMediaShareLink = typeof mediaShareLinks.$inferInsert;
+
+/**
+ * Audit log of media folder moves triggered by content-item drift.
+ *
+ * Written by `reconcileContentItemMediaFolders` (lib/media/service.ts) when an
+ * idea's `plannedPublishAt` or `format` changes and one or more linked assets
+ * are silently moved to the new derived folder path. Every row carries the
+ * from/to folder id, the actor who triggered the change, and the content
+ * item that drove it so a workspace manager can answer "why did this asset
+ * jump from September to October?" by reading this table.
+ */
+export const mediaFolderReconcileLogs = pgTable(
+  "media_folder_reconcile_log",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    mediaAssetId: uuid("media_asset_id")
+      .notNull()
+      .references(() => mediaAssets.id, { onDelete: "cascade" }),
+    contentItemId: uuid("content_item_id")
+      .notNull()
+      .references(() => contentItems.id, { onDelete: "cascade" }),
+    fromFolderId: uuid("from_folder_id").references(() => mediaFolders.id, {
+      onDelete: "set null",
+    }),
+    toFolderId: uuid("to_folder_id").references(() => mediaFolders.id, {
+      onDelete: "set null",
+    }),
+    reason: text("reason").notNull(),
+    actorId: uuid("actor_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    reconciledAt: timestamp("reconciled_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index("media_folder_reconcile_log_workspace_idx").on(t.workspaceId, t.reconciledAt),
+    index("media_folder_reconcile_log_content_item_idx").on(t.contentItemId, t.reconciledAt),
+    index("media_folder_reconcile_log_asset_idx").on(t.mediaAssetId, t.reconciledAt),
+    check(
+      "media_folder_reconcile_log_reason_valid",
+      sql`${t.reason} IN ('planned_publish_at_changed', 'format_changed', 'bulk_move')`,
+      // Per the locked plan: only two reasons are written by the reconcile
+      // path itself; "bulk_move" is reserved for the bulk-move API so the
+      // sidebar audit log surfaces both kinds of folder changes.
+    ),
+  ],
+);
+
+export type MediaFolderReconcileLog = typeof mediaFolderReconcileLogs.$inferSelect;
+export type NewMediaFolderReconcileLog = typeof mediaFolderReconcileLogs.$inferInsert;
 export type MediaShareCollection = typeof mediaShareCollections.$inferSelect;
 export type NewMediaShareCollection = typeof mediaShareCollections.$inferInsert;
 export type MediaShareCollectionItem = typeof mediaShareCollectionItems.$inferSelect;
