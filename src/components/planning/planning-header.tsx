@@ -4,6 +4,7 @@ import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { humanFormat, humanStatus, statusBadgeVariant } from "@/lib/content/status";
+import { PlanningHeaderActions } from "./planning-header-actions";
 
 /**
  * PlanningHeader — the compact, sticky, at-a-glance summary of
@@ -36,6 +37,14 @@ export interface PlanningHeaderProps {
   /** Locale-resolved channel summary. */
   channelsSummary?: string;
   plannedPublishAt: string;
+  /** ISO-8601 string for the planned publish instant. Drives the
+   *  kebab's "Reschedule" date picker. */
+  plannedPublishAtIso: string;
+  /** Permission flags for the kebab menu. */
+  canEdit: boolean;
+  canTrash: boolean;
+  /** Href to the legacy `/edit/[id]` form. */
+  editHref: string;
 }
 
 export function PlanningHeader({
@@ -52,6 +61,10 @@ export function PlanningHeader({
   channels,
   channelsSummary,
   plannedPublishAt,
+  plannedPublishAtIso,
+  canEdit,
+  canTrash,
+  editHref,
 }: PlanningHeaderProps) {
   return (
     <Card padding="md" data-testid="planning-header" data-content-item-id={contentItemId}>
@@ -96,6 +109,16 @@ export function PlanningHeader({
             </span>
           </div>
         </div>
+        <PlanningHeaderActions
+          workspaceSlug={workspaceSlug}
+          contentItemId={contentItemId}
+          canEdit={canEdit}
+          canTrash={canTrash}
+          editHref={editHref}
+          plannedPublishAtIso={plannedPublishAtIso}
+          workspaceTimezone={workspaceTimezone}
+          status={status}
+        />
       </div>
     </Card>
   );

@@ -662,6 +662,10 @@ export default async function ContentDetailPage({
                 timeStyle: "short",
                 timeZone: ws.timezone,
               })}
+              plannedPublishAtIso={item.plannedPublishAt.toISOString()}
+              canEdit={canEdit}
+              canTrash={canEdit && item.status !== "cancelled" && item.status !== "published"}
+              editHref={editHref}
             />
           </>
         }

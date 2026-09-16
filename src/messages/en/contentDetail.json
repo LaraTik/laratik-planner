@@ -391,6 +391,13 @@
     "details": "Details",
     "detailsHeading": "Basic information",
     "editDetails": "Edit details",
+    "kebab": {
+      "label": "More actions",
+      "reschedule": "Reschedule publish date",
+      "editDetails": "Edit all details",
+      "trash": "Cancel idea",
+      "cancelled": "Cancelled"
+    },
     "title": "Title",
     "format": "Format",
     "channels": "Channels",

@@ -391,6 +391,13 @@
     "details": "التفاصيل",
     "detailsHeading": "المعلومات الأساسية",
     "editDetails": "تعديل التفاصيل",
+    "kebab": {
+      "label": "إجراءات إضافية",
+      "reschedule": "إعادة جدولة تاريخ النشر",
+      "editDetails": "تعديل جميع التفاصيل",
+      "trash": "إلغاء الفكرة",
+      "cancelled": "ملغاة"
+    },
     "title": "العنوان",
     "format": "التنسيق",
     "channels": "القنوات",

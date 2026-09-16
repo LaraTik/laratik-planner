@@ -1,6 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { PlanningHeader } from "@/components/planning/planning-header";
+
+// Mock the inline-editable-fields module so the test doesn't pull in
+// the next-auth module chain (next-auth currently has a pre-existing
+// `next/server` import issue with Next 16 that prevents the test
+// file from loading when this dependency tree is reached).
+// The PlanningHeader test doesn't exercise the date editor itself
+// — it only checks the header chrome — so a stub is sufficient.
+vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields", () => ({
+  InlineDateEditor: () => null,
+  InlineBriefEditor: () => null,
+  InlineTitleEditor: () => null,
+}));
 
 describe("PlanningHeader", () => {
   it("renders the title, format, channels, planned date, and status badge", () => {
@@ -18,6 +30,10 @@ describe("PlanningHeader", () => {
           { platform: "tiktok", accountName: "Acme TikTok" },
         ]}
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("Spring drop teaser")).toBeInTheDocument();
@@ -39,6 +55,10 @@ describe("PlanningHeader", () => {
         status="draft"
         channels={[]}
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("No channels")).toBeInTheDocument();
@@ -59,6 +79,10 @@ describe("PlanningHeader", () => {
         channels={[]}
         channelsSummary="القنوات: 0"
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("منشور ثابت")).toBeInTheDocument();
@@ -78,6 +102,10 @@ describe("PlanningHeader", () => {
         status="draft"
         channels={[]}
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
@@ -96,6 +124,10 @@ describe("PlanningHeader", () => {
         status="draft"
         channels={[]}
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     const breadcrumb = screen.getByTestId("planning-header-breadcrumb");
@@ -115,6 +147,10 @@ describe("PlanningHeader", () => {
         status="draft"
         channels={[]}
         plannedPublishAt="2026-09-01 09:00"
+        plannedPublishAtIso="2026-09-01T09:00:00.000Z"
+        canEdit={true}
+        canTrash={false}
+        editHref="/app/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByTestId("planning-header-breadcrumb")).toHaveTextContent(

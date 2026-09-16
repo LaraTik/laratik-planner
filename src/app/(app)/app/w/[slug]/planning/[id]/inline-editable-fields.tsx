@@ -286,6 +286,7 @@ export function InlineDateEditor({
   contentItemId,
   value,
   timezone,
+  onSaved,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -293,6 +294,8 @@ export function InlineDateEditor({
   value: string;
   /** IANA timezone label, e.g. "Europe/Berlin". */
   timezone: string;
+  /** Optional: fired after a successful save. */
+  onSaved?: () => void;
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
@@ -354,6 +357,7 @@ export function InlineDateEditor({
           : undefined
       }
       onSave={(next) => inlineUpdateDateAction(workspaceSlug, contentItemId, new Date(next))}
+      {...(onSaved ? { onSaved } : {})}
     />
   );
 }

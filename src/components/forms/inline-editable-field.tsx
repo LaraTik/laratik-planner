@@ -67,6 +67,13 @@ export interface InlineEditableFieldProps<TValue> {
    * in edit mode.
    */
   extraActions?: React.ReactNode;
+  /**
+   * Called after a successful save, when the field leaves edit mode.
+   * Used by hosts that need to react to "user just saved" — e.g. the
+   * planning header's kebab menu closes itself once the inline date
+   * editor saves.
+   */
+  onSaved?: () => void;
 }
 
 export function InlineEditableField<TValue>({
@@ -80,6 +87,7 @@ export function InlineEditableField<TValue>({
   revealOnHover = false,
   className,
   extraActions,
+  onSaved,
 }: InlineEditableFieldProps<TValue>) {
   const t = useLocaleT();
   const [editing, setEditing] = React.useState(false);
@@ -120,6 +128,7 @@ export function InlineEditableField<TValue>({
       } else {
         setEditing(false);
         setError(null);
+        onSaved?.();
       }
     });
   };
