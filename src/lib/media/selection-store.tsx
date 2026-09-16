@@ -227,12 +227,16 @@ export function useMediaSelection(): MediaSelectionApi {
     store ? store.getState : () => NOOP_API.state,
   );
   if (!store) return NOOP_API;
+  // Bind the methods so callers can destructure them off the API
+  // object without losing `this`. (Destructuring a class method off
+  // an object rebinds `this` to `undefined` under strict mode, which
+  // is what the unit tests run in.)
   return {
     state,
-    toggle: store.toggle,
-    toggleRange: store.toggleRange,
-    setMany: store.setMany,
-    clear: store.clear,
+    toggle: store.toggle.bind(store),
+    toggleRange: store.toggleRange.bind(store),
+    setMany: store.setMany.bind(store),
+    clear: store.clear.bind(store),
     isSelected: (assetId: string) => state.selected.has(assetId),
   };
 }

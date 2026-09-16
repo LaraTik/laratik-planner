@@ -24,11 +24,20 @@ export function MediaBulkToolbar({
   folders,
   canWrite,
   hasTrashedSelected,
+  pageAssetIds,
+  total,
+  pageSize,
 }: {
   workspaceId: string;
   folders: MediaFolderTreeRow[];
   canWrite: boolean;
   hasTrashedSelected: boolean;
+  /** Asset ids on the current page (for the "Select all on this page" shortcut). */
+  pageAssetIds?: readonly string[];
+  /** Total assets matching the current filters (for the "Select all matching" affordance). */
+  total?: number;
+  /** Page size (used to decide whether `total > pageSize`). */
+  pageSize?: number;
 }) {
   const t = useLocaleT();
   const selection = useMediaSelection();
@@ -71,6 +80,17 @@ export function MediaBulkToolbar({
             ? t("media.bulk.oneSelected")
             : t("media.bulk.selected", { count: selectedIds.length })}
         </span>
+        {pageAssetIds && total !== undefined && pageSize !== undefined && total > pageSize ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => selection.setMany(pageAssetIds)}
+            data-testid="media-bulk-toolbar-select-all-matching"
+          >
+            {t("media.bulk.selectAllMatching", { count: total })}
+          </Button>
+        ) : null}
         <Button variant="ghost" size="sm" onClick={() => selection.clear()}>
           <X className="me-1 h-4 w-4" aria-hidden="true" />
           {t("media.bulk.clear")}

@@ -308,14 +308,74 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
 export async function listMediaAssetsPage(actor: Actor, input: ListInput) {
   const pageSize = Math.min(Math.max(input.pageSize ?? input.limit ?? 48, 1), 100);
   const page = Math.max(input.page ?? 1, 1);
-  const rows = await listMediaAssets(actor, { ...input, page, pageSize: pageSize + 1 });
+  const [rows, total] = await Promise.all([
+    listMediaAssets(actor, { ...input, page, pageSize: pageSize + 1 }),
+    countMediaAssets(actor, input),
+  ]);
   return {
     rows: rows.slice(0, pageSize),
     page,
     pageSize,
     hasPreviousPage: page > 1,
     hasNextPage: rows.length > pageSize,
+    total,
   };
+}
+
+/**
+ * Count the rows that `listMediaAssets` would return for the given
+ * filters. Same predicate shape, no offset/limit. Used by
+ * `listMediaAssetsPage` to expose the total so the UI can render
+ * "Select all matching N" affordances.
+ */
+export async function countMediaAssets(
+  actor: Actor,
+  input: Omit<ListInput, "limit" | "offset" | "page" | "pageSize">,
+): Promise<number> {
+  if (!(await isAgencyMember(actor, input.agencyId))) return 0;
+  const accessibleIds = await accessibleWorkspaceIds(actor, input.agencyId);
+  if (accessibleIds.length === 0) return 0;
+  if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return 0;
+
+  const ownerScope = input.workspaceId
+    ? or(eq(mediaAssets.ownerWorkspaceId, input.workspaceId), eq(mediaAssets.visibility, "agency"))
+    : or(
+        inArray(mediaAssets.ownerWorkspaceId, accessibleIds),
+        eq(mediaAssets.visibility, "agency"),
+      );
+
+  const conditions = [
+    eq(mediaAssets.agencyId, input.agencyId),
+    ownerScope,
+    input.includeTrashed
+      ? inArray(mediaAssets.status, ["processing", "ready", "failed", "trashed"])
+      : inArray(mediaAssets.status, ["processing", "ready", "failed"]),
+    inArray(mediaAssets.ownerWorkspaceId, input.workspaceId ? [input.workspaceId] : accessibleIds),
+  ];
+
+  if (input.query) {
+    const pattern = `%${input.query.trim()}%`;
+    conditions.push(
+      or(ilike(mediaAssets.title, pattern), ilike(storageObjects.originalName, pattern))!,
+    );
+  }
+  if (input.kind) {
+    conditions.push(eq(storageObjects.kind, input.kind));
+  }
+  if (input.sharedOnly) {
+    conditions.push(eq(mediaAssets.visibility, "agency"));
+  }
+  if (input.folderId === null) {
+    conditions.push(isNull(mediaAssets.folderId));
+  } else if (input.folderId) {
+    conditions.push(eq(mediaAssets.folderId, input.folderId));
+  }
+
+  const [row] = await db
+    .select({ count: sql<number>`count(*)::int` })
+    .from(mediaAssets)
+    .where(and(...conditions));
+  return row?.count ?? 0;
 }
 
 export type MediaDuplicateAdvisory = {

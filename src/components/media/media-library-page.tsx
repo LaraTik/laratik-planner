@@ -9,6 +9,7 @@ import { MediaAssetSelectionCheckbox, MediaSelectionToolbar } from "./media-sele
 import { MediaFolderTree } from "./media-folder-tree";
 import { MediaBreadcrumb } from "./media-breadcrumb";
 import { MediaBulkToolbar } from "./media-bulk-toolbar";
+import { MediaBulkHeader } from "./media-bulk-header";
 import { MediaSelectionProvider } from "@/lib/media/selection-store";
 import { MediaSourcePicker } from "./media-source-picker";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
@@ -59,7 +60,13 @@ export function MediaLibraryPage({
   search: string;
   kind: string;
   sort: "name" | "uploadedAt" | "updatedAt";
-  pageInfo: { page: number; pageSize: number; hasPreviousPage: boolean; hasNextPage: boolean };
+  pageInfo: {
+    page: number;
+    pageSize: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+    total: number;
+  };
   initialSource?: "device" | "link";
   t: (key: string, params?: Record<string, string | number>) => string;
   storageSummary: {
@@ -379,6 +386,19 @@ export function MediaLibraryPage({
                 folders={folderTree}
                 canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}
                 hasTrashedSelected={includeTrashed}
+                pageAssetIds={rows.map((row) => row.asset.id)}
+                total={pageInfo.total}
+                pageSize={pageInfo.pageSize}
+              />
+            </MediaSelectionProvider>
+          ) : null}
+          {folderTree && rows.length > 0 ? (
+            <MediaSelectionProvider canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}>
+              <MediaBulkHeader
+                pageAssetIds={rows.map((row) => row.asset.id)}
+                total={pageInfo.total}
+                pageSize={pageInfo.pageSize}
+                canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}
               />
             </MediaSelectionProvider>
           ) : null}

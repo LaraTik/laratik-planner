@@ -253,6 +253,8 @@
     "oneSelected": "تم تحديد أصل واحد",
     "selectAll": "تحديد كل الصفحة",
     "selectAllMatching": "تحديد كل {count} المطابق",
+    "selectAllOnPage": "تحديد كل ما في هذه الصفحة",
+    "deselectAllOnPage": "إلغاء تحديد كل ما في هذه الصفحة",
     "clear": "مسح التحديد",
     "move": "نقل",
     "trash": "نقل إلى المهملات",

@@ -253,6 +253,8 @@
     "oneSelected": "1 asset selected",
     "selectAll": "Select all on this page",
     "selectAllMatching": "Select all {count} matching",
+    "selectAllOnPage": "Select all on this page",
+    "deselectAllOnPage": "Deselect all on this page",
     "clear": "Clear selection",
     "move": "Move",
     "trash": "Move to trash",
