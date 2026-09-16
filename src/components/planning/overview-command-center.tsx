@@ -8,6 +8,11 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
+import {
+  InlineBriefEditor,
+  InlineDateEditor,
+  InlineTitleEditor,
+} from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { PlanningAttentionItem } from "@/lib/planning/presentation";
 
@@ -127,8 +132,11 @@ export function OverviewCommandCenter({
   workspaceSlug,
   contentItemId,
   contentStatus,
+  title,
   brief,
   plannedPublishAt,
+  plannedPublishAtIso,
+  workspaceTimezone,
   channels,
   readinessBlockers,
   readinessCanPublish,
@@ -170,6 +178,17 @@ export function OverviewCommandCenter({
         {...(nextActionDestinationTab ? { nextActionDestinationTab } : {})}
         {...(nextActionExecutable !== undefined ? { nextActionExecutable } : {})}
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
+      />
+      <DetailsSection
+        workspaceSlug={workspaceSlug}
+        contentItemId={contentItemId}
+        title={title}
+        brief={brief}
+        plannedPublishAtIso={plannedPublishAtIso}
+        workspaceTimezone={workspaceTimezone}
+        plannedPublishAtLabel={plannedPublishAt}
+        canEdit={canEditOverview}
+        t={t}
       />
       <NeedsAttention
         items={attention}
@@ -717,5 +736,114 @@ function RecentActivity({
         </Card>
       )}
     </section>
+  );
+}
+
+/**
+ * "Basic information" card.
+ *
+ * Phase 6 of the planning-detail refactor (2026-08-30) moved Title,
+ * Brief, and Planned publish date out of the editing form and into
+ * the Overview tab as inline-editable fields. The components
+ * (`InlineTitleEditor`, `InlineBriefEditor`, `InlineDateEditor`)
+ * shipped but were never wired in this UI until now — users had to
+ * click through to `/edit/[id]` just to reschedule, which made the
+ * Overview's "Reschedule" link feel like a dead-end.
+ *
+ * UI/UX Pro Max:
+ *   - Click-to-edit on every row (the row IS the affordance).
+ *   - Capability-aware: when `canEdit=false` (read-only reviewer),
+ *     the rows render as plain text with no hover affordance, so
+ *     viewers aren't teased into clicking.
+ *   - The planned publish date row shows the timezone label
+ *     next to the value, so the user always knows which clock
+ *     they're editing.
+ */
+function DetailsSection({
+  workspaceSlug,
+  contentItemId,
+  title,
+  brief,
+  plannedPublishAtIso,
+  plannedPublishAtLabel,
+  workspaceTimezone,
+  canEdit,
+  t,
+}: {
+  workspaceSlug: string;
+  contentItemId: string;
+  title: string;
+  brief: string;
+  plannedPublishAtIso: string;
+  plannedPublishAtLabel: string;
+  workspaceTimezone: string;
+  canEdit: boolean;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  return (
+    <Card padding="md" data-testid="overview-details">
+      <h2
+        id="overview-details-heading"
+        className="text-label text-fg-secondary mb-3 font-semibold uppercase"
+      >
+        {t("contentDetail.overview.detailsHeading")}
+      </h2>
+      <dl className="grid gap-3">
+        <div className="grid gap-1">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.overview.title")}
+          </dt>
+          <dd data-testid="overview-details-title">
+            {canEdit ? (
+              <InlineTitleEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={title}
+              />
+            ) : (
+              <p className="text-body text-fg-primary font-semibold">{title}</p>
+            )}
+          </dd>
+        </div>
+        <div className="grid gap-1">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.overview.brief")}
+          </dt>
+          <dd data-testid="overview-details-brief">
+            {canEdit ? (
+              <InlineBriefEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={brief}
+              />
+            ) : (
+              <p className="text-body text-fg-primary whitespace-pre-wrap">
+                {brief || t("contentDetail.overview.noBrief")}
+              </p>
+            )}
+          </dd>
+        </div>
+        <div className="grid gap-1">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.overview.plannedPublishDate")}
+          </dt>
+          <dd data-testid="overview-details-planned-publish">
+            {canEdit ? (
+              <InlineDateEditor
+                workspaceSlug={workspaceSlug}
+                contentItemId={contentItemId}
+                value={plannedPublishAtIso}
+                timezone={workspaceTimezone}
+              />
+            ) : (
+              <p className="text-body text-fg-primary">
+                {plannedPublishAtLabel}{" "}
+                <span className="text-label text-fg-muted">· {workspaceTimezone}</span>
+              </p>
+            )}
+          </dd>
+        </div>
+      </dl>
+    </Card>
   );
 }
