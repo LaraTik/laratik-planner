@@ -37,6 +37,8 @@ export interface PlanningDetailShellWorkspaceProps {
   mentionCount: number;
   canManageContentActions?: boolean;
   sourceFormat?: ContentFormat;
+  editHref?: string;
+  canEdit?: boolean;
 }
 
 /**
@@ -116,7 +118,11 @@ export function PlanningDetailShell({
           data-testid="planning-detail-center"
           aria-label={t("common.contentWorkspace")}
         >
-          <WorkspaceShell {...workspace} />
+          <WorkspaceShell
+            {...workspace}
+            {...(workspace.editHref ? { editHref: workspace.editHref } : {})}
+            {...(workspace.canEdit !== undefined ? { canEdit: workspace.canEdit } : {})}
+          />
         </section>
 
         {/* Right rail — sticky so it stays visible while the

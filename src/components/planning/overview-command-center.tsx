@@ -164,6 +164,8 @@ export function OverviewCommandCenter({
   const t = tProp ?? localeT;
   return (
     <div className="space-y-6" data-testid="overview-command-center">
+      {/* Top: the single most important card — "what's next" — stays
+          full-width so the planner's eye lands here first. */}
       <NextActionCard
         contentStatus={contentStatus}
         readinessBlockers={readinessBlockers}
@@ -179,41 +181,57 @@ export function OverviewCommandCenter({
         {...(nextActionExecutable !== undefined ? { nextActionExecutable } : {})}
         {...(reviewChangesHref ? { reviewChangesHref } : {})}
       />
-      <DetailsSection
-        workspaceSlug={workspaceSlug}
-        contentItemId={contentItemId}
-        title={title}
-        brief={brief}
-        plannedPublishAtIso={plannedPublishAtIso}
-        workspaceTimezone={workspaceTimezone}
-        plannedPublishAtLabel={plannedPublishAt}
-        canEdit={canEditOverview}
-        t={t}
-      />
-      <NeedsAttention
-        items={attention}
-        onNavigate={onReadinessNavigate}
-        workspaceSlug={workspaceSlug}
-        contentItemId={contentItemId}
-        plannedPublishAt={plannedPublishAt}
-        editHref={editHref}
-        canAcknowledgeOverdue={canEditOverview}
-        {...(onAcknowledgeOverdue ? { onAcknowledgeOverdue } : {})}
-        t={t}
-      />
-      <ReadinessSummary
-        blockers={readinessBlockers}
-        canPublish={readinessCanPublish}
-        lines={readiness}
-        t={t}
-      />
-      <WorkspaceSnapshot
-        brief={brief}
-        deliveryCount={deliveryCount}
-        finalApprovedCount={finalApprovedCount}
-        channels={channels}
-        t={t}
-      />
+
+      {/* Mid: pair the "what is this" details with the "what needs
+          fixing" attention list. The two are related — both about
+          the basics of the idea — so they share a row on lg+. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="overview-mid-grid">
+        <DetailsSection
+          workspaceSlug={workspaceSlug}
+          contentItemId={contentItemId}
+          title={title}
+          brief={brief}
+          plannedPublishAtIso={plannedPublishAtIso}
+          workspaceTimezone={workspaceTimezone}
+          plannedPublishAtLabel={plannedPublishAt}
+          canEdit={canEditOverview}
+          t={t}
+        />
+        <NeedsAttention
+          items={attention}
+          onNavigate={onReadinessNavigate}
+          workspaceSlug={workspaceSlug}
+          contentItemId={contentItemId}
+          plannedPublishAt={plannedPublishAt}
+          editHref={editHref}
+          canAcknowledgeOverdue={canEditOverview}
+          {...(onAcknowledgeOverdue ? { onAcknowledgeOverdue } : {})}
+          t={t}
+        />
+      </div>
+
+      {/* Mid-low: readiness + snapshot. Readiness is "are we ready
+          to publish?", snapshot is "what do we already have?". Both
+          are operational summaries, so they pair well. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="overview-status-grid">
+        <ReadinessSummary
+          blockers={readinessBlockers}
+          canPublish={readinessCanPublish}
+          lines={readiness}
+          t={t}
+        />
+        <WorkspaceSnapshot
+          brief={brief}
+          deliveryCount={deliveryCount}
+          finalApprovedCount={finalApprovedCount}
+          channels={channels}
+          t={t}
+        />
+      </div>
+
+      {/* Bottom: activity is reference material — full width so the
+          list of events can breathe without competing with the
+          operational cards above. */}
       <RecentActivity
         events={recentActivity}
         totalCount={totalActivityCount}

@@ -12,6 +12,70 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Planning detail: "Open copy" / "Open preview" buttons now switch tabs (2026-09-17)
+
+The cross-tab shortcuts on the Content panel (`Open copy`, `Open preview`,
+`Open Details`) and the equivalent "Open Details" on the Copy and Preview
+empty-states looked right but never switched tabs. Root cause: `<Link
+href="#copy">` updates the URL hash via Next.js's client router, which
+**does not fire the browser's native `hashchange` event** when only the
+hash of the current page changes. `WorkspaceShell` listens for
+`hashchange` to update `activeId`, so it never saw the navigation.
+
+**Fix**: new `TabSwitchLink` client component (`src/components/planning/tab-switch-link.tsx`)
+that, on click, sets the hash through the History API and dispatches a
+real `hashchange` event the existing shell listener picks up. Five
+call-sites on the planning detail page and the Copy empty-state now use
+it. Regression covered by 7 new unit tests.
+
+### Changed — Slide `summary` field is now a multi-line textarea (2026-09-17)
+
+`NavigableArrayColumn` accepts a new optional `multiline` flag; when
+`true` the slider + list layouts render a `DirAwareTextarea` (auto-dir,
+RTL-aware) instead of a single-line `<input>`. The slide outline,
+visual slides, and scene fields set `multiline: true` so paragraph-length
+summaries wrap and stay readable. Caps at 6 rows; defaults to 2.
+
+### Added — "Edit all details" in workspace `•••` overflow menu (2026-09-17)
+
+The workspace-tab `•••` overflow menu (`WorkspaceShell` header) now
+includes an "Edit all details" item, as the first entry, for users with
+edit permission. It deep-links to the same `/planning/edit/[id]` route
+that already lives in the page-header kebab — the planner no longer
+needs to scroll up to the title to find the full Edit form.
+
+The prop threading is `page → PlanningDetailShell → WorkspaceShell →
+OverflowMenu`. The Edit item only renders when `canEdit` and `editHref`
+are both provided, so read-only roles / system messages never see it.
+
+### Changed — Overview two-column reorganization (2026-09-17)
+
+The Overview tab previously stacked six sections in a single column
+(Next action → Details → Needs attention → Readiness → Snapshot →
+Recent activity). On `lg+` screens it now pairs related sections:
+
+- Top: `NextActionCard` (full width — eye lands here first).
+- Mid: `DetailsSection` + `NeedsAttention` side-by-side.
+- Mid-low: `ReadinessSummary` + `WorkspaceSnapshot` side-by-side.
+- Bottom: `RecentActivity` (full width — reference material).
+
+On mobile the layout collapses back to the existing single-column flow,
+so no UX regression for narrow viewports.
+
+### Changed — Copy tab: scannable per-channel status row (2026-09-17)
+
+The per-channel rows in the Channel Readiness card now carry:
+
+- A coloured status dot next to the override badge (info / warning /
+  neutral) for instant visual anchoring.
+- A border tint (`border-info` / `border-warning`) when the channel has
+  a custom override, so the planner can scan a long list and find the
+  channels that need attention.
+- Compact "Lang / Chars / Tags" labels with proper `role="listitem"`
+  semantics for screen readers.
+- Inline `AlertCircle` icons on the "Too long" and "Missing translation"
+  warnings so the eye lands on the problem immediately.
+
 ### Added — Trend Radar v1 (2026-09-08)
 
 Multi-platform trend intelligence ships behind the new `trend_radar` capability

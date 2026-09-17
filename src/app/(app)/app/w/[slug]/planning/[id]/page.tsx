@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Clock, Eye, Sparkles } from "lucide-react";
+import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { resolveContentLocale } from "@/lib/i18n/content-locale";
@@ -691,6 +692,8 @@ export default async function ContentDetailPage({
           workspaceSlug: slug,
           contentItemId: item.id,
           ideaTitle: item.title,
+          editHref,
+          canEdit,
           comments: discussionComments.map((c) => ({
             ...c,
             createdAt: c.createdAt.toISOString(),
@@ -818,7 +821,9 @@ export default async function ContentDetailPage({
                           <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
                         </div>
                         <Button variant="outline" size="sm" asChild>
-                          <Link href="#copy">{t("contentDetail.copy.openCopy")}</Link>
+                          <TabSwitchLink href="#copy" data-testid="content-open-copy">
+                            {t("contentDetail.copy.openCopy")}
+                          </TabSwitchLink>
                         </Button>
                       </div>
                       <div
@@ -839,10 +844,10 @@ export default async function ContentDetailPage({
                           asChild
                           data-testid="content-open-preview"
                         >
-                          <Link href="#preview">
+                          <TabSwitchLink href="#preview">
                             <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                             {t("contentDetail.openPreview")}
-                          </Link>
+                          </TabSwitchLink>
                         </Button>
                       </div>
                     </div>
@@ -883,7 +888,9 @@ export default async function ContentDetailPage({
                         <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
                       </div>
                       <Button variant="outline" size="sm" asChild>
-                        <Link href="#copy">{t("contentDetail.copy.openCopy")}</Link>
+                        <TabSwitchLink href="#copy" data-testid="content-open-copy-no-channels">
+                          {t("contentDetail.copy.openCopy")}
+                        </TabSwitchLink>
                       </Button>
                     </div>
                   </PlanningSection>
@@ -1049,7 +1056,9 @@ export default async function ContentDetailPage({
                     </p>
                     {canEditAll ? (
                       <Button asChild size="sm" variant="outline" className="mt-3">
-                        <Link href="#overview">{t("contentDetail.copy.openDetails")}</Link>
+                        <TabSwitchLink href="#overview">
+                          {t("contentDetail.copy.openDetails")}
+                        </TabSwitchLink>
                       </Button>
                     ) : null}
                   </div>
@@ -1149,7 +1158,9 @@ export default async function ContentDetailPage({
                     </p>
                     {canEditAll ? (
                       <Button asChild size="sm" variant="outline" className="mt-3">
-                        <Link href="#overview">{t("contentDetail.copy.openDetails")}</Link>
+                        <TabSwitchLink href="#overview">
+                          {t("contentDetail.copy.openDetails")}
+                        </TabSwitchLink>
                       </Button>
                     ) : null}
                   </div>
