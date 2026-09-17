@@ -500,8 +500,12 @@ function ScenesFieldRenderer({ label, payload, locale, editable, t, onField }: F
             key: "summary",
             label: t("formatEditor.fields.summary"),
             kind: "text",
+            // Per-scene summary is the only copy the viewer sees
+            // for that scene. Three rows keeps a full sentence
+            // visible without scrolling while still letting the
+            // chip stay compact in the slider rail.
             multiline: true,
-            rows: 2,
+            rows: 3,
           },
           {
             key: "durationSeconds",
@@ -545,8 +549,14 @@ function SlideOutlineFieldRenderer({
             key: "summary",
             label: t("formatEditor.fields.summary"),
             kind: "text",
+            // Per-slide summary is the headline of each slide —
+            // it's what the planner's audience reads as the
+            // visible copy on the carousel image. Four rows
+            // (≈120px) is enough for a complete headline +
+            // supporting line without scrolling, which is
+            // what the planner asked for.
             multiline: true,
-            rows: 2,
+            rows: 4,
           },
           { key: "visual", label: t("formatEditor.fields.visual"), kind: "text", optional: true },
         ]}
