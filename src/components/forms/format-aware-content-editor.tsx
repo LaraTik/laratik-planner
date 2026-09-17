@@ -2,7 +2,8 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { CheckCircle2, Compass, Loader2, Palette, Save } from "lucide-react";
+import { CheckCircle2, Compass, Loader2, Palette } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
@@ -294,16 +295,52 @@ export function FormatAwareContentEditor({
   // mirrors the same pattern so the beforeunload and
   // in-app navigation prompts cover the Content tab too.
   const formRef = React.useRef<HTMLFormElement | null>(null);
+  // Track the last-saved snapshot so we can compute dirty against it.
+  // The form starts clean (matches `initialPayload`); `state.ok`
+  // flips it to the current `payload` JSON when a save succeeds.
+  const [savedJson, setSavedJson] = React.useState(initialJson);
+  React.useEffect(() => {
+    // Server revalidation can replace initialPayload under us;
+    // mirror the new snapshot as the baseline.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSavedJson(initialJson);
+  }, [initialJson]);
+  React.useEffect(() => {
+    // Mark clean after a successful save without depending on
+    // `payload` (which would re-fire after every edit).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (state?.ok) setSavedJson(JSON.stringify(payload));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state?.ok]);
+  const currentJson = React.useMemo(() => JSON.stringify(payload), [payload]);
+  const dirty = currentJson !== savedJson;
   // After a successful save the form is "clean" — the
   // dirty guards suppress their prompt until the user
   // makes another edit.
-  const isClean = state?.ok === true;
+  const isClean = !dirty;
   useBeforeunloadDirtyGuard(formRef, isClean);
   useNavigationDirtyGuard({
     formRef,
     isClean,
     confirmMessage: t("formatEditor.editor.unsavedGuard"),
   });
+
+  // Auto-save on idle: when the user stops editing for 800ms and
+  // there are pending edits, requestSubmit() the form. The
+  // navigation/beforeunload guards above still kick in for real
+  // navigation (closing the tab, clicking a tab pill while a save
+  // is in flight) — we only kick off the save itself, not bypass
+  // the safety rails.
+  React.useEffect(() => {
+    if (!dirty || pending || !editable) return;
+    const timer = window.setTimeout(() => {
+      const form = formRef.current;
+      if (!form) return;
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.submit();
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [dirty, pending, editable, currentJson]);
 
   const fields = React.useMemo(() => fieldsFor(format), [format]);
   const sections = SECTIONS_BY_FORMAT[format] ?? SECTIONS_BY_FORMAT.static_post!;
@@ -643,7 +680,11 @@ export function FormatAwareContentEditor({
       </div>
 
       {editable ? (
-        <form ref={formRef} action={formAction} className="mt-5 flex flex-wrap items-center gap-2">
+        <form
+          ref={formRef}
+          action={formAction}
+          className="bg-surface-subtle border-border mt-5 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border px-3 py-2"
+        >
           <input type="hidden" name="contentItemId" value={contentItemId} />
           {/* The `format` hidden input is required by
               `updateFormatPayloadFormSchema` in
@@ -654,40 +695,50 @@ export function FormatAwareContentEditor({
               every save fail with a `format` field error. */}
           <input type="hidden" name="format" value={format} />
           <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
-          <Button type="submit" size="sm" disabled={pending} data-testid="format-aware-save">
+          <p
+            className={cn(
+              "text-label inline-flex items-center gap-1",
+              pending ? "text-fg-secondary" : dirty ? "text-warning" : "text-success",
+            )}
+            aria-live="polite"
+            data-testid="format-aware-save-status"
+            data-state={pending ? "saving" : dirty ? "dirty" : "saved"}
+          >
             {pending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : dirty ? (
+              <span
+                aria-hidden="true"
+                className="bg-warning inline-block h-1.5 w-1.5 rounded-full"
+              />
             ) : (
-              <Save className="h-3.5 w-3.5" aria-hidden="true" />
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {pending ? t("formatEditor.editor.savePending") : t("formatEditor.editor.save")}
-          </Button>
-          {pending ? (
-            <p
-              className="text-label text-fg-muted inline-flex items-center gap-1"
-              data-testid="format-aware-saving"
-              aria-live="polite"
+            {pending
+              ? t("formatEditor.editor.autoSaving")
+              : dirty
+                ? t("formatEditor.editor.unsavedAuto")
+                : t("formatEditor.editor.saveSuccess")}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="submit"
+              size="sm"
+              variant="ghost"
+              disabled={pending || !dirty}
+              data-testid="format-aware-save-now"
             >
-              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-              {t("formatEditor.editor.savePending")}
-            </p>
-          ) : state?.error ? (
+              {t("formatEditor.editor.saveNow")}
+            </Button>
+          </div>
+          {state?.error ? (
             <p
               role="alert"
               aria-live="assertive"
-              className="text-label text-danger"
+              className="text-label text-danger basis-full"
               data-testid="format-aware-save-error"
             >
               {state.error}
-            </p>
-          ) : state?.ok ? (
-            <p
-              className="text-label text-success inline-flex items-center gap-1"
-              data-testid="format-aware-save-confirmation"
-              aria-live="polite"
-            >
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {t("formatEditor.editor.saveSuccess")}
             </p>
           ) : null}
         </form>

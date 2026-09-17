@@ -66,7 +66,7 @@ import { aiFeatureSettings, agencies, trendBriefs, trendSignals, users } from "@
 import { and, eq } from "drizzle-orm";
 import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
-import { PlatformPreview } from "@/components/planning/platform-preview";
+import { PlatformPreviewSwitcher } from "@/components/planning/platform-preview-switcher";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
 import { acknowledgeOverdueScheduleAction } from "./publish/actions";
@@ -1079,9 +1079,8 @@ export default async function ContentDetailPage({
                       </div>
                       {item.channels.length > 1 ? (
                         <p className="text-label text-fg-muted">
-                          {t("contentDetail.preview.showingFirst", {
+                          {t("contentDetail.preview.allChannels", {
                             count: item.channels.length,
-                            publishing: t("contentDetail.tabs.publishing"),
                           })}
                         </p>
                       ) : null}
@@ -1104,18 +1103,21 @@ export default async function ContentDetailPage({
                           });
                           const plannerCaption = copyView.resolved.caption;
                           const plannerHashtags = copyView.resolved.hashtags;
-                          const channelPayload = (channelPayloads as Record<string, unknown>)[
-                            item.channels[0].socialChannelId
-                          ] as { caption?: string; hashtags?: string[] } | undefined;
-                          const caption =
-                            channelPayload?.caption ?? plannerCaption ?? item.brief ?? "";
-                          const hashtags = channelPayload?.hashtags ?? plannerHashtags;
+                          const switcherChannels = item.channels.map((ch) => ({
+                            id: ch.id,
+                            socialChannelId: ch.socialChannelId,
+                            platform: ch.platform,
+                            accountName: ch.accountName,
+                            contentFormat: item.format,
+                            payload: (channelPayloads as Record<string, unknown>)[
+                              ch.socialChannelId
+                            ] as { caption?: string; hashtags?: string[] } | null,
+                          }));
                           return (
-                            <PlatformPreview
-                              platform={item.channels[0].platform}
-                              accountName={item.channels[0].accountName}
-                              caption={caption}
-                              {...(hashtags ? { hashtags } : {})}
+                            <PlatformPreviewSwitcher
+                              channels={switcherChannels}
+                              sharedCaption={plannerCaption ?? item.brief ?? ""}
+                              {...(plannerHashtags ? { sharedHashtags: plannerHashtags } : {})}
                             />
                           );
                         })()

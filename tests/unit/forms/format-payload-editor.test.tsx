@@ -48,7 +48,7 @@ describe("FormatPayloadEditor", () => {
       "2 / 13 total filled",
     );
     expect(screen.getByTestId("format-payload-completion-essential")).toHaveTextContent(
-      "2 / 6 essential",
+      "2 / 8 essential",
     );
   });
 

@@ -78,8 +78,11 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    // They always belonged in essential; the previous grouping
+    // buried the planner's core intent under a disclosure.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     // Visual slides lead the Creative section so the
     // designer-mode editor sees them first. The full
     // per-slide structured array (visualSlides) gives the
@@ -103,8 +106,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
     { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
@@ -116,8 +120,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
   ],
@@ -134,6 +139,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "onScreenText", labelKey: "formatEditor.fields.onScreenText", group: "essential" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "advanced" },
     { key: "voiceOverNotes", labelKey: "formatEditor.fields.voiceOverNotes", group: "advanced" },
     { key: "audioReference", labelKey: "formatEditor.fields.audioReference", group: "advanced" },
@@ -150,6 +158,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "advanced" },
     { key: "description", labelKey: "formatEditor.fields.description", group: "advanced" },
     { key: "transcriptNotes", labelKey: "formatEditor.fields.transcriptNotes", group: "advanced" },
@@ -174,6 +185,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "advanced" },
     { key: "segments", labelKey: "formatEditor.fields.segments", group: "advanced" },
     { key: "qaPrompts", labelKey: "formatEditor.fields.qaPrompts", group: "advanced" },
@@ -189,8 +203,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "keyTakeaways", labelKey: "formatEditor.fields.keyTakeaways", group: "advanced" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
     { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
@@ -201,8 +216,9 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
+    // Objective + Audience are STRATEGY fields, not advanced.
+    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
+    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
   ],

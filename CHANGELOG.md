@@ -12,7 +12,46 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
-### Changed — Brief + Copy reorg: one canonical place per concern (2026-09-17)
+### Changed — Planning detail round 3: auto-save, live preview switcher, badge deep-links (2026-09-18)
+
+Round 3 of the planning-detail UX pass. Focus on the three
+friction points planners hit after the round-2 reorg landed.
+
+- **Auto-save on idle (800ms debounce) for both Brief and Copy tabs.**
+  Stop typing -> the form submits itself via `requestSubmit()`.
+  Replaces the single big "Save" button that hid state. The
+  sticky save bar now shows live status: amber "Unsaved changes -
+  auto-save in a moment" while dirty, "Saving..." spinner while
+  pending, green "All changes saved" when clean. A small ghost
+  "Save now" button stays available for planners who don't want
+  to wait. The beforeunload / navigation guards still kick in for
+  real navigation (closing the tab, jumping tabs mid-save).
+- **Per-channel override badge is now a deep link.** Previously
+  the "Custom override" / "Custom override - shared copy changed"
+  badge was read-only - to edit the override you had to switch to
+  the Publishing tab, find the channel, expand its override
+  drawer. Now the badge itself is a `TabSwitchLink` to `#publishing`
+  with a chevron, so the planner can see "this is overridden"
+  and click straight to where they edit it.
+- **Preview tab gains a channel switcher chip strip.** Before this
+  round, the Preview only rendered the first channel - a planner
+  with 4 IG accounts + 1 FB account never saw 80% of their output.
+  Now `PlatformPreviewSwitcher` (new client component) renders a
+  thin tab-strip of `platform . accountName` pills above the
+  preview. Click -> preview updates with that channel's caption /
+  hashtags (override or shared). Honors the same priority as
+  before: `platformPayload.caption` -> shared `formatPayload` -> brief.
+- **Objective + Audience promoted from "advanced" to "essential"**
+  for every format. These are core strategic fields, not
+  power-user-only. The previous grouping buried the planner's
+  intent under a disclosure. The advanced block now only hides
+  visual direction / references / additional notes (per format).
+
+Live preview (Planner tab updates as you type in Brief/Copy) is
+still deferred - requires lifting formatPayload state to the
+page-level client shell. Filed for round 4.
+
+### Changed - Brief + Copy reorg: one canonical place per concern (2026-09-17)
 
 Path A of the planning-detail UX pass. The Brief tab drops the
 duplicate audience-copy section entirely (caption, hashtags,

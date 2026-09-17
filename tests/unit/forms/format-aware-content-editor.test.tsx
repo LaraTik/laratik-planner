@@ -59,21 +59,28 @@ describe("FormatAwareContentEditor", () => {
     expect(
       within(screen.getByTestId("format-section-creative")).queryByText("Core creative fields"),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId("format-section-strategy-optional")).toBeInTheDocument();
+    // objective/audience were promoted from "advanced" to
+    // "essential" in the 2026-09-17 reorg, so the Strategy
+    // section no longer has an "optional" disclosure for
+    // static_post. The Creative section still does.
+    expect(screen.queryByTestId("format-section-strategy-optional")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative-optional")).toBeInTheDocument();
-    expect(screen.getByTestId("format-section-strategy-optional")).not.toHaveAttribute("open");
+    expect(screen.getByTestId("format-section-creative-optional")).not.toHaveAttribute("open");
   });
 
   it("keeps populated optional details visible for returning planners", () => {
+    // 2026-09-17 reorg: objective/audience moved to essential,
+    // so the Strategy section has no "optional" disclosure
+    // anymore. The Creative section still does and stays
+    // open when populated.
     render(
       <FormatAwareContentEditor
         {...baseProps}
         format="static_post"
-        initial={{ schemaVersion: 1, objective: "Conversion", visualDirection: "Warm and bright" }}
+        initial={{ schemaVersion: 1, visualDirection: "Warm and bright" }}
       />,
     );
 
-    expect(screen.getByTestId("format-section-strategy-optional")).toHaveAttribute("open");
     expect(screen.getByTestId("format-section-creative-optional")).toHaveAttribute("open");
   });
 
@@ -107,13 +114,13 @@ describe("FormatAwareContentEditor", () => {
 
   it("hides the Save button in read-only mode and shows the read-only notice", () => {
     render(<FormatAwareContentEditor {...baseProps} editable={false} format="static_post" />);
-    expect(screen.queryByTestId("format-aware-save")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("format-aware-save-now")).not.toBeInTheDocument();
     expect(screen.getByText(/Read-only/i)).toBeInTheDocument();
   });
 
   it("renders the Save button in editable mode", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
-    expect(screen.getByTestId("format-aware-save")).toBeInTheDocument();
+    expect(screen.getByTestId("format-aware-save-now")).toBeInTheDocument();
   });
 
   it("lets a designer edit production fields while keeping strategy read-only", () => {

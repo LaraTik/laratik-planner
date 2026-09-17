@@ -4,7 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import Link from "next/link";
 import { TabSwitchLink } from "@/components/planning/tab-switch-link";
-import { CheckCircle2, Info, Loader2, Save, AlertCircle } from "lucide-react";
+import { CheckCircle2, Info, Loader2, AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
@@ -115,6 +115,25 @@ export function AudienceCopyPanel({
       "You have unsaved changes in Copy. Leave and lose them?",
     ),
   });
+
+  // Auto-save on idle: when the user stops typing for 800ms and
+  // there are pending edits, requestSubmit() the form. The
+  // navigation/beforeunload guards above still kick in for real
+  // navigation (closing the tab, clicking a tab pill while a save
+  // is in flight) — we only kick off the save itself, not bypass
+  // the safety rails.
+  React.useEffect(() => {
+    if (!dirty || pending) return;
+    const timer = window.setTimeout(() => {
+      const form = formRef.current;
+      if (!form) return;
+      // requestSubmit triggers the React useActionState-bound
+      // formAction without bypassing client-side form validation.
+      if (typeof form.requestSubmit === "function") form.requestSubmit();
+      else form.submit();
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [dirty, pending, payload]);
 
   function setField(key: string, value: unknown) {
     setPayload((current) => ({ ...current, [key]: value }));
@@ -261,32 +280,40 @@ export function AudienceCopyPanel({
           className="bg-surface sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_12px_rgba(0,0,0,0.06)] sm:-mx-6 sm:px-6"
           data-testid="copy-save-bar"
         >
-          <p className="text-label text-fg-secondary" aria-live="polite">
-            {dirty
-              ? tr("contentDetail.copy.unsaved", "Unsaved changes")
-              : tr("contentDetail.copy.allSaved", "All changes saved")}
+          <p
+            className={cn(
+              "text-label inline-flex items-center gap-1",
+              pending ? "text-fg-secondary" : dirty ? "text-warning" : "text-success",
+            )}
+            aria-live="polite"
+            data-testid="messages-save-status"
+            data-state={pending ? "saving" : dirty ? "dirty" : "saved"}
+          >
+            {pending ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            ) : dirty ? (
+              <span
+                aria-hidden="true"
+                className="bg-warning inline-block h-1.5 w-1.5 rounded-full"
+              />
+            ) : (
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {pending
+              ? tr("contentDetail.copy.autoSaving", "Saving…")
+              : dirty
+                ? tr("contentDetail.copy.unsaved", "Unsaved changes — auto-save in a moment")
+                : tr("contentDetail.copy.allSaved", "All changes saved")}
           </p>
           <div className="flex items-center gap-3">
-            {state.ok && !pending ? (
-              <span className="text-label text-success inline-flex items-center gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                {tr("contentDetail.copy.saved", "Saved")}
-              </span>
-            ) : null}
             <Button
               type="submit"
-              size="lg"
+              size="sm"
+              variant="ghost"
               disabled={!canEdit || pending || !dirty}
-              data-testid="messages-save"
+              data-testid="messages-save-now"
             >
-              {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <Save className="h-4 w-4" aria-hidden="true" />
-              )}
-              {pending
-                ? tr("contentDetail.copy.saving", "Saving…")
-                : tr("contentDetail.copy.save", "Save copy")}
+              {tr("contentDetail.copy.saveNow", "Save now")}
             </Button>
           </div>
         </div>
@@ -430,30 +457,54 @@ export function AudienceCopyPanel({
                             <bdi>{localizedPlatformLabel(channel.platform)}</bdi> ·{" "}
                             <bdi>{channel.accountName}</bdi>
                           </p>
-                          <span
-                            className={cn(
-                              "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold",
-                              copyStatus === "stale"
-                                ? "bg-warning-subtle text-warning"
-                                : copyStatus === "custom"
-                                  ? "bg-info-subtle text-info"
-                                  : "bg-surface text-fg-secondary",
-                            )}
-                          >
-                            {/* Coloured status dot — gives the eye an
+                          {copyStatus !== "inherited" && channels ? (
+                            <TabSwitchLink
+                              href="#publishing"
+                              data-testid={`messages-channel-jump-${channel.socialChannelId}`}
+                              className={cn(
+                                "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold transition-opacity hover:opacity-80",
+                                copyStatus === "stale"
+                                  ? "bg-warning-subtle text-warning"
+                                  : "bg-info-subtle text-info",
+                              )}
+                            >
+                              {/* Coloured status dot — gives the eye an
                           instant visual anchor before the user reads
                           the badge label. */}
-                            <span
-                              aria-hidden="true"
-                              className={cn(
-                                "h-1.5 w-1.5 rounded-full",
-                                copyStatus === "stale"
-                                  ? "bg-warning"
-                                  : copyStatus === "custom"
-                                    ? "bg-info"
-                                    : "bg-fg-muted",
-                              )}
-                            />
+                              <span
+                                aria-hidden="true"
+                                className={cn(
+                                  "h-1.5 w-1.5 rounded-full",
+                                  copyStatus === "stale" ? "bg-warning" : "bg-info",
+                                )}
+                              />
+                              {copyStatus === "stale"
+                                ? tr(
+                                    "contentDetail.copy.staleOverride",
+                                    "Custom override — shared copy changed",
+                                  )
+                                : tr("contentDetail.copy.customOverride", "Custom override")}
+                              <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                            </TabSwitchLink>
+                          ) : (
+                            <span className="text-label bg-surface text-fg-secondary inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold">
+                              <span
+                                aria-hidden="true"
+                                className="bg-fg-muted h-1.5 w-1.5 rounded-full"
+                              />
+                              {tr("contentDetail.copy.inherited", "Inherited shared copy")}
+                            </span>
+                          )}
+                          {/* Keep the override badge reachable for the
+                              accessibility tree. The data-testid
+                              attribute below lets the existing
+                              per-channel tests still assert the
+                              "stale" vs "custom" state off the row. */}
+                          <span
+                            className="sr-only"
+                            data-testid={`messages-channel-status-${channel.socialChannelId}`}
+                            data-status={copyStatus}
+                          >
                             {copyStatus === "stale"
                               ? tr(
                                   "contentDetail.copy.staleOverride",

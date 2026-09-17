@@ -41,7 +41,7 @@ import { type LinkProps } from "next/link";
  *     so the destination section is visible after the tab
  *     switch.
  */
-export type TabSwitchLinkProps = Omit<LinkProps, "children"> & {
+export type TabSwitchLinkProps = Omit<LinkProps, "children" | "className"> & {
   /**
    * Optional callback fired AFTER the tab switch + scroll
    * settle. Useful when the parent wants to dismiss a
@@ -49,6 +49,8 @@ export type TabSwitchLinkProps = Omit<LinkProps, "children"> & {
    */
   onNavigated?: () => void;
   children?: React.ReactNode;
+  /** Standard anchor className — forwarded through to the rendered <a>. */
+  className?: string;
 };
 
 /**
@@ -70,12 +72,13 @@ function isHashOnlyLink(href: LinkProps["href"], currentPath: string): { hash: s
 }
 
 export const TabSwitchLink = React.forwardRef<HTMLAnchorElement, TabSwitchLinkProps>(
-  function TabSwitchLink({ href, onClick, onNavigated, ...rest }, ref) {
+  function TabSwitchLink({ href, onClick, onNavigated, className, ...rest }, ref) {
     return (
       <Link
         ref={ref}
         href={href}
         scroll={false}
+        className={className}
         {...rest}
         onClick={(event) => {
           // Surface a typed event so the user-supplied handler
