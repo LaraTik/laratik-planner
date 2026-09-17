@@ -1672,19 +1672,26 @@ export async function linkedTargetsForMediaAsset(
     .map((row) => {
       const href = (() => {
         if (row.targetType === "content_item") {
+          // The deep link requires both the workspace slug AND the
+          // content item id. If the workspace slug is missing (the
+          // joined row was deleted), we cannot construct a real URL
+          // for this item — fall back to the workspace selector so
+          // the user can still reach the planner. The legacy broken
+          // shape that joins "planning" directly under "/app" has
+          // never been routed; never write it.
           return row.contentItemWorkspaceSlug
             ? `/app/w/${row.contentItemWorkspaceSlug}/planning/${row.targetId}`
-            : `/app/planning/${row.targetId}`;
+            : `/app`;
         }
         if (row.targetType === "delivery") {
           return row.contentItemWorkspaceSlug
             ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
-            : `/app/planning`;
+            : `/app`;
         }
         if (row.targetType === "comment") {
           return row.contentItemWorkspaceSlug
             ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
-            : `/app/planning`;
+            : `/app`;
         }
         return row.contentItemWorkspaceSlug
           ? `/app/w/${row.contentItemWorkspaceSlug}/brand-kit`
