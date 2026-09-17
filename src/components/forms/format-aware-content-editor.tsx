@@ -430,9 +430,7 @@ export function FormatAwareContentEditor({
           role="note"
           data-testid="format-aware-copy-hint"
         >
-          <p className="text-body flex-1">
-            {t("formatEditor.editor.copyLivesInCopyTab")}
-          </p>
+          <p className="text-body flex-1">{t("formatEditor.editor.copyLivesInCopyTab")}</p>
           <Button asChild size="sm" variant="outline">
             <TabSwitchLink href="#copy" data-testid="format-aware-open-copy-tab">
               {t("contentDetail.copy.openCopy")}
