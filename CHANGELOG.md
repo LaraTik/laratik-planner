@@ -12,6 +12,56 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Brief + Copy reorg: one canonical place per concern (2026-09-17)
+
+Path A of the planning-detail UX pass. The Brief tab drops the
+duplicate audience-copy section entirely (caption, hashtags,
+firstComment live ONLY in the Copy tab); the editor renders only
+Strategy and Creative sections. Three concrete UX improvements:
+
+- **"Where is the caption?" hint** at the top of the Brief tab so
+  planners stop hunting for the caption. It explains that audience
+  copy lives in the Copy tab and ships with a one-click "Open Copy"
+  jump (uses the `TabSwitchLink` from the previous PR so the tab
+  actually switches).
+- **Strategy section gets a "How we'll say it" sub-header** after
+  objective/audience so the boundary between "why we're publishing"
+  and "how we'll hook the reader" is visible.
+- **Structured arrays lead the Creative section.** For carousel,
+  the `slideOutline` is the FIRST essential field — the planner's
+  eye lands on the slides before any other creative-direction
+  fields. For short-form video, `scenes` leads. For static post,
+  `visualSlides` leads the advanced creative block.
+- **Slide summary textarea grows from rows=2 to rows=4** (≈120px).
+  This was the user's explicit request — a per-slide summary is the
+  only copy the viewer sees on the carousel image, and 2 rows barely
+  fit one short sentence before scrolling. Scene summary grows
+  from rows=2 to rows=3.
+- **Dead code removed.** The `SECTIONS_BY_FORMAT` map had `copy`
+  sections defined for every format that were always filtered at
+  render time (because `isAudienceCopyKey()` excluded audience-copy
+  fields anyway). Now the data structure matches the rendered
+  reality. The `SectionDef` type's `"copy"` literal is gone too.
+
+### Changed — Copy tab: Source copy + platform-grouped Channel readiness (2026-09-17)
+
+The Copy tab used to dump the per-channel readiness list as a flat
+single column. Two improvements:
+
+- **"Source copy" sub-header** above the editable caption / hashtags
+  / first-comment fields so the planner knows that's the canonical
+  author-side input. Below it, the channel readiness card stays the
+  read-only diagnostic panel it already was.
+- **Channels are now grouped by platform** in the readiness card.
+  A planner with 4 Instagram accounts and 1 Facebook account
+  previously had to scroll to find the Facebook one. Now the
+  groups have a thin uppercase label with a count, so the
+  structure of "where will this post go" is visible at a glance.
+
+Verified by the existing per-channel locale test
+(`tests/unit/planning/messages-panel-locale.test.tsx`) and the
+i18n catalog parity gate.
+
 ### Fixed — Planning detail: "Open copy" / "Open preview" buttons now switch tabs (2026-09-17)
 
 The cross-tab shortcuts on the Content panel (`Open copy`, `Open preview`,

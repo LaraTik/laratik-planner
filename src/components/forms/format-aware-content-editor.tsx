@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { CheckCircle2, Compass, Loader2, MessageSquareText, Palette, Save } from "lucide-react";
+import { CheckCircle2, Compass, Loader2, Palette, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
@@ -18,6 +18,7 @@ import {
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { isAudienceCopyKey } from "@/lib/content/audience-copy";
+import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 
 /**
  * FormatAwareContentEditor — sectioned, format-aware
@@ -96,7 +97,7 @@ export interface FormatAwareContentEditorProps {
  * bucket as a safe default.
  */
 interface SectionDef {
-  id: "strategy" | "copy" | "creative";
+  id: "strategy" | "creative";
   titleKey: string;
   descriptionKey: string;
   icon: React.ComponentType<{ className?: string }>;
@@ -113,18 +114,11 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags", "firstComment"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
       descriptionKey: "formatEditor.sections.creative.description",
       icon: Palette,
-      keys: ["visualDirection", "visualSlides", "references", "location", "additionalNotes"],
+      keys: ["visualSlides", "visualDirection", "references", "location", "additionalNotes"],
     },
   ],
   carousel: [
@@ -136,21 +130,14 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags", "firstComment"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
       descriptionKey: "formatEditor.sections.creativeCarousel.description",
       icon: Palette,
-      // The slide outline gets first-class treatment; we
-      // render the structured array field directly, with
-      // the full add/duplicate/delete/reorder UI. The
-      // remaining creative-direction fields fall after it.
+      // The slide outline is the headline of a carousel brief.
+      // Render it first inside the Creative section so the
+      // planner's eye lands on the slides before the supporting
+      // notes.
       keys: ["slideOutline", "visualDirection", "references", "additionalNotes"],
     },
   ],
@@ -163,21 +150,15 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags", "firstComment"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creativeDirection.title",
       descriptionKey: "formatEditor.sections.creativeDirection.description",
       icon: Palette,
+      // Scenes are the headline of a reel brief — list them first.
       keys: [
+        "scenes",
         "ratio",
         "durationSeconds",
-        "scenes",
         "onScreenText",
         "voiceOverNotes",
         "audioReference",
@@ -201,13 +182,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "hook", "callToAction"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
       descriptionKey: "formatEditor.sections.creative.description",
@@ -222,13 +196,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
-    },
-    {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags", "firstComment"],
     },
     {
       id: "creative",
@@ -255,13 +222,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "mainMessage", "callToAction"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["headline", "summary", "body", "hashtags"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
       descriptionKey: "formatEditor.sections.creative.description",
@@ -278,13 +238,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       keys: ["objective", "audience", "hook", "mainMessage"],
     },
     {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["preShowCaption", "postShowCaption", "hashtags"],
-    },
-    {
       id: "creative",
       titleKey: "formatEditor.sections.creative.title",
       descriptionKey: "formatEditor.sections.creative.description",
@@ -299,13 +252,6 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
       descriptionKey: "formatEditor.sections.strategy.description",
       icon: Compass,
       keys: ["objective", "audience", "mainMessage"],
-    },
-    {
-      id: "copy",
-      titleKey: "formatEditor.sections.copy.title",
-      descriptionKey: "formatEditor.sections.copy.description",
-      icon: MessageSquareText,
-      keys: ["caption", "hashtags"],
     },
     {
       id: "creative",
@@ -471,12 +417,41 @@ export function FormatAwareContentEditor({
         </p>
       ) : null}
 
+      {/* "Where is the caption?" hint — the most common question
+          planners ask. Surfaces upfront that the audience-facing
+          copy (caption / hashtags / first comment / description /
+          location) is owned by the Copy tab. Saves a tab round-trip
+          and prevents two-edit drift. Hidden when the user is in
+          designer mode (editableFields set) because they're
+          editing the brief, not the copy. */}
+      {!editableFields ? (
+        <div
+          className="border-info bg-info-subtle text-fg-primary mt-4 flex flex-wrap items-start gap-3 rounded-[var(--radius-control)] border px-3 py-2"
+          role="note"
+          data-testid="format-aware-copy-hint"
+        >
+          <p className="text-body flex-1">
+            {t("formatEditor.editor.copyLivesInCopyTab")}
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <TabSwitchLink href="#copy" data-testid="format-aware-open-copy-tab">
+              {t("contentDetail.copy.openCopy")}
+            </TabSwitchLink>
+          </Button>
+        </div>
+      ) : null}
+
       <div className="mt-5 space-y-5" data-testid="format-aware-sections">
         {sections.map((section) => {
-          // Audience-facing fields have one canonical owner: the Copy tab.
-          // Keep strategy fields such as Hook and Main message here, but do
-          // not render a second editable caption/CTA/hashtag surface.
-          if (section.id === "copy") return null;
+          // Audience-facing fields (caption, hashtags, firstComment,
+          // description, location, callToAction where it is
+          // audience-facing) have ONE canonical owner — the Copy
+          // tab. The Brief tab surfaces Hook and Main message as
+          // *strategy* fields (the planner's own thinking), not as
+          // editable audience copy, so the two surfaces never drift.
+          // isAudienceCopyKey() below keeps those fields out of the
+          // section render even if a manifest key accidentally slips
+          // into the strategy section.
           const Icon = section.icon;
           // Map the section's declared keys back to the manifest
           // entries. We render in manifest order so the planner
@@ -612,6 +587,20 @@ export function FormatAwareContentEditor({
                 {hasObjectiveAudience && !objectiveAudienceOptional
                   ? renderObjectiveAudience()
                   : null}
+                {/* Strategy section gets a "How we'll say it" sub-header
+                    after the objective/audience block so the planner
+                    can see the boundary between strategic intent
+                    ("why we're publishing") and execution intent
+                    ("how we'll hook the reader"). Other sections
+                    stay flat. */}
+                {section.id === "strategy" && coreFields.length > 0 ? (
+                  <p
+                    className="text-label text-fg-secondary font-semibold tracking-wide uppercase"
+                    data-testid={`format-section-${section.id}-how-subhead`}
+                  >
+                    {t("formatEditor.editor.howSubhead")}
+                  </p>
+                ) : null}
                 {renderSectionFields(coreFields, "core")}
                 {optionalFields.length > 0 ||
                 (hasObjectiveAudience && objectiveAudienceOptional) ? (

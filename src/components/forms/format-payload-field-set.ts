@@ -80,21 +80,29 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
     { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
     { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
-    { key: "location", labelKey: "formatEditor.fields.location", group: "advanced" },
+    // Visual slides lead the Creative section so the
+    // designer-mode editor sees them first. The full
+    // per-slide structured array (visualSlides) gives the
+    // designer a frame-by-frame place to capture direction.
     { key: "visualSlides", labelKey: "formatEditor.fields.visualSlides", group: "advanced" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
+    { key: "location", labelKey: "formatEditor.fields.location", group: "advanced" },
     { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
   ],
   carousel: [
     { key: "slideCount", labelKey: "formatEditor.fields.slideCount", group: "essential" },
+    // Slide outline is the headline of a carousel brief.
+    // Render it BEFORE the strategy fields so the planner
+    // sees the slides first, then fills in the strategic
+    // framing (hook, mainMessage, callToAction) below.
+    { key: "slideOutline", labelKey: "formatEditor.fields.slideOutline", group: "essential" },
     { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
     { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    { key: "slideOutline", labelKey: "formatEditor.fields.slideOutline", group: "essential" },
     { key: "objective", labelKey: "formatEditor.fields.objective", group: "advanced" },
     { key: "audience", labelKey: "formatEditor.fields.audience", group: "advanced" },
     { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
@@ -114,10 +122,14 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
   ],
   short_form_video: [
+    // Scenes lead the brief for a reel — they're the
+    // core creative direction. Ratio and duration come
+    // right after because they're the spec for the
+    // scenes.
+    { key: "scenes", labelKey: "formatEditor.fields.scenes", group: "essential" },
     { key: "ratio", labelKey: "formatEditor.fields.ratio", group: "essential" },
     { key: "durationSeconds", labelKey: "formatEditor.fields.duration", group: "essential" },
     { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
-    { key: "scenes", labelKey: "formatEditor.fields.scenes", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },

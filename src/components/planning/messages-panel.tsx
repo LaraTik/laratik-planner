@@ -210,6 +210,23 @@ export function AudienceCopyPanel({
           {...(state.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
           fieldLabels={fieldLabels}
         />
+        {/* "Source copy" sub-header so the planner knows this
+            section is the canonical author-side input and the
+            Channel Readiness card below is read-only diagnostics. */}
+        <div
+          className="border-border bg-surface rounded-[var(--radius-control)] border px-4 py-3"
+          data-testid="copy-source-section-header"
+        >
+          <h3 className="text-body text-fg-primary font-semibold">
+            {tr("contentDetail.copy.sourceTitle", "Source copy")}
+          </h3>
+          <p className="text-label text-fg-secondary mt-1">
+            {tr(
+              "contentDetail.copy.sourceDescription",
+              "The words your audience will read. Channels inherit this; override per channel in Publishing.",
+            )}
+          </p>
+        </div>
         <div className="space-y-5">
           {copyFields.length === 0 ? (
             <p className="text-body text-fg-muted italic" role="status">
@@ -332,147 +349,182 @@ export function AudienceCopyPanel({
             ) : null}
           </div>
         ) : (
-          <ul className="mt-3 space-y-2" data-testid="messages-per-channel-list">
-            {channels.map((channel) => {
-              const platform = channel.platform.toLowerCase();
-              const limit =
-                platform === "twitter" || platform === "x"
-                  ? 280
-                  : platform === "linkedin"
-                    ? 3000
-                    : 2200;
-              const caption = typeof mapped?.caption === "string" ? mapped.caption : "";
-              const hashtagCount = mapped?.hashtags?.length ?? 0;
-              const custom =
-                channel.payload != null &&
-                [
-                  "caption",
-                  "description",
-                  "firstComment",
-                  "hashtags",
-                  "callToAction",
-                  "location",
-                ].some(
-                  (key) =>
-                    channel.payload?.[key] !== undefined &&
-                    JSON.stringify(channel.payload[key]) !==
-                      JSON.stringify(mapped[key as keyof typeof mapped]),
-                );
-              const copyStatus = channelCopyStatus({
-                hasOverride: custom,
-                ...(channel.sourceRevision !== undefined
-                  ? { sourceRevision: channel.sourceRevision }
-                  : {}),
-                ...(channel.currentRevision !== undefined
-                  ? { currentRevision: channel.currentRevision }
-                  : {}),
-              });
-              const language =
-                typeof channel.payload?.contentLanguage === "string"
-                  ? channel.payload.contentLanguage
-                  : contentLocale;
-              return (
-                <li
-                  key={channel.id}
-                  className={cn(
-                    "border-border bg-surface-container rounded-[var(--radius-control)] border p-3",
-                    // Subtle border tint when the channel has a custom
-                    // override — matches the workflow badge above so
-                    // the planner can scan a long list and find the
-                    // channels that need attention.
-                    copyStatus === "custom" && "border-info",
-                    copyStatus === "stale" && "border-warning",
-                  )}
-                  data-testid={`messages-per-channel-row-${channel.socialChannelId}`}
+          <ul className="mt-3 space-y-3" data-testid="messages-per-channel-list">
+            {Object.entries(
+              channels.reduce<Record<string, typeof channels>>((groups, ch) => {
+                const key = ch.platform.toLowerCase();
+                (groups[key] ??= []).push(ch);
+                return groups;
+              }, {}),
+            ).map(([platformKey, platformChannels]) => (
+              <li
+                key={platformKey}
+                className="space-y-2"
+                data-testid={`messages-platform-group-${platformKey}`}
+              >
+                <p
+                  className="text-label text-fg-secondary flex items-center gap-2 font-semibold tracking-wide uppercase"
+                  data-testid={`messages-platform-group-${platformKey}-label`}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-label text-fg-primary font-semibold">
-                      <bdi>{localizedPlatformLabel(channel.platform)}</bdi> ·{" "}
-                      <bdi>{channel.accountName}</bdi>
-                    </p>
-                    <span
-                      className={cn(
-                        "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold",
-                        copyStatus === "stale"
-                          ? "bg-warning-subtle text-warning"
-                          : copyStatus === "custom"
-                            ? "bg-info-subtle text-info"
-                            : "bg-surface text-fg-secondary",
-                      )}
-                    >
-                      {/* Coloured status dot — gives the eye an
+                  <span aria-hidden="true" className="bg-fg-muted inline-block h-px w-3" />
+                  {localizedPlatformLabel(platformKey)}
+                  <span className="text-fg-muted font-normal normal-case">
+                    ({platformChannels.length})
+                  </span>
+                </p>
+                <ul className="space-y-2">
+                  {platformChannels.map((channel) => {
+                    const platform = channel.platform.toLowerCase();
+                    const limit =
+                      platform === "twitter" || platform === "x"
+                        ? 280
+                        : platform === "linkedin"
+                          ? 3000
+                          : 2200;
+                    const caption = typeof mapped?.caption === "string" ? mapped.caption : "";
+                    const hashtagCount = mapped?.hashtags?.length ?? 0;
+                    const custom =
+                      channel.payload != null &&
+                      [
+                        "caption",
+                        "description",
+                        "firstComment",
+                        "hashtags",
+                        "callToAction",
+                        "location",
+                      ].some(
+                        (key) =>
+                          channel.payload?.[key] !== undefined &&
+                          JSON.stringify(channel.payload[key]) !==
+                            JSON.stringify(mapped[key as keyof typeof mapped]),
+                      );
+                    const copyStatus = channelCopyStatus({
+                      hasOverride: custom,
+                      ...(channel.sourceRevision !== undefined
+                        ? { sourceRevision: channel.sourceRevision }
+                        : {}),
+                      ...(channel.currentRevision !== undefined
+                        ? { currentRevision: channel.currentRevision }
+                        : {}),
+                    });
+                    const language =
+                      typeof channel.payload?.contentLanguage === "string"
+                        ? channel.payload.contentLanguage
+                        : contentLocale;
+                    return (
+                      <li
+                        key={channel.id}
+                        className={cn(
+                          "border-border bg-surface-container rounded-[var(--radius-control)] border p-3",
+                          // Subtle border tint when the channel has a custom
+                          // override — matches the workflow badge above so
+                          // the planner can scan a long list and find the
+                          // channels that need attention.
+                          copyStatus === "custom" && "border-info",
+                          copyStatus === "stale" && "border-warning",
+                        )}
+                        data-testid={`messages-per-channel-row-${channel.socialChannelId}`}
+                      >
+                        <div className="flex flex-wrap items-start justify-between gap-2">
+                          <p className="text-label text-fg-primary font-semibold">
+                            <bdi>{localizedPlatformLabel(channel.platform)}</bdi> ·{" "}
+                            <bdi>{channel.accountName}</bdi>
+                          </p>
+                          <span
+                            className={cn(
+                              "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold",
+                              copyStatus === "stale"
+                                ? "bg-warning-subtle text-warning"
+                                : copyStatus === "custom"
+                                  ? "bg-info-subtle text-info"
+                                  : "bg-surface text-fg-secondary",
+                            )}
+                          >
+                            {/* Coloured status dot — gives the eye an
                           instant visual anchor before the user reads
                           the badge label. */}
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "h-1.5 w-1.5 rounded-full",
-                          copyStatus === "stale"
-                            ? "bg-warning"
-                            : copyStatus === "custom"
-                              ? "bg-info"
-                              : "bg-fg-muted",
-                        )}
-                      />
-                      {copyStatus === "stale"
-                        ? tr(
-                            "contentDetail.copy.staleOverride",
-                            "Custom override — shared copy changed",
-                          )
-                        : copyStatus === "custom"
-                          ? tr("contentDetail.copy.customOverride", "Custom override")
-                          : tr("contentDetail.copy.inherited", "Inherited shared copy")}
-                    </span>
-                  </div>
-                  {/* Metadata strip — language + counters + warnings,
+                            <span
+                              aria-hidden="true"
+                              className={cn(
+                                "h-1.5 w-1.5 rounded-full",
+                                copyStatus === "stale"
+                                  ? "bg-warning"
+                                  : copyStatus === "custom"
+                                    ? "bg-info"
+                                    : "bg-fg-muted",
+                              )}
+                            />
+                            {copyStatus === "stale"
+                              ? tr(
+                                  "contentDetail.copy.staleOverride",
+                                  "Custom override — shared copy changed",
+                                )
+                              : copyStatus === "custom"
+                                ? tr("contentDetail.copy.customOverride", "Custom override")
+                                : tr("contentDetail.copy.inherited", "Inherited shared copy")}
+                          </span>
+                        </div>
+                        {/* Metadata strip — language + counters + warnings,
                       grouped into a single line so the planner can
                       scan a long list of channels in one glance. The
                       `role="list"` keeps SR rotor behaviour. */}
-                  <div
-                    className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-4 gap-y-1"
-                    role="list"
-                    aria-label={tr(
-                      "contentDetail.copy.perChannelMetaLabel",
-                      "Channel copy summary",
-                    )}
-                  >
-                    <span role="listitem">
-                      <span className="text-fg-muted">
-                        {tr("contentDetail.copy.languageShort", "Lang")}:{" "}
-                      </span>
-                      {language.toUpperCase()}
-                    </span>
-                    <span
-                      role="listitem"
-                      className={caption.length > limit ? "text-danger font-semibold" : ""}
-                    >
-                      <span className="text-fg-muted">
-                        {tr("contentDetail.copy.charactersShort", "Chars")}:{" "}
-                      </span>
-                      {formatNumber(caption.length, locale)} / {formatNumber(limit, locale)}
-                    </span>
-                    <span role="listitem">
-                      <span className="text-fg-muted">
-                        {tr("contentDetail.copy.hashtagsShort", "Tags")}:{" "}
-                      </span>
-                      {formatNumber(hashtagCount, locale)} / 30
-                    </span>
-                    {caption.length > limit ? (
-                      <span role="alert" className="text-danger inline-flex items-center gap-1">
-                        <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                        {tr("contentDetail.copy.characterWarning", "Too long for this channel")}
-                      </span>
-                    ) : null}
-                    {language !== contentLocale && !copyView.translations[language] ? (
-                      <span role="listitem" className="text-warning inline-flex items-center gap-1">
-                        <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                        {tr("contentDetail.copy.missingTranslation", "Missing translation")}
-                      </span>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
+                        <div
+                          className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-4 gap-y-1"
+                          role="list"
+                          aria-label={tr(
+                            "contentDetail.copy.perChannelMetaLabel",
+                            "Channel copy summary",
+                          )}
+                        >
+                          <span role="listitem">
+                            <span className="text-fg-muted">
+                              {tr("contentDetail.copy.languageShort", "Lang")}:{" "}
+                            </span>
+                            {language.toUpperCase()}
+                          </span>
+                          <span
+                            role="listitem"
+                            className={caption.length > limit ? "text-danger font-semibold" : ""}
+                          >
+                            <span className="text-fg-muted">
+                              {tr("contentDetail.copy.charactersShort", "Chars")}:{" "}
+                            </span>
+                            {formatNumber(caption.length, locale)} / {formatNumber(limit, locale)}
+                          </span>
+                          <span role="listitem">
+                            <span className="text-fg-muted">
+                              {tr("contentDetail.copy.hashtagsShort", "Tags")}:{" "}
+                            </span>
+                            {formatNumber(hashtagCount, locale)} / 30
+                          </span>
+                          {caption.length > limit ? (
+                            <span
+                              role="alert"
+                              className="text-danger inline-flex items-center gap-1"
+                            >
+                              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                              {tr(
+                                "contentDetail.copy.characterWarning",
+                                "Too long for this channel",
+                              )}
+                            </span>
+                          ) : null}
+                          {language !== contentLocale && !copyView.translations[language] ? (
+                            <span
+                              role="listitem"
+                              className="text-warning inline-flex items-center gap-1"
+                            >
+                              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                              {tr("contentDetail.copy.missingTranslation", "Missing translation")}
+                            </span>
+                          ) : null}
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </li>
+            ))}
           </ul>
         )}
         <div

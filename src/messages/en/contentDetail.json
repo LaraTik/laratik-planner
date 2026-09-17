@@ -439,6 +439,8 @@
     "title": "Audience copy",
     "description": "One shared source for the words your audience will read. Publishing owns the final channel-specific version.",
     "sourceLanguage": "Source language: {language}",
+    "sourceTitle": "Source copy",
+    "sourceDescription": "The words your audience will read. Channels inherit this; override per channel in Publishing.",
     "empty": "This format has no audience-copy fields yet.",
     "unsaved": "Unsaved changes",
     "allSaved": "All changes saved",
