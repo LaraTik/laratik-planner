@@ -51,8 +51,25 @@ concurrency:
 permissions: {}
 
 jobs:
+  gate:
+    name: Verify upstream CI conclusion
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require successful CI
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "workflow_run" && "${UPSTREAM_CONCLUSION}" != "success" ]]; then
+            echo "Refusing deployment: upstream CI concluded ${UPSTREAM_CONCLUSION}."
+            exit 1
+          fi
+
   resolve:
     name: Resolve deployment commit
+    needs: gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -144,7 +161,7 @@ jobs:
   deploy:
     name: Deploy to laratik-vps
     runs-on: ubuntu-latest
-    needs: [resolve, build]
+    needs: [gate, resolve, build]
     # `build` is intentionally optional on the normal workflow_run path,
     # because CI's build-smoke job publishes the image there. The upstream
     # CI conclusion is not optional, however: a failed CI run must never
