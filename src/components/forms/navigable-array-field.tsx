@@ -79,6 +79,22 @@ export interface NavigableArrayColumn {
    * first non-position column.
    */
   preview?: boolean;
+  /**
+   * Render a multi-line textarea instead of a single-line
+   * input for text columns. Useful for columns whose values
+   * are paragraph-length (e.g. a slide's `summary`). When
+   * `true`, the field auto-grows up to ~6 rows. Defaults to
+   * `false` to keep the existing single-line behaviour for
+   * short fields like `position` or `name`.
+   */
+  multiline?: boolean;
+  /**
+   * Number of visible rows for `multiline` columns. Defaults
+   * to `2`. The textarea also auto-grows up to a cap of 6
+   * rows as the user types, so long summaries stay readable
+   * but the layout doesn't blow up on first paint.
+   */
+  rows?: number;
 }
 
 export interface NavigableArrayFieldProps {
@@ -704,30 +720,48 @@ export function NavigableArrayField({
                     >
                       {c.label}
                     </label>
-                    <DirAwareInput
-                      id={cellId}
-                      locale={locale}
-                      type={c.kind === "number" ? "number" : "text"}
-                      value={
-                        typeof cellVal === "number" || typeof cellVal === "string"
-                          ? String(cellVal)
-                          : ""
-                      }
-                      readOnly={!editable}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        if (c.kind === "number") {
-                          const n = v ? Number(v) : undefined;
-                          patchRow(
-                            activeIndex,
-                            c.key,
-                            n === undefined || !Number.isFinite(n) ? undefined : n,
-                          );
-                          return;
+                    {c.kind === "text" && c.multiline ? (
+                      <DirAwareTextarea
+                        id={cellId}
+                        locale={locale}
+                        rows={c.rows ?? 2}
+                        value={
+                          typeof cellVal === "number" || typeof cellVal === "string"
+                            ? String(cellVal)
+                            : ""
                         }
-                        patchRow(activeIndex, c.key, v ? v : undefined);
-                      }}
-                    />
+                        readOnly={!editable}
+                        onChange={(e) => {
+                          patchRow(activeIndex, c.key, e.target.value ? e.target.value : undefined);
+                        }}
+                        className="min-h-12"
+                      />
+                    ) : (
+                      <DirAwareInput
+                        id={cellId}
+                        locale={locale}
+                        type={c.kind === "number" ? "number" : "text"}
+                        value={
+                          typeof cellVal === "number" || typeof cellVal === "string"
+                            ? String(cellVal)
+                            : ""
+                        }
+                        readOnly={!editable}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (c.kind === "number") {
+                            const n = v ? Number(v) : undefined;
+                            patchRow(
+                              activeIndex,
+                              c.key,
+                              n === undefined || !Number.isFinite(n) ? undefined : n,
+                            );
+                            return;
+                          }
+                          patchRow(activeIndex, c.key, v ? v : undefined);
+                        }}
+                      />
+                    )}
                   </div>
                 );
               })}
@@ -782,30 +816,48 @@ export function NavigableArrayField({
                       >
                         {c.label}
                       </label>
-                      <DirAwareInput
-                        id={cellId}
-                        locale={locale}
-                        type={c.kind === "number" ? "number" : "text"}
-                        value={
-                          typeof cellVal === "number" || typeof cellVal === "string"
-                            ? String(cellVal)
-                            : ""
-                        }
-                        readOnly={!editable}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (c.kind === "number") {
-                            const n = v ? Number(v) : undefined;
-                            patchRow(
-                              idx,
-                              c.key,
-                              n === undefined || !Number.isFinite(n) ? undefined : n,
-                            );
-                            return;
+                      {c.kind === "text" && c.multiline ? (
+                        <DirAwareTextarea
+                          id={cellId}
+                          locale={locale}
+                          rows={c.rows ?? 2}
+                          value={
+                            typeof cellVal === "number" || typeof cellVal === "string"
+                              ? String(cellVal)
+                              : ""
                           }
-                          patchRow(idx, c.key, v ? v : undefined);
-                        }}
-                      />
+                          readOnly={!editable}
+                          onChange={(e) => {
+                            patchRow(idx, c.key, e.target.value ? e.target.value : undefined);
+                          }}
+                          className="min-h-12"
+                        />
+                      ) : (
+                        <DirAwareInput
+                          id={cellId}
+                          locale={locale}
+                          type={c.kind === "number" ? "number" : "text"}
+                          value={
+                            typeof cellVal === "number" || typeof cellVal === "string"
+                              ? String(cellVal)
+                              : ""
+                          }
+                          readOnly={!editable}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (c.kind === "number") {
+                              const n = v ? Number(v) : undefined;
+                              patchRow(
+                                idx,
+                                c.key,
+                                n === undefined || !Number.isFinite(n) ? undefined : n,
+                              );
+                              return;
+                            }
+                            patchRow(idx, c.key, v ? v : undefined);
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}

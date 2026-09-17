@@ -496,7 +496,13 @@ function ScenesFieldRenderer({ label, payload, locale, editable, t, onField }: F
         rows={scenes}
         columns={[
           { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
-          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          {
+            key: "summary",
+            label: t("formatEditor.fields.summary"),
+            kind: "text",
+            multiline: true,
+            rows: 2,
+          },
           {
             key: "durationSeconds",
             label: t("formatEditor.fields.durationSeconds"),
@@ -535,7 +541,13 @@ function SlideOutlineFieldRenderer({
         rows={slides}
         columns={[
           { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
-          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          {
+            key: "summary",
+            label: t("formatEditor.fields.summary"),
+            kind: "text",
+            multiline: true,
+            rows: 2,
+          },
           { key: "visual", label: t("formatEditor.fields.visual"), kind: "text", optional: true },
         ]}
         locale={locale}
@@ -569,7 +581,13 @@ function VisualSlidesFieldRenderer({
         rows={slides}
         columns={[
           { key: "position", label: t("formatEditor.fields.positionTag"), kind: "number" },
-          { key: "summary", label: t("formatEditor.fields.summary"), kind: "text" },
+          {
+            key: "summary",
+            label: t("formatEditor.fields.summary"),
+            kind: "text",
+            multiline: true,
+            rows: 3,
+          },
           { key: "visual", label: t("formatEditor.fields.visual"), kind: "text", optional: true },
         ]}
         locale={locale}

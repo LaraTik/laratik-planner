@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal, Pencil, Archive, RotateCcw, Copy, FilePlus2 } from "lucide-react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm-dialog";
 import { DiscussionDrawer } from "@/components/planning/discussion-drawer";
@@ -100,6 +101,16 @@ export interface WorkspaceShellProps {
   canManageContentActions?: boolean;
   sourceFormat?: ContentFormat;
   /**
+   * Deep link to the full Edit form for this item. The overflow
+   * menu renders an "Edit all details" shortcut when this is
+   * provided and the user is allowed to edit. The Edit form is
+   * the canonical place to change the title, brief, format,
+   * publish date, channels, and other top-level metadata; the
+   * inline edit drawers in each tab only cover a subset.
+   */
+  editHref?: string;
+  canEdit?: boolean;
+  /**
    * Bound translator from the parent planning detail page.
    * Threaded to the embedded `<DiscussionDrawer>` so the
    * discussion surface (drawer chrome + comment items +
@@ -127,6 +138,8 @@ export function WorkspaceShell({
   mentionCount,
   canManageContentActions = false,
   sourceFormat = "static_post",
+  editHref,
+  canEdit = false,
 }: WorkspaceShellProps) {
   const t = useLocaleT();
   const router = useRouter();
@@ -229,7 +242,7 @@ export function WorkspaceShell({
             mentionCount={mentionCount}
             onClick={() => setDrawerOpen(true)}
           />
-          {canResetIdea || canManageContentActions ? (
+          {canResetIdea || canManageContentActions || (canEdit && editHref) ? (
             <OverflowMenu
               onReset={() => setResetOpen(true)}
               onDuplicate={() => void duplicate()}
@@ -240,6 +253,8 @@ export function WorkspaceShell({
               onArchive={() => void archive()}
               canResetIdea={canResetIdea}
               canManageContentActions={canManageContentActions}
+              editHref={editHref}
+              canEdit={canEdit}
               t={t}
             />
           ) : null}
@@ -419,6 +434,8 @@ function OverflowMenu({
   onArchive,
   canResetIdea,
   canManageContentActions,
+  editHref,
+  canEdit,
   t,
 }: {
   onReset: () => void;
@@ -427,6 +444,8 @@ function OverflowMenu({
   onArchive: () => void;
   canResetIdea: boolean;
   canManageContentActions: boolean;
+  editHref?: string | undefined;
+  canEdit: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
   // Radix portals the menu outside the sticky header and any panel
@@ -451,11 +470,25 @@ function OverflowMenu({
         className="w-56"
         data-testid="workspace-overflow-content"
       >
-        {canManageContentActions ? (
-          <DropdownMenuItem onSelect={onDuplicate} data-testid="workspace-overflow-duplicate">
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
-            {t("contentDetail.navigation.duplicate")}
+        {canEdit && editHref ? (
+          <DropdownMenuItem asChild data-testid="workspace-overflow-edit">
+            <Link
+              href={editHref}
+              className="text-body text-fg-primary flex cursor-pointer items-center gap-2"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("contentDetail.overview.kebab.editDetails")}
+            </Link>
           </DropdownMenuItem>
+        ) : null}
+        {canManageContentActions ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={onDuplicate} data-testid="workspace-overflow-duplicate">
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("contentDetail.navigation.duplicate")}
+            </DropdownMenuItem>
+          </>
         ) : null}
         {canManageContentActions ? (
           <DropdownMenuItem onSelect={onReplacement} data-testid="workspace-overflow-replacement">

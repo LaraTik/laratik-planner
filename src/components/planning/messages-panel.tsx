@@ -3,7 +3,9 @@
 import * as React from "react";
 import { useActionState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Info, Loader2, Save } from "lucide-react";
+import { TabSwitchLink } from "@/components/planning/tab-switch-link";
+import { CheckCircle2, Info, Loader2, Save, AlertCircle } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { FormSummary } from "@/components/forms/form-summary";
@@ -323,7 +325,9 @@ export function AudienceCopyPanel({
             </p>
             {canManageChannels ? (
               <Button asChild size="sm" variant="outline">
-                <Link href="#overview">{tr("contentDetail.copy.openDetails", "Open Details")}</Link>
+                <TabSwitchLink href="#overview">
+                  {tr("contentDetail.copy.openDetails", "Open Details")}
+                </TabSwitchLink>
               </Button>
             ) : null}
           </div>
@@ -370,15 +374,46 @@ export function AudienceCopyPanel({
               return (
                 <li
                   key={channel.id}
-                  className="border-border bg-surface-container rounded-[var(--radius-control)] border p-3"
+                  className={cn(
+                    "border-border bg-surface-container rounded-[var(--radius-control)] border p-3",
+                    // Subtle border tint when the channel has a custom
+                    // override — matches the workflow badge above so
+                    // the planner can scan a long list and find the
+                    // channels that need attention.
+                    copyStatus === "custom" && "border-info",
+                    copyStatus === "stale" && "border-warning",
+                  )}
                   data-testid={`messages-per-channel-row-${channel.socialChannelId}`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <p className="text-label text-fg-secondary font-semibold">
+                    <p className="text-label text-fg-primary font-semibold">
                       <bdi>{localizedPlatformLabel(channel.platform)}</bdi> ·{" "}
                       <bdi>{channel.accountName}</bdi>
                     </p>
-                    <span className="text-label bg-surface rounded-full px-2 py-0.5 font-semibold">
+                    <span
+                      className={cn(
+                        "text-label inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-semibold",
+                        copyStatus === "stale"
+                          ? "bg-warning-subtle text-warning"
+                          : copyStatus === "custom"
+                            ? "bg-info-subtle text-info"
+                            : "bg-surface text-fg-secondary",
+                      )}
+                    >
+                      {/* Coloured status dot — gives the eye an
+                          instant visual anchor before the user reads
+                          the badge label. */}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          copyStatus === "stale"
+                            ? "bg-warning"
+                            : copyStatus === "custom"
+                              ? "bg-info"
+                              : "bg-fg-muted",
+                        )}
+                      />
                       {copyStatus === "stale"
                         ? tr(
                             "contentDetail.copy.staleOverride",
@@ -389,30 +424,48 @@ export function AudienceCopyPanel({
                           : tr("contentDetail.copy.inherited", "Inherited shared copy")}
                     </span>
                   </div>
-                  <div className="text-label text-fg-secondary mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                    <span>
-                      {tr("contentDetail.copy.resolvedLanguage", "Language: {language}", {
-                        language: language.toUpperCase(),
-                      })}
+                  {/* Metadata strip — language + counters + warnings,
+                      grouped into a single line so the planner can
+                      scan a long list of channels in one glance. The
+                      `role="list"` keeps SR rotor behaviour. */}
+                  <div
+                    className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-4 gap-y-1"
+                    role="list"
+                    aria-label={tr(
+                      "contentDetail.copy.perChannelMetaLabel",
+                      "Channel copy summary",
+                    )}
+                  >
+                    <span role="listitem">
+                      <span className="text-fg-muted">
+                        {tr("contentDetail.copy.languageShort", "Lang")}:{" "}
+                      </span>
+                      {language.toUpperCase()}
                     </span>
-                    <span className={caption.length > limit ? "text-danger font-semibold" : ""}>
-                      {tr("contentDetail.copy.characterStatus", "{count} / {limit} characters", {
-                        count: formatNumber(caption.length, locale),
-                        limit: formatNumber(limit, locale),
-                      })}
+                    <span
+                      role="listitem"
+                      className={caption.length > limit ? "text-danger font-semibold" : ""}
+                    >
+                      <span className="text-fg-muted">
+                        {tr("contentDetail.copy.charactersShort", "Chars")}:{" "}
+                      </span>
+                      {formatNumber(caption.length, locale)} / {formatNumber(limit, locale)}
                     </span>
-                    <span>
-                      {tr("contentDetail.copy.hashtagStatus", "{count} / 30 hashtags", {
-                        count: formatNumber(hashtagCount, locale),
-                      })}
+                    <span role="listitem">
+                      <span className="text-fg-muted">
+                        {tr("contentDetail.copy.hashtagsShort", "Tags")}:{" "}
+                      </span>
+                      {formatNumber(hashtagCount, locale)} / 30
                     </span>
                     {caption.length > limit ? (
-                      <span role="alert">
+                      <span role="alert" className="text-danger inline-flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                         {tr("contentDetail.copy.characterWarning", "Too long for this channel")}
                       </span>
                     ) : null}
                     {language !== contentLocale && !copyView.translations[language] ? (
-                      <span className="text-warning">
+                      <span role="listitem" className="text-warning inline-flex items-center gap-1">
+                        <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
                         {tr("contentDetail.copy.missingTranslation", "Missing translation")}
                       </span>
                     ) : null}
