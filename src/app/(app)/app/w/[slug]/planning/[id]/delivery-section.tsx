@@ -114,7 +114,6 @@ export function DeliverySection({
           ? t("contentDetail.deliveries.reviewerInternal")
           : t("contentDetail.deliveries.reviewerPending");
   const reviewStatusLabel = t(`contentDetail.deliveries.reviewHandoffStatus.${reviewStatus}`);
-  const reviewStatusBody = t(`contentDetail.deliveries.reviewHandoffBody.${reviewStatus}`);
   const nextStep = t(`contentDetail.deliveries.reviewHandoffNext.${reviewStatus}`);
   const canSubmit =
     (isDesigner || isManager) &&
@@ -188,47 +187,43 @@ export function DeliverySection({
         data-testid="delivery-review-handoff"
         role="region"
         aria-labelledby="delivery-review-handoff-title"
+        padding="sm"
       >
-        <header className="flex flex-wrap items-start justify-between gap-2">
-          <div className="min-w-0">
-            <CardTitle id="delivery-review-handoff-title">
-              {t("contentDetail.deliveries.reviewHandoffTitle")}
-            </CardTitle>
-            <p className="text-body text-fg-secondary mt-1">{reviewStatusBody}</p>
-          </div>
-          <span className="text-label border-info/30 bg-surface text-info rounded-full border px-2 py-1 font-semibold">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+          <CardTitle id="delivery-review-handoff-title" className="text-body">
+            {t("contentDetail.deliveries.reviewHandoffTitle")}
+          </CardTitle>
+          <span className="text-label border-info/30 bg-surface text-info rounded-full border px-2 py-0.5 font-semibold">
             {reviewStatusLabel}
           </span>
-        </header>
-        <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-          <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
-            <dt className="text-label text-fg-muted font-semibold">
-              {t("contentDetail.deliveries.currentVersionLabel")}
-            </dt>
-            <dd className="text-body text-fg-primary mt-0.5 font-semibold">
-              {latestDelivery
-                ? t("contentDetail.deliveries.currentVersion", {
-                    count: latestDelivery.versionNumber,
-                  })
-                : t("contentDetail.deliveries.noCurrentVersion")}
-            </dd>
-          </div>
-          <div className="border-border bg-surface rounded-[var(--radius-control)] border p-2">
-            <dt className="text-label text-fg-muted font-semibold">
-              {t("contentDetail.deliveries.reviewerLabel")}
-            </dt>
-            <dd className="text-body text-fg-primary mt-0.5 font-semibold">{reviewOwner}</dd>
-          </div>
-        </dl>
-        {latestDelivery && !viewerIsClient && latestDelivery.submittedBy.name ? (
-          <p className="text-label text-fg-muted mt-3">
-            {t("contentDetail.deliveries.submittedBy", { name: latestDelivery.submittedBy.name })}
-          </p>
-        ) : null}
-        <p className="text-label text-fg-secondary border-border mt-3 border-t pt-3">
-          <span className="font-semibold">{t("contentDetail.deliveries.nextStepLabel")}</span>{" "}
-          {nextStep}
-        </p>
+          <span className="text-label text-fg-secondary" aria-hidden="true">
+            ·
+          </span>
+          <span className="text-label text-fg-primary font-semibold">
+            {latestDelivery
+              ? t("contentDetail.deliveries.currentVersion", {
+                  count: latestDelivery.versionNumber,
+                })
+              : t("contentDetail.deliveries.noCurrentVersion")}
+          </span>
+          <span className="text-label text-fg-secondary" aria-hidden="true">
+            ·
+          </span>
+          <span className="text-label text-fg-primary font-semibold">{reviewOwner}</span>
+          {latestDelivery && !viewerIsClient && latestDelivery.submittedBy.name ? (
+            <>
+              <span className="text-label text-fg-secondary" aria-hidden="true">
+                ·
+              </span>
+              <span className="text-label text-fg-muted">
+                {t("contentDetail.deliveries.submittedBy", {
+                  name: latestDelivery.submittedBy.name,
+                })}
+              </span>
+            </>
+          ) : null}
+          <span className="text-label text-fg-secondary ms-auto font-semibold">{nextStep}</span>
+        </div>
       </Card>
 
       {/* History — always visible when there is at least one delivery */}

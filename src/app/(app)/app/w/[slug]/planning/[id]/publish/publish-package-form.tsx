@@ -24,6 +24,7 @@ import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { humanFormat } from "@/lib/content/status";
+import { PublishPhaseStepper } from "@/components/planning/publish-phase-stepper";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import type { MetaPublishingReadiness } from "@/lib/db/schema";
@@ -563,6 +564,22 @@ export function PublishPackageForm({
         })}
       </div>
 
+      {channels.length > 0 ? (
+        <PublishPhaseStepper
+          activeChannel={activeChannel}
+          channels={channels.map((c) => ({
+            id: c.id,
+            socialChannelId: c.socialChannelId,
+          }))}
+          channelsReadiness={readiness.channels.map((c) => ({
+            socialChannelId: c.socialChannelId,
+            blockerCount: c.blockerCount,
+          }))}
+          currentReadinessBlockerCount={currentReadiness?.blockerCount ?? 0}
+          t={t}
+        />
+      ) : null}
+
       {channels.length > 1 ? (
         <div
           className="border-border bg-surface-subtle flex flex-col gap-2 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-end sm:justify-between"
@@ -784,87 +801,100 @@ export function PublishPackageForm({
                 data-testid="publish-alt-text"
               />
             </div>
-            <Checkbox
-              label={t("contentDetail.publishForm.rightsConfirmed")}
-              checked={Boolean(
-                (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
-                  ?.rightsConfirmed,
-              )}
-              onChange={(v) =>
-                updateDraft(current.id, {
-                  disclosures: {
-                    paidPartnership: Boolean(
-                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
-                        ?.paidPartnership,
-                    ),
-                    aiGenerated: Boolean(
-                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                        ?.aiGenerated,
-                    ),
-                    syntheticMedia: Boolean(
-                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
-                        ?.syntheticMedia,
-                    ),
-                    rightsConfirmed: v,
-                  },
-                })
-              }
-              testId="publish-rights-confirmed"
-            />
-            <Checkbox
-              label={t("contentDetail.publishForm.aiGenerated")}
-              checked={Boolean(
-                (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                  ?.aiGenerated,
-              )}
-              onChange={(v) =>
-                updateDraft(current.id, {
-                  disclosures: {
-                    paidPartnership: Boolean(
-                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
-                        ?.paidPartnership,
-                    ),
-                    aiGenerated: v,
-                    syntheticMedia: Boolean(
-                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
-                        ?.syntheticMedia,
-                    ),
-                    rightsConfirmed: Boolean(
-                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
-                        ?.rightsConfirmed,
-                    ),
-                  },
-                })
-              }
-              testId="publish-ai-generated"
-            />
-            <Checkbox
-              label={t("contentDetail.publishForm.paidPartnership")}
-              checked={Boolean(
-                (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
-                  ?.paidPartnership,
-              )}
-              onChange={(v) =>
-                updateDraft(current.id, {
-                  disclosures: {
-                    paidPartnership: v,
-                    aiGenerated: Boolean(
-                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                        ?.aiGenerated,
-                    ),
-                    syntheticMedia: Boolean(
-                      (currentDraft as { disclosures?: { syntheticMedia?: boolean } }).disclosures
-                        ?.syntheticMedia,
-                    ),
-                    rightsConfirmed: Boolean(
-                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
-                        ?.rightsConfirmed,
-                    ),
-                  },
-                })
-              }
-              testId="publish-paid-partnership"
-            />
+            <details
+              className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+              data-testid="publish-advanced-disclosures"
+            >
+              <summary className="text-body text-fg-primary cursor-pointer font-semibold">
+                {t("contentDetail.publishForm.advancedDisclosures")}
+                <span className="text-label text-fg-muted ms-2 font-normal">
+                  {t("contentDetail.publishForm.advancedDisclosuresSummary")}
+                </span>
+              </summary>
+              <div className="mt-3 space-y-3">
+                <Checkbox
+                  label={t("contentDetail.publishForm.rightsConfirmed")}
+                  checked={Boolean(
+                    (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
+                      ?.rightsConfirmed,
+                  )}
+                  onChange={(v) =>
+                    updateDraft(current.id, {
+                      disclosures: {
+                        paidPartnership: Boolean(
+                          (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                            .disclosures?.paidPartnership,
+                        ),
+                        aiGenerated: Boolean(
+                          (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                            ?.aiGenerated,
+                        ),
+                        syntheticMedia: Boolean(
+                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                            .disclosures?.syntheticMedia,
+                        ),
+                        rightsConfirmed: v,
+                      },
+                    })
+                  }
+                  testId="publish-rights-confirmed"
+                />
+                <Checkbox
+                  label={t("contentDetail.publishForm.aiGenerated")}
+                  checked={Boolean(
+                    (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                      ?.aiGenerated,
+                  )}
+                  onChange={(v) =>
+                    updateDraft(current.id, {
+                      disclosures: {
+                        paidPartnership: Boolean(
+                          (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                            .disclosures?.paidPartnership,
+                        ),
+                        aiGenerated: v,
+                        syntheticMedia: Boolean(
+                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                            .disclosures?.syntheticMedia,
+                        ),
+                        rightsConfirmed: Boolean(
+                          (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                            .disclosures?.rightsConfirmed,
+                        ),
+                      },
+                    })
+                  }
+                  testId="publish-ai-generated"
+                />
+                <Checkbox
+                  label={t("contentDetail.publishForm.paidPartnership")}
+                  checked={Boolean(
+                    (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
+                      ?.paidPartnership,
+                  )}
+                  onChange={(v) =>
+                    updateDraft(current.id, {
+                      disclosures: {
+                        paidPartnership: v,
+                        aiGenerated: Boolean(
+                          (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                            ?.aiGenerated,
+                        ),
+                        syntheticMedia: Boolean(
+                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                            .disclosures?.syntheticMedia,
+                        ),
+                        rightsConfirmed: Boolean(
+                          (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                            .disclosures?.rightsConfirmed,
+                        ),
+                      },
+                    })
+                  }
+                  testId="publish-paid-partnership"
+                />
+              </div>
+            </details>
             <div>
               {/* Phase 8 (2026-08-30): user-facing label renamed from
                   "Approved delivery version" → "Approved version"

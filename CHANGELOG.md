@@ -12,6 +12,66 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Publish tab: phase stepper + collapsed advanced disclosures (2026-09-17)
+
+Round 5 of the planning-detail UX pass. The Publishing tab used to
+be a 1329-line form with no "you are here" anchor — planners had
+to scroll through 4–5 cards to figure out which phase needed work.
+
+- **Phase stepper.** New `PublishPhaseStepper` sits directly under
+  the channel tabs and shows four phases (`Channels` → `Audience
+  copy` → `Compliance` → `Review & submit`). The current phase is
+  inferred from the per-channel readiness data, so the strip stays
+  in lockstep with the actual blockers — no self-declared counters
+  to keep in sync. A subtle hint below the current step tells the
+  planner "N open blocker(s) on this channel" or "M other channel(s)
+  still have blockers" so they know whether they're stuck on their
+  own channel or on network readiness.
+- **Advanced disclosures collapsed by default.** Rights / AI /
+  paid-partnership checkboxes are now inside a native `<details>`
+  ("Advanced disclosures (optional) — Rights, AI-generated, paid
+  partnership"). Three of the four Media & disclosures checkboxes
+  were rarely-edited compliance toggles that took up vertical space
+  on every form load. Alt text stays visible because it's a
+  readiness blocker.
+
+### Changed — Assets tab: Review handoff compressed to one row (2026-09-17)
+
+The "Review handoff" card on the Assets / Delivery tab used to take
+~180px of vertical space for title + status + 2-cell grid +
+submitted-by + next-step footer. Most of that was duplicate chrome.
+
+- **Single-row info bar.** Title + status pill + version +
+  reviewer + submitted-by + next-step all on one line, with the
+  next-step pushed to the right (`ms-auto`). The 2-column
+  `<dl>` grid + the bottom border separator are gone. The
+  `nextStep` derivation is preserved (still pulled from
+  `reviewHandoffNext.{status}`).
+- **Status body removed** (was the verbose sentence under the
+  title). The status pill now carries the same information in a
+  more scannable form.
+
+### Changed — Preview tab: shows uploaded assets + aspect-ratio diagnostic (2026-09-17)
+
+The Preview tab used to always render the empty "no media" state
+even when the content item had linked image assets in the Assets
+tab. The aspect-ratio diagnostic — which compares the asset's
+intrinsic dimensions to the platform's safe ratio — was wired up
+but never fed.
+
+- **First image-kind linked asset drives the preview.** The page
+  now finds the first `row.object.kind === "image"` row in
+  `linkedMediaAssets` and passes its `/api/media/assets/{id}` URL
+  to `<PlatformPreview thumbnailUrl=...>`. The existing
+  `useImageDimensions` hook loads the bytes and feeds the
+  diagnostic.
+- **Aspect-ratio fit verdict now visible.** The diagnostic
+  already classified the result as `perfect | close |
+  will-crop | wrong-ratio | unknown`. Planners now see
+  immediately whether their 4:5 carousel will be cropped to a
+  1:1 square on Instagram, or whether a 16:9 reel will letterbox
+  on a 9:16 story. The verdict sits inline under the media body.
+
 ### Changed — Brief + Copy reorg: one canonical place per concern (2026-09-17)
 
 Path A of the planning-detail UX pass. The Brief tab drops the

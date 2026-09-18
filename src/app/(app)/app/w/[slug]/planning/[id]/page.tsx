@@ -1110,12 +1110,28 @@ export default async function ContentDetailPage({
                           const caption =
                             channelPayload?.caption ?? plannerCaption ?? item.brief ?? "";
                           const hashtags = channelPayload?.hashtags ?? plannerHashtags;
+                          // P5 (2026-09-04, /ui-ux-pro-max round 5):
+                          // pick the first image-kind asset linked to
+                          // this content item so the preview actually
+                          // renders the creative (was: always empty).
+                          // `PlatformPreview.useImageDimensions` loads
+                          // the bytes and feeds the aspect-ratio
+                          // diagnostic — so the planner sees both the
+                          // image AND a "fits / will be cropped"
+                          // verdict against the platform's safe ratio.
+                          const firstImageAsset = linkedMediaAssets.find(
+                            (row) => row.object.kind === "image",
+                          );
+                          const thumbnailUrl = firstImageAsset
+                            ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
+                            : null;
                           return (
                             <PlatformPreview
                               platform={item.channels[0].platform}
                               accountName={item.channels[0].accountName}
                               caption={caption}
                               {...(hashtags ? { hashtags } : {})}
+                              {...(thumbnailUrl ? { thumbnailUrl } : {})}
                             />
                           );
                         })()
