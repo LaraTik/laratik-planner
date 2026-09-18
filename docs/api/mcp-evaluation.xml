@@ -11,4 +11,11 @@
   <case id="08">archive_content requires confirm=true and soft-archives only the selected item.</case>
   <case id="09">Repeated identical reschedule and owner-change calls are safe and do not create duplicate state changes.</case>
   <case id="10">After 120 requests in one minute for a token, the next request returns HTTP 429 with Retry-After.</case>
+  <case id="11">export_brand_kit returns every brand-kit kind for an accessible workspace; logo binaries are referenced via short-lived signed download URLs (storage_path + token + expiresAt), not raw bytes.</case>
+  <case id="12">import_brand_kit with conflict_strategy='merge' skips existing logo/color/font/voice-rule/publishing-rule/linked-resource names and reports the skipped list; new rows are still created.</case>
+  <case id="13">import_brand_kit with conflict_strategy='fail' rejects on the first duplicate name and does not partially apply.</case>
+  <case id="14">import_brand_kit with conflict_strategy='overwrite' requires confirm=true; without confirm the request is rejected by input validation. With confirm=true, the existing row is soft-archived and the new row is created.</case>
+  <case id="15">import_brand_kit logo entries accept exactly one of external_url / source_url / base64. Submitting none, or more than one, fails input validation with a clear message.</case>
+  <case id="16">import_brand_kit rejects logo source_url fetches that exceed the 10 MB cap or return non-2xx; the failure is reported per-row in `failed` without aborting the rest of the import.</case>
+  <case id="17">export_brand_kit and import_brand_kit both reject requests against a workspace the token owner cannot access (canAccessInternalWorkspace / workspace_manager role), returning the existing not-found / permission-denied error shape.</case>
 </evaluation>

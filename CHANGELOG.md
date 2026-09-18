@@ -12,6 +12,84 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — MCP brand-kit export / import tools (2026-09-18)
+
+Two new tools on the LaraTik Planner remote MCP endpoint that round-trip
+a brand-kit between two instances. Closes the gap surfaced by the
+"Path A: extend MCP with brand-kit + upload tools" decision earlier in
+the day. No schema changes, no migration, no new env vars.
+
+- **`laratik_planner_export_brand_kit`** (`content:read`). Reads the full
+  brand-kit for an accessible workspace — logos, colors, fonts, voice
+  rules, publishing rules, linked resources, content pillars — and
+  returns a JSON envelope. Logo binaries are referenced via short-lived
+  signed download URLs (bound to the same operator signing secret as the
+  existing UI downloads); logos saved with `external_url` only keep the
+  original URL. Implementation: [`src/lib/mcp/server.ts`](src/lib/mcp/server.ts)
+  brand-kit helpers.
+- **`laratik_planner_import_brand_kit`** (`content:write`). Applies a
+  brand-kit envelope to an accessible workspace. Supports three
+  conflict strategies: `merge` (default, idempotent — skip duplicates
+  by name), `fail` (reject on the first duplicate), `overwrite`
+  (soft-archive + recreate; requires `confirm=true` because it is
+  destructive). Logo binaries can be supplied as `base64` (inline,
+  with raw or `data:` URL wrappers), `source_url` (HTTPS only,
+  server-side fetch + 30 s ceiling + 10 MB cap), or `external_url`
+  (no binary fetched). Per-row failures are collected into a `failed`
+  list so one bad logo does not abort the whole import. Every
+  `create_*` helper re-checks the existing `workspace_manager` role on
+  the target.
+- **Documentation** synchronized per the maintenance contract:
+  [`docs/api/mcp.md`](docs/api/mcp.md) `## Brand-kit export and import`
+  section + updated Tools table; evaluation cases 11–17 in
+  [`docs/api/mcp-evaluation.xml`](docs/api/mcp-evaluation.xml); new row
+  in the source-of-truth map in
+  [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md).
+- **Compatibility and security rules.** The maintenance contract forbids
+  raw file access in the MCP surface. Logo binaries move via signed
+  download URLs, not as opaque MCP primitives, and the import tool
+  persists them only through the same `createLogoAsset` path that the
+  UI uses. All existing actor / agency / workspace / role / workflow
+  checks apply unchanged.
+
+Operator actions for an actual seed-from-prod run: revoke the leaked
+`lpm_…` token (see prior changelog entry), mint a fresh `content:read` +
+`content:write` token, register it via
+`mavis mcp create --headers '{"Authorization":"Bearer …"}'` against the
+prod endpoint, call `export_brand_kit` once, then call
+`import_brand_kit` against the disposable local DB with
+`conflict_strategy="merge"` and `confirm=false`.
+
+### Added — MCP client wiring pattern documented; `.env.example` placeholder shipped (2026-09-18)
+
+Documentation-only change for the remote MCP endpoint. No code, no
+schema, no migration. Aligns with the maintenance contract in
+[`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md)
+which forbids storing a plaintext `lpm_…` token in source, fixtures,
+logs, screenshots, URLs, spreadsheets, or shared chat.
+
+- **`docs/api/mcp.md` — new `## Client wiring` section.** Replaces the
+  terse "Recommended client setup" with the concrete recipe for the Mavis
+  desktop profile (`mavis mcp create` with a write-only `Authorization`
+  header sourced from a shell variable), the same recipe for CI / secret
+  managers, and the rotation procedure (revoke + re-register). No
+  plaintext token appears anywhere in the repository.
+- **`.env.example` — new `MCP_ACCESS_TOKEN=` placeholder.** Empty value
+  with comments pointing at [`docs/api/mcp.md`](docs/api/mcp.md) and the
+  no-plaintext rule in
+  [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md).
+  Local `.env` / `.env.local` (gitignored) is the only place a real
+  value should ever live.
+- **`docs/operations/mcp-maintenance.md` — new row in the source-of-truth
+  map** for the client-side wiring pattern, citing
+  `docs/api/mcp.md` and `.env.example` as the canonical surfaces.
+
+Operator action when convenient: revoke any `lpm_…` token that has been
+shared in chat or committed to a file, mint a fresh one from
+**Account → MCP access**, and register it via
+`mavis mcp create --headers '{"Authorization":"Bearer …"}'` — never via a
+checked-in file.
+
 ### Fixed — Media library header: workspace-switcher label, storage one-liner, folder-tree polish (2026-09-18)
 
 Three presentational fixes raised by the planner while reviewing the

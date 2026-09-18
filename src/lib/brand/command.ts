@@ -74,8 +74,25 @@ const fontCommand = z.object({
   }),
 });
 
+/**
+ * Generic brand-asset variants for `guideline` / `reference` / `other`.
+ * These share the same DB row shape as logo / color / font but have no
+ * kind-specific metadata — only `name`, an optional JSON `value`, and
+ * optional external / storage references. Used by the MCP
+ * `import_brand_kit` tool's `other_assets` array to round-trip the
+ * `brand_assets.other` category returned by `export_brand_kit`.
+ */
+const genericAssetCommand = z.object({
+  kind: z.enum(["guideline", "reference", "other"]),
+  name: z.string().trim().min(1).max(120),
+  value: z.record(z.string(), z.unknown()).optional(),
+  externalUrl: z.string().trim().url().optional(),
+  storagePath: z.string().trim().min(1).max(255).optional(),
+  storageObjectId: z.string().uuid().optional(),
+});
+
 export const BrandAssetCommandSchema = z
-  .discriminatedUnion("kind", [logoCommand, colorCommand, fontCommand])
+  .discriminatedUnion("kind", [logoCommand, colorCommand, fontCommand, genericAssetCommand])
   .superRefine((value, ctx) => {
     // Logo variant: external URL and uploaded file are mutually
     // exclusive. We check at the union level because Zod's
