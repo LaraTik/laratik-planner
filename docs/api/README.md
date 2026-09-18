@@ -76,7 +76,7 @@ The Zod schemas referenced above are in `src/lib/validation/` (one per domain) a
 
 ## Related documents
 
-- [`docs/api/mcp.md`](./mcp.md) — Planner MCP endpoint, tools, scopes, and client contract.
+- [`docs/api/mcp.md`](./mcp.md) — Planner MCP endpoint, tools, scopes, structured `format_payload` content contract, and client setup.
 - [`docs/operations/mcp-maintenance.md`](../operations/mcp-maintenance.md) — mandatory synchronization and release checklist for MCP changes.
 - [`docs/architecture/authorization.md`](../architecture/authorization.md) — auth policy and the `(actor, agencyId)` rule.
 - [`docs/architecture/data-model.md`](../architecture/data-model.md) — the underlying database tables.

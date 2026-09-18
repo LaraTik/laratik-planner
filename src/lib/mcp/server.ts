@@ -556,6 +556,12 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
         brief: z.string().max(2000).default(""),
         planned_publish_at: z.coerce.date(),
         channel_ids: z.array(z.string().uuid()).max(100).optional(),
+        format_payload: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            "Optional format-specific creative fields. The planner validates and normalizes this payload against the selected format.",
+          ),
         response_format: responseFormat,
       }),
       outputSchema: z.object({ result: z.unknown() }),
@@ -577,8 +583,12 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
           brief: input.brief,
           plannedPublishAt: input.planned_publish_at,
           channelIds: input.channel_ids,
+          ...(input.format_payload !== undefined ? { formatPayload: input.format_payload } : {}),
         });
-        return result({ id, status: "draft" }, input.response_format);
+        return result(
+          { id, status: "draft", format_payload_written: input.format_payload !== undefined },
+          input.response_format,
+        );
       } catch (error) {
         return errorResult(error);
       }
@@ -598,6 +608,12 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
         brief: z.string().max(2000).default(""),
         planned_publish_at: z.coerce.date(),
         channel_ids: z.array(z.string().uuid()).max(100).optional(),
+        format_payload: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            "Optional complete format-specific creative payload. It is revalidated against the item's selected format.",
+          ),
         response_format: responseFormat,
       }),
       outputSchema: z.object({ result: z.unknown() }),
@@ -618,8 +634,16 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
           brief: input.brief,
           plannedPublishAt: input.planned_publish_at,
           channelIds: input.channel_ids,
+          ...(input.format_payload !== undefined ? { formatPayload: input.format_payload } : {}),
         });
-        return result({ id: input.content_item_id, updated: true }, input.response_format);
+        return result(
+          {
+            id: input.content_item_id,
+            updated: true,
+            format_payload_written: input.format_payload !== undefined,
+          },
+          input.response_format,
+        );
       } catch (error) {
         return errorResult(error);
       }

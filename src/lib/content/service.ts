@@ -91,6 +91,8 @@ export const QuickCreateSchema = z.object({
   contentPillarId: z.string().uuid().optional(),
   designerId: z.string().uuid().optional(),
   trendSignalId: z.string().uuid().optional(),
+  /** Optional structured creative payload, validated against the selected format. */
+  formatPayload: z.record(z.string(), z.unknown()).optional(),
 });
 
 export type QuickCreateInput = z.infer<typeof QuickCreateSchema>;
@@ -116,6 +118,8 @@ export const UpdateContentSchema = z.object({
   brief: z.string().max(2000).optional().default(""),
   plannedPublishAt: z.coerce.date(),
   channelIds: z.array(z.string().uuid()).optional(),
+  /** Optional structured creative payload, validated against the item's format. */
+  formatPayload: z.record(z.string(), z.unknown()).optional(),
 });
 export type UpdateContentInput = z.infer<typeof UpdateContentSchema>;
 
@@ -149,6 +153,11 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
   if (input.trendSignalId && !trendSignal)
     throw new Error("Trend signal not found in this workspace");
 
+  const storedFormatPayload =
+    input.formatPayload === undefined
+      ? undefined
+      : parseFormatPayload(input.format as ContentFormat, input.formatPayload);
+
   // Auto-select active channels if not provided
   let channelIds = input.channelIds;
   if (!channelIds || channelIds.length === 0) {
@@ -173,6 +182,7 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
         title: input.title,
         format: input.format,
         brief: input.brief ?? "",
+        ...(storedFormatPayload ? { formatPayload: storedFormatPayload } : {}),
         plannedPublishAt: input.plannedPublishAt,
         contentOwnerId: actor.id,
         createdBy: actor.id,
@@ -246,6 +256,7 @@ export async function updateContentItem(
     brief: string;
     plannedPublishAt: Date;
     channelIds: string[] | undefined;
+    formatPayload?: Record<string, unknown>;
   },
 ): Promise<void> {
   const [item] = await db
@@ -277,6 +288,10 @@ export async function updateContentItem(
   const drift =
     item.prevFormat !== input.format ||
     item.prevPlannedPublishAt.getTime() !== input.plannedPublishAt.getTime();
+  const storedFormatPayload =
+    input.formatPayload === undefined
+      ? undefined
+      : parseFormatPayload(input.format as ContentFormat, input.formatPayload);
 
   await db.transaction(async (tx) => {
     await tx
@@ -285,6 +300,7 @@ export async function updateContentItem(
         title: input.title,
         format: input.format,
         brief: input.brief,
+        ...(storedFormatPayload ? { formatPayload: storedFormatPayload } : {}),
         plannedPublishAt: input.plannedPublishAt,
         updatedAt: new Date(),
       })
@@ -313,7 +329,13 @@ export async function updateContentItem(
       kind: "content_updated",
       summary: `Updated idea: ${input.title}`,
       beforeData: { status: item.status },
-      afterData: { title: input.title, format: input.format },
+      afterData: {
+        title: input.title,
+        format: input.format,
+        ...(storedFormatPayload
+          ? { formatPayloadKeys: Object.keys(storedFormatPayload).sort() }
+          : {}),
+      },
     });
   });
 

@@ -702,4 +702,86 @@ describe("MCP brand-kit tools", () => {
 
     await client.close();
   });
+
+  it("creates and updates normalized format payloads through content tools (cases 20–21)", async () => {
+    const seeded = await seedWorkspace();
+    const server = createLaraTikPlannerMcpServer({
+      actor: { id: seeded.managerUserId },
+      scopes: ["content:read", "content:write"],
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: {} });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    const created = await callTool<{
+      id: string;
+      format_payload_written: boolean;
+    }>(client, "laratik_planner_create_content", {
+      workspace_id: seeded.workspaceId,
+      title: "Structured carousel",
+      format: "carousel",
+      brief: "A carousel with a validated creative contract.",
+      planned_publish_at: "2026-09-21T17:00:00.000Z",
+      format_payload: {
+        schemaVersion: 1,
+        contentLanguage: "ar",
+        slideCount: 2,
+        caption: "Source caption",
+        visualDirection: "Use a clean product map.",
+        references: ["https://example.com/source"],
+        translations: { ar: { caption: "عنوان عربي" } },
+        discardedField: "ignored by the format schema",
+      },
+      response_format: "json",
+    });
+    expect(created.format_payload_written).toBe(true);
+
+    const readAfterCreate = await callTool<{
+      formatPayload: Record<string, unknown>;
+    }>(client, "laratik_planner_get_content", {
+      content_item_id: created.id,
+      response_format: "json",
+    });
+    expect(readAfterCreate.formatPayload).toMatchObject({
+      schemaVersion: 1,
+      slideCount: 2,
+      caption: "Source caption",
+    });
+    expect(readAfterCreate.formatPayload).not.toHaveProperty("discardedField");
+
+    const updated = await callTool<{ format_payload_written: boolean }>(
+      client,
+      "laratik_planner_update_content",
+      {
+        content_item_id: created.id,
+        title: "Structured carousel updated",
+        format: "carousel",
+        brief: "Updated structured creative contract.",
+        planned_publish_at: "2026-09-22T17:00:00.000Z",
+        format_payload: {
+          schemaVersion: 1,
+          slideCount: 3,
+          visualDirection: "Use three clear frames.",
+        },
+        response_format: "json",
+      },
+    );
+    expect(updated.format_payload_written).toBe(true);
+
+    const readAfterUpdate = await callTool<{
+      formatPayload: Record<string, unknown>;
+      title: string;
+    }>(client, "laratik_planner_get_content", {
+      content_item_id: created.id,
+      response_format: "json",
+    });
+    expect(readAfterUpdate.title).toBe("Structured carousel updated");
+    expect(readAfterUpdate.formatPayload).toMatchObject({
+      schemaVersion: 1,
+      slideCount: 3,
+      visualDirection: "Use three clear frames.",
+    });
+
+    await client.close();
+  });
 });

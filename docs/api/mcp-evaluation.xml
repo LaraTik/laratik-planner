@@ -20,4 +20,6 @@
   <case id="17">export_brand_kit and import_brand_kit both reject requests against a workspace the token owner cannot access (canAccessInternalWorkspace / workspace_manager role), returning the existing not-found / permission-denied error shape.</case>
   <case id="18">list_workspaces without `name_query` returns every accessible workspace (cap 200); with `name_query` (case-insensitive substring, 1–120 chars after trim) returns only the matching subset and still respects canAccessInternalWorkspace.</case>
   <case id="19">list_workspaces with `name_query` containing SQL LIKE wildcards (`%` / `_`) treats them as literals (ESCAPE '\\') — the result set is not widened beyond the literal substring.</case>
+  <case id="20">create_content accepts a complete format_payload for the selected format, writes it through the per-format Zod service, and get_content returns the normalized creative fields.</case>
+  <case id="21">update_content accepts a complete format_payload for an editable draft, preserves the existing authorization and workflow rules, and rejects payload fields that do not satisfy the selected format schema.</case>
 </evaluation>

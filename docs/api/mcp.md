@@ -34,8 +34,8 @@ policy checks.
 | `laratik_planner_list_workspaces`    | `content:read`  | List active internal workspaces available to the token owner; accepts optional `name_query` (1–120 chars, case-insensitive substring on `name` + `slug`) to resolve a single workspace UUID without paging 200 rows |
 | `laratik_planner_list_content`       | `content:read`  | Filter and paginate planning items                                                                                                                                                                                  |
 | `laratik_planner_get_content`        | `content:read`  | Read one item, selected channels, and assignment history                                                                                                                                                            |
-| `laratik_planner_create_content`     | `content:write` | Create a draft using Quick Create rules                                                                                                                                                                             |
-| `laratik_planner_update_content`     | `content:write` | Update an editable draft or changes-requested item                                                                                                                                                                  |
+| `laratik_planner_create_content`     | `content:write` | Create a draft using Quick Create rules; optionally write a validated format-specific `format_payload` in the same create operation                                                                                 |
+| `laratik_planner_update_content`     | `content:write` | Update an editable draft or changes-requested item, including an optional validated format-specific `format_payload`                                                                                                |
 | `laratik_planner_reschedule_content` | `content:write` | Change the planned publish date only                                                                                                                                                                                |
 | `laratik_planner_change_owner`       | `content:write` | Reassign the coordinating owner                                                                                                                                                                                     |
 | `laratik_planner_transition_content` | `content:write` | Run an explicit workflow transition                                                                                                                                                                                 |
@@ -47,6 +47,49 @@ policy checks.
 Write tools use the domain services already used by the web UI. The MCP
 surface does not offer direct SQL, raw file access, publishing credentials,
 social-provider credentials, or spreadsheet import.
+
+### Structured content payloads
+
+`laratik_planner_create_content` and `laratik_planner_update_content` accept
+an optional `format_payload` object. It is validated and normalized by the
+same per-format Zod schemas used by the Planner's **More details** editor;
+unknown fields are discarded and invalid fields return a tool error. The
+payload must include `schemaVersion: 1` or the service will normalize the
+version to `1`.
+
+The supported top-level fields depend on `format` (`caption`, `hook`,
+`visualDirection`, `slideOutline`, `scenes`, `references`, and so on). The
+`translations` map is also supported, but v1 accepts only `en` and `ar`, in
+line with the product locale contract. Use `additionalNotes` or the source
+caption to preserve source-plan text in other languages until those locales
+are formally enabled.
+
+Example carousel create:
+
+```json
+{
+  "workspace_id": "<uuid>",
+  "title": "New delivery area",
+  "format": "carousel",
+  "brief": "Explain the new delivery area and the customer action.",
+  "planned_publish_at": "2026-09-21T17:00:00Z",
+  "format_payload": {
+    "schemaVersion": 1,
+    "contentLanguage": "ar",
+    "slideCount": 4,
+    "caption": "…",
+    "visualDirection": "…",
+    "references": ["https://example.com/source"],
+    "translations": { "ar": { "caption": "…" } }
+  },
+  "response_format": "json"
+}
+```
+
+The create response includes `format_payload_written`; update responses use
+the same flag. The returned content item from
+`laratik_planner_get_content` includes the normalized `formatPayload`, which
+is the read-after-write verification path for automations and imports.
 
 ## Brand-kit export and import
 

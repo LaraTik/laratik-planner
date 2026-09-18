@@ -36,6 +36,11 @@ new tool, scope, error, or client requirement exist only in code.
 
 - Add or remove the tool in `src/lib/mcp/server.ts`, `docs/api/mcp.md`, and
   `docs/api/mcp-evaluation.xml`.
+- When a planning write tool changes its content contract, keep the
+  corresponding domain-service schema, normalized response fields, API docs,
+  evaluation cases, and integration coverage synchronized. In particular,
+  `format_payload` must always be validated by the per-format content service;
+  MCP must never write the JSONB column directly.
 - Keep tool descriptions, required scopes, input constraints, response fields,
   confirmation requirements, and error codes identical across source and docs.
 - Update `docs/api/README.md` whenever the route method, path, auth gate,
