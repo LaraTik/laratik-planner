@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
 import {
@@ -31,6 +30,7 @@ import {
 import { humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
+import { TabSwitchLink } from "./tab-switch-link";
 import {
   STEP_EXPLANATIONS,
   explainStatus,
@@ -469,7 +469,7 @@ function WorkflowRailBody({
             </p>
           ) : null}
           {canonicalAction.destinationTab ? (
-            <Link
+            <TabSwitchLink
               href={`#${canonicalAction.destinationTab}`}
               className="text-label text-primary inline-flex min-h-11 items-center font-semibold underline-offset-2 hover:underline"
             >
@@ -480,7 +480,7 @@ function WorkflowRailBody({
                 canonicalAction.canCurrentUserAct ? "Go to action" : "View action",
               )}
               <DirAwareArrowRight className="ms-1 h-3.5 w-3.5" aria-hidden="true" />
-            </Link>
+            </TabSwitchLink>
           ) : null}
         </div>
       ) : null}
@@ -943,14 +943,14 @@ function ActionButtons({
     canonicalActionType === "mark_publishing_setup_ready"
   ) {
     return canonicalDestinationTab ? (
-      <Link
+      <TabSwitchLink
         href={`#${canonicalDestinationTab}`}
         className="text-body text-primary border-primary/30 bg-primary-subtle inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[var(--radius-control)] border px-3 py-2 font-semibold hover:underline"
         data-testid="workflow-rail-owning-destination"
       >
         {tr("contentDetail.workflow.openOwningWorkspace", "Open owning workspace")}
         <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-      </Link>
+      </TabSwitchLink>
     ) : null;
   }
   return (

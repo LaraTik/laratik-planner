@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { OverviewCommandCenter } from "@/components/planning/overview-command-center";
 import { tFor } from "@/messages";
 
@@ -196,5 +196,122 @@ describe("OverviewCommandCenter", () => {
       "2 من أصل 4 مناطق جاهزة",
     );
     expect(screen.getByTestId("overview-snapshot-copy")).toHaveTextContent("المصدر المشترك");
+  });
+});
+
+/**
+ * Regression tests for the "Go to" links on the Overview tab.
+ *
+ * Background (2026-09-18): planners reported that the
+ * `Brief / Copy / Shared source / Assets / Publish` cards on
+ * the Overview tab updated the URL hash when clicked but the
+ * workspace tab stayed on `Overview`. The cause was that
+ * Next.js's client-side `<Link>` does not fire the browser's
+ * native `hashchange` event for same-page hash navigation —
+ * the `WorkspaceShell` listener that updates `activeId` never
+ * fired.
+ *
+ * The fix replaces the snapshot / next-action / view-all
+ * `<Link>` instances with `<TabSwitchLink>` (which dispatches
+ * a synthetic `hashchange`). The regression tests below
+ * assert each fixed instance dispatches the event so the
+ * shell can react.
+ */
+describe("OverviewCommandCenter — Go-to navigation wires hashchange", () => {
+  beforeEach(() => {
+    // Anchor the test window to the planning detail path so
+    // TabSwitchLink's `isHashOnlyLink` check accepts hash-only
+    // hrefs as in-page (not cross-page) navigation.
+    window.history.replaceState(null, "", "/app/w/acme/planning/ci-1");
+    window.location.hash = "";
+  });
+
+  it("the four workspace snapshot cards fire hashchange so WorkspaceShell can switch tabs", () => {
+    const listener = vi.fn();
+    window.addEventListener("hashchange", listener);
+    render(<OverviewCommandCenter {...baseProps} />);
+
+    // Each card is a real <a href="#…"> — the click must be
+    // observable through the standard anchor + preventDefault
+    // path TabSwitchLink uses.
+    const targets: Array<[string, string]> = [
+      ["overview-snapshot-brief", "#content"],
+      ["overview-snapshot-copy", "#copy"],
+      ["overview-snapshot-assets", "#delivery"],
+      ["overview-snapshot-publish", "#publishing"],
+    ];
+
+    for (const [testId, expectedHash] of targets) {
+      listener.mockClear();
+      window.location.hash = ""; // reset between iterations
+      const link = screen.getByTestId(testId);
+      act(() => {
+        fireEvent.click(link);
+      });
+      expect(link.tagName).toBe("A");
+      expect(link).toHaveAttribute("href", expectedHash);
+      expect(window.location.hash).toBe(expectedHash);
+      expect(listener).toHaveBeenCalledTimes(1);
+    }
+
+    window.removeEventListener("hashchange", listener);
+  });
+
+  it("the Next Action destination link fires hashchange", () => {
+    const listener = vi.fn();
+    window.addEventListener("hashchange", listener);
+    render(
+      <OverviewCommandCenter
+        {...baseProps}
+        contentStatus="changes_requested"
+        readinessBlockers={1}
+        primaryActionLabel="Review changes"
+        nextActionDestinationTab="content"
+        nextActionExecutable={true}
+      />,
+    );
+
+    const dest = screen.getByTestId("overview-next-action-destination");
+    act(() => {
+      fireEvent.click(dest);
+    });
+
+    expect(dest).toHaveAttribute("href", "#content");
+    expect(window.location.hash).toBe("#content");
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener("hashchange", listener);
+  });
+
+  it("the Recent Activity 'View all' link fires hashchange", () => {
+    const listener = vi.fn();
+    window.addEventListener("hashchange", listener);
+    render(
+      <OverviewCommandCenter
+        {...baseProps}
+        recentActivity={[
+          {
+            id: "e-1",
+            kind: "status_transition",
+            summary: "moved the workflow forward",
+            actorName: "Mohamad",
+            occurredAt: new Date().toISOString(),
+            metadata: null,
+          },
+        ]}
+        totalActivityCount={5}
+      />,
+    );
+
+    const viewAll = screen.getByTestId("overview-view-all-activity");
+    act(() => {
+      fireEvent.click(viewAll);
+    });
+
+    expect(viewAll).toHaveAttribute("href", "#activity");
+    expect(window.location.hash).toBe("#activity");
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener("hashchange", listener);
   });
 });

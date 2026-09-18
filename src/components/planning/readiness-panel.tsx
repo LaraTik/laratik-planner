@@ -4,8 +4,8 @@ import * as React from "react";
 import { AlertTriangle, X, CheckCircle2 } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { TabSwitchLink } from "./tab-switch-link";
 
 /**
  * ReadinessPanel — visible / actionable blocker list.
@@ -258,13 +258,13 @@ function ReadinessRow({
             {t("contentDetail.readinessPanel.fix")}
           </button>
         ) : (
-          <Link
+          <TabSwitchLink
             href={anchorHref}
             className="text-label text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-2 py-1 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid={`readiness-fix-${issue.code}`}
           >
             {t("contentDetail.readinessPanel.fix")}
-          </Link>
+          </TabSwitchLink>
         )
       ) : null}
     </li>

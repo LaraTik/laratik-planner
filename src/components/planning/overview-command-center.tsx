@@ -8,6 +8,7 @@ import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
+import { TabSwitchLink } from "./tab-switch-link";
 import {
   InlineBriefEditor,
   InlineDateEditor,
@@ -292,7 +293,7 @@ function WorkspaceSnapshot({
       </h2>
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
-          <Link
+          <TabSwitchLink
             key={card.id}
             href={card.href}
             className="border-border bg-surface hover:bg-surface-subtle focus-visible:ring-focus-ring min-h-20 rounded-[var(--radius-control)] border p-3 focus-visible:ring-2 focus-visible:outline-none"
@@ -303,7 +304,7 @@ function WorkspaceSnapshot({
             <span className="text-label text-primary mt-2 block font-semibold">
               {t("contentDetail.overview.goTo")}
             </span>
-          </Link>
+          </TabSwitchLink>
         ))}
       </div>
       {finalApprovedCount > 0 ? <span className="sr-only">{finalApprovedCount}</span> : null}
@@ -519,7 +520,7 @@ function NextActionCard({
           </p>
         ) : null}
         {nextActionDestinationTab ? (
-          <Link
+          <TabSwitchLink
             href={`#${nextActionDestinationTab}`}
             className="text-label text-primary focus-visible:ring-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid="overview-next-action-destination"
@@ -528,7 +529,7 @@ function NextActionCard({
               ? t("contentDetail.workflow.goToAction")
               : t("contentDetail.workflow.viewAction")}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          </TabSwitchLink>
         ) : null}
         {contentStatus === "changes_requested" && reviewChangesHref ? (
           <Link
@@ -732,7 +733,7 @@ function RecentActivity({
           {t("contentDetail.overview.recentActivity")}
         </h2>
         {totalCount > events.length ? (
-          <Link
+          <TabSwitchLink
             href={`#activity`}
             className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-1.5 py-0.5 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid="overview-view-all-activity"
@@ -741,7 +742,7 @@ function RecentActivity({
           >
             {t("contentDetail.overview.viewAll")}
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
+          </TabSwitchLink>
         ) : null}
       </header>
       {events.length > 0 ? (

@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ReadinessPanel, type ReadinessIssueView } from "@/components/planning/readiness-panel";
 
@@ -98,5 +98,46 @@ describe("ReadinessPanel", () => {
     expect(screen.getByText("أضف تعليقًا")).toBeInTheDocument();
     expect(screen.getByText("أضف تعليقًا قبل النشر.")).toBeInTheDocument();
     expect(screen.getByText("إصلاح")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Regression test for the Fix link when the parent does not
+ * provide an `onFix` callback. The fallback used to be a
+ * plain Next.js `<Link>`, which updates the URL hash but does
+ * NOT fire `hashchange` — so any downstream listener that
+ * mirrors hash changes (e.g. `WorkspaceShell`) would never see
+ * the navigation. The fallback is now a `TabSwitchLink` which
+ * dispatches the event explicitly.
+ *
+ * Background (2026-09-18): same family of bug as the
+ * Overview "Go to" cards — the readiness fallback was missed
+ * in the original TabSwitchLink rollout.
+ */
+describe("ReadinessPanel — fallback Fix link", () => {
+  beforeEach(() => {
+    // Anchor the test window to a planning-detail path so
+    // TabSwitchLink's `isHashOnlyLink` check accepts the hash.
+    window.history.replaceState(null, "", "/app/w/acme/planning/ci-1");
+    window.location.hash = "";
+  });
+
+  it("dispatches a real hashchange event when no onFix callback is provided", () => {
+    const listener = vi.fn();
+    window.addEventListener("hashchange", listener);
+    render(<ReadinessPanel ready={false} blockers={1} recommendations={0} issues={BLOCKERS} />);
+
+    const fix = screen.getByTestId("readiness-fix-caption_required");
+    expect(fix.tagName).toBe("A");
+    expect(fix).toHaveAttribute("href", "#publishing");
+
+    act(() => {
+      fireEvent.click(fix);
+    });
+
+    expect(window.location.hash).toBe("#publishing");
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    window.removeEventListener("hashchange", listener);
   });
 });
