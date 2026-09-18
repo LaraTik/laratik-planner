@@ -1113,11 +1113,27 @@ export default async function ContentDetailPage({
                               ch.socialChannelId
                             ] as { caption?: string; hashtags?: string[] } | null,
                           }));
+                          // P5 (2026-09-04, /ui-ux-pro-max round 5):
+                          // pick the first image-kind asset linked to
+                          // this content item so the preview actually
+                          // renders the creative (was: always empty).
+                          // `PlatformPreview.useImageDimensions` loads
+                          // the bytes and feeds the aspect-ratio
+                          // diagnostic — so the planner sees both the
+                          // image AND a "fits / will be cropped"
+                          // verdict against the platform's safe ratio.
+                          const firstImageAsset = linkedMediaAssets.find(
+                            (row) => row.object.kind === "image",
+                          );
+                          const thumbnailUrl = firstImageAsset
+                            ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
+                            : null;
                           return (
                             <PlatformPreviewSwitcher
                               channels={switcherChannels}
                               sharedCaption={plannerCaption ?? item.brief ?? ""}
                               {...(plannerHashtags ? { sharedHashtags: plannerHashtags } : {})}
+                              {...(thumbnailUrl ? { thumbnailUrl } : {})}
                             />
                           );
                         })()
