@@ -12,6 +12,58 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Copy tab: header + Channel Readiness slim, "Copy all" hashtags, CTA label reframed (2026-09-18)
+
+Five presentational-only changes to the Copy tab to reduce visual
+noise and add one missing affordance. No schema, no API, no migration.
+
+- **Header card slimmed.** The "Audience copy" header no longer
+  carries a 14-word CardDescription plus a redundant "Source copy"
+  sub-header card. New `contentDetail.copy.subtitle` key
+  (en: "The words your audience will read." / ar: "الكلمات التي يقرأها
+  جمهورك.") replaces both. The source-language pill on the right is
+  preserved (real signal — preserves the locale the writer is working
+  in).
+- **Channel Readiness card slimmed.** Drops the verbose CardDescription
+  ("Review the shared copy before opening Publishing…"), the
+  "Shared copy is the starting point…" info note, and the bottom
+  "Publishing is where you choose each channel language…" note — three
+  redundant descriptions of what the per-channel badges already convey.
+  The per-channel list now lives inside a native `<details>` collapsed
+  by default with a `<summary>` carrying the new
+  `contentDetail.copy.perChannelSummary` key
+  (en: "Per-channel override state ({count})" / ar: "حالة النسخ لكل
+  قناة ({count})"). The at-a-glance counts (channels / overrides /
+  stale) and the "Review in Publishing" CTA stay visible. Override /
+  stale metadata is **only** surfaced here — Publishing does not show
+  per-channel stale warnings — so the diagnostic value of the card is
+  preserved.
+- **"Copy all" hashtags.** `HashtagEditor` gains a `Button` next to the
+  `X / 30` counter that writes `#tag1 #tag2 …` (space-joined, the
+  Instagram paste convention) to the clipboard with a Sonner success
+  toast; failure surfaces a separate error toast. New keys:
+  `contentDetail.messages.copyAllHashtags`, `…Aria`, `…copied…`,
+  `…copyFailed`. Button is `type="button"` (does NOT submit parent
+  forms) and disabled when `value.length === 0`.
+- **CTA field reframed.** The on-screen label now reads "CTA label" /
+  "تسمية الإجراء" via the new `formatEditor.fields.callToActionLabel`
+  key. The legacy `formatEditor.fields.callToAction` key is preserved
+  for back-compat (translators who only filled in the old key see the
+  fallback). The existing hint "Describe the action… Add the final
+  link per channel in Publishing." already conveyed the per-channel
+  URL split, so it is unchanged.
+- **`AudienceCopyPanel` JSX refactor.** The per-channel list rendering
+  was lifted out of the `return` statement into a `const` so the JSX
+  parser no longer walks a ternary inside a ternary inside `<details>`.
+  No rendered DOM difference; same `data-testid` markers.
+
+**Designer brief readability** was raised by the planner during this
+work but is **deliberately out of scope** for this PR — the
+designer-facing fields live on the **Brief tab**
+(`visualDirection`, `additionalNotes`, `onScreenText`,
+`voiceOverNotes`) plus the `/design-queue` card grid, not the Copy
+tab. Tracked as a separate work item.
+
 ### Changed — Media library: interactive workspace switcher, "Add media" dialog, polished folder tree (2026-09-18)
 
 Three independent UX fixes applied to the agency-level Media library

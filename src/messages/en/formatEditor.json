@@ -27,6 +27,7 @@
     "hook": "Hook",
     "mainMessage": "Main message",
     "callToAction": "CTA",
+    "callToActionLabel": "CTA label",
     "firstComment": "First comment",
     "visualDirection": "Visual direction",
     "visualSlides": "Visual slides",

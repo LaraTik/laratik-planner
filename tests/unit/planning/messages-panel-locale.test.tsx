@@ -38,9 +38,14 @@ describe("AudienceCopyPanel localization", () => {
     expect(screen.getByTestId("messages-per-channel-row-social-1")).not.toHaveTextContent(
       "instagram_reel",
     );
-    expect(screen.getByTestId("copy-version-explanation")).toHaveTextContent(
-      "النسخة المشتركة هي نقطة البداية",
-    );
+    // The verbose versionExplanation note was removed in the Copy-tab
+    // slim. The per-channel list is now wrapped in <details>; the
+    // summary uses the new "perChannelSummary" key.
+    expect(screen.queryByTestId("copy-version-explanation")).not.toBeInTheDocument();
+    expect(screen.getByTestId("copy-channel-list-details")).toBeInTheDocument();
+    // The <summary> renders the localized "Per-channel override state"
+    // string with the channel count.
+    expect(screen.getByText(/حالة النسخ لكل قناة/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "مراجعة النشر" })).toHaveAttribute(
       "href",
       "/app/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",

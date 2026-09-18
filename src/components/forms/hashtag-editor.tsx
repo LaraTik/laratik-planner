@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getErrorMessage } from "@/lib/utils/error";
 import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 
 /**
@@ -63,6 +66,7 @@ export function HashtagEditor({
   };
   const [draft, setDraft] = React.useState("");
   const [warning, setWarning] = React.useState<string | null>(null);
+  const [copied, setCopied] = React.useState(false);
   const atMax = value.length >= HASHTAG_MAX;
 
   function commit(raw: string) {
@@ -87,6 +91,34 @@ export function HashtagEditor({
 
   function remove(tag: string) {
     onChange(value.filter((t) => t !== tag));
+  }
+
+  // One-click "Copy all" affordance. Writes `#tag1 #tag2 …` to the
+  // clipboard (the conventional Instagram paste format) and shows
+  // a Sonner toast with the count. Failure (rare — mostly old
+  // Safari / insecure context) surfaces a different toast and
+  // leaves the chip list untouched. The button mirrors
+  // `copy-hex-button.tsx` so the affordance is consistent across
+  // the app.
+  async function onCopyAll() {
+    if (value.length === 0) return;
+    const text = value.map((tag) => `#${tag}`).join(" ");
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      toast.success(
+        tr("contentDetail.messages.copiedAllHashtags", "Copied {count} hashtags", {
+          count: value.length,
+        }),
+        { duration: 1500 },
+      );
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch (err) {
+      toast.error(
+        tr("contentDetail.messages.copyFailed", "Couldn't copy. Select and copy manually."),
+        { description: getErrorMessage(err) },
+      );
+    }
   }
 
   function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -191,13 +223,37 @@ export function HashtagEditor({
             </p>
           ) : null}
         </div>
-        <p
-          className="text-label text-fg-muted shrink-0 text-end font-mono tabular-nums"
-          aria-live="polite"
-          data-testid={`${testId}-counter`}
-        >
-          {value.length} / {HASHTAG_MAX}
-        </p>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={onCopyAll}
+            disabled={disabled || value.length === 0}
+            aria-label={tr(
+              "contentDetail.messages.copyAllHashtagsAria",
+              "Copy all {count} hashtags to clipboard",
+              { count: value.length },
+            )}
+            data-testid={`${testId}-copy-all`}
+            data-copied={copied ? "true" : undefined}
+            className="text-label font-semibold"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {tr("contentDetail.messages.copyAllHashtags", "Copy all")}
+          </Button>
+          <p
+            className="text-label text-fg-muted text-end font-mono tabular-nums"
+            aria-live="polite"
+            data-testid={`${testId}-counter`}
+          >
+            {value.length} / {HASHTAG_MAX}
+          </p>
+        </div>
       </div>
     </div>
   );
