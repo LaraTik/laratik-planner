@@ -444,6 +444,7 @@
     "empty": "This format has no audience-copy fields yet.",
     "unsaved": "Unsaved changes — auto-save in a moment",
     "autoSaving": "Saving…",
+    "saveFailed": "Save failed — see error above",
     "saveNow": "Save now",
     "allSaved": "All changes saved",
     "saved": "Saved",

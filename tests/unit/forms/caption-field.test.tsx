@@ -68,8 +68,10 @@ describe("CaptionField", () => {
   it("calls onChange with the typed value", async () => {
     const user = userEvent.setup();
     function Wrapper() {
-      const [v, setV] = React.useState("");
-      return <CaptionField id="cap" name="caption" label="Caption" value={v} onChange={setV} />;
+      const [v, setV] = React.useState<string | undefined>("");
+      return (
+        <CaptionField id="cap" name="caption" label="Caption" value={v ?? ""} onChange={setV} />
+      );
     }
     render(<Wrapper />);
     const textarea = screen.getByRole("textbox", { name: /caption/i });

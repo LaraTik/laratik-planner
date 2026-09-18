@@ -44,8 +44,10 @@ export interface CaptionFieldProps {
   id: string;
   /** Controlled value. */
   value: string;
-  /** Controlled onChange. */
-  onChange: (next: string) => void;
+  /** Controlled onChange. `undefined` is the "clear field" signal — the
+   *  save pipeline treats it as a delete; the existing call sites
+   *  pass it back to the payload state. */
+  onChange: (next: string | undefined) => void;
   /** Optional placeholder. */
   placeholder?: string;
   /** Optional inline error from the form. */
@@ -94,7 +96,7 @@ export function CaptionField({
         name={name}
         value={value}
         locale={locale}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value || undefined)}
         rows={8}
         maxLength={CAPTION_MAX}
         disabled={disabled}

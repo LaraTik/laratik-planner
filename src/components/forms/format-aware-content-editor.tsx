@@ -4,6 +4,7 @@ import * as React from "react";
 import { useActionState } from "react";
 import { CheckCircle2, Compass, Loader2, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
@@ -325,12 +326,11 @@ export function FormatAwareContentEditor({
     confirmMessage: t("formatEditor.editor.unsavedGuard"),
   });
 
-  // Auto-save on idle: when the user stops editing for 800ms and
-  // there are pending edits, requestSubmit() the form. The
-  // navigation/beforeunload guards above still kick in for real
-  // navigation (closing the tab, clicking a tab pill while a save
-  // is in flight) — we only kick off the save itself, not bypass
-  // the safety rails.
+  // Auto-save on idle: when the user stops editing for
+  // AUTOSAVE_DEBOUNCE_MS (8 s) and there are pending edits,
+  // requestSubmit() the form. 8 s matches the typical
+  // pause-to-think cadence — the previous 800 ms fired
+  // mid-thought and created endless activity-log noise.
   React.useEffect(() => {
     if (!dirty || pending || !editable) return;
     const timer = window.setTimeout(() => {
@@ -338,7 +338,7 @@ export function FormatAwareContentEditor({
       if (!form) return;
       if (typeof form.requestSubmit === "function") form.requestSubmit();
       else form.submit();
-    }, 800);
+    }, AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [dirty, pending, editable, currentJson]);
 

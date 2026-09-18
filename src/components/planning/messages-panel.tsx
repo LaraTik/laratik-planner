@@ -6,6 +6,7 @@ import Link from "next/link";
 import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 import { CheckCircle2, Info, Loader2, AlertCircle, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { FormSummary } from "@/components/forms/form-summary";
@@ -116,9 +117,14 @@ export function AudienceCopyPanel({
     ),
   });
 
-  // Auto-save on idle: when the user stops typing for 800ms and
-  // there are pending edits, requestSubmit() the form. The
-  // navigation/beforeunload guards above still kick in for real
+  // Auto-save on idle: when the user stops typing for AUTOSAVE_DEBOUNCE_MS
+  // and there are pending edits, requestSubmit() the form. 8s was chosen
+  // (over the previous 800ms) because:
+  //   - 800ms fired mid-thought on multi-word phrases and created
+  //     "endless activity logs" (every partial word became a revision).
+  //   - 8s matches the typical pause-to-think cadence for copy editing
+  //     and is short enough that a habitual tab-switch still feels free.
+  // The navigation/beforeunload guards above still kick in for real
   // navigation (closing the tab, clicking a tab pill while a save
   // is in flight) — we only kick off the save itself, not bypass
   // the safety rails.
@@ -127,17 +133,33 @@ export function AudienceCopyPanel({
     const timer = window.setTimeout(() => {
       const form = formRef.current;
       if (!form) return;
-      // requestSubmit triggers the React useActionState-bound
-      // formAction without bypassing client-side form validation.
       if (typeof form.requestSubmit === "function") form.requestSubmit();
       else form.submit();
-    }, 800);
+    }, AUTOSAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [dirty, pending, payload]);
 
   function setField(key: string, value: unknown) {
     setPayload((current) => ({ ...current, [key]: value }));
   }
+  // Compute the at-a-glance counts for the channel-readiness card
+  // header. Doing it once here keeps the summary in lockstep with the
+  // per-channel rows below — if you filter a row out, the count
+  // moves with it.
+  const channelCounts = React.useMemo(() => {
+    let overrides = 0;
+    let stale = 0;
+    for (const channel of channels) {
+      const status = channelCopyStatus({
+        hasOverride: channel.payload != null,
+        sourceRevision: channel.sourceRevision ?? null,
+        currentRevision: channel.currentRevision ?? null,
+      });
+      if (status === "custom") overrides += 1;
+      if (status === "stale") stale += 1;
+    }
+    return { overrides, stale };
+  }, [channels]);
   function setTranslation(key: string, code: string, value: string) {
     setPayload((current) => ({
       ...current,
@@ -283,13 +305,21 @@ export function AudienceCopyPanel({
           <p
             className={cn(
               "text-label inline-flex items-center gap-1",
-              pending ? "text-fg-secondary" : dirty ? "text-warning" : "text-success",
+              state?.error
+                ? "text-danger font-semibold"
+                : pending
+                  ? "text-fg-secondary"
+                  : dirty
+                    ? "text-warning"
+                    : "text-success",
             )}
             aria-live="polite"
             data-testid="messages-save-status"
-            data-state={pending ? "saving" : dirty ? "dirty" : "saved"}
+            data-state={state?.error ? "error" : pending ? "saving" : dirty ? "dirty" : "saved"}
           >
-            {pending ? (
+            {state?.error ? (
+              <AlertCircle className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : pending ? (
               <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
             ) : dirty ? (
               <span
@@ -299,11 +329,13 @@ export function AudienceCopyPanel({
             ) : (
               <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
             )}
-            {pending
-              ? tr("contentDetail.copy.autoSaving", "Saving…")
-              : dirty
-                ? tr("contentDetail.copy.unsaved", "Unsaved changes — auto-save in a moment")
-                : tr("contentDetail.copy.allSaved", "All changes saved")}
+            {state?.error
+              ? tr("contentDetail.copy.saveFailed", "Save failed — see error above")
+              : pending
+                ? tr("contentDetail.copy.autoSaving", "Saving…")
+                : dirty
+                  ? tr("contentDetail.copy.unsaved", "Unsaved changes — auto-save in a moment")
+                  : tr("contentDetail.copy.allSaved", "All changes saved")}
           </p>
           <div className="flex items-center gap-3">
             <Button
@@ -321,7 +353,7 @@ export function AudienceCopyPanel({
 
       <Card padding="lg" data-testid="copy-channel-readiness">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
+          <div className="flex-1">
             <CardTitle>{tr("contentDetail.copy.readinessTitle", "Channel readiness")}</CardTitle>
             <p className="text-label text-fg-muted mt-1">
               {tr(
@@ -329,6 +361,47 @@ export function AudienceCopyPanel({
                 "Review the shared copy before opening Publishing for language, metadata, and final approval.",
               )}
             </p>
+            {/* Compact at-a-glance summary that stays visible even when
+                the per-channel list is collapsed. The planner gets
+                the current state of copy health on every visit
+                without scrolling. */}
+            {channels.length > 0 ? (
+              <p
+                className="text-label text-fg-secondary mt-3 flex flex-wrap items-center gap-3"
+                data-testid="copy-channel-readiness-summary"
+              >
+                <span>
+                  <span className="text-fg-primary font-semibold">{channels.length}</span>{" "}
+                  {tr("contentDetail.copy.channelsCount", "channels")}
+                </span>
+                {channelCounts.overrides > 0 ? (
+                  <span
+                    className="text-info inline-flex items-center gap-1"
+                    data-testid="copy-override-summary"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="bg-info inline-block h-1.5 w-1.5 rounded-full"
+                    />
+                    <span className="font-semibold">{channelCounts.overrides}</span>{" "}
+                    {tr("contentDetail.copy.overridesCount", "with custom override")}
+                  </span>
+                ) : null}
+                {channelCounts.stale > 0 ? (
+                  <span
+                    className="text-warning inline-flex items-center gap-1"
+                    data-testid="copy-stale-summary"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="bg-warning inline-block h-1.5 w-1.5 rounded-full"
+                    />
+                    <span className="font-semibold">{channelCounts.stale}</span>{" "}
+                    {tr("contentDetail.copy.staleCount", "marked stale")}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
           </div>
           {channels.length > 0 ? (
             <Button asChild size="sm" variant="outline">
@@ -338,18 +411,24 @@ export function AudienceCopyPanel({
             </Button>
           ) : null}
         </div>
-        <div
-          className="border-info bg-info-subtle text-fg-primary mt-4 rounded-[var(--radius-control)] border p-3"
-          role="note"
-          data-testid="copy-version-explanation"
-        >
-          <p className="text-label">
-            {tr(
-              "contentDetail.copy.versionExplanation",
-              "Shared copy is the starting point. Inherited channels use it as-is; custom overrides are the channel's final version. Review the final result in Publishing.",
-            )}
-          </p>
-        </div>
+        {/* Per-channel list is collapsed by default. Planners see the
+            summary above; expanding is one click when they need the
+            per-channel override depth (writer wants to edit one
+            channel without leaving the Copy tab). */}
+        {channels.length > 0 ? (
+          <div
+            className="border-info bg-info-subtle text-fg-primary mt-4 rounded-[var(--radius-control)] border p-3"
+            role="note"
+            data-testid="copy-version-explanation"
+          >
+            <p className="text-label">
+              {tr(
+                "contentDetail.copy.versionExplanation",
+                "Shared copy is the starting point. Inherited channels use it as-is; custom overrides are the channel's final version. Review the final result in Publishing.",
+              )}
+            </p>
+          </div>
+        ) : null}
         {channels.length === 0 ? (
           <div
             className="border-border bg-surface-subtle mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"

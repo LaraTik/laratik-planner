@@ -12,6 +12,47 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Copy tab: autosave debounce + empty-field safety + compact readiness summary (2026-09-18)
+
+Three planner-reported issues addressed in round 4.
+
+- **Auto-save debounce 800 ms -> 8 s.** The 800 ms debounce fired
+  mid-thought on multi-word phrases and created "endless
+  activity-log" noise (every partial word became a revision).
+  The new 8 s idle time matches the typical pause-to-think
+  cadence for copy editing. Shared in a single
+  `AUTOSAVE_DEBOUNCE_MS` constant (`src/lib/forms/autosave.ts`)
+  so the Brief and Copy tabs can never drift apart.
+- **Empty-field safety on the Copy tab.** When a planner clears
+  the entire CTA / first-comment / caption field, autosave
+  previously kept the empty string in the payload. The shared
+  `CaptionField` now normalises empty -> `undefined` so the
+  audience-copy merge can properly delete the field. Type
+  updated: `onChange: (next: string | undefined) => void`.
+- **Save-failed state is visible.** The Copy tab save status now
+  shows a red `Save failed - see error above` chip when the
+  server returns an error, not just an invisible console log.
+  `aria-live="polite"` still announces "Saving..." -> "All
+  changes saved" during the happy path.
+- **Compact at-a-glance readiness summary.** The Copy tab's
+  Channel Readiness card now shows the headline numbers right
+  next to the title: "4 channels, 2 with custom override, 1
+  marked stale" — the per-channel breakdown below the card
+  stays for planners who need the depth. Fewer scroll-through
+  trips to the per-channel rows.
+
+Three further improvements are filed for round 5 (each is its
+own architecturally heavier lift, deferred to keep this PR
+focused on the highest-impact bugs):
+
+- Publish form: 1329-line monstrosity needs a wizard step
+  indicator + advanced fields under a disclosure.
+- Preview tab: still doesn't render the actual uploaded media
+  asset for the active channel, and doesn't show ratio /
+  crop-fit diagnostic.
+- Assets tab: Review handoff card is too dense; needs to
+  collapse to a single-row layout.
+
 ### Changed — Planning detail round 3: auto-save, live preview switcher, badge deep-links (2026-09-18)
 
 Round 3 of the planning-detail UX pass. Focus on the three
