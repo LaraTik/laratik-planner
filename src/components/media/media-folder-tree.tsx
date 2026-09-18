@@ -69,9 +69,6 @@ type TreeProps = {
     archiveFolder: string;
     archiveConfirm: string;
     folderError: string;
-    postBadge: string;
-    brandBadge: string;
-    systemBadge: string;
     info: string;
     openInfo: string;
     /**
@@ -87,6 +84,18 @@ type TreeProps = {
       searchPlaceholder: string;
       noFoldersYet: string;
       noSearchMatch: string;
+      /**
+       * Screen-reader-only descriptions for the colored kind dot
+       * shown next to system/brand folders. The 6px dot is purely
+       * decorative; the text equivalent is announced by assistive
+       * tech via `sr-only` text. `postsRoot` doubles as the title
+       * for the dot itself because there is no separate aria-label.
+       */
+      kind: {
+        postsRoot: string;
+        brandRoot: string;
+        system: string;
+      };
       section: { quickFilters: string; folders: string; shared: string };
       actions: {
         label: string;
@@ -259,9 +268,27 @@ export function MediaFolderTree(props: TreeProps) {
     const children = byParent.get(folder.id) ?? [];
     const visibleChildren = children.filter(isVisible);
     const isActive = props.activeFolderId === folder.id && !props.sharedOnly;
-    const badgeLabel = props.labels[
-      folder.isPostsRoot ? "postBadge" : folder.isBrandRoot ? "brandBadge" : "systemBadge"
-    ] as string;
+    // Old design showed a literal "Posts"/"Auto"/"Brand" pill next
+    // to every system folder — it duplicated the folder name on the
+    // "Posts" root and added visual noise elsewhere. Replaced with
+    // a 6px colored dot inside the chevron slot so the row keeps its
+    // exact width but the kind can still be spotted at a glance.
+    const kindSwatch =
+      folder.kind === "system"
+        ? folder.isPostsRoot
+          ? "bg-primary"
+          : folder.isBrandRoot
+            ? "bg-brand"
+            : "bg-fg-muted"
+        : null;
+    const kindTitle =
+      folder.kind === "system"
+        ? folder.isPostsRoot
+          ? t("media.tree.kind.postsRoot")
+          : folder.isBrandRoot
+            ? t("media.tree.kind.brandRoot")
+            : t("media.tree.kind.system")
+        : null;
     const rowDepthStyle: React.CSSProperties = {
       paddingInlineStart: `calc(var(--tree-indent) + ${Math.max(depth - 1, 0)} * var(--tree-indent-step))`,
     };
@@ -289,15 +316,37 @@ export function MediaFolderTree(props: TreeProps) {
                   ? t("media.tree.collapse", { name: folder.name })
                   : t("media.tree.expand", { name: folder.name })
               }
-              className="text-fg-secondary hover:bg-surface flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] focus-visible:ring-2 focus-visible:outline-none"
+              className="text-fg-secondary hover:bg-surface relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-control)] focus-visible:ring-2 focus-visible:outline-none"
             >
               <ChevronRight
                 className={cn("h-4 w-4 transition-transform", isExpanded && "rotate-90")}
                 aria-hidden="true"
               />
+              {kindSwatch ? (
+                <span
+                  aria-hidden="true"
+                  title={kindTitle ?? undefined}
+                  data-testid={`folder-kind-swatch-${folder.id}`}
+                  className={cn("absolute end-1.5 bottom-1.5 h-1.5 w-1.5 rounded-full", kindSwatch)}
+                />
+              ) : null}
+              {kindTitle ? <span className="sr-only">{kindTitle}</span> : null}
             </button>
           ) : (
-            <span aria-hidden="true" className="inline-block h-9 w-9 shrink-0" />
+            <span aria-hidden="true" className="relative inline-block h-9 w-9 shrink-0">
+              {kindSwatch ? (
+                <span
+                  aria-hidden="true"
+                  title={kindTitle ?? undefined}
+                  data-testid={`folder-kind-swatch-${folder.id}`}
+                  className={cn(
+                    "absolute end-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full",
+                    kindSwatch,
+                  )}
+                />
+              ) : null}
+              {kindTitle ? <span className="sr-only">{kindTitle}</span> : null}
+            </span>
           )}
           <Link
             href={href(folder.id)}
@@ -309,11 +358,6 @@ export function MediaFolderTree(props: TreeProps) {
             )}
           >
             <span className="truncate">{folder.name}</span>
-            {folder.kind === "system" ? (
-              <span className="bg-surface text-fg-muted rounded-full px-1.5 py-0.5 text-[10px] font-medium">
-                {badgeLabel}
-              </span>
-            ) : null}
             <span className="bg-surface text-fg-muted ms-auto inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium">
               {t("media.tree.assetCount", { count: folder.descendantAssetCount })}
             </span>

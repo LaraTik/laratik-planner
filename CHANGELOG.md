@@ -12,6 +12,51 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Media library header: workspace-switcher label, storage one-liner, folder-tree polish (2026-09-18)
+
+Three presentational fixes raised by the planner while reviewing the
+media library on the agency route (`/app/media`). No schema, no API,
+no migration. All three ship in this release.
+
+- **Workspace-switcher label always read "All workspaces".** The
+  `<MediaAgencyWorkspaceSwitcher>` in `media-library-actions.tsx`
+  was instantiated with a hardcoded `active={null}`, so the trigger
+  label never picked up the `?workspace=<id>` URL the user came in
+  with — even though the page itself was filtering against that id.
+  The component now derives `active` from the resolved `workspace`
+  prop (falling back to `null` only when the active workspace is not
+  in the user's _writable_ list, so the trigger never lies about a
+  workspace the user cannot switch to). New unit test in
+  `tests/unit/media/media-library-actions.test.tsx` locks both the
+  selected-workspace case and the non-writable fallback.
+- **"Where this media is stored" card was eating first paint.** A
+  ~200px `Card variant="subtle"` between the page header and the
+  filter bar described storage mode / bucket / prefix / file-naming.
+  Replaced with a new `<MediaStorageSummary>` client component: a
+  single muted one-liner under the title (`"Storage: Agency-owned
+R2 · laratik-planner · agencies/5694…"`) plus an info-icon
+  popover that reveals the full breakdown on demand. New unit test
+  in `tests/unit/media/media-storage-summary.test.tsx`. Translation
+  key mapping (`media.storageDestinationTitle` →
+  `media.storageSummaryDetailsTitle`) is updated in both
+  `messages/en/media.json` and `messages/ar/media.json`; the legacy
+  card-only `storageDestinationTitle` is no longer rendered but the
+  key is preserved because storage settings still references it
+  indirectly via the popover title.
+- **Folder tree badges were noisy and duplicated the row.**
+  System-folder rows rendered an inline `"Auto"` / `"Brand"` /
+  `"Posts"` pill next to the folder name — `"Posts"` sat directly
+  next to the folder also called `"Posts"`. Now replaced with a 6px
+  colored kind dot tucked into the chevron slot
+  (`folder.kind-swatch-<id>` testid, postsRoot → primary, brandRoot
+  → brand, plain system → muted) plus an `sr-only` label for
+  assistive tech. The legacy `media.tree.{post,brand,system}Badge`
+  keys are removed from both message files; the new namespace is
+  `media.tree.kind.{postsRoot,brandRoot,system}`. Updated
+  `tests/unit/media/media-folder-tree.test.tsx` exercises both the
+  presence of the sr-only label and the absence of the legacy pill
+  text.
+
 ### Changed — Copy tab: header + Channel Readiness slim, "Copy all" hashtags, CTA label reframed (2026-09-18)
 
 Five presentational-only changes to the Copy tab to reduce visual

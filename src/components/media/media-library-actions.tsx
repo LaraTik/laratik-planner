@@ -51,11 +51,23 @@ export function MediaLibraryActions({
 
   const showWorkspaceSwitcher = mode === "agency" && agencyWorkspaces.length >= 2;
 
+  // Resolve the active option for the workspace switcher. Only
+  // surface the chip when the selected workspace is in the user's
+  // *writable* list — otherwise the trigger label would say e.g.
+  // "All workspaces" even though a non-writable workspace is
+  // filtered via `?workspace=...`. Falling back to `null` keeps the
+  // single row labelled "All workspaces" until the user picks one
+  // explicitly.
+  const activeWorkspaceForSwitcher =
+    workspace && agencyWorkspaces.some((option) => option.id === workspace.id)
+      ? (agencyWorkspaces.find((option) => option.id === workspace.id) ?? null)
+      : null;
+
   return (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
       {showWorkspaceSwitcher ? (
         <MediaAgencyWorkspaceSwitcher
-          active={null}
+          active={activeWorkspaceForSwitcher}
           options={agencyWorkspaces}
           basePath={basePath}
           preserveParams={preserveParams}

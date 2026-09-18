@@ -94,9 +94,6 @@ const baseLabels = (t: (key: string, params?: Record<string, string | number>) =
   renameFolder: t("media.renameFolder"),
   archiveFolder: t("media.archiveFolder"),
   archiveConfirm: t("media.archiveConfirm"),
-  postBadge: t("media.tree.postBadge"),
-  brandBadge: t("media.tree.brandBadge"),
-  systemBadge: t("media.tree.systemBadge"),
   info: t("media.tree.info"),
   openInfo: t("media.tree.openInfo"),
 });
@@ -119,6 +116,9 @@ const baseT = (key: string, params?: Record<string, string | number>) => {
     "media.tree.postBadge": "Posts",
     "media.tree.brandBadge": "Brand",
     "media.tree.systemBadge": "Auto",
+    "media.tree.kind.postsRoot": "Posts-root folder",
+    "media.tree.kind.brandRoot": "Brand-root folder",
+    "media.tree.kind.system": "Auto-managed folder",
     "media.tree.info": "Info",
     "media.tree.openInfo": "Open info",
     "media.tree.expandAll": "Expand all",
@@ -154,6 +154,11 @@ const polishLabels = (t: (key: string, params?: Record<string, string | number>)
   searchPlaceholder: t("media.tree.searchPlaceholder"),
   noFoldersYet: t("media.tree.noFoldersYet"),
   noSearchMatch: t("media.tree.noSearchMatch"),
+  kind: {
+    postsRoot: t("media.tree.kind.postsRoot"),
+    brandRoot: t("media.tree.kind.brandRoot"),
+    system: t("media.tree.kind.system"),
+  },
   section: {
     quickFilters: t("media.tree.section.quickFilters"),
     folders: t("media.tree.section.folders"),
@@ -330,5 +335,37 @@ describe("MediaFolderTree (2026-09-18 polish)", () => {
       </LocaleProvider>,
     );
     expect(screen.getByText("Create your first folder")).toBeInTheDocument();
+  });
+
+  it("renders a screen-reader kind label on every system folder and skips the legacy text pill", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider locale="en">
+        <MediaFolderTree
+          basePath="/app/media"
+          workspaceId="ws-1"
+          workspaceName="Studio One"
+          folders={fixtures()}
+          activeFolderId={null}
+          ancestors={[]}
+          sharedOnly={false}
+          canManage
+          labels={{ ...baseLabels(baseT), polish: polishLabels(baseT) }}
+        />
+      </LocaleProvider>,
+    );
+    // Expand-all so the 2026 system folder is in the DOM (otherwise
+    // it remains collapsed under Posts).
+    await user.click(screen.getByTestId("folder-tree-expand-all"));
+    // The Posts root (system + isPostsRoot) and the 2026 year folder
+    // (system, plain) should both surface their kind in the
+    // accessibility tree. The Brand Q4 user folder must NOT.
+    expect(screen.getAllByText("Posts-root folder").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Auto-managed folder").length).toBeGreaterThan(0);
+    expect(screen.queryByText("Brand-root folder")).toBeNull();
+    // No literal "Auto" / "Brand" / "Posts" badge text should appear
+    // inside folder rows anymore.
+    expect(screen.queryByText("Auto")).toBeNull();
+    expect(screen.queryByText("Brand")).toBeNull();
   });
 });

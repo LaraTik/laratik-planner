@@ -12,6 +12,7 @@ import { MediaBulkToolbar } from "./media-bulk-toolbar";
 import { MediaBulkHeader } from "./media-bulk-header";
 import { MediaSelectionProvider } from "@/lib/media/selection-store";
 import { MediaLibraryActions } from "./media-library-actions";
+import { MediaStorageSummary } from "./media-storage-summary";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 import type { listMediaAssets, MediaFolderTreeRow } from "@/lib/media/service";
 
@@ -141,7 +142,12 @@ export function MediaLibraryPage({
               ) : null}
             </>
           )}
-          <p className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">
+          <MediaStorageSummary
+            mode={storageSummary.mode}
+            bucket={storageSummary.bucket}
+            keyPrefix={storageSummary.keyPrefix}
+          />
+          <p className="text-body text-fg-secondary mt-2 max-w-3xl text-pretty">
             {t("media.description")}
           </p>
         </div>
@@ -173,44 +179,6 @@ export function MediaLibraryPage({
           initialSource={initialSource}
         />
       </header>
-      <Card
-        variant="subtle"
-        padding="md"
-        className="order-3 sm:order-2"
-        data-testid="media-storage-destination"
-      >
-        <div className="min-w-0">
-          <h2 className="text-title-card text-fg-primary font-semibold">
-            {t("media.storageDestinationTitle")}
-          </h2>
-          <p className="text-label text-fg-secondary mt-1 max-w-3xl">
-            {t("media.storageDestinationDescription")}
-          </p>
-        </div>
-        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-          <div className="min-w-0">
-            <dt className="text-label text-fg-muted">{t("media.storageMode")}</dt>
-            <dd className="text-body text-fg-primary mt-1 font-semibold">
-              {storageSummary.mode === "agency_owned"
-                ? t("storage.ownedMode")
-                : t("storage.managedMode")}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-label text-fg-muted">{t("media.storageBucket")}</dt>
-            <dd className="text-body text-fg-primary mt-1 font-semibold break-all" dir="ltr">
-              {storageSummary.bucket ?? t("storage.notConfiguredShort")}
-            </dd>
-          </div>
-          <div className="min-w-0">
-            <dt className="text-label text-fg-muted">{t("media.storagePrefix")}</dt>
-            <dd className="text-body text-fg-primary mt-1 font-mono text-sm break-all" dir="ltr">
-              {storageSummary.keyPrefix}
-            </dd>
-          </div>
-        </dl>
-        <p className="text-label text-fg-muted mt-4">{t("media.storageFileNameRule")}</p>
-      </Card>
       <div className="order-2 flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="grid gap-3 lg:w-72 lg:shrink-0 xl:w-80">
           {workspace && folderTree ? (
@@ -239,9 +207,6 @@ export function MediaLibraryPage({
                 renameFolder: t("media.renameFolder"),
                 archiveFolder: t("media.archiveFolder"),
                 archiveConfirm: t("media.archiveConfirm"),
-                postBadge: t("media.tree.postBadge"),
-                brandBadge: t("media.tree.brandBadge"),
-                systemBadge: t("media.tree.systemBadge"),
                 info: t("media.tree.info"),
                 openInfo: t("media.tree.openInfo"),
                 polish: {
@@ -250,6 +215,11 @@ export function MediaLibraryPage({
                   searchPlaceholder: t("media.tree.searchPlaceholder"),
                   noFoldersYet: t("media.tree.noFoldersYet"),
                   noSearchMatch: t("media.tree.noSearchMatch"),
+                  kind: {
+                    postsRoot: t("media.tree.kind.postsRoot"),
+                    brandRoot: t("media.tree.kind.brandRoot"),
+                    system: t("media.tree.kind.system"),
+                  },
                   section: {
                     quickFilters: t("media.tree.section.quickFilters"),
                     folders: t("media.tree.section.folders"),
