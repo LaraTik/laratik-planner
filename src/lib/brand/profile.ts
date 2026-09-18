@@ -38,7 +38,30 @@ export async function getBrandProfile(workspaceId: string): Promise<{
     .where(eq(brandProfiles.workspaceId, workspaceId))
     .limit(1);
   if (!row) return null;
-  return { profile: BrandProfileSchema.parse(row.profile ?? {}), revision: row.revision };
+  // Defensive parse — `profile` is a JSONB column that can hold
+  // shapes produced by older app versions (e.g. before the
+  // `goals: Csv` / `primaryLanguage: enum` constraints were added).
+  // A hard `.parse()` would 500 the Brand Kit overview + profile
+  // page for any workspace with a row whose shape no longer
+  // matches the current schema. We:
+  //   1. Try safeParse; on success, return the validated shape.
+  //   2. On failure, log a single warning with the workspace id +
+  //      a truncated issue list (never the raw payload, which may
+  //      contain user data), and fall back to an empty default
+  //      profile at the saved revision. The user can re-save the
+  //      form to overwrite the bad row.
+  const result = BrandProfileSchema.safeParse(row.profile ?? {});
+  if (result.success) {
+    return { profile: result.data, revision: row.revision };
+  }
+  const issues = result.error.issues
+    .slice(0, 3)
+    .map((i) => `${i.path.join(".") || "<root>"}: ${i.code}`)
+    .join("; ");
+  console.warn(
+    `[brand-kit] getBrandProfile: stored profile for workspace ${workspaceId} failed validation — returning empty defaults. Issues: ${issues}`,
+  );
+  return { profile: BrandProfileSchema.parse({}), revision: row.revision };
 }
 
 export async function saveBrandProfile(

@@ -170,7 +170,7 @@ export function BrandIdentityHero({
               <span className="text-label text-fg-muted font-semibold tracking-wider uppercase">
                 {tr("brandKit.overview.lastUpdatedLabel", "Last updated")}
               </span>
-              {lastUpdatedAt ? (
+              {lastUpdatedAt && !Number.isNaN(lastUpdatedAt.getTime()) ? (
                 <span
                   className="text-body text-fg-primary inline-flex items-center gap-1 font-semibold"
                   data-testid="brand-kit-hero-last-updated"

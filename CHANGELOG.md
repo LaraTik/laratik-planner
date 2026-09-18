@@ -12,6 +12,57 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Brand Kit overview: defensive parse + null-safe renders (2026-09-18)
+
+A workspace (`dr-reem-reda`) hit the Brand Kit error boundary with the
+generic "Try again, or head back to the Brand Kit summary" message and
+no Sentry reference. The page-level `Promise.all` rejected, which
+triggered `app/(app)/app/w/[slug]/brand-kit/error.tsx`. All 121 brand-kit
+unit tests still passed, so the regression was data-shaped — three
+runtime traps the tests did not exercise. This change hardens the
+defensive contract so a single bad row (or a missing optional column)
+never 500s the Brand Kit overview, profile, or any per-section page.
+
+- **`src/lib/brand/profile.ts` `getBrandProfile`** — replaced the hard
+  `BrandProfileSchema.parse(row.profile ?? {})` with `safeParse`. On
+  failure, the function logs a single warning (workspace id + truncated
+  Zod issue list, never the raw payload) and returns an empty-default
+  profile at the saved revision. The Brand Kit overview now renders,
+  the Profile form re-opens, and the user can re-save to overwrite the
+  bad row. New `tests/unit/brand-kit/profile.test.ts` (5 cases) pins the
+  contract: empty row → `null`, valid → parsed passthrough, null profile
+  → empty defaults, malformed legacy shape → empty defaults at saved
+  revision (no throw), primitive stored profile → empty defaults (no
+  throw).
+- **`src/lib/utils/safe-href.ts`** — signature widened from
+  `safeHref(url: string)` to `safeHref(url: string | null | undefined)`.
+  Null / undefined / empty / non-string inputs now return `{ href: "#" }`
+  (no-op anchor) instead of crashing on `.trim()`. Pre-existing
+  `tests/unit/safe-href.test.ts` flipped its `it.todo()` placeholders to
+  passing assertions to lock the new contract; the "throws" branch was
+  removed because it documented the old, dangerous behavior.
+- **`src/app/(app)/app/w/[slug]/brand-kit/recent-updates-table.tsx`** —
+  guards `row.updatedAt` with `instanceof Date && !Number.isNaN(getTime())`
+  before calling `.toISOString()`. Invalid dates render an em-dash
+  placeholder instead of throwing `RangeError: Invalid time value` and
+  taking the page-level Promise.all with them. New
+  `tests/unit/brand-kit/recent-updates-table-invalid-date.test.tsx`
+  (2 cases) covers both single-invalid-row and all-invalid-rows.
+- **`src/app/(app)/app/w/[slug]/brand-kit/brand-identity-hero.tsx`** —
+  same Date guard on `lastUpdatedAt`. An invalid Date now falls into the
+  existing "No activity yet" branch instead of crashing
+  `<time dateTime={…}`. New
+  `tests/unit/brand-kit/brand-identity-hero.test.tsx` (2 cases) pins both
+  branches.
+
+Operator-facing effect: the Brand Kit overview, the Profile editor, and
+the recent-updates table never 500 on stale JSONB or bad Date data
+again. The malformed row is logged once per render with enough context
+to triage (workspace id + first three Zod issue codes) and the user
+can recover by re-saving the form. Verified locally:
+`pnpm vitest run` → 3 523 tests pass across 392 files,
+`pnpm typecheck` → clean, `pnpm lint` → 0 warnings.
+
 ### Added — `list_workspaces` accepts an optional `name_query` filter (2026-09-18)
 
 Tightens the resolver path: callers can now ask for a single workspace by

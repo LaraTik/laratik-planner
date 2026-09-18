@@ -23,7 +23,14 @@
  */
 export type SafeHrefResult = { href: string; warning?: "insecure" };
 
-export function safeHref(url: string): SafeHrefResult {
+export function safeHref(url: string | null | undefined): SafeHrefResult {
+  // Defensive: callers sometimes hand us a nullable DB column
+  // (e.g. `brandAssets.externalUrl`) that was rendered without
+  // checking. Falling back to `#` keeps the page on a no-op link
+  // rather than crashing the entire render.
+  if (typeof url !== "string" || url.length === 0) {
+    return { href: "#" };
+  }
   const trimmed = url.trim();
   const lower = trimmed.toLowerCase();
   if (lower.startsWith("https://")) {

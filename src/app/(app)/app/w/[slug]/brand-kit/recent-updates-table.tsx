@@ -90,16 +90,24 @@ export function RecentUpdatesTable({ rows, t, locale = "en" }: RecentUpdatesTabl
         </thead>
         <tbody className="divide-border divide-y">
           {rows.map((row, index) => {
-            const key = `${row.kind}-${row.updatedAt.toString()}-${index}`;
+            const updatedAt =
+              row.updatedAt instanceof Date && !Number.isNaN(row.updatedAt.getTime())
+                ? row.updatedAt
+                : null;
+            const key = `${row.kind}-${updatedAt?.toISOString() ?? "invalid"}-${index}`;
             return (
               <tr key={key} data-testid="brand-recent-row">
                 <td className="text-fg-secondary py-2 pe-3">
-                  <time
-                    dateTime={row.updatedAt.toISOString()}
-                    title={absoluteDateLabel(row.updatedAt, locale)}
-                  >
-                    {formatRelativeDate(row.updatedAt, new Date(), locale)}
-                  </time>
+                  {updatedAt ? (
+                    <time
+                      dateTime={updatedAt.toISOString()}
+                      title={absoluteDateLabel(updatedAt, locale)}
+                    >
+                      {formatRelativeDate(updatedAt, new Date(), locale)}
+                    </time>
+                  ) : (
+                    <span className="text-fg-muted">—</span>
+                  )}
                 </td>
                 <td className="text-fg-primary py-2 pe-3">{row.description}</td>
                 <td className="py-2">
