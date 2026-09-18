@@ -11,7 +11,7 @@ import { MediaBreadcrumb } from "./media-breadcrumb";
 import { MediaBulkToolbar } from "./media-bulk-toolbar";
 import { MediaBulkHeader } from "./media-bulk-header";
 import { MediaSelectionProvider } from "@/lib/media/selection-store";
-import { MediaSourcePicker } from "./media-source-picker";
+import { MediaLibraryActions } from "./media-library-actions";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 import type { listMediaAssets, MediaFolderTreeRow } from "@/lib/media/service";
 
@@ -145,19 +145,33 @@ export function MediaLibraryPage({
             {t("media.description")}
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
-          {mode === "agency" && agencyWorkspaces.length > 1 ? (
-            <AgencyWorkspaceChip active={workspace} options={agencyWorkspaces} t={t} />
-          ) : null}
-          {canUpload && workspace ? (
-            <a
-              href="#media-upload"
-              className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
-            >
-              {t("media.upload")}
-            </a>
-          ) : null}
-        </div>
+        <MediaLibraryActions
+          mode={mode}
+          canUpload={canUpload}
+          workspace={
+            workspace ? { id: workspace.id, name: workspace.name, slug: workspace.slug } : null
+          }
+          agencyWorkspaces={agencyWorkspaces.map((workspaceOption) => ({
+            id: workspaceOption.id,
+            name: workspaceOption.name,
+            slug: workspaceOption.slug,
+          }))}
+          basePath={basePath}
+          preserveParams={preserveParams}
+          workspaceOptions={mode === "agency" ? agencyWorkspaces : workspace ? [workspace] : []}
+          folderOptionsByWorkspace={
+            workspace
+              ? {
+                  [workspace.id]: (folderTree ?? []).map((f) => ({
+                    id: f.id,
+                    name: f.name,
+                    parentId: f.parentId,
+                  })),
+                }
+              : {}
+          }
+          initialSource={initialSource}
+        />
       </header>
       <Card
         variant="subtle"
@@ -197,27 +211,8 @@ export function MediaLibraryPage({
         </dl>
         <p className="text-label text-fg-muted mt-4">{t("media.storageFileNameRule")}</p>
       </Card>
-      {canUpload ? (
-        <div id="media-upload" className="order-2 scroll-mt-4 sm:order-3">
-          <MediaSourcePicker
-            workspaceOptions={mode === "agency" ? agencyWorkspaces : workspace ? [workspace] : []}
-            folderOptionsByWorkspace={
-              workspace
-                ? {
-                    [workspace.id]: (folderTree ?? []).map((f) => ({
-                      id: f.id,
-                      name: f.name,
-                      parentId: f.parentId,
-                    })),
-                  }
-                : {}
-            }
-            initialSource={initialSource}
-          />
-        </div>
-      ) : null}
-      <div className="order-4 flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="grid gap-3 lg:w-64 lg:shrink-0">
+      <div className="order-2 flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="grid gap-3 lg:w-72 lg:shrink-0 xl:w-80">
           {workspace && folderTree ? (
             <MediaFolderTree
               basePath={basePath}
@@ -249,6 +244,26 @@ export function MediaLibraryPage({
                 systemBadge: t("media.tree.systemBadge"),
                 info: t("media.tree.info"),
                 openInfo: t("media.tree.openInfo"),
+                polish: {
+                  expandAll: t("media.tree.expandAll"),
+                  collapseAll: t("media.tree.collapseAll"),
+                  searchPlaceholder: t("media.tree.searchPlaceholder"),
+                  noFoldersYet: t("media.tree.noFoldersYet"),
+                  noSearchMatch: t("media.tree.noSearchMatch"),
+                  section: {
+                    quickFilters: t("media.tree.section.quickFilters"),
+                    folders: t("media.tree.section.folders"),
+                    shared: t("media.tree.section.shared"),
+                  },
+                  actions: {
+                    label: t("media.tree.actions.label"),
+                    info: t("media.tree.actions.info"),
+                    newSubfolder: t("media.tree.actions.newSubfolder"),
+                    rename: t("media.tree.actions.rename"),
+                    archive: t("media.tree.actions.archive"),
+                    archiveConfirm: t("media.tree.actions.archiveConfirm"),
+                  },
+                },
               }}
             />
           ) : mode === "agency" ? (
@@ -798,33 +813,4 @@ function mediaSourceLabel(
     default:
       return t("media.sourceBrowser");
   }
-}
-
-/**
- * Compact workspace chip that surfaces on the agency-wide media page
- * header. Mirrors the visual rhythm of `<WorkspaceSwitcher>` but is a
- * popover-triggered chip rather than a full button, so it doesn't
- * dominate the page header.
- *
- * Used when there is more than one writable workspace in the agency;
- * on a single-workspace agency the chip is omitted to avoid noise.
- */
-function AgencyWorkspaceChip({
-  active,
-  options,
-  t,
-}: {
-  active: WorkspaceOption | null;
-  options: WorkspaceOption[];
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  return (
-    <div className="border-border bg-surface-subtle text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 text-sm font-semibold">
-      <Briefcase className="text-fg-muted h-4 w-4" aria-hidden="true" />
-      <span className="truncate">{active?.name ?? t("media.workspacePickerEmpty")}</span>
-      <span className="bg-surface text-fg-muted rounded-full px-2 py-0.5 text-[10px] font-medium">
-        {t("media.workspaceCount", { count: options.length })}
-      </span>
-    </div>
-  );
 }
