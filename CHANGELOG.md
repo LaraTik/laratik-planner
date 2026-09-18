@@ -12,6 +12,34 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — `list_workspaces` accepts an optional `name_query` filter (2026-09-18)
+
+Tightens the resolver path: callers can now ask for a single workspace by
+name or slug instead of paging through every accessible workspace (capped
+at 200). Backward-compatible — `name_query` is optional; omitting it
+preserves the prior "return everything accessible" behavior.
+
+- **`src/lib/mcp/server.ts` `laratik_planner_list_workspaces`** — adds an
+  optional `name_query: string` input field (1–120 chars after trim).
+  Filter is `ILIKE %query% ESCAPE '\'` on `workspaces.name` OR
+  `workspaces.slug`, so partial / mixed-casing / Arabic-substring matches
+  all work. Like wildcards in user input are escaped (`%`, `_`, `\\`)
+  so a caller can't widen the match by accident.
+- **Documentation** synchronized per the maintenance contract:
+  [`docs/api/mcp.md`](docs/api/mcp.md) Tools table updated,
+  [`docs/api/mcp-evaluation.xml`](docs/api/mcp-evaluation.xml) cases 18–19
+  added, source-of-truth map in
+  [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md)
+  extended.
+- **Security / access control** — the existing `canAccessInternalWorkspace`
+  guard runs after the filter, so a name hit on an inaccessible workspace
+  is still pruned. No change to the auth model.
+
+Operator-facing effect: a fresh `lpm_…` token + one
+`list_workspaces(name_query="Dr Reem Reda")` call returns the workspace
+UUID + slug + agency + timezone, ready to feed straight into
+`export_brand_kit` or `import_brand_kit`.
+
 ### Added — MCP brand-kit export / import tools (2026-09-18)
 
 Two new tools on the LaraTik Planner remote MCP endpoint that round-trip

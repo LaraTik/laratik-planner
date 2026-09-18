@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
 import {
@@ -395,13 +395,32 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
     "laratik_planner_list_workspaces",
     {
       title: "List accessible workspaces",
-      description: "List active internal workspaces the authenticated user can access.",
-      inputSchema: z.object({ response_format: responseFormat }),
+      description:
+        "List active internal workspaces the authenticated user can access. Pass `name_query` (case-insensitive substring, 1-120 chars) to filter by name or slug — useful for resolving a specific workspace UUID without paging through the full list. Empty/missing filter returns every accessible workspace, capped at 200.",
+      inputSchema: z.object({
+        name_query: z
+          .string()
+          .trim()
+          .min(1)
+          .max(120)
+          .optional()
+          .describe(
+            "Case-insensitive substring match against workspace.name or workspace.slug. Trimmed before matching. Returns matching workspaces only.",
+          ),
+        response_format: responseFormat,
+      }),
       outputSchema: z.object({ result: z.unknown() }),
       annotations: { readOnlyHint: true, openWorldHint: false },
     },
-    async ({ response_format }) => {
+    async ({ name_query, response_format }) => {
       try {
+        const trimmed = name_query?.trim();
+        if (trimmed && (trimmed.length < 1 || trimmed.length > 120)) {
+          throw new McpToolError(
+            "invalid_request",
+            "name_query must be 1-120 characters after trimming.",
+          );
+        }
         const memberships = await db
           .select({
             agencyId: agencyMemberships.agencyId,
@@ -416,7 +435,7 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
           );
         const agencyIds = memberships.map((membership) => membership.agencyId);
         if (agencyIds.length === 0) return result([], response_format);
-        const rows = await db
+        const baseQuery = db
           .select({
             id: workspaces.id,
             agencyId: workspaces.agencyId,
@@ -426,15 +445,24 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
             timezone: workspaces.timezone,
           })
           .from(workspaces)
-          .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
-          .where(
-            and(
-              eq(workspaces.status, "active"),
-              isNull(agencies.archivedAt),
-              isNull(agencies.suspendedAt),
-            ),
-          )
-          .limit(200);
+          .innerJoin(agencies, eq(agencies.id, workspaces.agencyId));
+        const whereClauses = [
+          eq(workspaces.status, "active"),
+          isNull(agencies.archivedAt),
+          isNull(agencies.suspendedAt),
+        ];
+        if (trimmed) {
+          // Postgres ILIKE on both name + slug keeps the filter cheap and
+          // forgiving for callers who type partial Arabic, mixed casing,
+          // or only remember the slug. Escape any user-controlled LIKE
+          // wildcards (%, _) so callers can't widen the match accidentally.
+          const safe = trimmed.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+          const pattern = `%${safe}%`;
+          whereClauses.push(
+            sql`(${workspaces.name} ILIKE ${pattern} ESCAPE '\\' OR ${workspaces.slug} ILIKE ${pattern} ESCAPE '\\')`,
+          );
+        }
+        const rows = await baseQuery.where(and(...whereClauses)).limit(200);
         const allowed = [];
         for (const row of rows.filter((row) => agencyIds.includes(row.agencyId))) {
           if (await canAccessInternalWorkspace(context.actor, row.id)) allowed.push(row);

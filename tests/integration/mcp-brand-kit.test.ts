@@ -567,4 +567,139 @@ describe("MCP brand-kit tools", () => {
 
     await client.close();
   });
+
+  it("list_workspaces name_query scopes to a substring match (case 18)", async () => {
+    const seeded = await seedWorkspace();
+    // Seed a second workspace with a different name so the filter has
+    // something to exclude. We intentionally give it a different agency
+    // so canAccessInternalWorkspace is the only reason it'd be visible.
+    const [otherAgency] = await db
+      .insert(agencies)
+      .values({
+        name: `Other Agency ${randomUUID().slice(0, 8)}`,
+        slug: `other-agency-${randomUUID().slice(0, 8)}`,
+      })
+      .returning();
+    await db.insert(agencyMemberships).values({
+      agencyId: otherAgency!.id,
+      userId: seeded.managerUserId,
+      status: "active",
+      isAgencyAdmin: true,
+    });
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({
+        agencyId: otherAgency!.id,
+        slug: `unique-${randomUUID().slice(0, 8)}`,
+        name: "Distinctly Different Name",
+        createdBy: seeded.managerUserId,
+        status: "active",
+      })
+      .returning();
+
+    const server = createLaraTikPlannerMcpServer({
+      actor: { id: seeded.managerUserId },
+      scopes: ["content:read", "content:write"],
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: {} });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    // No filter: both workspaces come back.
+    const all = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { response_format: "json" },
+    );
+    const ourIds = all.map((w) => w.id);
+    expect(ourIds).toContain(seeded.workspaceId);
+    expect(ourIds).toContain(otherWorkspace!.id);
+
+    // Filter by substring of the seeded workspace name.
+    const filtered = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { name_query: "Main", response_format: "json" },
+    );
+    expect(filtered.map((w) => w.id)).toContain(seeded.workspaceId);
+    expect(filtered.map((w) => w.id)).not.toContain(otherWorkspace!.id);
+
+    // Filter by substring of the seeded workspace slug.
+    const slugFiltered = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { name_query: "main-", response_format: "json" },
+    );
+    expect(slugFiltered.map((w) => w.id)).toContain(seeded.workspaceId);
+    expect(slugFiltered.map((w) => w.id)).not.toContain(otherWorkspace!.id);
+
+    await client.close();
+  });
+
+  it("list_workspaces name_query escapes LIKE wildcards (case 19)", async () => {
+    const seeded = await seedWorkspace();
+    // Seed a workspace whose name contains a literal underscore so we
+    // can prove the filter does NOT widen `_` to a single-char wildcard.
+    const [otherAgency] = await db
+      .insert(agencies)
+      .values({
+        name: `Wildcard Agency ${randomUUID().slice(0, 8)}`,
+        slug: `wildcard-agency-${randomUUID().slice(0, 8)}`,
+      })
+      .returning();
+    await db.insert(agencyMemberships).values({
+      agencyId: otherAgency!.id,
+      userId: seeded.managerUserId,
+      status: "active",
+      isAgencyAdmin: true,
+    });
+    await db.insert(workspaces).values({
+      agencyId: otherAgency!.id,
+      slug: `wildcard-ws-${randomUUID().slice(0, 8)}`,
+      name: "underscore_test",
+      createdBy: seeded.managerUserId,
+      status: "active",
+    });
+
+    const server = createLaraTikPlannerMcpServer({
+      actor: { id: seeded.managerUserId },
+      scopes: ["content:read", "content:write"],
+    });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: {} });
+    await Promise.all([client.connect(clientTransport), server.connect(serverTransport)]);
+
+    // `%` should match a literal percent sign, not act as the
+    // "match anything" wildcard. A query of `%ain` only matches a name
+    // containing the literal substring `%ain`, which none do.
+    const percentQuery = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { name_query: "%ain", response_format: "json" },
+    );
+    expect(percentQuery).toEqual([]);
+
+    // `_` should match a literal underscore, not act as the
+    // single-character wildcard. Querying for just `_` should only
+    // return the workspace whose name literally contains an underscore.
+    // (If escape were missing, `_` would match the seeded "Main"
+    // workspace too — `M` is "any single character".)
+    const underscoreOnly = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { name_query: "_", response_format: "json" },
+    );
+    const underscoreNames = underscoreOnly.map((w) => w.name);
+    expect(underscoreNames).toEqual(["underscore_test"]);
+
+    // Sanity check: literal substring matches still work after escaping.
+    const literalSubstring = await callTool<{ id: string; name: string }[]>(
+      client,
+      "laratik_planner_list_workspaces",
+      { name_query: "underscore_test", response_format: "json" },
+    );
+    expect(literalSubstring.some((w) => w.name === "underscore_test")).toBe(true);
+
+    await client.close();
+  });
 });

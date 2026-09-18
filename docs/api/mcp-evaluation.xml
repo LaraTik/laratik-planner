@@ -18,4 +18,6 @@
   <case id="15">import_brand_kit logo entries accept exactly one of external_url / source_url / base64. Submitting none, or more than one, fails input validation with a clear message.</case>
   <case id="16">import_brand_kit rejects logo source_url fetches that exceed the 10 MB cap or return non-2xx; the failure is reported per-row in `failed` without aborting the rest of the import.</case>
   <case id="17">export_brand_kit and import_brand_kit both reject requests against a workspace the token owner cannot access (canAccessInternalWorkspace / workspace_manager role), returning the existing not-found / permission-denied error shape.</case>
+  <case id="18">list_workspaces without `name_query` returns every accessible workspace (cap 200); with `name_query` (case-insensitive substring, 1–120 chars after trim) returns only the matching subset and still respects canAccessInternalWorkspace.</case>
+  <case id="19">list_workspaces with `name_query` containing SQL LIKE wildcards (`%` / `_`) treats them as literals (ESCAPE '\\') — the result set is not widened beyond the literal substring.</case>
 </evaluation>
