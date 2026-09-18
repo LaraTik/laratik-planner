@@ -189,6 +189,23 @@
   "publicCollectionZipTooLarge": "ZIP download is unavailable above 500 MiB. Download assets individually instead.",
   "languageArabic": "العربية",
   "languageEnglish": "English",
+  "agencyWorkspace": {
+    "label": "Switch workspace",
+    "all": "All workspaces",
+    "allDescription": "Show every workspace's media at once.",
+    "selectActiveAria": "Active workspace: {name}. Click to switch.",
+    "selectAria": "Select a workspace. Click to open.",
+    "noWorkspacesAria": "No writable workspaces"
+  },
+  "uploadDialog": {
+    "openAria": "Add media",
+    "openLabel": "Add media",
+    "title": "Add media",
+    "description": "Upload from your device or import a verified link into private storage.",
+    "close": "Close",
+    "done": "Done",
+    "busyHint": "Uploads in progress — close will be enabled when they finish."
+  },
   "tree": {
     "label": "Folder tree",
     "expand": "Expand {name}",
@@ -200,7 +217,25 @@
     "brandBadge": "Brand",
     "postBadge": "Posts",
     "info": "Folder info",
-    "openInfo": "Show recent activity for {name}"
+    "openInfo": "Show recent activity for {name}",
+    "expandAll": "Expand all",
+    "collapseAll": "Collapse all",
+    "searchPlaceholder": "Filter folders",
+    "noFoldersYet": "Create your first folder to organize this workspace",
+    "noSearchMatch": "No folders match this filter",
+    "section": {
+      "quickFilters": "Quick filters",
+      "folders": "Folders",
+      "shared": "Shared"
+    },
+    "actions": {
+      "label": "Folder actions",
+      "info": "Folder info",
+      "newSubfolder": "New subfolder",
+      "rename": "Rename folder",
+      "archive": "Archive folder",
+      "archiveConfirm": "Archive this folder and its subfolders? Their assets will move to Unfiled."
+    }
   },
   "breadcrumb": {
     "label": "Folder path",

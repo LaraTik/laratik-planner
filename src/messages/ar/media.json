@@ -189,6 +189,23 @@
   "publicCollectionZipTooLarge": "يتعذر تنزيل ZIP عندما يتجاوز الحجم 500 ميجابايت. نزّل الأصول بشكل فردي بدلًا من ذلك.",
   "languageArabic": "العربية",
   "languageEnglish": "English",
+  "agencyWorkspace": {
+    "label": "تبديل مساحة العمل",
+    "all": "كل مساحات العمل",
+    "allDescription": "عرض وسائط كل مساحات العمل دفعة واحدة.",
+    "selectActiveAria": "مساحة العمل النشطة: {name}. انقر للتبديل.",
+    "selectAria": "اختر مساحة عمل. انقر للفتح.",
+    "noWorkspacesAria": "لا توجد مساحات عمل قابلة للكتابة"
+  },
+  "uploadDialog": {
+    "openAria": "إضافة وسائط",
+    "openLabel": "إضافة وسائط",
+    "title": "إضافة وسائط",
+    "description": "ارفع من جهازك أو استورد رابطًا تم التحقق منه إلى التخزين الخاص.",
+    "close": "إغلاق",
+    "done": "تم",
+    "busyHint": "عمليات الرفع قيد التنفيذ — سيُفعَّل الإغلاق عند انتهائها."
+  },
   "tree": {
     "label": "شجرة المجلدات",
     "expand": "توسيع {name}",
@@ -200,7 +217,25 @@
     "brandBadge": "العلامة",
     "postBadge": "المنشورات",
     "info": "معلومات المجلد",
-    "openInfo": "إظهار النشاط الأخير لـ {name}"
+    "openInfo": "إظهار النشاط الأخير لـ {name}",
+    "expandAll": "توسيع الكل",
+    "collapseAll": "طي الكل",
+    "searchPlaceholder": "تصفية المجلدات",
+    "noFoldersYet": "أنشئ مجلدك الأول لتنظيم هذه المساحة",
+    "noSearchMatch": "لا توجد مجلدات تطابق هذا التصفية",
+    "section": {
+      "quickFilters": "عوامل تصفية سريعة",
+      "folders": "المجلدات",
+      "shared": "مشتركة"
+    },
+    "actions": {
+      "label": "إجراءات المجلد",
+      "info": "معلومات المجلد",
+      "newSubfolder": "مجلد فرعي جديد",
+      "rename": "إعادة تسمية المجلد",
+      "archive": "أرشفة المجلد",
+      "archiveConfirm": "أرشفة هذا المجلد ومجلداته الفرعية؟ ستنتقل أصولها إلى غير مصنفة."
+    }
   },
   "breadcrumb": {
     "label": "مسار المجلد",

@@ -12,6 +12,48 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Media library: interactive workspace switcher, "Add media" dialog, polished folder tree (2026-09-18)
+
+Three independent UX fixes applied to the agency-level Media library
+(`/app/media`) on top of the 2026-09-16 audit.
+
+- **Interactive workspace switcher.** The static `<AgencyWorkspaceChip>`
+  pill on the agency page header is replaced by a popover with an "All
+  workspaces" synthetic option, "All workspaces" / "Quick filters"
+  cross-link rows, arrow-key + `Enter` keyboard navigation, and a
+  single `router.push(...)` that preserves every stable filter
+  (`q`, `kind`, `view`, `trash`, `folder`, `shared`, `sort`, `page`).
+  The prior implementation was a static `<div>`; the only path to
+  switch workspaces was the sidebar `<WorkspaceSwitcher>`, which
+  navigated to `/app/w/<slug>/media` and abandoned the active filters.
+  New component: `MediaAgencyWorkspaceSwitcher`.
+- **"Add media" dialog.** The 250-line `<MediaSourcePicker>` that
+  used to render inline on first paint is now mounted behind a
+  `<Dialog>` (max-w-3xl). The header CTA is a `<Button>` that opens
+  the dialog via `Cmd/Ctrl+U` (future) or click. The dialog is a
+  drop-in for the inline picker, so `<MediaSourcePicker>` is kept
+  intact for any future back-compat caller. New component:
+  `MediaUploadDialog`.
+- **Polished folder tree.** Section headings (`Quick filters` /
+  `Folders` / `Shared`), a kebab per row that replaces the four
+  inline icon buttons, Expand-all / Collapse-all + folder-name search
+  in the header, CSS-variable depth indent (`var(--tree-indent)` +
+  `(depth - 1) * var(--tree-indent-step)`), independent vertical
+  scroll (`max-h-[60vh] overscroll-contain`), sticky-footer create
+  form, larger chevron touch target (`h-9 w-9`), and sidebar width
+  bumped to `lg:w-72 / xl:w-80`. No backend or contract changes; the
+  RSC's `?workspace=`, `?folder=`, `?q=`, etc. query params already
+  supported everything the new affordances expose.
+
+UI/UX-Pro-Max discipline preserved: full-row click works on the tree
+rows, kebab stopPropagation on the kebab row, hide-not-disable on
+`canManage` controls, BEM-clean kebab menu, badge counts unchanged.
+Bilingual parity verified through `tests/unit/i18n/catalogs.test.ts`
+plus a full `pnpm test:unit` green run (3478 + 13 = 3491 tests).
+Typecheck clean.
+
+Design memo: `docs/design/MEDIA_LIBRARY_POLISH_2026-09-18.md`.
+
 ### Changed — Publish tab: phase stepper + collapsed advanced disclosures (2026-09-17)
 
 Round 5 of the planning-detail UX pass. The Publishing tab used to
