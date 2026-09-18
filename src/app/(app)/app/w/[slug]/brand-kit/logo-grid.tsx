@@ -1,6 +1,6 @@
 import * as React from "react";
 import type { BrandAssetRow } from "@/lib/brand/service";
-import { getSignedDownloadUrl } from "@/lib/storage";
+import { safeGetSignedDownloadUrl } from "@/lib/storage";
 import { ArchiveWithUndo } from "./archive-with-undo";
 import { archiveLogoAssetAction, restoreLogoAssetAction } from "./actions";
 import { Badge } from "@/components/ui/badge";
@@ -70,7 +70,7 @@ export function LogoGrid({ slug, canManage, assets, t }: LogoGridProps) {
         const previewSrc = asset.storageObjectId
           ? `/api/storage/objects/${encodeURIComponent(asset.storageObjectId)}`
           : asset.storagePath
-            ? getSignedDownloadUrl(asset.storagePath)
+            ? safeGetSignedDownloadUrl(asset.storagePath)
             : asset.externalUrl;
         return (
           <li key={asset.id} data-testid={`brand-asset-${asset.id}`} className="flex">

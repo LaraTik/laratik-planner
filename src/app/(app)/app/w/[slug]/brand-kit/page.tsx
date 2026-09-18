@@ -24,7 +24,7 @@ import {
   listContentPillars,
   listRecentBrandUpdates,
 } from "@/lib/brand/service";
-import { getSignedDownloadUrl } from "@/lib/storage";
+import { safeGetSignedDownloadUrl } from "@/lib/storage";
 import { safeHref } from "@/lib/utils/safe-href";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -111,7 +111,7 @@ export default async function BrandKitPage({ params }: { params: Promise<{ slug:
     ? firstLogo.storageObjectId
       ? `/api/storage/objects/${encodeURIComponent(firstLogo.storageObjectId)}`
       : firstLogo.storagePath
-        ? getSignedDownloadUrl(firstLogo.storagePath)
+        ? safeGetSignedDownloadUrl(firstLogo.storagePath)
         : firstLogo.externalUrl
     : null;
   const firstLogoSafe = firstLogoRawSrc ? safeHref(firstLogoRawSrc) : null;

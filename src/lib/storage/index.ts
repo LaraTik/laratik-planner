@@ -167,6 +167,43 @@ export function getSignedDownloadUrl(storagePath: string): string {
   return `/api/uploads/${encodeURIComponent(fileId)}?token=${encodeURIComponent(token)}&expiresAt=${expiresAt}`;
 }
 
+/**
+ * Defensive wrapper around `getSignedDownloadUrl` for UI render paths.
+ *
+ * `getSignedDownloadUrl` deliberately throws `StoragePathError` when the
+ * stored path is missing its workspace prefix — a real data-integrity
+ * signal we don't want to swallow silently. But the Brand Kit logo grid
+ * and overview hero would 500 the entire page if any single legacy
+ * `brand_assets.storagePath` row lacked the prefix (the just-halal
+ * workspace has one such row, surfaced in production as digest
+ * `1922858633` / `1276527957`). UI renderers should degrade to a
+ * broken-image fallback instead of crashing the page.
+ *
+ * Behaviour:
+ *   - empty / non-string input → returns `null` (no throw, no warn)
+ *   - throws `StoragePathError` → returns `null` + one console.warn
+ *     per workspace so the operator can find and clean the bad row
+ *   - any other throw → returns `null` + console.warn (no path exposed
+ *     in logs)
+ */
+export function safeGetSignedDownloadUrl(storagePath: string | null | undefined): string | null {
+  if (typeof storagePath !== "string" || storagePath.length === 0) return null;
+  try {
+    return getSignedDownloadUrl(storagePath);
+  } catch (err) {
+    if (err instanceof StoragePathError) {
+      console.warn(
+        `[brand-kit] safeGetSignedDownloadUrl: storagePath missing workspace prefix; skipping render. path=${storagePath.split("/")[0] ?? "<empty>"}/<redacted>`,
+      );
+    } else {
+      console.warn(
+        `[brand-kit] safeGetSignedDownloadUrl: unexpected error signing download url; skipping render.`,
+      );
+    }
+    return null;
+  }
+}
+
 export type { SignedUploadPayload, SignedDownloadPayload };
 
 // Re-export the verify functions so route handlers can import them

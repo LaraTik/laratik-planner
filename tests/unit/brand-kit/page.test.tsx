@@ -47,6 +47,7 @@ const serviceMock = vi.hoisted(() => ({
 
 const storageMock = vi.hoisted(() => ({
   getSignedDownloadUrl: vi.fn(),
+  safeGetSignedDownloadUrl: vi.fn(),
 }));
 
 // Phase-7 follow-up (bilingual): the page now calls `tForActive()`
@@ -120,7 +121,10 @@ vi.mock("@/lib/brand/service", () => ({
   listBrandLinkedResources: serviceMock.listBrandLinkedResources,
 }));
 vi.mock("@/lib/brand/profile", () => ({ getBrandProfile: serviceMock.getBrandProfile }));
-vi.mock("@/lib/storage", () => ({ getSignedDownloadUrl: storageMock.getSignedDownloadUrl }));
+vi.mock("@/lib/storage", () => ({
+  getSignedDownloadUrl: storageMock.getSignedDownloadUrl,
+  safeGetSignedDownloadUrl: storageMock.safeGetSignedDownloadUrl,
+}));
 vi.mock("@/lib/i18n/t-for-active", () => ({ tForActive: tForActiveMock }));
 
 vi.mock("next/navigation", () => ({
@@ -156,6 +160,10 @@ beforeEach(() => {
   serviceMock.listBrandLinkedResources.mockResolvedValue([]);
   serviceMock.getBrandProfile.mockResolvedValue(null);
   storageMock.getSignedDownloadUrl.mockReset();
+  storageMock.safeGetSignedDownloadUrl.mockReset();
+  storageMock.safeGetSignedDownloadUrl.mockImplementation((storagePath: string) =>
+    storageMock.getSignedDownloadUrl(storagePath),
+  );
   tForActiveMock.mockClear();
 });
 
@@ -251,5 +259,44 @@ describe("Brand Kit overview (Phase 7)", () => {
     expect(screen.queryByTestId("mock-publishing-rule-form")).toBeNull();
     expect(screen.queryByTestId("mock-linked-resource-form")).toBeNull();
     expect(screen.queryByTestId("brand-kit-add-asset")).toBeNull();
+  });
+
+  // Regression — dr-reem-reda + just-halal workspaces hit the
+  // Brand Kit error boundary when a logo row had `storagePath`
+  // set without the workspace prefix. `getSignedDownloadUrl`
+  // throws `StoragePathError`, which the old code let bubble all
+  // the way up to the route error boundary. After the defensive
+  // hardening, the page must render even with such a row.
+  it("renders the overview when the first logo's storagePath is missing the workspace prefix (just-halal regression)", async () => {
+    dbMock._setAssets([
+      {
+        id: "logo-legacy",
+        kind: "logo",
+        name: "Legacy Mark",
+        value: {},
+        // Path is truthy but lacks the required `workspaceId/file`
+        // shape — `getSignedDownloadUrl` throws StoragePathError.
+        storagePath: "legacy-no-prefix",
+        storageObjectId: null,
+        externalUrl: null,
+        archivedAt: null,
+      },
+    ]);
+    // Mirror the production contract: `safeGetSignedDownloadUrl`
+    // catches the StoragePathError thrown by `getSignedDownloadUrl`
+    // and returns `null` so the page can degrade gracefully.
+    storageMock.safeGetSignedDownloadUrl.mockImplementation((storagePath: string) => {
+      const slash = storagePath.indexOf("/");
+      if (slash < 0) return null;
+      return storageMock.getSignedDownloadUrl(storagePath);
+    });
+    // The page must NOT throw — it should render with `firstLogoSrc`
+    // null so the hero shows the "no logo" affordance instead of a
+    // broken image.
+    await expect(renderOverview()).resolves.not.toThrow();
+    const hero = screen.getByTestId("brand-kit-hero");
+    expect(hero).toBeInTheDocument();
+    // No <img> rendered in the hero because the path was unusable.
+    expect(hero.querySelector("img")).toBeNull();
   });
 });

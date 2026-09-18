@@ -12,6 +12,71 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Brand Kit overview + logos page: malformed `brand_assets.storagePath` no longer 500s (2026-09-19)
+
+A second workspace (`just-halal`) hit the same Brand Kit error boundary
+after the defensive parse patch landed. Digests `1922858633` (overview)
+and `1276527957` (logos page). Root cause was distinct from the first
+fix: `getSignedDownloadUrl` in `@/lib/storage/index.ts` deliberately
+throws `StoragePathError` when a `brand_assets.storagePath` row lacks
+the required `workspaceId/file` prefix — a real data-integrity signal
+that we don't want to swallow silently. But the Brand Kit overview's
+hero (`firstLogo.storagePath ? getSignedDownloadUrl(...) : ...`) and
+the logos page's `LogoGrid` (per-row) called the strict helper
+unconditionally, so a single legacy `storagePath` row (no workspace
+prefix — common for early-seed / pre-R2-migration / direct-DB-write
+rows) crashed the entire page.
+
+- **`src/lib/storage/index.ts`** — new `safeGetSignedDownloadUrl` wrapper.
+  Nullish / empty / non-string input → `null`. `StoragePathError` →
+  `null` + one `console.warn` (workspace id + redacted path) so the
+  operator can grep for the bad row. Other throws → `null` + one
+  warn. The strict `getSignedDownloadUrl` is preserved for callers
+  that want to surface the error (MCP export tool, signed download
+  APIs).
+- **`src/app/(app)/app/w/[slug]/brand-kit/page.tsx`** — hero uses
+  `safeGetSignedDownloadUrl(firstLogo.storagePath)`. A bad row now
+  degrades to "no logo in hero" instead of crashing the page.
+- **`src/app/(app)/app/w/[slug]/brand-kit/logo-grid.tsx`** — same
+  swap. A bad row in the grid renders the tile without an image
+  (the existing `<ImageIcon />` fallback) instead of crashing the
+  page.
+- **Tests** — `tests/unit/brand-kit/safe-get-signed-download-url.test.ts`
+  (7 cases) pins the new contract, and
+  `tests/unit/brand-kit/page.test.tsx` gains a regression test
+  ("just-halal regression") that renders the overview with a
+  legacy `storagePath: "legacy-no-prefix"` logo and asserts the
+  page does not throw and the hero renders no `<img>`.
+
+Operator-facing effect: Brand Kit overview + logos + any other
+render path that uses the safe wrapper will never 500 on a bad
+storagePath row again. The MCP export tool + signed-download APIs
+still throw on bad paths so data-integrity problems stay visible.
+Verified: `pnpm vitest run tests/unit/brand-kit/` 138 cases pass,
+`pnpm typecheck` clean, `pnpm lint` 0 warnings.
+
+Operator follow-up: when this lands in production, `just-halal`
+will emit one `[brand-kit] safeGetSignedDownloadUrl: storagePath
+missing workspace prefix` log line on the first render. The fix
+above keeps the page rendering; to permanently repair the bad row,
+either re-upload the logo through the UI (which writes a properly
+prefixed path) or fix it directly:
+
+```sql
+-- Find the bad rows
+SELECT id, workspace_id, kind, name, storage_path
+FROM brand_assets
+WHERE storage_path IS NOT NULL
+  AND storage_path NOT LIKE '%/%';
+
+-- Fix one workspace (replace <workspaceId> with the workspace's UUID
+-- and prefix the path with `<workspaceId>/`):
+UPDATE brand_assets
+SET storage_path = '<workspaceId>/' || storage_path
+WHERE workspace_id = '<workspaceId>'
+  AND storage_path NOT LIKE '%/%';
+```
+
 ### Fixed — Brand Kit overview: defensive parse + null-safe renders (2026-09-18)
 
 A workspace (`dr-reem-reda`) hit the Brand Kit error boundary with the
