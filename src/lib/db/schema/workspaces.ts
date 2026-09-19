@@ -77,6 +77,14 @@ export const workspaceSettings = pgTable("workspace_settings", {
     onDelete: "set null",
   }),
   approvalMode: text("approval_mode").notNull().default("simple"), // 'simple' | 'internal_then_client'
+  /**
+   * Workflow scenario id from the `workflow_scenario` catalog. Drives
+   * which rail stages are active for this workspace and whether the
+   * creative-approval gate is forced to one or two stages.
+   * Default 'standard' preserves the pre-existing full editorial spine
+   * for every workspace shipped before migration 0048.
+   */
+  workflowScenario: text("workflow_scenario").notNull().default("standard"),
   contentApprovalLeadDays: smallint("content_approval_lead_days").notNull().default(10),
   designCompleteLeadDays: smallint("design_complete_lead_days").notNull().default(5),
   creativeApprovalLeadDays: smallint("creative_approval_lead_days").notNull().default(2),

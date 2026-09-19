@@ -37,6 +37,7 @@ import {
   localizeStepExplanation,
 } from "@/lib/content/workflow-explanations";
 import { planningStageForStatus } from "@/lib/planning/presentation";
+import type { ScenarioSpec } from "@/lib/content/workflow";
 import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
 import type { PlanningPresentation } from "@/lib/planning/presentation";
 import { cn } from "@/lib/utils";
@@ -124,16 +125,34 @@ const RAIL_STAGES: ReadonlyArray<{ id: RailStage; label: string }> = [
   { id: "published", label: "Published" },
 ];
 
-export function railStageForStatus(status: string): {
+export function railStageForStatus(
+  status: string,
+  scenario?: { stages: ReadonlyArray<RailStage> } | null,
+): {
   stage: RailStage | null;
   /** "linear" or "blocked" / "cancelled" special states. */
   variant: "linear" | "blocked" | "cancelled";
 } {
-  const stage = planningStageForStatus(status as Parameters<typeof planningStageForStatus>[0]);
+  const stage = planningStageForStatus(
+    status as Parameters<typeof planningStageForStatus>[0],
+    scenario ?? null,
+  );
   if (stage) return { stage, variant: "linear" };
   if (status === "blocked") return { stage: null, variant: "blocked" };
   if (status === "cancelled") return { stage: null, variant: "cancelled" };
   return { stage: null, variant: "linear" };
+}
+
+/**
+ * Active rail stages for the workspace — applies the scenario filter
+ * to the canonical 6-stage list. Stages the workspace has omitted
+ * disappear from the rail's vertical list.
+ */
+export function activeRailStages(
+  scenario?: { stages: ReadonlyArray<RailStage> } | null,
+): ReadonlyArray<RailStage> {
+  if (!scenario) return RAIL_STAGES.map((s) => s.id);
+  return RAIL_STAGES.map((s) => s.id).filter((id) => scenario.stages.includes(id));
 }
 
 /**
@@ -248,7 +267,9 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
           )}
           data-testid="workflow-rail-stages-collapsed"
         >
-          {RAIL_STAGES.map(({ id: stage, label }) => {
+          {RAIL_STAGES.filter(
+            ({ id: stage }) => !props.scenario || props.scenario.stages.includes(stage),
+          ).map(({ id: stage, label }) => {
             const state = railStageState(
               stage,
               props.status,
@@ -322,6 +343,13 @@ export interface WorkflowRailBodyProps {
   /** Canonical lifecycle/action presentation from the server. */
   planningPresentation?: PlanningPresentation;
   /**
+   * Optional workflow scenario spec. When provided, the rail renders
+   * only the stages included by the workspace's active scenario
+   * (e.g. `lightweight` omits `content_review`). When omitted, the
+   * rail falls back to the canonical 6-stage list.
+   */
+  scenario?: ScenarioSpec | null;
+  /**
    * Optional translator. When provided, the workflow dialog titles
    * + descriptions render from `contentDetail.workflow.*`; when
    * omitted, the hard-coded English copy is used.
@@ -339,6 +367,7 @@ function WorkflowRailBody({
   designers,
   designer,
   planningPresentation,
+  scenario,
 }: {
   workspaceSlug: string;
   contentItemId: string;
@@ -356,6 +385,7 @@ function WorkflowRailBody({
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
   planningPresentation?: PlanningPresentation;
+  scenario?: ScenarioSpec | null;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -415,7 +445,7 @@ function WorkflowRailBody({
   const canonicalAction = planningPresentation?.nextAction;
   const activeApprovals = approvals.filter((approval) => approval.status === "pending");
 
-  const { stage: railCurrentStage } = railStageForStatus(status);
+  const { stage: railCurrentStage } = railStageForStatus(status, scenario);
   const condition = status === "blocked" || status === "cancelled" ? status : null;
   const hasAnyButton =
     (status === "draft" && can(["isManager", "isPlanner"])) ||
@@ -532,172 +562,177 @@ function WorkflowRailBody({
           aria-hidden="true"
           data-testid="workflow-rail-process-line"
         />
-        {RAIL_STAGES.map(({ id: stage, label }) => {
-          const expanded = stage === railCurrentStage;
-          return (
-            <li
-              key={stage}
-              className="relative py-1"
-              data-stage-id={stage}
-              data-active={expanded || undefined}
-            >
-              <RailStageRow
-                stage={stage}
-                label={tr(`contentDetail.workflow.railStageLabels.${stage}`, label)}
-                status={status}
-                stageComplete={planningPresentation?.workflow.stageComplete ?? false}
-                t={t}
-              />
-              {expanded ? (
-                <div
-                  className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
-                  data-testid="workflow-rail-current"
-                >
-                  {currentStep ? (
-                    <>
-                      <p className="text-body text-fg-primary font-semibold">{currentStep.label}</p>
-                      <p className="text-label text-fg-secondary">{currentStep.description}</p>
-                      <div className="text-label text-fg-secondary flex flex-wrap items-center gap-1.5">
-                        <span className="text-fg-muted">
-                          {tr("contentDetail.workflow.responsible", "Responsible:")}
-                        </span>
-                        {currentRoleLabels.length > 0 ? (
-                          currentRoleLabels.map((label) => (
-                            <Badge key={label} variant="info">
-                              {label}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-fg-muted">—</span>
-                        )}
-                      </div>
-                      {status === "approved_for_design" || status === "in_design" ? (
-                        <div
-                          className="border-border bg-surface flex flex-col gap-1 rounded-[var(--radius-control)] border p-2"
-                          data-testid="workflow-designer-assignment"
-                        >
-                          <div className="text-label text-fg-muted flex items-center gap-1.5 font-semibold">
-                            <Palette className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                            <span>{tr("contentDetail.workflow.designer", "Designer")}</span>
-                          </div>
-                          <span
-                            className={cn(
-                              "text-body font-semibold",
-                              designer ? "text-fg-primary" : "text-fg-muted italic",
-                            )}
-                            data-testid="workflow-current-designer"
-                          >
-                            <bdi dir="auto">
-                              {designer?.label ?? tr("common.ownerUnassigned", "Unassigned")}
-                            </bdi>
+        {RAIL_STAGES.filter(({ id: stage }) => !scenario || scenario.stages.includes(stage)).map(
+          ({ id: stage, label }) => {
+            const expanded = stage === railCurrentStage;
+            return (
+              <li
+                key={stage}
+                className="relative py-1"
+                data-stage-id={stage}
+                data-active={expanded || undefined}
+              >
+                <RailStageRow
+                  stage={stage}
+                  label={tr(`contentDetail.workflow.railStageLabels.${stage}`, label)}
+                  status={status}
+                  stageComplete={planningPresentation?.workflow.stageComplete ?? false}
+                  t={t}
+                />
+                {expanded ? (
+                  <div
+                    className="border-border bg-surface-subtle ms-7 mt-1 space-y-2 rounded-[var(--radius-control)] border p-2"
+                    data-testid="workflow-rail-current"
+                  >
+                    {currentStep ? (
+                      <>
+                        <p className="text-body text-fg-primary font-semibold">
+                          {currentStep.label}
+                        </p>
+                        <p className="text-label text-fg-secondary">{currentStep.description}</p>
+                        <div className="text-label text-fg-secondary flex flex-wrap items-center gap-1.5">
+                          <span className="text-fg-muted">
+                            {tr("contentDetail.workflow.responsible", "Responsible:")}
                           </span>
+                          {currentRoleLabels.length > 0 ? (
+                            currentRoleLabels.map((label) => (
+                              <Badge key={label} variant="info">
+                                {label}
+                              </Badge>
+                            ))
+                          ) : (
+                            <span className="text-fg-muted">—</span>
+                          )}
                         </div>
-                      ) : null}
-                      {currentStep.next ? (
-                        <p className="text-label text-fg-muted inline-flex items-start gap-1.5">
-                          <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                          <span>
-                            <span className="text-fg-secondary font-semibold">
-                              {tr("contentDetail.workflow.next", "Next:")}
-                            </span>{" "}
-                            {currentStep.next}
-                          </span>
-                        </p>
-                      ) : null}
+                        {status === "approved_for_design" || status === "in_design" ? (
+                          <div
+                            className="border-border bg-surface flex flex-col gap-1 rounded-[var(--radius-control)] border p-2"
+                            data-testid="workflow-designer-assignment"
+                          >
+                            <div className="text-label text-fg-muted flex items-center gap-1.5 font-semibold">
+                              <Palette className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                              <span>{tr("contentDetail.workflow.designer", "Designer")}</span>
+                            </div>
+                            <span
+                              className={cn(
+                                "text-body font-semibold",
+                                designer ? "text-fg-primary" : "text-fg-muted italic",
+                              )}
+                              data-testid="workflow-current-designer"
+                            >
+                              <bdi dir="auto">
+                                {designer?.label ?? tr("common.ownerUnassigned", "Unassigned")}
+                              </bdi>
+                            </span>
+                          </div>
+                        ) : null}
+                        {currentStep.next ? (
+                          <p className="text-label text-fg-muted inline-flex items-start gap-1.5">
+                            <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span>
+                              <span className="text-fg-secondary font-semibold">
+                                {tr("contentDetail.workflow.next", "Next:")}
+                              </span>{" "}
+                              {currentStep.next}
+                            </span>
+                          </p>
+                        ) : null}
 
-                      {blockedReason ? (
-                        <p className="text-body text-danger">
-                          <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
-                          {tr("contentDetail.workflow.blockedReason", "Blocked: {reason}", {
-                            reason: blockedReason,
-                          })}
-                        </p>
-                      ) : null}
-                      {cancellationReason ? (
-                        <p className="text-body text-danger">
-                          <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
-                          {tr("contentDetail.workflow.cancelledReason", "Cancelled: {reason}", {
-                            reason: cancellationReason,
-                          })}
-                        </p>
-                      ) : null}
+                        {blockedReason ? (
+                          <p className="text-body text-danger">
+                            <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
+                            {tr("contentDetail.workflow.blockedReason", "Blocked: {reason}", {
+                              reason: blockedReason,
+                            })}
+                          </p>
+                        ) : null}
+                        {cancellationReason ? (
+                          <p className="text-body text-danger">
+                            <Ban className="me-1 inline h-4 w-4" aria-hidden="true" />
+                            {tr("contentDetail.workflow.cancelledReason", "Cancelled: {reason}", {
+                              reason: cancellationReason,
+                            })}
+                          </p>
+                        ) : null}
 
-                      {actionError ? (
-                        <p role="alert" className="text-body text-danger">
-                          {actionError}
-                        </p>
-                      ) : null}
+                        {actionError ? (
+                          <p role="alert" className="text-body text-danger">
+                            {actionError}
+                          </p>
+                        ) : null}
 
-                      <ActionButtons
-                        status={status}
-                        roles={roles}
-                        isDesigner={roles.isDesigner}
-                        isManager={roles.isManager}
-                        isInternalReviewer={roles.isInternalReviewer}
-                        isClientReviewer={roles.isClientReviewer}
-                        isPublisher={roles.isPublisher}
-                        designers={designers}
-                        {...(designer ? { designer } : {})}
-                        pending={pending}
-                        onTransition={run}
-                        onExecuteTransition={executeTransition}
-                        onClaim={async () => {
-                          setActionError(null);
-                          const result = await claimAction({ workspaceSlug, contentItemId });
-                          if (result?.error) setActionError(result.error);
-                        }}
-                        onAssignDesigner={async (designerId) => {
-                          setActionError(null);
-                          const result = await assignDesignerAction({
-                            workspaceSlug,
-                            contentItemId,
-                            designerId,
-                          });
-                          if (result?.error) setActionError(result.error);
-                        }}
-                        {...(canonicalAction?.type
-                          ? { canonicalActionType: canonicalAction.type }
-                          : {})}
-                        {...(canonicalAction?.destinationTab
-                          ? { canonicalDestinationTab: canonicalAction.destinationTab }
-                          : {})}
-                        t={t}
-                      />
+                        <ActionButtons
+                          status={status}
+                          roles={roles}
+                          isDesigner={roles.isDesigner}
+                          isManager={roles.isManager}
+                          isInternalReviewer={roles.isInternalReviewer}
+                          isClientReviewer={roles.isClientReviewer}
+                          isPublisher={roles.isPublisher}
+                          designers={designers}
+                          {...(designer ? { designer } : {})}
+                          pending={pending}
+                          onTransition={run}
+                          onExecuteTransition={executeTransition}
+                          onClaim={async () => {
+                            setActionError(null);
+                            const result = await claimAction({ workspaceSlug, contentItemId });
+                            if (result?.error) setActionError(result.error);
+                          }}
+                          onAssignDesigner={async (designerId) => {
+                            setActionError(null);
+                            const result = await assignDesignerAction({
+                              workspaceSlug,
+                              contentItemId,
+                              designerId,
+                            });
+                            if (result?.error) setActionError(result.error);
+                          }}
+                          {...(canonicalAction?.type
+                            ? { canonicalActionType: canonicalAction.type }
+                            : {})}
+                          {...(canonicalAction?.destinationTab
+                            ? { canonicalDestinationTab: canonicalAction.destinationTab }
+                            : {})}
+                          t={t}
+                        />
 
-                      {!hasAnyButton && currentEligibleRoles.length > 0 ? (
-                        <p
-                          className="text-label text-fg-muted inline-flex items-center gap-1.5"
-                          data-testid="workflow-awaiting-others"
-                        >
-                          <Info className="h-3.5 w-3.5" aria-hidden="true" />
-                          {(() => {
-                            const step =
-                              STEP_EXPLANATIONS[status as keyof typeof STEP_EXPLANATIONS];
-                            const eligibleLabels = currentEligibleRoles
-                              .map(
-                                (r) =>
-                                  step?.responsibleRoles.find((x) => x.role === roleNameForFlag(r))
-                                    ?.label,
-                              )
-                              .filter((label): label is string => Boolean(label));
-                            return eligibleLabels.length > 0
-                              ? tr("contentDetail.workflow.awaitingRoles", "Awaiting {roles}.", {
-                                  roles: eligibleLabels.join(" or "),
-                                })
-                              : tr(
-                                  "contentDetail.workflow.awaitingTeamMember",
-                                  "Awaiting another team member.",
-                                );
-                          })()}
-                        </p>
-                      ) : null}
-                    </>
-                  ) : null}
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
+                        {!hasAnyButton && currentEligibleRoles.length > 0 ? (
+                          <p
+                            className="text-label text-fg-muted inline-flex items-center gap-1.5"
+                            data-testid="workflow-awaiting-others"
+                          >
+                            <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                            {(() => {
+                              const step =
+                                STEP_EXPLANATIONS[status as keyof typeof STEP_EXPLANATIONS];
+                              const eligibleLabels = currentEligibleRoles
+                                .map(
+                                  (r) =>
+                                    step?.responsibleRoles.find(
+                                      (x) => x.role === roleNameForFlag(r),
+                                    )?.label,
+                                )
+                                .filter((label): label is string => Boolean(label));
+                              return eligibleLabels.length > 0
+                                ? tr("contentDetail.workflow.awaitingRoles", "Awaiting {roles}.", {
+                                    roles: eligibleLabels.join(" or "),
+                                  })
+                                : tr(
+                                    "contentDetail.workflow.awaitingTeamMember",
+                                    "Awaiting another team member.",
+                                  );
+                            })()}
+                          </p>
+                        ) : null}
+                      </>
+                    ) : null}
+                  </div>
+                ) : null}
+              </li>
+            );
+          },
+        )}
       </ol>
 
       {activeApprovals.length > 0 ? (

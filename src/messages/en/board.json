@@ -18,5 +18,7 @@
   "columnCreativeReview": "Creative review",
   "columnReady": "Ready",
   "columnPublished": "Published",
-  "noItems": "No items"
+  "noItems": "No items",
+  "outOfScenarioHeader": "Outside current workflow",
+  "outOfScenarioDescription": "These items are in stages the current workflow scenario omits. Open each one to finish or reset it."
 }

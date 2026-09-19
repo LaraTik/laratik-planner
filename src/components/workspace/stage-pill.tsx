@@ -50,6 +50,7 @@ export function StagePill({
   className,
   testId = "stage-pill",
   t,
+  scenario,
 }: {
   status: ContentStatus;
   className?: string;
@@ -61,12 +62,25 @@ export function StagePill({
    * when omitted, the stored English copy is used.
    */
   t?: (key: string, params?: Record<string, string | number>) => string;
+  /**
+   * Optional workflow scenario. When omitted the pill falls back to
+   * the canonical 6-stage model (no filter). Pass the workspace's
+   * active scenario's `stages` to hide omitted chips from the rail /
+   * stepper position counter.
+   */
+  scenario?: { stages: ReadonlyArray<PlanningWorkflowStage> } | null;
 }) {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
-  const stage = planningStageForStatus(status);
+  const stage = planningStageForStatus(status, scenario ?? null);
   const condition = status === "blocked" || status === "cancelled" ? status : null;
-  const position = stage ? PLANNING_WORKFLOW_STAGES.indexOf(stage) + 1 : null;
+  const totalStages = scenario?.stages.length ?? PLANNING_WORKFLOW_STAGES.length;
+  const position =
+    stage && scenario
+      ? scenario.stages.indexOf(stage) + 1
+      : stage
+        ? PLANNING_WORKFLOW_STAGES.indexOf(stage) + 1
+        : null;
   const label = stage
     ? tr(STAGE_KEY[stage], STAGE_FALLBACK[stage])
     : tr(
@@ -87,8 +101,8 @@ export function StagePill({
         ? {
             title: tr(
               "common.stageCurrentTitle",
-              `Current stage: ${label} (${position} of ${PLANNING_WORKFLOW_STAGES.length})`,
-              { label, position, total: PLANNING_WORKFLOW_STAGES.length },
+              `Current stage: ${label} (${position} of ${totalStages})`,
+              { label, position, total: totalStages },
             ),
           }
         : {})}
@@ -107,7 +121,7 @@ export function StagePill({
       <span>{label}</span>
       {position ? (
         <span className="text-fg-muted font-normal">
-          {position}/{PLANNING_WORKFLOW_STAGES.length}
+          {position}/{totalStages}
         </span>
       ) : null}
     </span>

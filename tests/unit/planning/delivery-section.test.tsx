@@ -21,9 +21,7 @@ vi.mock("@/components/media/media-source-picker", () => ({
         typeof props.defaultFolderId === "string" ? props.defaultFolderId : ""
       }
       data-has-on-asset-ready={typeof props.onAssetReady === "function" ? "1" : "0"}
-      data-initial-source={
-        typeof props.initialSource === "string" ? props.initialSource : ""
-      }
+      data-initial-source={typeof props.initialSource === "string" ? props.initialSource : ""}
     >
       <div role="tab" aria-label="From device" />
       <div role="tab" aria-label="From link" />

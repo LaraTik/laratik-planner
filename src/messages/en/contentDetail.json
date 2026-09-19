@@ -515,6 +515,38 @@
     "stageBlocked": "Blocked",
     "stageUpcoming": "Upcoming",
     "approve": "Approve",
+    "section": {
+      "title": "Workflow",
+      "blurb": "Choose how content moves through your team. Each scenario runs a different set of stages."
+    },
+    "scenario": {
+      "standard": {
+        "name": "Standard",
+        "blurb": "Planning → Content review → Design → Creative approval → Publishing setup → Published. The full editorial spine."
+      },
+      "lightweight": {
+        "name": "Lightweight",
+        "blurb": "Planning → Design → Creative approval → Publishing setup → Published. No pre-design content review — small teams and solo brands."
+      },
+      "two_gate_client": {
+        "name": "Two-gate client",
+        "blurb": "Standard + forced internal-then-client approval. Best for agencies with explicit client sign-off."
+      },
+      "self_publish": {
+        "name": "Self-publish",
+        "blurb": "Standard without the Publishing setup gate. Publishers publish directly from the approval screen."
+      },
+      "diff": {
+        "same": "Current",
+        "changes": "−{removed} stage(s) · +{added} stage(s)",
+        "approvalModeForcedInternalClient": "Will also change approval mode to 'Internal, then client'.",
+        "approvalModeForcedSimple": "Will also change approval mode to 'Internal only'.",
+        "publishingSetupOptional": "Will skip the Publishing setup gate."
+      },
+      "apply": "Apply scenario",
+      "applied": "Scenario applied",
+      "railPreviewAria": "Scenario stages"
+    },
     "approvalGates": {
       "content": "Content",
       "creative_internal": "Internal creative",

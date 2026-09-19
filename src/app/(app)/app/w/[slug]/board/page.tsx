@@ -18,9 +18,16 @@ import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
-import { users, workspaceMemberships } from "@/lib/db/schema";
+import {
+  users,
+  workspaceMemberships,
+  workspaceSettings as workspaceSettingsTable,
+} from "@/lib/db/schema";
 import { describeActiveFilter } from "../planning/filter-describe";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { getActiveScenario, type WorkflowScenarioStage } from "@/lib/content/workflow";
+import { PLANNING_WORKFLOW_STAGES } from "@/lib/planning/presentation";
+import type { ContentStatus } from "@/lib/content/status";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -32,28 +39,77 @@ export async function generateMetadata(): Promise<Metadata> {
  * `label` strings can be resolved through the message catalog
  * at render time. The `statuses` are a code-set and stay
  * stable across locales.
+ *
+ * The scenario filter (added with migration 0048) drops any
+ * column whose stage is not in the workspace's active scenario.
+ * `lightweight`, for example, omits the `content_review` column
+ * entirely; `self_publish` omits `publishing_setup`.
  */
-function buildColumns(t: (key: string) => string): readonly WorkflowBoardColumn[] {
-  return [
-    { label: t("contentDetail.workflow.railStageLabels.planning"), statuses: ["draft"] },
-    {
-      label: t("contentDetail.workflow.railStageLabels.content_review"),
-      statuses: ["content_review", "changes_requested"],
-    },
-    {
-      label: t("contentDetail.workflow.railStageLabels.creative_production"),
-      statuses: ["approved_for_design", "in_design"],
-    },
-    {
-      label: t("contentDetail.workflow.railStageLabels.creative_approval"),
-      statuses: ["creative_review"],
-    },
-    {
-      label: t("contentDetail.workflow.railStageLabels.publishing_setup"),
-      statuses: ["ready_to_publish", "partially_published"],
-    },
-    { label: t("contentDetail.workflow.railStageLabels.published"), statuses: ["published"] },
-  ];
+const ALL_COLUMNS: ReadonlyArray<{
+  stage: WorkflowScenarioStage;
+  labelKey: string;
+  statuses: readonly ContentStatus[];
+}> = [
+  {
+    stage: "planning",
+    labelKey: "contentDetail.workflow.railStageLabels.planning",
+    statuses: ["draft"],
+  },
+  {
+    stage: "content_review",
+    labelKey: "contentDetail.workflow.railStageLabels.content_review",
+    statuses: ["content_review", "changes_requested"],
+  },
+  {
+    stage: "creative_production",
+    labelKey: "contentDetail.workflow.railStageLabels.creative_production",
+    statuses: ["approved_for_design", "in_design"],
+  },
+  {
+    stage: "creative_approval",
+    labelKey: "contentDetail.workflow.railStageLabels.creative_approval",
+    statuses: ["creative_review"],
+  },
+  {
+    stage: "publishing_setup",
+    labelKey: "contentDetail.workflow.railStageLabels.publishing_setup",
+    statuses: ["ready_to_publish", "partially_published"],
+  },
+  {
+    stage: "published",
+    labelKey: "contentDetail.workflow.railStageLabels.published",
+    statuses: ["published"],
+  },
+];
+
+function buildColumns(
+  t: (key: string) => string,
+  scenarioStages: readonly WorkflowScenarioStage[],
+): readonly WorkflowBoardColumn[] {
+  // Preserve canonical stage ordering so the columns always render
+  // planning → … → published, not the order they happen to be
+  // declared in the scenario.
+  const ordered = [...PLANNING_WORKFLOW_STAGES].filter((stage) => scenarioStages.includes(stage));
+  return ALL_COLUMNS.filter((col) => ordered.includes(col.stage)).map((col) => ({
+    label: t(col.labelKey),
+    statuses: col.statuses,
+  }));
+}
+
+/**
+ * Statuses that bucket into the active board. Anything not listed
+ * here (e.g. a workspace on `lightweight` with items still in
+ * `content_review`) stays visible in the `blockedItems` group or
+ * falls into the catch-all "no column" bucket — we surface them as
+ * their own section rather than silently dropping them, so the
+ * switch is never lossy in flight.
+ */
+function visibleBoardStatuses(
+  scenarioStages: readonly WorkflowScenarioStage[],
+): readonly ContentStatus[] {
+  return ALL_COLUMNS.filter((col) => scenarioStages.includes(col.stage)).flatMap(
+    (col) => col.statuses,
+  );
 }
 
 /**
@@ -90,7 +146,6 @@ export default async function WorkflowBoardPage({
 }) {
   const { t, code } = await tForActive();
   const { slug } = await params;
-  const columns = buildColumns(t);
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
@@ -99,6 +154,22 @@ export default async function WorkflowBoardPage({
     "workspace_manager",
     "content_planner",
   ]);
+
+  // Load the workspace's active workflow scenario (added by migration
+  // 0048) so the board only renders columns whose stage is included.
+  const [workspaceSettingsRow] = await db
+    .select({
+      workflowScenario: workspaceSettingsTable.workflowScenario,
+      approvalMode: workspaceSettingsTable.approvalMode,
+    })
+    .from(workspaceSettingsTable)
+    .where(eq(workspaceSettingsTable.workspaceId, workspace.id))
+    .limit(1);
+  const activeScenario = getActiveScenario({
+    workflowScenario: workspaceSettingsRow?.workflowScenario ?? "standard",
+    approvalMode: workspaceSettingsRow?.approvalMode ?? "simple",
+  });
+  const columns = buildColumns(t, activeScenario.stages);
 
   const filters = await searchParams;
   const selectedStatus =
@@ -260,6 +331,11 @@ export default async function WorkflowBoardPage({
             memberRows.map((m) => [m.id, m satisfies BoardMemberEntry]),
           )}
           blockedItems={items.filter((item) => item.status === "blocked")}
+          outOfScenarioItems={items.filter((item) => {
+            if (item.status === "blocked" || item.status === "cancelled") return false;
+            const visible = visibleBoardStatuses(activeScenario.stages);
+            return !(visible as readonly string[]).includes(item.status);
+          })}
         />
       )}
     </div>

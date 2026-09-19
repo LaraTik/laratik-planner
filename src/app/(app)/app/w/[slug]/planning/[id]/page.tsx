@@ -62,7 +62,14 @@ import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
-import { aiFeatureSettings, agencies, trendBriefs, trendSignals, users } from "@/lib/db/schema";
+import {
+  aiFeatureSettings,
+  agencies,
+  trendBriefs,
+  trendSignals,
+  users,
+  workspaceSettings as workspaceSettingsTable,
+} from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
@@ -80,6 +87,7 @@ import {
 } from "@/lib/media/service";
 import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/planning/presentation";
 import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
+import { getActiveScenario } from "@/lib/content/workflow";
 import type { ContentStatus } from "@/lib/content/status";
 
 export async function generateMetadata({
@@ -110,6 +118,22 @@ export default async function ContentDetailPage({
 
   const ws = await getAccessibleWorkspace(actor, slug);
   if (!ws) notFound();
+
+  // Load the workspace's workflow scenario so the rail / board / next-action
+  // surface reflects the active spine. New column added by migration 0048;
+  // unknown ids fall back to 'standard' inside getActiveScenario.
+  const [workspaceSettingsRow] = await db
+    .select({
+      workflowScenario: workspaceSettingsTable.workflowScenario,
+      approvalMode: workspaceSettingsTable.approvalMode,
+    })
+    .from(workspaceSettingsTable)
+    .where(eq(workspaceSettingsTable.workspaceId, ws.id))
+    .limit(1);
+  const activeScenario = getActiveScenario({
+    workflowScenario: workspaceSettingsRow?.workflowScenario ?? "standard",
+    approvalMode: workspaceSettingsRow?.approvalMode ?? "simple",
+  });
 
   const metaPublishingReadiness = await getMetaPublishingReadinessForWorkspace(ws.agencyId, ws.id);
   const metaPublishingCopy = metaPublishingReadinessCopy(metaPublishingReadiness, t);
@@ -705,6 +729,7 @@ export default async function ContentDetailPage({
           designers,
           ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
           planningPresentation,
+          scenario: activeScenario,
         }}
         workspace={{
           workspaceSlug: slug,

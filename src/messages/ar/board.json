@@ -18,5 +18,7 @@
   "columnCreativeReview": "المراجعة الإبداعية",
   "columnReady": "جاهز",
   "columnPublished": "منشور",
-  "noItems": "لا توجد عناصر"
+  "noItems": "لا توجد عناصر",
+  "outOfScenarioHeader": "خارج سير العمل الحالي",
+  "outOfScenarioDescription": "هذه العناصر في مراحل يتجاوزها سيناريو سير العمل الحالي. افتح كل عنصر لإنهائه أو إعادة تعيينه."
 }

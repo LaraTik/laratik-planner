@@ -8,6 +8,7 @@ export * from "./enums";
 export * from "./_helpers";
 export * from "./identity";
 export * from "./workspaces";
+export * from "./workflow";
 export * from "./channels";
 export * from "./planning";
 export * from "./monthly-planning";

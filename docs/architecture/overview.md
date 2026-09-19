@@ -54,6 +54,10 @@ and is threaded explicitly into every agency-scoped helper. See
 
 `src/lib/content/workflow.ts` defines statuses, actions, permitted roles, required reasons, approval gates, and return targets. Delivery and publishing modules derive their outcomes through typed pure functions and then persist those outcomes transactionally. UI labels and actions must consume the same domain definitions.
 
+### Per-workspace scenarios (migration 0048)
+
+The manager picks one `workflowScenario` per workspace from a pre-defined catalog (`workflow_scenario` table). The catalog fixes the ordered rail stages a scenario includes, whether creative approval is forced to one or two gates, and whether publishing setup is a required gate. `WORKFLOW_RULES` remains the engine for legal transitions; the scenario layer filters those rules at the boundary via `effectiveTransitions()` and `stageIncluded()`. Conditions (`blocked`, `cancelled`) always pass through, so scenarios never trap an in-flight item. The default `standard` scenario preserves prior behavior for every workspace shipped before migration 0048.
+
 ## Deployment and data safety
 
 The application and migrator are separate immutable image targets. Deployment is triggered only by successful CI for the exact commit. The VPS process verifies a backup and checksum before migration, never suppresses a migration failure, checks schema/application readiness after migration, and restores the previous application image when the new release is unhealthy.
