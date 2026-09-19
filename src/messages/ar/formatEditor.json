@@ -12,6 +12,10 @@
       "title": "الإبداع",
       "description": "التوجيه البصري، المراجع، ملاحظات التصميم."
     },
+    "workbook": {
+      "title": "خطة الإنتاج",
+      "description": "الحقول أدناه مطابقة لجدول التخطيط كما هو، من دون تقسيم إلى خطاف أو مشاهد."
+    },
     "creativeDirection": {
       "title": "التوجيه الإبداعي",
       "description": "حقول التوجيه الإبداعي الخاصة بكل تنسيق."
@@ -23,6 +27,8 @@
   },
   "fields": {
     "caption": "الكابشن",
+    "weekday": "اليوم",
+    "platforms": "المنصات",
     "hashtags": "الهاشتاجات",
     "hook": "الخطاف",
     "mainMessage": "الرسالة الرئيسية",
@@ -30,8 +36,12 @@
     "callToActionLabel": "تسمية الإجراء",
     "firstComment": "التعليق الأول",
     "visualDirection": "التوجيه البصري",
+    "onImageText": "النص داخل الصور",
     "visualSlides": "الشرائح البصرية",
     "references": "المراجع",
+    "requiredImageLinks": "رابط الصورة المطلوبة / مرجع التصميم",
+    "designReadyLink": "رابط التصميم الجاهز",
+    "publicationStatus": "حالة النشر",
     "location": "الموقع",
     "additionalNotes": "ملاحظات إضافية",
     "slideOutline": "مخطط الشرائح",
@@ -66,6 +76,10 @@
     },
     "referencesMeta": {
       "hint": "رابط واحد في كل سطر",
+      "placeholder": "https://…"
+    },
+    "requiredImageLinksMeta": {
+      "hint": "رابط واحد من عمود الصورة المطلوبة في كل سطر. ضع روابط التصميم الجاهز في الحقل المنفصل.",
       "placeholder": "https://…"
     },
     "hashtagsMeta": {

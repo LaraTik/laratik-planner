@@ -65,7 +65,6 @@ export const PRIMARY_WORKSPACE_TAB_IDS = [
   "copy",
   "delivery",
   "publishing",
-  "activity",
 ] as const satisfies readonly WorkspaceTabId[];
 
 export const SECONDARY_WORKSPACE_TAB_IDS = ["preview"] as const satisfies readonly WorkspaceTabId[];

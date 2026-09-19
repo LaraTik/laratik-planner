@@ -703,7 +703,7 @@ describe("MCP brand-kit tools", () => {
     await client.close();
   });
 
-  it("creates and updates normalized format payloads through content tools (cases 20–21)", async () => {
+  it("creates and updates normalized workbook payloads through content tools (cases 20–22)", async () => {
     const seeded = await seedWorkspace();
     const server = createLaraTikPlannerMcpServer({
       actor: { id: seeded.managerUserId },
@@ -718,17 +718,22 @@ describe("MCP brand-kit tools", () => {
       format_payload_written: boolean;
     }>(client, "laratik_planner_create_content", {
       workspace_id: seeded.workspaceId,
-      title: "Structured carousel",
+      title: "Workbook carousel",
       format: "carousel",
-      brief: "A carousel with a validated creative contract.",
+      brief: "A carousel with the workbook production contract.",
       planned_publish_at: "2026-09-21T17:00:00.000Z",
       format_payload: {
         schemaVersion: 1,
         contentLanguage: "ar",
-        slideCount: 2,
         caption: "Source caption",
+        weekday: "الاثنين",
+        platforms: "insta/Fb",
         visualDirection: "Use a clean product map.",
-        references: ["https://example.com/source"],
+        onImageText: "Text inside the artwork.",
+        requiredImageLinks: ["https://example.com/required-image"],
+        designReadyLink: "https://example.com/finished-design",
+        publicationStatus: "no",
+        additionalNotes: "Keep the full workbook note.",
         translations: { ar: { caption: "عنوان عربي" } },
         discardedField: "ignored by the format schema",
       },
@@ -744,24 +749,39 @@ describe("MCP brand-kit tools", () => {
     });
     expect(readAfterCreate.formatPayload).toMatchObject({
       schemaVersion: 1,
-      slideCount: 2,
       caption: "Source caption",
+      weekday: "الاثنين",
+      platforms: "insta/Fb",
+      onImageText: "Text inside the artwork.",
+      requiredImageLinks: ["https://example.com/required-image"],
+      designReadyLink: "https://example.com/finished-design",
+      publicationStatus: "no",
+      additionalNotes: "Keep the full workbook note.",
     });
     expect(readAfterCreate.formatPayload).not.toHaveProperty("discardedField");
+    expect(readAfterCreate.formatPayload).not.toHaveProperty("hook");
+    expect(readAfterCreate.formatPayload).not.toHaveProperty("references");
 
     const updated = await callTool<{ format_payload_written: boolean }>(
       client,
       "laratik_planner_update_content",
       {
         content_item_id: created.id,
-        title: "Structured carousel updated",
+        title: "Workbook carousel updated",
         format: "carousel",
-        brief: "Updated structured creative contract.",
+        brief: "Updated workbook production contract.",
         planned_publish_at: "2026-09-22T17:00:00.000Z",
         format_payload: {
           schemaVersion: 1,
-          slideCount: 3,
-          visualDirection: "Use three clear frames.",
+          caption: "Updated full caption.",
+          weekday: "الثلاثاء",
+          platforms: "insta/Fb",
+          visualDirection: "Updated full visual direction.",
+          onImageText: "Updated image text.",
+          requiredImageLinks: ["https://example.com/required-image-2"],
+          designReadyLink: "https://example.com/finished-design-2",
+          publicationStatus: "yes",
+          additionalNotes: "Updated notes.",
         },
         response_format: "json",
       },
@@ -775,11 +795,14 @@ describe("MCP brand-kit tools", () => {
       content_item_id: created.id,
       response_format: "json",
     });
-    expect(readAfterUpdate.title).toBe("Structured carousel updated");
+    expect(readAfterUpdate.title).toBe("Workbook carousel updated");
     expect(readAfterUpdate.formatPayload).toMatchObject({
       schemaVersion: 1,
-      slideCount: 3,
-      visualDirection: "Use three clear frames.",
+      caption: "Updated full caption.",
+      weekday: "الثلاثاء",
+      visualDirection: "Updated full visual direction.",
+      requiredImageLinks: ["https://example.com/required-image-2"],
+      designReadyLink: "https://example.com/finished-design-2",
     });
 
     await client.close();

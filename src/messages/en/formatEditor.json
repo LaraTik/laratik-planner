@@ -12,6 +12,10 @@
       "title": "Creative",
       "description": "Visual direction, references, design notes."
     },
+    "workbook": {
+      "title": "Production plan",
+      "description": "The fields below match the planning workbook exactly. Nothing is split into Hook or Scenes."
+    },
     "creativeDirection": {
       "title": "Creative direction",
       "description": "Format-specific creative direction fields."
@@ -23,6 +27,8 @@
   },
   "fields": {
     "caption": "Caption",
+    "weekday": "Day",
+    "platforms": "Platforms",
     "hashtags": "Hashtags",
     "hook": "Hook",
     "mainMessage": "Main message",
@@ -30,8 +36,12 @@
     "callToActionLabel": "CTA label",
     "firstComment": "First comment",
     "visualDirection": "Visual direction",
+    "onImageText": "Text inside images",
     "visualSlides": "Visual slides",
     "references": "References",
+    "requiredImageLinks": "Required image / design reference",
+    "designReadyLink": "Finished design link",
+    "publicationStatus": "Publication status",
     "location": "Location",
     "additionalNotes": "Additional notes",
     "slideOutline": "Slide outline",
@@ -69,6 +79,10 @@
     },
     "referencesMeta": {
       "hint": "One URL per line",
+      "placeholder": "https://…"
+    },
+    "requiredImageLinksMeta": {
+      "hint": "One Required image URL per line. Keep finished-design links in the separate field.",
       "placeholder": "https://…"
     },
     "hashtagsMeta": {

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal, Pencil, Archive, RotateCcw, Copy, FilePlus2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Archive, RotateCcw, Copy, FilePlus2, History } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { DestructiveConfirmDialog } from "@/components/forms/destructive-confirm-dialog";
@@ -134,6 +134,7 @@ export function WorkspaceShell({
   panels,
   canResetIdea,
   resetCounts,
+  activityCount,
   openCommentCount,
   mentionCount,
   canManageContentActions = false,
@@ -242,22 +243,22 @@ export function WorkspaceShell({
             mentionCount={mentionCount}
             onClick={() => setDrawerOpen(true)}
           />
-          {canResetIdea || canManageContentActions || (canEdit && editHref) ? (
-            <OverflowMenu
-              onReset={() => setResetOpen(true)}
-              onDuplicate={() => void duplicate()}
-              onReplacement={() => {
-                setActionError(null);
-                setReplacementOpen(true);
-              }}
-              onArchive={() => void archive()}
-              canResetIdea={canResetIdea}
-              canManageContentActions={canManageContentActions}
-              editHref={editHref}
-              canEdit={canEdit}
-              t={t}
-            />
-          ) : null}
+          <OverflowMenu
+            onActivity={() => setActiveId("activity")}
+            activityCount={activityCount}
+            onReset={() => setResetOpen(true)}
+            onDuplicate={() => void duplicate()}
+            onReplacement={() => {
+              setActionError(null);
+              setReplacementOpen(true);
+            }}
+            onArchive={() => void archive()}
+            canResetIdea={canResetIdea}
+            canManageContentActions={canManageContentActions}
+            editHref={editHref}
+            canEdit={canEdit}
+            t={t}
+          />
           {actionError && !replacementOpen ? (
             <p className="text-label text-danger max-w-56 font-semibold" role="alert">
               {actionError}
@@ -428,6 +429,8 @@ export function WorkspaceShell({
 }
 
 function OverflowMenu({
+  onActivity,
+  activityCount,
   onReset,
   onDuplicate,
   onReplacement,
@@ -438,6 +441,8 @@ function OverflowMenu({
   canEdit,
   t,
 }: {
+  onActivity: () => void;
+  activityCount: number;
   onReset: () => void;
   onDuplicate: () => void;
   onReplacement: () => void;
@@ -470,6 +475,14 @@ function OverflowMenu({
         className="w-56"
         data-testid="workspace-overflow-content"
       >
+        <DropdownMenuItem onSelect={onActivity} data-testid="workspace-overflow-activity">
+          <History className="h-3.5 w-3.5" aria-hidden="true" />
+          <span className="flex-1">{t("contentDetail.navigation.activity")}</span>
+          <span className="text-label text-fg-muted tabular-nums">{activityCount}</span>
+        </DropdownMenuItem>
+        {(canEdit && editHref) || canManageContentActions || canResetIdea ? (
+          <DropdownMenuSeparator />
+        ) : null}
         {canEdit && editHref ? (
           <DropdownMenuItem asChild data-testid="workspace-overflow-edit">
             <Link

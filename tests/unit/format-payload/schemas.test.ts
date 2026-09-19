@@ -45,7 +45,7 @@ describe("format-payload/schemas", () => {
     it("rejects an over-length caption", () => {
       const result = FormatPayloadByFormat.static_post.safeParse({
         schemaVersion: 1,
-        caption: "x".repeat(2_201),
+        caption: "x".repeat(10_001),
       });
       expect(result.success).toBe(false);
     });
@@ -175,18 +175,19 @@ describe("format-payload/schemas", () => {
       }
     });
 
-    it("aligns the `caption` cap with the static_post Zod schema (2 200)", () => {
+    it("aligns the `caption` cap with the static_post Zod schema (10 000)", () => {
       // Sanity check: the UI cap must equal the schema cap.
       // The previous TextFieldRenderer used 220, which let
       // the user type up to 2 200 chars but truncated on
       // submit silently. The new map pins the cap.
-      expect(fieldMaxLength("caption")).toBe(2_200);
+      expect(fieldMaxLength("caption")).toBe(10_000);
       expect(fieldMaxLength("firstComment")).toBe(2_200);
     });
 
-    it("aligns the `visualDirection` cap with the static_post Zod schema (2 000)", () => {
-      expect(fieldMaxLength("visualDirection")).toBe(2_000);
-      expect(fieldMaxLength("additionalNotes")).toBe(2_000);
+    it("aligns the workbook text caps with the static_post Zod schema (10 000)", () => {
+      expect(fieldMaxLength("visualDirection")).toBe(10_000);
+      expect(fieldMaxLength("additionalNotes")).toBe(10_000);
+      expect(fieldMaxLength("onImageText")).toBe(10_000);
       expect(fieldMaxLength("onScreenText")).toBe(2_000);
       expect(fieldMaxLength("voiceOverNotes")).toBe(2_000);
     });

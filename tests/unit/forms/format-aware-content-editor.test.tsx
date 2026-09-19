@@ -13,9 +13,8 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
 
 /**
  * Phase 2 of the planning-workspace-v2 refactor (2026-08-30):
- * the Content tab now renders a sectioned editor with
- * Strategy / Copy / Creative groups. Each format gets
- * its own section composition; the data model is unchanged.
+ * the Content tab now renders the workbook-shaped production
+ * fields without inferred Strategy / Hook / Scenes groups.
  *
  * Phase 5b (2026-09-01): the editor now resolves its
  * section title / description / field label through the
@@ -50,29 +49,23 @@ const baseProps = {
 };
 
 describe("FormatAwareContentEditor", () => {
-  it("renders Strategy and Creative sections without a duplicate Copy surface for static_post", () => {
+  it("renders one workbook section without inferred Strategy fields for static_post", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
-    expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-strategy")).not.toBeInTheDocument();
     expect(screen.getAllByText("Core creative fields").length).toBeGreaterThan(0);
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
     expect(
-      within(screen.getByTestId("format-section-creative")).queryByText("Core creative fields"),
-    ).not.toBeInTheDocument();
-    // objective/audience were promoted from "advanced" to
-    // "essential" in the 2026-09-17 reorg, so the Strategy
-    // section no longer has an "optional" disclosure for
-    // static_post. The Creative section still does.
-    expect(screen.queryByTestId("format-section-strategy-optional")).not.toBeInTheDocument();
-    expect(screen.getByTestId("format-section-creative-optional")).toBeInTheDocument();
-    expect(screen.getByTestId("format-section-creative-optional")).not.toHaveAttribute("open");
+      within(screen.getByTestId("format-section-creative")).getByText("Core creative fields"),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-creative-optional")).not.toBeInTheDocument();
+    expect(screen.getByTestId("field-caption-caption")).toBeInTheDocument();
+    expect(screen.getByTestId("field-onImageText")).toBeInTheDocument();
   });
 
   it("keeps populated optional details visible for returning planners", () => {
-    // 2026-09-17 reorg: objective/audience moved to essential,
-    // so the Strategy section has no "optional" disclosure
-    // anymore. The Creative section still does and stays
-    // open when populated.
+    // Workbook fields are all visible and do not use an inferred
+    // optional creative disclosure.
     render(
       <FormatAwareContentEditor
         {...baseProps}
@@ -81,35 +74,31 @@ describe("FormatAwareContentEditor", () => {
       />,
     );
 
-    expect(screen.getByTestId("format-section-creative-optional")).toHaveAttribute("open");
+    expect(screen.queryByTestId("format-section-creative-optional")).not.toBeInTheDocument();
   });
 
-  it("renders Strategy and Creative sections for carousel", () => {
+  it("renders the workbook section for carousel", () => {
     render(<FormatAwareContentEditor {...baseProps} format="carousel" />);
-    expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-strategy")).not.toBeInTheDocument();
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
   });
 
-  it("renders Strategy and Creative direction sections for short_form_video (Reel)", () => {
+  it("renders the workbook section for short_form_video (Reel)", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
-    expect(screen.getByTestId("format-section-strategy")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-strategy")).not.toBeInTheDocument();
     expect(screen.queryByTestId("format-section-copy")).not.toBeInTheDocument();
     expect(screen.getByTestId("format-section-creative")).toBeInTheDocument();
   });
 
-  it("mounts the slide outline as a first-class array manager for carousel", () => {
+  it("does not invent a slide outline array for carousel", () => {
     render(<FormatAwareContentEditor {...baseProps} format="carousel" />);
-    // The NavigableArrayField renders with fieldKey="slideOutline".
-    expect(screen.getByTestId("format-section-creative-slideOutline")).toBeInTheDocument();
-    // The chip-strip / add affordance from NavigableArrayField is present.
-    expect(screen.getByTestId("navigable-array-slider-slideOutline")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-creative-slideOutline")).not.toBeInTheDocument();
   });
 
-  it("mounts scenes as a first-class array manager for short_form_video", () => {
+  it("does not invent scenes for short_form_video", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
-    expect(screen.getByTestId("format-section-creative-scenes")).toBeInTheDocument();
-    expect(screen.getByTestId("navigable-array-slider-scenes")).toBeInTheDocument();
+    expect(screen.queryByTestId("format-section-creative-scenes")).not.toBeInTheDocument();
   });
 
   it("hides the Save button in read-only mode and shows the read-only notice", () => {
@@ -151,7 +140,7 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getAllByText(/ابدأ هنا لتحديد الاتجاه الإبداعي/).length).toBeGreaterThan(0);
   });
 
-  it("keeps audience copy out of Content while preserving the format save contract", () => {
+  it("keeps the workbook caption in Content while preserving the format save contract", () => {
     // Phase 1 of the planning-detail refactor (2026-08-30)
     // used a 220-char single-line TextFieldRenderer for
     // `caption` and `firstComment`. The new CaptionFieldRenderer
@@ -165,7 +154,7 @@ describe("FormatAwareContentEditor", () => {
         initial={{ schemaVersion: 1, caption: "Hello world" }}
       />,
     );
-    expect(screen.queryByTestId("field-caption-caption")).not.toBeInTheDocument();
+    expect(screen.getByTestId("field-caption-caption")).toBeInTheDocument();
     // The `format` hidden input is required by the
     // `updateFormatPayloadFormSchema` Zod schema; before the
     // fix, every save failed with a `format` field error.

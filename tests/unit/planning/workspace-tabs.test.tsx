@@ -39,8 +39,9 @@ vi.mock("next/navigation", () => ({
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. The contract:
- *  - Seven tabs in a fixed order: overview / content / copy / delivery / preview /
- *    publishing / activity. The Preview tab is the dedicated
+ *  - Activity remains a deep-linkable panel but is opened from the overflow
+ *    menu. The visible strip keeps overview / content / copy / delivery /
+ *    preview / publishing. The Preview tab is the dedicated
  *    home for the platform simulator (master prompt §7 +
  *    AGENTS.md §B + §C).
  *  - Every tab id maps to a Lucide icon — a regression that
@@ -89,14 +90,13 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
 }
 
 describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
-  it("keeps six task tabs primary and Preview outside the primary row", () => {
+  it("keeps production tabs primary and moves Activity to the overflow menu", () => {
     expect(PRIMARY_WORKSPACE_TAB_IDS).toEqual([
       "overview",
       "content",
       "copy",
       "delivery",
       "publishing",
-      "activity",
     ]);
     expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual(["preview"]);
   });

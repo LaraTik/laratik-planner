@@ -57,8 +57,14 @@ unknown fields are discarded and invalid fields return a tool error. The
 payload must include `schemaVersion: 1` or the service will normalize the
 version to `1`.
 
-The supported top-level fields depend on `format` (`caption`, `hook`,
-`visualDirection`, `slideOutline`, `scenes`, `references`, and so on). The
+The supported top-level fields depend on `format` (`caption`, `weekday`,
+`platforms`, `visualDirection`, `onImageText`, `requiredImageLinks`,
+`designReadyLink`, `publicationStatus`, `additionalNotes`, and legacy
+format-specific fields such as `hook`, `slideOutline`, `scenes`, and
+`references`). Workbook imports should use the flat production fields and must
+not infer Hook, Scenes, or slide outlines from long source text. Keep
+`requiredImageLinks` limited to Required image URLs and keep the finished
+design URL in `designReadyLink`. The
 `translations` map is also supported, but v1 accepts only `en` and `ar`, in
 line with the product locale contract. Use `additionalNotes` or the source
 caption to preserve source-plan text in other languages until those locales
@@ -76,10 +82,15 @@ Example carousel create:
   "format_payload": {
     "schemaVersion": 1,
     "contentLanguage": "ar",
-    "slideCount": 4,
     "caption": "…",
+    "weekday": "الاثنين",
+    "platforms": "insta/Fb",
     "visualDirection": "…",
-    "references": ["https://example.com/source"],
+    "onImageText": "…",
+    "requiredImageLinks": ["https://example.com/required-image"],
+    "designReadyLink": "https://example.com/finished-design",
+    "publicationStatus": "no",
+    "additionalNotes": "…",
     "translations": { "ar": { "caption": "…" } }
   },
   "response_format": "json"

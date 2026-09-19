@@ -32,8 +32,7 @@ import { resolveLocale } from "@/lib/i18n/locales";
  * 8-row + 2 200 cap + live counter UX. A future refactor
  * (e.g. adding an emoji picker) lands in one place.
  */
-export const CAPTION_MAX = 2_200;
-const CAPTION_WARN = Math.floor(CAPTION_MAX * 0.9); // 1 980
+export const CAPTION_MAX = 10_000;
 
 export interface CaptionFieldProps {
   /** Visible field label rendered above the textarea. */
@@ -64,6 +63,8 @@ export interface CaptionFieldProps {
   ariaLabel?: string;
   /** Content locale used only as the empty-field direction fallback. */
   locale?: string;
+  /** Optional per-field cap; captions and first comments share this component. */
+  maxLength?: number;
 }
 
 export function CaptionField({
@@ -80,12 +81,14 @@ export function CaptionField({
   testId = "caption-field",
   ariaLabel,
   locale: contentLocale,
+  maxLength = CAPTION_MAX,
 }: CaptionFieldProps) {
   const interfaceLocale = useLocaleCode();
   const locale = resolveLocale(contentLocale ?? interfaceLocale).code;
   const len = value.length;
-  const overWarn = len >= CAPTION_WARN;
-  const atMax = len >= CAPTION_MAX;
+  const captionWarn = Math.floor(maxLength * 0.9);
+  const overWarn = len >= captionWarn;
+  const atMax = len >= maxLength;
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <label htmlFor={id} className="text-body text-fg-primary font-semibold">
@@ -98,7 +101,7 @@ export function CaptionField({
         locale={locale}
         onChange={(e) => onChange(e.target.value || undefined)}
         rows={8}
-        maxLength={CAPTION_MAX}
+        maxLength={maxLength}
         disabled={disabled}
         placeholder={placeholder}
         aria-label={ariaLabel ?? label}
@@ -137,7 +140,7 @@ export function CaptionField({
             atMax && "text-danger font-semibold",
           )}
         >
-          {formatNumber(len, locale)} / {formatNumber(CAPTION_MAX, locale)}
+          {formatNumber(len, locale)} / {formatNumber(maxLength, locale)}
         </p>
       </div>
     </div>

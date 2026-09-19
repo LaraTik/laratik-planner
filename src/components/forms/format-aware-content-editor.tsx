@@ -19,8 +19,6 @@ import {
 } from "./format-payload-field-renderers";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { isAudienceCopyKey } from "@/lib/content/audience-copy";
-import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 
 /**
  * FormatAwareContentEditor — sectioned, format-aware
@@ -36,17 +34,10 @@ import { TabSwitchLink } from "@/components/planning/tab-switch-link";
  * groups, so the planner always knows which question each
  * field is answering:
  *
- *   1. **Strategy** — why are we publishing this? (objective,
- *      audience, key message, hook, main message)
- *   2. **Creative** — what does the visual look like? Audience-facing
- *      copy is intentionally omitted here and edited in the Copy tab.
- *      Format-specific:
- *        - Static Post → visual direction, visual slides,
- *          references, design notes
- *        - Carousel → slide outline (with full add / duplicate /
- *          delete / reorder / drag / keyboard support)
- *        - Reel → scenes, cover direction, on-screen text,
- *          voice-over notes, audio reference
+ *   1. **Workbook** — the production fields imported from the
+ *      planning workbook: caption, platforms, visual direction,
+ *      text inside images, required-image links, finished-design
+ *      link, publication status, and notes.
  *
  * The data model is unchanged. The component still writes
  * the creative subset of `formatPayload` via the existing server
@@ -109,64 +100,57 @@ interface SectionDef {
 const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   static_post: [
     {
-      id: "strategy",
-      titleKey: "formatEditor.sections.strategy.title",
-      descriptionKey: "formatEditor.sections.strategy.description",
-      icon: Compass,
-      keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
-    },
-    {
       id: "creative",
-      titleKey: "formatEditor.sections.creative.title",
-      descriptionKey: "formatEditor.sections.creative.description",
+      titleKey: "formatEditor.sections.workbook.title",
+      descriptionKey: "formatEditor.sections.workbook.description",
       icon: Palette,
-      keys: ["visualSlides", "visualDirection", "references", "location", "additionalNotes"],
+      keys: [
+        "caption",
+        "weekday",
+        "platforms",
+        "visualDirection",
+        "onImageText",
+        "requiredImageLinks",
+        "designReadyLink",
+        "publicationStatus",
+        "additionalNotes",
+      ],
     },
   ],
   carousel: [
     {
-      id: "strategy",
-      titleKey: "formatEditor.sections.strategy.title",
-      descriptionKey: "formatEditor.sections.strategy.description",
-      icon: Compass,
-      keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
-    },
-    {
       id: "creative",
-      titleKey: "formatEditor.sections.creative.title",
-      descriptionKey: "formatEditor.sections.creativeCarousel.description",
+      titleKey: "formatEditor.sections.workbook.title",
+      descriptionKey: "formatEditor.sections.workbook.description",
       icon: Palette,
-      // The slide outline is the headline of a carousel brief.
-      // Render it first inside the Creative section so the
-      // planner's eye lands on the slides before the supporting
-      // notes.
-      keys: ["slideOutline", "visualDirection", "references", "additionalNotes"],
+      keys: [
+        "caption",
+        "weekday",
+        "platforms",
+        "visualDirection",
+        "onImageText",
+        "requiredImageLinks",
+        "designReadyLink",
+        "publicationStatus",
+        "additionalNotes",
+      ],
     },
   ],
   short_form_video: [
     {
-      id: "strategy",
-      titleKey: "formatEditor.sections.strategy.title",
-      descriptionKey: "formatEditor.sections.strategy.description",
-      icon: Compass,
-      keys: ["objective", "audience", "hook", "mainMessage", "callToAction"],
-    },
-    {
       id: "creative",
-      titleKey: "formatEditor.sections.creativeDirection.title",
-      descriptionKey: "formatEditor.sections.creativeDirection.description",
+      titleKey: "formatEditor.sections.workbook.title",
+      descriptionKey: "formatEditor.sections.workbook.description",
       icon: Palette,
-      // Scenes are the headline of a reel brief — list them first.
       keys: [
-        "scenes",
-        "ratio",
-        "durationSeconds",
-        "onScreenText",
-        "voiceOverNotes",
-        "audioReference",
-        "coverDirection",
+        "caption",
+        "weekday",
+        "platforms",
         "visualDirection",
-        "references",
+        "onImageText",
+        "requiredImageLinks",
+        "designReadyLink",
+        "publicationStatus",
         "additionalNotes",
       ],
     },
@@ -177,18 +161,21 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
   // a flat fallback for everything else.
   story: [
     {
-      id: "strategy",
-      titleKey: "formatEditor.sections.strategy.title",
-      descriptionKey: "formatEditor.sections.strategy.description",
-      icon: Compass,
-      keys: ["objective", "audience", "hook", "callToAction"],
-    },
-    {
       id: "creative",
-      titleKey: "formatEditor.sections.creative.title",
-      descriptionKey: "formatEditor.sections.creative.description",
+      titleKey: "formatEditor.sections.workbook.title",
+      descriptionKey: "formatEditor.sections.workbook.description",
       icon: Palette,
-      keys: ["frameCount", "visualDirection", "additionalNotes"],
+      keys: [
+        "caption",
+        "weekday",
+        "platforms",
+        "visualDirection",
+        "onImageText",
+        "requiredImageLinks",
+        "designReadyLink",
+        "publicationStatus",
+        "additionalNotes",
+      ],
     },
   ],
   long_form_video: [
@@ -454,39 +441,8 @@ export function FormatAwareContentEditor({
         </p>
       ) : null}
 
-      {/* "Where is the caption?" hint — the most common question
-          planners ask. Surfaces upfront that the audience-facing
-          copy (caption / hashtags / first comment / description /
-          location) is owned by the Copy tab. Saves a tab round-trip
-          and prevents two-edit drift. Hidden when the user is in
-          designer mode (editableFields set) because they're
-          editing the brief, not the copy. */}
-      {!editableFields ? (
-        <div
-          className="border-info bg-info-subtle text-fg-primary mt-4 flex flex-wrap items-start gap-3 rounded-[var(--radius-control)] border px-3 py-2"
-          role="note"
-          data-testid="format-aware-copy-hint"
-        >
-          <p className="text-body flex-1">{t("formatEditor.editor.copyLivesInCopyTab")}</p>
-          <Button asChild size="sm" variant="outline">
-            <TabSwitchLink href="#copy" data-testid="format-aware-open-copy-tab">
-              {t("contentDetail.copy.openCopy")}
-            </TabSwitchLink>
-          </Button>
-        </div>
-      ) : null}
-
       <div className="mt-5 space-y-5" data-testid="format-aware-sections">
         {sections.map((section) => {
-          // Audience-facing fields (caption, hashtags, firstComment,
-          // description, location, callToAction where it is
-          // audience-facing) have ONE canonical owner — the Copy
-          // tab. The Brief tab surfaces Hook and Main message as
-          // *strategy* fields (the planner's own thinking), not as
-          // editable audience copy, so the two surfaces never drift.
-          // isAudienceCopyKey() below keeps those fields out of the
-          // section render even if a manifest key accidentally slips
-          // into the strategy section.
           const Icon = section.icon;
           // Map the section's declared keys back to the manifest
           // entries. We render in manifest order so the planner
@@ -494,7 +450,6 @@ export function FormatAwareContentEditor({
           const sectionFields = fields.filter(
             (f) =>
               section.keys.includes(f.key) &&
-              !isAudienceCopyKey(f.key) &&
               // objective/audience are rendered as a pair by
               // their own renderer; pick one entry to drive
               // the render and skip the other.

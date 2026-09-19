@@ -819,25 +819,30 @@ function ScheduledStartFieldRenderer({
   );
 }
 
-function ReferencesFieldRenderer({
+function UrlListFieldRenderer({
+  fieldKey,
   label,
+  hint,
   payload,
   locale,
   editable,
   t,
   onField,
 }: FieldRendererProps) {
-  const arr = Array.isArray(payload.references) ? (payload.references as unknown[]) : [];
+  const arr = Array.isArray(payload[fieldKey]) ? (payload[fieldKey] as unknown[]) : [];
   const value = arr.filter((x): x is string => typeof x === "string").join("\n");
+  const resolvedHint =
+    hint ??
+    (fieldKey === "requiredImageLinks"
+      ? t("formatEditor.fields.requiredImageLinksMeta.hint")
+      : fieldKey === "references"
+        ? t("formatEditor.fields.referencesMeta.hint")
+        : undefined);
   return (
-    <div className="space-y-1.5" data-testid="field-references">
-      <LabeledField
-        fieldKey="references"
-        label={label}
-        hint={t("formatEditor.fields.referencesMeta.hint")}
-      />
+    <div className="space-y-1.5" data-testid={`field-${fieldKey}`}>
+      <LabeledField fieldKey={fieldKey} label={label} hint={resolvedHint} />
       <DirAwareTextarea
-        id="references"
+        id={fieldKey}
         locale={locale}
         value={value}
         readOnly={!editable}
@@ -846,10 +851,11 @@ function ReferencesFieldRenderer({
             .split(/\r?\n/)
             .map((s) => s.trim())
             .filter((s) => s.length > 0);
-          onField("references", next.length > 0 ? next : undefined);
+          onField(fieldKey, next.length > 0 ? next : undefined);
         }}
         rows={Math.min(6, Math.max(2, value.split("\n").length + 1))}
-        placeholder={t("formatEditor.fields.referencesMeta.placeholder")}
+        placeholder={resolvedHint}
+        aria-describedby={resolvedHint ? `${fieldKey}-hint` : undefined}
       />
     </div>
   );
@@ -983,7 +989,7 @@ function CaptionFieldRenderer({
 }: FieldRendererProps) {
   const value = stringField(payload, fieldKey);
   const sourceLocale = getByCode(resolveLocale(locale).code).code;
-  // Always 2 200 for caption / firstComment. The map is the
+  // The map is the
   // single source of truth for the cap; if the schema grows
   // the cap, the central map and this renderer follow.
   const maxLength = FIELD_MAX_LENGTHS[fieldKey as FieldMaxLengthKey] ?? 2_200;
@@ -1014,6 +1020,7 @@ function CaptionFieldRenderer({
         disabled={!editable}
         locale={locale}
         testId={`field-${fieldKey}-caption`}
+        maxLength={maxLength}
         {...(hint ? { hint } : {})}
       />
       {/* Hidden marker so tests can assert the cap the
@@ -1072,7 +1079,13 @@ export const RENDERERS: Record<string, FieldRenderer> = {
   audience: ObjectiveAudienceRenderer,
   // Composite / array fields.
   location: LocationFieldRenderer,
-  references: ReferencesFieldRenderer,
+  references: UrlListFieldRenderer,
+  requiredImageLinks: UrlListFieldRenderer,
+  weekday: PlainTextFieldRenderer,
+  platforms: PlainTextFieldRenderer,
+  designReadyLink: PlainTextFieldRenderer,
+  publicationStatus: PlainTextFieldRenderer,
+  onImageText: LongTextFieldRenderer,
   visualSlides: VisualSlidesFieldRenderer,
   scenes: ScenesFieldRenderer,
   slideOutline: SlideOutlineFieldRenderer,

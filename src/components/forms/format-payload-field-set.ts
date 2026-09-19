@@ -73,82 +73,79 @@ export interface FieldDef {
 export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = {
   static_post: [
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
-    { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
-    { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
-    { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "essential" },
-    { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
-    { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    // Objective + Audience are STRATEGY fields, not advanced.
-    // They always belonged in essential; the previous grouping
-    // buried the planner's core intent under a disclosure.
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
-    // Visual slides lead the Creative section so the
-    // designer-mode editor sees them first. The full
-    // per-slide structured array (visualSlides) gives the
-    // designer a frame-by-frame place to capture direction.
-    { key: "visualSlides", labelKey: "formatEditor.fields.visualSlides", group: "advanced" },
-    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
-    { key: "location", labelKey: "formatEditor.fields.location", group: "advanced" },
-    { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
-    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
+    { key: "weekday", labelKey: "formatEditor.fields.weekday", group: "essential" },
+    { key: "platforms", labelKey: "formatEditor.fields.platforms", group: "essential" },
+    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "essential" },
+    { key: "onImageText", labelKey: "formatEditor.fields.onImageText", group: "essential" },
+    {
+      key: "requiredImageLinks",
+      labelKey: "formatEditor.fields.requiredImageLinks",
+      group: "essential",
+    },
+    { key: "designReadyLink", labelKey: "formatEditor.fields.designReadyLink", group: "essential" },
+    {
+      key: "publicationStatus",
+      labelKey: "formatEditor.fields.publicationStatus",
+      group: "essential",
+    },
+    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "essential" },
   ],
   carousel: [
-    { key: "slideCount", labelKey: "formatEditor.fields.slideCount", group: "essential" },
-    // Slide outline is the headline of a carousel brief.
-    // Render it BEFORE the strategy fields so the planner
-    // sees the slides first, then fills in the strategic
-    // framing (hook, mainMessage, callToAction) below.
-    { key: "slideOutline", labelKey: "formatEditor.fields.slideOutline", group: "essential" },
-    { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
-    { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "essential" },
-    { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
-    { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
-    { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    // Objective + Audience are STRATEGY fields, not advanced.
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
-    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
-    { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
-    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
+    { key: "weekday", labelKey: "formatEditor.fields.weekday", group: "essential" },
+    { key: "platforms", labelKey: "formatEditor.fields.platforms", group: "essential" },
+    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "essential" },
+    { key: "onImageText", labelKey: "formatEditor.fields.onImageText", group: "essential" },
+    {
+      key: "requiredImageLinks",
+      labelKey: "formatEditor.fields.requiredImageLinks",
+      group: "essential",
+    },
+    { key: "designReadyLink", labelKey: "formatEditor.fields.designReadyLink", group: "essential" },
+    {
+      key: "publicationStatus",
+      labelKey: "formatEditor.fields.publicationStatus",
+      group: "essential",
+    },
+    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "essential" },
   ],
   story: [
-    { key: "frameCount", labelKey: "formatEditor.fields.frameCount", group: "essential" },
-    { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
-    { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
-    { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
-    { key: "firstComment", labelKey: "formatEditor.fields.firstComment", group: "essential" },
-    // Objective + Audience are STRATEGY fields, not advanced.
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
-    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
-    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
+    { key: "weekday", labelKey: "formatEditor.fields.weekday", group: "essential" },
+    { key: "platforms", labelKey: "formatEditor.fields.platforms", group: "essential" },
+    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "essential" },
+    { key: "onImageText", labelKey: "formatEditor.fields.onImageText", group: "essential" },
+    {
+      key: "requiredImageLinks",
+      labelKey: "formatEditor.fields.requiredImageLinks",
+      group: "essential",
+    },
+    { key: "designReadyLink", labelKey: "formatEditor.fields.designReadyLink", group: "essential" },
+    {
+      key: "publicationStatus",
+      labelKey: "formatEditor.fields.publicationStatus",
+      group: "essential",
+    },
+    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "essential" },
   ],
   short_form_video: [
-    // Scenes lead the brief for a reel — they're the
-    // core creative direction. Ratio and duration come
-    // right after because they're the spec for the
-    // scenes.
-    { key: "scenes", labelKey: "formatEditor.fields.scenes", group: "essential" },
-    { key: "ratio", labelKey: "formatEditor.fields.ratio", group: "essential" },
-    { key: "durationSeconds", labelKey: "formatEditor.fields.duration", group: "essential" },
-    { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
-    { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
-    { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
-    { key: "onScreenText", labelKey: "formatEditor.fields.onScreenText", group: "essential" },
-    // Objective + Audience are STRATEGY fields, not advanced.
-    { key: "objective", labelKey: "formatEditor.fields.objective", group: "essential" },
-    { key: "audience", labelKey: "formatEditor.fields.audience", group: "essential" },
-    { key: "mainMessage", labelKey: "formatEditor.fields.mainMessage", group: "advanced" },
-    { key: "voiceOverNotes", labelKey: "formatEditor.fields.voiceOverNotes", group: "advanced" },
-    { key: "audioReference", labelKey: "formatEditor.fields.audioReference", group: "advanced" },
-    { key: "coverDirection", labelKey: "formatEditor.fields.coverDirection", group: "advanced" },
-    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
-    { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
-    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
+    { key: "weekday", labelKey: "formatEditor.fields.weekday", group: "essential" },
+    { key: "platforms", labelKey: "formatEditor.fields.platforms", group: "essential" },
+    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "essential" },
+    { key: "onImageText", labelKey: "formatEditor.fields.onImageText", group: "essential" },
+    {
+      key: "requiredImageLinks",
+      labelKey: "formatEditor.fields.requiredImageLinks",
+      group: "essential",
+    },
+    { key: "designReadyLink", labelKey: "formatEditor.fields.designReadyLink", group: "essential" },
+    {
+      key: "publicationStatus",
+      labelKey: "formatEditor.fields.publicationStatus",
+      group: "essential",
+    },
+    { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "essential" },
   ],
   long_form_video: [
     { key: "ratio", labelKey: "formatEditor.fields.ratio", group: "essential" },

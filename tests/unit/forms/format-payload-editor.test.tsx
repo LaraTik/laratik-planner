@@ -45,10 +45,10 @@ describe("FormatPayloadEditor", () => {
     expect(screen.queryByTestId("format-payload-editor-body")).toBeNull();
     // Header shows the total completion count and the essential count.
     expect(screen.getByTestId("format-payload-completion-total")).toHaveTextContent(
-      "2 / 13 total filled",
+      "2 / 9 total filled",
     );
     expect(screen.getByTestId("format-payload-completion-essential")).toHaveTextContent(
-      "2 / 8 essential",
+      "1 / 9 essential",
     );
   });
 
@@ -72,12 +72,16 @@ describe("FormatPayloadEditor", () => {
     // Essential fields are present.
     const essentialTier = within(body).getByTestId("essential-tier");
     expect(within(essentialTier).getByTestId("essential-field-caption")).toBeInTheDocument();
-    expect(within(essentialTier).getByTestId("essential-field-hook")).toBeInTheDocument();
-    // Advanced fields are NOT rendered in the essential tier.
-    expect(within(essentialTier).queryByTestId("essential-field-visualDirection")).toBeNull();
+    expect(
+      within(essentialTier).getByTestId("essential-field-visualDirection"),
+    ).toBeInTheDocument();
+    expect(
+      within(essentialTier).getByTestId("essential-field-requiredImageLinks"),
+    ).toBeInTheDocument();
+    expect(within(essentialTier).queryByTestId("essential-field-hook")).toBeNull();
   });
 
-  it("renders the advanced disclosure with the right count", async () => {
+  it("does not create a second advanced tier for the workbook fields", async () => {
     render(
       <FormatPayloadEditor
         t={t}
@@ -91,15 +95,7 @@ describe("FormatPayloadEditor", () => {
       />,
     );
     await userEvent.click(screen.getByTestId("format-payload-toggle"));
-    const disclosure = screen.getByTestId("advanced-disclosure");
-    expect(disclosure).toHaveAttribute("data-open", "false");
-    // 5 advanced fields inside the disclosure; the
-    // `objective` + `audience` pair is rendered separately
-    // in the essential tier (it has a dedicated grid pair
-    // component, not a single-field renderer).
-    expect(within(disclosure).getByTestId("advanced-disclosure-show")).toHaveTextContent(
-      "Advanced details (5)",
-    );
+    expect(screen.queryByTestId("advanced-disclosure")).toBeNull();
   });
 
   it("renders format-specific essential fields for short_form_video", async () => {
@@ -117,16 +113,13 @@ describe("FormatPayloadEditor", () => {
     );
     await userEvent.click(screen.getByTestId("format-payload-toggle"));
     const essentialTier = screen.getByTestId("essential-tier");
-    // The short-form video essentials include the format-specific fields.
-    expect(within(essentialTier).getByTestId("essential-field-ratio")).toBeInTheDocument();
     expect(
-      within(essentialTier).getByTestId("essential-field-durationSeconds"),
+      within(essentialTier).getByTestId("essential-field-visualDirection"),
     ).toBeInTheDocument();
-    expect(within(essentialTier).getByTestId("essential-field-scenes")).toBeInTheDocument();
-    expect(within(essentialTier).getByTestId("essential-field-onScreenText")).toBeInTheDocument();
+    expect(within(essentialTier).getByTestId("essential-field-onImageText")).toBeInTheDocument();
   });
 
-  it("renders carousel-specific essentials including the slide outline", async () => {
+  it("renders carousel workbook essentials without an inferred slide outline", async () => {
     render(
       <FormatPayloadEditor
         t={t}
@@ -141,8 +134,10 @@ describe("FormatPayloadEditor", () => {
     );
     await userEvent.click(screen.getByTestId("format-payload-toggle"));
     const essentialTier = screen.getByTestId("essential-tier");
-    expect(within(essentialTier).getByTestId("essential-field-slideCount")).toBeInTheDocument();
-    expect(within(essentialTier).getByTestId("essential-field-slideOutline")).toBeInTheDocument();
+    expect(
+      within(essentialTier).getByTestId("essential-field-requiredImageLinks"),
+    ).toBeInTheDocument();
+    expect(within(essentialTier).queryByTestId("essential-field-slideOutline")).toBeNull();
   });
 
   it("does not render a save button when read-only", async () => {

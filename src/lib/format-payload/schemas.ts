@@ -63,6 +63,25 @@ const TranslationMapSchema = z
 const ShortText = z.string().trim().max(220);
 
 /**
+ * Workbook-native planning fields.
+ *
+ * These deliberately stay flat and source-shaped. The Excel planning
+ * file is the creative contract used by the designer, so we must not
+ * reinterpret one long visual brief as a hook, scene list, or other
+ * inferred structure. Legacy fields remain in the format schemas for
+ * backward compatibility, but new imports and the planner UI use this
+ * shared set.
+ */
+const WorkbookPlanningFields = {
+  weekday: z.string().trim().max(40).optional(),
+  platforms: z.string().trim().max(1_000).optional(),
+  onImageText: z.string().trim().max(10_000).optional(),
+  requiredImageLinks: z.array(z.string().url().max(500)).max(20).optional(),
+  designReadyLink: z.string().trim().url().max(500).optional(),
+  publicationStatus: z.string().trim().max(80).optional(),
+} as const;
+
+/**
  * `static_post` — single image / video / text post.
  * The publish form is the per-platform adapter (Instagram, X,
  * Facebook, LinkedIn). The planner-facing fields here are
@@ -81,11 +100,11 @@ export const StaticPostPayloadSchema = z.object({
    * `content_item_channel.platform_payload.caption` (see
    * payload-schemas.ts). This is the planner's working draft.
    */
-  caption: z.string().trim().max(2_200).optional(),
+  caption: z.string().trim().max(10_000).optional(),
   hashtags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
   firstComment: z.string().trim().max(2_200).optional(),
   /** Free-text visual direction for the designer. */
-  visualDirection: z.string().trim().max(2_000).optional(),
+  visualDirection: z.string().trim().max(10_000).optional(),
   /** Per-slide visual notes when the post is a single-image deck. */
   visualSlides: z
     .array(
@@ -105,7 +124,8 @@ export const StaticPostPayloadSchema = z.object({
     .optional(),
   references: z.array(z.string().url().max(500)).max(20).optional(),
   /** Free-form notes — kept distinct from the structured fields. */
-  additionalNotes: z.string().trim().max(2_000).optional(),
+  additionalNotes: z.string().trim().max(10_000).optional(),
+  ...WorkbookPlanningFields,
   translations: TranslationMapSchema.optional(),
 });
 export type StaticPostPayload = z.infer<typeof StaticPostPayloadSchema>;
@@ -120,7 +140,7 @@ export const CarouselPayloadSchema = z.object({
   hook: ShortText.optional(),
   mainMessage: ShortText.optional(),
   callToAction: ShortText.optional(),
-  caption: z.string().trim().max(2_200).optional(),
+  caption: z.string().trim().max(10_000).optional(),
   hashtags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
   firstComment: z.string().trim().max(2_200).optional(),
   /**
@@ -138,9 +158,10 @@ export const CarouselPayloadSchema = z.object({
     )
     .max(10)
     .optional(),
-  visualDirection: z.string().trim().max(2_000).optional(),
+  visualDirection: z.string().trim().max(10_000).optional(),
   references: z.array(z.string().url().max(500)).max(20).optional(),
-  additionalNotes: z.string().trim().max(2_000).optional(),
+  additionalNotes: z.string().trim().max(10_000).optional(),
+  ...WorkbookPlanningFields,
   translations: TranslationMapSchema.optional(),
 });
 export type CarouselPayload = z.infer<typeof CarouselPayloadSchema>;
@@ -154,10 +175,11 @@ export const StoryPayloadSchema = z.object({
   audience: z.string().trim().max(200).optional(),
   hook: ShortText.optional(),
   callToAction: ShortText.optional(),
-  caption: z.string().trim().max(2_200).optional(),
+  caption: z.string().trim().max(10_000).optional(),
   hashtags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
-  visualDirection: z.string().trim().max(2_000).optional(),
-  additionalNotes: z.string().trim().max(2_000).optional(),
+  visualDirection: z.string().trim().max(10_000).optional(),
+  additionalNotes: z.string().trim().max(10_000).optional(),
+  ...WorkbookPlanningFields,
   translations: TranslationMapSchema.optional(),
 });
 export type StoryPayload = z.infer<typeof StoryPayloadSchema>;
@@ -171,7 +193,7 @@ export const ShortFormVideoPayloadSchema = z.object({
   hook: ShortText.optional(),
   mainMessage: ShortText.optional(),
   callToAction: ShortText.optional(),
-  caption: z.string().trim().max(2_200).optional(),
+  caption: z.string().trim().max(10_000).optional(),
   hashtags: z.array(z.string().trim().min(1).max(60)).max(30).optional(),
   /**
    * Scene list — position + one-line summary + duration. The
@@ -192,9 +214,10 @@ export const ShortFormVideoPayloadSchema = z.object({
   voiceOverNotes: z.string().trim().max(2_000).optional(),
   audioReference: z.string().url().max(500).optional(),
   coverDirection: z.string().trim().max(500).optional(),
-  visualDirection: z.string().trim().max(2_000).optional(),
+  visualDirection: z.string().trim().max(10_000).optional(),
   references: z.array(z.string().url().max(500)).max(20).optional(),
-  additionalNotes: z.string().trim().max(2_000).optional(),
+  additionalNotes: z.string().trim().max(10_000).optional(),
+  ...WorkbookPlanningFields,
   translations: TranslationMapSchema.optional(),
 });
 export type ShortFormVideoPayload = z.infer<typeof ShortFormVideoPayloadSchema>;
@@ -451,11 +474,15 @@ export function getTranslation(
  */
 export const FIELD_MAX_LENGTHS = {
   // Long-form audience-facing text (caption + first comment).
-  caption: 2_200,
+  // Excel captions can be substantially longer than a short social
+  // hook. Keep the planning source intact; platform-specific limits
+  // belong to the publish adapter.
+  caption: 10_000,
   firstComment: 2_200,
   // Creative direction — long enough for a paragraph.
-  visualDirection: 2_000,
-  additionalNotes: 2_000,
+  visualDirection: 10_000,
+  additionalNotes: 10_000,
+  onImageText: 10_000,
   onScreenText: 2_000,
   voiceOverNotes: 2_000,
   // Long-form video descriptions can be much longer (YouTube
@@ -485,6 +512,10 @@ export const FIELD_MAX_LENGTHS = {
   // References / URLs.
   referenceUrl: 500,
   referencesMaxCount: 20,
+  designReadyLink: 500,
+  platforms: 1_000,
+  weekday: 40,
+  publicationStatus: 80,
   // Live content.
   liveGuestName: 120,
   liveRunOfShowTopic: 220,

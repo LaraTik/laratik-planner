@@ -7,9 +7,9 @@ import { CaptionField, CAPTION_MAX } from "@/components/forms/caption-field";
 /**
  * CaptionField — plan §3 acceptance:
  *   - rows=8 (regression guard for the publish form's caption)
- *   - maxLength=2_200 (the per-platform schema cap)
- *   - counter goes warning at 1 980 chars (90%) and danger
- *     at 2 200 (100%)
+ *   - maxLength=10_000 for the planning source caption
+ *   - counter goes warning at 9 000 chars (90%) and danger
+ *     at 10 000 (100%)
  *   - aria-live="polite" on the counter for screen readers
  *   - error prop sets aria-invalid="true" on the textarea
  */
@@ -24,7 +24,7 @@ describe("CaptionField", () => {
         onChange={() => undefined}
       />,
     );
-    expect(screen.getByText("5 / 2,200")).toBeInTheDocument();
+    expect(screen.getByText("5 / 10,000")).toBeInTheDocument();
   });
 
   it("renders an 8-row textarea", () => {
@@ -46,7 +46,7 @@ describe("CaptionField", () => {
         onChange={() => undefined}
       />,
     );
-    const counter = screen.getByText(/1,980/);
+    const counter = screen.getByText(/9,000/);
     expect(counter.className).toContain("text-warning");
   });
 
@@ -61,7 +61,7 @@ describe("CaptionField", () => {
         onChange={() => undefined}
       />,
     );
-    const counter = screen.getByText(/2,200/);
+    const counter = screen.getByText(/10,000/);
     expect(counter.className).toContain("text-danger");
   });
 

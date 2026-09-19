@@ -22,4 +22,5 @@
   <case id="19">list_workspaces with `name_query` containing SQL LIKE wildcards (`%` / `_`) treats them as literals (ESCAPE '\\') — the result set is not widened beyond the literal substring.</case>
   <case id="20">create_content accepts a complete format_payload for the selected format, writes it through the per-format Zod service, and get_content returns the normalized creative fields.</case>
   <case id="21">update_content accepts a complete format_payload for an editable draft, preserves the existing authorization and workflow rules, and rejects payload fields that do not satisfy the selected format schema.</case>
+  <case id="22">Workbook-shaped format_payload preserves the full caption and visual direction, stores optional onImageText, weekday, platforms, requiredImageLinks, designReadyLink, publicationStatus, and additionalNotes, and does not infer hook/scenes/references when those fields are omitted.</case>
 </evaluation>

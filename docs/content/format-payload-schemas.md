@@ -13,6 +13,28 @@ structured, format-specific contract creative must answer. Keep them
 separate: rewriting the brief for clarity does not reset creative's
 structured notes, and vice versa.
 
+### Workbook-native production fields
+
+The Just Halal and Food Game planning workbooks use a flat production contract.
+For `static_post`, `carousel`, `story`, and `short_form_video`, preserve these
+source-shaped fields without inferring a Hook, scene list, or slide outline:
+
+| Workbook column                            | `formatPayload` key  | Rule                                                                                               |
+| ------------------------------------------ | -------------------- | -------------------------------------------------------------------------------------------------- |
+| `Post / Caption`                           | `caption`            | Keep the full source text; platform limits belong to publishing.                                   |
+| `Day`                                      | `weekday`            | Preserve the workbook value.                                                                       |
+| `platforms`                                | `platforms`          | Preserve the workbook value.                                                                       |
+| `visual Guidelines`                        | `visualDirection`    | Keep the complete visual brief, including text shown in the image when the source places it there. |
+| `visual caption / reel`                    | `onImageText`        | Optional text inside images or video.                                                              |
+| `Required image`                           | `requiredImageLinks` | Only required-image/design-reference URLs.                                                         |
+| `Design status`                            | `designReadyLink`    | The finished design/reel URL; do not merge it into references.                                     |
+| `published`                                | `publicationStatus`  | Preserve the source status as planning metadata; it does not change the Planner workflow state.    |
+| `notice`, recipe columns, and source notes | `additionalNotes`    | Preserve source notes without truncation.                                                          |
+
+Legacy fields such as `hook`, `scenes`, `slideOutline`, and `references` remain
+accepted for compatibility with older records, but the workbook import and the
+current production editor do not create or display them for these four formats.
+
 ## Why not add columns?
 
 Three reasons that argue for jsonb (`format_payload`) instead of new
@@ -49,6 +71,16 @@ columns on `content_item`:
 ```jsonc
 {
   "schemaVersion": 1,
+  "contentLanguage": "ar",
+  "caption": "Full workbook caption",
+  "weekday": "الاثنين",
+  "platforms": "insta/Fb",
+  "visualDirection": "Full visual brief",
+  "onImageText": "Optional text inside the image",
+  "requiredImageLinks": ["https://example.com/required-image"],
+  "designReadyLink": "https://example.com/finished-design",
+  "publicationStatus": "yes",
+  "additionalNotes": "Source notes",
   "objective": "awareness" | "consideration" | "conversion" | "retention" | null,
   "audience": "string | null",
   "hook": "string | null",         // 1-line scroll-stop
