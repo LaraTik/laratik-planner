@@ -211,7 +211,7 @@
   },
   "templates": {
     "title": "Settings presets",
-    "description": "Curated preset values for the four numbers every new workspace has to set. Each card shows the delta against your current settings so you can see what changes before applying.",
+    "description": "Curated preset values for the four numbers every new workspace has to set plus the workflow spine. Each card shows the delta against your current settings so you can see what changes before applying.",
     "empty": "No templates available yet.",
     "apply": "Apply preset",
     "applied": "Preset applied.",
@@ -234,6 +234,10 @@
     "monthlyTargetSection": {
       "title": "Monthly target presets",
       "blurb": "Common post-per-month targets the planning KPI bar uses to colour on-track / at-risk / off-track."
+    },
+    "workflowScenarioSection": {
+      "title": "Workflow scenario presets",
+      "blurb": "Pick which stages a content item runs through. Switch anytime — in-flight items keep their current state."
     },
     "leadClientHint": "This preset flips approval mode to 'Internal, then client'.",
     "leadFast": {

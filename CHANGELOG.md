@@ -12,6 +12,45 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Per-workspace workflow scenarios
+
+- New Settings → Templates → **Workflow scenario presets** section
+  (`/app/w/[slug]/settings/templates`). Managers pick from four
+  pre-defined spines: **Standard** (full editorial flow),
+  **Lightweight** (skips content review — solo brands and small teams),
+  **Two-gate client** (forces internal-then-client approval), and
+  **Self-publish** (collapses the publishing-setup gate; publishers
+  publish directly from the approval screen).
+- Each card shows a horizontal mini-rail preview, a current-vs-card diff
+  badge, and an explicit side-effect hint when the scenario forces
+  `approvalMode`. Apply is a single click; switches are reversible and
+  in-flight items keep their current state.
+- New `workspace_settings.workflow_scenario` column + read-only
+  `workflow_scenario` catalog table (migration `0048_workflow_scenarios`).
+  Default `'standard'` is behaviour-preserving for every workspace
+  shipped before this migration.
+- `src/lib/content/workflow.ts` gains `WorkflowScenarioId`,
+  `ScenarioSpec`, `getActiveScenario()`, `stageIncluded()`,
+  `effectiveTransitions()`. `resolveWorkflowTransition()` accepts an
+  optional scenario; missing it defaults to `standard` (backward compat).
+- `WorkflowRail` and `WorkflowStepper` accept a scenario and skip the
+  excluded chips. `WorkflowBoard` filters columns by scenario and surfaces
+  out-of-scenario items in a dedicated "Outside current workflow" group so
+  the switch is never lossy.
+- New MCP tools `laratik_planner_get_workspace_settings` (read) and
+  `laratik_planner_apply_workflow_scenario` (write, manager-only).
+  `laratik_planner_transition_content` description notes the scenario
+  filter so MCP clients call `get_workspace_settings` first when the
+  spine is unclear.
+
+### Changed — `ready_to_publish` "next" string
+
+- The rail's `next` string for the Publishing Setup stage now reads
+  _"Validate the package so channels are ready for the publisher. This
+  does not schedule or publish."_ — same copy as
+  `markPublishingSetupReadyDescription` so both surfaces stay in sync.
+  See ADR 0014 / Appendix A of the implementation plan.
+
 ### Fixed — Delivery tab: media uploader now shows the "From link" tab and defaults to the canonical `Posts / {Format} / {YYYY} / {MM}` folder (2026-09-19)
 
 Two UX regressions reported on the Delivery tab of a planned post
@@ -52,7 +91,7 @@ Changes:
   current content item up front via the existing
   `ensurePlanningMediaFolderPathPublic` service and passes its id to
   `<DeliverySection>` as `defaultFolderId`. Wrapped in `.catch(() =>
-  null)` so a misconfigured workspace (no actor, bad timezone, etc.)
+null)` so a misconfigured workspace (no actor, bad timezone, etc.)
   never 500s the page — the picker falls back to "Unfiled" and the
   backend re-resolves on submit.
 

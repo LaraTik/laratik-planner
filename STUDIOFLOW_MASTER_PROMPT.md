@@ -132,7 +132,8 @@ Production success means:
 - Multiple independent agencies in one deployment.
 - Subscription billing.
 - Native iOS or Android applications.
-- Custom workflow designer.
+- Custom workflow designer (drag-drop stages).
+- Per-content workflow overrides.
 - Custom form builder.
 - Permanent deletion through the normal UI.
 - Large-file video hosting or transcoding.

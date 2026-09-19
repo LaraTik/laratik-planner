@@ -8,6 +8,7 @@ import {
   applyApprovalTemplateAction,
   applyLeadTimeTemplateAction,
   applyMonthlyTargetTemplateAction,
+  applyWorkflowScenarioAction,
 } from "../templates-actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -18,7 +19,7 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * actions live next to the card so a single click writes
  * through the existing typed service wrappers).
  */
-type Kind = "lead-times" | "approvals" | "monthly-target";
+type Kind = "lead-times" | "approvals" | "monthly-target" | "workflow-scenario";
 
 export interface SettingsTemplateCardProps {
   kind: Kind;
@@ -70,6 +71,9 @@ export function SettingsTemplateCard({
         break;
       case "monthly-target":
         res = await applyMonthlyTargetTemplateAction(slug, templateId);
+        break;
+      case "workflow-scenario":
+        res = await applyWorkflowScenarioAction(slug, templateId);
         break;
     }
     if (!res?.ok) {

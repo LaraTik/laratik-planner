@@ -176,4 +176,57 @@ export const settingsTemplateSections = [
     label: "Monthly target presets",
     blurb: "Common post-per-month targets for the planning KPI bar.",
   },
+  {
+    id: "workflow-scenario",
+    label: "Workflow scenario presets",
+    blurb:
+      "Pick which stages a content item runs through. Switch anytime — in-flight items keep their current state.",
+  },
 ] as const;
+
+/**
+ * Workflow-scenario presets. Mirrors `WORKFLOW_SCENARIOS` in
+ * `lib/content/workflow.ts` — both should stay aligned. The
+ * catalog here is used only by the Settings → Templates UI; the
+ * engine reads from `WORKFLOW_SCENARIOS` directly.
+ */
+export type WorkflowScenarioTemplate = {
+  id: string;
+  /** Translation key for the scenario's display name. */
+  nameKey: string;
+  /** Translation key for the scenario's one-line blurb. */
+  blurbKey: string;
+  /**
+   * Whether applying this scenario forces an approval-mode flip as a
+   * side effect. UI surfaces this as a confirmation hint on the
+   * card. `null` means "keep whatever the workspace already has".
+   */
+  forcedApprovalMode: "simple" | "internal_then_client" | null;
+};
+
+export const workflowScenarioTemplates: readonly WorkflowScenarioTemplate[] = [
+  {
+    id: "standard",
+    nameKey: "workflow.scenario.standard.name",
+    blurbKey: "workflow.scenario.standard.blurb",
+    forcedApprovalMode: null,
+  },
+  {
+    id: "lightweight",
+    nameKey: "workflow.scenario.lightweight.name",
+    blurbKey: "workflow.scenario.lightweight.blurb",
+    forcedApprovalMode: "simple",
+  },
+  {
+    id: "two_gate_client",
+    nameKey: "workflow.scenario.two_gate_client.name",
+    blurbKey: "workflow.scenario.two_gate_client.blurb",
+    forcedApprovalMode: "internal_then_client",
+  },
+  {
+    id: "self_publish",
+    nameKey: "workflow.scenario.self_publish.name",
+    blurbKey: "workflow.scenario.self_publish.blurb",
+    forcedApprovalMode: "simple",
+  },
+];

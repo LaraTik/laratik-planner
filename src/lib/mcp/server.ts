@@ -9,6 +9,7 @@ import {
   brandAssets,
   contentItems,
   workspaces,
+  workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema";
 import { canAccessInternalWorkspace, PermissionDeniedError, type Actor } from "@/lib/auth/policy";
 import {
@@ -22,7 +23,7 @@ import {
   updateContentItem,
 } from "@/lib/content/service";
 import { duplicateContentItem } from "@/lib/planning/content-clone";
-import { DomainError } from "@/lib/content/workflow";
+import { DomainError, WORKFLOW_SCENARIOS } from "@/lib/content/workflow";
 import {
   createBrandAsset,
   createBrandLinkedResource,
@@ -475,6 +476,116 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
   );
 
   server.registerTool(
+    "laratik_planner_get_workspace_settings",
+    {
+      title: "Get workspace settings",
+      description:
+        "Read the workspace's active workflow scenario, approval mode, lead times, and monthly target. Use this to confirm which spine a workspace is running before proposing transitions.",
+      inputSchema: z.object({
+        workspace_id: workspaceId,
+        response_format: responseFormat,
+      }),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ workspace_id, response_format }) => {
+      try {
+        requireScope(context, "content:read");
+        if (!(await canAccessInternalWorkspace(context.actor, workspace_id))) {
+          return errorResult(new PermissionDeniedError("read workspace settings"));
+        }
+        const { getAccessibleWorkspace } = await import("@/lib/workspaces/context");
+        const workspace = await getAccessibleWorkspace(context.actor, workspace_id);
+        if (!workspace) {
+          return errorResult(new Error("Workspace not found"));
+        }
+        const [row] = await db
+          .select({
+            workflowScenario: workspaceSettingsTable.workflowScenario,
+            approvalMode: workspaceSettingsTable.approvalMode,
+            contentApprovalLeadDays: workspaceSettingsTable.contentApprovalLeadDays,
+            designCompleteLeadDays: workspaceSettingsTable.designCompleteLeadDays,
+            creativeApprovalLeadDays: workspaceSettingsTable.creativeApprovalLeadDays,
+            readyToPublishLeadDays: workspaceSettingsTable.readyToPublishLeadDays,
+            monthlyTarget: workspaceSettingsTable.monthlyTarget,
+            metaPublishingEnabled: workspaceSettingsTable.metaPublishingEnabled,
+          })
+          .from(workspaceSettingsTable)
+          .where(eq(workspaceSettingsTable.workspaceId, workspace.id))
+          .limit(1);
+        const scenarioId = (row?.workflowScenario ?? "standard") as
+          "standard" | "lightweight" | "two_gate_client" | "self_publish";
+        const catalog = WORKFLOW_SCENARIOS[scenarioId];
+        const payload = {
+          workspace_id: workspace.id,
+          slug: workspace.slug,
+          workflow_scenario: {
+            id: scenarioId,
+            name_key: `contentDetail.workflow.scenario.${scenarioId.replace(/_/g, "")}.name`,
+            stages: catalog?.stages ?? WORKFLOW_SCENARIOS.standard.stages,
+            approval_mode_forced: catalog?.approvalMode ?? null,
+            publishing_setup_required: catalog?.publishingSetupRequired ?? true,
+          },
+          approval_mode: row?.approvalMode ?? "simple",
+          lead_days: {
+            content_approval: row?.contentApprovalLeadDays ?? 10,
+            design_complete: row?.designCompleteLeadDays ?? 5,
+            creative_approval: row?.creativeApprovalLeadDays ?? 0,
+            ready_to_publish: row?.readyToPublishLeadDays ?? 3,
+          },
+          monthly_target: row?.monthlyTarget ?? null,
+          meta_publishing_enabled: row?.metaPublishingEnabled ?? false,
+        };
+        return result(payload, response_format);
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "laratik_planner_apply_workflow_scenario",
+    {
+      title: "Apply workflow scenario",
+      description:
+        "Apply one of the pre-defined workflow scenarios to the workspace. Manager-only. Scenarios are reversible; in-flight items keep their current state. Side effects: may force approval_mode to match the scenario's contract.",
+      inputSchema: z.object({
+        workspace_id: workspaceId,
+        scenario_id: z.enum(["standard", "lightweight", "two_gate_client", "self_publish"]),
+        response_format: responseFormat,
+      }),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+    },
+    async ({ workspace_id, scenario_id, response_format }) => {
+      try {
+        requireScope(context, "content:write");
+        // Reuse the same permission gate as the Settings UI to
+        // avoid duplicating role checks across the MCP surface.
+        const { applyWorkflowScenarioAction } =
+          await import("@/app/(app)/app/w/[slug]/settings/templates-actions");
+        const { getAccessibleWorkspace } = await import("@/lib/workspaces/context");
+        const ws = await getAccessibleWorkspace(context.actor, workspace_id);
+        if (!ws) return errorResult(new Error("Workspace not found"));
+        const outcome = await applyWorkflowScenarioAction(ws.slug, scenario_id);
+        if (!outcome.ok) return errorResult(new Error(outcome.error ?? "could not apply scenario"));
+        return result(
+          {
+            workspace_id: ws.id,
+            scenario_id,
+            ...(outcome.forcedApprovalMode
+              ? { forced_approval_mode: outcome.forcedApprovalMode }
+              : {}),
+          },
+          response_format,
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
     "laratik_planner_list_content",
     {
       title: "List planning content",
@@ -721,7 +832,7 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
     {
       title: "Advance workflow item",
       description:
-        "Run one explicit workflow action through the planner state machine. Invalid transitions and role restrictions are rejected.",
+        "Run one explicit workflow action through the planner state machine. Invalid transitions and role restrictions are rejected. Transitions that target a stage excluded by the workspace's active scenario are also rejected; call laratik_planner_get_workspace_settings first if the spine is unclear.",
       inputSchema: z.object({
         content_item_id: contentItemId,
         action: z.enum(WORKFLOW_ACTIONS),

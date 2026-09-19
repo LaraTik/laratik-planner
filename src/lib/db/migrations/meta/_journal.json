@@ -337,6 +337,13 @@
       "when": 1790040000000,
       "tag": "0047_media_folder_reconcile_log",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1790050000000,
+      "tag": "0048_workflow_scenarios",
+      "breakpoints": true
     }
   ]
 }

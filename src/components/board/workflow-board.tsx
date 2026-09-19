@@ -67,6 +67,13 @@ export interface WorkflowBoardProps {
   /** Blocked items are conditions, so the page may render them in a
    * dedicated grouping outside the active six-stage board. */
   blockedItems?: readonly WorkflowBoardItem[];
+  /**
+   * Items currently in a stage the active scenario omits. Surfaced
+   * in a dedicated grouping (mirrors the blocked group) so the
+   * workspace can see exactly which in-flight items need attention
+   * when the manager switches scenarios. Empty in the common case.
+   */
+  outOfScenarioItems?: readonly WorkflowBoardItem[];
 }
 
 /**
@@ -109,12 +116,24 @@ export function WorkflowBoard({
   t,
   memberDirectory,
   blockedItems = [],
+  outOfScenarioItems = [],
 }: WorkflowBoardProps) {
   const activeLocale = locale ?? "en";
   const activeTimezone = workspaceTimezone ?? "UTC";
+  // Column count varies by scenario: `standard` ships 6 columns,
+  // `lightweight` ships 5, `self_publish` ships 5. Use a 2-col
+  // mobile layout, 3 on tablet, and a 6-on-xl default that wraps
+  // to 2 rows for fewer columns.
+  const columnCount = columns.length;
+  const xlCols =
+    columnCount >= 6 ? "xl:grid-cols-6" : columnCount >= 5 ? "xl:grid-cols-5" : "xl:grid-cols-4";
   return (
     <div className="space-y-3">
-      <div className="grid items-start gap-3 md:grid-cols-2 xl:grid-cols-6">
+      <div
+        className={`grid items-start gap-3 md:grid-cols-2 lg:grid-cols-3 ${xlCols}`}
+        data-testid="workflow-board-grid"
+        data-column-count={columnCount}
+      >
         {columns.map((column) => {
           const rows = items.filter((item) =>
             (column.statuses as readonly string[]).includes(item.status),
@@ -176,6 +195,47 @@ export function WorkflowBoard({
           </header>
           <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
             {blockedItems.map((item) => (
+              <BoardCard
+                key={item.id}
+                item={item}
+                workspaceSlug={workspaceSlug}
+                {...(memberDirectory ? { memberDirectory } : {})}
+                locale={activeLocale}
+                workspaceTimezone={activeTimezone}
+                {...(t ? { t } : {})}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
+      {outOfScenarioItems.length > 0 ? (
+        <section
+          className="border-warning/30 bg-warning-subtle/30 rounded-[var(--radius-card)] border p-3"
+          data-testid="board-out-of-scenario-group"
+        >
+          <header className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-label text-warning font-semibold">
+              {t
+                ? t("board.outOfScenarioHeader", { defaultValue: "Outside current workflow" })
+                : "Outside current workflow"}
+            </h2>
+            <span
+              className="text-label text-warning border-warning/30 bg-surface min-w-6 rounded-full border px-1.5 text-center font-semibold"
+              data-testid="board-out-of-scenario-count"
+            >
+              {outOfScenarioItems.length}
+            </span>
+          </header>
+          <p className="text-label text-fg-muted mb-3">
+            {t
+              ? t("board.outOfScenarioDescription", {
+                  defaultValue:
+                    "These items are in stages the current workflow scenario omits. Open each one to finish or reset it.",
+                })
+              : "These items are in stages the current workflow scenario omits. Open each one to finish or reset it."}
+          </p>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+            {outOfScenarioItems.map((item) => (
               <BoardCard
                 key={item.id}
                 item={item}

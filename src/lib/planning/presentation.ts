@@ -263,8 +263,22 @@ function destinationForStatus(status: ContentStatus): {
   }
 }
 
-export function planningStageForStatus(status: ContentStatus): PlanningWorkflowStage | null {
-  return STATUS_TO_STAGE[status] ?? null;
+export function planningStageForStatus(
+  status: ContentStatus,
+  scenario?: { stages: ReadonlyArray<PlanningWorkflowStage> } | null,
+): PlanningWorkflowStage | null {
+  const stage = STATUS_TO_STAGE[status] ?? null;
+  if (stage === null) return null;
+  if (!scenario) return stage;
+  // If the scenario omits this stage, fall back to the nearest preceding
+  // included stage so the rail still anchors somewhere sensible.
+  if (scenario.stages.includes(stage)) return stage;
+  const idx = PLANNING_WORKFLOW_STAGES.indexOf(stage);
+  for (let i = idx - 1; i >= 0; i--) {
+    const earlier = PLANNING_WORKFLOW_STAGES[i]!;
+    if (scenario.stages.includes(earlier)) return earlier;
+  }
+  return scenario.stages[0] ?? null;
 }
 
 function conditionForStatus(status: ContentStatus): PlanningCondition {

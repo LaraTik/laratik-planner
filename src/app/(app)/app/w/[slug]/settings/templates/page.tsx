@@ -1,7 +1,17 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { eq } from "drizzle-orm";
-import { Clock, CheckCircle2, Hash, ArrowDown, ArrowUp, Equal, Sparkles } from "lucide-react";
+import {
+  Clock,
+  CheckCircle2,
+  Hash,
+  ArrowDown,
+  ArrowUp,
+  Equal,
+  Sparkles,
+  GitBranch,
+  Check,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { workspaceSettings as workspaceSettingsTable } from "@/lib/db/schema";
@@ -15,7 +25,9 @@ import {
   leadTimeTemplates,
   monthlyTargetTemplates,
   settingsTemplateSections,
+  workflowScenarioTemplates,
 } from "@/lib/workspaces/settings-templates";
+import { WORKFLOW_SCENARIOS, type WorkflowScenarioStage } from "@/lib/content/workflow";
 import { cn } from "@/lib/utils";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -66,6 +78,10 @@ export default async function SettingsTemplatesPage({
     : 18; // DB default
   const currentApprovalMode = settings?.approvalMode ?? "simple";
   const currentMonthlyTarget = settings?.monthlyTarget ?? null;
+  const currentScenarioId = settings?.workflowScenario ?? "standard";
+  const currentScenarioSpec =
+    WORKFLOW_SCENARIOS[currentScenarioId as keyof typeof WORKFLOW_SCENARIOS] ??
+    WORKFLOW_SCENARIOS.standard;
 
   return (
     <div className="space-y-8">
@@ -215,6 +231,79 @@ export default async function SettingsTemplatesPage({
         </ul>
       </TemplateSection>
 
+      <TemplateSection
+        icon={GitBranch}
+        title={t("settings.templates.workflowScenarioSection.title")}
+        blurb={t("settings.templates.workflowScenarioSection.blurb")}
+        testId="settings-template-section-workflow-scenario"
+      >
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {workflowScenarioTemplates.map((tpl) => {
+            const spec =
+              WORKFLOW_SCENARIOS[tpl.id as keyof typeof WORKFLOW_SCENARIOS] ??
+              WORKFLOW_SCENARIOS.standard;
+            const isCurrent = tpl.id === currentScenarioId;
+            const removed = currentScenarioSpec.stages.filter(
+              (s) => !spec.stages.includes(s as WorkflowScenarioStage),
+            ).length;
+            const added = spec.stages.filter(
+              (s) => !currentScenarioSpec.stages.includes(s as WorkflowScenarioStage),
+            ).length;
+            const diffBadge = isCurrent ? (
+              <DeltaBadge
+                delta={0}
+                kind="badge"
+                label={t("contentDetail.workflow.scenario.diff.same")}
+              />
+            ) : removed > 0 || added > 0 ? (
+              <DeltaBadge
+                delta={removed - added}
+                kind="badge"
+                label={t("contentDetail.workflow.scenario.diff.changes", { removed, added })}
+              />
+            ) : (
+              <DeltaBadge delta={1} kind="badge" label={t("settings.templates.diffFromCurrent")} />
+            );
+            const approvalModeForcedLabel =
+              tpl.forcedApprovalMode === "internal_then_client"
+                ? t("contentDetail.workflow.scenario.diff.approvalModeForcedInternalClient")
+                : tpl.forcedApprovalMode === "simple"
+                  ? t("contentDetail.workflow.scenario.diff.approvalModeForcedSimple")
+                  : null;
+            const skipPublishingSetupLabel =
+              !isCurrent && spec.publishingSetupRequired === false
+                ? t("contentDetail.workflow.scenario.diff.publishingSetupOptional")
+                : null;
+            const hintParts = [
+              ...(approvalModeForcedLabel ? [approvalModeForcedLabel] : []),
+              ...(skipPublishingSetupLabel ? [skipPublishingSetupLabel] : []),
+            ];
+            const hint = hintParts.length > 0 ? hintParts.join(" · ") : undefined;
+            return (
+              <li key={tpl.id}>
+                <SettingsTemplateCard
+                  kind="workflow-scenario"
+                  slug={slug}
+                  templateId={tpl.id}
+                  title={t(tpl.nameKey)}
+                  blurb={t(tpl.blurbKey)}
+                  preview={
+                    <ScenarioRailPreview
+                      stages={spec.stages as ReadonlyArray<WorkflowScenarioStage>}
+                      t={t}
+                    />
+                  }
+                  meta={`${spec.stages.length} stages`}
+                  delta={diffBadge}
+                  {...(hint ? { hint } : {})}
+                  testId={`workflow-scenario-${tpl.id}`}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      </TemplateSection>
+
       {!canManage ? (
         <p className="text-label text-fg-muted text-center" role="status">
           {t("settings.templates.managerRequired")}
@@ -313,6 +402,67 @@ function TemplateSection({
       </header>
       {children}
     </section>
+  );
+}
+
+/**
+ * ScenarioRailPreview — a compact horizontal mini-rail of the
+ * scenario's stages, rendered inside the Settings → Templates card.
+ * Visual language matches the right-side WorkflowRail (check +
+ * arrow markers) so users can eyeball the spine without parsing
+ * prose.
+ *
+ * Stages where the workspace's active scenario already includes
+ * are filled; stages the active scenario omits but this card
+ * includes render with a "+" marker to flag the addition.
+ */
+function ScenarioRailPreview({
+  stages,
+  t,
+}: {
+  stages: ReadonlyArray<WorkflowScenarioStage>;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const labelKeys: Record<WorkflowScenarioStage, string> = {
+    planning: "contentDetail.workflow.railStageLabels.planning",
+    content_review: "contentDetail.workflow.railStageLabels.content_review",
+    creative_production: "contentDetail.workflow.railStageLabels.creative_production",
+    creative_approval: "contentDetail.workflow.railStageLabels.creative_approval",
+    publishing_setup: "contentDetail.workflow.railStageLabels.publishing_setup",
+    published: "contentDetail.workflow.railStageLabels.published",
+  };
+  return (
+    <ol
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
+      aria-label={t("contentDetail.workflow.scenario.railPreviewAria", {
+        defaultValue: "Scenario stages",
+      })}
+      data-testid="workflow-scenario-rail-preview"
+    >
+      {stages.map((stage, idx) => {
+        const label = t(labelKeys[stage]) ?? stage.replace(/_/g, " ");
+        return (
+          <li
+            key={stage}
+            className="text-label text-fg-primary inline-flex items-center gap-1.5"
+            data-stage-id={stage}
+          >
+            <span
+              className="border-border bg-success-subtle text-success inline-flex h-5 w-5 items-center justify-center rounded-full border"
+              aria-hidden="true"
+            >
+              <Check className="h-3 w-3" strokeWidth={3} />
+            </span>
+            <span>{label}</span>
+            {idx < stages.length - 1 ? (
+              <span aria-hidden="true" className="text-fg-muted">
+                →
+              </span>
+            ) : null}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 

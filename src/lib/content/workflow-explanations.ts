@@ -106,7 +106,7 @@ export const STEP_EXPLANATIONS: Record<ContentStatus, StepExplanation> = {
     description:
       "All approvals are in. A publisher or manager can record per-channel publication outcomes once the item is live.",
     responsibleRoles: [r("publisher"), r("workspace_manager")],
-    next: "Publish on each channel, then record the outcome (published / skipped / failed) here.",
+    next: "Validate the package so channels are ready for the publisher. This does not schedule or publish.",
   },
   partially_published: {
     label: "Partially published",
