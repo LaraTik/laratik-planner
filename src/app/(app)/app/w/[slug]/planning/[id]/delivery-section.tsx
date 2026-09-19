@@ -10,7 +10,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { submitDeliveryAction } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { MediaUploadForm, type MediaUploadResult } from "@/components/media/media-upload-form";
+import { type MediaUploadResult } from "@/components/media/media-upload-form";
+import { MediaSourcePicker } from "@/components/media/media-source-picker";
 import {
   DeliveryVersionList,
   type DeliveryVersion,
@@ -59,6 +60,7 @@ export function DeliverySection({
   deliveries,
   mediaAssets = [],
   folderOptions = [],
+  defaultFolderId,
   approvalGates = [],
   viewerIsClient = false,
 }: {
@@ -72,6 +74,12 @@ export function DeliverySection({
   deliveries: DeliveryVersion[];
   mediaAssets?: DeliveryMediaAsset[];
   folderOptions?: DeliveryFolder[];
+  /**
+   * Canonical folder id for this content item (`Posts / {Format} / {YYYY} /
+   * {MM}`). Resolved server-side so the uploader lands the right folder by
+   * default — designers should never have to think about folder routing.
+   */
+  defaultFolderId?: string;
   approvalGates?: string[];
   viewerIsClient?: boolean;
 }) {
@@ -457,11 +465,12 @@ export function DeliverySection({
                 ) : null}
                 {showUploader && canUploadInline ? (
                   <div id="delivery-media-uploader-panel" className="mt-3">
-                    <MediaUploadForm
-                      compact
+                    <MediaSourcePicker
+                      initialSource="device"
                       workspaceOptions={[{ id: workspaceId, name: workspaceName }]}
                       folderOptionsByWorkspace={{ [workspaceId]: folderOptions }}
                       contentItemId={contentItemId}
+                      {...(defaultFolderId ? { defaultFolderId } : {})}
                       onAssetReady={(asset: MediaUploadResult) => {
                         setAvailableAssets((current) =>
                           current.some((candidate) => candidate.id === asset.id)

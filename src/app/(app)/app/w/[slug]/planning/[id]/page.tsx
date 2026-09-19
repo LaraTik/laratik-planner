@@ -73,7 +73,11 @@ import { acknowledgeOverdueScheduleAction } from "./publish/actions";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
-import { listMediaAssetsForContentItem, listMediaFolders } from "@/lib/media/service";
+import {
+  ensurePlanningMediaFolderPathPublic,
+  listMediaAssetsForContentItem,
+  listMediaFolders,
+} from "@/lib/media/service";
 import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/planning/presentation";
 import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
 import type { ContentStatus } from "@/lib/content/status";
@@ -183,6 +187,20 @@ export default async function ContentDetailPage({
     }).catch(() => []),
     listMediaFolders(actor, { agencyId: ws.agencyId, workspaceId: ws.id }).catch(() => []),
   ]);
+
+  // Resolve the canonical delivery folder (`Posts / {Format} / {YYYY} / {MM}`)
+  // up front so the Delivery uploader can preselect it. Wrapped in .catch so a
+  // misconfigured workspace (no actor, bad timezone, etc.) never 500s the
+  // page — the picker falls back to "Unfiled" which the backend will
+  // re-resolve on submit.
+  const canonicalDeliveryFolderId = await ensurePlanningMediaFolderPathPublic({
+    agencyId: ws.agencyId,
+    workspaceId: ws.id,
+    format: item.format,
+    plannedPublishAt: item.plannedPublishAt,
+    timezone: ws.timezone,
+    createdBy: actor.id,
+  }).catch(() => null);
 
   const agencyId = ws.agencyId;
   const references = (() => {
@@ -969,6 +987,9 @@ export default async function ContentDetailPage({
                       name: folder.name,
                       parentId: folder.parentId,
                     }))}
+                    {...(canonicalDeliveryFolderId
+                      ? { defaultFolderId: canonicalDeliveryFolderId }
+                      : {})}
                     approvalGates={visiblePendingApprovalGates}
                     deliveries={deliveries.map((d) => ({
                       id: d.id,

@@ -141,18 +141,26 @@ export function MediaUploadForm({
   folderOptionsByWorkspace,
   compact = false,
   contentItemId,
+  defaultFolderId,
   onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
   folderOptionsByWorkspace?: Record<string, FolderOption[]>;
   compact?: boolean;
   contentItemId?: string;
+  /**
+   * Folder to preselect when the form first mounts. Used by surfaces that
+   * know the canonical folder up front (e.g. the Delivery tab, where the
+   * `Posts / {Format} / {YYYY} / {MM}` path is the right default). When
+   * omitted, the dropdown defaults to "Unfiled" (the previous behavior).
+   */
+  defaultFolderId?: string;
   onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   const router = useRouter();
   const [workspaceId, setWorkspaceId] = React.useState(workspaceOptions[0]?.id ?? "");
-  const [folderId, setFolderId] = React.useState("");
+  const [folderId, setFolderId] = React.useState(defaultFolderId ?? "");
   const [items, setItems] = React.useState<QueueItem[]>([]);
   const [dragging, setDragging] = React.useState(false);
   const [busy, setBusy] = React.useState(false);

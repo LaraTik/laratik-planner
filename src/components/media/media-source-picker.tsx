@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { MediaLinkImporter } from "./media-link-importer";
-import { MediaUploadForm } from "./media-upload-form";
+import { MediaUploadForm, type MediaUploadResult } from "./media-upload-form";
 
 /**
  * One media-intake surface with interchangeable source adapters. The tabs
@@ -15,6 +15,8 @@ export function MediaSourcePicker({
   folderOptionsByWorkspace,
   initialSource = "device",
   contentItemId,
+  defaultFolderId,
+  onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
   folderOptionsByWorkspace: Record<
@@ -23,6 +25,21 @@ export function MediaSourcePicker({
   >;
   initialSource?: "device" | "link";
   contentItemId?: string;
+  /**
+   * Folder to preselect in the device-upload dropdown. The link importer
+   * doesn't surface a folder picker — the server resolves the folder from
+   * `contentItemId` — so this prop is intentionally forwarded only to the
+   * device child. When omitted, the dropdown defaults to "Unfiled", which
+   * is the same UX as before this prop existed.
+   */
+  defaultFolderId?: string;
+  /**
+   * Fired by the device tab once an asset has finished registering. The
+   * link tab refreshes the router on success, so parents that rely on the
+   * "new asset appears in the picker" flow should refresh on their own
+   * after a link import (or render the picker outside of `useState`).
+   */
+  onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   return (
@@ -52,6 +69,8 @@ export function MediaSourcePicker({
             workspaceOptions={workspaceOptions}
             folderOptionsByWorkspace={folderOptionsByWorkspace}
             {...(contentItemId ? { contentItemId } : {})}
+            {...(defaultFolderId ? { defaultFolderId } : {})}
+            {...(onAssetReady ? { onAssetReady } : {})}
           />
         </TabsContent>
         <TabsContent value="link">
