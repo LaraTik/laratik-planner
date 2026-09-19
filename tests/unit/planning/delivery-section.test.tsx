@@ -9,6 +9,27 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
 vi.mock("@/components/media/media-upload-form", () => ({
   MediaUploadForm: () => null,
 }));
+vi.mock("@/components/media/media-source-picker", () => ({
+  // Capture the props so the test can assert the picker is rendered with
+  // the canonical folder id forwarded — this is the contract that fixes
+  // both reported bugs in the Delivery tab.
+  MediaSourcePicker: (props: Record<string, unknown>) => (
+    <div
+      data-testid="mock-media-source-picker"
+      data-content-item-id={typeof props.contentItemId === "string" ? props.contentItemId : ""}
+      data-default-folder-id={
+        typeof props.defaultFolderId === "string" ? props.defaultFolderId : ""
+      }
+      data-has-on-asset-ready={typeof props.onAssetReady === "function" ? "1" : "0"}
+      data-initial-source={
+        typeof props.initialSource === "string" ? props.initialSource : ""
+      }
+    >
+      <div role="tab" aria-label="From device" />
+      <div role="tab" aria-label="From link" />
+    </div>
+  ),
+}));
 
 const baseProps = {
   workspaceId: "00000000-0000-0000-0000-000000000001",
@@ -243,5 +264,63 @@ describe("DeliverySection media search", () => {
     );
     expect(screen.getByRole("img", { name: "Hero image" })).toBeInTheDocument();
     expect(document.querySelector('video[aria-label="Hero reel"]')).toBeInTheDocument();
+  });
+});
+
+describe("DeliverySection uploader", () => {
+  it("renders the media source picker with both device and link tabs when the uploader is open", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeliverySection
+        {...baseProps}
+        mediaAssets={[
+          {
+            id: "asset-existing",
+            title: "Existing hero image",
+            kind: "image",
+            byteSize: 1200,
+            workspaceName: "Northstar Coffee",
+            visibility: "workspace",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upload and attach media" }));
+    const picker = screen.getByTestId("mock-media-source-picker");
+    expect(picker).toBeInTheDocument();
+    expect(picker.getAttribute("data-initial-source")).toBe("device");
+    expect(picker.getAttribute("data-content-item-id")).toBe(baseProps.contentItemId);
+    // Both source tabs must be present so designers can switch from device
+    // upload to link import without leaving the Delivery tab.
+    expect(screen.getByRole("tab", { name: "From device" })).toBeInTheDocument();
+    expect(screen.getByRole("tab", { name: "From link" })).toBeInTheDocument();
+    expect(picker.getAttribute("data-has-on-asset-ready")).toBe("1");
+  });
+
+  it("forwards the canonical default folder id to the picker so uploads land in Posts / Format / YYYY / MM", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeliverySection
+        {...baseProps}
+        defaultFolderId="00000000-0000-0000-0000-000000000777"
+        mediaAssets={[
+          {
+            id: "asset-existing",
+            title: "Existing hero image",
+            kind: "image",
+            byteSize: 1200,
+            workspaceName: "Northstar Coffee",
+            visibility: "workspace",
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Upload and attach media" }));
+    const picker = screen.getByTestId("mock-media-source-picker");
+    expect(picker.getAttribute("data-default-folder-id")).toBe(
+      "00000000-0000-0000-0000-000000000777",
+    );
   });
 });

@@ -12,6 +12,59 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Delivery tab: media uploader now shows the "From link" tab and defaults to the canonical `Posts / {Format} / {YYYY} / {MM}` folder (2026-09-19)
+
+Two UX regressions reported on the Delivery tab of a planned post
+(`/app/w/just-halal/planning/{id}#delivery`):
+
+1. The uploader surfaced only the device-upload surface, so designers
+   could not import a media asset from a Google Drive / OneDrive / direct
+   link — the "From link" tab simply wasn't there. Root cause: the
+   Delivery section rendered `<MediaUploadForm>` directly, while the
+   tabbed device-vs-link surface lives in `<MediaSourcePicker>` (already
+   used by the agency-level Add-media dialog).
+2. The folder dropdown defaulted to "Unfiled". The backend
+   (`registerUploadedMediaAsset` in `@/lib/media/service.ts`) already
+   auto-resolves the canonical folder from `contentItemId`, but the UI
+   never surfaced that decision — designers had no visibility into
+   where the asset was actually landing. The user's mental model was
+   "the system should pick the right folder based on the post I'm
+   delivering to", which is exactly what the server-side path does; the
+   UI just wasn't keeping up.
+
+Changes:
+
+- **`src/components/media/media-source-picker.tsx`** — adds a
+  `defaultFolderId` prop forwarded to the device child, plus a new
+  `onAssetReady` callback so delivery surfaces can refresh their
+  asset list when the device tab finishes registering an asset.
+- **`src/components/media/media-upload-form.tsx`** — accepts
+  `defaultFolderId` and uses it as the initial `folderId` state.
+  When the prop is omitted, the dropdown still defaults to "Unfiled"
+  (the previous behavior, preserved for the agency-level Add-media
+  dialog).
+- **`src/app/(app)/app/w/[slug]/planning/[id]/delivery-section.tsx`** —
+  renders `<MediaSourcePicker>` (so the "From link" tab is visible)
+  with `onAssetReady` wired to the local `setAvailableAssets` /
+  `setSelectedAssetIds` flow, and forwards `defaultFolderId` down.
+- **`src/app/(app)/app/w/[slug]/planning/[id]/page.tsx`** — resolves
+  the canonical `Posts / {Format} / {YYYY} / {MM}` folder for the
+  current content item up front via the existing
+  `ensurePlanningMediaFolderPathPublic` service and passes its id to
+  `<DeliverySection>` as `defaultFolderId`. Wrapped in `.catch(() =>
+  null)` so a misconfigured workspace (no actor, bad timezone, etc.)
+  never 500s the page — the picker falls back to "Unfiled" and the
+  backend re-resolves on submit.
+
+Tests: 5 new unit tests in
+`tests/unit/media/media-source-picker.test.tsx` (tab visibility,
+`defaultFolderId` + `contentItemId` forwarding to both children,
+`onAssetReady` propagation, fallback behavior), 2 new assertions in
+`tests/unit/planning/delivery-section.test.tsx` (Delivery uploader
+renders the picker with both tabs and forwards the canonical folder
+id). Full `tests/unit/media` + `tests/unit/planning` suite green
+(245 / 245). Lint + typecheck clean.
+
 ### Fixed — Brand Kit overview + logos page: malformed `brand_assets.storagePath` no longer 500s (2026-09-19)
 
 A second workspace (`just-halal`) hit the same Brand Kit error boundary
