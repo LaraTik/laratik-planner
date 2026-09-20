@@ -27,11 +27,14 @@ const dbMock = vi.hoisted(() => {
     insertCalls: { values: unknown }[];
     deleteCalls: { where: unknown }[];
     transactionExecutions: number;
+    /** Order of operations performed inside the last transaction. */
+    transactionOps: ("execute" | "delete" | "insert")[];
   } = {
     selectResults: [],
     insertCalls: [],
     deleteCalls: [],
     transactionExecutions: 0,
+    transactionOps: [],
   };
 
   function selectChain() {
@@ -47,6 +50,7 @@ const dbMock = vi.hoisted(() => {
     const chain: Record<string, unknown> = {};
     chain.values = vi.fn((values: unknown) => {
       state.insertCalls.push({ values });
+      state.transactionOps.push("insert");
       return Promise.resolve();
     });
     return chain;
@@ -57,6 +61,7 @@ const dbMock = vi.hoisted(() => {
     const chain: Record<string, unknown> = {};
     chain.where = vi.fn((where: unknown) => {
       state.deleteCalls.push({ where });
+      state.transactionOps.push("delete");
       return Promise.resolve();
     });
     return chain;
@@ -72,8 +77,12 @@ const dbMock = vi.hoisted(() => {
       }) => Promise<unknown>,
     ) => {
       state.transactionExecutions += 1;
+      state.transactionOps = [];
       const tx = {
-        execute: vi.fn(async () => [{ cic: "2", ca: "1", c: "3", dv: "1" }]),
+        execute: vi.fn(async () => {
+          state.transactionOps.push("execute");
+          return [{ cic: "2", ca: "1", c: "3", dv: "1" }];
+        }),
         delete: del,
         insert,
       };
@@ -297,5 +306,50 @@ describe("resetIdeaAction", () => {
     // We bounced the operator back to the planning list with a
     // confirmation flag the page can use for a toast.
     expect(navMock.redirect).toHaveBeenCalledWith(expect.stringMatching(/\/planning\?reset=1/));
+  });
+
+  it("inserts the activity_event row BEFORE deleting content_item (FK ordering)", async () => {
+    // REGRESSION (2026-09-20, just-halal post ae2aa8fe):
+    //
+    // `activity_event.content_item_id` is a FK to `content_items.id`
+    // with `ON DELETE SET NULL`. The old code did the DELETE first
+    // and the activity INSERT second, which made Postgres reject the
+    // INSERT ("insert or update on table activity_event violates
+    // foreign key constraint activity_event_content_item_id_fkey")
+    // and rolled the whole transaction back. The operator saw
+    // "The idea could not be deleted. Try again or contact platform
+    // support." even though the content_item row was already
+    // half-gone — and any pre-existing activity_events on the post
+    // had already been SET-NULL'd, leaving orphans with content_item_id
+    // = NULL visible to the activity timeline.
+    //
+    // The fix reorders: insert the activity_event FIRST (still
+    // referencing the live content_items.id), then delete the
+    // content_item. The SET NULL cascade then nulls content_item_id
+    // on the inserted row once the delete commits.
+    platformAccessMock.requirePlatformPermission.mockResolvedValueOnce({});
+    dbMock.state.selectResults.push([
+      {
+        id: IDEA_ID,
+        title: "Spring sale — Instagram carousel",
+        workspaceId: WORKSPACE_ID,
+      },
+    ]);
+    workspaceContextMock.getAccessibleWorkspace.mockResolvedValueOnce({
+      id: WORKSPACE_ID,
+    });
+
+    await expect(resetIdeaAction("acme", undefined, makeFormData())).rejects.toThrow(
+      /NEXT_REDIRECT/,
+    );
+
+    // The activity-event insert must come before the content_item
+    // delete. We assert this by recording the sequence of operations
+    // inside the transaction and pinning their order.
+    const insertIdx = dbMock.state.transactionOps.indexOf("insert");
+    const deleteIdx = dbMock.state.transactionOps.indexOf("delete");
+    expect(insertIdx).toBeGreaterThanOrEqual(0);
+    expect(deleteIdx).toBeGreaterThanOrEqual(0);
+    expect(insertIdx).toBeLessThan(deleteIdx);
   });
 });

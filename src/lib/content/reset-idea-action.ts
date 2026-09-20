@@ -220,8 +220,6 @@ export async function resetIdeaAction(
         : ((countsRaw as { rows?: unknown[] }).rows ?? []);
       const row = countsArr[0] as Record<string, string> | undefined;
 
-      await tx.delete(contentItems).where(eq(contentItems.id, idea.id));
-
       // `exactOptionalPropertyTypes` is enabled in tsconfig, so
       // we conditionally spread rather than passing `undefined`.
       const bucketCounts = row
@@ -233,14 +231,6 @@ export async function resetIdeaAction(
           }
         : null;
       const successMetadata = bucketCounts ? { bucketCounts } : {};
-      recordAudit({
-        actorId: actor.id,
-        contentItemId: idea.id,
-        outcome: "success",
-        reason: parsed.data.reason,
-        typedPhraseMatch: true,
-        ...successMetadata,
-      });
 
       // Activity log (plan §1). The row is written inside the
       // same transaction as the DELETE so the activity timeline
@@ -249,9 +239,20 @@ export async function resetIdeaAction(
       // `ActivityTimeline` component renders by default; the
       // `metadata` mirrors the audit row's bucket counts so a
       // "why did the operator delete this idea?" review needs
-      // only one join. `content_item_id` becomes `NULL` after
-      // the cascade delete (the FK is `ON DELETE SET NULL`),
-      // which the timeline renders as a "deleted" badge.
+      // only one join.
+      //
+      // ORDER MATTERS: `activity_event.content_item_id` is a FK
+      // to `content_items.id` with `ON DELETE SET NULL` (see
+      // schema/notifications.ts). We MUST insert the activity row
+      // BEFORE the content_item delete so the FK targets a row
+      // that still exists within the transaction. The SET NULL
+      // cascade then nulls `content_item_id` on the inserted row
+      // once the delete commits — the timeline renders that as
+      // a "deleted" badge. Doing the delete first leaves the FK
+      // pointing at a vanished parent, which Postgres rejects and
+      // rolls the whole transaction back, surfacing as
+      // "The idea could not be deleted" on the operator's
+      // screen even though the row was already half-gone.
       await tx.insert(activityEvents).values({
         workspaceId: idea.workspaceId,
         contentItemId: idea.id,
@@ -264,6 +265,17 @@ export async function resetIdeaAction(
           crossTenantGuard: "passed",
           ...(bucketCounts ? { bucketCounts } : {}),
         },
+      });
+
+      await tx.delete(contentItems).where(eq(contentItems.id, idea.id));
+
+      recordAudit({
+        actorId: actor.id,
+        contentItemId: idea.id,
+        outcome: "success",
+        reason: parsed.data.reason,
+        typedPhraseMatch: true,
+        ...successMetadata,
       });
     });
   } catch (error) {

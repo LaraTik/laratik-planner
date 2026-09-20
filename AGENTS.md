@@ -671,6 +671,13 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - Cross-workspace query keys MUST include the workspace id. A `useSWR(['/api/content', workspaceId])` key without the workspace id is a data-leak bug.
 - Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
 
+## Changelog
+
+### 2026-09-20 — delivery picker + reset-content bug fix
+
+- **fix(deliveries): link-imported assets now appear in the picker without a hard refresh.** `DeliverySection` used `useState(mediaAssets)` for `availableAssets`, so the picker stayed empty after the "From link" importer's `router.refresh()` handed the new asset down through props. Added a `useEffect` that merges any newly-arrived `mediaAssets` ids into `availableAssets` and `selectedAssetIds`. The effect preserves search results and explicit selections — only _new_ ids are appended. Regression test in `tests/unit/planning/delivery-section.test.tsx` (`syncs mediaAssets prop changes into the picker without remounting`).
+- **fix(content): "Reset idea" now succeeds for posts with prior activity.** `resetIdeaAction` did the `DELETE FROM content_items` BEFORE the `INSERT INTO activity_events` inside the same transaction, but `activity_event.content_item_id` is a FK to `content_items.id` with `ON DELETE SET NULL` (`src/lib/db/schema/notifications.ts:152-154`). The FK check rejected the activity insert (the parent row was already gone), the whole transaction rolled back, and the operator saw `The idea could not be deleted. Try again or contact platform support.` — even though the content_item row was already half-deleted. Pre-existing activity_events on the post had already been SET-NULL'd in the same doomed transaction, leaving orphans with `content_item_id = NULL` visible to the activity timeline. Surfaces reliably once a post has any activity history (the `ae2aa8fe-…` post on `just-halal` had 6 activity rows — that's the "Activity events (orphaned, link cleared) 6" line in the dialog). Fixed by reordering: insert the activity row FIRST (still pointing at the live content_item), then delete the content_item. The `ON DELETE SET NULL` cascade then nulls `content_item_id` on the inserted row once the delete commits. Regression test in `tests/unit/reset-idea-action.test.ts` (`inserts the activity_event row BEFORE deleting content_item (FK ordering)`) — records operation order inside the transaction and pins `insert.indexOf < delete.indexOf`. Red-pinned on the unfixed code.
+
 ## Cross-references
 
 - `STUDIOFLOW_MASTER_PROMPT.md` — the source spec (3,010 lines, 26 sections)
