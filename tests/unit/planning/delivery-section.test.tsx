@@ -321,4 +321,72 @@ describe("DeliverySection uploader", () => {
       "00000000-0000-0000-0000-000000000777",
     );
   });
+
+  it("syncs mediaAssets prop changes (link import via router.refresh) into the picker without remounting", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <DeliverySection
+        {...baseProps}
+        deliveries={[
+          {
+            id: "delivery-v1",
+            versionNumber: 1,
+            description: "V1",
+            designerNote: null,
+            submittedAt: "2026-08-25T10:00:00.000Z",
+            isFinalApproved: false,
+            submittedBy: { id: "u-1", name: "Designer" },
+            links: [],
+          },
+        ]}
+        mediaAssets={[]}
+      />,
+    );
+
+    // Open the new-version form. With an empty initial mediaAssets list,
+    // the picker has no asset rows to render yet.
+    await user.click(screen.getByRole("button", { name: "Submit new version" }));
+    expect(screen.queryByText("Imported reel via link")).not.toBeInTheDocument();
+
+    // Simulate router.refresh() handing down a fresh mediaAssets prop that
+    // now includes the link-imported video. The picker MUST render the new
+    // asset without a full page reload — that was the regression this
+    // test pins: useState(mediaAssets) only initializes on mount, so
+    // before the fix the link importer's refresh was a silent no-op for
+    // any post whose picker was already mounted.
+    rerender(
+      <DeliverySection
+        {...baseProps}
+        deliveries={[
+          {
+            id: "delivery-v1",
+            versionNumber: 1,
+            description: "V1",
+            designerNote: null,
+            submittedAt: "2026-08-25T10:00:00.000Z",
+            isFinalApproved: false,
+            submittedBy: { id: "u-1", name: "Designer" },
+            links: [],
+          },
+        ]}
+        mediaAssets={[
+          {
+            id: "asset-link-import",
+            title: "Imported reel via link",
+            kind: "video",
+            mimeType: "video/mp4",
+            byteSize: 5_000_000,
+            workspaceName: "Northstar Coffee",
+            visibility: "workspace",
+          },
+        ]}
+      />,
+    );
+
+    const checkbox = await screen.findByRole("checkbox", { name: /imported reel via link/i });
+    expect(checkbox).toHaveAttribute("data-state", "checked");
+    expect(
+      document.querySelector('video[aria-label="Imported reel via link"]'),
+    ).toBeInTheDocument();
+  });
 });

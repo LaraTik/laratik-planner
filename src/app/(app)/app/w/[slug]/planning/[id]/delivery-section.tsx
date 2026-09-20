@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { FileText, FolderOpen, Package, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -91,6 +91,11 @@ export function DeliverySection({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [availableAssets, setAvailableAssets] = useState(mediaAssets);
   const [selectedAssetIds, setSelectedAssetIds] = useState<string[]>(previousAssetIds);
+  const mediaAssetsKey = useMemo(
+    () => mediaAssets.map((asset) => asset.id).join("\u0000"),
+    [mediaAssets],
+  );
+  const [lastSyncedMediaAssetsKey, setLastSyncedMediaAssetsKey] = useState(mediaAssetsKey);
   const [showUploader, setShowUploader] = useState(mediaAssets.length === 0);
   const [showMediaSearch, setShowMediaSearch] = useState(false);
   const [mediaQuery, setMediaQuery] = useState("");
@@ -142,6 +147,41 @@ export function DeliverySection({
     }
     wasUploaderOpen.current = showUploader;
   }, [showUploader]);
+
+  // Sync library changes into the form state. The "From link" importer
+  // does not call `onAssetReady` — it ends with `router.refresh()`,
+  // which hands the new asset down through the `mediaAssets` prop.
+  // Without this sync the picker stays empty (useState only initializes
+  // on mount) and the user has to hard-refresh the page to see the
+  // freshly imported video. We merge new ids instead of replacing the
+  // list so search results, explicit selections, and pending uploads
+  // all survive the refresh.
+  //
+  // State derived from props is updated during render (not in an
+  // effect) to comply with `react-hooks/set-state-in-effect`. The
+  // pattern is documented by the React team as the canonical way to
+  // adjust state when a prop changes: store the last-seen prop
+  // snapshot, queue state updates for this render when the prop drifts,
+  // and React schedules a follow-up render with the new state.
+  //
+  // Reference equality alone is unsafe here because the prop default
+  // `mediaAssets = []` produces a fresh empty array on every render,
+  // which would loop forever. We compare on the stable id-key instead,
+  // so re-renders that pass the same items (or the same `[]`) take the
+  // fast path.
+  if (mediaAssetsKey !== lastSyncedMediaAssetsKey) {
+    setLastSyncedMediaAssetsKey(mediaAssetsKey);
+    const knownAvailable = new Set(availableAssets.map((asset) => asset.id));
+    const knownSelected = new Set(selectedAssetIds);
+    const newAvailable = mediaAssets.filter((asset) => !knownAvailable.has(asset.id));
+    const newSelected = mediaAssets.filter((asset) => !knownSelected.has(asset.id));
+    if (newAvailable.length > 0) {
+      setAvailableAssets((current) => [...current, ...newAvailable]);
+    }
+    if (newSelected.length > 0) {
+      setSelectedAssetIds((current) => [...current, ...newSelected.map((asset) => asset.id)]);
+    }
+  }
 
   async function searchMediaLibrary() {
     const query = mediaQuery.trim();
