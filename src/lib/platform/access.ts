@@ -82,8 +82,38 @@ function resultRows<T>(result: unknown): T[] {
   return [];
 }
 
-export async function listPlatformAccess(actor: Actor): Promise<PlatformAccessRow[]> {
+/**
+ * Filters accepted by {@link listPlatformAccess}. Every field is
+ * optional; absent values mean "no filter".
+ */
+export interface ListPlatformAccessFilters {
+  /** Case-insensitive substring match on email or display name. */
+  q?: string;
+  /** Restrict to one or more roles (whitelist; unknown values ignored). */
+  role?: PlatformRole[];
+}
+
+export async function listPlatformAccess(
+  actor: Actor,
+  filters: ListPlatformAccessFilters = {},
+): Promise<PlatformAccessRow[]> {
   await requirePlatformPermission(actor, "platform.access.read");
+  const trimmed = (filters.q ?? "").trim();
+  const roleFilter = (filters.role ?? []).filter((r): r is PlatformRole =>
+    (PLATFORM_ROLE_VALUES as readonly string[]).includes(r),
+  );
+  // Build the optional WHERE fragments on top of the revoked_at IS NULL
+  // predicate. We keep the role list short (4 values) and parameterise
+  // each value to keep the prepared statement hot.
+  const conditions: ReturnType<typeof sql>[] = [sql`pa.revoked_at IS NULL`];
+  if (trimmed) {
+    const pattern = `%${trimmed.toLowerCase()}%`;
+    conditions.push(sql`(lower(u.email) LIKE ${pattern} OR lower(u.display_name) LIKE ${pattern})`);
+  }
+  if (roleFilter.length > 0) {
+    conditions.push(sql`pa.role IN ${roleFilter}`);
+  }
+  const where = sql.join(conditions, sql` AND `);
   const result = await db.execute(sql`
     SELECT
       pa.user_id,
@@ -98,7 +128,7 @@ export async function listPlatformAccess(actor: Actor): Promise<PlatformAccessRo
     FROM platform_administrator pa
     INNER JOIN "user" u ON u.id = pa.user_id
     LEFT JOIN "user" grantor ON grantor.id = pa.granted_by
-    WHERE pa.revoked_at IS NULL
+    WHERE ${where}
     ORDER BY
       CASE pa.role
         WHEN 'platform_owner' THEN 0

@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ClipboardCheck,
+  Filter,
   Headphones,
   ShieldCheck,
   UserCog,
@@ -14,12 +15,19 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
-import { PLATFORM_ROLE_DETAILS, type PlatformRole } from "@/lib/auth/platform-access-types";
+import {
+  PLATFORM_ROLE_DETAILS,
+  PLATFORM_ROLE_VALUES,
+  type PlatformRole,
+} from "@/lib/auth/platform-access-types";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
 import {
   getPlatformSupportAccessSummary,
   listPlatformAccess,
@@ -66,7 +74,15 @@ function auditActionLabel(action: string, t: Translator): string {
   return value.startsWith("[") ? action : value;
 }
 
-export default async function PlatformAccessPage() {
+const ROLE_SEARCH_VALUES: Record<string, PlatformRole> = Object.fromEntries(
+  PLATFORM_ROLE_VALUES.map((r) => [r, r]),
+) as Record<string, PlatformRole>;
+
+export default async function PlatformAccessPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const actor = await currentActor();
   const { t, code } = await tForActive();
   if (!actor) {
@@ -91,16 +107,33 @@ export default async function PlatformAccessPage() {
   }
 
   const canManage = principal.permissions.has("platform.access.manage");
-  const [assignments, audit, supportSummary] = await Promise.all([
-    listPlatformAccess(actor),
+  const filters = parseListFilters(await searchParams);
+  const selectedRoles: PlatformRole[] = filters.role
+    .map((r) => ROLE_SEARCH_VALUES[r])
+    .filter((r): r is PlatformRole => Boolean(r));
+
+  const [allRows, audit, supportSummary] = await Promise.all([
+    listPlatformAccess(actor, {
+      ...(filters.q ? { q: filters.q } : {}),
+      ...(selectedRoles.length > 0 ? { role: selectedRoles } : {}),
+    }),
     listPlatformAccessAudit(actor, 20),
     getPlatformSupportAccessSummary(actor),
   ]);
-  const ownerCount = assignments.filter((row) => row.role === "platform_owner").length;
-  const operatorCount = assignments.filter(
+
+  // KPI counts are computed from the FULL result (not just the
+  // filtered page) so the headline numbers stay stable while the user
+  // is filtering. The "X matching" KPI tile surfaces the active filter.
+  const ownerCountAll = allRows.filter((row) => row.role === "platform_owner").length;
+  const operatorCountAll = allRows.filter(
     (row) => row.role === "agency_operator" || row.role === "support_operator",
   ).length;
-  const targetLabels = new Map(assignments.map((row) => [row.userId, row.email]));
+
+  const paginated = paginate(allRows, filters.page, filters.size);
+  const assignments = paginated.rows;
+  const filterActive =
+    hasActiveFilters({ ...filters, status: [], role: filters.role }) || filters.role.length > 0;
+  const targetLabels = new Map(allRows.map((row) => [row.userId, row.email]));
 
   const assignmentColumns: DataTableColumnDef<PlatformAccessRow>[] = [
     {
@@ -202,6 +235,50 @@ export default async function PlatformAccessPage() {
     },
   ];
 
+  const counterLabel = filterActive
+    ? t("platform.paginationMatching", {
+        from: paginated.from,
+        to: paginated.to,
+        total: paginated.total,
+      })
+    : t("platform.paginationAll", {
+        from: paginated.from,
+        to: paginated.to,
+        total: paginated.total,
+      });
+
+  const basePath = "/app/platform/access";
+  const prevHref =
+    filters.page > 1
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page - 1 },
+        })
+      : null;
+  const nextHref =
+    filters.page < paginated.totalPages
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page + 1 },
+        })
+      : null;
+
+  // The toolbar's hidden inputs preserve the active role + size when
+  // the user updates search, so reload-after-search doesn't lose them.
+  // We omit `q` (the input's `defaultValue` covers it) and `page` (the
+  // toolbar always resets to 1 when filters change).
   return (
     <div className="space-y-6" data-testid="platform-access-root">
       <PageHeader
@@ -232,20 +309,20 @@ export default async function PlatformAccessPage() {
         <KpiTile
           icon={<Users className="h-4 w-4" aria-hidden="true" />}
           label={t("platform.kpiActiveMembers")}
-          value={assignments.length}
+          value={allRows.length}
           data-testid="platform-access-kpi-members"
         />
         <KpiTile
           icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
           label={t("platform.kpiPlatformOwners")}
-          value={ownerCount}
-          tone={ownerCount <= 1 ? "warning" : "default"}
+          value={ownerCountAll}
+          tone={ownerCountAll <= 1 ? "warning" : "default"}
           data-testid="platform-access-kpi-owners"
         />
         <KpiTile
           icon={<UserCog className="h-4 w-4" aria-hidden="true" />}
           label={t("platform.kpiOperators")}
-          value={operatorCount}
+          value={operatorCountAll}
           data-testid="platform-access-kpi-operators"
         />
         <KpiTile
@@ -261,7 +338,7 @@ export default async function PlatformAccessPage() {
         />
       </div>
 
-      {ownerCount <= 1 ? (
+      {ownerCountAll <= 1 ? (
         <div
           className="border-warning/40 bg-warning-subtle text-body text-fg-secondary flex items-start gap-3 rounded-[var(--radius-control)] border p-4"
           role="status"
@@ -283,19 +360,65 @@ export default async function PlatformAccessPage() {
         </Card>
       ) : null}
 
-      <Card padding="lg" className="space-y-4">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="text-primary h-5 w-5" aria-hidden="true" />
-          <CardTitle>{t("platform.currentAssignmentsTitle")}</CardTitle>
+      <Card padding="none" className="overflow-hidden">
+        <div className="border-border border-b px-4 py-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="text-primary h-5 w-5" aria-hidden="true" />
+            <CardTitle>{t("platform.currentAssignmentsTitle")}</CardTitle>
+          </div>
+          <CardDescription>{t("platform.currentAssignmentsDescription")}</CardDescription>
         </div>
-        <CardDescription>{t("platform.currentAssignmentsDescription")}</CardDescription>
+
+        <DataTableToolbar
+          testIdPrefix="platform-access-toolbar"
+          searchPlaceholder={t("platform.accessSearchPlaceholder")}
+          searchLabel={t("platform.accessSearchLabel")}
+          defaultSearchValue={filters.q}
+          hiddenParams={{
+            ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
+            ...(filters.role.length > 0 ? { role: filters.role } : {}),
+          }}
+          clearHref={buildListHref({
+            basePath,
+            current: {
+              q: filters.q,
+              status: filters.status,
+              role: filters.role,
+              size: filters.size,
+            },
+            next: { q: "", status: [], role: [], page: 1, size: 50, clear: true },
+          })}
+          clearLabel={t("platform.accessSearchClear")}
+        >
+          {PLATFORM_ROLE_VALUES.map((role) => (
+            <FilterChip
+              key={role}
+              name="role"
+              value={role}
+              selected={filters.role.includes(role)}
+              label={roleLabel(role, t)}
+              testId={`platform-access-filter-role-${role}`}
+            />
+          ))}
+        </DataTableToolbar>
+
         {assignments.length === 0 ? (
-          <EmptyState
-            icon={<Users className="h-8 w-8" aria-hidden="true" />}
-            title={t("platform.emptyAssignments")}
-            description={t("platform.emptyAssignmentsBody")}
-            data-testid="platform-access-empty"
-          />
+          <div className="p-6" data-testid="platform-access-empty">
+            <EmptyState
+              icon={<Users className="h-8 w-8" aria-hidden="true" />}
+              title={t("platform.emptyAssignments")}
+              description={t("platform.emptyAssignmentsBody")}
+              data-testid="platform-access-empty"
+            />
+          </div>
+        ) : filterActive && allRows.length > 0 ? (
+          <div className="p-6" data-testid="platform-access-no-match">
+            <EmptyState
+              icon={<Filter className="h-8 w-8" aria-hidden="true" />}
+              title={t("platform.accessEmptyNoMatch")}
+              description={t("platform.accessEmptyNoMatchBody")}
+            />
+          </div>
         ) : (
           <>
             <div className="grid gap-3 lg:hidden" data-testid="platform-access-mobile-list">
@@ -352,6 +475,24 @@ export default async function PlatformAccessPage() {
                 data-testid="platform-access-table"
               />
             </div>
+            <ListPagination
+              testId="platform-access-pagination"
+              page={paginated.page}
+              totalPages={paginated.totalPages}
+              total={paginated.total}
+              from={paginated.from}
+              to={paginated.to}
+              prevHref={prevHref}
+              nextHref={nextHref}
+              counterLabel={counterLabel}
+              ariaLabel={t("platform.accessPaginationAria")}
+              prevLabel={t("platform.accessPaginationPrev")}
+              nextLabel={t("platform.accessPaginationNext")}
+              pageIndicator={t("platform.accessPaginationPageOf", {
+                page: paginated.page,
+                total: paginated.totalPages,
+              })}
+            />
           </>
         )}
       </Card>

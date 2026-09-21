@@ -107,7 +107,10 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
     expect(src).not.toMatch(/activeAgencyId\s*\(\s*\)/);
     expect(src).not.toMatch(/firstAgencyForBootstrap/);
     expect(src).toMatch(/listInvitations\(agencyId: string\)/);
-    expect(src).toMatch(/listAgencyMembers\(agencyId: string\)/);
+    // listAgencyMembers takes an optional second `filters` parameter as
+    // of the Team & Access / ui-ux-pro-max round (SQL-pushdown of q /
+    // status / isAdmin); the agency scope remains required.
+    expect(src).toMatch(/listAgencyMembers\([^\)]*agencyId: string/);
   });
 
   it("planning actions resolve workspace through the active agency context", () => {

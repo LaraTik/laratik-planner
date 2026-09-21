@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { Clock, UserPlus, Users } from "lucide-react";
+import { Clock, Filter as FilterIcon, UserPlus, Users } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import {
@@ -19,18 +19,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
+import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
+import { MemberEditTrigger } from "./member-edit-trigger";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
   return { title: t("sidebar.team") };
 }
-import { MemberEditTrigger } from "./member-edit-trigger";
 
 type MemberRow = {
   id: string;
@@ -148,6 +151,20 @@ const ROLE_LABEL_KEY: Record<string, string> = {
 };
 
 /**
+ * The full set of workspace roles surfaced as filter chips.
+ * Order matters — the chips render in this order.
+ */
+const WORKSPACE_ROLES = [
+  "workspace_manager",
+  "content_planner",
+  "designer",
+  "internal_reviewer",
+  "client_reviewer",
+  "publisher",
+  "viewer",
+] as const;
+
+/**
  * Team (M3.4) — Stitch-aligned table view of the people who have
  * access to a workspace and their roles.
  *
@@ -156,10 +173,22 @@ const ROLE_LABEL_KEY: Record<string, string> = {
  *   "Invite people" lives in a side drawer; in v1 it deep-links to
  *   /app/users where the invite form already lives.
  *
+ * Round 1 (Team & Access / ui-ux-pro-max): added URL-driven search +
+ * status + role filter chips + pagination. Filter+search happens in
+ * memory after the DB join — workspace member lists rarely exceed a
+ * few hundred rows; if that ceiling is breached, push the predicates
+ * into the `memberRows` query below.
+ *
  * Pending workspace invitations are surfaced inline at the top of the
  * page so the manager can see what's outstanding for *this* workspace.
  */
-export default async function WorkspaceTeamPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function WorkspaceTeamPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { slug } = await params;
@@ -172,7 +201,10 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
     actorIsAgencyAdmin || (await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"]));
   const canInvite = actorIsAgencyAdmin;
 
-  // Active members (join users + roles)
+  const filters = parseListFilters(await searchParams);
+
+  // Active members (join users + roles). Filter is in-memory after the
+  // join so the join shape stays trivially auditable.
   const memberRows = await db
     .select({
       membershipId: workspaceMemberships.id,
@@ -198,12 +230,12 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
     )
     .where(eq(workspaceMemberships.workspaceId, workspace.id));
 
-  const members = new Map<
+  const allMembers = new Map<
     string,
     { name: string; email: string; status: string; isAgencyAdmin: boolean; roles: string[] }
   >();
   for (const row of memberRows) {
-    const member = members.get(row.userId) ?? {
+    const member = allMembers.get(row.userId) ?? {
       name: row.name,
       email: row.email,
       status: row.status,
@@ -211,8 +243,32 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
       roles: [],
     };
     if (row.role) member.roles.push(row.role);
-    members.set(row.userId, member);
+    allMembers.set(row.userId, member);
   }
+
+  // Free-text + status + role filtering in memory. The role chip
+  // matches when the user holds ANY of the requested roles in this
+  // workspace.
+  const q = filters.q.toLowerCase();
+  const filteredByText = Array.from(allMembers.entries()).filter(([, member]) => {
+    if (!q) return true;
+    return member.name.toLowerCase().includes(q) || member.email.toLowerCase().includes(q);
+  });
+  const filtered = filteredByText.filter(([, member]) => {
+    if (filters.status.length > 0 && !filters.status.includes(member.status)) {
+      return false;
+    }
+    if (filters.role.length > 0) {
+      const hasAny = member.roles.some((r) => filters.role.includes(r));
+      if (!hasAny) return false;
+    }
+    return true;
+  });
+  const sorted = filtered.sort((a, b) =>
+    a[1].name.toLowerCase().localeCompare(b[1].name.toLowerCase()),
+  );
+  const paginatedArr = paginate(sorted, filters.page, filters.size);
+  const members = new Map(sorted);
 
   // Pending invitations for this workspace
   const pendingInvitations = await db
@@ -264,15 +320,41 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
         eq(workspaceMemberships.status, "active"),
       ),
     );
-  // Multi-role: group rows by (userId, workspaceId) so a user with
-  // multiple roles in the same workspace shows up as a single chip
-  // list, not as multiple rows.
   const memberRolesByWorkspace: Record<string, Record<string, string[]>> = {};
   for (const r of roleRows) {
     const userBucket = (memberRolesByWorkspace[r.userId] ??= {});
     const wsBucket = (userBucket[r.workspaceId] ??= []);
     if (!wsBucket.includes(r.role)) wsBucket.push(r.role);
   }
+
+  const filterActive = hasActiveFilters(filters);
+  const basePath = `/app/w/${workspace.slug}/team`;
+  const prevHref =
+    filters.page > 1
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page - 1 },
+        })
+      : null;
+  const nextHref =
+    filters.page < paginatedArr.totalPages
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page + 1 },
+        })
+      : null;
 
   return (
     <div className="space-y-6" data-testid="workspace-team">
@@ -336,12 +418,69 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
       ) : null}
 
       <Card padding="none" className="overflow-hidden" data-testid="team-members-card">
-        {members.size === 0 ? (
+        <DataTableToolbar
+          testIdPrefix="team-toolbar"
+          searchPlaceholder={t("team.searchPlaceholder")}
+          searchLabel={t("team.searchLabel")}
+          defaultSearchValue={filters.q}
+          hiddenParams={{
+            ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
+            ...(filters.status.length > 0 ? { status: filters.status } : {}),
+            ...(filters.role.length > 0 ? { role: filters.role } : {}),
+          }}
+          clearHref={buildListHref({
+            basePath,
+            current: {
+              q: filters.q,
+              status: filters.status,
+              role: filters.role,
+              size: filters.size,
+            },
+            next: { q: "", status: [], role: [], page: 1, size: 50, clear: true },
+          })}
+          clearLabel={t("team.searchClear")}
+        >
+          <FilterIcon className="text-fg-muted h-4 w-4" aria-hidden={true} />
+          <FilterChip
+            name="status"
+            value="active"
+            selected={filters.status.includes("active")}
+            label={t("team.statusActive")}
+            testId="team-filter-status-active"
+          />
+          <FilterChip
+            name="status"
+            value="inactive"
+            selected={filters.status.includes("inactive")}
+            label={t("team.statusInactive")}
+            testId="team-filter-status-inactive"
+          />
+          {WORKSPACE_ROLES.map((role) => (
+            <FilterChip
+              key={role}
+              name="role"
+              value={role}
+              selected={filters.role.includes(role)}
+              label={t(ROLE_LABEL_KEY[role] ?? role)}
+              testId={`team-filter-role-${role}`}
+            />
+          ))}
+        </DataTableToolbar>
+
+        {members.size === 0 && !filterActive ? (
           <div className="p-6" data-testid="team-empty-state">
             <EmptyState
               icon={<Users className="h-8 w-8" />}
               title={t("team.emptyTitle")}
               description={canInvite ? t("team.adminEmpty") : t("team.memberEmpty")}
+            />
+          </div>
+        ) : members.size === 0 && filterActive ? (
+          <div className="p-6" data-testid="team-no-match">
+            <EmptyState
+              icon={<FilterIcon className="h-8 w-8" aria-hidden={true} />}
+              title={t("team.emptyNoMatch")}
+              description={t("team.emptyNoMatchBody")}
             />
           </div>
         ) : (
@@ -351,7 +490,7 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 data-testid="team-table"
                 getRowKey={(m) => m.id}
                 getRowTestId={(m) => `team-member-${m.id}`}
-                rows={[...members.entries()].map(([id, member]) => ({ id, ...member }))}
+                rows={paginatedArr.rows.map(([id, member]) => ({ id, ...member }))}
                 columns={teamColumns({
                   actorId: session.user.id,
                   actorIsAgencyAdmin,
@@ -365,9 +504,28 @@ export default async function WorkspaceTeamPage({ params }: { params: Promise<{ 
                 })}
               />
             </div>
-            <div className="border-border text-label text-fg-secondary flex items-center justify-between border-t px-4 py-3">
-              <span data-testid="team-count">{t("team.showing", { count: members.size })}</span>
-            </div>
+            <ListPagination
+              testId="team-pagination"
+              page={paginatedArr.page}
+              totalPages={paginatedArr.totalPages}
+              total={paginatedArr.total}
+              from={paginatedArr.from}
+              to={paginatedArr.to}
+              prevHref={prevHref}
+              nextHref={nextHref}
+              counterLabel={t("team.paginationAll", {
+                from: paginatedArr.from,
+                to: paginatedArr.to,
+                total: paginatedArr.total,
+              })}
+              ariaLabel={t("team.paginationAria")}
+              prevLabel={t("team.paginationPrev")}
+              nextLabel={t("team.paginationNext")}
+              pageIndicator={t("team.paginationPageOf", {
+                page: paginatedArr.page,
+                total: paginatedArr.totalPages,
+              })}
+            />
           </>
         )}
       </Card>

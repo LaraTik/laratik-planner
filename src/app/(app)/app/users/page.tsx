@@ -16,9 +16,12 @@ import { MemberList } from "./member-list";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { KpiTile } from "@/components/workspace/kpi-tile";
 import { PageHeader } from "@/components/workspace/page-header";
-import { Building2, Mail, UserCheck, UserPlus, UserX } from "lucide-react";
+import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
+import { Filter as FilterIcon, UserCheck, Mail, UserPlus, UserX } from "lucide-react";
 
 /**
  * User Management (admin only) — Stitch-aligned dashboard.
@@ -29,16 +32,21 @@ import { Building2, Mail, UserCheck, UserPlus, UserX } from "lucide-react";
  *   - Pending invitations list
  *   - Members list (with Edit access drawer)
  *
- * v1 (Goal 2.5) ships the tabbed "Add directly" variant of the
- * original card. The KPI tiles + Pending + Members sections are
- * unchanged from the prior release.
+ * Round 1 (Team & Access / ui-ux-pro-max): the members list grew a
+ * search + status + role toolbar (URL-driven) and cursor-style
+ * pagination. The KPI tiles always reflect the FULL member population,
+ * not the filtered page, so they stay stable while filtering.
  */
 export async function generateMetadata() {
   const { t } = await tForActive();
   return { title: t("users.title") };
 }
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const actor = await currentActor();
@@ -61,8 +69,21 @@ export default async function UsersPage() {
     );
   }
 
-  const [members, pending, allWorkspaces] = await Promise.all([
-    listAgencyMembers(agencyId),
+  const filters = parseListFilters(await searchParams);
+
+  const [membersAll, pending, allWorkspaces] = await Promise.all([
+    listAgencyMembers(agencyId, {
+      ...(filters.q ? { q: filters.q } : {}),
+      ...(filters.status.length > 0 ? { status: filters.status } : {}),
+      // No role-chip filter is exposed on this page in v1 — the
+      // authoritative agency-admins filter is handled below via the
+      // `role` URL param so the toolbar can re-render without it.
+      ...(filters.role.includes("agency_admin")
+        ? { isAdmin: true }
+        : filters.role.includes("non_admin")
+          ? { isAdmin: false }
+          : {}),
+    }),
     listInvitations(agencyId),
     db
       .select({ id: workspaces.id, name: workspaces.name })
@@ -70,22 +91,19 @@ export default async function UsersPage() {
       .where(and(eq(workspaces.agencyId, agencyId))),
   ]);
 
-  // Per-invitation workspace role grants so the admin can audit
-  // what access a pending invite will grant on accept. Without
-  // this, the pending-invitations list only shows the email +
-  // expiry + the agency-admin flag, and the admin cannot tell
-  // at a glance whether the invitee is going to be added to
-  // any workspace.
+  // KPI counts from the un-filtered population so the user keeps
+  // seeing the same totals while searching.
+  const [allForKpi] = await Promise.all([listAgencyMembers(agencyId)]);
+  const activeCount = allForKpi.filter((m) => m.status === "active").length;
+  const deactivatedCount = allForKpi.length - activeCount;
+  const pendingCount = pending.length;
+  const workspaceList = allWorkspaces.map((w) => ({ id: w.id, name: w.name }));
+
   const grantsByInvitation = await listInvitationGrants(
     pending.map((i) => i.id),
     agencyId,
   );
 
-  // Per-user, per-workspace role lookup so the Edit drawer can pre-select
-  // the current role in each workspace select. Active memberships only —
-  // deactivated memberships aren't editable in this surface.
-  // Multi-role: a user can hold many roles in the same workspace; we
-  // group the rows by (userId, workspaceId) into a `string[]`.
   const memberRows = await db
     .select({
       userId: workspaceMemberships.userId,
@@ -113,9 +131,35 @@ export default async function UsersPage() {
     if (!wsBucket.includes(r.role)) wsBucket.push(r.role);
   }
 
-  const activeCount = members.filter((m) => m.status === "active").length;
-  const deactivatedCount = members.length - activeCount;
-  const workspaceList = allWorkspaces.map((w) => ({ id: w.id, name: w.name }));
+  const paginated = paginate(membersAll, filters.page, filters.size);
+  const filterActive = hasActiveFilters(filters);
+  const basePath = "/app/users";
+  const prevHref =
+    filters.page > 1
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page - 1 },
+        })
+      : null;
+  const nextHref =
+    filters.page < paginated.totalPages
+      ? buildListHref({
+          basePath,
+          current: {
+            q: filters.q,
+            status: filters.status,
+            role: filters.role,
+            size: filters.size,
+          },
+          next: { page: filters.page + 1 },
+        })
+      : null;
 
   return (
     <div className="space-y-6">
@@ -131,7 +175,7 @@ export default async function UsersPage() {
         <KpiTile
           icon={<Mail className="h-4 w-4" aria-hidden="true" />}
           label={t("users.kpiPending")}
-          value={pending.length}
+          value={pendingCount}
           tone="warning"
         />
         <KpiTile
@@ -187,17 +231,75 @@ export default async function UsersPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="inline-flex items-center gap-2">
-            <Building2 className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            {t("users.membersTitle")}
-          </CardTitle>
-          <Badge variant="info">{members.length}</Badge>
+          <CardTitle>{t("users.membersTitle")}</CardTitle>
+          <Badge variant="info">
+            {filterActive
+              ? t("users.membersFiltered", { count: paginated.total })
+              : membersAll.length}
+          </Badge>
         </CardHeader>
+        <DataTableToolbar
+          testIdPrefix="users-toolbar"
+          searchPlaceholder={t("users.searchPlaceholder")}
+          searchLabel={t("users.searchLabel")}
+          defaultSearchValue={filters.q}
+          hiddenParams={{
+            ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
+            ...(filters.status.length > 0 ? { status: filters.status } : {}),
+            ...(filters.role.length > 0 ? { role: filters.role } : {}),
+          }}
+          clearHref={buildListHref({
+            basePath,
+            current: {
+              q: filters.q,
+              status: filters.status,
+              role: filters.role,
+              size: filters.size,
+            },
+            next: { q: "", status: [], role: [], page: 1, size: 50, clear: true },
+          })}
+          clearLabel={t("users.searchClear")}
+        >
+          <FilterIcon
+            className="text-fg-muted h-4 w-4"
+            aria-hidden={true}
+            data-testid="users-toolbar-divider"
+          />
+          <FilterChip
+            name="status"
+            value="active"
+            selected={filters.status.includes("active")}
+            label={t("users.statusActive")}
+            testId="users-filter-status-active"
+          />
+          <FilterChip
+            name="status"
+            value="deactivated"
+            selected={filters.status.includes("deactivated")}
+            label={t("users.statusDeactivated")}
+            testId="users-filter-status-deactivated"
+          />
+          <FilterChip
+            name="role"
+            value="agency_admin"
+            selected={filters.role.includes("agency_admin")}
+            label={t("users.roleAgencyAdmin")}
+            testId="users-filter-role-admin"
+          />
+          <FilterChip
+            name="role"
+            value="non_admin"
+            selected={filters.role.includes("non_admin")}
+            label={t("users.roleNonAdmin")}
+            testId="users-filter-role-non-admin"
+          />
+        </DataTableToolbar>
+
         <MemberList
           actorId={session.user.id}
           workspaces={workspaceList}
           rolesByUser={rolesByUser}
-          members={members.map((m) => ({
+          members={paginated.rows.map((m) => ({
             id: m.userId,
             name: m.name ?? m.email,
             email: m.email,
@@ -206,6 +308,29 @@ export default async function UsersPage() {
             role: m.role,
             joinedAt: m.joinedAt.toISOString().slice(0, 10),
           }))}
+        />
+
+        <ListPagination
+          testId="users-pagination"
+          page={paginated.page}
+          totalPages={paginated.totalPages}
+          total={paginated.total}
+          from={paginated.from}
+          to={paginated.to}
+          prevHref={prevHref}
+          nextHref={nextHref}
+          counterLabel={t("users.paginationAll", {
+            from: paginated.from,
+            to: paginated.to,
+            total: paginated.total,
+          })}
+          ariaLabel={t("users.paginationAria")}
+          prevLabel={t("users.paginationPrev")}
+          nextLabel={t("users.paginationNext")}
+          pageIndicator={t("users.paginationPageOf", {
+            page: paginated.page,
+            total: paginated.totalPages,
+          })}
         />
       </Card>
     </div>

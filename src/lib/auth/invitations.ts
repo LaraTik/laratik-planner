@@ -733,9 +733,58 @@ export async function reactivateUser(input: {
 }
 
 /**
+ * Filters accepted by {@link listAgencyMembers}. Every field is
+ * optional; absent values mean "no filter".
+ *
+ * - `q`       : case-insensitive substring on email, name, or display name
+ * - `status`  : whitelist of `agencyMemberships.status` enum values.
+ *               Unknown / non-enum values are silently dropped; pass
+ *               `["active"]` to restrict to active memberships.
+ * - `isAdmin` : restrict to agency admins (`true`) or non-admins (`false`)
+ */
+export interface ListAgencyMembersFilters {
+  q?: string;
+  status?: string[];
+  isAdmin?: boolean;
+}
+
+// `agency_memberships.status` is a Postgres enum with exactly two
+// values today (active, deactivated). Pending contributors live on the
+// `invitation` table, NOT on `agency_memberships`. Filtering by
+// "pending" against `agency_memberships` is a no-op; we silently drop
+// it to keep the toolbar tolerant.
+type AgencyMemberStatus = "active" | "deactivated";
+
+function narrowStatuses(values: string[]): AgencyMemberStatus[] {
+  const out: AgencyMemberStatus[] = [];
+  for (const v of values) {
+    const lower = v.trim().toLowerCase();
+    if ((lower === "active" || lower === "deactivated") && !out.includes(lower)) {
+      out.push(lower);
+    }
+  }
+  return out;
+}
+
+/**
  * All members of the agency (used by User Management UI).
  */
-export async function listAgencyMembers(agencyId: string) {
+export async function listAgencyMembers(agencyId: string, filters: ListAgencyMembersFilters = {}) {
+  const trimmed = (filters.q ?? "").trim();
+  const statusList = narrowStatuses(filters.status ?? []);
+  const conditions = [eq(agencyMemberships.agencyId, agencyId)];
+  if (statusList.length > 0) {
+    conditions.push(inArray(agencyMemberships.status, statusList));
+  }
+  if (typeof filters.isAdmin === "boolean") {
+    conditions.push(eq(agencyMemberships.isAgencyAdmin, filters.isAdmin));
+  }
+  if (trimmed) {
+    const pattern = `%${trimmed.toLowerCase()}%`;
+    conditions.push(
+      sql`(lower(${users.email}) LIKE ${pattern} OR lower(coalesce(${users.name}, '')) LIKE ${pattern})`,
+    );
+  }
   return db
     .select({
       userId: users.id,
@@ -749,5 +798,5 @@ export async function listAgencyMembers(agencyId: string) {
     })
     .from(agencyMemberships)
     .innerJoin(users, eq(users.id, agencyMemberships.userId))
-    .where(eq(agencyMemberships.agencyId, agencyId));
+    .where(and(...conditions));
 }
