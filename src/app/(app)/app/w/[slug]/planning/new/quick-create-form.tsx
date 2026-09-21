@@ -11,6 +11,7 @@ import { FormSummary } from "@/components/forms/form-summary";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
+import { formatDateInTimeZoneForInput } from "@/lib/utils/date";
 import { quickCreateAction } from "../actions";
 
 /**
@@ -23,9 +24,11 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
 
 export function QuickCreateForm({
   workspaceSlug,
+  workspaceTimezone,
   trendSignal,
 }: {
   workspaceSlug: string;
+  workspaceTimezone: string;
   trendSignal?: { id: string; label: string };
 }) {
   const t = useLocaleT();
@@ -36,11 +39,19 @@ export function QuickCreateForm({
   const [title, setTitle] = React.useState(trendSignal?.label ?? "");
   const [brief, setBrief] = React.useState(trendSignal ? `Trend angle: ${trendSignal.label}` : "");
 
-  // Default the planned date to tomorrow 9am
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(9, 0, 0, 0);
-  const defaultPlanned = tomorrow.toISOString().slice(0, 16);
+  // Default the planned date to *workspace-local* tomorrow 9am.
+  // The previous `toISOString().slice(0, 16)` translated the instant
+  // to UTC and then re-formatted it as YYYY-MM-DDTHH:mm, so a Berlin
+  // planner choosing 9 AM saw a default of 07:00 (UTC) on the form —
+  // and the value they didn't touch would round-trip as 7 AM UTC
+  // instead of 9 AM Berlin. `formatDateInTimeZoneForInput` formats
+  // the wall-clock in the workspace timezone (`workspaceTimezone`),
+  // not the browser's local clock, so a New York user working on a
+  // Berlin workspace still sees the 9 AM Berlin reading.
+  const tomorrowUtc = new Date();
+  tomorrowUtc.setUTCDate(tomorrowUtc.getUTCDate() + 1);
+  tomorrowUtc.setUTCHours(9, 0, 0, 0);
+  const defaultPlanned = formatDateInTimeZoneForInput(tomorrowUtc, workspaceTimezone);
 
   // When the Server Action returns a `fieldErrors` map, the
   // first invalid control is focused on the next paint so

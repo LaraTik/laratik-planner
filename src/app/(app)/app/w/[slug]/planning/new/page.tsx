@@ -76,7 +76,11 @@ export default async function QuickCreatePage({
           </>
         }
       />
-      <QuickCreateForm workspaceSlug={slug} {...(trendSignal ? { trendSignal } : {})} />
+      <QuickCreateForm
+        workspaceSlug={slug}
+        workspaceTimezone={ws.timezone}
+        {...(trendSignal ? { trendSignal } : {})}
+      />
     </div>
   );
 }

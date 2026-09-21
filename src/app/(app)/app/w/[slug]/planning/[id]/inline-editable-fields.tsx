@@ -60,7 +60,7 @@ import {
   inlineUpdateDateAction,
   inlineUpdateTitleAction,
 } from "@/lib/content/inline-update";
-import { formatDateForInput, parseInputAsLocalDate } from "@/lib/utils/date";
+import { formatDateInTimeZoneForInput, parseInputAsWorkspaceDate } from "@/lib/utils/date";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
@@ -325,9 +325,16 @@ export function InlineDateEditor({
           <input
             id="inline-edit-date-input"
             type="datetime-local"
-            value={formatDateForInput(value)}
+            // Format & parse in the *workspace* timezone so a
+            // planner in NY editing a Berlin workspace sees the
+            // stored instant as its Berlin wall-clock, not the
+            // NY local clock. The previous `formatDateForInput`
+            // used `d.getHours()` etc. — those read the browser's
+            // local clock, which could shift the displayed time
+            // by hours across DST.
+            value={formatDateInTimeZoneForInput(value, timezone)}
             onChange={(e) => {
-              const parsed = parseInputAsLocalDate(e.target.value);
+              const parsed = parseInputAsWorkspaceDate(e.target.value, timezone);
               onChange(Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString());
             }}
             // Shared focus ring + padding with the other

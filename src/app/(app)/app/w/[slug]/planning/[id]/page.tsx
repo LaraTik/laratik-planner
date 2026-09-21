@@ -23,6 +23,7 @@ import {
   listWorkspaceDesigners,
   UPDATEABLE_STATUSES,
 } from "@/lib/content/service";
+import { INLINE_EDITABLE_STATUSES } from "@/lib/content/inline-update-actions";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 import {
   listPublicationsForItem,
@@ -347,20 +348,16 @@ export default async function ContentDetailPage({
     (actorRoles.isManager || actorRoles.isPlanner) &&
     UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
   // The overview's inline title/date/brief editors intentionally support
+  // The overview's inline title/date/brief editors intentionally support
   // later workflow stages than the full draft editor. Keep that surface
   // available wherever the inline server actions accept an update, without
   // widening `canEdit` and accidentally reopening the full editor.
+  // The allow-list is the canonical `INLINE_EDITABLE_STATUSES` exported by
+  // `lib/content/inline-update.ts` — the server-side gate uses the same
+  // symbol, so the two cannot drift if a future status is added.
   const canEditOverview =
     (actorRoles.isManager || actorRoles.isPlanner) &&
-    [
-      "draft",
-      "content_review",
-      "changes_requested",
-      "approved_for_design",
-      "in_design",
-      "creative_review",
-      "ready_to_publish",
-    ].includes(item.status);
+    (INLINE_EDITABLE_STATUSES as readonly string[]).includes(item.status);
   const canEditProduction =
     actorRoles.isDesigner &&
     item.designerId === actor.id &&

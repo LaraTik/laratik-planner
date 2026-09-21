@@ -49,6 +49,13 @@ import {
 export interface EditDetailsDrawerProps {
   workspaceSlug: string;
   contentItemId: string;
+  /**
+   * IANA timezone of the workspace, e.g. `"Europe/Berlin"`.
+   * The edit form formats the planned-publish date in this
+   * timezone so the input pre-fill reads as the workspace's
+   * 9 AM regardless of the planner's local clock.
+   */
+  workspaceTimezone: string;
   channels: { id: string; accountName: string; platform: string }[];
   initial: EditIdeaFormInitial;
   /**
@@ -65,6 +72,7 @@ export interface EditDetailsDrawerProps {
 export function EditDetailsDrawer({
   workspaceSlug,
   contentItemId,
+  workspaceTimezone,
   channels,
   initial,
   triggerLabel = "Edit content",
@@ -110,6 +118,7 @@ export function EditDetailsDrawer({
         <EditIdeaForm
           workspaceSlug={workspaceSlug}
           contentItemId={contentItemId}
+          workspaceTimezone={workspaceTimezone}
           channels={channels}
           initial={initial}
         />
