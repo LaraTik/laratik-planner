@@ -12,6 +12,72 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Reports section (round 3)
+
+Agency admins can now generate PDF reports that span any
+combination of their workspaces and channels. The reports surface
+lives at `/app/agency-settings/reports` and the chosen template
+picker card ships with three forward-slots:
+
+- **Analytics** — reach & engagement (launched)
+- **Post engagement** — coming soon
+- **Ads campaigns** — coming soon
+
+Adding a new report type is a one-file change: implement
+`lib/reports/templates/<name>.ts(x)` exporting a `ReportTemplateSpec`,
+register it in `lib/reports/templates/index.ts`, and add the two
+bilingual catalog keys. The picker, the renderer, the storage
+layer, the API route, and the page are unchanged.
+
+Architecture:
+
+- `lib/reports/aggregate.ts` — reach / views / engaged-accounts /
+  interactions / follower-growth aggregate per (workspace ×
+  channel). The output shape is the contract every template
+  consumes.
+- `lib/reports/templates/types.ts` — generic `ReportTemplateSpec<TData>`
+  with `load(ctx)` + `render(props)`. The variance is intentional:
+  render is typed as a function-of-props (not
+  `React.ComponentType`) because React types are invariant in
+  their props argument; the registry only knows about `unknown`.
+- `lib/reports/templates/analytics.tsx` — the first template, a
+  one-page cover with totals, a per-channel breakdown table, and a
+  styled footer with `Page N of M`.
+- `lib/reports/render.tsx` — calls `template.load()` then
+  `template.render()` through `react-pdf/renderer`'s
+  `renderToBuffer`. Server-side only; never bundled on the client.
+- `lib/reports/storage.ts` — file-backed metadata + bytes (v1;
+  swappable for an S3 adapter). Capped at 100 entries; older
+  entries are GC'd from the index.
+- `app/api/reports/[id]/pdf/route.ts` — signed-by-agency download
+  endpoint with `cache-control: private, no-store`.
+
+Why `@react-pdf/renderer` (and not Puppeteer / jsPDF / HTML-print):
+server-rendered, no browser instance, ~200KB added, scales linearly
+when more templates land. Templates are plain React components so
+the layout DSL stays the project DSL.
+
+UI: a single page hosts the builder + history list. Workspaces
+select-all-by-default; channels scope automatically to selected
+workspaces (and a workspace's previously-deselected channels come
+back when re-selecting). 7d / 30d / 90d / Custom period presets +
+custom range validation.
+
+Bilingual (EN + AR): every new label in
+`src/messages/{en,ar}/reports.json`; parity-pinned by
+`tests/unit/i18n/catalogs.test.ts`.
+
+Tests: 7 cases pinning the period-helper boundary semantics at
+`tests/unit/report-period.test.ts`.
+
+Files added: `lib/reports/{aggregate,render,storage}.ts(x)`,
+`lib/reports/templates/{types,index,analytics}.ts(x)`,
+`app/(app)/app/agency-settings/reports/page.tsx`,
+`actions.ts`, `_components/{report-builder,report-history-list}.tsx`,
+`app/api/reports/[id]/pdf/route.ts`, bilingual catalog, docs.
+
+Typecheck + ESLint clean (max-warnings=0); period tests 7 / 7.
+
 ### Added — Workspace Activity becomes workspace-wide (round 2)
 
 The Activity page grew up from a brand-kit-scoped audit log into a

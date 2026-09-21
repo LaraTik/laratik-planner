@@ -197,6 +197,7 @@ describe("buildAgencyNavigation", () => {
         "agency-settings-trend-sources",
         "agency-settings-social",
         "agency-settings-social-providers",
+        "agency-settings-reports",
         "agency-settings-storage",
       ]);
     }

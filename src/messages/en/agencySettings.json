@@ -1,6 +1,7 @@
 {
   "title": "Agency Settings",
   "description": "Agency identity, access footprint, and managed services.",
+  "eyebrow": "Agency administration",
   "hubEyebrow": "Agency administration",
   "hubBadge": "Central hub",
   "hubDescription": "Configure agency-wide identity, social connections, private storage, and reviewed planning guidance from one operational hub.",

@@ -2,6 +2,7 @@ import {
   Activity,
   AlertOctagon,
   BarChart3,
+  FileText,
   BookOpen,
   Bot,
   Briefcase,
@@ -673,6 +674,15 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
               labelKey: "sidebar.settingsSocialProviders",
               icon: PlugZap,
               exact: true,
+            },
+            {
+              kind: "link",
+              key: "agency-settings-reports",
+              href: "/app/agency-settings/reports",
+              label: "Reports",
+              labelKey: "sidebar.settingsReports",
+              icon: FileText,
+              exact: false,
             },
             {
               kind: "link",

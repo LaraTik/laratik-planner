@@ -30,6 +30,7 @@ import planningFilters from "./planningFilters.json";
 import planningPacks from "./planningPacks.json";
 import platform from "./platform.json";
 import quickCreate from "./quickCreate.json";
+import reports from "./reports.json";
 import reviews from "./reviews.json";
 import settings from "./settings.json";
 import sidebar from "./sidebar.json";
@@ -75,6 +76,7 @@ export default {
   planningPacks,
   platform,
   quickCreate,
+  reports,
   reviews,
   settings,
   sidebar,
