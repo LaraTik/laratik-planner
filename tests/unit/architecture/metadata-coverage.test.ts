@@ -10,6 +10,11 @@ const intentionalExceptions = new Set([
   "(app)/app/w/[slug]/settings/lead-times/page.tsx",
   "(app)/app/w/[slug]/settings/lifecycle/page.tsx",
   "(app)/app/w/[slug]/planning/[id]/publish/page.tsx",
+  // Round 2 of ui-ux-pro-max / Team & Access expansion: Activity
+  // moved out of brand-kit to /app/w/[slug]/activity. The
+  // brand-kit/activity route is preserved as a server-side redirect
+  // shim so existing Slack/email deep links keep working.
+  "(app)/app/w/[slug]/brand-kit/activity/page.tsx",
 ]);
 
 function collectPageFiles(directory: string, relativeDirectory = ""): string[] {

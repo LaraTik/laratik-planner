@@ -409,7 +409,10 @@ export function buildWorkspaceNavigation(input: {
         {
           kind: "link",
           key: "activity",
-          href: `${wsBase}/brand-kit/activity`,
+          // Workspace-scoped feed that aggregates content + reviews +
+          // plans + publications + brand-kit activity_event rows.
+          // Brand kit's old `/brand-kit/activity` URL redirects here.
+          href: `${wsBase}/activity`,
           label: "Activity",
           labelKey: "sidebar.activity",
           icon: History,

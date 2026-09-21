@@ -12,6 +12,45 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Workspace Activity becomes workspace-wide (round 2)
+
+The Activity page grew up from a brand-kit-scoped audit log into a
+proper workspace feed. New URL: `/app/w/[slug]/activity`. The old
+`/brand-kit/activity` route is preserved as a one-line redirect shim
+so existing Slack / email deep links keep working.
+
+The page is fed by `lib/workspace-activity/service.ts`'s
+`listWorkspaceActivity`, which aggregates two sources and merges them
+in-memory by `createdAt DESC`:
+
+- `activity_event` table (content items, reviews, plans, publications,
+  settings). Indexes on `(workspace_id, created_at DESC)` already
+  existed.
+- `listRecentBrandUpdates` — the four brand-kit tables (assets, voice
+  rules, publishing rules, linked resources). Brand-kit activity is no
+  longer the whole page; it's a filter chip.
+
+Each row is classified into one of six scopes via `kindToScope(kind)`
+in the service. The toolbar exposes six filter chips
+(`All / Content / Reviews / Brand kit / Planning / Publications`).
+The active chip carries the success-tone KPI tile above the feed
+so the user always knows which scope they're reading.
+
+Each feed row is keyboard-focusable and links to the source's
+canonical page (`/planning/[id]`, `/reviews/[id]`,
+`/calendar?item=[id]`, etc.) via `buildActivityHref` in the service.
+
+Bilingual (EN + AR): every new label in
+`src/messages/{en,ar}/activity.json`; parity-pinned by
+`tests/unit/i18n/catalogs.test.ts`.
+
+Files added: workspace-activity service, activity page,
+brand-kit→activity redirect shim, bilingual catalog, docs.
+File modified: `navigation-model.ts` Activity link relabeled to
+`/activity` (was `/brand-kit/activity`).
+
+Typecheck + lint + catalog parity clean.
+
 ### Added — Team & Access round 1: search / filter / pagination
 
 Three admin lists — Platform access (`/app/platform/access`), Agency

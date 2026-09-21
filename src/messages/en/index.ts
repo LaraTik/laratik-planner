@@ -1,4 +1,5 @@
 import account from "./account.json";
+import activity from "./activity.json";
 import agencyAi from "./agencyAi.json";
 import agencyPlan from "./agencyPlan.json";
 import agencyProviders from "./agencyProviders.json";
@@ -43,6 +44,7 @@ import workspaces from "./workspaces.json";
 
 export default {
   account,
+  activity,
   agencyAi,
   agencyPlan,
   agencyProviders,
