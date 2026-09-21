@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
+import { formatDateInTimeZoneForInput } from "@/lib/utils/date";
 import { updateContentItemAction } from "../../actions";
 
 export interface EditIdeaFormInitial {
@@ -41,11 +42,13 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
 export function EditIdeaForm({
   workspaceSlug,
   contentItemId,
+  workspaceTimezone,
   channels,
   initial: initialValues,
 }: {
   workspaceSlug: string;
   contentItemId: string;
+  workspaceTimezone: string;
   channels: { id: string; accountName: string; platform: string }[];
   initial: EditIdeaFormInitial;
 }) {
@@ -57,8 +60,18 @@ export function EditIdeaForm({
   const [title, setTitle] = React.useState(initialValues.title);
   const [brief, setBrief] = React.useState(initialValues.brief);
 
-  // datetime-local needs YYYY-MM-DDTHH:mm, slice the ISO.
-  const defaultPlanned = initialValues.plannedPublishAtIso.slice(0, 16);
+  // datetime-local needs YYYY-MM-DDTHH:mm. We previously
+  // did `.toISOString().slice(0, 16)`, which translates the
+  // instant to UTC and re-emits the wall clock in the UTC
+  // zone — so a 9 AM Berlin reading stored as `2026-09-30T07:00Z`
+  // would render as `07:00` on a NY planner's form and round-
+  // trip as 7 AM UTC. `formatDateInTimeZoneForInput` renders
+  // the wall-clock in the **workspace** IANA timezone, so the
+  // `09:00` reading survives an unmodified save.
+  const defaultPlanned = formatDateInTimeZoneForInput(
+    initialValues.plannedPublishAtIso,
+    workspaceTimezone,
+  );
 
   // Focus the first invalid field on submit failure.
   React.useEffect(() => {
@@ -145,6 +158,14 @@ export function EditIdeaForm({
         <FormField
           id="plannedPublishAt"
           label={t("planning.editForm.plannedPublish")}
+          // Surface the workspace IANA timezone so the planner
+          // always knows "9 AM" here means "9 AM in Berlin" —
+          // not their browser clock. The previous form left
+          // this implicit and was the root cause of the
+          // timezone mismatch reports (commit memo).
+          hint={t("planning.editForm.plannedPublishTimezone", {
+            timezone: workspaceTimezone,
+          })}
           required
           {...(state?.fieldErrors?.plannedPublishAt
             ? { error: state.fieldErrors.plannedPublishAt }

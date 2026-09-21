@@ -150,6 +150,7 @@ export default async function EditIdeaPage({
       <EditIdeaForm
         workspaceSlug={slug}
         contentItemId={item.id}
+        workspaceTimezone={ws.timezone}
         channels={[...allChannels, ...missingSelected]}
         initial={{
           title: item.title,

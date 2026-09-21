@@ -43,6 +43,7 @@
     "titleHint": "Short, descriptive.",
     "format": "Format",
     "plannedPublish": "Planned publish",
+    "plannedPublishTimezone": "Workspace timezone: {timezone}",
     "briefSummary": "Brief",
     "briefOptional": "Brief (optional)",
     "briefHint": "Goal, audience, key points.",

@@ -43,6 +43,7 @@
     "titleHint": "قصير وواضح.",
     "format": "التنسيق",
     "plannedPublish": "النشر المخطط له",
+    "plannedPublishTimezone": "المنطقة الزمنية لمساحة العمل: ‏{timezone}",
     "briefSummary": "الوصف المختصر",
     "briefOptional": "الوصف المختصر (اختياري)",
     "briefHint": "الهدف والجمهور والنقاط الرئيسية.",

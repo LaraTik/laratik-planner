@@ -61,6 +61,7 @@ describe("EditIdeaForm — channel state contract", () => {
       <EditIdeaForm
         workspaceSlug="food-game"
         contentItemId="content-1"
+        workspaceTimezone="Europe/Berlin"
         channels={[...ACTIVE_CHANNELS, STALE_SELECTED]}
         initial={{
           title: "August Kickoff",
@@ -96,6 +97,7 @@ describe("EditIdeaForm — channel state contract", () => {
       <EditIdeaForm
         workspaceSlug="food-game"
         contentItemId="content-1"
+        workspaceTimezone="Europe/Berlin"
         channels={ACTIVE_CHANNELS}
         initial={{
           title: "August Kickoff",
