@@ -28,6 +28,7 @@ The source boundary also supports server-mediated imports:
 - Public HTTPS direct-download links are fetched by the server and streamed into the same configured storage sink.
 - Link inspection performs a real bounded fetch and signature check before import, is rate-limited independently, and never persists or returns the fetched body.
 - Google Drive and OneDrive sharing links are detected. The server attempts a provider public-download URL first; private or permissioned files require the provider's OAuth/file-picker connection before import. A pasted sharing URL is not treated as authorization.
+- Google Drive **shared folder** URLs (`https://drive.google.com/drive/folders/<id>` and `/drive/u/<int>/folders/<id>`) are also detected. See the **Folder import** section below for the v1 contract.
 - Unsafe URLs are rejected: HTTP, non-standard ports, localhost/private/link-local destinations, unsafe redirects, unsupported MIME types, missing content length, and size-limit violations.
 - Public-link imports validate bounded file signatures for supported images, videos, PDFs, DOCX, and text before the stream is written to storage. Browser uploads are validated again from private storage before promotion to `ready`; invalid signatures are quarantined from storage reads, release quota, and are physically purged after retention. A future malware scanner remains an additional gate.
 - For browser files with an empty `File.type`, the client uses an allowlisted extension fallback only; the server still verifies provider MIME metadata and file signature before the asset is usable.
@@ -39,6 +40,65 @@ The source boundary also supports server-mediated imports:
 - A valid source `Last-Modified` header is retained as informational metadata so future provider connectors can detect remote changes without changing the catalog shape.
 - The library displays source provenance as a localized label (device upload, direct link, Google Drive, OneDrive, or legacy storage) while preserving stable technical source fields for audit and future connector actions.
 - Image cards use responsive `next/image` previews with reserved space to prevent layout shift; private media remains on the protected same-origin endpoint until authenticated derivative variants are available.
+
+### Folder import
+
+The "From link" picker recognises Google Drive **shared-folder** URLs in
+addition to single file links. A folder URL routes the user through a
+small wizard inside the same surface; the existing device-tab and
+single-file link contract stay unchanged.
+
+- **Accepted URL forms.**
+  - `https://drive.google.com/drive/folders/<id>`
+  - `https://drive.google.com/drive/u/<int>/folders/<id>`
+  - Query strings such as `?usp=sharing` are ignored when classifying the URL.
+- **Listing source (v1).** The server fetches the folder HTML page and
+  parses a pure, fixture-tested extractor for the file list. Folders
+  must be **"Anyone with the link can view"**. Private folders surface
+  `provider_connection_required` with the same copy used by single-file
+  imports — pasting a URL is never authorization.
+- **Seam for v2.** A `MediaFolderSourceAdapter` interface in
+  `src/lib/media/folder-sources/` lets a future service-account
+  implementation drop in without changing the UI. The HTML adapter is
+  selected by default; setting `GOOGLE_DRIVE_FOLDER_ADAPTER=service-account`
+  selects the SA stub.
+- **Browse step.** The wizard lists every importable file with a
+  thumbnail, MIME badge, and size. **All importable items are preselected
+  by default.** Rows that preflight 401/403 are disabled with a
+  "Private — share or connect Drive" chip and start unchecked. Each row
+  exposes an inline title override so the user can rename before
+  importing. A per-batch visibility toggle (`workspace` default,
+  `agency` opt-in) sits above the list.
+- **Per-item import.** The server fans out across four workers and
+  reuses `importPublicMediaAsset` per file, so every item lands through
+  the existing storage-intent, signature, and quarantine paths. No new
+  storage or token surface is introduced.
+- **Caps.**
+  - Listing: `MAX_FOLDER_ITEMS = 500` (soft cap; surfaces `too_large`).
+  - Batch import: `MAX_FOLDER_BATCH_IMPORT = 25` items per batch — the
+    Import button is disabled and a hint is shown when more are selected.
+  - Rate limits: `media_folder_inspect = 15/h`,
+    `media_folder_import = 5/h`. Each import call counts as one batch
+    regardless of item count, on top of the per-batch cap.
+- **Per-row status and retry.** The import step shows a live counter
+  (`aria-live="polite"`), per-row state icons (Lucide, no emoji), and
+  a **Retry** button on every failed row. A single failed item never
+  aborts siblings; storage intents are aborted by the existing
+  per-file failure path so there are no orphan rows.
+- **Source fields.** Imported rows continue to carry
+  `sourceType = "google_drive"`, `sourceProvider = "google_drive"`, and
+  redacted `sourceUrl` / `sourceReference` pointing at the canonical
+  `/file/d/<id>/view` form, so audit + duplicate-detection paths are
+  identical to single-file imports.
+- **OneDrive folder links** keep their `provider_connection_required`
+  copy in v1. Drive-only because public folder HTML scraping is not
+  stable on OneDrive.
+- **Sub-folders** are skipped with a non-fatal warning. Recursive
+  drill-down is deferred.
+
+Operators can detect listing-parser breakage (a Drive markup shift)
+without grepping logs: an empty parse surfaces `unsupported_type` and
+the route logs `media_folder_listing_parser_empty`.
 
 The provider boundary is intentionally separate from the storage sink so R2,
 another S3-compatible provider, Google Drive, OneDrive, or a future connector

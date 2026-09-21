@@ -12,6 +12,52 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Folder-link import for the Media "From link" picker
+
+The "From link" media intake now recognises Google Drive **shared-folder**
+URLs and walks the user through a small wizard that lists the folder
+contents, preselects every importable file by default, and imports the
+selection through the existing per-file pipeline.
+
+- The picker detects `/drive/folders/<id>` and `/drive/u/<int>/folders/<id>`
+  URLs and routes them through `src/app/api/media/import/folder/route.ts`,
+  a two-mode endpoint (`inspect` + `import`) that runs under two new
+  rate-limit scopes (`media_folder_inspect = 15/h`,
+  `media_folder_import = 5/h`). The single-file import contract is unchanged.
+- v1 listing source is `GoogleDriveHtmlAdapter`
+  (`src/lib/media/folder-sources/drive-html.ts`), a pure HTML parser
+  with golden fixtures under `tests/fixtures/drive-folder-html/`. The
+  adapter behind a `MediaFolderSourceAdapter` interface so a future
+  service-account adapter (`drive-service-account.ts` stub) drops in
+  without touching the UI. Set `GOOGLE_DRIVE_FOLDER_ADAPTER=service-account`
+  to enable the seam.
+- `runMediaFolderBatch` (`src/lib/media/folder-import.ts`) fans out across
+  four workers via `FOLDER_IMPORT_CONCURRENCY` and reuses
+  `importPublicMediaAsset` per file, so every imported asset goes
+  through the same storage-intent, signature, and quarantine paths the
+  single-file flow uses today. No new storage or token surface is
+  introduced.
+- Caps: `MAX_FOLDER_ITEMS = 500` (listing), `MAX_FOLDER_BATCH_IMPORT = 25`
+  per batch. The Import button is disabled and `folderTooManyHint` is
+  shown when more are selected.
+- Wizard lives inside `MediaLinkImporter` (no change to the picker
+  surface, no change to the device tab). Steps: **link → browse → import
+  → done**. Per-row inline rename, per-row Retry on failure, ARIA-live
+  progress region during import.
+- All importable items are preselected by default. Items that preflight
+  401/403 render disabled with a "Private — share or connect Drive"
+  chip and start unchecked — same posture as the single-file
+  `provider_connection_required` copy ("a pasted URL is never
+  authorization").
+- i18n: 25 new keys added to `messages/en/media.json` and
+  `messages/ar/media.json` (mirror parity).
+- Bilingual folder-import copy keys live under `media.folder*`.
+- Documentation: new **Folder import** subsection in
+  `docs/media-library.md`. AGENTS.md Changelog mirrors this entry.
+- OneDrive folder links keep their existing `provider_connection_required`
+  copy in v1 (deferred). Recursive sub-folder drill-down is also
+  deferred; v1 lists the root folder only with a non-fatal warning.
+
 ### Added — Reports section (round 3)
 
 Agency admins can now generate PDF reports that span any

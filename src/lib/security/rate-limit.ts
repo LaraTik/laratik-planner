@@ -16,6 +16,8 @@ export type RateLimitScope =
   | "upload_sign"
   | "media_import"
   | "media_import_inspect"
+  | "media_folder_inspect"
+  | "media_folder_import"
   | "media_duplicate_lookup"
   | "media_public_view"
   | "support_access_request"
@@ -59,6 +61,13 @@ const RULES: Record<RateLimitScope, { limit: number; windowSeconds: number }> = 
   // Inspection performs a bounded external fetch but does not reserve
   // storage. Allow more checks than imports while limiting network use.
   media_import_inspect: { limit: 20, windowSeconds: 60 * 60 },
+  // Folder HTML scrape: the page can be 200KB+ and we also fan out
+  // 4-way HEAD preflights. Tighter than the single-file inspect to
+  // bound network + parser cost.
+  media_folder_inspect: { limit: 15, windowSeconds: 60 * 60 },
+  // Each call counts as one batch (≤ MAX_FOLDER_BATCH_IMPORT = 25 items
+  // per call). 5 batches/h × 25 items = 125 items/h ceiling per actor.
+  media_folder_import: { limit: 5, windowSeconds: 60 * 60 },
   // Duplicate checks are cheap database reads, but the endpoint is still
   // bounded so a leaked authenticated session cannot turn it into an
   // unbounded checksum oracle.

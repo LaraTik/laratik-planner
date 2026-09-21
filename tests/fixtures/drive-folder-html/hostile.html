@@ -1,0 +1,25 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Hostile Folder</title>
+    <!-- Drive sometimes injects comment blocks mid-content. The parser must
+     tolerate them and still recover the file rows. -->
+  </head>
+  <body>
+    <script>
+      AF_initDataCallback({
+        key: "ds:0",
+        data: [
+          /* look-alike garbage */
+          ["not-an-id", "garbage", "image/png", 0, "x"],
+          ["3BBBBBBBBBBBBBBBBBB1", "hello.png", "image/png", 99, "aa"],
+        ],
+      });
+    </script>
+    <!-- Drive also serves ad/tracker script blocks. -->
+    <script src="https://example.com/tracker.js"></script>
+    <div data-id="3BBBBBBBBBBBBBBBBBB1" role="row">
+      <span aria-label="hello.png"></span>
+    </div>
+  </body>
+</html>

@@ -322,11 +322,30 @@ function isSafeExtensionForContentType(extension: string, contentType: string): 
   return allowed.includes(extension);
 }
 
+/**
+ * Discriminates between a single file URL and a Drive folder URL.
+ *
+ * - `file`  — the existing single-file path: `/file/d/<id>/view`,
+ *   `/open?id=<id>`, `/uc?export=download&id=<id>`.
+ * - `folder` — `/drive/folders/<id>`, `/drive/u/<int>/folders/<id>`,
+ *   or `?id=<id>` with a `/folders/`-shaped path. Folder URLs route
+ *   through `lib/media/folder-sources/` and are NOT importable through
+ *   the legacy single-file pipeline.
+ */
+export type ExternalMediaKind = "file" | "folder";
+
+export type InspectExternalMediaUrlOk = {
+  ok: true;
+  provider: "google_drive" | "onedrive" | "external_url";
+  url: string;
+  kind: ExternalMediaKind;
+  /** Present for `kind === 'folder'`. */
+  folderId?: string;
+};
+
 export function inspectExternalMediaUrl(
   raw: string,
-):
-  | { ok: true; provider: "google_drive" | "onedrive" | "external_url"; url: string }
-  | { ok: false; code: "invalid_url" | "unsupported_host" } {
+): InspectExternalMediaUrlOk | { ok: false; code: "invalid_url" | "unsupported_host" } {
   let parsed: URL;
   try {
     parsed = new URL(raw.trim());
@@ -336,10 +355,47 @@ export function inspectExternalMediaUrl(
   if (parsed.protocol !== "https:") return { ok: false, code: "invalid_url" };
   const host = parsed.hostname.toLowerCase();
   if (PROVIDER_HOSTS.google_drive.has(host)) {
-    return { ok: true, provider: "google_drive", url: parsed.toString() };
+    const folderId = parseGoogleDriveFolderId(parsed);
+    if (folderId) {
+      return {
+        ok: true,
+        provider: "google_drive",
+        url: parsed.toString(),
+        kind: "folder",
+        folderId,
+      };
+    }
+    return { ok: true, provider: "google_drive", url: parsed.toString(), kind: "file" };
   }
   if (PROVIDER_HOSTS.onedrive.has(host) || host.endsWith(".sharepoint.com")) {
-    return { ok: true, provider: "onedrive", url: parsed.toString() };
+    return { ok: true, provider: "onedrive", url: parsed.toString(), kind: "file" };
   }
-  return { ok: true, provider: "external_url", url: parsed.toString() };
+  return { ok: true, provider: "external_url", url: parsed.toString(), kind: "file" };
+}
+
+/**
+ * Extract the folder id from a Drive folder URL.
+ *
+ * Recognised:
+ *   - https://drive.google.com/drive/folders/<id>
+ *   - https://drive.google.com/drive/u/<int>/folders/<id>
+ *   - https://drive.google.com/drive/folders/<id>?usp=sharing
+ *   - https://drive.google.com/drive/u/0/folders/<id>?usp=sharing
+ *
+ * Returns null if the URL is not a folder URL.
+ */
+export function parseGoogleDriveFolderId(parsed: URL): string | null {
+  const pathSegments = parsed.pathname.split("/").filter(Boolean);
+  // segments: [drive, folders, <id>] or [drive, u, <int>, folders, <id>]
+  if (pathSegments[0] !== "drive") return null;
+  if (pathSegments[1] === "folders" && pathSegments[2]) return pathSegments[2];
+  if (
+    pathSegments[1] === "u" &&
+    /^\d+$/.test(pathSegments[2] ?? "") &&
+    pathSegments[3] === "folders" &&
+    pathSegments[4]
+  ) {
+    return pathSegments[4];
+  }
+  return null;
 }

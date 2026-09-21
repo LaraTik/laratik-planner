@@ -43,10 +43,12 @@ describe("media contract", () => {
     expect(inspectExternalMediaUrl("https://drive.google.com/file/d/abc/view")).toMatchObject({
       ok: true,
       provider: "google_drive",
+      kind: "file",
     });
     expect(inspectExternalMediaUrl("https://tenant.sharepoint.com/:v:/r/file")).toMatchObject({
       ok: true,
       provider: "onedrive",
+      kind: "file",
     });
     expect(inspectExternalMediaUrl("http://127.0.0.1/file")).toEqual({
       ok: false,
@@ -55,6 +57,40 @@ describe("media contract", () => {
     expect(inspectExternalMediaUrl("https://example.com/file.mp4")).toMatchObject({
       ok: true,
       provider: "external_url",
+      kind: "file",
+    });
+  });
+
+  it("discriminates Google Drive folder URLs as kind 'folder'", () => {
+    // /drive/folders/<id>
+    expect(
+      inspectExternalMediaUrl(
+        "https://drive.google.com/drive/folders/1JWqxiknoZdX3eHs-NukvcD7cj9uonSZc",
+      ),
+    ).toMatchObject({
+      ok: true,
+      provider: "google_drive",
+      kind: "folder",
+      folderId: "1JWqxiknoZdX3eHs-NukvcD7cj9uonSZc",
+    });
+    // /drive/u/0/folders/<id>
+    expect(
+      inspectExternalMediaUrl("https://drive.google.com/drive/u/0/folders/abcDEF123-_-"),
+    ).toMatchObject({
+      ok: true,
+      provider: "google_drive",
+      kind: "folder",
+      folderId: "abcDEF123-_-",
+    });
+    // /drive/folders/<id>?usp=sharing
+    expect(
+      inspectExternalMediaUrl("https://drive.google.com/drive/folders/abc?usp=sharing"),
+    ).toMatchObject({ ok: true, provider: "google_drive", kind: "folder", folderId: "abc" });
+    // /file/d/<id> stays file
+    expect(inspectExternalMediaUrl("https://drive.google.com/file/d/abc/view")).toMatchObject({
+      ok: true,
+      provider: "google_drive",
+      kind: "file",
     });
   });
 
