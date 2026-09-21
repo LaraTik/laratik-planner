@@ -22,7 +22,7 @@ import "server-only";
  * normalises the raw `searchParams` async object too.
  */
 
-export const DEFAULT_PAGE_SIZE = 50;
+export const DEFAULT_PAGE_SIZE = 50 as const;
 export const ALLOWED_PAGE_SIZES = [25, 50, 100] as const;
 export type AllowedPageSize = (typeof ALLOWED_PAGE_SIZES)[number];
 
@@ -180,10 +180,15 @@ export function paginate<T>(
   size: AllowedPageSize,
 ): PaginatedResult<T> {
   const total = rows.length;
-  const start = (page - 1) * size;
+  const totalPages = Math.max(1, Math.ceil(total / size));
+  // Clamp FIRST so the rendered slice and the rendered range both
+  // agree with `page`. Clamping only `page` (as the original draft
+  // did) returned a row slice of `[]` while `from = (page-1)*size+1`
+  // — a confusing "Page 3 of 3 but Showing 201–400 of 137" UI.
+  const safePage = Math.max(1, Math.min(page, totalPages));
+  const start = (safePage - 1) * size;
   const end = Math.min(total, start + size);
   const slice = rows.slice(start, end) as T[];
-  const totalPages = Math.max(1, Math.ceil(total / size));
   const from = total === 0 ? 0 : start + 1;
   const to = total === 0 ? 0 : end;
   return {
@@ -192,7 +197,7 @@ export function paginate<T>(
     matched: total,
     from,
     to,
-    page: Math.min(page, totalPages),
+    page: safePage,
     totalPages,
   };
 }

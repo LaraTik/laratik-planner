@@ -12,6 +12,67 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Team & Access round 1: search / filter / pagination
+
+Three admin lists — Platform access (`/app/platform/access`), Agency
+members (`/app/users`), and Workspace team (`/app/w/[slug]/team`) —
+now grow a server-driven search bar, multi-select chip filters, and
+SSR pagination. State lives in URL search params
+(`?q=ali&role=designer&page=2`), so admin surfaces stay shareable /
+bookmarkable / SSR-friendly.
+
+Foundation:
+
+- `src/components/ui/data-table-toolbar.tsx` — `<form method="GET">` toolbar
+  with native submit semantics (no client JS), preserving foreign
+  filter keys via hidden inputs and resetting `page` to 1 on submission.
+- `src/components/ui/list-pagination.tsx` — counter + Prev/Next + page
+  indicator; disabled boundaries instead of removed so the layout
+  doesn't shift; dir-aware chevrons for RTL.
+- `src/components/ui/filter-chip.tsx` — single-export from the
+  toolbar file. Multi-select chip with `aria-pressed` semantics.
+- `src/lib/list-page-utils.ts` — `parseListFilters`,
+  `buildListHref`, `paginate`, `hasActiveFilters` (single source of
+  truth; the three pages cannot drift in convention).
+
+Query pushdown:
+
+- `listPlatformAccess(actor, { q, role })` — closes the gap when no
+  role filter is provided.
+- `listAgencyMembers(agencyId, { q, status, isAdmin })` — accepts
+  the optional second parameter; the `agencyId: string` required
+  scope is preserved (asserted in
+  `tests/unit/replace-active-agency-id.test.ts`).
+
+Drawer polish:
+
+- `src/components/team/member-audit-panel.tsx` renders the most
+  recent access-change entries for the member the drawer is editing.
+  Empty-state-friendly: a member with no prior edits shows a
+  "first edit coming up" prompt instead of an empty box.
+- The drawer accepts an optional `audit?: readonly MemberAuditEntry[]`
+  prop — wiring the data source from each page is a one-line
+  follow-up that does not require a draw-API change.
+
+Bilingual:
+
+- Every new label has matching `en` + `ar` entries in
+  `src/messages/{en,ar}/{platform,users,team}.json`. Catalog parity
+  is enforced by `tests/unit/i18n/catalogs.test.ts`.
+
+Tests:
+
+- `tests/unit/list-page-utils.test.ts` — 25 cases pinning the URL
+  contract and the `paginate` clamping behaviour (catches the
+  regression where `page` was clamped to `totalPages` but the
+  `from`/`to` range was still computed from the requested page,
+  producing "Showing 201–400 of 137" UI).
+
+Docs:
+
+- `docs/features/team-access.md` — architecture, URL contract,
+  bypass paths considered, verification matrix.
+
 ### Added — Per-workspace workflow scenarios
 
 - New Settings → Templates → **Workflow scenario presets** section

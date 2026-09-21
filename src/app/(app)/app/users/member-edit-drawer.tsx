@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toggleAgencyAdminAction, updateMemberRolesAction, type MemberEditState } from "./actions";
 import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
 import { workspaceRoleSchema } from "@/lib/auth/invitation-command";
+import { MemberAuditPanel, type MemberAuditEntry } from "@/components/team/member-audit-panel";
 
 /**
  * Right-side slide-in drawer for editing a single agency member's:
@@ -74,6 +75,12 @@ export type MemberEditDrawerProps = {
   /** The signed-in user's id; used to hide the self-admin lockout UI. */
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
+  /**
+   * Recent access changes for the subject. Surfaced in the drawer's
+   * audit panel so the actor can see what's already happened before
+   * applying another change. Empty when no prior edits exist.
+   */
+  audit?: readonly MemberAuditEntry[];
   onOpenChange: (open: boolean) => void;
   /**
    * Optional translator. When provided, every user-visible string
@@ -121,6 +128,7 @@ export function MemberEditDrawer({
   roleScopeWorkspaceId,
   actorUserId,
   workspaces,
+  audit,
   onOpenChange,
   t,
 }: MemberEditDrawerProps) {
@@ -143,6 +151,7 @@ export function MemberEditDrawer({
             actorIsAgencyAdmin={actorIsAgencyAdmin}
             actorUserId={actorUserId}
             workspaces={workspaces}
+            {...(audit ? { audit } : {})}
             {...(roleScopeWorkspaceId ? { roleScopeWorkspaceId } : {})}
             onClose={() => onOpenChange(false)}
             {...(t !== undefined ? { t } : {})}
@@ -158,6 +167,7 @@ type FormProps = {
   actorIsAgencyAdmin: boolean;
   actorUserId: string;
   workspaces: MemberEditWorkspace[];
+  audit?: readonly MemberAuditEntry[];
   roleScopeWorkspaceId?: string;
   onClose: () => void;
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -170,6 +180,7 @@ function MemberEditForm({
   actorIsAgencyAdmin,
   actorUserId,
   workspaces,
+  audit,
   roleScopeWorkspaceId,
   onClose,
   t,
@@ -378,6 +389,12 @@ function MemberEditForm({
               {errorMessage}
             </p>
           ) : null}
+
+          <MemberAuditPanel
+            entries={audit ?? []}
+            {...(t ? { t } : {})}
+            dataTestId={`member-edit-audit-${subject.id}`}
+          />
         </div>
 
         <DialogFooter className="border-border bg-surface sticky bottom-0 px-6 py-4">
