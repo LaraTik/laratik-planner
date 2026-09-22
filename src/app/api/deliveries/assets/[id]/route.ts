@@ -94,19 +94,33 @@ export async function GET(
   });
   if (!remote) return NextResponse.json({ error: "Delivery asset not found" }, { status: 404 });
 
+  const download = request.nextUrl.searchParams.get("download") === "1";
   const headers = new Headers({
     "Content-Type": row.mimeType,
-    "Cache-Control": "private, max-age=300",
+    // Same cache policy as `/api/media/assets/[id]` (PR 1 + 2): a
+    // planner scrolling back through their delivery history shouldn't
+    // re-hit R2 on every nav. ETag is pass-through (below) so the
+    // browser can revalidate cheaply when the object changes.
+    // `Vary: Cookie` makes the browser revalidate on auth state
+    // changes within the 24h window — `private` already implies
+    // user-scoped, but explicit Vary prevents stale bytes across
+    // role/visibility changes. The delivery download path stays
+    // `no-store` so a download click never serves a stale body.
+    "Cache-Control": download ? "private, no-store" : "private, max-age=86400",
+    ...(download ? {} : { Vary: "Cookie" }),
     "X-Content-Type-Options": "nosniff",
   });
-  if (request.nextUrl.searchParams.get("download") === "1") {
+  if (download) {
     headers.set(
       "Content-Disposition",
       `attachment; filename*=UTF-8''${encodeURIComponent(downloadFilename(row.title, row.originalName, row.mimeType))}`,
     );
   }
+  // Pass-through order: the explicit Content-Type is set first so it
+  // wins — R2 returns its own `Content-Type` header but our row's
+  // value is the authoritative one (validated by the upload
+  // pipeline). Skipping `content-type` here is deliberate.
   for (const name of [
-    "content-type",
     "content-length",
     "content-range",
     "accept-ranges",

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { timingSafeEqual } from "node:crypto";
-import { processPendingMediaAssets } from "@/lib/media/service";
+import { expungeExpiredTrashedMedia, processPendingMediaAssets } from "@/lib/media/service";
 import {
   expireStorageUploadIntents,
   purgeSoftDeletedStorageObjects,
@@ -25,9 +25,17 @@ async function handle(req: NextRequest) {
   const startedAt = Date.now();
   const expired = await expireStorageUploadIntents(100);
   const media = await processPendingMediaAssets(50);
+  const expunged = await expungeExpiredTrashedMedia(200);
   const purged = await purgeSoftDeletedStorageObjects(100);
   return NextResponse.json(
-    { ok: true, expired, media, purged, durationMs: Date.now() - startedAt },
+    {
+      ok: true,
+      expired,
+      media,
+      expunged,
+      purged,
+      durationMs: Date.now() - startedAt,
+    },
     { headers: mutatingApiHeaders() },
   );
 }

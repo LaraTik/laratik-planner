@@ -12,6 +12,21 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Media Cloudflare-asset audit + refinement
+
+Follow-up audit after the three media-perf PRs (cache + fetchpriority,
+480px WebP preview variant, per-page R2 signed URLs) shipped. Every
+Cloudflare R2-backed read path was traced, every cache header was
+checked, and the full trash → expunge → hard-delete lifecycle was
+mapped. Four real issues shipped; one deferral recorded.
+
+- **`/api/deliveries/assets/[id]` cache TTL bumped from 300s to 86400s** with `Vary: Cookie`. The route serves brand-kit + media previews on the delivery strip and was the only authenticated image route still on the 5-minute policy. `Content-Type` now comes from the row's stored mime, not the R2 passthrough — the previous code put `content-type` in the passthrough list AND set the explicit header, so the explicit value could be silently overwritten by R2's value if the rows disagreed. `Content-Disposition: no-store` when `?download=1` so a download click never serves a stale body. `src/app/api/deliveries/assets/[id]/route.ts:42-67`.
+- **`/api/storage/objects/[id]` (brand-kit storage proxy) cache TTL bumped from 300s to 86400s** with `Vary: Cookie` and explicit `Content-Type: <object.mimeType>` sourced from the `storage_objects` row. Same passthrough-order bug as the delivery route; the new code selects `mimeType` directly and sets it before the response stream. `src/app/api/storage/objects/[id]/route.ts:42-67`.
+- **`expungeExpiredTrashedMedia(limit)` closes the trash lifecycle.** The audit found that `media_assets.delete_after` was populated by `trashMediaAsset` but nothing ever read it — trashed media sat in the DB indefinitely and storage bytes stayed reserved forever. New helper in `src/lib/media/service.ts:1493-1591`: per call, scans `status="trashed" AND delete_after <= now()` rows, soft-deletes every tied storage row (original + preview variant) in one transaction, releases the recorded quota via `releaseCapacityAmount` in the same transaction (so a quota-release failure rolls back the soft-delete and we never under-report), and hard-deletes the `media_asset` row. Per-row errors are caught + warned so one corrupt row doesn't poison the rest. Bound `Math.min(Math.max(limit, 1), 500)`; default 100. Wired into `src/app/api/cron/storage-cleanup/route.ts` between `processPendingMediaAssets` and `purgeSoftDeletedStorageObjects`; the response JSON gains an `expunged: { media, storageObjects, bytesReleased }` block. The 30-day secondary retention on soft-deleted storage rows means a user who immediately restores a trashed asset still gets a working preview for a brief window.
+- **Test: `tests/unit/media/expunge-trashed.test.ts` — 3 tests pinning the contract.** Outer candidate query → loop → return `{ media, storageObjects, bytesReleased }`. Empty candidate query → no transaction started (the cron tick is cheap when the queue is empty). Per-row errors are caught + warned so `mediaCount` advances for the rows that succeeded while the failing row is logged.
+
+**Deferred**: brand-kit preview variant. A natural symmetry with Tier 2 would add a 480px WebP variant for brand-kit logos and a `preview_storage_object_id` on `brand_assets`. Schema migration is straightforward but the blast radius is non-trivial (brand-kit proxy route, gallery hero, Linked-from-media dialog all need updating), so it's its own PR. Brand-kit logos also load less frequently than media-library thumbnails, so the perf win is smaller.
+
 ### Changed — Media performance, Tier 3 of 3
 
 PR 1 fixed cache policy + fetchpriority; PR 2 generated a 480px WebP
