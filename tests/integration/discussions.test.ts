@@ -28,7 +28,21 @@ describe("discussions service", () => {
     const { sql } = await import("drizzle-orm");
 
     const { agencies, agencyMemberships } = await import("@/lib/db/schema");
-    await db.execute(sql`TRUNCATE agency, "user" CASCADE`);
+    // Wipe the outbox/notification tables too. They have no FK to
+    // user, so `TRUNCATE … CASCADE` from agency/user leaves them
+    // behind — and over many test runs they accumulate. The
+    // dispatcher's `LIMIT 50` then picks up only the OLDEST
+    // unprocessed events, so a brand-new `comment_created` event
+    // from this test can be skipped while the suite silently
+    // fails the notification-count assertion. This bug bit us on
+    // 2026-09-22 (KSUL 166 → 0 after truncating the queue).
+    await db.execute(sql`
+      TRUNCATE
+        notification, notification_email_delivery,
+        outbox_event, comment, comment_mention,
+        agency, "user"
+      RESTART IDENTITY CASCADE
+    `);
     const [actorRow] = await db
       .insert(users)
       .values({
