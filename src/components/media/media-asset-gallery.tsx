@@ -15,6 +15,13 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
 export type MediaGalleryAsset = {
   id: string;
   url: string;
+  /**
+   * PR 2: 480px WebP preview URL for the strip thumbnails. The hero
+   * keeps using `url` (full resolution) because the user opens the
+   * gallery to inspect the asset at full fidelity. When unset, the
+   * strip falls back to `url` (legacy assets before this PR).
+   */
+  previewUrl?: string | null;
   label: string;
   kind: "image" | "video";
 };
@@ -151,9 +158,12 @@ export function MediaAssetGallery({
                         // viewport at once. Lazy-load everything that isn't
                         // the currently-active tile; the active one carries
                         // fetchpriority="high" so the swap to it is instant.
+                        // PR 2: prefer the 480px WebP preview variant —
+                        // a 20-tile strip drops from ~30 MB to ~700 KB
+                        // on first dialog open.
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={asset.url}
+                          src={asset.previewUrl ?? asset.url}
                           alt=""
                           className="h-full w-full object-cover"
                           loading={assetIndex === index ? "eager" : "lazy"}

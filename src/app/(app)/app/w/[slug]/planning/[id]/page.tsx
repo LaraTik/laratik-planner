@@ -1168,8 +1168,20 @@ export default async function ContentDetailPage({
                           const firstImageAsset = linkedMediaAssets.find(
                             (row) => row.object.kind === "image",
                           );
+                          // PR 2 / Tier 2 (perf/media): prefer the 480px
+                          // WebP preview variant when one exists, so the
+                          // planning-detail `<img>` doesn't stream a
+                          // multi-MB original through Next.js just to
+                          // display it in a 320-px preview slot. Legacy
+                          // assets (previewStorageObjectId null) fall
+                          // through to the full URL — same behaviour as
+                          // pre-PR 2.
+                          const firstAssetHasPreview =
+                            !!firstImageAsset?.object.previewStorageObjectId;
                           const thumbnailUrl = firstImageAsset
-                            ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
+                            ? firstAssetHasPreview
+                              ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
+                              : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
                             : null;
                           // Forward the stored intrinsic dimensions so
                           // `PlatformPreview` does not need a second

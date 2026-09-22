@@ -216,6 +216,12 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
         durationMs: storageObjects.durationMs,
         kind: storageObjects.kind,
         status: storageObjects.status,
+        // Preview variant pointer — surfaced by PR 2 so the grid /
+        // gallery / planning preview can render the small WebP from
+        // `/api/media/assets/[id]/preview` instead of streaming the
+        // full original. Null for legacy assets without a preview;
+        // the components fall back to the full URL in that case.
+        previewStorageObjectId: mediaAssets.previewStorageObjectId,
       },
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
@@ -823,6 +829,36 @@ export async function registerUploadedMediaAsset(input: {
           contentItemId: input.contentItemId,
         });
       }
+      // PR 2 / Tier 2 (perf/media): generate a 480px WebP preview as a
+      // progressive enhancement. A failure here must NOT fail the
+      // upload — the asset is already registered, the gallery will
+      // fall back to the full URL via the legacy code path in
+      // `mediaAssetForActor` (previewStorageObjectId stays null).
+      if (status === "ready") {
+        try {
+          const { storePreviewForAsset } = await import("./thumbnails");
+          await storePreviewForAsset(input.actor, {
+            assetId: asset.id,
+            agencyId: input.agencyId,
+            workspaceId: input.workspaceId,
+            storageObjectId: input.storageObjectId,
+            sourceMimeType: object.mimeType,
+            ...(dimensions
+              ? { sourceWidth: dimensions.width, sourceHeight: dimensions.height }
+              : {}),
+          });
+        } catch (previewError) {
+          // Logged but never rethrown. The `.catch` inside
+          // `storePreviewForAsset` already swallows the noisy cases
+          // (unsupported mime, decode error, R2 outage); anything
+          // that bubbles here is a real bug, but the asset row is
+          // already committed, so logging is the right balance.
+          console.warn("[media] preview generation failed; asset registered without variant", {
+            assetId: asset.id,
+            err: previewError instanceof Error ? previewError.message : String(previewError),
+          });
+        }
+      }
       return asset;
     }
 
@@ -1280,7 +1316,14 @@ export async function restoreMediaAsset(actor: Actor, assetId: string) {
 
 export async function mediaAssetForActor(actor: Actor, assetId: string) {
   const [row] = await db
-    .select({ asset: mediaAssets, object: storageObjects })
+    .select({
+      asset: mediaAssets,
+      object: storageObjects,
+      // PR 2: surface the preview variant's storage_object id so the
+      // `/api/media/assets/[id]` route can kick off a backfill
+      // when the variant is missing for legacy assets.
+      previewStorageObjectId: mediaAssets.previewStorageObjectId,
+    })
     .from(mediaAssets)
     .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
     .where(eq(mediaAssets.id, assetId))
