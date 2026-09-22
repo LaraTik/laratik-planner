@@ -505,6 +505,18 @@ function MediaCard({
     typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
   const intrinsicHeight =
     typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
+  // PR 2 / Tier 2 (perf/media): prefer the 480px WebP preview variant
+  // stored at `/api/media/assets/<uuid>/preview` when the asset has
+  // one. The variant averages 25-40 KB instead of the multi-MB
+  // original, so a 48-card grid drops from ~50 MB to ~1.5 MB on first
+  // paint. Legacy assets (previewStorageObjectId null) fall through
+  // to the full URL — the same route the grid used pre-PR 2.
+  const hasPreview =
+    typeof row.object.previewStorageObjectId === "string" &&
+    row.object.previewStorageObjectId.length > 0;
+  const thumbnailSrc = hasPreview
+    ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
+    : `/api/media/assets/${encodeURIComponent(row.asset.id)}`;
   const thumbnail =
     downloadable && kind === "image" ? (
       <>
@@ -513,7 +525,7 @@ function MediaCard({
             cookie available; next/image's optimizer cannot authenticate it. */}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
+          src={thumbnailSrc}
           alt={row.asset.altText ?? row.asset.title}
           loading={priority ? "eager" : "lazy"}
           decoding="async"
@@ -689,11 +701,21 @@ function MediaListRow({
     typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
   const intrinsicHeight =
     typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
+  // PR 2: same preview variant preference as the grid card above.
+  // List-view thumbs render at 56x56 px so the byte savings are
+  // particularly stark — the variant drops the typical asset
+  // from ~2 MB to ~25 KB.
+  const hasPreview =
+    typeof row.object.previewStorageObjectId === "string" &&
+    row.object.previewStorageObjectId.length > 0;
+  const thumbnailSrc = hasPreview
+    ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
+    : `/api/media/assets/${encodeURIComponent(row.asset.id)}`;
   const thumbnail =
     downloadable && kind === "image" ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
+        src={thumbnailSrc}
         alt={row.asset.altText ?? row.asset.title}
         loading={priority ? "eager" : "lazy"}
         decoding="async"

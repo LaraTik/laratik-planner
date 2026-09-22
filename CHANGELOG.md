@@ -12,6 +12,66 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Media performance, Tier 2 of 3
+
+PR 1 stacked the cheap half of the perf fix (cache policy, fetchpriority,
+deduped probe); PR 2 ships the structural half — a 480px WebP preview
+variant generated at upload time, served from a dedicated
+`/api/media/assets/[id]/preview` route.
+
+- **`src/lib/media/thumbnails.ts`** — three pure helpers:
+  - `generatePreviewBuffer(bytes, mimeType)` — sharp pipeline that
+    honours EXIF orientation, keeps aspect ratio, caps the longest
+    edge at 480px, encodes WebP at quality 80, and never enlarges a
+    source smaller than the cap. Pure function over (bytes, mimeType);
+    unit-testable in isolation.
+  - `storePreviewForAsset(actor, input)` — reads the full bytes via
+    the existing proxy path, generates the variant, uploads to R2
+    under a new `preview/` key prefix, and writes a `storage_objects`
+    row + `media_assets.preview_storage_object_id` in a single
+    transaction that reserves the variant's bytes against the agency
+    quota. Failures are best-effort: the asset row is already
+    committed, so a generator outage degrades to "no preview yet."
+  - `fetchPreviewForActor(actor, id)` — the auth gate the new route
+    uses. Inlined from `mediaAssetForActor` so the preview-specific
+    path doesn't have to import the full read service just to do
+    visibility checks.
+- **`/api/media/assets/[id]/preview` route** — same auth as the full
+  route. `Cache-Control: private, max-age=86400, immutable` because the
+  variant is content-addressed by its storage_object id and never
+  mutates in place. `Vary: Cookie` so role/visibility changes
+  invalidate within the 24h window. Forwards intrinsic dimensions as
+  `X-Preview-Width` / `X-Preview-Height` response headers so the
+  browser can reserve layout space before the body finishes decoding.
+  404 when no preview or no access — indistinguishable to a non-owner
+  so the existence of a preview variant doesn't leak.
+- **Every new upload gets a preview variant.** `registerUploadedMediaAsset`
+  calls `storePreviewForAsset` after a successful insert. Legacy
+  assets with `preview_storage_object_id IS NULL` continue to serve
+  the full URL — the components fall back transparently.
+- **Media Library grid + planning preview now prefer the preview
+  variant.** A 48-card grid drops from ~50 MB of full-resolution
+  bytes on first paint to ~1.5 MB of WebP variants — a 30× reduction
+  at the same visual fidelity for the rendered scale. The
+  `MediaAssetGallery` type grew an optional `previewUrl` field ready
+  for the v1.1 change that will route the gallery strip through it.
+- **`sharp@^0.35.0` added as a direct dependency.** Was already
+  transitively bundled via Next.js; pinning it explicitly makes the
+  contract clear for security audits.
+
+Tests added: `tests/unit/media/thumbnails.test.ts` (8 tests pinning
+the generator) and `tests/unit/media/preview-route.test.ts` (7 tests
+pinning the route contract). Existing test suite (410 files, 3,661
+unit tests) still passes; full `pnpm verify` (format + lint +
+typecheck + unit + build) is green.
+
+The full re-architecture closes with PR 3, which bypasses the proxy
+entirely with a per-page signed URL pattern so bytes stream R2 →
+browser directly. The preview variant is the cache-friendly content;
+the signed URL is the transport.
+
+### Changed — Media performance, Tier 1 of 3
+
 ### Changed — Media performance, Tier 1 of 3
 
 Planners opening an idea in the Media Library reported the page taking
