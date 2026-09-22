@@ -74,6 +74,21 @@ export default async function WorkspaceMediaPage({
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
 
+  // PR 3 / Tier 3 (perf/media): issue per-row R2 signed URLs so the
+  // browser downloads the preview variant straight from the
+  // Cloudflare edge instead of streaming through this Node process.
+  // For 48 rows that's 48 HMAC sigs (~10-30µs each locally, sub-ms
+  // for the whole batch). The signed URLs are short-lived (15 min,
+  // the adapter's max — see `r2-adapter.ts:143`) so we re-sign on
+  // every page render; the browser caches the bytes by URL + ETag
+  // within that window. `getSignedPreviewUrl` returns null when
+  // the asset has no preview yet or the caller can't read it — the
+  // components fall back to `/api/media/assets/[id]/preview`.
+  const { getSignedPreviewUrl } = await import("@/lib/media/thumbnails");
+  const signedPreviewUrls = await Promise.all(
+    mediaPage.rows.map((row) => getSignedPreviewUrl(actor, row.asset.id)),
+  );
+
   // Resolve the active folder's ancestor chain for the breadcrumb.
   const ancestors: { id: string; name: string }[] = [];
   const folderById = new Map(folders.map((f) => [f.id, f]));
@@ -91,12 +106,21 @@ export default async function WorkspaceMediaPage({
         ? t("media.agencySharedFilter")
         : (folders.find((f) => f.id === selectedFolderId)?.name ?? t("media.allMedia"));
 
+  // Attach the signed URL onto each row so the MediaLibraryPage can
+  // emit it directly without re-querying. `Object.assign` keeps the
+  // original row's reference (the component's `MediaRow` extends
+  // the service's return type).
+  const rowsWithSignedUrl = mediaPage.rows.map((row, index) => ({
+    ...row,
+    signedPreviewUrl: signedPreviewUrls[index] ?? null,
+  }));
+
   return (
     <MediaLibraryPage
       mode="workspace"
       workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
       agencyWorkspaces={[]}
-      rows={mediaPage.rows}
+      rows={rowsWithSignedUrl}
       basePath={`/app/w/${workspace.slug}/media`}
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}

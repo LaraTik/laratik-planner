@@ -46,7 +46,7 @@ import { mediaAssets, storageObjects, workspaces } from "@/lib/db/schema";
 import { reserveCapacity } from "@/lib/entitlements";
 import type { Actor } from "@/lib/auth/policy";
 import { getAgencyStorageContext } from "@/lib/storage/config";
-import { fetchStorageObject } from "@/lib/storage/read-service";
+import { createStorageObjectReadUrl, fetchStorageObject } from "@/lib/storage/read-service";
 
 /**
  * Cap on the preview's longest edge. A 4:3 cell rendered at 240x180
@@ -421,4 +421,60 @@ export async function backfillPreviewIfMissing(
     storageObjectId: input.storageObjectId,
     sourceMimeType: input.sourceMimeType,
   });
+}
+
+/**
+ * PR 3 / Tier 3 (perf/media): direct signed-URL preview path.
+ *
+ * Server-side helper that hands back a short-lived signed R2 URL
+ * pointing straight at the preview variant. The browser fetches the
+ * bytes directly from R2's Cloudflare edge — no Next.js hop — which
+ * removes the per-image Node.js proxy from the request path. This is
+ * the "bypass the proxy" half of the perf plan in
+ * `docs/media-library-plan.md:250`.
+ *
+ * Why a signed URL instead of a public bucket: the preview lives in
+ * the same private bucket as the originals. A signed URL scopes
+ * access to "anyone holding this URL" — fine for a `<img src>` because
+ * the URL is per-page (regenerated on every server render) and the
+ * browser caches the bytes by URL + ETag. The trade-off vs the
+ * `/api/media/assets/[id]/preview` proxy route:
+ *
+ *   - Bytes flow R2 → browser, no Next.js CPU + egress.
+ *   - The signed URL TTL is the max the adapter supports (15 min —
+ *     `r2-adapter.ts:143` clamps `expiresInSeconds` to [30, 900]).
+ *     Within that window the browser hits its own cache for repeat
+ *     `<img>` re-renders. Past 15 min the bytes the browser cached
+ *     by ETag are still served; only a fresh page navigation
+ *     triggers a re-sign. That matches the user's session length
+ *     for the planner tool — 15 min is long enough.
+ *
+ * Auth gate: same as `fetchPreviewForActor`. A non-owner with no
+ * agency membership gets null. The signed URL is content-addressed
+ * (its signature embeds the object key + the storage context's
+ * signing credentials) so even if a URL leaks it only grants access
+ * to that one preview variant, only for the 15-min window.
+ */
+export async function getSignedPreviewUrl(actor: Actor, assetId: string): Promise<string | null> {
+  // Reuse the auth gate from `fetchPreviewForActor` so the two read
+  // paths can never drift on permissions.
+  const preview = await fetchPreviewForActor(actor, assetId);
+  if (!preview) return null;
+  try {
+    return await createStorageObjectReadUrl({
+      agencyId: preview.agencyId,
+      workspaceId: preview.workspaceId,
+      objectId: preview.objectId,
+      // 15 min — the adapter's hard max. Long enough that a single
+      // session's worth of page navigations reuses the cached URL;
+      // short enough that a leaked URL has a tight blast radius.
+      expiresInSeconds: 900,
+    });
+  } catch {
+    // R2 sign failure is rare (HMAC is local) but possible if the
+    // signing credentials rotated between page render and
+    // createReadUrl. Fall back to the proxy route — the user gets
+    // the bytes either way.
+    return null;
+  }
 }
