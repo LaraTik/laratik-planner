@@ -12,6 +12,63 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Media performance, Tier 1 of 3
+
+Planners opening an idea in the Media Library reported the page taking
+forever to load. Audit found the library ships 48 full-resolution images
+per page and proxies every one through the Next.js server — including
+thumbnail-sized renders. This PR stacks the cheap half of the fix; the
+structural half lands in two follow-up PRs (preview-variant pipeline;
+bypass the proxy).
+
+- **Media-library grid cards** carry intrinsic `width`/`height`, `sizes`,
+  and `fetchpriority="high"` for the first row above the fold. Intrinsic
+  dimensions come from `storage_objects.width/height` (populated by the
+  upload validator). `sizes` matches the 3-up / 2-up grid layout.
+  Above-the-fold cards (`index < 6`) carry `loading="eager"` +
+  `fetchpriority="high"` so the first paint isn't blocked by 48 image
+  requests competing equally.
+- **MediaAssetGallery dialog** renders the active hero eagerly; only the
+  active strip thumbnail carries `fetchpriority="high"`. The rest of
+  the strip stays lazy. Pre-PR 1, all 20 strip thumbnails started the
+  moment the dialog mounted, each fetching the full-resolution original.
+- **Planning Preview tab** no longer waits for a `useImageDimensions`
+  probe of the same image it already rendered. `PlatformPreview` accepts
+  new `thumbnailWidth` / `thumbnailHeight` props sourced from
+  `storage_objects` via the `linkedMediaAssets` data already on the
+  page. When both are positive numbers the supplied dimensions are
+  used directly; the hook's probe is still called as a fallback.
+- **`useImageDimensions` deduplicates probes per URL via a module-level
+  Map.** The hook keeps `{promise, result}` keyed by URL; subsequent
+  subscribers for the same URL attach to the in-flight load. Probe cost
+  drops from O(2 probes per Preview tab open) to O(1).
+- **`/api/media/assets/[id]` cache TTL moves from 5 min to 24 h for
+  previews**; `private, no-store` for `?download=1` so a download click
+  never serves a stale body. `Vary: Cookie` added so role/visibility
+  changes invalidate the browser cache within the 24 h window. ETag,
+  Content-Length, Last-Modified are still passed through from R2 so the
+  browser revalidates cheaply when the object does change.
+- **Brand Kit logo grid + identity hero** carry `loading`, `decoding`,
+  `fetchpriority`, `sizes`. The hero (the only above-the-fold image on
+  the page) gets `fetchpriority="high"`; the grid marks the first six
+  tiles eager with `fetchpriority="high"`.
+- **`DeliveryVersionCard` strip thumbnails** lazy-load below the first
+  three. Above-the-fold thumbnails keep `preload="metadata"` for video
+  tiles; below the fold they switch to `preload="none"` so the browser
+  doesn't fetch 20 video metadata blocks at once.
+
+Tests added: `tests/unit/media/asset-route-cache-headers.test.ts`
+(4 tests for the cache policy) and
+`tests/unit/preview/use-image-dimensions-dedup.test.tsx` (5 tests for
+the bypass contract). Existing test suite (133 unit tests across media /
+preview / brand-kit / planning) still passes.
+
+The full re-architecture is documented in `AGENTS.md` Changelog
+`2026-09-22 — media performance, Tier 1 of 3`. PR 2 generates a
+480×360 WebP variant on upload and serves it from a dedicated
+`/preview` route. PR 3 short-circuits the proxy with per-page signed
+URLs so bytes flow R2 → browser directly.
+
 ### Added — Folder-link import for the Media "From link" picker
 
 The "From link" media intake now recognises Google Drive **shared-folder**

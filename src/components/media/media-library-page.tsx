@@ -399,7 +399,7 @@ export function MediaLibraryPage({
             </Card>
           ) : view === "grid" ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {rows.map((row) => (
+              {rows.map((row, index) => (
                 <MediaCard
                   key={row.asset.id}
                   row={row}
@@ -410,13 +410,24 @@ export function MediaLibraryPage({
                     name: f.name,
                     parentId: f.parentId,
                   }))}
+                  // First row of cards is above the fold on a 3-up (xl)
+                  // grid: 3 cards, plus a small buffer for the 2-up (sm)
+                  // breakpoint = 4, plus one extra = 6. Anything past
+                  // that is below the viewport and stays lazy.
+                  priority={index < 6}
+                  // Grid thumb is 1 of 3 columns at xl (~33vw), 1 of 2
+                  // at sm (~50vw), and full-width on mobile. Used by
+                  // browsers that pick a `srcset` density; we have no
+                  // variant today but wiring `sizes` now keeps the
+                  // PR 2 thumbnail pipeline a one-line change away.
+                  sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
                 />
               ))}
             </div>
           ) : (
             <div className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
               <ul className="divide-border divide-y">
-                {rows.map((row) => (
+                {rows.map((row, index) => (
                   <MediaListRow
                     key={row.asset.id}
                     row={row}
@@ -427,6 +438,8 @@ export function MediaLibraryPage({
                       name: f.name,
                       parentId: f.parentId,
                     }))}
+                    priority={index < 6}
+                    sizes="56px"
                   />
                 ))}
               </ul>
@@ -469,16 +482,29 @@ function MediaCard({
   t,
   canManage,
   folderOptions,
+  priority = false,
+  sizes = "100vw",
 }: {
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
   folderOptions: { id: string; name: string; parentId?: string | null }[];
+  priority?: boolean;
+  sizes?: string;
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
   const downloadable = row.asset.status === "ready";
   const statusLabel = mediaStatusLabel(row, t);
+  // Width/height come from `storage_objects` populated by the upload
+  // validator (`validateStoredMediaObject`). They are null for legacy
+  // assets where extraction failed; in that case we omit the attrs so
+  // the browser falls back to layout-driven sizing (the parent already
+  // reserves `aspect-[4/3]`).
+  const intrinsicWidth =
+    typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
+  const intrinsicHeight =
+    typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
   const thumbnail =
     downloadable && kind === "image" ? (
       <>
@@ -489,8 +515,20 @@ function MediaCard({
         <img
           src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
           alt={row.asset.altText ?? row.asset.title}
-          loading="lazy"
+          loading={priority ? "eager" : "lazy"}
           decoding="async"
+          // `fetchpriority` is the modern equivalent of `priority` on
+          // next/image; it tells the browser to compete for bandwidth
+          // on first paint for the above-the-fold cards. Browsers
+          // without support (Safari < 17.4) ignore the attribute.
+          // Emit intrinsic width/height only when BOTH are present —
+          // a half-known dimension misleads the browser about the
+          // aspect ratio and triggers a layout shift on load.
+          {...(intrinsicWidth !== undefined && intrinsicHeight !== undefined
+            ? { width: intrinsicWidth, height: intrinsicHeight }
+            : {})}
+          {...(priority ? { fetchPriority: "high" as const } : {})}
+          sizes={sizes}
           className="h-full w-full object-cover"
         />
       </>
@@ -629,24 +667,41 @@ function MediaListRow({
   t,
   canManage,
   folderOptions,
+  priority = false,
+  sizes = "100vw",
 }: {
   row: MediaRow;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
   folderOptions: { id: string; name: string; parentId?: string | null }[];
+  priority?: boolean;
+  sizes?: string;
 }) {
   const kind = row.object.kind as MediaKind;
   const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
   const downloadable = row.asset.status === "ready";
   const statusLabel = mediaStatusLabel(row, t);
+  // List-view thumb is rendered at 56×56 (h-14 w-14). We still pass
+  // intrinsic width/height so the browser reserves layout space and
+  // skips a full-pixel decode for legacy assets that ship without
+  // a stored dimension.
+  const intrinsicWidth =
+    typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
+  const intrinsicHeight =
+    typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
   const thumbnail =
     downloadable && kind === "image" ? (
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
         alt={row.asset.altText ?? row.asset.title}
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
         decoding="async"
+        {...(intrinsicWidth !== undefined && intrinsicHeight !== undefined
+          ? { width: intrinsicWidth, height: intrinsicHeight }
+          : {})}
+        {...(priority ? { fetchPriority: "high" as const } : {})}
+        sizes={sizes}
         className="h-full w-full rounded-[var(--radius-control)] object-cover"
       />
     ) : downloadable && kind === "video" ? (
