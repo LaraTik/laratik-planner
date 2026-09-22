@@ -68,6 +68,15 @@ export interface PlatformPreviewProps {
   caption: string;
   hashtags?: string[];
   thumbnailUrl?: string | null;
+  /**
+   * Stored intrinsic dimensions for the thumbnail. Sourced from
+   * `storage_objects.width/height` (populated by the upload
+   * validator). Used by the aspect-ratio diagnostic so we never
+   * need a second client-side probe of the same URL. Optional
+   * because legacy assets may have null dimensions.
+   */
+  thumbnailWidth?: number | null;
+  thumbnailHeight?: number | null;
   /** When the platform is instagram, offer feed/reel/story;
    *  otherwise fall back to a single "post" view. */
   initialFormat?: PreviewFormat;
@@ -123,6 +132,8 @@ export function PlatformPreview({
   caption,
   hashtags,
   thumbnailUrl,
+  thumbnailWidth,
+  thumbnailHeight,
   initialFormat,
   className,
   contentFormat,
@@ -134,7 +145,22 @@ export function PlatformPreview({
     initialFormat && options.includes(initialFormat) ? initialFormat : options[0]!,
   );
   const candidates = candidatesFor(format, contentFormat);
-  const imageDims = useImageDimensions(thumbnailUrl);
+  // Prefer the server-supplied intrinsic dimensions (sourced from
+  // `storage_objects.width/height`, populated at upload time). Fall
+  // back to the client-side probe only when those are unavailable
+  // — for example on legacy assets where the upload validator did
+  // not extract dimensions, or on URLs that don't go through the
+  // media route. `useImageDimensions` already short-circuits URLs
+  // without a recognised image extension, so the planning-detail
+  // URL (`/api/media/assets/<uuid>`) never triggers a second fetch.
+  const probeDims = useImageDimensions(thumbnailUrl);
+  const imageDims: { width: number | null; height: number | null } =
+    typeof thumbnailWidth === "number" &&
+    typeof thumbnailHeight === "number" &&
+    thumbnailWidth > 0 &&
+    thumbnailHeight > 0
+      ? { width: thumbnailWidth, height: thumbnailHeight }
+      : { width: probeDims.width, height: probeDims.height };
   const diagnostic = React.useMemo(
     () => diagnoseAspectRatio(imageDims.width, imageDims.height, candidates),
     [imageDims.width, imageDims.height, candidates],
@@ -156,6 +182,17 @@ export function PlatformPreview({
           className="h-full w-full object-cover"
           loading="lazy"
           decoding="async"
+          // Emit intrinsic width/height only when both dimensions are
+          // known — emitting one without the other misleads the
+          // browser about the image's aspect ratio and triggers a
+          // layout shift on load.
+          {...(typeof thumbnailWidth === "number" &&
+          thumbnailWidth > 0 &&
+          typeof thumbnailHeight === "number" &&
+          thumbnailHeight > 0
+            ? { width: thumbnailWidth, height: thumbnailHeight }
+            : {})}
+          sizes="(min-width: 768px) 320px, 100vw"
         />
       ) : (
         <div

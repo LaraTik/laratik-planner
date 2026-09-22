@@ -96,18 +96,25 @@ export function MediaAssetGallery({
               ) : null}
               {active.kind === "image" ? (
                 // The private media route authenticates with the browser session.
+                // `eager` + `fetchpriority="high"` on the active hero so
+                // it competes for bandwidth the moment the dialog opens.
+                // The strip thumbnails below stay `lazy` because only a
+                // few are in the visible scroll viewport at any time.
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={active.url}
                   alt={active.label}
                   className="max-h-[58dvh] max-w-full object-contain"
+                  loading="eager"
                   decoding="async"
+                  fetchPriority="high"
                 />
               ) : (
                 <video
                   controls
                   autoPlay
                   playsInline
+                  preload="auto"
                   className="max-h-[58dvh] max-w-full"
                   aria-label={active.label}
                 >
@@ -139,8 +146,20 @@ export function MediaAssetGallery({
                       onClick={() => setIndex(assetIndex)}
                     >
                       {asset.kind === "image" ? (
+                        // Strip thumbnails are tiny (h-16 w-20 = 80×64 px)
+                        // and only a few are in the horizontal scroll
+                        // viewport at once. Lazy-load everything that isn't
+                        // the currently-active tile; the active one carries
+                        // fetchpriority="high" so the swap to it is instant.
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={asset.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                          loading={assetIndex === index ? "eager" : "lazy"}
+                          decoding="async"
+                          {...(assetIndex === index ? { fetchPriority: "high" as const } : {})}
+                        />
                       ) : (
                         <Video className="text-fg-muted h-5 w-5" aria-hidden="true" />
                       )}

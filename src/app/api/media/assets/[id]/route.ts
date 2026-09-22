@@ -41,9 +41,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   });
   if (!remote) return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
   const download = req.nextUrl.searchParams.get("download") === "1";
+  // Cache long enough that a planner scrolling back through their own
+  // library doesn't re-hit R2 on every nav. ETag is passed through from
+  // the R2 response below so the browser can revalidate cheaply when
+  // the object does change. `Vary: Cookie` keeps per-user caches
+  // correct when roles/visibility change within the 24h window —
+  // `private` already implies user-scoped, but the explicit Vary
+  // makes the browser revalidate on auth state change instead of
+  // serving stale bytes.
+  //
+  // This is the cheap half of the perf fix; the real one lands in
+  // PR 2 (preview-variant / thumbnail pipeline). See AGENTS.md
+  // Changelog "perf(media): …" entries for context.
   const headers = new Headers({
     "Content-Type": row.object.mimeType,
-    "Cache-Control": "private, max-age=300",
+    "Cache-Control": download ? "private, no-store" : "private, max-age=86400",
+    ...(download ? {} : { Vary: "Cookie" }),
     "X-Content-Type-Options": "nosniff",
   });
   if (download) {

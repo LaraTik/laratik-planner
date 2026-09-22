@@ -1171,12 +1171,24 @@ export default async function ContentDetailPage({
                           const thumbnailUrl = firstImageAsset
                             ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
                             : null;
+                          // Forward the stored intrinsic dimensions so
+                          // `PlatformPreview` does not need a second
+                          // client-side probe of the same image. Sourced
+                          // from `storage_objects.width/height` via
+                          // `listMediaAssetsForContentItem`. Null on
+                          // legacy assets where extraction failed; the
+                          // probe fallback inside PlatformPreview handles
+                          // those.
+                          const thumbnailWidth = firstImageAsset?.object.width ?? null;
+                          const thumbnailHeight = firstImageAsset?.object.height ?? null;
                           return (
                             <PlatformPreviewSwitcher
                               channels={switcherChannels}
                               sharedCaption={plannerCaption ?? item.brief ?? ""}
                               {...(plannerHashtags ? { sharedHashtags: plannerHashtags } : {})}
                               {...(thumbnailUrl ? { thumbnailUrl } : {})}
+                              {...(thumbnailWidth !== null ? { thumbnailWidth } : {})}
+                              {...(thumbnailHeight !== null ? { thumbnailHeight } : {})}
                             />
                           );
                         })()

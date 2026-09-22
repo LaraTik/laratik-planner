@@ -26,6 +26,14 @@ export interface PlatformPreviewSwitcherProps {
   sharedCaption: string;
   sharedHashtags?: string[];
   thumbnailUrl?: string | null;
+  /**
+   * Stored intrinsic dimensions of the thumbnail (from
+   * `storage_objects.width/height`). Forwarded to PlatformPreview
+   * so the aspect-ratio diagnostic does not need a second client-side
+   * fetch of the same image bytes.
+   */
+  thumbnailWidth?: number | null;
+  thumbnailHeight?: number | null;
   initialFormat?: PreviewFormat;
   /** Catalog key prefix for the platform labels (e.g. "contentDetail.publishForm.platformLabels"). */
   platformLabelCatalogPrefix?: string;
@@ -48,6 +56,8 @@ export function PlatformPreviewSwitcher({
   sharedCaption,
   sharedHashtags,
   thumbnailUrl,
+  thumbnailWidth,
+  thumbnailHeight,
   initialFormat,
 }: PlatformPreviewSwitcherProps) {
   const [activeId, setActiveId] = React.useState<string | null>(channels[0]?.id ?? null);
@@ -94,6 +104,8 @@ export function PlatformPreviewSwitcher({
         accountName={active.accountName}
         caption={caption}
         {...(thumbnailUrl !== undefined ? { thumbnailUrl } : {})}
+        {...(thumbnailWidth !== undefined ? { thumbnailWidth } : {})}
+        {...(thumbnailHeight !== undefined ? { thumbnailHeight } : {})}
         {...(initialFormat !== undefined ? { initialFormat } : {})}
         {...(active.contentFormat !== undefined ? { contentFormat: active.contentFormat } : {})}
         {...(hashtags ? { hashtags } : {})}

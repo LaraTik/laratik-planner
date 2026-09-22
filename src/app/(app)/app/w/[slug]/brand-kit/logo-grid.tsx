@@ -66,19 +66,33 @@ export function LogoGrid({ slug, canManage, assets, t }: LogoGridProps) {
   }
   return (
     <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="brand-kit-logo-grid">
-      {assets.map((asset) => {
+      {assets.map((asset, index) => {
         const previewSrc = asset.storageObjectId
           ? `/api/storage/objects/${encodeURIComponent(asset.storageObjectId)}`
           : asset.storagePath
             ? safeGetSignedDownloadUrl(asset.storagePath)
             : asset.externalUrl;
+        // Above-the-fold tile gets `fetchpriority="high"`; the rest
+        // stay lazy so the browser doesn't burn bandwidth on logos
+        // the planner can't see yet. The tile is square (aspect-square
+        // CSS), so 240 is a reasonable intrinsic hint for the first
+        // row at the 3-up (lg) breakpoint.
+        const priority = index < 6;
         return (
           <li key={asset.id} data-testid={`brand-asset-${asset.id}`} className="flex">
             <Card padding="sm" className="bg-surface-subtle relative flex w-full flex-col gap-2">
               <div className="border-border bg-surface flex aspect-square w-full items-center justify-center overflow-hidden rounded-[var(--radius-control)] border">
                 {previewSrc ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={previewSrc} alt={asset.name} className="h-full w-full object-contain" />
+                  <img
+                    src={previewSrc}
+                    alt={asset.name}
+                    className="h-full w-full object-contain"
+                    loading={priority ? "eager" : "lazy"}
+                    decoding="async"
+                    {...(priority ? { fetchPriority: "high" as const } : {})}
+                    sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                  />
                 ) : (
                   <ImageIcon className="text-fg-muted h-10 w-10" aria-hidden="true" />
                 )}

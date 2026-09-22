@@ -238,7 +238,7 @@ export function DeliveryVersionCard({
           className="mt-3 flex flex-wrap gap-2"
           data-testid={`delivery-version-thumbnails-${version.versionNumber}`}
         >
-          {version.links.map((l) => (
+          {version.links.map((l, index) => (
             <li
               key={l.id}
               className="border-border bg-surface-subtle relative flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-control)] border"
@@ -250,13 +250,16 @@ export function DeliveryVersionCard({
                   src={l.url}
                   alt={`${version.description} — ${l.label}`}
                   className="h-full w-full object-cover"
-                  loading="lazy"
+                  loading={index < 3 ? "eager" : "lazy"}
+                  decoding="async"
+                  {...(index < 3 ? { fetchPriority: "high" as const } : {})}
+                  sizes="80px"
                 />
               ) : l.mediaAssetId && l.mediaKind === "video" ? (
                 <video
                   controls
                   playsInline
-                  preload="metadata"
+                  preload={index < 3 ? "metadata" : "none"}
                   aria-label={`${version.description} — ${l.label}`}
                   className="h-full w-full object-cover"
                 >
@@ -266,7 +269,7 @@ export function DeliveryVersionCard({
                 <video
                   controls
                   playsInline
-                  preload="metadata"
+                  preload={index < 3 ? "metadata" : "none"}
                   aria-label={`${version.description} — ${l.label}`}
                   className="h-full w-full object-cover"
                 >
@@ -278,7 +281,10 @@ export function DeliveryVersionCard({
                   src={l.url}
                   alt={`${version.description} — ${l.label}`}
                   className="h-full w-full object-cover"
-                  loading="lazy"
+                  loading={index < 3 ? "eager" : "lazy"}
+                  decoding="async"
+                  {...(index < 3 ? { fetchPriority: "high" as const } : {})}
+                  sizes="80px"
                 />
               ) : (
                 <div className="text-fg-muted flex flex-col items-center gap-0.5 p-1 text-center">
