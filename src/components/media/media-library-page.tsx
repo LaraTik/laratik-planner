@@ -16,7 +16,18 @@ import { MediaStorageSummary } from "./media-storage-summary";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 import type { listMediaAssets, MediaFolderTreeRow } from "@/lib/media/service";
 
-type MediaRow = Awaited<ReturnType<typeof listMediaAssets>>[number];
+type MediaRow = Awaited<ReturnType<typeof listMediaAssets>>[number] & {
+  /**
+   * PR 3 / Tier 3 (perf/media): short-lived R2 signed URL pointing
+   * directly at the preview variant. When present, the `<img>` uses
+   * it so the bytes flow R2 → browser without the Next.js proxy hop.
+   * Null when the asset has no preview yet (legacy asset or the
+   * generator failed at upload time) or the sign helper failed; the
+   * component falls back to `/api/media/assets/<id>/preview` in that
+   * case.
+   */
+  signedPreviewUrl?: string | null;
+};
 
 type WorkspaceOption = { id: string; name: string; slug: string };
 
@@ -505,18 +516,22 @@ function MediaCard({
     typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
   const intrinsicHeight =
     typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
-  // PR 2 / Tier 2 (perf/media): prefer the 480px WebP preview variant
-  // stored at `/api/media/assets/<uuid>/preview` when the asset has
-  // one. The variant averages 25-40 KB instead of the multi-MB
-  // original, so a 48-card grid drops from ~50 MB to ~1.5 MB on first
-  // paint. Legacy assets (previewStorageObjectId null) fall through
-  // to the full URL — the same route the grid used pre-PR 2.
+  // PR 3 / Tier 3 (perf/media): when the parent page issued a signed
+  // R2 URL for the preview variant, render it directly. Otherwise
+  // fall back to the proxy route that PR 2 shipped (`/preview`); the
+  // legacy `<id>` route is the last resort for assets that never had
+  // a preview generated. The signed URL is the cheapest path — R2's
+  // Cloudflare edge serves the bytes without our Node process in
+  // the loop. See `getSignedPreviewUrl` in `src/lib/media/thumbnails.ts`
+  // for the auth gate that produces the URL.
   const hasPreview =
     typeof row.object.previewStorageObjectId === "string" &&
     row.object.previewStorageObjectId.length > 0;
-  const thumbnailSrc = hasPreview
-    ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
-    : `/api/media/assets/${encodeURIComponent(row.asset.id)}`;
+  const thumbnailSrc =
+    row.signedPreviewUrl ??
+    (hasPreview
+      ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
+      : `/api/media/assets/${encodeURIComponent(row.asset.id)}`);
   const thumbnail =
     downloadable && kind === "image" ? (
       <>
@@ -701,16 +716,17 @@ function MediaListRow({
     typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
   const intrinsicHeight =
     typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
-  // PR 2: same preview variant preference as the grid card above.
-  // List-view thumbs render at 56x56 px so the byte savings are
-  // particularly stark — the variant drops the typical asset
-  // from ~2 MB to ~25 KB.
+  // PR 3: same signed-URL preference as the grid card above. List-view
+  // thumbs render at 56x56 px so the byte savings are particularly
+  // stark — the variant drops the typical asset from ~2 MB to ~25 KB.
   const hasPreview =
     typeof row.object.previewStorageObjectId === "string" &&
     row.object.previewStorageObjectId.length > 0;
-  const thumbnailSrc = hasPreview
-    ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
-    : `/api/media/assets/${encodeURIComponent(row.asset.id)}`;
+  const thumbnailSrc =
+    row.signedPreviewUrl ??
+    (hasPreview
+      ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
+      : `/api/media/assets/${encodeURIComponent(row.asset.id)}`);
   const thumbnail =
     downloadable && kind === "image" ? (
       // eslint-disable-next-line @next/next/no-img-element

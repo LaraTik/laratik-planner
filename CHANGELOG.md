@@ -12,6 +12,47 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Media performance, Tier 3 of 3
+
+PR 1 fixed cache policy + fetchpriority; PR 2 generated a 480px WebP
+preview variant and served it from `/api/media/assets/[id]/preview`.
+This PR closes the loop with **per-page R2 signed URLs** for the
+preview variant — the bytes flow R2 → browser directly, no Next.js
+hop.
+
+- **`getSignedPreviewUrl(actor, assetId)`** in
+  `src/lib/media/thumbnails.ts`. Reuses `fetchPreviewForActor` for the
+  auth gate (so the two read paths can never drift on permissions)
+  and calls `createStorageObjectReadUrl` with `expiresInSeconds: 900`
+  — the adapter's hard max from `r2-adapter.ts:143`. Returns null on
+  any failure (auth denied, signer error, R2 outage) so the
+  components fall through to the proxy route.
+- **Media Library page emits signed URLs.** The server-side page
+  calls `getSignedPreviewUrl` for every row (one `Promise.all` over
+  the 48 rows; HMAC sigs are ~10-30µs each so the batch is sub-ms)
+  and attaches the result as `signedPreviewUrl` on each row.
+  `MediaCard` + `MediaListRow` prefer that field. A 48-card page now
+  makes **zero** requests to the Next.js image path on first paint.
+- **Planning detail's Preview tab signs the first image's URL.** The
+  signing call is hoisted to the top of the page function (the
+  renderer is a sync `.map()` so we can't await inside JSX). One R2
+  sign call per page render.
+- **Documented fallback.** `/api/media/assets/[id]/preview` is
+  unchanged — same `Cache-Control: private, max-age=86400, immutable`,
+  same ETag passthrough, same X-Preview-Width / X-Preview-Height
+  response headers. The byte savings on the signed URL path are
+  zero (R2 serves the same bytes as the proxy); the win is CPU + egress
+  on the Next.js side.
+
+The three-tier arc:
+
+- **PR 1**: cache policy + fetchpriority — cheaper request on the
+  network.
+- **PR 2**: preview variant — 30× smaller bytes.
+- **PR 3**: signed URL — no server hop at all.
+
+Each PR is independent and ships a real improvement on its own.
+
 ### Changed — Media performance, Tier 2 of 3
 
 PR 1 stacked the cheap half of the perf fix (cache policy, fetchpriority,

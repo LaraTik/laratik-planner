@@ -34,6 +34,7 @@ import {
 import { listActivityEvents } from "@/lib/notifications/activity";
 import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
 import { listCommentsForItem } from "@/lib/discussions/service";
+import { getSignedPreviewUrl } from "@/lib/media/thumbnails";
 import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 // resolveActiveAgencyContext is intentionally NOT imported here. The
 // page derives its agency scope from `ws.agencyId` (the workspace
@@ -212,6 +213,17 @@ export default async function ContentDetailPage({
     }).catch(() => []),
     listMediaFolders(actor, { agencyId: ws.agencyId, workspaceId: ws.id }).catch(() => []),
   ]);
+
+  // PR 3 / Tier 3 (perf/media): sign a per-page R2 URL for the first
+  // image asset's preview variant. The signed URL lets the planning
+  // preview `<img>` download straight from the Cloudflare edge
+  // instead of streaming through this Node process. We sign at the
+  // top of the page (outside JSX) because the renderer is a sync
+  // `.map()` and we can't `await` inside it.
+  const firstImageAsset = linkedMediaAssets.find((row) => row.object.kind === "image");
+  const firstImageSignedPreviewUrl = firstImageAsset
+    ? await getSignedPreviewUrl(actor, firstImageAsset.asset.id)
+    : null;
 
   // Resolve the canonical delivery folder (`Posts / {Format} / {YYYY} / {MM}`)
   // up front so the Delivery uploader can preselect it. Wrapped in .catch so a
@@ -1165,23 +1177,18 @@ export default async function ContentDetailPage({
                           // diagnostic — so the planner sees both the
                           // image AND a "fits / will be cropped"
                           // verdict against the platform's safe ratio.
-                          const firstImageAsset = linkedMediaAssets.find(
-                            (row) => row.object.kind === "image",
-                          );
-                          // PR 2 / Tier 2 (perf/media): prefer the 480px
-                          // WebP preview variant when one exists, so the
-                          // planning-detail `<img>` doesn't stream a
-                          // multi-MB original through Next.js just to
-                          // display it in a 320-px preview slot. Legacy
-                          // assets (previewStorageObjectId null) fall
-                          // through to the full URL — same behaviour as
-                          // pre-PR 2.
+                          // The signed R2 URL was computed at the top
+                          // of the page render (see firstImageSignedPreviewUrl
+                          // below). Falls back to `/preview` (PR 2) and
+                          // finally to the full URL when no signed URL
+                          // was issued (legacy asset / no preview yet).
                           const firstAssetHasPreview =
                             !!firstImageAsset?.object.previewStorageObjectId;
                           const thumbnailUrl = firstImageAsset
-                            ? firstAssetHasPreview
-                              ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
-                              : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`
+                            ? (firstImageSignedPreviewUrl ??
+                              (firstAssetHasPreview
+                                ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
+                                : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`))
                             : null;
                           // Forward the stored intrinsic dimensions so
                           // `PlatformPreview` does not need a second
