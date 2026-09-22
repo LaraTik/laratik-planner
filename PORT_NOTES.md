@@ -118,3 +118,26 @@ Product-owner approval for the backfill and collision policy is recorded in
 ## When to add this file's decisions to ADRs
 
 If a deviation becomes stable (e.g. we keep Mailcow long-term, or we add a second VPS), promote the relevant section to `docs/decisions/000N-*.md` and link it from `AGENTS.md`. For now, this single file is enough.
+
+## Meta external publication linking (2026-09-22)
+
+The Planner adds a semi-automated read-only bridge to Meta: a user can fetch
+Facebook Page and Instagram candidates and explicitly link one to an existing
+Planner publication record. This does not port direct or scheduled publishing;
+Meta remains the system that publishes the post.
+
+Impact: publication records retain provider identity, permalink, external
+scheduled/published state, last-seen/sync timestamps, a sanitized snapshot, and
+unavailability/error state. Planner's publication status remains separate and
+changes to `published` only when Meta returns the post as live. Existing manual
+records and channel IDs remain compatible.
+
+Security/data implications: only read scopes are requested, including
+`pages_read_user_content` for Page feed/scheduled reads. Publishing, ads, and
+write scopes remain excluded. Provider payloads are normalized and sanitized;
+tokens never cross the action/UI boundary. Existing connections require
+reauthorization to receive the new scope. Meta App Review and live Page/IG UAT
+remain external approval gates.
+
+Approval: product request in the 2026-09-22 implementation task; direct Meta
+publishing remains explicitly out of scope.

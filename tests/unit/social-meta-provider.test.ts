@@ -6,6 +6,8 @@ import {
   discoverMetaPages,
   fetchMetaFacebookPageSnapshot,
   fetchMetaInstagramSnapshot,
+  fetchMetaPublicationById,
+  fetchMetaPublicationCandidates,
   META_SCOPES,
   metaAdapter,
   probeMetaPermissions,
@@ -78,6 +80,7 @@ describe("META_SCOPES", () => {
     expect(META_SCOPES).toEqual([
       "pages_show_list",
       "pages_read_engagement",
+      "pages_read_user_content",
       "instagram_basic",
       "instagram_manage_insights",
     ]);
@@ -98,6 +101,117 @@ describe("META_SCOPES", () => {
     ]) {
       expect(META_SCOPES).not.toContain(forbidden);
     }
+  });
+});
+
+describe("fetchMetaPublicationCandidates", () => {
+  it("combines Facebook scheduled and recent feed posts with sanitized candidates", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/scheduled_posts")) {
+        return jsonResponse(200, {
+          data: [
+            {
+              id: "scheduled-1",
+              message: "Scheduled post",
+              scheduled_publish_time: "2026-09-30T09:00:00Z",
+              is_published: false,
+              permalink_url: "https://facebook.com/page/posts/scheduled-1",
+            },
+          ],
+        });
+      }
+      return jsonResponse(200, {
+        data: [
+          {
+            id: "published-1",
+            message: "Published post",
+            created_time: "2026-09-21T09:00:00Z",
+            is_published: true,
+            permalink_url: "https://facebook.com/page/posts/published-1",
+          },
+        ],
+      });
+    }) as typeof fetch;
+
+    const result = await fetchMetaPublicationCandidates({
+      platform: "facebook",
+      accountId: "page-1",
+      credentials: {
+        accessToken: "user-token",
+        profileAccessTokens: { "page-1": "page-token" },
+      },
+      apiVersion: "v25.0",
+      now: new Date("2026-09-22T10:00:00Z"),
+      publishedSince: new Date("2026-06-24T10:00:00Z"),
+    });
+
+    expect(result.map((candidate) => [candidate.id, candidate.status])).toEqual([
+      ["scheduled-1", "scheduled"],
+      ["published-1", "published"],
+    ]);
+    expect(JSON.stringify(result)).not.toContain("page-token");
+  });
+
+  it("lists Instagram media and maps carousel/reel provider fields", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(200, {
+        data: [
+          {
+            id: "ig-reel-1",
+            caption: "A reel",
+            media_type: "VIDEO",
+            media_product_type: "REELS",
+            timestamp: "2026-09-21T12:00:00Z",
+            permalink: "https://instagram.com/reel/ig-reel-1",
+          },
+          {
+            id: "ig-carousel-1",
+            caption: "A carousel",
+            media_type: "CAROUSEL_ALBUM",
+            timestamp: "2026-09-20T12:00:00Z",
+            permalink: "https://instagram.com/p/ig-carousel-1",
+          },
+        ],
+      }),
+    ) as typeof fetch;
+
+    const result = await fetchMetaPublicationCandidates({
+      platform: "instagram",
+      accountId: "ig-1",
+      credentials: { accessToken: "user-token" },
+      apiVersion: "v25.0",
+      now: new Date("2026-09-22T10:00:00Z"),
+      publishedSince: new Date("2026-06-24T10:00:00Z"),
+    });
+
+    expect(result.map((candidate) => candidate.mediaType)).toEqual(["reel", "carousel"]);
+    expect(result.every((candidate) => candidate.platform === "instagram")).toBe(true);
+  });
+
+  it("re-reads a selected publication by provider id before linking it", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      expect(url.pathname).toBe("/v25.0/media-1");
+      return jsonResponse(200, {
+        id: "media-1",
+        caption: "Verified media",
+        media_type: "IMAGE",
+        timestamp: "2026-09-21T12:00:00Z",
+        permalink: "https://instagram.com/p/media-1",
+      });
+    }) as typeof fetch;
+
+    const result = await fetchMetaPublicationById({
+      platform: "instagram",
+      accountId: "ig-1",
+      publicationId: "media-1",
+      credentials: { accessToken: "user-token" },
+      apiVersion: "v25.0",
+    });
+
+    expect(result?.id).toBe("media-1");
+    expect(result?.permalink).toBe("https://instagram.com/p/media-1");
   });
 });
 

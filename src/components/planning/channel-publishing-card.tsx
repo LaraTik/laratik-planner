@@ -1,13 +1,27 @@
 "use client";
 
 import * as React from "react";
-import { Check, ExternalLink, Loader2, Send, AlertTriangle } from "lucide-react";
+import {
+  Check,
+  ExternalLink,
+  Loader2,
+  Send,
+  AlertTriangle,
+  Link2,
+  RefreshCw,
+  Unlink,
+} from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import {
+  recordPublicationAction,
+  refreshMetaPublicationAction,
+  unlinkMetaPublicationAction,
+} from "@/app/(app)/app/w/[slug]/planning/actions";
 import { platformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { MetaPublicationLinkDialog } from "./meta-publication-link-dialog";
 
 /**
  * ChannelPublishingCard — per-channel publishing card. Shows the
@@ -49,12 +63,20 @@ export interface ChannelPublishingCardProps {
      * null and the card shows an "In setup" badge.
      */
     configured: boolean;
+    connectionStatus?: string;
+    externalAccountId?: string | null;
+    targetDate?: string | null;
+    searchText?: string | null;
   };
   publication: {
     status: "pending" | "published" | "failed" | "skipped";
     publishedUrl: string | null;
     note: string | null;
     failureReason: string | null;
+    externalProvider?: string | null;
+    externalPostId?: string | null;
+    externalStatus?: string | null;
+    externalPermalink?: string | null;
   } | null;
   isPublisher: boolean;
   /** Optional link to the publish-package form, shown in the
@@ -95,6 +117,9 @@ export function ChannelPublishingCard({
   const [open, setOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
+  const [metaOpen, setMetaOpen] = React.useState(false);
+  const [metaPending, startMeta] = React.useTransition();
+  const [metaError, setMetaError] = React.useState<string | null>(null);
   const status = publication
     ? publication.status === "failed" || publication.status === "skipped"
       ? "needs_attention"
@@ -102,6 +127,35 @@ export function ChannelPublishingCard({
     : channel.configured
       ? "ready_to_publish"
       : "needs_setup";
+  const isMetaChannel = channel.platform === "facebook" || channel.platform === "instagram";
+  const canLinkMeta =
+    isPublisher &&
+    isMetaChannel &&
+    channel.connectionStatus === "connected" &&
+    Boolean(channel.externalAccountId);
+
+  function refreshMeta() {
+    startMeta(async () => {
+      setMetaError(null);
+      const result = await refreshMetaPublicationAction({
+        workspaceSlug,
+        contentItemChannelId: channel.id,
+      });
+      if (!result.ok) setMetaError(result.errorCode);
+    });
+  }
+
+  function unlinkMeta() {
+    if (!window.confirm(t("contentDetail.publishingCard.meta.unlinkConfirm"))) return;
+    startMeta(async () => {
+      setMetaError(null);
+      const result = await unlinkMetaPublicationAction({
+        workspaceSlug,
+        contentItemChannelId: channel.id,
+      });
+      if (!result.ok) setMetaError(result.errorCode);
+    });
+  }
 
   return (
     <Card padding="md" data-testid="channel-publishing-card" data-channel-id={channel.id}>
@@ -155,6 +209,86 @@ export function ChannelPublishingCard({
         <p className="text-label text-danger mt-1" data-testid="channel-card-failure">
           {t("contentDetail.publishingCard.failurePrefix", { reason: publication.failureReason })}
         </p>
+      ) : null}
+
+      {canLinkMeta || publication?.externalPostId ? (
+        <div className="border-border bg-surface-subtle mt-3 rounded-[var(--radius-control)] border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <Link2 className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="text-label text-fg-secondary">
+                {t("contentDetail.publishingCard.meta.label")}
+              </span>
+              {publication?.externalStatus ? (
+                <Badge
+                  variant={
+                    publication.externalStatus === "published"
+                      ? "success"
+                      : publication.externalStatus === "scheduled"
+                        ? "info"
+                        : "warning"
+                  }
+                >
+                  {t(`contentDetail.publishingCard.meta.status.${publication.externalStatus}`)}
+                </Badge>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {canLinkMeta && publication?.externalPostId ? (
+                <>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={refreshMeta}
+                    disabled={metaPending}
+                  >
+                    <RefreshCw
+                      className={metaPending ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"}
+                      aria-hidden="true"
+                    />
+                    {t("contentDetail.publishingCard.meta.refresh")}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={unlinkMeta}
+                    disabled={metaPending}
+                  >
+                    <Unlink className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("contentDetail.publishingCard.meta.unlink")}
+                  </Button>
+                </>
+              ) : canLinkMeta ? (
+                <Button type="button" size="sm" variant="outline" onClick={() => setMetaOpen(true)}>
+                  <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("contentDetail.publishingCard.meta.link")}
+                </Button>
+              ) : (
+                <span className="text-label text-fg-muted">
+                  {t("contentDetail.publishingCard.meta.reconnectToManage")}
+                </span>
+              )}
+            </div>
+          </div>
+          {publication?.externalPermalink ? (
+            <a
+              href={publication.externalPermalink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-label text-primary mt-2 inline-flex max-w-full items-center gap-1 break-all underline-offset-4 hover:underline"
+            >
+              <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
+              {publication.externalPermalink}
+            </a>
+          ) : null}
+          {metaError ? (
+            <p role="alert" className="text-label text-danger mt-2">
+              {t(`contentDetail.publishingCard.meta.errors.${metaError}`)}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Inline outcome form — only for users with the publisher
@@ -306,6 +440,17 @@ export function ChannelPublishingCard({
             ) : null}
           </div>
         )
+      ) : null}
+      {canLinkMeta ? (
+        <MetaPublicationLinkDialog
+          open={metaOpen}
+          onOpenChange={setMetaOpen}
+          workspaceSlug={workspaceSlug}
+          contentItemChannelId={channel.id}
+          platform={channel.platform as "facebook" | "instagram"}
+          {...(channel.targetDate !== undefined ? { targetDate: channel.targetDate } : {})}
+          {...(channel.searchText !== undefined ? { searchText: channel.searchText } : {})}
+        />
       ) : null}
     </Card>
   );

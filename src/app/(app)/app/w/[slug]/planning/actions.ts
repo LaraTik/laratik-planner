@@ -46,6 +46,14 @@ import {
 } from "@/lib/deliveries/service";
 import { RecordPublicationSchema, recordPublication } from "@/lib/publishing/service";
 import {
+  listMetaPublicationCandidates,
+  linkMetaPublication,
+  refreshMetaPublicationLink,
+  unlinkMetaPublication,
+  MetaPublicationLinkError,
+} from "@/lib/social/meta-publication-service";
+import type { MetaPublicationCandidate } from "@/lib/social/meta-publications";
+import {
   createComment,
   CreateCommentSchema,
   resolveComment,
@@ -573,6 +581,106 @@ export async function recordPublicationAction(input: {
   }
   revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
   return { ok: true };
+}
+
+type MetaPublicationCandidateDto = Omit<
+  MetaPublicationCandidate,
+  "createdAt" | "scheduledAt" | "publishedAt"
+> & {
+  createdAt: string | null;
+  scheduledAt: string | null;
+  publishedAt: string | null;
+};
+
+function metaPublicationDto(candidate: MetaPublicationCandidate): MetaPublicationCandidateDto {
+  return {
+    ...candidate,
+    createdAt: candidate.createdAt?.toISOString() ?? null,
+    scheduledAt: candidate.scheduledAt?.toISOString() ?? null,
+    publishedAt: candidate.publishedAt?.toISOString() ?? null,
+  };
+}
+
+type MetaPublicationActionFailure = { ok: false; errorCode: string };
+
+function metaPublicationFailure(error: unknown): MetaPublicationActionFailure {
+  if (error instanceof MetaPublicationLinkError) return { ok: false, errorCode: error.code };
+  return { ok: false, errorCode: "provider_unavailable" };
+}
+
+export async function listMetaPublicationCandidatesAction(input: {
+  workspaceSlug: string;
+  contentItemChannelId: string;
+  after?: string;
+  targetDate?: string | null;
+  searchText?: string | null;
+}): Promise<
+  | { ok: true; candidates: MetaPublicationCandidateDto[]; nextCursor: string | null }
+  | MetaPublicationActionFailure
+> {
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    const result = await listMetaPublicationCandidates(actor, {
+      contentItemChannelId: input.contentItemChannelId,
+      ...(input.after ? { after: input.after } : {}),
+      ...(input.targetDate ? { targetDate: new Date(input.targetDate) } : {}),
+      ...(input.searchText ? { searchText: input.searchText.slice(0, 200) } : {}),
+    });
+    return {
+      ok: true,
+      candidates: result.candidates.map(metaPublicationDto),
+      nextCursor: result.nextCursor,
+    };
+  } catch (error) {
+    return metaPublicationFailure(error);
+  }
+}
+
+export async function linkMetaPublicationAction(input: {
+  workspaceSlug: string;
+  contentItemChannelId: string;
+  externalPostId: string;
+}): Promise<{ ok: true } | MetaPublicationActionFailure> {
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    const result = await linkMetaPublication(actor, input);
+    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
+    revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+    return { ok: true };
+  } catch (error) {
+    return metaPublicationFailure(error);
+  }
+}
+
+export async function refreshMetaPublicationAction(input: {
+  workspaceSlug: string;
+  contentItemChannelId: string;
+}): Promise<{ ok: true; unavailable?: boolean } | MetaPublicationActionFailure> {
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    const result = await refreshMetaPublicationLink(actor, input.contentItemChannelId);
+    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
+    return {
+      ok: true,
+      ...("unavailable" in result && result.unavailable ? { unavailable: true } : {}),
+    };
+  } catch (error) {
+    return metaPublicationFailure(error);
+  }
+}
+
+export async function unlinkMetaPublicationAction(input: {
+  workspaceSlug: string;
+  contentItemChannelId: string;
+}): Promise<{ ok: true } | MetaPublicationActionFailure> {
+  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  try {
+    const result = await unlinkMetaPublication(actor, input.contentItemChannelId);
+    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
+    return { ok: true };
+  } catch (error) {
+    return metaPublicationFailure(error);
+  }
 }
 
 // ─── Discussion actions (Goal 8) ─────────────────────────────────────

@@ -16,6 +16,13 @@
 > Edit this file when adding a new table; PRs that add a table
 > without updating this doc fail DOC-006 review.
 
+`publication_record` also carries the additive Meta external-publication
+contract from migration `0049`: provider identity/status, permalink and
+scheduled/live timestamps, last-seen/sync timestamps, a sanitized snapshot,
+error fields, and link actor/time. The unique provider/post identity prevents
+one Meta object from being linked to multiple Planner channel records. These
+fields are intentionally separate from the Planner `publication_status` enum.
+
 ## Conventions
 
 - All tables live in the `public` schema. Migrations are forward-only

@@ -904,6 +904,9 @@ export async function getContentItem(actor: Actor, contentItemId: string) {
         socialChannelId: contentItemChannels.socialChannelId,
         accountName: socialChannels.accountName,
         platform: socialChannels.platform,
+        socialConnectionId: socialChannels.socialConnectionId,
+        externalAccountId: socialChannels.externalAccountId,
+        connectionStatus: socialChannels.connectionStatus,
         plannedPublishAtOverride: contentItemChannels.plannedPublishAtOverride,
       })
       .from(contentItemChannels)

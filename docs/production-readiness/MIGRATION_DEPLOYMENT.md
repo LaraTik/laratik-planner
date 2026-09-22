@@ -17,6 +17,27 @@
 | Encrypted offsite backup + rotation | **Blocked on OPS-001** (owner-supplied)      |
 | VPS deploy to `laratik-vps`         | **Blocked on OPS-001** (VPS_SSH_* secrets)   |
 
+## Migration 0049 — Meta external publication links
+
+Migration `0049_meta_external_publication_links.sql` is additive. It adds
+provider identity/status/timestamp/error/link fields to `publication_record`,
+a sanitized non-null snapshot defaulting to `{}`, a `set null` actor foreign
+key, a unique provider/post identity index, and guarded provider/status/
+identity/permalink checks. It does not alter the existing `publication_status`
+enum or delete/rewrite publication history.
+
+Compatibility: older application images ignore the new columns and continue
+manual publication. Back up the target database before deployment. Normal
+rollback pins the previous image and leaves the additive columns/index in
+place; destructive removal requires a reviewed forward migration or restoring
+the verified backup.
+
+Required evidence before release: run `NODE_ENV=test pnpm migration-drill` for
+from-zero, skipped-migration repair, in-place upgrade, backup/restore, and
+failed-migration abort; run the integration suite against `planner_test`; and
+record the exact clean commit SHA. This section remains pending until those
+checks are rerun after the implementation commit.
+
 ## Migration 0031 — workspace-local social metric dates
 
 Migration `0031_social_metric_workspace_dates.sql` corrects the daily metric

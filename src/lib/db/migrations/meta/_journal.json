@@ -344,6 +344,13 @@
       "when": 1790050000000,
       "tag": "0048_workflow_scenarios",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1790071321942,
+      "tag": "0049_meta_external_publication_links",
+      "breakpoints": true
     }
   ]
 }
