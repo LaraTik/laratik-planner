@@ -16,6 +16,13 @@ import type {
   SocialSourceMetadata,
 } from "@/lib/social/types";
 import type { MetricStatus, SocialMetric } from "@/lib/social/metrics";
+import {
+  mergeMetaPublicationCandidates,
+  normalizeMetaPublication,
+  type MetaPublicationCandidate,
+  type MetaPublicationCandidateRaw,
+  type MetaPublicationPlatform,
+} from "@/lib/social/meta-publications";
 
 /**
  * M2 — Meta (Facebook Login for Business) provider adapter.
@@ -64,11 +71,12 @@ import type { MetricStatus, SocialMetric } from "@/lib/social/metrics";
 // `read_insights` was removed 2026-08-28: Meta deprecated it for
 // new apps and rejects the dialog with `Invalid Scopes:
 // read_insights` when the Login for Business config or the OAuth
-// URL still includes it. The four remaining scopes cover every
+// URL still includes it. The five read-only scopes cover every
 // metric the social pipeline reads:
 //   - `pages_show_list` + `pages_read_engagement` → Page metadata,
 //     fan_count, page-level insights (impressions, reach, views,
 //     post engagements)
+//   - `pages_read_user_content` → Page feed and scheduled post reads
 //   - `instagram_basic` + `instagram_manage_insights` → IG business
 //     account metadata, followers/media counts, and IG account
 //     insights (reach, profile_views, accounts_engaged,
@@ -77,11 +85,12 @@ import type { MetricStatus, SocialMetric } from "@/lib/social/metrics";
 // Pre-flight verification on the Food Game IG and Just Halal tr IG
 // accounts (run on the same `pages_show_list` + `pages_read_engagement`
 // + `instagram_basic` + `instagram_manage_insights` set) confirmed
-// all four required endpoints return the expected shape; removing
+// all required endpoints return the expected shape; removing
 // `read_insights` does not regress any data the pipeline reads.
 export const META_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
+  "pages_read_user_content",
   "instagram_basic",
   "instagram_manage_insights",
 ] as const;
@@ -396,7 +405,7 @@ export async function discoverMetaPages(
     if (!Array.isArray(parsed.data)) {
       throw new SocialProviderError("invalid_response", false, null);
     }
-    for (const page of parsed.data) {
+    for (const page of parsed.data ?? []) {
       if (!hasAnalyticsPermission(page)) continue;
       profiles.push(toPageProfile(page));
       profileAccessTokens[page.id] = page.access_token;
@@ -419,6 +428,183 @@ export async function discoverMetaPages(
       profileAccessTokens,
     },
   };
+}
+
+type MetaPublicationCollectionResponse = {
+  data?: unknown[];
+  paging?: { cursors?: { after?: string }; next?: string };
+};
+
+export type MetaPublicationCandidatePage = {
+  candidates: MetaPublicationCandidate[];
+  nextCursor: string | null;
+};
+
+export type FetchMetaPublicationCandidatesInput = {
+  platform: MetaPublicationPlatform;
+  accountId: string;
+  credentials: SocialCredentials;
+  apiVersion?: string | null;
+  now?: Date;
+  publishedSince: Date;
+  after?: string | null;
+  limit?: number;
+};
+
+function parsePublicationCollection(body: string): MetaPublicationCollectionResponse {
+  let parsed: MetaPublicationCollectionResponse;
+  try {
+    parsed = JSON.parse(body) as MetaPublicationCollectionResponse;
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  if (!Array.isArray(parsed.data)) {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  return parsed;
+}
+
+async function fetchPublicationCollection(args: {
+  url: URL;
+  platform: MetaPublicationPlatform;
+  now: Date;
+}): Promise<MetaPublicationCandidatePage> {
+  const { body, requestId } = await providerRequest(args.url.toString());
+  try {
+    const parsed = parsePublicationCollection(body);
+    return {
+      candidates: (parsed.data ?? []).flatMap((entry) => {
+        if (typeof entry !== "object" || entry === null) return [];
+        try {
+          return [
+            normalizeMetaPublication(args.platform, entry as MetaPublicationCandidateRaw, args.now),
+          ];
+        } catch {
+          return [];
+        }
+      }),
+      nextCursor: parsed.paging?.cursors?.after ?? null,
+    };
+  } catch (error) {
+    if (error instanceof SocialProviderError) {
+      throw new SocialProviderError(error.code, error.retryable, requestId ?? error.requestId);
+    }
+    throw error;
+  }
+}
+
+/**
+ * Fetch the first candidate page for a linked Facebook Page or Instagram
+ * professional account. The returned DTO contains no access token or raw
+ * provider response. Facebook uses separate feed and scheduled-post edges;
+ * Instagram media is returned through the account's media edge.
+ */
+export async function fetchMetaPublicationCandidatesPage(
+  input: FetchMetaPublicationCandidatesInput,
+): Promise<MetaPublicationCandidatePage> {
+  const apiVersion = resolveGraphVersion(input.apiVersion);
+  const now = input.now ?? new Date();
+  const limit = Math.min(Math.max(input.limit ?? 25, 1), 100);
+  const accessToken =
+    input.platform === "facebook"
+      ? await acquirePageAccessToken(input.credentials, input.accountId, apiVersion)
+      : (input.credentials.profileAccessTokens?.[input.accountId] ?? input.credentials.accessToken);
+
+  if (input.platform === "facebook") {
+    const fields = [
+      "id",
+      "message",
+      "created_time",
+      "scheduled_publish_time",
+      "is_published",
+      "permalink_url",
+      "attachments{media_type,media_url,thumbnail_url}",
+    ].join(",");
+    const scheduledUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}/scheduled_posts`);
+    scheduledUrl.searchParams.set("fields", fields);
+    scheduledUrl.searchParams.set("limit", String(limit));
+    scheduledUrl.searchParams.set("access_token", accessToken);
+    if (input.after) scheduledUrl.searchParams.set("after", input.after);
+
+    const feedUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}/feed`);
+    feedUrl.searchParams.set("fields", fields);
+    feedUrl.searchParams.set("limit", String(limit));
+    feedUrl.searchParams.set("since", String(Math.floor(input.publishedSince.getTime() / 1000)));
+    feedUrl.searchParams.set("access_token", accessToken);
+    if (input.after) feedUrl.searchParams.set("after", input.after);
+
+    const [scheduled, published] = await Promise.all([
+      fetchPublicationCollection({ url: scheduledUrl, platform: "facebook", now }),
+      fetchPublicationCollection({ url: feedUrl, platform: "facebook", now }),
+    ]);
+    return {
+      candidates: mergeMetaPublicationCandidates([
+        ...scheduled.candidates,
+        ...published.candidates,
+      ]),
+      nextCursor: scheduled.nextCursor ?? published.nextCursor,
+    };
+  }
+
+  const mediaUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}/media`);
+  mediaUrl.searchParams.set(
+    "fields",
+    "id,caption,media_type,media_product_type,permalink,timestamp,media_url,thumbnail_url",
+  );
+  mediaUrl.searchParams.set("limit", String(limit));
+  mediaUrl.searchParams.set("since", String(Math.floor(input.publishedSince.getTime() / 1000)));
+  mediaUrl.searchParams.set("access_token", accessToken);
+  if (input.after) mediaUrl.searchParams.set("after", input.after);
+  return fetchPublicationCollection({ url: mediaUrl, platform: "instagram", now });
+}
+
+export async function fetchMetaPublicationCandidates(
+  input: FetchMetaPublicationCandidatesInput,
+): Promise<MetaPublicationCandidate[]> {
+  const page = await fetchMetaPublicationCandidatesPage(input);
+  return page.candidates;
+}
+
+export async function fetchMetaPublicationById(input: {
+  platform: MetaPublicationPlatform;
+  accountId: string;
+  publicationId: string;
+  credentials: SocialCredentials;
+  apiVersion?: string | null;
+  now?: Date;
+}): Promise<MetaPublicationCandidate | null> {
+  const apiVersion = resolveGraphVersion(input.apiVersion);
+  const accessToken =
+    input.platform === "facebook"
+      ? await acquirePageAccessToken(input.credentials, input.accountId, apiVersion)
+      : (input.credentials.profileAccessTokens?.[input.accountId] ?? input.credentials.accessToken);
+  const url = new URL(`${graphBaseUrl(apiVersion)}/${input.publicationId}`);
+  url.searchParams.set(
+    "fields",
+    input.platform === "facebook"
+      ? "id,message,created_time,scheduled_publish_time,is_published,permalink_url"
+      : "id,caption,media_type,media_product_type,permalink,timestamp,media_url,thumbnail_url",
+  );
+  url.searchParams.set("access_token", accessToken);
+  const { body } = await providerRequest(url.toString());
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  if (typeof parsed !== "object" || parsed === null) {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  try {
+    return normalizeMetaPublication(
+      input.platform,
+      parsed as MetaPublicationCandidateRaw,
+      input.now ?? new Date(),
+    );
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
 }
 
 // ─── Snapshot worker helpers (Task 7) ─────────────────────────────────────

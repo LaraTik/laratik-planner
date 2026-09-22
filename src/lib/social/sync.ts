@@ -39,6 +39,7 @@ import {
 import { getAgencyProviderConfig, type SocialProvider } from "./provider-config";
 import type { TestErrorCode } from "./test-error-codes";
 import { metricDateInTimeZone, nextDailySyncAt } from "./timezone";
+import { reconcileMetaPublicationLinks } from "./meta-publication-service";
 
 export { TEST_ERROR_CODES } from "./test-error-codes";
 export type { TestErrorCode } from "./test-error-codes";
@@ -186,6 +187,15 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
   metricCutoff.setMonth(metricCutoff.getMonth() - RETENTION_METRIC_MONTHS);
   const oauthStatesDeleted = await cleanupOauthStates(db, oauthCutoff);
   const oldMetricsDeleted = await cleanupOldMetrics(db, metricCutoff);
+  // Reconcile only links that are still externally scheduled. Published
+  // links remain immutable unless a user explicitly refreshes them, which
+  // keeps the background worker bounded and avoids needless Meta reads.
+  try {
+    await reconcileMetaPublicationLinks(now);
+  } catch {
+    // A publication-link failure must not hide successful analytics syncs.
+    // The link row is marked per-record by the reconciler when possible.
+  }
 
   return {
     claimed: claimed.length,

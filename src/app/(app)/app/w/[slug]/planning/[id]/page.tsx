@@ -1251,6 +1251,14 @@ export default async function ContentDetailPage({
                             platform: ch.platform,
                             accountName: ch.accountName,
                             configured: cfg?.configured ?? false,
+                            connectionStatus: ch.connectionStatus,
+                            externalAccountId: ch.externalAccountId,
+                            targetDate:
+                              ch.plannedPublishAtOverride?.toISOString() ??
+                              item.plannedPublishAt?.toISOString() ??
+                              null,
+                            searchText: [item.title, item.brief].filter(Boolean).join(" "),
+                            timeZone: ws.timezone,
                           }}
                           publication={pub ? { ...pub.publication_record } : null}
                           isPublisher={actorRoles.isPublisher || actorRoles.isManager}

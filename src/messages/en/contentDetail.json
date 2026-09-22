@@ -238,7 +238,53 @@
     "outcomeFailed": "Failed",
     "publishedUrlLabel": "Published URL",
     "noteLabel": "Note (optional)",
-    "failureReasonLabel": "Failure reason"
+    "failureReasonLabel": "Failure reason",
+    "meta": {
+      "label": "Meta publication",
+      "link": "Link Meta post",
+      "unlink": "Unlink",
+      "refresh": "Refresh",
+      "title": "Link a Meta post",
+      "description": "Choose the Facebook or Instagram post that matches this Planner item. Published posts from the last 90 days and all scheduled posts are shown.",
+      "close": "Close Meta post linking",
+      "loading": "Fetching Meta posts…",
+      "empty": "No matching Meta posts were found.",
+      "candidatesLabel": "Meta post candidates",
+      "confirmLink": "Link selected post",
+      "loadMore": "Load more",
+      "noCaption": "No caption",
+      "previewLink": "Open preview",
+      "unlinkConfirm": "Unlink this Meta post? You can link it again later.",
+      "reconnectToManage": "Reconnect Meta to manage this link",
+      "platform": { "facebook": "Facebook", "instagram": "Instagram" },
+      "status": {
+        "scheduled": "Scheduled",
+        "published": "Published",
+        "unavailable": "Unavailable",
+        "error": "Sync error"
+      },
+      "mediaType": {
+        "image": "Image",
+        "video": "Video",
+        "carousel": "Carousel",
+        "reel": "Reel",
+        "unknown": "Media"
+      },
+      "errors": {
+        "channel_not_found": "This channel could not be found.",
+        "forbidden": "You do not have permission to link Meta posts.",
+        "not_meta_channel": "This channel is not a Facebook or Instagram channel.",
+        "connection_unavailable": "Reconnect the Meta channel before linking a post.",
+        "provider_not_configured": "Meta is not configured for this agency.",
+        "permission_denied": "Meta denied access. Reauthorize the connection with the required read permissions.",
+        "auth_expired": "The Meta connection expired. Reauthorize it and try again.",
+        "provider_unavailable": "Meta could not be reached. Try again shortly.",
+        "publication_not_found": "That Meta post is no longer available.",
+        "duplicate_link": "That Meta post is already linked to another Planner item.",
+        "invalid_candidate": "That Meta post cannot be linked.",
+        "invalid_state": "This Planner item is not ready for publication linking."
+      }
+    }
   },
   "comments": {
     "trigger": { "open": "Open discussion ({count} comments)" },

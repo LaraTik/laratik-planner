@@ -238,7 +238,53 @@
     "outcomeFailed": "فشل",
     "publishedUrlLabel": "رابط المنشور",
     "noteLabel": "ملاحظة (اختياري)",
-    "failureReasonLabel": "سبب الفشل"
+    "failureReasonLabel": "سبب الفشل",
+    "meta": {
+      "label": "منشور Meta",
+      "link": "ربط منشور Meta",
+      "unlink": "إلغاء الربط",
+      "refresh": "تحديث",
+      "title": "ربط منشور من Meta",
+      "description": "اختر منشور Facebook أو Instagram المطابق لهذا العنصر في Planner. تظهر المنشورات المنشورة خلال آخر 90 يومًا وكل المنشورات المجدولة.",
+      "close": "إغلاق ربط منشور Meta",
+      "loading": "جارٍ جلب منشورات Meta…",
+      "empty": "لم يتم العثور على منشورات Meta مطابقة.",
+      "candidatesLabel": "المنشورات المرشحة من Meta",
+      "confirmLink": "ربط المنشور المحدد",
+      "loadMore": "تحميل المزيد",
+      "noCaption": "بدون تعليق",
+      "previewLink": "فتح المعاينة",
+      "unlinkConfirm": "إلغاء ربط منشور Meta هذا؟ يمكنك ربطه مرة أخرى لاحقًا.",
+      "reconnectToManage": "أعد ربط Meta لإدارة هذا الارتباط",
+      "platform": { "facebook": "Facebook", "instagram": "Instagram" },
+      "status": {
+        "scheduled": "مجدول",
+        "published": "منشور",
+        "unavailable": "غير متاح",
+        "error": "خطأ في المزامنة"
+      },
+      "mediaType": {
+        "image": "صورة",
+        "video": "فيديو",
+        "carousel": "ألبوم",
+        "reel": "ريلز",
+        "unknown": "وسائط"
+      },
+      "errors": {
+        "channel_not_found": "تعذر العثور على هذه القناة.",
+        "forbidden": "ليس لديك إذن لربط منشورات Meta.",
+        "not_meta_channel": "هذه القناة ليست قناة Facebook أو Instagram.",
+        "connection_unavailable": "أعد ربط قناة Meta قبل ربط منشور.",
+        "provider_not_configured": "لم يتم إعداد Meta لهذه الوكالة.",
+        "permission_denied": "رفض Meta الوصول. أعد تفويض الاتصال بالأذونات المطلوبة للقراءة.",
+        "auth_expired": "انتهت صلاحية اتصال Meta. أعد تفويضه ثم حاول مرة أخرى.",
+        "provider_unavailable": "تعذر الوصول إلى Meta. حاول مرة أخرى بعد قليل.",
+        "publication_not_found": "لم يعد منشور Meta هذا متاحًا.",
+        "duplicate_link": "هذا المنشور مرتبط بالفعل بعنصر Planner آخر.",
+        "invalid_candidate": "لا يمكن ربط منشور Meta هذا.",
+        "invalid_state": "هذا العنصر غير جاهز لربط منشور."
+      }
+    }
   },
   "comments": {
     "trigger": { "open": "فتح المناقشة ({count} تعليقًا)" },
