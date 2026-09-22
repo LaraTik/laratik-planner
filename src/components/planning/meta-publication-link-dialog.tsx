@@ -64,15 +64,21 @@ export function MetaPublicationLinkDialog({
   const locale = useLocaleCode();
   const [candidates, setCandidates] = React.useState<MetaPublicationCandidateDto[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
+  const [scheduledCoverage, setScheduledCoverage] = React.useState<
+    "complete" | "published_only" | null
+  >(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [errorCode, setErrorCode] = React.useState<string | null>(null);
+  const requestSequence = React.useRef(0);
 
   const load = React.useCallback(
     async (after?: string) => {
+      const requestId = ++requestSequence.current;
       setLoading(true);
       setErrorCode(null);
+      if (!after) setScheduledCoverage(null);
       try {
         const result = await listMetaPublicationCandidatesAction({
           workspaceSlug,
@@ -81,20 +87,23 @@ export function MetaPublicationLinkDialog({
           ...(!after && targetDate ? { targetDate } : {}),
           ...(!after && searchText ? { searchText } : {}),
         });
+        if (requestId !== requestSequence.current) return;
         if (result.ok) {
           setCandidates((current) => {
             const merged = after ? [...current, ...result.candidates] : result.candidates;
             return [...new Map(merged.map((candidate) => [candidate.id, candidate])).values()];
           });
           setNextCursor(result.nextCursor);
+          setScheduledCoverage(result.scheduledCoverage);
           if (!after) setSelectedId(result.candidates[0]?.id ?? null);
         } else {
           setErrorCode(result.errorCode);
         }
       } catch {
+        if (requestId !== requestSequence.current) return;
         setErrorCode("provider_unavailable");
       } finally {
-        setLoading(false);
+        if (requestId === requestSequence.current) setLoading(false);
       }
     },
     [contentItemChannelId, searchText, targetDate, workspaceSlug],
@@ -162,6 +171,14 @@ export function MetaPublicationLinkDialog({
         {errorText ? (
           <p role="alert" className="text-label text-danger">
             {errorText}
+          </p>
+        ) : null}
+        {scheduledCoverage === "published_only" ? (
+          <p
+            role="status"
+            className="text-label text-fg-muted rounded-[var(--radius-control)] border border-dashed p-3"
+          >
+            {t("contentDetail.publishingCard.meta.instagramScheduledUnavailable")}
           </p>
         ) : null}
         {loading && candidates.length === 0 ? (

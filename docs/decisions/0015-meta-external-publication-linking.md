@@ -14,9 +14,11 @@ link. Direct Meta publishing remains outside the product scope.
 
 - Add nullable external publication metadata to `publication_record`.
 - Identify a link by the unique `(external_provider, external_post_id)` pair.
-- Fetch Facebook Page feed/scheduled posts and Instagram media using read-only
-  Meta permissions, limited to published history from 90 days and future
-  scheduled posts.
+- Fetch Facebook Page feed/scheduled posts and Instagram published media using
+  read-only Meta permissions, limited to published history from 90 days. The
+  current read-only Instagram media endpoint does not provide scheduled media;
+  that limitation is surfaced in the UI rather than worked around with a write
+  permission.
 - Require explicit user confirmation before linking; link Facebook and
   Instagram independently.
 - Keep Meta's external state (`scheduled`, `published`, `unavailable`, `error`)
@@ -33,7 +35,7 @@ link. Direct Meta publishing remains outside the product scope.
 The common workflow is reduced to fetch → select → confirm, while the existing
 manual outcome form remains available. A new read permission may require
 reauthorization for existing connections. Provider endpoint behavior,
-scheduled-post visibility, and App Review remain external UAT gates.
+Instagram scheduled-post visibility, and App Review remain external UAT gates.
 
 The sync worker performs bounded reconciliation only for linked scheduled
 objects. A manual refresh is available for any linked object. Unlinking clears

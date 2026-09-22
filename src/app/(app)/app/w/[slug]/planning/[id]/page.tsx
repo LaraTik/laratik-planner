@@ -1279,7 +1279,16 @@ export default async function ContentDetailPage({
                             searchText: [item.title, item.brief].filter(Boolean).join(" "),
                             timeZone: ws.timezone,
                           }}
-                          publication={pub ? { ...pub.publication_record } : null}
+                          publication={
+                            pub
+                              ? {
+                                  ...pub.publication_record,
+                                  externalLastSyncedAt:
+                                    pub.publication_record.externalLastSyncedAt?.toISOString() ??
+                                    null,
+                                }
+                              : null
+                          }
                           isPublisher={actorRoles.isPublisher || actorRoles.isManager}
                         />
                       );

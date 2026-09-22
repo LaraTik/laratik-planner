@@ -20,7 +20,7 @@ import {
   unlinkMetaPublicationAction,
 } from "@/app/(app)/app/w/[slug]/planning/actions";
 import { platformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { MetaPublicationLinkDialog } from "./meta-publication-link-dialog";
 
 /**
@@ -78,6 +78,8 @@ export interface ChannelPublishingCardProps {
     externalPostId?: string | null;
     externalStatus?: string | null;
     externalPermalink?: string | null;
+    externalLastSyncedAt?: string | null;
+    externalErrorCode?: string | null;
   } | null;
   isPublisher: boolean;
   /** Optional link to the publish-package form, shown in the
@@ -107,6 +109,17 @@ function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: stri
   return value === key ? platformLabel(platform) : value;
 }
 
+function localizedDate(value: string | null | undefined, locale: "en" | "ar", timeZone: string) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone,
+  }).format(date);
+}
+
 export function ChannelPublishingCard({
   workspaceSlug,
   channel,
@@ -115,6 +128,7 @@ export function ChannelPublishingCard({
   publishPackageHref,
 }: ChannelPublishingCardProps) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [open, setOpen] = React.useState(false);
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
@@ -138,11 +152,15 @@ export function ChannelPublishingCard({
   function refreshMeta() {
     startMeta(async () => {
       setMetaError(null);
-      const result = await refreshMetaPublicationAction({
-        workspaceSlug,
-        contentItemChannelId: channel.id,
-      });
-      if (!result.ok) setMetaError(result.errorCode);
+      try {
+        const result = await refreshMetaPublicationAction({
+          workspaceSlug,
+          contentItemChannelId: channel.id,
+        });
+        if (!result.ok) setMetaError(result.errorCode);
+      } catch {
+        setMetaError("provider_unavailable");
+      }
     });
   }
 
@@ -150,11 +168,15 @@ export function ChannelPublishingCard({
     if (!window.confirm(t("contentDetail.publishingCard.meta.unlinkConfirm"))) return;
     startMeta(async () => {
       setMetaError(null);
-      const result = await unlinkMetaPublicationAction({
-        workspaceSlug,
-        contentItemChannelId: channel.id,
-      });
-      if (!result.ok) setMetaError(result.errorCode);
+      try {
+        const result = await unlinkMetaPublicationAction({
+          workspaceSlug,
+          contentItemChannelId: channel.id,
+        });
+        if (!result.ok) setMetaError(result.errorCode);
+      } catch {
+        setMetaError("provider_unavailable");
+      }
     });
   }
 
@@ -283,6 +305,18 @@ export function ChannelPublishingCard({
               <ExternalLink className="h-3 w-3 shrink-0" aria-hidden="true" />
               {publication.externalPermalink}
             </a>
+          ) : null}
+          {publication?.externalLastSyncedAt ? (
+            <p className="text-label text-fg-muted mt-2">
+              {t("contentDetail.publishingCard.meta.lastChecked", {
+                date:
+                  localizedDate(
+                    publication.externalLastSyncedAt,
+                    locale,
+                    channel.timeZone ?? "UTC",
+                  ) ?? publication.externalLastSyncedAt,
+              })}
+            </p>
           ) : null}
           {metaError ? (
             <p role="alert" className="text-label text-danger mt-2">

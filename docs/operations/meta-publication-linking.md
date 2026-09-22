@@ -8,10 +8,12 @@ matching Planner channel.
 
 1. Open an existing Planner item and select the **Publish** tab.
 2. Find the Facebook or Instagram channel card and choose **Link Meta post**.
-3. Planner loads published posts from the last 90 days and future scheduled
-   posts for that connected channel. The first candidate is ranked using the
-   Planner date and title/brief, but always verify the caption, preview, and
-   date yourself.
+3. Planner loads published posts from the last 90 days. Facebook also exposes
+   future scheduled Page posts. Instagram scheduled media is not exposed by
+   the current read-only media endpoint, so scheduled Instagram content will
+   appear after it goes live. The first candidate is ranked using the Planner
+   date and title/brief, but always verify the caption, preview, and date
+   yourself.
 4. Select the correct candidate and choose **Link selected post**.
 5. Use **Refresh** after a scheduled post goes live. Planner changes its
    external state from **Scheduled** to **Published** only after Meta confirms
@@ -39,7 +41,7 @@ can only be linked to one Planner publication record.
 
 The connection must be active and associated with the Planner channel. The
 read-only Meta scopes include `pages_read_user_content` so Page feeds and
-scheduled posts can be read. Publishing, ads, and write scopes are not
+scheduled Page posts can be read. Publishing, ads, and write scopes are not
 requested. Existing connections may need to be reauthorized before linking.
 
 If the dialog reports a permission or expired-token error, reconnect Meta from

@@ -123,8 +123,10 @@ If a deviation becomes stable (e.g. we keep Mailcow long-term, or we add a secon
 
 The Planner adds a semi-automated read-only bridge to Meta: a user can fetch
 Facebook Page and Instagram candidates and explicitly link one to an existing
-Planner publication record. This does not port direct or scheduled publishing;
-Meta remains the system that publishes the post.
+Planner publication record. Facebook scheduled Page posts are discoverable;
+Instagram scheduled media is not exposed by the current read-only media
+endpoint and appears after it goes live. This does not port direct or
+scheduled publishing; Meta remains the system that publishes the post.
 
 Impact: publication records retain provider identity, permalink, external
 scheduled/published state, last-seen/sync timestamps, a sanitized snapshot, and

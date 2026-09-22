@@ -615,12 +615,18 @@ export async function listMetaPublicationCandidatesAction(input: {
   targetDate?: string | null;
   searchText?: string | null;
 }): Promise<
-  | { ok: true; candidates: MetaPublicationCandidateDto[]; nextCursor: string | null }
+  | {
+      ok: true;
+      candidates: MetaPublicationCandidateDto[];
+      nextCursor: string | null;
+      scheduledCoverage: "complete" | "published_only";
+    }
   | MetaPublicationActionFailure
 > {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
     const result = await listMetaPublicationCandidates(actor, {
+      workspaceId: workspace.id,
       contentItemChannelId: input.contentItemChannelId,
       ...(input.after ? { after: input.after } : {}),
       ...(input.targetDate ? { targetDate: new Date(input.targetDate) } : {}),
@@ -630,6 +636,7 @@ export async function listMetaPublicationCandidatesAction(input: {
       ok: true,
       candidates: result.candidates.map(metaPublicationDto),
       nextCursor: result.nextCursor,
+      scheduledCoverage: result.scheduledCoverage,
     };
   } catch (error) {
     return metaPublicationFailure(error);
@@ -641,9 +648,9 @@ export async function linkMetaPublicationAction(input: {
   contentItemChannelId: string;
   externalPostId: string;
 }): Promise<{ ok: true } | MetaPublicationActionFailure> {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
-    const result = await linkMetaPublication(actor, input);
+    const result = await linkMetaPublication(actor, { ...input, workspaceId: workspace.id });
     revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
     revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
     return { ok: true };
@@ -656,9 +663,13 @@ export async function refreshMetaPublicationAction(input: {
   workspaceSlug: string;
   contentItemChannelId: string;
 }): Promise<{ ok: true; unavailable?: boolean } | MetaPublicationActionFailure> {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
-    const result = await refreshMetaPublicationLink(actor, input.contentItemChannelId);
+    const result = await refreshMetaPublicationLink(
+      actor,
+      workspace.id,
+      input.contentItemChannelId,
+    );
     revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
     return {
       ok: true,
@@ -673,9 +684,9 @@ export async function unlinkMetaPublicationAction(input: {
   workspaceSlug: string;
   contentItemChannelId: string;
 }): Promise<{ ok: true } | MetaPublicationActionFailure> {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
-    const result = await unlinkMetaPublication(actor, input.contentItemChannelId);
+    const result = await unlinkMetaPublication(actor, workspace.id, input.contentItemChannelId);
     revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
     return { ok: true };
   } catch (error) {

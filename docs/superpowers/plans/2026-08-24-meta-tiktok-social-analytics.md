@@ -480,7 +480,7 @@ Request only:
 const META_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
-  "read_insights",
+  "pages_read_user_content",
   "instagram_basic",
   "instagram_manage_insights",
 ] as const;
@@ -757,7 +757,7 @@ Run: `git add src/lib/social/providers/tiktok.ts src/app/api/social/tiktok src/a
 
 - [ ] **Step 1: Prepare Meta App Review evidence**
 
-Document the exact user journey, screencast script, test workspace, data-use explanation, privacy-policy URL, data-deletion URL, and justification for `pages_show_list`, `pages_read_engagement`, `read_insights`, `instagram_basic`, and `instagram_manage_insights`. Request Advanced Access only for these read scopes.
+Document the exact user journey, screencast script, test workspace, data-use explanation, privacy-policy URL, data-deletion URL, and justification for `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `instagram_basic`, and `instagram_manage_insights`. Request Advanced Access only for these read scopes.
 
 - [ ] **Step 2: Prepare TikTok review evidence**
 

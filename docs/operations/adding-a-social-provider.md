@@ -51,7 +51,7 @@ The OAuth flow is the connect / callback surface. The pattern (see `src/app/api/
 
 The scope set is **read-only**. The current scope sets:
 
-- Meta: `business_management`, `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `read_insights`.
+- Meta: `pages_show_list`, `pages_read_engagement`, `pages_read_user_content`, `instagram_basic`, `instagram_manage_insights`.
 - TikTok: `user.info.basic`, `user.info.stats`, `video.list`.
 
 The new provider's scope set is added to the adapter's authorization URL builder. No publish / manage / ads scope ever appears in the URL. The scope is part of the adapter's `provider: '...'` key — adding a new provider is a new scope set, not a new route.

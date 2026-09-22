@@ -48,7 +48,12 @@ const channel = {
 
 describe("Meta publication linking UI", () => {
   it("loads candidates, keeps the best candidate selected, and links after confirmation", async () => {
-    actions.list.mockResolvedValue({ ok: true, candidates: [candidate], nextCursor: null });
+    actions.list.mockResolvedValue({
+      ok: true,
+      candidates: [candidate],
+      nextCursor: null,
+      scheduledCoverage: "published_only",
+    });
     actions.link.mockResolvedValue({ ok: true });
 
     render(
@@ -65,6 +70,11 @@ describe("Meta publication linking UI", () => {
     fireEvent.click(screen.getByRole("button", { name: "Link Meta post" }));
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
     expect(await screen.findByText("Launch announcement")).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        "Meta currently exposes published Instagram media here. Scheduled Instagram posts will appear after they go live.",
+      ),
+    ).toBeInTheDocument();
 
     const radio = screen.getByRole("radio") as HTMLInputElement;
     expect(radio.checked).toBe(true);

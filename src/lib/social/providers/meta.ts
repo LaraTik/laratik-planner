@@ -438,6 +438,7 @@ type MetaPublicationCollectionResponse = {
 export type MetaPublicationCandidatePage = {
   candidates: MetaPublicationCandidate[];
   nextCursor: string | null;
+  scheduledCoverage: "complete" | "published_only";
 };
 
 export type FetchMetaPublicationCandidatesInput = {
@@ -450,6 +451,41 @@ export type FetchMetaPublicationCandidatesInput = {
   after?: string | null;
   limit?: number;
 };
+
+type FacebookPublicationCursor = {
+  version: 1;
+  scheduledAfter: string | null;
+  feedAfter: string | null;
+};
+
+function encodeFacebookPublicationCursor(cursor: FacebookPublicationCursor): string {
+  return Buffer.from(JSON.stringify(cursor), "utf8").toString("base64url");
+}
+
+function decodeFacebookPublicationCursor(
+  value: string | null | undefined,
+): FacebookPublicationCursor | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(
+      Buffer.from(value, "base64url").toString("utf8"),
+    ) as Partial<FacebookPublicationCursor>;
+    if (
+      parsed.version !== 1 ||
+      (parsed.scheduledAfter !== null && typeof parsed.scheduledAfter !== "string") ||
+      (parsed.feedAfter !== null && typeof parsed.feedAfter !== "string")
+    ) {
+      throw new Error("invalid cursor");
+    }
+    return {
+      version: 1,
+      scheduledAfter: parsed.scheduledAfter ?? null,
+      feedAfter: parsed.feedAfter ?? null,
+    };
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+}
 
 function parsePublicationCollection(body: string): MetaPublicationCollectionResponse {
   let parsed: MetaPublicationCollectionResponse;
@@ -468,7 +504,7 @@ async function fetchPublicationCollection(args: {
   url: URL;
   platform: MetaPublicationPlatform;
   now: Date;
-}): Promise<MetaPublicationCandidatePage> {
+}): Promise<Omit<MetaPublicationCandidatePage, "scheduledCoverage">> {
   const { body, requestId } = await providerRequest(args.url.toString());
   try {
     const parsed = parsePublicationCollection(body);
@@ -518,31 +554,47 @@ export async function fetchMetaPublicationCandidatesPage(
       "scheduled_publish_time",
       "is_published",
       "permalink_url",
+      "from{id}",
       "attachments{media_type,media_url,thumbnail_url}",
     ].join(",");
+    const cursor = decodeFacebookPublicationCursor(input.after);
     const scheduledUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}/scheduled_posts`);
     scheduledUrl.searchParams.set("fields", fields);
     scheduledUrl.searchParams.set("limit", String(limit));
     scheduledUrl.searchParams.set("access_token", accessToken);
-    if (input.after) scheduledUrl.searchParams.set("after", input.after);
+    if (cursor?.scheduledAfter) scheduledUrl.searchParams.set("after", cursor.scheduledAfter);
 
     const feedUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}/feed`);
     feedUrl.searchParams.set("fields", fields);
     feedUrl.searchParams.set("limit", String(limit));
     feedUrl.searchParams.set("since", String(Math.floor(input.publishedSince.getTime() / 1000)));
     feedUrl.searchParams.set("access_token", accessToken);
-    if (input.after) feedUrl.searchParams.set("after", input.after);
+    if (cursor?.feedAfter) feedUrl.searchParams.set("after", cursor.feedAfter);
 
-    const [scheduled, published] = await Promise.all([
-      fetchPublicationCollection({ url: scheduledUrl, platform: "facebook", now }),
-      fetchPublicationCollection({ url: feedUrl, platform: "facebook", now }),
-    ]);
+    const scheduledRequest =
+      cursor?.scheduledAfter === null
+        ? Promise.resolve({ candidates: [], nextCursor: null })
+        : fetchPublicationCollection({ url: scheduledUrl, platform: "facebook", now });
+    const feedRequest =
+      cursor?.feedAfter === null
+        ? Promise.resolve({ candidates: [], nextCursor: null })
+        : fetchPublicationCollection({ url: feedUrl, platform: "facebook", now });
+    const [scheduled, published] = await Promise.all([scheduledRequest, feedRequest]);
+    const nextCursor =
+      scheduled.nextCursor || published.nextCursor
+        ? encodeFacebookPublicationCursor({
+            version: 1,
+            scheduledAfter: scheduled.nextCursor,
+            feedAfter: published.nextCursor,
+          })
+        : null;
     return {
       candidates: mergeMetaPublicationCandidates([
         ...scheduled.candidates,
         ...published.candidates,
       ]),
-      nextCursor: scheduled.nextCursor ?? published.nextCursor,
+      nextCursor,
+      scheduledCoverage: "complete",
     };
   }
 
@@ -555,7 +607,8 @@ export async function fetchMetaPublicationCandidatesPage(
   mediaUrl.searchParams.set("since", String(Math.floor(input.publishedSince.getTime() / 1000)));
   mediaUrl.searchParams.set("access_token", accessToken);
   if (input.after) mediaUrl.searchParams.set("after", input.after);
-  return fetchPublicationCollection({ url: mediaUrl, platform: "instagram", now });
+  const page = await fetchPublicationCollection({ url: mediaUrl, platform: "instagram", now });
+  return { ...page, scheduledCoverage: "published_only" };
 }
 
 export async function fetchMetaPublicationCandidates(
@@ -582,8 +635,8 @@ export async function fetchMetaPublicationById(input: {
   url.searchParams.set(
     "fields",
     input.platform === "facebook"
-      ? "id,message,created_time,scheduled_publish_time,is_published,permalink_url"
-      : "id,caption,media_type,media_product_type,permalink,timestamp,media_url,thumbnail_url",
+      ? "id,message,created_time,scheduled_publish_time,is_published,permalink_url,from{id}"
+      : "id,caption,media_type,media_product_type,permalink,timestamp,media_url,thumbnail_url,username",
   );
   url.searchParams.set("access_token", accessToken);
   const { body } = await providerRequest(url.toString());
@@ -596,12 +649,37 @@ export async function fetchMetaPublicationById(input: {
   if (typeof parsed !== "object" || parsed === null) {
     throw new SocialProviderError("invalid_response", false, null);
   }
+  const raw = parsed as MetaPublicationCandidateRaw;
+  if (input.platform === "facebook") {
+    const owner = raw.from;
+    const ownerId =
+      owner && typeof owner === "object" && typeof (owner as { id?: unknown }).id === "string"
+        ? (owner as { id: string }).id
+        : null;
+    if (ownerId !== input.accountId) return null;
+  } else {
+    const mediaUsername = typeof raw.username === "string" ? raw.username : null;
+    if (!mediaUsername) return null;
+    const accountUrl = new URL(`${graphBaseUrl(apiVersion)}/${input.accountId}`);
+    accountUrl.searchParams.set("fields", "id,username");
+    accountUrl.searchParams.set("access_token", accessToken);
+    const accountResponse = await providerRequest(accountUrl.toString());
+    let account: { id?: unknown; username?: unknown };
+    try {
+      account = JSON.parse(accountResponse.body) as { id?: unknown; username?: unknown };
+    } catch {
+      throw new SocialProviderError("invalid_response", false, accountResponse.requestId);
+    }
+    if (
+      account.id !== input.accountId ||
+      typeof account.username !== "string" ||
+      account.username.toLocaleLowerCase() !== mediaUsername.toLocaleLowerCase()
+    ) {
+      return null;
+    }
+  }
   try {
-    return normalizeMetaPublication(
-      input.platform,
-      parsed as MetaPublicationCandidateRaw,
-      input.now ?? new Date(),
-    );
+    return normalizeMetaPublication(input.platform, raw, input.now ?? new Date());
   } catch {
     throw new SocialProviderError("invalid_response", false, null);
   }

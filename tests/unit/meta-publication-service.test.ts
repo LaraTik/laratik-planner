@@ -2,10 +2,26 @@ import { describe, expect, it } from "vitest";
 import {
   externalPublicationSnapshot,
   externalPublicationStatusFromCandidate,
+  isMetaPublicationUniqueViolation,
 } from "@/lib/social/meta-publication-service";
 import { normalizeMetaPublication } from "@/lib/social/meta-publications";
 
 describe("Meta publication persistence helpers", () => {
+  it("maps the external identity unique constraint to a duplicate-link conflict", () => {
+    expect(
+      isMetaPublicationUniqueViolation({
+        code: "23505",
+        constraint: "publication_record_external_post_unique",
+      }),
+    ).toBe(true);
+    expect(
+      isMetaPublicationUniqueViolation({
+        code: "23505",
+        constraint: "publication_record_channel_unique",
+      }),
+    ).toBe(false);
+  });
+
   it("keeps scheduled external state separate from Planner publication state", () => {
     const candidate = normalizeMetaPublication("facebook", {
       id: "scheduled-1",

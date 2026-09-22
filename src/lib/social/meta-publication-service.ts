@@ -86,6 +86,7 @@ async function loadMetaChannelContext(
   actor: Actor,
   contentItemChannelId: string,
   mode: "read" | "write" | "internal",
+  expectedWorkspaceId?: string,
 ): Promise<MetaChannelContext> {
   const [row] = await db
     .select({
@@ -108,6 +109,9 @@ async function loadMetaChannelContext(
     .limit(1);
 
   if (!row) throw new MetaPublicationLinkError("channel_not_found");
+  if (expectedWorkspaceId && row.workspaceId !== expectedWorkspaceId) {
+    throw new MetaPublicationLinkError("channel_not_found");
+  }
   if (mode !== "internal") {
     const allowed = await hasWorkspaceRole(
       actor,
@@ -245,9 +249,21 @@ function mapProviderError(error: unknown): MetaPublicationLinkError {
   return new MetaPublicationLinkError("provider_unavailable");
 }
 
+export function isMetaPublicationUniqueViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("code" in error)) return false;
+  const candidate = error as { code?: unknown; constraint?: unknown; message?: unknown };
+  return (
+    candidate.code === "23505" &&
+    (candidate.constraint === "publication_record_external_post_unique" ||
+      (typeof candidate.message === "string" &&
+        candidate.message.includes("publication_record_external_post_unique")))
+  );
+}
+
 export async function listMetaPublicationCandidates(
   actor: Actor,
   input: {
+    workspaceId: string;
     contentItemChannelId: string;
     publishedSince?: Date;
     after?: string;
@@ -255,7 +271,12 @@ export async function listMetaPublicationCandidates(
     searchText?: string | null;
   },
 ) {
-  const context = await loadMetaChannelContext(actor, input.contentItemChannelId, "read");
+  const context = await loadMetaChannelContext(
+    actor,
+    input.contentItemChannelId,
+    "read",
+    input.workspaceId,
+  );
   const now = new Date();
   const { credentials } = await credentialsFor(context, now);
   let page;
@@ -283,9 +304,14 @@ export async function listMetaPublicationCandidates(
 
 export async function linkMetaPublication(
   actor: Actor,
-  input: { contentItemChannelId: string; externalPostId: string },
+  input: { workspaceId: string; contentItemChannelId: string; externalPostId: string },
 ) {
-  const context = await loadMetaChannelContext(actor, input.contentItemChannelId, "write");
+  const context = await loadMetaChannelContext(
+    actor,
+    input.contentItemChannelId,
+    "write",
+    input.workspaceId,
+  );
   if (!(
     "ready_to_publish" === context.contentStatus ||
     "partially_published" === context.contentStatus ||
@@ -318,110 +344,126 @@ async function persistLinkedCandidate(
   event: "linked" | "refreshed" | "reconciled" = "linked",
 ) {
   const now = new Date();
-  return db.transaction(async (tx) => {
-    await tx.execute(
-      sql`SELECT id FROM content_item WHERE id = ${context.contentItemId} FOR UPDATE`,
-    );
-    const [existingLink] = await tx
-      .select({
-        id: publicationRecords.id,
-        contentItemChannelId: publicationRecords.contentItemChannelId,
-      })
-      .from(publicationRecords)
-      .where(
-        and(
-          eq(publicationRecords.externalProvider, "meta"),
-          eq(publicationRecords.externalPostId, candidate.id),
-        ),
-      )
-      .limit(1);
-    if (existingLink && existingLink.contentItemChannelId !== contentItemChannelId) {
+  try {
+    return await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`SELECT id FROM content_item WHERE id = ${context.contentItemId} FOR UPDATE`,
+      );
+      const [existingLink] = await tx
+        .select({
+          id: publicationRecords.id,
+          contentItemChannelId: publicationRecords.contentItemChannelId,
+        })
+        .from(publicationRecords)
+        .where(
+          and(
+            eq(publicationRecords.externalProvider, "meta"),
+            eq(publicationRecords.externalPostId, candidate.id),
+          ),
+        )
+        .limit(1);
+      if (existingLink && existingLink.contentItemChannelId !== contentItemChannelId) {
+        throw new MetaPublicationLinkError("duplicate_link");
+      }
+
+      const [existing] = await tx
+        .select()
+        .from(publicationRecords)
+        .where(eq(publicationRecords.contentItemChannelId, contentItemChannelId))
+        .limit(1);
+      const externalStatus = externalPublicationStatusFromCandidate(candidate);
+      const update: Record<string, unknown> = {
+        externalProvider: "meta",
+        externalPostId: candidate.id,
+        externalStatus,
+        externalPermalink: candidate.permalink,
+        externalScheduledAt: candidate.scheduledAt,
+        externalPublishedAt: candidate.publishedAt,
+        externalLastSeenAt: now,
+        externalLastSyncedAt: now,
+        externalErrorCode: null,
+        externalSnapshot: externalPublicationSnapshot(candidate),
+        externalLinkedBy: actor?.id ?? null,
+        externalLinkedAt: now,
+        updatedAt: now,
+      };
+      if (externalStatus === "published") {
+        Object.assign(update, {
+          status: "published",
+          actualPublishedAt: candidate.publishedAt ?? now,
+          publishedUrl: candidate.permalink,
+          publisherId: actor?.id ?? existing?.publisherId ?? null,
+          failureReason: null,
+        });
+      }
+      let recordId = existing?.id;
+      if (recordId) {
+        await tx
+          .update(publicationRecords)
+          .set(update as never)
+          .where(eq(publicationRecords.id, recordId));
+      } else {
+        const [inserted] = await tx
+          .insert(publicationRecords)
+          .values({
+            contentItemChannelId,
+            status: externalStatus === "published" ? "published" : "pending",
+            ...(update as Record<string, unknown>),
+          })
+          .returning({ id: publicationRecords.id });
+        recordId = inserted?.id;
+      }
+      if (!recordId) throw new MetaPublicationLinkError("invalid_state");
+
+      if (externalStatus === "published") {
+        const records = await tx
+          .select({ status: publicationRecords.status })
+          .from(publicationRecords)
+          .innerJoin(
+            contentItemChannels,
+            eq(contentItemChannels.id, publicationRecords.contentItemChannelId),
+          )
+          .where(eq(contentItemChannels.contentItemId, context.contentItemId));
+        const channels = await tx
+          .select({ id: contentItemChannels.id })
+          .from(contentItemChannels)
+          .where(eq(contentItemChannels.contentItemId, context.contentItemId));
+        const nextStatus = deriveExternalAggregate(
+          channels.length,
+          records.map((r) => r.status),
+        );
+        await tx
+          .update(contentItems)
+          .set({ status: nextStatus, updatedAt: now })
+          .where(eq(contentItems.id, context.contentItemId));
+      }
+      const previousExternalStatus = existing?.externalStatus ?? null;
+      const shouldRecordReconciliation =
+        event !== "reconciled" || previousExternalStatus !== externalStatus;
+      if (shouldRecordReconciliation) {
+        await tx.insert(activityEvents).values({
+          workspaceId: context.workspaceId,
+          contentItemId: context.contentItemId,
+          actorId: actor?.id ?? null,
+          kind: "publication",
+          summary: `Meta publication ${event === "linked" ? "linked" : event === "refreshed" ? "refreshed" : "reconciled"}${externalStatus === "published" ? " and confirmed" : ""}`,
+          beforeData: {
+            externalProvider: existing?.externalProvider ?? null,
+            externalPostId: existing?.externalPostId ?? null,
+            externalStatus: previousExternalStatus,
+          },
+          afterData: { externalProvider: "meta", externalPostId: candidate.id, externalStatus },
+          metadata: { contentItemChannelId, event: `meta_publication_${event}` },
+        });
+      }
+      return { contentItemId: context.contentItemId, recordId, candidate };
+    });
+  } catch (error) {
+    if (isMetaPublicationUniqueViolation(error)) {
       throw new MetaPublicationLinkError("duplicate_link");
     }
-
-    const [existing] = await tx
-      .select()
-      .from(publicationRecords)
-      .where(eq(publicationRecords.contentItemChannelId, contentItemChannelId))
-      .limit(1);
-    const externalStatus = externalPublicationStatusFromCandidate(candidate);
-    const update: Record<string, unknown> = {
-      externalProvider: "meta",
-      externalPostId: candidate.id,
-      externalStatus,
-      externalPermalink: candidate.permalink,
-      externalScheduledAt: candidate.scheduledAt,
-      externalPublishedAt: candidate.publishedAt,
-      externalLastSeenAt: now,
-      externalLastSyncedAt: now,
-      externalErrorCode: null,
-      externalSnapshot: externalPublicationSnapshot(candidate),
-      externalLinkedBy: actor?.id ?? null,
-      externalLinkedAt: now,
-      updatedAt: now,
-    };
-    if (externalStatus === "published") {
-      Object.assign(update, {
-        status: "published",
-        actualPublishedAt: candidate.publishedAt ?? now,
-        publishedUrl: candidate.permalink,
-        publisherId: actor?.id ?? existing?.publisherId ?? null,
-        failureReason: null,
-      });
-    }
-    let recordId = existing?.id;
-    if (recordId) {
-      await tx
-        .update(publicationRecords)
-        .set(update as never)
-        .where(eq(publicationRecords.id, recordId));
-    } else {
-      const [inserted] = await tx
-        .insert(publicationRecords)
-        .values({
-          contentItemChannelId,
-          status: externalStatus === "published" ? "published" : "pending",
-          ...(update as Record<string, unknown>),
-        })
-        .returning({ id: publicationRecords.id });
-      recordId = inserted?.id;
-    }
-    if (!recordId) throw new MetaPublicationLinkError("invalid_state");
-
-    if (externalStatus === "published") {
-      const records = await tx
-        .select({ status: publicationRecords.status })
-        .from(publicationRecords)
-        .innerJoin(
-          contentItemChannels,
-          eq(contentItemChannels.id, publicationRecords.contentItemChannelId),
-        )
-        .where(eq(contentItemChannels.contentItemId, context.contentItemId));
-      const channels = await tx
-        .select({ id: contentItemChannels.id })
-        .from(contentItemChannels)
-        .where(eq(contentItemChannels.contentItemId, context.contentItemId));
-      const nextStatus = deriveExternalAggregate(
-        channels.length,
-        records.map((r) => r.status),
-      );
-      await tx
-        .update(contentItems)
-        .set({ status: nextStatus, updatedAt: now })
-        .where(eq(contentItems.id, context.contentItemId));
-    }
-    await tx.insert(activityEvents).values({
-      workspaceId: context.workspaceId,
-      contentItemId: context.contentItemId,
-      actorId: actor?.id ?? null,
-      kind: "publication",
-      summary: `Meta publication ${event === "linked" ? "linked" : "refreshed"}${externalStatus === "published" ? " and confirmed" : ""}`,
-      beforeData: {},
-      afterData: { externalProvider: "meta", externalPostId: candidate.id, externalStatus },
-      metadata: { contentItemChannelId, event: `meta_publication_${event}` },
-    });
-    return { contentItemId: context.contentItemId, recordId, candidate };
-  });
+    throw error;
+  }
 }
 
 function deriveExternalAggregate(count: number, statuses: string[]) {
@@ -436,8 +478,12 @@ function deriveExternalAggregate(count: number, statuses: string[]) {
   return "ready_to_publish" as const;
 }
 
-export async function refreshMetaPublicationLink(actor: Actor, contentItemChannelId: string) {
-  const context = await loadMetaChannelContext(actor, contentItemChannelId, "write");
+export async function refreshMetaPublicationLink(
+  actor: Actor,
+  workspaceId: string,
+  contentItemChannelId: string,
+) {
+  const context = await loadMetaChannelContext(actor, contentItemChannelId, "write", workspaceId);
   const [record] = await db
     .select()
     .from(publicationRecords)
@@ -512,8 +558,12 @@ export async function refreshMetaPublicationLink(actor: Actor, contentItemChanne
   }
 }
 
-export async function unlinkMetaPublication(actor: Actor, contentItemChannelId: string) {
-  const context = await loadMetaChannelContext(actor, contentItemChannelId, "write");
+export async function unlinkMetaPublication(
+  actor: Actor,
+  workspaceId: string,
+  contentItemChannelId: string,
+) {
+  const context = await loadMetaChannelContext(actor, contentItemChannelId, "write", workspaceId);
   const [record] = await db
     .select()
     .from(publicationRecords)
@@ -592,6 +642,7 @@ export async function reconcileMetaPublicationLinks(now = new Date()) {
         actor ?? { id: "00000000-0000-0000-0000-000000000000" },
         row.record.contentItemChannelId,
         "internal",
+        row.context.workspaceId,
       );
       const { credentials } = await credentialsFor(context, now);
       const candidate = await fetchMetaPublicationById({
@@ -602,7 +653,7 @@ export async function reconcileMetaPublicationLinks(now = new Date()) {
         apiVersion: context.appCredentials.graphApiVersion,
         now,
       });
-      if (candidate)
+      if (candidate) {
         await persistLinkedCandidate(
           actor,
           context,
@@ -610,6 +661,30 @@ export async function reconcileMetaPublicationLinks(now = new Date()) {
           candidate,
           "reconciled",
         );
+      } else {
+        await db
+          .update(publicationRecords)
+          .set({
+            externalStatus: "unavailable",
+            externalLastSyncedAt: now,
+            externalErrorCode: "not_found",
+            updatedAt: now,
+          })
+          .where(eq(publicationRecords.id, row.record.id));
+        await db.insert(activityEvents).values({
+          workspaceId: row.context.workspaceId,
+          contentItemId: row.context.contentItemId,
+          actorId: row.record.externalLinkedBy,
+          kind: "publication",
+          summary: "Linked Meta publication is unavailable",
+          beforeData: { externalPostId: row.record.externalPostId },
+          afterData: { externalStatus: "unavailable" },
+          metadata: {
+            contentItemChannelId: row.record.contentItemChannelId,
+            event: "meta_publication_unavailable",
+          },
+        });
+      }
     } catch (error) {
       if (isSocialProviderError(error) && error.code === "not_found") {
         await db
@@ -635,15 +710,32 @@ export async function reconcileMetaPublicationLinks(now = new Date()) {
           },
         });
       } else {
+        const errorCode = isSocialProviderError(error) ? error.code : "provider_unavailable";
         await db
           .update(publicationRecords)
           .set({
             externalStatus: "error",
             externalLastSyncedAt: now,
-            externalErrorCode: isSocialProviderError(error) ? error.code : "provider_unavailable",
+            externalErrorCode: errorCode,
             updatedAt: now,
           })
           .where(eq(publicationRecords.id, row.record.id));
+        await db.insert(activityEvents).values({
+          workspaceId: row.context.workspaceId,
+          contentItemId: row.context.contentItemId,
+          actorId: row.record.externalLinkedBy,
+          kind: "publication",
+          summary: "Meta publication reconciliation failed",
+          beforeData: {
+            externalPostId: row.record.externalPostId,
+            externalStatus: "scheduled",
+          },
+          afterData: { externalStatus: "error", errorCode },
+          metadata: {
+            contentItemChannelId: row.record.contentItemChannelId,
+            event: "meta_publication_reconcile_failed",
+          },
+        });
       }
     }
   }

@@ -8,6 +8,7 @@ import {
   fetchMetaInstagramSnapshot,
   fetchMetaPublicationById,
   fetchMetaPublicationCandidates,
+  fetchMetaPublicationCandidatesPage,
   META_SCOPES,
   metaAdapter,
   probeMetaPermissions,
@@ -105,6 +106,67 @@ describe("META_SCOPES", () => {
 });
 
 describe("fetchMetaPublicationCandidates", () => {
+  it("keeps Facebook feed and scheduled pagination cursors independent", async () => {
+    const calls: Array<{ path: string; after: string | null }> = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      calls.push({ path: url.pathname, after: url.searchParams.get("after") });
+      if (url.pathname.endsWith("/scheduled_posts")) {
+        return jsonResponse(200, {
+          data: [{ id: url.searchParams.get("after") ? "scheduled-2" : "scheduled-1" }],
+          paging: url.searchParams.get("after")
+            ? { cursors: {} }
+            : { cursors: { after: "scheduled-after-1" } },
+        });
+      }
+      return jsonResponse(200, {
+        data: [{ id: url.searchParams.get("after") ? "published-2" : "published-1" }],
+        paging: url.searchParams.get("after")
+          ? { cursors: {} }
+          : { cursors: { after: "published-after-1" } },
+      });
+    }) as typeof fetch;
+
+    const first = await fetchMetaPublicationCandidatesPage({
+      platform: "facebook",
+      accountId: "page-1",
+      credentials: {
+        accessToken: "user-token",
+        profileAccessTokens: { "page-1": "page-token" },
+      },
+      apiVersion: "v25.0",
+      now: new Date("2026-09-22T10:00:00Z"),
+      publishedSince: new Date("2026-06-24T10:00:00Z"),
+    });
+    const second = await fetchMetaPublicationCandidatesPage({
+      platform: "facebook",
+      accountId: "page-1",
+      credentials: {
+        accessToken: "user-token",
+        profileAccessTokens: { "page-1": "page-token" },
+      },
+      apiVersion: "v25.0",
+      now: new Date("2026-09-22T10:00:00Z"),
+      publishedSince: new Date("2026-06-24T10:00:00Z"),
+      after: first.nextCursor,
+    });
+
+    expect(first.candidates.map((candidate) => candidate.id)).toEqual([
+      "scheduled-1",
+      "published-1",
+    ]);
+    expect(second.candidates.map((candidate) => candidate.id)).toEqual([
+      "scheduled-2",
+      "published-2",
+    ]);
+    expect(calls).toEqual([
+      { path: "/v25.0/page-1/scheduled_posts", after: null },
+      { path: "/v25.0/page-1/feed", after: null },
+      { path: "/v25.0/page-1/scheduled_posts", after: "scheduled-after-1" },
+      { path: "/v25.0/page-1/feed", after: "published-after-1" },
+    ]);
+  });
+
   it("combines Facebook scheduled and recent feed posts with sanitized candidates", async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
@@ -192,6 +254,9 @@ describe("fetchMetaPublicationCandidates", () => {
   it("re-reads a selected publication by provider id before linking it", async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
+      if (url.pathname === "/v25.0/ig-1") {
+        return jsonResponse(200, { id: "ig-1", username: "brand" });
+      }
       expect(url.pathname).toBe("/v25.0/media-1");
       return jsonResponse(200, {
         id: "media-1",
@@ -199,6 +264,7 @@ describe("fetchMetaPublicationCandidates", () => {
         media_type: "IMAGE",
         timestamp: "2026-09-21T12:00:00Z",
         permalink: "https://instagram.com/p/media-1",
+        username: "brand",
       });
     }) as typeof fetch;
 
@@ -206,12 +272,37 @@ describe("fetchMetaPublicationCandidates", () => {
       platform: "instagram",
       accountId: "ig-1",
       publicationId: "media-1",
-      credentials: { accessToken: "user-token" },
+      credentials: { accessToken: "user-token", profileAccessTokens: { "ig-1": "page-token" } },
       apiVersion: "v25.0",
     });
 
     expect(result?.id).toBe("media-1");
     expect(result?.permalink).toBe("https://instagram.com/p/media-1");
+  });
+
+  it("does not return a Facebook post owned by another Page", async () => {
+    globalThis.fetch = vi.fn(async () =>
+      jsonResponse(200, {
+        id: "post-from-other-page",
+        from: { id: "page-2" },
+        message: "Other Page",
+        created_time: "2026-09-21T12:00:00Z",
+        is_published: true,
+      }),
+    ) as typeof fetch;
+
+    const result = await fetchMetaPublicationById({
+      platform: "facebook",
+      accountId: "page-1",
+      publicationId: "post-from-other-page",
+      credentials: {
+        accessToken: "user-token",
+        profileAccessTokens: { "page-1": "page-token" },
+      },
+      apiVersion: "v25.0",
+    });
+
+    expect(result).toBeNull();
   });
 });
 
