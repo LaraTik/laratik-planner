@@ -70,6 +70,8 @@ const storageContextMock = vi.hoisted(() => ({
   adapter: adapterMock,
 }));
 
+const getAgencyStorageContextMock = vi.hoisted(() => vi.fn(async () => storageContextMock));
+
 const capacityMock = vi.hoisted(() => ({
   reserveCapacity: vi.fn(async () => undefined),
   releaseCapacityAmount: vi.fn(async () => undefined),
@@ -77,7 +79,7 @@ const capacityMock = vi.hoisted(() => ({
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/storage/config", () => ({
-  getAgencyStorageContext: vi.fn(async () => storageContextMock),
+  getAgencyStorageContext: getAgencyStorageContextMock,
 }));
 vi.mock("@/lib/entitlements", () => capacityMock);
 
@@ -93,6 +95,7 @@ const {
 const { quarantineMediaObject } = await import("@/lib/media/quarantine");
 const { createStorageObjectReadUrl, fetchStorageObject } =
   await import("@/lib/storage/read-service");
+const { createStorageObjectReadUrls } = await import("@/lib/storage/read-service");
 
 const AGENCY_ID = "agency-1";
 const WORKSPACE_ID = "workspace-1";
@@ -142,6 +145,8 @@ beforeEach(() => {
   adapterMock.uploadObject.mockClear();
   adapterMock.completeUpload.mockClear();
   adapterMock.abortUpload.mockClear();
+  adapterMock.createReadUrl.mockClear();
+  getAgencyStorageContextMock.mockClear();
   adapterMock.deleteObject.mockClear();
   adapterMock.completeUpload.mockResolvedValue({
     objectKey: validInput.workspaceId,
@@ -472,6 +477,47 @@ describe("createStorageObjectReadUrl", () => {
     expect(adapterMock.createReadUrl).toHaveBeenLastCalledWith({
       objectKey: "agencies/agency-1/key",
     });
+  });
+});
+
+describe("createStorageObjectReadUrls", () => {
+  it("resolves the provider once and signs a page of objects in one batch", async () => {
+    state.selectResults.push([
+      {
+        id: "preview-1",
+        objectKey: "agencies/agency-1/preview/preview-1.webp",
+        bucket: "planner-media",
+        workspaceId: WORKSPACE_ID,
+      },
+      {
+        id: "preview-2",
+        objectKey: "agencies/agency-1/preview/preview-2.webp",
+        bucket: "planner-media",
+        workspaceId: WORKSPACE_ID,
+      },
+    ]);
+    adapterMock.createReadUrl
+      .mockResolvedValueOnce("https://signed.example/preview-1")
+      .mockResolvedValueOnce("https://signed.example/preview-2");
+
+    await expect(
+      createStorageObjectReadUrls({
+        agencyId: AGENCY_ID,
+        objects: [
+          { objectId: "preview-1", workspaceId: WORKSPACE_ID },
+          { objectId: "preview-2", workspaceId: WORKSPACE_ID },
+        ],
+        expiresInSeconds: 900,
+      }),
+    ).resolves.toEqual(
+      new Map([
+        ["preview-1", "https://signed.example/preview-1"],
+        ["preview-2", "https://signed.example/preview-2"],
+      ]),
+    );
+    expect(dbMock.select).toHaveBeenCalledTimes(1);
+    expect(getAgencyStorageContextMock).toHaveBeenCalledTimes(1);
+    expect(adapterMock.createReadUrl).toHaveBeenCalledTimes(2);
   });
 });
 

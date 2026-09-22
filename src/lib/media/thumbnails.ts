@@ -46,7 +46,11 @@ import { mediaAssets, storageObjects, workspaces } from "@/lib/db/schema";
 import { reserveCapacity } from "@/lib/entitlements";
 import type { Actor } from "@/lib/auth/policy";
 import { getAgencyStorageContext } from "@/lib/storage/config";
-import { createStorageObjectReadUrl, fetchStorageObject } from "@/lib/storage/read-service";
+import {
+  createStorageObjectReadUrl,
+  createStorageObjectReadUrls,
+  fetchStorageObject,
+} from "@/lib/storage/read-service";
 
 /**
  * Cap on the preview's longest edge. A 4:3 cell rendered at 240x180
@@ -477,4 +481,54 @@ export async function getSignedPreviewUrl(actor: Actor, assetId: string): Promis
     // the bytes either way.
     return null;
   }
+}
+
+/**
+ * Batch form used by the media library after `listMediaAssets` has applied
+ * its visibility and workspace-access rules. It avoids repeating the
+ * per-asset authorization/configuration path for every card on a page.
+ */
+export async function getSignedPreviewUrls(
+  targets: ReadonlyArray<{
+    assetId: string;
+    agencyId: string;
+    workspaceId: string;
+    previewStorageObjectId: string | null;
+  }>,
+): Promise<Map<string, string>> {
+  const previewTargets = targets.filter(
+    (target) => target.previewStorageObjectId && target.previewStorageObjectId.length > 0,
+  );
+  if (previewTargets.length === 0) return new Map();
+
+  const byAgency = new Map<string, typeof previewTargets>();
+  for (const target of previewTargets) {
+    const agencyTargets = byAgency.get(target.agencyId) ?? [];
+    agencyTargets.push(target);
+    byAgency.set(target.agencyId, agencyTargets);
+  }
+
+  const entries = await Promise.all(
+    [...byAgency.entries()].map(async ([agencyId, agencyTargets]) => {
+      try {
+        const urls = await createStorageObjectReadUrls({
+          agencyId,
+          objects: agencyTargets.map((target) => ({
+            objectId: target.previewStorageObjectId!,
+            workspaceId: target.workspaceId,
+          })),
+          expiresInSeconds: 900,
+        });
+        return agencyTargets.flatMap((target) => {
+          const objectId = target.previewStorageObjectId;
+          const url = objectId ? urls.get(objectId) : undefined;
+          return url ? [[target.assetId, url] as const] : [];
+        });
+      } catch {
+        return [];
+      }
+    }),
+  );
+
+  return new Map(entries.flat());
 }
