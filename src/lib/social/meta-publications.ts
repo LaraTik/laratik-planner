@@ -121,11 +121,14 @@ export function rankMetaPublicationCandidates(
   input: { targetDate: Date; searchText?: string },
 ): MetaPublicationCandidate[] {
   const searchText = input.searchText?.trim().toLocaleLowerCase() ?? "";
+  const searchTerms = searchText
+    .split(/\s+/)
+    .filter((term) => term.length >= 3)
+    .slice(0, 12);
   const scored = candidates.map((candidate, index) => {
-    const textMatch =
-      searchText.length > 0 && candidate.caption?.toLocaleLowerCase().includes(searchText)
-        ? 100
-        : 0;
+    const caption = candidate.caption?.toLocaleLowerCase() ?? "";
+    const matchedTerms = searchTerms.filter((term) => caption.includes(term)).length;
+    const textMatch = matchedTerms > 0 ? 100 + matchedTerms * 10 : 0;
     const distance = Math.abs(candidateTime(candidate) - input.targetDate.getTime());
     const dateMatch =
       distance <= 24 * 60 * 60 * 1000 ? 40 : distance <= 3 * 24 * 60 * 60 * 1000 ? 15 : 0;

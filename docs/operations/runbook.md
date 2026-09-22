@@ -587,6 +587,11 @@ Add the following entry to the VPS-side root crontab so you receive an email ale
 
 ## Social analytics (M4)
 
+For the Planner-side Meta linking workflow, see
+[`meta-publication-linking.md`](./meta-publication-linking.md). It documents
+the user flow, external states, refresh/reconciliation behavior, and
+reauthorization recovery.
+
 Read-only, provider-neutral social profile analytics for Meta and TikTok. This section is the operator reference; the architecture decision is in [`docs/decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and the per-task spec is in [`docs/superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md).
 
 ### Environment variables (server-only)

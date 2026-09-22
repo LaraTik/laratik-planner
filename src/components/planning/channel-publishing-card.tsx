@@ -67,6 +67,7 @@ export interface ChannelPublishingCardProps {
     externalAccountId?: string | null;
     targetDate?: string | null;
     searchText?: string | null;
+    timeZone?: string;
   };
   publication: {
     status: "pending" | "published" | "failed" | "skipped";
@@ -265,11 +266,11 @@ export function ChannelPublishingCard({
                   <Link2 className="h-3.5 w-3.5" aria-hidden="true" />
                   {t("contentDetail.publishingCard.meta.link")}
                 </Button>
-              ) : (
+              ) : isPublisher ? (
                 <span className="text-label text-fg-muted">
                   {t("contentDetail.publishingCard.meta.reconnectToManage")}
                 </span>
-              )}
+              ) : null}
             </div>
           </div>
           {publication?.externalPermalink ? (
@@ -450,6 +451,7 @@ export function ChannelPublishingCard({
           platform={channel.platform as "facebook" | "instagram"}
           {...(channel.targetDate !== undefined ? { targetDate: channel.targetDate } : {})}
           {...(channel.searchText !== undefined ? { searchText: channel.searchText } : {})}
+          timeZone={channel.timeZone ?? "UTC"}
         />
       ) : null}
     </Card>

@@ -1257,7 +1257,8 @@ export default async function ContentDetailPage({
                               ch.plannedPublishAtOverride?.toISOString() ??
                               item.plannedPublishAt?.toISOString() ??
                               null,
-                            searchText: item.brief,
+                            searchText: [item.title, item.brief].filter(Boolean).join(" "),
+                            timeZone: ws.timezone,
                           }}
                           publication={pub ? { ...pub.publication_record } : null}
                           isPublisher={actorRoles.isPublisher || actorRoles.isManager}

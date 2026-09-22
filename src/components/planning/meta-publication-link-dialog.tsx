@@ -16,7 +16,7 @@ import {
   listMetaPublicationCandidatesAction,
   linkMetaPublicationAction,
 } from "@/app/(app)/app/w/[slug]/planning/actions";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 export type MetaPublicationCandidateDto = {
   id: string;
@@ -31,12 +31,14 @@ export type MetaPublicationCandidateDto = {
   publishedAt: string | null;
 };
 
-function dateLabel(value: string | null): string {
+function dateLabel(value: string | null, locale: "en" | "ar", timeZone: string): string {
   if (!value) return "";
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? ""
-    : new Intl.DateTimeFormat(undefined, { dateStyle: "medium", timeStyle: "short" }).format(date);
+    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone }).format(
+        date,
+      );
 }
 
 export function MetaPublicationLinkDialog({
@@ -47,6 +49,7 @@ export function MetaPublicationLinkDialog({
   platform,
   targetDate,
   searchText,
+  timeZone,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -55,12 +58,14 @@ export function MetaPublicationLinkDialog({
   platform: "facebook" | "instagram";
   targetDate?: string | null;
   searchText?: string | null;
+  timeZone: string;
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const [candidates, setCandidates] = React.useState<MetaPublicationCandidateDto[]>([]);
   const [nextCursor, setNextCursor] = React.useState<string | null>(null);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
-  const [loading, setLoading] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
   const [saving, setSaving] = React.useState(false);
   const [errorCode, setErrorCode] = React.useState<string | null>(null);
 
@@ -68,23 +73,29 @@ export function MetaPublicationLinkDialog({
     async (after?: string) => {
       setLoading(true);
       setErrorCode(null);
-      const result = await listMetaPublicationCandidatesAction({
-        workspaceSlug,
-        contentItemChannelId,
-        ...(after ? { after } : {}),
-        ...(!after && targetDate ? { targetDate } : {}),
-        ...(!after && searchText ? { searchText } : {}),
-      });
-      if (result.ok) {
-        setCandidates((current) =>
-          after ? [...current, ...result.candidates] : result.candidates,
-        );
-        setNextCursor(result.nextCursor);
-        if (!after) setSelectedId(result.candidates[0]?.id ?? null);
-      } else {
-        setErrorCode(result.errorCode);
+      try {
+        const result = await listMetaPublicationCandidatesAction({
+          workspaceSlug,
+          contentItemChannelId,
+          ...(after ? { after } : {}),
+          ...(!after && targetDate ? { targetDate } : {}),
+          ...(!after && searchText ? { searchText } : {}),
+        });
+        if (result.ok) {
+          setCandidates((current) => {
+            const merged = after ? [...current, ...result.candidates] : result.candidates;
+            return [...new Map(merged.map((candidate) => [candidate.id, candidate])).values()];
+          });
+          setNextCursor(result.nextCursor);
+          if (!after) setSelectedId(result.candidates[0]?.id ?? null);
+        } else {
+          setErrorCode(result.errorCode);
+        }
+      } catch {
+        setErrorCode("provider_unavailable");
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     },
     [contentItemChannelId, searchText, targetDate, workspaceSlug],
   );
@@ -99,14 +110,19 @@ export function MetaPublicationLinkDialog({
     if (!selectedId) return;
     setSaving(true);
     setErrorCode(null);
-    const result = await linkMetaPublicationAction({
-      workspaceSlug,
-      contentItemChannelId,
-      externalPostId: selectedId,
-    });
-    if (result.ok) onOpenChange(false);
-    else setErrorCode(result.errorCode);
-    setSaving(false);
+    try {
+      const result = await linkMetaPublicationAction({
+        workspaceSlug,
+        contentItemChannelId,
+        externalPostId: selectedId,
+      });
+      if (result.ok) onOpenChange(false);
+      else setErrorCode(result.errorCode);
+    } catch {
+      setErrorCode("provider_unavailable");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const errorText = errorCode ? t(`contentDetail.publishingCard.meta.errors.${errorCode}`) : null;
@@ -202,10 +218,15 @@ export function MetaPublicationLinkDialog({
                         {t(`contentDetail.publishingCard.meta.mediaType.${candidate.mediaType}`)}
                       </span>
                       {date ? (
-                        <span className="text-label text-fg-muted">{dateLabel(date)}</span>
+                        <span className="text-label text-fg-muted">
+                          {dateLabel(date, locale, timeZone)}
+                        </span>
                       ) : null}
                     </span>
-                    <span dir="auto" className="text-body text-fg-primary mt-1 block truncate">
+                    <span
+                      dir="auto"
+                      className="text-body text-fg-primary mt-1 line-clamp-2 block break-words"
+                    >
                       {candidate.caption || t("contentDetail.publishingCard.meta.noCaption")}
                     </span>
                     {candidate.permalink ? (
