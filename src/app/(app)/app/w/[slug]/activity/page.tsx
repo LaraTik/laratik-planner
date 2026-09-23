@@ -1,8 +1,12 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { and, asc, eq } from "drizzle-orm";
+import { fromZonedTime } from "date-fns-tz";
 import { Activity, Filter as FilterIcon, History } from "lucide-react";
 import { auth } from "@/lib/auth/config";
+import { db } from "@/lib/db";
+import { users, workspaceMemberships } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
@@ -12,7 +16,15 @@ import { KpiTile } from "@/components/workspace/kpi-tile";
 import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { tForActive } from "@/lib/i18n/t-for-active";
-import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
+import {
+  buildListHref,
+  hasActiveFilters,
+  paginate,
+  parseListFilters,
+  type AllowedPageSize,
+  type ListFilters,
+} from "@/lib/list-page-utils";
+import { formatDate } from "@/lib/i18n/format-locale";
 import {
   type ActivityScope,
   type ListWorkspaceActivityFilters,
@@ -50,6 +62,83 @@ const SCOPE_CHIP_VALUES: ActivityScope[] = [
   "publication",
 ];
 
+type ActivityUrlFilters = Pick<ListFilters, "q" | "status" | "role" | "size"> & {
+  actorId: string;
+  from: string;
+  to: string;
+};
+
+type ActivityHrefNext = {
+  q?: string;
+  status?: string[];
+  role?: string[];
+  size?: AllowedPageSize;
+  page?: number;
+  actorId?: string;
+  from?: string;
+  to?: string;
+};
+
+function firstParam(
+  searchParams: Record<string, string | string[] | undefined>,
+  key: string,
+): string {
+  const value = searchParams[key];
+  return (Array.isArray(value) ? value[0] : value)?.trim() ?? "";
+}
+
+function isCalendarDate(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(`${value}T`);
+}
+
+function dateBoundary(value: string, timeZone: string, endOfDay: boolean): Date | null {
+  if (!isCalendarDate(value)) return null;
+  const [yearText, monthText, dayText] = value.split("-");
+  if (!yearText || !monthText || !dayText) return null;
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  const wallClockDate = new Date(year, month - 1, day + (endOfDay ? 1 : 0), 0, 0, 0, 0);
+  const instant = fromZonedTime(wallClockDate, timeZone);
+  return endOfDay ? new Date(instant.getTime() - 1) : instant;
+}
+
+function buildActivityHref(args: {
+  basePath: string;
+  current: ActivityUrlFilters;
+  next?: ActivityHrefNext;
+}): string {
+  const { basePath, current, next = {} } = args;
+  const listNext: {
+    q?: string;
+    status?: string[];
+    role?: string[];
+    size?: AllowedPageSize;
+    page?: number;
+  } = {};
+  if (next.q !== undefined) listNext.q = next.q;
+  if (next.status !== undefined) listNext.status = next.status;
+  if (next.role !== undefined) listNext.role = next.role;
+  if (next.size !== undefined) listNext.size = next.size;
+  if (next.page !== undefined) listNext.page = next.page;
+
+  const href = buildListHref({
+    basePath,
+    current,
+    next: listNext,
+  });
+  const url = new URL(href, "https://activity.local");
+  const actorId = next.actorId ?? current.actorId;
+  const from = next.from ?? current.from;
+  const to = next.to ?? current.to;
+  if (actorId) url.searchParams.set("actor", actorId);
+  if (from) url.searchParams.set("from", from);
+  if (to) url.searchParams.set("to", to);
+  return `${url.pathname}${url.search}`;
+}
+
 export default async function WorkspaceActivityPage({
   params,
   searchParams,
@@ -62,8 +151,16 @@ export default async function WorkspaceActivityPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
-  const filters = parseListFilters(await searchParams);
+  const { t, code } = await tForActive();
+  const rawSearchParams = await searchParams;
+  const filters = parseListFilters(rawSearchParams);
+  const actorId = firstParam(rawSearchParams, "actor");
+  const from = isCalendarDate(firstParam(rawSearchParams, "from"))
+    ? firstParam(rawSearchParams, "from")
+    : "";
+  const to = isCalendarDate(firstParam(rawSearchParams, "to"))
+    ? firstParam(rawSearchParams, "to")
+    : "";
   const scopeRaw = (filters.role[0] ?? "all").toLowerCase();
   const validScope = (SCOPE_CHIP_VALUES as string[]).includes(scopeRaw)
     ? (scopeRaw as ActivityScope)
@@ -73,16 +170,42 @@ export default async function WorkspaceActivityPage({
     scope: validScope,
     limit: filters.size,
   };
-  // Actor + status filters are intentionally absent in v1. The URL
-  // already carries a `q` param; the page renders a "search summaries"
-  // input that hits the row summary in the next iteration.
-  if (filters.status.length > 0) {
-    // Reserved for future filters (e.g. content_status). Silently ignored today.
-  }
+  if (filters.q) serviceFilters.query = filters.q;
+  if (actorId) serviceFilters.actorId = actorId;
+  const after = dateBoundary(from, workspace.timezone, false);
+  const before = dateBoundary(to, workspace.timezone, true);
+  if (after) serviceFilters.after = after;
+  if (before) serviceFilters.before = before;
+
+  const countFilters: { actorId?: string; after?: Date; before?: Date; query?: string } = {};
+  if (actorId) countFilters.actorId = actorId;
+  if (after) countFilters.after = after;
+  if (before) countFilters.before = before;
+  if (filters.q) countFilters.query = filters.q;
+
+  const memberRows = await db
+    .select({ id: users.id, name: users.displayName, email: users.email })
+    .from(workspaceMemberships)
+    .innerJoin(users, eq(users.id, workspaceMemberships.userId))
+    .where(
+      and(
+        eq(workspaceMemberships.workspaceId, workspace.id),
+        eq(workspaceMemberships.status, "active"),
+      ),
+    )
+    .orderBy(asc(users.displayName), asc(users.email));
+  const activityActors = Array.from(
+    new Map(
+      memberRows.map((member) => [
+        member.id,
+        { id: member.id, label: member.name || member.email },
+      ]),
+    ).values(),
+  );
 
   const [feed, counts] = await Promise.all([
     listWorkspaceActivity({ id: workspace.id, slug: workspace.slug }, serviceFilters),
-    listWorkspaceActivityCounts({ id: workspace.id, slug: workspace.slug }),
+    listWorkspaceActivityCounts({ id: workspace.id, slug: workspace.slug }, countFilters),
   ]);
 
   const rows = feed.rows;
@@ -99,37 +222,37 @@ export default async function WorkspaceActivityPage({
   const finalFrom = paginated.from;
   const finalTo = paginated.to;
   const finalTotal = feed.hasNext ? rows.length + 1 : rows.length;
+  const currentHrefFilters: ActivityUrlFilters = {
+    q: filters.q,
+    status: filters.status,
+    role: validScope === "all" ? [] : [validScope],
+    size: filters.size,
+    actorId,
+    from,
+    to,
+  };
   const prevHref =
     filters.page > 1
-      ? buildListHref({
+      ? buildActivityHref({
           basePath: `/app/w/${workspace.slug}/activity`,
-          current: {
-            q: filters.q,
-            status: filters.status,
-            role: validScope === "all" ? [] : [validScope],
-            size: filters.size,
-          },
+          current: currentHrefFilters,
           next: { page: filters.page - 1 },
         })
       : null;
   const nextHref =
     filters.page < totalPages
-      ? buildListHref({
+      ? buildActivityHref({
           basePath: `/app/w/${workspace.slug}/activity`,
-          current: {
-            q: filters.q,
-            status: filters.status,
-            role: validScope === "all" ? [] : [validScope],
-            size: filters.size,
-          },
+          current: currentHrefFilters,
           next: { page: filters.page + 1 },
         })
       : null;
 
-  const filterActive = hasActiveFilters({
-    ...filters,
-    role: validScope === "all" ? [] : [validScope],
-  });
+  const filterActive =
+    hasActiveFilters({
+      ...filters,
+      role: validScope === "all" ? [] : [validScope],
+    }) || Boolean(actorId || from || to);
 
   return (
     <div className="space-y-6" data-testid="workspace-activity-root">
@@ -172,21 +295,18 @@ export default async function WorkspaceActivityPage({
             ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
             ...(validScope !== "all" ? { role: validScope } : {}),
           }}
-          clearHref={buildListHref({
+          clearHref={buildActivityHref({
             basePath: `/app/w/${workspace.slug}/activity`,
-            current: {
-              q: filters.q,
-              status: filters.status,
-              role: validScope === "all" ? [] : [validScope],
-              size: filters.size,
-            },
+            current: currentHrefFilters,
             next: {
               q: "",
               status: [],
               role: [],
               page: 1,
               size: 50,
-              clear: true,
+              actorId: "",
+              from: "",
+              to: "",
             },
           })}
           clearLabel={t("activity.searchClear")}
@@ -202,6 +322,42 @@ export default async function WorkspaceActivityPage({
               testId={`activity-filter-scope-${scope}`}
             />
           ))}
+          <label className="text-label text-fg-secondary inline-flex min-h-9 items-center gap-2">
+            <span>{t("activity.userFilterLabel")}</span>
+            <select
+              name="actor"
+              defaultValue={actorId}
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              data-testid="activity-filter-user"
+            >
+              <option value="">{t("activity.allUsers")}</option>
+              {activityActors.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="text-label text-fg-secondary inline-flex min-h-9 items-center gap-2">
+            <span>{t("activity.fromDate")}</span>
+            <input
+              type="date"
+              name="from"
+              defaultValue={from}
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              data-testid="activity-filter-from"
+            />
+          </label>
+          <label className="text-label text-fg-secondary inline-flex min-h-9 items-center gap-2">
+            <span>{t("activity.toDate")}</span>
+            <input
+              type="date"
+              name="to"
+              defaultValue={to}
+              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+              data-testid="activity-filter-to"
+            />
+          </label>
         </DataTableToolbar>
 
         {finalRows.length === 0 ? (
@@ -256,7 +412,14 @@ export default async function WorkspaceActivityPage({
                   </Badge>
                 </div>
                 <p className="text-label text-fg-muted ms-12 mt-1 font-mono">
-                  {new Date(row.at).toLocaleString()}
+                  {formatDate(row.at, code, {
+                    timeZone: workspace.timezone,
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                    hour: "numeric",
+                    minute: "2-digit",
+                  })}
                 </p>
               </li>
             ))}

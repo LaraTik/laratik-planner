@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -30,8 +30,9 @@ import { listRecentBrandUpdates } from "@/lib/brand/service";
  * Filters:
  *   - `scope`  : 'all' | 'content' | 'review' | 'brand_kit' | 'planning' | 'publication'
  *   - `actor`  : optional user.id (events created by that actor)
- *   - `before` : optional Date — only include events at-or-after this point
- *                (used for "last 30 days" affordances; `all-time` keeps it open)
+ *   - `after`  : optional Date — only include events at-or-after this point
+ *   - `before` : optional Date — only include events at-or-before this point
+ *                (used for date-range affordances; `all-time` keeps it open)
  *   - `limit`  : rows to return (page size + 1 to detect "hasNext")
  *   - `cursor` : optional `createdAt` ISO timestamp — events strictly
  *                older than this; key-set pagination, no OFFSET
@@ -63,10 +64,11 @@ export interface WorkspaceActivityRow {
 export interface ListWorkspaceActivityFilters {
   scope?: ActivityScope;
   actorId?: string;
-  /** Lower bound on event timestamp. */
-  before?: Date;
-  /** Upper bound; same as `before` but inclusive in the opposite direction. */
+  query?: string;
+  /** Lower bound on event timestamp, inclusive. */
   after?: Date;
+  /** Upper bound on event timestamp, inclusive. */
+  before?: Date;
   /** Page size. */
   limit?: number;
   /** Cursor — return events with `at < cursor`. */
@@ -163,6 +165,11 @@ export async function listWorkspaceActivity(
   if (filters.actorId) {
     aeConditions.push(eq(activityEvents.actorId, filters.actorId));
   }
+  const query = filters.query?.trim();
+  if (query) {
+    const escapedQuery = query.replace(/[\\%_]/g, "\\$&");
+    aeConditions.push(ilike(activityEvents.summary, `%${escapedQuery}%`));
+  }
   if (filters.after) {
     aeConditions.push(sql`${activityEvents.createdAt} >= ${filters.after.toISOString()}`);
   }
@@ -224,7 +231,16 @@ export async function listWorkspaceActivity(
   // the activity_event cursor because they live in their own tables.
   // Keeping the same contract as the activity table means the merged
   // feed is monotonic regardless of source.
-  const brandFiltered = cursor ? brandRaw.filter((r) => r.at < cursor) : brandRaw;
+  const brandFiltered = brandRaw.filter((row) => {
+    if (filters.actorId) return false;
+    if (cursor && row.at >= cursor) return false;
+    if (filters.after && row.at < filters.after) return false;
+    if (filters.before && row.at > filters.before) return false;
+    if (query && !row.summary.toLocaleLowerCase().includes(query.toLocaleLowerCase())) {
+      return false;
+    }
+    return true;
+  });
 
   const aeMerged: WorkspaceActivityRow[] = aeRaw.map((row) => ({
     id: row.id,
@@ -290,7 +306,7 @@ export interface ActivityScopeCounts {
 
 export async function listWorkspaceActivityCounts(
   workspace: { id: string; slug: string },
-  filters: { actorId?: string; after?: Date; before?: Date } = {},
+  filters: { actorId?: string; after?: Date; before?: Date; query?: string } = {},
 ): Promise<ActivityScopeCounts> {
   // Reuse the aggregate with a generous limit. The merge runs once,
   // scope counts are derived in JS.

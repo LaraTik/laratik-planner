@@ -70,7 +70,10 @@ export default async function WorkspaceMediaPage({
     includeTrashed: filters.trash === "1",
     sort,
     page,
-    pageSize: 48,
+    // Keep the first response small enough that the browser only has to
+    // discover a single viewport of previews before the user interacts.
+    // Additional assets remain available through pagination.
+    pageSize: 24,
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
 

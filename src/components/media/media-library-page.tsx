@@ -421,11 +421,12 @@ export function MediaLibraryPage({
                     name: f.name,
                     parentId: f.parentId,
                   }))}
-                  // First row of cards is above the fold on a 3-up (xl)
-                  // grid: 3 cards, plus a small buffer for the 2-up (sm)
-                  // breakpoint = 4, plus one extra = 6. Anything past
-                  // that is below the viewport and stays lazy.
-                  priority={index < 6}
+                  // Prioritise only the first viewport's worth of previews:
+                  // three cards on wide screens plus one small-screen buffer.
+                  // Anything past that stays lazy.
+                  // The remaining cards stay lazy so a 24-item page does not
+                  // turn into an eager burst of Cloudflare requests.
+                  priority={index < 4}
                   // Grid thumb is 1 of 3 columns at xl (~33vw), 1 of 2
                   // at sm (~50vw), and full-width on mobile. Used by
                   // browsers that pick a `srcset` density; we have no
@@ -449,7 +450,7 @@ export function MediaLibraryPage({
                       name: f.name,
                       parentId: f.parentId,
                     }))}
-                    priority={index < 6}
+                    priority={index < 4}
                     sizes="56px"
                   />
                 ))}
