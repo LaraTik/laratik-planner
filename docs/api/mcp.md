@@ -48,6 +48,11 @@ Write tools use the domain services already used by the web UI. The MCP
 surface does not offer direct SQL, raw file access, publishing credentials,
 social-provider credentials, or spreadsheet import.
 
+Agency tasks and the global calendar are currently web/API surfaces rather
+than MCP tools. The task routes are documented in the [API surface
+reference](./README.md); this milestone does not add an MCP scope or tool, so
+existing token permissions and the MCP evaluation contract remain unchanged.
+
 ### Structured content payloads
 
 `laratik_planner_create_content` and `laratik_planner_update_content` accept

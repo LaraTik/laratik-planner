@@ -4,5 +4,15 @@
   "agendaAriaLabel": "أجندة التقويم",
   "emptyMonth": "لا يوجد شيء مُجدول لهذا الشهر.",
   "today": "اليوم",
-  "todayAriaLabel": "اليوم، {date}"
+  "todayAriaLabel": "اليوم، {date}",
+  "globalTitle": "التقويم العام",
+  "globalDescription": "اعرض المحتوى المُخطّط والمهام التشغيلية عبر كل مساحات العمل.",
+  "globalAgendaAriaLabel": "أجندة التقويم العام",
+  "globalEmptyMonth": "لا يوجد شيء مُجدول لهذا الشهر.",
+  "globalPlan": "خطة",
+  "globalTask": "مهمة",
+  "globalDue": "الاستحقاق",
+  "globalWorkspace": "مساحة العمل",
+  "globalNoWorkspace": "على مستوى الوكالة",
+  "globalUnassigned": "غير مُسنَّد"
 }

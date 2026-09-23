@@ -4,5 +4,15 @@
   "agendaAriaLabel": "Calendar agenda",
   "emptyMonth": "Nothing is scheduled for this month.",
   "today": "Today",
-  "todayAriaLabel": "Today, {date}"
+  "todayAriaLabel": "Today, {date}",
+  "globalTitle": "Global calendar",
+  "globalDescription": "See planned content and operational tasks across every workspace.",
+  "globalAgendaAriaLabel": "Global calendar agenda",
+  "globalEmptyMonth": "Nothing is scheduled for this month.",
+  "globalPlan": "Plan",
+  "globalTask": "Task",
+  "globalDue": "Due",
+  "globalWorkspace": "Workspace",
+  "globalNoWorkspace": "Agency-wide",
+  "globalUnassigned": "Unassigned"
 }

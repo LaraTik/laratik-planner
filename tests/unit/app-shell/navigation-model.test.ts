@@ -26,7 +26,7 @@ describe("buildWorkspaceNavigation", () => {
     expect(nav.top).toHaveLength(1);
     expect(nav.top[0]?.key).toBe("overview");
     const groupKeys = nav.groups.map((g) => g.key);
-    expect(groupKeys).toEqual(["content", "performance", "brand", "manage"]);
+    expect(groupKeys).toEqual(["work", "content", "performance", "brand", "manage"]);
   });
 
   it("omits the Manage group for non-managers (viewer role)", () => {
@@ -37,7 +37,7 @@ describe("buildWorkspaceNavigation", () => {
       canManage: false,
       canAccessTrendRadar: false,
     });
-    expect(nav.groups.map((g) => g.key)).toEqual(["content", "performance", "brand"]);
+    expect(nav.groups.map((g) => g.key)).toEqual(["work", "content", "performance", "brand"]);
   });
 
   it("exposes the workspace's Create content href only when the actor can create", () => {
@@ -157,7 +157,7 @@ describe("buildWorkspaceNavigation", () => {
 });
 
 describe("buildAgencyNavigation", () => {
-  it("returns My work + Workspaces + Media for a non-admin, non-platform user", () => {
+  it("returns personal work plus agency destinations for a non-admin, non-platform user", () => {
     const nav = buildAgencyNavigation({
       isAdmin: false,
       platformAccess: {
@@ -169,8 +169,13 @@ describe("buildAgencyNavigation", () => {
       canAccessTrendRadar: false,
     });
     expect(nav.top[0]?.key).toBe("my-work");
-    expect(nav.groups.map((g) => g.key)).toEqual(["agency"]);
-    expect(nav.groups[0]?.items.map((item) => item.key)).toEqual(["workspaces", "media"]);
+    expect(nav.groups.map((g) => g.key)).toEqual(["work", "agency"]);
+    expect(nav.groups[0]?.items.map((item) => item.key)).toEqual([
+      "my-tasks",
+      "all-tasks",
+      "global-calendar",
+    ]);
+    expect(nav.groups[1]?.items.map((item) => item.key)).toEqual(["workspaces", "media"]);
   });
 
   it("adds the Admin group for agency admins", () => {

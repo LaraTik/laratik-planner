@@ -50,3 +50,4 @@ export * from "./media";
 // `trend_brief`) and after identity (for the `users` FKs).
 export * from "./trends";
 export * from "./mcp";
+export * from "./tasks";

@@ -154,6 +154,42 @@ export function buildWorkspaceNavigation(input: {
   const groups: SidebarGroupSpec[] = [
     {
       kind: "group",
+      key: "work",
+      label: "Work",
+      labelKey: "sidebar.workGroup",
+      heading: true,
+      items: [
+        {
+          kind: "link",
+          key: "my-tasks",
+          href: "/app/tasks/mine",
+          label: "My tasks",
+          labelKey: "sidebar.myTasks",
+          icon: ClipboardList,
+          exact: true,
+        },
+        {
+          kind: "link",
+          key: "all-tasks",
+          href: "/app/tasks",
+          label: "All tasks",
+          labelKey: "sidebar.allTasks",
+          icon: ClipboardList,
+          exact: true,
+        },
+        {
+          kind: "link",
+          key: "global-calendar",
+          href: "/app/calendar",
+          label: "Global calendar",
+          labelKey: "sidebar.globalCalendar",
+          icon: CalendarDays,
+          exact: true,
+        },
+      ],
+    },
+    {
+      kind: "group",
       key: "content",
       label: "Content",
       labelKey: "sidebar.workspaceContent",
@@ -576,6 +612,42 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
     });
   }
   const groups: SidebarGroupSpec[] = [
+    {
+      kind: "group",
+      key: "work",
+      label: "Work",
+      labelKey: "sidebar.workGroup",
+      heading: true,
+      items: [
+        {
+          kind: "link",
+          key: "my-tasks",
+          href: "/app/tasks/mine",
+          label: "My tasks",
+          labelKey: "sidebar.myTasks",
+          icon: ClipboardList,
+          exact: true,
+        },
+        {
+          kind: "link",
+          key: "all-tasks",
+          href: "/app/tasks",
+          label: "All tasks",
+          labelKey: "sidebar.allTasks",
+          icon: ClipboardList,
+          exact: true,
+        },
+        {
+          kind: "link",
+          key: "global-calendar",
+          href: "/app/calendar",
+          label: "Global calendar",
+          labelKey: "sidebar.globalCalendar",
+          icon: CalendarDays,
+          exact: true,
+        },
+      ],
+    },
     {
       kind: "group",
       key: "agency",

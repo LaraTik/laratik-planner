@@ -333,6 +333,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       // Agency navigation (matches the `key` field of each
       // buildAgencyNavigation spec).
       "my-work": t("sidebar.myWork"),
+      work: t("sidebar.workGroup"),
+      "my-tasks": t("sidebar.myTasks"),
+      "all-tasks": t("sidebar.allTasks"),
+      "global-calendar": t("sidebar.globalCalendar"),
       agency: t("sidebar.agencyGroup"),
       workspaces: t("sidebar.agencyWorkspaces"),
       admin: t("sidebar.adminGroup"),

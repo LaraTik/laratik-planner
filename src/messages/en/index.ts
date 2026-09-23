@@ -36,6 +36,7 @@ import settings from "./settings.json";
 import sidebar from "./sidebar.json";
 import storage from "./storage.json";
 import team from "./team.json";
+import tasks from "./tasks.json";
 import trends from "./trends.json";
 import users from "./users.json";
 import workspaceNew from "./workspaceNew.json";
@@ -82,6 +83,7 @@ export default {
   sidebar,
   storage,
   team,
+  tasks,
   trends,
   users,
   workspaceNew,

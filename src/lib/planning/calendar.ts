@@ -1,8 +1,22 @@
 import "server-only";
 import { db } from "@/lib/db";
-import { workspaceSettings } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import {
+  agencyTasks,
+  agencies,
+  contentItems,
+  users,
+  workspaceMemberships,
+  workspaceSettings,
+  workspaces,
+} from "@/lib/db/schema";
+import { and, asc, eq, gte, isNull, lt } from "drizzle-orm";
+import {
+  hasWorkspaceRole,
+  isAgencyAdmin,
+  isAgencyMember,
+  requirePolicy,
+  type Actor,
+} from "@/lib/auth/policy";
 import { listWorkspaceContent } from "@/lib/content/service";
 import {
   expandRecurrence,
@@ -161,3 +175,120 @@ export async function getCalendarView(
 // re-export point for the calendar page; the function uses the
 // resolved value, not the schema.
 void HolidayCalendarSchema;
+
+export type AgencyCalendarEvent = {
+  id: string;
+  kind: "plan" | "task";
+  title: string;
+  startsAt: Date;
+  status: string;
+  priority?: string;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  workspaceSlug: string | null;
+  workspaceTimezone: string | null;
+  assigneeName?: string | null;
+  href: string;
+};
+
+export async function getAgencyTimezone(actor: Actor, agencyId: string): Promise<string> {
+  if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
+  const [agency] = await db
+    .select({ timezone: agencies.timezone })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1);
+  return agency?.timezone ?? "UTC";
+}
+
+/** Cross-workspace month view used by the agency calendar overview. */
+export async function getAgencyCalendarView(
+  actor: Actor,
+  agencyId: string,
+  monthStart: Date,
+  monthEnd: Date,
+): Promise<{ agencyTimezone: string; events: AgencyCalendarEvent[] }> {
+  if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
+  const admin = await isAgencyAdmin(actor, agencyId);
+  const planQuery = db
+    .select({
+      id: contentItems.id,
+      title: contentItems.title,
+      status: contentItems.status,
+      startsAt: contentItems.plannedPublishAt,
+      workspaceId: workspaces.id,
+      workspaceName: workspaces.name,
+      workspaceSlug: workspaces.slug,
+      workspaceTimezone: workspaces.timezone,
+    })
+    .from(contentItems)
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId));
+  const scopedPlans = admin
+    ? planQuery.where(
+        and(
+          eq(workspaces.agencyId, agencyId),
+          isNull(contentItems.archivedAt),
+          gte(contentItems.plannedPublishAt, monthStart),
+          lt(contentItems.plannedPublishAt, monthEnd),
+        ),
+      )
+    : planQuery
+        .innerJoin(workspaceMemberships, eq(workspaceMemberships.workspaceId, workspaces.id))
+        .where(
+          and(
+            eq(workspaces.agencyId, agencyId),
+            eq(workspaceMemberships.userId, actor.id),
+            eq(workspaceMemberships.status, "active"),
+            isNull(contentItems.archivedAt),
+            gte(contentItems.plannedPublishAt, monthStart),
+            lt(contentItems.plannedPublishAt, monthEnd),
+          ),
+        );
+  const [plans, tasks, [agency]] = await Promise.all([
+    scopedPlans,
+    db
+      .select({
+        id: agencyTasks.id,
+        title: agencyTasks.title,
+        status: agencyTasks.status,
+        priority: agencyTasks.priority,
+        startsAt: agencyTasks.dueAt,
+        workspaceId: workspaces.id,
+        workspaceName: workspaces.name,
+        workspaceSlug: workspaces.slug,
+        workspaceTimezone: workspaces.timezone,
+        assigneeName: users.displayName,
+      })
+      .from(agencyTasks)
+      .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
+      .leftJoin(users, eq(users.id, agencyTasks.assigneeId))
+      .where(
+        and(
+          eq(agencyTasks.agencyId, agencyId),
+          isNull(agencyTasks.archivedAt),
+          gte(agencyTasks.dueAt, monthStart),
+          lt(agencyTasks.dueAt, monthEnd),
+        ),
+      )
+      .orderBy(asc(agencyTasks.dueAt)),
+    db
+      .select({ timezone: agencies.timezone })
+      .from(agencies)
+      .where(eq(agencies.id, agencyId))
+      .limit(1),
+  ]);
+  return {
+    agencyTimezone: agency?.timezone ?? "UTC",
+    events: [
+      ...plans.map((plan) => ({
+        ...plan,
+        kind: "plan" as const,
+        workspaceId: plan.workspaceId,
+        href: `/app/w/${plan.workspaceSlug}/planning/${plan.id}`,
+      })),
+      ...tasks
+        .filter((task): task is typeof task & { startsAt: Date } => task.startsAt !== null)
+        .map((task) => ({ ...task, kind: "task" as const, href: `/app/tasks/${task.id}` })),
+    ].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
+  };
+}

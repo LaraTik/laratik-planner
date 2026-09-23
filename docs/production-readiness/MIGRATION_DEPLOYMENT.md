@@ -1,5 +1,22 @@
 # Migration and deployment evidence
 
+## Migration 0050 — agency tasks and global calendar support
+
+`0050_happy_praxagora.sql` is an additive migration that creates
+`agency_task`, `task_activity_event`, and `task_attachment`. It does not alter
+existing identifiers or content rows. The task table uses named status and
+priority checks; foreign keys restrict cross-agency assignment and set nullable
+workspace/user references to null where lifecycle deletion requires it.
+
+Forward evidence: run `pnpm migration-drill` against the disposable
+`planner_test` database and record from-zero, skipped-migration repair,
+upgrade, backup/restore, and failed-migration abort results at the exact clean
+SHA. Compatibility is provided by the additive schema: an older application
+image does not read these tables. Before production deployment, take the normal
+database backup and retain the previous image. A normal application rollback
+leaves these tables in place; a destructive schema rollback requires a verified
+backup and an independently reviewed forward-fix, as described in ADR 0016.
+
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows DEP-001 / DEP-002 / OPS-001).
 > Drill results: [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
 

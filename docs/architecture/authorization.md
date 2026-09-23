@@ -31,6 +31,18 @@ The scopes are deliberately disjoint so that:
   they can reach is bounded by their agency; they cannot see or manage other
   agencies. Cross-tenant reads return `404` (anti-IDOR; see §5).
 
+### Agency-wide task policy
+
+Tasks and the global calendar are agency-scoped surfaces. Every active agency
+member may create and view non-archived tasks, including tasks with no
+workspace. The creator and assignee may update task content, status, priority,
+and due date. Only an agency admin may change the workspace or assignee, archive
+or restore a task, or edit a task they do not own. Task attachment signing and
+completion use the same creator/assignee/admin manage check. Global calendar
+content is filtered by active workspace membership for non-admins; admins see
+all active content in the agency. The server services remain authoritative for
+all of these checks; hidden UI controls are only a usability layer.
+
 Platform implementation:
 
 - `src/lib/auth/platform-access.ts` — closed role-to-permission matrix,
