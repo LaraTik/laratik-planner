@@ -279,6 +279,27 @@ export function MobileNav({
               />
             </div>
 
+            <MenuSection label={labelFor("work", "Work")}>
+              <MobileMenuLink
+                href="/app/tasks/mine"
+                icon={<ClipboardList />}
+                label={labelFor("my-tasks", "My tasks")}
+                active={pathname === "/app/tasks/mine"}
+              />
+              <MobileMenuLink
+                href="/app/tasks"
+                icon={<ClipboardList />}
+                label={labelFor("all-tasks", "All tasks")}
+                active={pathname === "/app/tasks"}
+              />
+              <MobileMenuLink
+                href="/app/calendar"
+                icon={<CalendarDays />}
+                label={labelFor("global-calendar", "Global calendar")}
+                active={pathname === "/app/calendar"}
+              />
+            </MenuSection>
+
             {currentWorkspace && !clientOnly ? (
               <MenuSection label={labelFor("workspaceSection", "Workspace")}>
                 <MobileMenuLink

@@ -124,6 +124,25 @@ describe("MobileNav", () => {
     );
   });
 
+  it("keeps the global Work destinations reachable from More", async () => {
+    usePathnameMock.mockReturnValue("/app/tasks");
+    const user = userEvent.setup();
+    render(<MobileNav {...baseProps} />);
+
+    await user.click(screen.getByTestId("mobile-navigation-more"));
+
+    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
+      "href",
+      "/app/tasks/mine",
+    );
+    expect(screen.getByRole("link", { name: "All tasks" })).toHaveAttribute("href", "/app/tasks");
+    expect(screen.getByRole("link", { name: "Global calendar" })).toHaveAttribute(
+      "href",
+      "/app/calendar",
+    );
+    expect(screen.getByRole("link", { name: "All tasks" })).toHaveAttribute("aria-current", "page");
+  });
+
   it("uses content creation inside a workspace and exposes every secondary route in More", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     const user = userEvent.setup();

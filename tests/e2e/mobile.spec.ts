@@ -88,6 +88,28 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     );
   });
 
+  test("global Work destinations remain discoverable from the mobile More sheet", async ({
+    page,
+  }) => {
+    await bootstrapTestSession(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/app/tasks");
+
+    await page.getByTestId("mobile-navigation-more").click();
+    const dialog = page.getByRole("dialog", { name: "Navigate" });
+    await expect(dialog).toBeVisible();
+    for (const label of ["My tasks", "All tasks", "Global calendar"]) {
+      await expect(dialog.getByRole("link", { name: label, exact: true })).toBeVisible();
+    }
+    await expect(dialog.getByRole("link", { name: "All tasks", exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      390,
+    );
+  });
+
   test("mobile calendar uses an agenda without horizontal page overflow", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 390, height: 844 });
