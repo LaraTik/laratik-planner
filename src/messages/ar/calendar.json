@@ -14,5 +14,15 @@
   "globalDue": "الاستحقاق",
   "globalWorkspace": "مساحة العمل",
   "globalNoWorkspace": "على مستوى الوكالة",
-  "globalUnassigned": "غير مُسنَّد"
+  "globalUnassigned": "غير مُسنَّد",
+  "globalToday": "اليوم",
+  "globalFilters": "فلاتر التقويم",
+  "globalWorkspaceFilter": "مساحة العمل",
+  "globalAssigneeFilter": "مسند مهام التقويم",
+  "globalAnyWorkspace": "كل مساحات العمل",
+  "globalAnyAssignee": "كل مسندي المهام",
+  "globalAssigneeNote": "يطبّق فلتر المسند على المهام؛ وتُخفى الخطط عند اختيار مسند للمهام.",
+  "globalShowing": "يعرض {count} من الأحداث",
+  "globalApplyFilters": "تطبيق الفلاتر",
+  "globalClearFilters": "مسح الفلاتر"
 }

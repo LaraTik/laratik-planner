@@ -5,6 +5,7 @@ import {
   Archive,
   CalendarClock,
   CheckCircle2,
+  Clock3,
   ExternalLink,
   Paperclip,
   UserRound,
@@ -34,6 +35,7 @@ import {
   restoreTaskAction,
 } from "@/app/(app)/app/tasks/actions";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { formatTaskDuration, taskDurationMinutes } from "@/lib/tasks/time";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -61,6 +63,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
     listAgencyWorkspaces(task.agencyId),
     listTaskAttachmentUrls(actor, task.id),
   ]);
+  const durationMinutes = taskDurationMinutes(task.startedAt, task.completedAt);
+  const durationLabel =
+    durationMinutes === null ? t("tasks.notStarted") : formatTaskDuration(durationMinutes, t);
   return (
     <div className="space-y-6">
       <PageHeader
@@ -265,6 +270,37 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
               <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
               {task.assigneeName ?? t("tasks.noAssignee")}
             </p>
+          </Card>
+          <Card padding="md">
+            <h2 className="text-title-section text-fg-primary font-semibold">
+              {t("tasks.timeTracking")}
+            </h2>
+            <p className="text-body text-fg-secondary mt-2 inline-flex items-center gap-2">
+              <Clock3 className="h-4 w-4" aria-hidden="true" />
+              {task.completedAt ? t("tasks.timeToComplete") : t("tasks.elapsedTime")}:{" "}
+              {durationLabel}
+            </p>
+            <dl className="text-label text-fg-muted mt-3 space-y-1">
+              <div className="flex justify-between gap-3">
+                <dt>{t("tasks.startedAt")}</dt>
+                <dd>
+                  {task.startedAt
+                    ? formatDate(task.startedAt, code, { dateStyle: "medium", timeStyle: "short" })
+                    : t("tasks.notStarted")}
+                </dd>
+              </div>
+              {task.completedAt ? (
+                <div className="flex justify-between gap-3">
+                  <dt>{t("tasks.completedAt")}</dt>
+                  <dd>
+                    {formatDate(task.completedAt, code, {
+                      dateStyle: "medium",
+                      timeStyle: "short",
+                    })}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
           </Card>
           {task.canArchive && !task.archivedAt ? (
             <Card padding="md">

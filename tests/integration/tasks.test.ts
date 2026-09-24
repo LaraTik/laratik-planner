@@ -12,6 +12,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { createTask, listTasks, updateTask } from "@/lib/tasks/service";
+import { getAgencyCalendarView } from "@/lib/planning/calendar";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -131,14 +132,61 @@ describe("agency tasks", () => {
     );
     const updated = await updateTask({ id: creator.id }, task.id, { status: "in_progress" });
     expect(updated.status).toBe("in_progress");
+    expect(updated.startedAt).toBeInstanceOf(Date);
     const completed = await updateTask({ id: creator.id }, task.id, { status: "in_review" });
     expect(completed.completedAt).toBeNull();
     const done = await updateTask({ id: creator.id }, task.id, { status: "done" });
     expect(done.completedAt).toBeInstanceOf(Date);
+    expect(done.startedAt).toBeInstanceOf(Date);
+    expect(done.completedAt!.getTime()).toBeGreaterThanOrEqual(done.startedAt!.getTime());
     const activity = await db
       .select()
       .from(taskActivityEvents)
       .where(eq(taskActivityEvents.taskId, task.id));
     expect(activity.filter((event) => event.kind === "status_changed")).toHaveLength(3);
+  });
+
+  it("filters the global calendar by workspace and task assignee", async () => {
+    const { agency, creator, other, workspace } = await fixture();
+    const [secondWorkspace] = await db
+      .insert(workspaces)
+      .values({
+        agencyId: agency.id,
+        name: "Second",
+        slug: "second",
+        createdBy: creator.id,
+      })
+      .returning();
+    if (!secondWorkspace) throw new Error("second workspace fixture failed");
+    await createTask(
+      { id: creator.id },
+      {
+        agencyId: agency.id,
+        title: "Creator task",
+        workspaceId: workspace.id,
+        dueAt: new Date("2026-09-24T12:00:00.000Z"),
+      },
+    );
+    const assignedTask = await createTask(
+      { id: creator.id },
+      {
+        agencyId: agency.id,
+        title: "Other task",
+        workspaceId: secondWorkspace.id,
+        assigneeId: other.id,
+        dueAt: new Date("2026-09-24T13:00:00.000Z"),
+      },
+    );
+
+    const calendar = await getAgencyCalendarView(
+      { id: creator.id },
+      agency.id,
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-10-01T00:00:00.000Z"),
+      { workspaceId: secondWorkspace.id, assigneeId: other.id },
+    );
+    expect(calendar.events).toEqual([
+      expect.objectContaining({ id: assignedTask.id, kind: "task", title: "Other task" }),
+    ]);
   });
 });

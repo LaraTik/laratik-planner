@@ -56,12 +56,14 @@ GitHub issue per check; a later passing SHA closes that issue.
 
 ### Agency tasks and global calendar
 
-The task feature must cover the status transition matrix, agency isolation,
+The task feature must cover the status transition matrix, automatic start and
+completion timestamps plus duration formatting, agency isolation,
 creator/assignee/admin permissions, optional workspace validation, pagination
 and filters, atomic activity rows, archive behavior, attachment type/size and
 pending-to-ready verification, and the agency-timezone month boundary. Browser
 coverage must exercise create, filter, paginate, edit, upload, activity, the
-global calendar, keyboard focus, Arabic/RTL rendering, empty states, and
+global calendar Today jump, current-day highlight, workspace/task-assignee
+filters, keyboard focus, Arabic/RTL rendering, empty states, and
 responsive layouts at 375/768/1024/1280/1440 widths. Required checks are unit
 workflow tests, disposable-Postgres integration tests, authenticated a11y
 journeys, and the visual suite; no test may point at the normal or production

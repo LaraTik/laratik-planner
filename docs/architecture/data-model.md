@@ -2,7 +2,7 @@
 
 > Authoritative schema source: `src/lib/db/schema/*.ts`. The
 > authoritative Postgres DDL: `src/lib/db/migrations/0000_*.sql` …
-> `0050_*.sql` (51 migrations on `main`).
+> `0051_*.sql` (52 migrations on `main`).
 >
 > This document covers all 60 Drizzle-exported tables. Of these, 50
 > are domain tables (counted in `MIGRATION_DEPLOYMENT.md` § "From-zero
@@ -134,11 +134,11 @@ schema file named in each row.
 
 ### Agency work (`tasks.ts`)
 
-| Table                 | Purpose                                                                                  | Key columns                                                                                                                             | FKs                                 | Indexes                                                                                                             | Schema file |
-| --------------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
-| `agency_task`         | Agency-wide operational task that may optionally be related to one workspace.            | `id`, `agencyId`, `workspaceId?`, `title`, `description`, `status`, `priority`, `assigneeId?`, `dueAt?`, `completedAt?`, archive fields | `agencies`, `workspaces`, `users`   | `(agencyId, status, dueAt)`, `(agencyId, assigneeId, status)`, `(workspaceId, dueAt)`, `(agencyId, createdAt DESC)` | `tasks.ts`  |
-| `task_activity_event` | Append-only task history for creation, edits, status changes, assignments, and archival. | `id`, `agencyId`, `taskId`, `actorId?`, `kind`, `summary`, `beforeData`, `afterData`, `metadata`, `createdAt`                           | `agencies`, `agency_tasks`, `users` | `(taskId, createdAt DESC)`, `(agencyId, createdAt DESC)`                                                            | `tasks.ts`  |
-| `task_attachment`     | Verified agency-storage object attached to a task; pending rows are not downloadable.    | `id`, `agencyId`, `taskId`, `bucket`, `objectKey`, `originalName`, `mimeType`, `byteSize`, `status`, `uploadedBy`, `createdAt`          | `agencies`, `agency_tasks`, `users` | `(taskId, createdAt DESC)`                                                                                          | `tasks.ts`  |
+| Table                 | Purpose                                                                                  | Key columns                                                                                                                                           | FKs                                 | Indexes                                                                                                             | Schema file |
+| --------------------- | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `agency_task`         | Agency-wide operational task that may optionally be related to one workspace.            | `id`, `agencyId`, `workspaceId?`, `title`, `description`, `status`, `priority`, `assigneeId?`, `dueAt?`, `startedAt?`, `completedAt?`, archive fields | `agencies`, `workspaces`, `users`   | `(agencyId, status, dueAt)`, `(agencyId, assigneeId, status)`, `(workspaceId, dueAt)`, `(agencyId, createdAt DESC)` | `tasks.ts`  |
+| `task_activity_event` | Append-only task history for creation, edits, status changes, assignments, and archival. | `id`, `agencyId`, `taskId`, `actorId?`, `kind`, `summary`, `beforeData`, `afterData`, `metadata`, `createdAt`                                         | `agencies`, `agency_tasks`, `users` | `(taskId, createdAt DESC)`, `(agencyId, createdAt DESC)`                                                            | `tasks.ts`  |
+| `task_attachment`     | Verified agency-storage object attached to a task; pending rows are not downloadable.    | `id`, `agencyId`, `taskId`, `bucket`, `objectKey`, `originalName`, `mimeType`, `byteSize`, `status`, `uploadedBy`, `createdAt`                        | `agencies`, `agency_tasks`, `users` | `(taskId, createdAt DESC)`                                                                                          | `tasks.ts`  |
 
 ### Brand and channels (`channels.ts`, `brand-kit.ts`)
 

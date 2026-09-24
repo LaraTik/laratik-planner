@@ -19,6 +19,7 @@ export const agencyTasks = pgTable(
     priority: text("priority").notNull().default("normal"),
     assigneeId: uuid("assignee_id").references(() => users.id, { onDelete: "set null" }),
     dueAt: timestamp("due_at", { withTimezone: true, mode: "date" }),
+    startedAt: timestamp("started_at", { withTimezone: true, mode: "date" }),
     completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
     archivedAt: timestamp("archived_at", { withTimezone: true, mode: "date" }),
     archivedBy: uuid("archived_by").references(() => users.id, { onDelete: "set null" }),

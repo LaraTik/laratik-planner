@@ -9,7 +9,7 @@ import {
   workspaceSettings,
   workspaces,
 } from "@/lib/db/schema";
-import { and, asc, eq, gte, isNull, lt } from "drizzle-orm";
+import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import {
   hasWorkspaceRole,
   isAgencyAdmin,
@@ -191,6 +191,11 @@ export type AgencyCalendarEvent = {
   href: string;
 };
 
+export type AgencyCalendarFilters = {
+  workspaceId?: string | undefined;
+  assigneeId?: string | undefined;
+};
+
 export async function getAgencyTimezone(actor: Actor, agencyId: string): Promise<string> {
   if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
   const [agency] = await db
@@ -207,6 +212,7 @@ export async function getAgencyCalendarView(
   agencyId: string,
   monthStart: Date,
   monthEnd: Date,
+  filters: AgencyCalendarFilters = {},
 ): Promise<{ agencyTimezone: string; events: AgencyCalendarEvent[] }> {
   if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
   const admin = await isAgencyAdmin(actor, agencyId);
@@ -227,6 +233,8 @@ export async function getAgencyCalendarView(
     ? planQuery.where(
         and(
           eq(workspaces.agencyId, agencyId),
+          filters.workspaceId ? eq(workspaces.id, filters.workspaceId) : undefined,
+          filters.assigneeId ? sql`false` : undefined,
           isNull(contentItems.archivedAt),
           gte(contentItems.plannedPublishAt, monthStart),
           lt(contentItems.plannedPublishAt, monthEnd),
@@ -239,6 +247,8 @@ export async function getAgencyCalendarView(
             eq(workspaces.agencyId, agencyId),
             eq(workspaceMemberships.userId, actor.id),
             eq(workspaceMemberships.status, "active"),
+            filters.workspaceId ? eq(workspaces.id, filters.workspaceId) : undefined,
+            filters.assigneeId ? sql`false` : undefined,
             isNull(contentItems.archivedAt),
             gte(contentItems.plannedPublishAt, monthStart),
             lt(contentItems.plannedPublishAt, monthEnd),
@@ -265,6 +275,8 @@ export async function getAgencyCalendarView(
       .where(
         and(
           eq(agencyTasks.agencyId, agencyId),
+          filters.workspaceId ? eq(agencyTasks.workspaceId, filters.workspaceId) : undefined,
+          filters.assigneeId ? eq(agencyTasks.assigneeId, filters.assigneeId) : undefined,
           isNull(agencyTasks.archivedAt),
           gte(agencyTasks.dueAt, monthStart),
           lt(agencyTasks.dueAt, monthEnd),

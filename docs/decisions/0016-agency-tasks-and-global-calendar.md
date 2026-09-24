@@ -22,6 +22,10 @@ permissions, lifecycle, and attachments ambiguous.
 done`, with cancellation from active work and a controlled reopen path.
   Every mutation writes an append-only `task_activity_event` row in the same
   transaction.
+- Record `started_at` automatically on the first transition into
+  `in_progress` and use `completed_at - started_at` as the displayed time to
+  complete. This is intentionally cycle time, not a claim about active effort;
+  a future work-session timer can be added without changing this contract.
 - Store task files in `task_attachment` and upload them directly to the
   agency's configured R2 storage after a server-authorized, size/type-bound
   signed intent. The database row is pending until exact object metadata is
@@ -29,7 +33,8 @@ done`, with cancellation from active work and a controlled reopen path.
 - Build the global calendar from both agency tasks with due dates and planned
   content items. Non-admins see plans from workspaces where they are active
   members; agency admins see all agency plans. The agency timezone defines the
-  month boundary and event day.
+  month boundary and event day. The calendar provides a Today jump, highlights
+  the current day, and supports workspace plus task-assignee filters.
 
 ## Consequences
 
@@ -41,7 +46,8 @@ pagination plus server-side filters to remain bounded.
 
 ## Rollback and data safety
 
-Migration `0050_happy_praxagora.sql` is additive. An application image can be
+Migrations `0050_happy_praxagora.sql` and `0051_low_human_torch.sql` are
+additive. An application image can be
 rolled back while leaving the new tables in place. Removing the tables is a
 destructive rollback and requires a verified backup plus a separately reviewed
 forward-fix; task files must be retained or explicitly garbage-collected with

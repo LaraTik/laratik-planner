@@ -20,6 +20,19 @@ backup and an independently reviewed forward-fix, as described in ADR 0016.
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows DEP-001 / DEP-002 / OPS-001).
 > Drill results: [`MIGRATION_DRILL_RESULTS.md`](./MIGRATION_DRILL_RESULTS.md).
 
+## Migration 0051 — task cycle timing
+
+`0051_low_human_torch.sql` is an additive, replay-safe migration that adds
+`agency_task.started_at`. The service sets it automatically when a task first
+enters `in_progress` (or is completed directly), while `completed_at` remains
+the completion boundary. The UI presents the difference as elapsed cycle time,
+not active work time, so blocked time is not misrepresented as effort.
+
+Compatibility: older images ignore the nullable column. Normal rollback pins
+the previous image and leaves the additive column in place; removal requires a
+reviewed forward migration. The migration uses `ADD COLUMN IF NOT EXISTS` so
+skipped-migration repair remains safe.
+
 ## Status (current evidence: 2026-09-01)
 
 | Item                                | Current status                               |

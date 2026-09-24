@@ -14,5 +14,15 @@
   "globalDue": "Due",
   "globalWorkspace": "Workspace",
   "globalNoWorkspace": "Agency-wide",
-  "globalUnassigned": "Unassigned"
+  "globalUnassigned": "Unassigned",
+  "globalToday": "Today",
+  "globalFilters": "Calendar filters",
+  "globalWorkspaceFilter": "Workspace",
+  "globalAssigneeFilter": "Task assignee",
+  "globalAnyWorkspace": "All workspaces",
+  "globalAnyAssignee": "All task assignees",
+  "globalAssigneeNote": "Assignee filters apply to tasks; plans are hidden while a task assignee is selected.",
+  "globalShowing": "Showing {count} events",
+  "globalApplyFilters": "Apply filters",
+  "globalClearFilters": "Clear filters"
 }

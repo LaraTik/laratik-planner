@@ -187,6 +187,10 @@ export async function updateTask(actor: Actor, taskId: string, input: TaskUpdate
   }
   const nextStatus = input.status ?? (current.status as TaskStatus);
   const now = new Date();
+  let nextStartedAt = current.startedAt;
+  if ((nextStatus === "in_progress" || nextStatus === "done") && !nextStartedAt) {
+    nextStartedAt = now;
+  }
   const changed = Object.fromEntries(
     Object.entries(input).filter(([, value]) => value !== undefined),
   ) as Record<string, unknown>;
@@ -199,6 +203,7 @@ export async function updateTask(actor: Actor, taskId: string, input: TaskUpdate
   if (input.dueAt !== undefined) values.dueAt = input.dueAt;
   if (input.priority !== undefined) values.priority = input.priority;
   if (input.status !== undefined) values.status = input.status;
+  values.startedAt = nextStartedAt;
   values.completedAt = nextStatus === "done" ? (current.completedAt ?? now) : null;
   return db.transaction(async (tx) => {
     const [updated] = await tx
@@ -220,11 +225,15 @@ export async function updateTask(actor: Actor, taskId: string, input: TaskUpdate
         status: current.status,
         priority: current.priority,
         assigneeId: current.assigneeId,
+        startedAt: current.startedAt,
+        completedAt: current.completedAt,
       },
       afterData: {
         status: updated.status,
         priority: updated.priority,
         assigneeId: updated.assigneeId,
+        startedAt: updated.startedAt,
+        completedAt: updated.completedAt,
       },
     });
     return updated;
