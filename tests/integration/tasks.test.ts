@@ -177,6 +177,16 @@ describe("agency tasks", () => {
         dueAt: new Date("2026-09-24T13:00:00.000Z"),
       },
     );
+    await updateTask({ id: creator.id }, assignedTask.id, { status: "in_progress" });
+    await createTask(
+      { id: creator.id },
+      {
+        agencyId: agency.id,
+        title: "Unscheduled task",
+        workspaceId: secondWorkspace.id,
+        assigneeId: other.id,
+      },
+    );
 
     const calendar = await getAgencyCalendarView(
       { id: creator.id },
@@ -188,5 +198,29 @@ describe("agency tasks", () => {
     expect(calendar.events).toEqual([
       expect.objectContaining({ id: assignedTask.id, kind: "task", title: "Other task" }),
     ]);
+    expect(calendar.unscheduledTasks).toEqual([
+      expect.objectContaining({ title: "Unscheduled task", assigneeName: "Other" }),
+    ]);
+
+    const statusFiltered = await getAgencyCalendarView(
+      { id: creator.id },
+      agency.id,
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-10-01T00:00:00.000Z"),
+      { taskStatus: "in_progress" },
+    );
+    expect(statusFiltered.events).toEqual([
+      expect.objectContaining({ id: assignedTask.id, status: "in_progress" }),
+    ]);
+
+    const filtered = await getAgencyCalendarView(
+      { id: creator.id },
+      agency.id,
+      new Date("2026-09-01T00:00:00.000Z"),
+      new Date("2026-10-01T00:00:00.000Z"),
+      { showTasks: false },
+    );
+    expect(filtered.events).toEqual([]);
+    expect(filtered.unscheduledTasks).toEqual([]);
   });
 });

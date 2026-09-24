@@ -34,7 +34,9 @@ done`, with cancellation from active work and a controlled reopen path.
   content items. Non-admins see plans from workspaces where they are active
   members; agency admins see all agency plans. The agency timezone defines the
   month boundary and event day. The calendar provides a Today jump, highlights
-  the current day, and supports workspace plus task-assignee filters.
+  the current day, and supports workspace, task-assignee, task-status, and
+  independent Plans/Tasks visibility filters. An unscheduled-task section keeps
+  tasks without due dates visible instead of silently dropping them.
 
 ## Consequences
 

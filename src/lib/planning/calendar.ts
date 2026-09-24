@@ -9,7 +9,7 @@ import {
   workspaceSettings,
   workspaces,
 } from "@/lib/db/schema";
-import { and, asc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 import {
   hasWorkspaceRole,
   isAgencyAdmin,
@@ -194,6 +194,20 @@ export type AgencyCalendarEvent = {
 export type AgencyCalendarFilters = {
   workspaceId?: string | undefined;
   assigneeId?: string | undefined;
+  taskStatus?: string | undefined;
+  showPlans?: boolean | undefined;
+  showTasks?: boolean | undefined;
+};
+
+export type AgencyCalendarUnscheduledTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  assigneeName: string | null;
+  href: string;
 };
 
 export async function getAgencyTimezone(actor: Actor, agencyId: string): Promise<string> {
@@ -213,7 +227,11 @@ export async function getAgencyCalendarView(
   monthStart: Date,
   monthEnd: Date,
   filters: AgencyCalendarFilters = {},
-): Promise<{ agencyTimezone: string; events: AgencyCalendarEvent[] }> {
+): Promise<{
+  agencyTimezone: string;
+  events: AgencyCalendarEvent[];
+  unscheduledTasks: AgencyCalendarUnscheduledTask[];
+}> {
   if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
   const admin = await isAgencyAdmin(actor, agencyId);
   const planQuery = db
@@ -233,8 +251,8 @@ export async function getAgencyCalendarView(
     ? planQuery.where(
         and(
           eq(workspaces.agencyId, agencyId),
+          filters.showPlans === false ? sql`false` : undefined,
           filters.workspaceId ? eq(workspaces.id, filters.workspaceId) : undefined,
-          filters.assigneeId ? sql`false` : undefined,
           isNull(contentItems.archivedAt),
           gte(contentItems.plannedPublishAt, monthStart),
           lt(contentItems.plannedPublishAt, monthEnd),
@@ -247,14 +265,22 @@ export async function getAgencyCalendarView(
             eq(workspaces.agencyId, agencyId),
             eq(workspaceMemberships.userId, actor.id),
             eq(workspaceMemberships.status, "active"),
+            filters.showPlans === false ? sql`false` : undefined,
             filters.workspaceId ? eq(workspaces.id, filters.workspaceId) : undefined,
-            filters.assigneeId ? sql`false` : undefined,
             isNull(contentItems.archivedAt),
             gte(contentItems.plannedPublishAt, monthStart),
             lt(contentItems.plannedPublishAt, monthEnd),
           ),
         );
-  const [plans, tasks, [agency]] = await Promise.all([
+  const taskFilters = [
+    eq(agencyTasks.agencyId, agencyId),
+    filters.showTasks === false ? sql`false` : undefined,
+    filters.workspaceId ? eq(agencyTasks.workspaceId, filters.workspaceId) : undefined,
+    filters.assigneeId ? eq(agencyTasks.assigneeId, filters.assigneeId) : undefined,
+    filters.taskStatus ? eq(agencyTasks.status, filters.taskStatus) : undefined,
+    isNull(agencyTasks.archivedAt),
+  ];
+  const [plans, tasks, unscheduledTasks, [agency]] = await Promise.all([
     scopedPlans,
     db
       .select({
@@ -273,16 +299,29 @@ export async function getAgencyCalendarView(
       .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
       .leftJoin(users, eq(users.id, agencyTasks.assigneeId))
       .where(
-        and(
-          eq(agencyTasks.agencyId, agencyId),
-          filters.workspaceId ? eq(agencyTasks.workspaceId, filters.workspaceId) : undefined,
-          filters.assigneeId ? eq(agencyTasks.assigneeId, filters.assigneeId) : undefined,
-          isNull(agencyTasks.archivedAt),
-          gte(agencyTasks.dueAt, monthStart),
-          lt(agencyTasks.dueAt, monthEnd),
-        ),
+        and(...taskFilters, gte(agencyTasks.dueAt, monthStart), lt(agencyTasks.dueAt, monthEnd)),
       )
       .orderBy(asc(agencyTasks.dueAt)),
+    db
+      .select({
+        id: agencyTasks.id,
+        title: agencyTasks.title,
+        status: agencyTasks.status,
+        priority: agencyTasks.priority,
+        workspaceId: workspaces.id,
+        workspaceName: workspaces.name,
+        assigneeName: users.displayName,
+      })
+      .from(agencyTasks)
+      .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
+      .leftJoin(users, eq(users.id, agencyTasks.assigneeId))
+      .where(and(...taskFilters, isNull(agencyTasks.dueAt)))
+      .orderBy(
+        sql`CASE WHEN ${agencyTasks.status} = 'blocked' THEN 0 ELSE 1 END`,
+        desc(agencyTasks.priority),
+        desc(agencyTasks.createdAt),
+      )
+      .limit(8),
     db
       .select({ timezone: agencies.timezone })
       .from(agencies)
@@ -302,5 +341,9 @@ export async function getAgencyCalendarView(
         .filter((task): task is typeof task & { startsAt: Date } => task.startsAt !== null)
         .map((task) => ({ ...task, kind: "task" as const, href: `/app/tasks/${task.id}` })),
     ].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime()),
+    unscheduledTasks: unscheduledTasks.map((task) => ({
+      ...task,
+      href: `/app/tasks/${task.id}`,
+    })),
   };
 }

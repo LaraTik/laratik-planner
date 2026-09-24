@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckSquare2, FileText } from "lucide-react";
+import { CalendarDays, CheckSquare2, FileText, ListTodo } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -19,7 +19,13 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
-import { listAgencyMembers, listAgencyWorkspaces } from "@/lib/tasks/service";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  listAgencyMembers,
+  listAgencyWorkspaces,
+  TASK_STATUSES,
+  type TaskStatus,
+} from "@/lib/tasks/service";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
@@ -70,6 +76,9 @@ function EventCard({
         {event.workspaceName ?? t("calendar.globalNoWorkspace")}
       </span>
       <span className="text-label text-fg-secondary mt-1 block">{eventLabel(event, t)}</span>
+      {event.kind === "task" && event.assigneeName ? (
+        <span className="text-label text-fg-muted mt-1 block truncate">{event.assigneeName}</span>
+      ) : null}
     </Link>
   );
 }
@@ -77,7 +86,14 @@ function EventCard({
 export default async function GlobalCalendarPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; workspaceId?: string; assigneeId?: string }>;
+  searchParams: Promise<{
+    month?: string;
+    workspaceId?: string;
+    assigneeId?: string;
+    taskStatus?: string;
+    showPlans?: string;
+    showTasks?: string;
+  }>;
 }) {
   const { t, code } = await tForActive();
   const session = await auth();
@@ -95,6 +111,11 @@ export default async function GlobalCalendarPage({
   const assigneeId = z.string().uuid().safeParse(requestedParams.assigneeId).success
     ? requestedParams.assigneeId
     : undefined;
+  const taskStatus = TASK_STATUSES.includes(requestedParams.taskStatus as TaskStatus)
+    ? (requestedParams.taskStatus as TaskStatus)
+    : undefined;
+  const showPlans = requestedParams.showPlans !== "false";
+  const showTasks = requestedParams.showTasks !== "false";
   const [agencyTimezone, members, workspaces] = await Promise.all([
     getAgencyTimezone(actor, context.agencyId),
     listAgencyMembers(context.agencyId),
@@ -111,7 +132,7 @@ export default async function GlobalCalendarPage({
     context.agencyId,
     monthRange.start,
     monthRange.end,
-    { workspaceId, assigneeId },
+    { workspaceId, assigneeId, taskStatus, showPlans, showTasks },
   );
   const firstWeekday = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
@@ -124,6 +145,9 @@ export default async function GlobalCalendarPage({
     const params = new URLSearchParams({ month: monthValue });
     if (workspaceId) params.set("workspaceId", workspaceId);
     if (assigneeId) params.set("assigneeId", assigneeId);
+    if (taskStatus) params.set("taskStatus", taskStatus);
+    if (!showPlans) params.set("showPlans", "false");
+    if (!showTasks) params.set("showTasks", "false");
     return `?${params.toString()}`;
   };
   const monthHref = (offset: number) => {
@@ -134,7 +158,12 @@ export default async function GlobalCalendarPage({
   const todayMonth = zonedNow.getMonth();
   const todayDay = zonedNow.getDate();
   const todayMonthValue = `${todayYear}-${String(todayMonth + 1).padStart(2, "0")}`;
-  const hasFilters = Boolean(workspaceId || assigneeId);
+  const hasFilters = Boolean(workspaceId || assigneeId || taskStatus || !showPlans || !showTasks);
+  const taskViewParams = new URLSearchParams();
+  if (workspaceId) taskViewParams.set("workspaceId", workspaceId);
+  if (assigneeId) taskViewParams.set("assigneeId", assigneeId);
+  if (taskStatus) taskViewParams.set("status", taskStatus);
+  const tasksHref = `/app/tasks${taskViewParams.toString() ? `?${taskViewParams.toString()}` : ""}`;
   const eventDateIsToday = (date: Date) => {
     const zonedDate = toZonedTime(date, agencyTimezone);
     return (
@@ -204,7 +233,7 @@ export default async function GlobalCalendarPage({
         </div>
         <form
           method="get"
-          className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end"
+          className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end"
         >
           <input type="hidden" name="month" value={selectedMonth} />
           <FormField id="calendar-workspace" label={t("calendar.globalWorkspaceFilter")}>
@@ -237,11 +266,89 @@ export default async function GlobalCalendarPage({
               ))}
             </select>
           </FormField>
+          <FormField id="calendar-task-status" label={t("calendar.globalTaskStatusFilter")}>
+            <select
+              id="calendar-task-status"
+              name="taskStatus"
+              defaultValue={taskStatus ?? ""}
+              className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
+            >
+              <option value="">{t("calendar.globalAnyTaskStatus")}</option>
+              {TASK_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {t(`tasks.status.${status}`)}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <fieldset className="border-border flex min-h-11 flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2 sm:col-span-2 lg:col-span-3">
+            <legend className="text-label text-fg-muted px-1">{t("calendar.globalShow")}</legend>
+            <label
+              htmlFor="calendar-show-plans"
+              className="text-body text-fg-primary inline-flex min-h-8 cursor-pointer items-center gap-2"
+            >
+              <Checkbox
+                id="calendar-show-plans"
+                name="showPlans"
+                value="true"
+                defaultChecked={showPlans}
+              />
+              {t("calendar.globalPlans")}
+            </label>
+            <label
+              htmlFor="calendar-show-tasks"
+              className="text-body text-fg-primary inline-flex min-h-8 cursor-pointer items-center gap-2"
+            >
+              <Checkbox
+                id="calendar-show-tasks"
+                name="showTasks"
+                value="true"
+                defaultChecked={showTasks}
+              />
+              {t("calendar.globalTasks")}
+            </label>
+          </fieldset>
           <Button type="submit" variant="secondary" className="min-h-11">
             {t("calendar.globalApplyFilters")}
           </Button>
         </form>
       </section>
+      {hasFilters ? (
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label={t("calendar.globalActiveFilters")}
+        >
+          <span className="text-label text-fg-muted">{t("calendar.globalActiveFilters")}:</span>
+          {workspaceId ? (
+            <span className="bg-primary-subtle text-primary text-label rounded-full px-2.5 py-1 font-semibold">
+              {workspaces.find((workspace) => workspace.id === workspaceId)?.name ??
+                t("calendar.globalWorkspaceFilter")}
+            </span>
+          ) : null}
+          {assigneeId ? (
+            <span className="bg-primary-subtle text-primary text-label rounded-full px-2.5 py-1 font-semibold">
+              {members.find((member) => member.id === assigneeId)?.name ??
+                t("calendar.globalAssigneeFilter")}
+            </span>
+          ) : null}
+          {taskStatus ? (
+            <span className="bg-primary-subtle text-primary text-label rounded-full px-2.5 py-1 font-semibold">
+              {t(`tasks.status.${taskStatus}`)}
+            </span>
+          ) : null}
+          {!showPlans ? (
+            <span className="bg-surface-subtle text-fg-secondary text-label rounded-full px-2.5 py-1 font-semibold">
+              {t("calendar.globalTasksOnly")}
+            </span>
+          ) : null}
+          {!showTasks ? (
+            <span className="bg-surface-subtle text-fg-secondary text-label rounded-full px-2.5 py-1 font-semibold">
+              {t("calendar.globalPlansOnly")}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <p className="text-label text-fg-muted" aria-live="polite">
         {t("calendar.globalShowing", { count: calendar.events.length })}
       </p>
@@ -325,6 +432,52 @@ export default async function GlobalCalendarPage({
           })}
         </div>
       </div>
+      {showTasks && calendar.unscheduledTasks.length > 0 ? (
+        <section
+          className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
+          aria-labelledby="global-calendar-unscheduled"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2
+                id="global-calendar-unscheduled"
+                className="text-title-section text-fg-primary font-semibold"
+              >
+                <span className="inline-flex items-center gap-2">
+                  <ListTodo className="h-4 w-4" aria-hidden="true" />
+                  {t("calendar.globalUnscheduledTitle")}
+                </span>
+              </h2>
+              <p className="text-body text-fg-secondary mt-1">
+                {t("calendar.globalUnscheduledDescription")}
+              </p>
+            </div>
+            <Link
+              href={tasksHref}
+              className="text-body text-primary focus-visible:ring-focus-ring inline-flex min-h-10 items-center font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+            >
+              {t("calendar.globalViewAllTasks")}
+            </Link>
+          </div>
+          <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {calendar.unscheduledTasks.map((task) => (
+              <li key={task.id}>
+                <Link
+                  href={task.href}
+                  className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block min-h-20 rounded-[var(--radius-control)] border p-3 focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <span className="text-body text-fg-primary block font-semibold wrap-break-word">
+                    {task.title}
+                  </span>
+                  <span className="text-label text-fg-muted mt-1 block truncate">
+                    {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
     </div>
   );
 }

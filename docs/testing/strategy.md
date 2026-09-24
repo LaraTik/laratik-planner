@@ -62,8 +62,9 @@ creator/assignee/admin permissions, optional workspace validation, pagination
 and filters, atomic activity rows, archive behavior, attachment type/size and
 pending-to-ready verification, and the agency-timezone month boundary. Browser
 coverage must exercise create, filter, paginate, edit, upload, activity, the
-global calendar Today jump, current-day highlight, workspace/task-assignee
-filters, keyboard focus, Arabic/RTL rendering, empty states, and
+global calendar Today jump, current-day highlight, workspace/task-assignee/task-status
+filters, independent Plans/Tasks visibility, unscheduled-task visibility,
+keyboard focus, Arabic/RTL rendering, empty states, and
 responsive layouts at 375/768/1024/1280/1440 widths. Required checks are unit
 workflow tests, disposable-Postgres integration tests, authenticated a11y
 journeys, and the visual suite; no test may point at the normal or production

@@ -57,6 +57,14 @@ export async function TaskListPage({
   ]);
   const totalPages = Math.max(1, Math.ceil(result.total / result.pageSize));
   const currentTime = new Date();
+  const hasFilters = Boolean(
+    searchParams.search ||
+    searchParams.status ||
+    searchParams.priority ||
+    searchParams.workspaceId ||
+    searchParams.assigneeId ||
+    searchParams.overdue === "true",
+  );
   const buildHref = (page: number) => {
     const params = new URLSearchParams();
     if (searchParams.search) params.set("search", searchParams.search);
@@ -83,11 +91,7 @@ export async function TaskListPage({
           </Button>
         }
       />
-      <div
-        className="flex flex-wrap items-center gap-2"
-        role="tablist"
-        aria-label={t("tasks.title")}
-      >
+      <nav className="flex flex-wrap items-center gap-2" aria-label={t("tasks.title")}>
         <Link
           href={buildHref(1).replace("/app/tasks/mine", "/app/tasks")}
           className={`text-body inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold ${!mine ? "border-primary bg-primary-subtle text-primary" : "border-border bg-surface text-fg-secondary"}`}
@@ -102,7 +106,7 @@ export async function TaskListPage({
         >
           {t("tasks.myTasks")}
         </Link>
-      </div>
+      </nav>
       <Card padding="md">
         <form
           method="get"
@@ -195,6 +199,19 @@ export async function TaskListPage({
           </div>
         </form>
       </Card>
+      <div className="flex flex-wrap items-center justify-between gap-2" aria-live="polite">
+        <p className="text-label text-fg-secondary">
+          {t("tasks.showing", { count: result.total })}
+        </p>
+        {hasFilters ? (
+          <Link
+            href={mine ? "/app/tasks/mine" : "/app/tasks"}
+            className="text-body text-primary focus-visible:ring-focus-ring inline-flex min-h-10 items-center font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          >
+            {t("tasks.clearFilters")}
+          </Link>
+        ) : null}
+      </div>
       {result.rows.length === 0 ? (
         <Card variant="dashed" padding="lg">
           <EmptyState

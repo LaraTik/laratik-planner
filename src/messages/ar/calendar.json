@@ -21,8 +21,19 @@
   "globalAssigneeFilter": "مسند مهام التقويم",
   "globalAnyWorkspace": "كل مساحات العمل",
   "globalAnyAssignee": "كل مسندي المهام",
-  "globalAssigneeNote": "يطبّق فلتر المسند على المهام؛ وتُخفى الخطط عند اختيار مسند للمهام.",
+  "globalAssigneeNote": "تنطبق فلاتر المسند والحالة على المهام. تبقى الخطط ظاهرة ما لم تُخفَ يدويًا.",
+  "globalTaskStatusFilter": "حالة المهمة",
+  "globalAnyTaskStatus": "أي حالة مهمة",
+  "globalShow": "عرض",
+  "globalPlans": "الخطط",
+  "globalTasks": "المهام",
+  "globalActiveFilters": "الفلاتر النشطة",
+  "globalTasksOnly": "المهام فقط",
+  "globalPlansOnly": "الخطط فقط",
   "globalShowing": "يعرض {count} من الأحداث",
   "globalApplyFilters": "تطبيق الفلاتر",
-  "globalClearFilters": "مسح الفلاتر"
+  "globalClearFilters": "مسح الفلاتر",
+  "globalUnscheduledTitle": "مهام بلا موعد",
+  "globalUnscheduledDescription": "تبقى المهام بلا تاريخ استحقاق ظاهرة هنا حتى لا تفوتك أي مهمة.",
+  "globalViewAllTasks": "عرض كل المهام"
 }

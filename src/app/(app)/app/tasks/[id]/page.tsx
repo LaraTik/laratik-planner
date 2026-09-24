@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
-  Archive,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -29,6 +28,7 @@ import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
+import { TaskArchiveButton } from "@/components/tasks/task-archive-button";
 import {
   updateTaskAction,
   archiveTaskAction,
@@ -304,13 +304,17 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
           </Card>
           {task.canArchive && !task.archivedAt ? (
             <Card padding="md">
-              <form action={archiveTaskAction.bind(null, task.id)}>
-                <Button type="submit" variant="destructive">
-                  <Archive className="h-4 w-4" aria-hidden="true" />
-                  {t("tasks.archive")}
-                </Button>
-                <p className="text-label text-fg-muted mt-2">{t("tasks.archiveConfirm")}</p>
-              </form>
+              <TaskArchiveButton
+                action={archiveTaskAction.bind(null, task.id)}
+                label={t("tasks.archive")}
+                title={t("tasks.archiveDialogTitle")}
+                description={t("tasks.archiveDialogDescription")}
+                cancelLabel={t("tasks.archiveDialogCancel")}
+                confirmLabel={t("tasks.archiveDialogConfirm")}
+                pendingLabel={t("tasks.archiveDialogPending")}
+                closeAriaLabel={t("common.close")}
+              />
+              <p className="text-label text-fg-muted mt-2">{t("tasks.archiveConfirm")}</p>
             </Card>
           ) : null}
           {task.canRestore ? (

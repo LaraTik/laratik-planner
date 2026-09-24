@@ -21,8 +21,19 @@
   "globalAssigneeFilter": "Task assignee",
   "globalAnyWorkspace": "All workspaces",
   "globalAnyAssignee": "All task assignees",
-  "globalAssigneeNote": "Assignee filters apply to tasks; plans are hidden while a task assignee is selected.",
+  "globalAssigneeNote": "Assignee and status filters apply to tasks. Plans stay visible unless you turn them off.",
+  "globalTaskStatusFilter": "Task status",
+  "globalAnyTaskStatus": "Any task status",
+  "globalShow": "Show",
+  "globalPlans": "Plans",
+  "globalTasks": "Tasks",
+  "globalActiveFilters": "Active filters",
+  "globalTasksOnly": "Tasks only",
+  "globalPlansOnly": "Plans only",
   "globalShowing": "Showing {count} events",
   "globalApplyFilters": "Apply filters",
-  "globalClearFilters": "Clear filters"
+  "globalClearFilters": "Clear filters",
+  "globalUnscheduledTitle": "Unscheduled tasks",
+  "globalUnscheduledDescription": "Tasks without a due date stay visible here so nothing falls through the cracks.",
+  "globalViewAllTasks": "View all tasks"
 }
