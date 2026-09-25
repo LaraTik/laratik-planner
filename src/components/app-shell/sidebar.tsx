@@ -121,7 +121,6 @@ export function Sidebar({
   // Subscribe to the URL hash so the Settings page highlights the
   // correct sub-anchor (Lifecycle / Lead times / etc).
   React.useSyncExternalStore(subscribeToHash, readHash, () => "");
-  void React;
 
   // Build the navigation tree from the model. Each branch keeps the
   // build pure (no JSX) so the renderer is just dispatch.

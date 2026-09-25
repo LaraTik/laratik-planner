@@ -673,6 +673,44 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-25 — UI/UX round 2 (chore/ui-ux-pass2)
+
+Round-2 of the `/ui-ux-pro-max` polish pass. Built on the round-1 sidebar rebuild + mobile `My Work` route restore + trend-radar glyph swap.
+
+- **feat(ui): `SettingsSidebar` — sticky left rail (lg+) / horizontal chip strip (mobile) on the workspace Settings overview.** Mirrors the same scroll-spy contract as `WorkspaceTopTabs` on Brand Kit. Five nav items map 1:1 to the existing `<section id=...>` anchors (lifecycle / lead-times / defaults / approvals / meta-publishing), so `?wsBase#section` deep links keep working. New `src/components/workspace/settings-sidebar.tsx` + `tests/unit/workspace/settings-sidebar.test.tsx`.
+
+- **fix(ui): `/app/users` MemberList shows per-workspace role chips inline** (max 3 + `+N` overflow). Matches the workspace Team table's `Roles` column so the assignment context is visible on both surfaces without opening the edit drawer. The drawer wiring is unchanged.
+
+- **perf(media): `/app/media` default page size 48 → 24.** A 48-row page routinely pushed 48 concurrent signed-URL fetches at the Cloudflare edge on cold cache, producing the "images-not-loaded-until-I-open" reload-recovery pattern. Users can still widen with `?size=48` if they want a denser grid.
+
+- **feat(ui): wall-clock UTC build timestamp in the user avatar menu + Application Info card.** New `ARG APP_BUILD_AT` in the Dockerfile (CI stamps `--build-arg $(date -u +%Y-%m-%dT%H:%M:%SZ)` for both the app + migrator builds); new `APP_BUILD_AT` + `NEXT_PUBLIC_APP_BUILD_AT` env vars; `createBuildInfo` extended with `builtAt` / `builtAtLabel` (Intl-localised) / `detailsLabel`. Empty / malformed inputs collapse to `null` so the UI never renders `Invalid Date`. Both the desktop dropdown and the mobile sheet action show build time as the secondary row + environment as tertiary.
+
+- **feat(ui): mobile workspace section gets the Analytics link.** The desktop sidebar had it under the Channels group; the mobile menu's workspace section was missing it (only the URL-driven `isAnalyticsRoute` flag existed, used to hide the create-content FAB). Added a `BarChart3` MobileMenuLink to `/w/[slug]/analytics/social` so the surface is reachable from a phone.
+
+- **test: build-info + build-info-ui + settings-sidebar cases added.** All 414 files / 3689 tests pass. tsc + eslint clean on touched files.
+
+### 2026-09-25 — UI/UX round 3 (chore/ui-ux-pass3)
+
+Round-3 of the `/ui-ux-pro-max` polish pass. Built on the round-2 sidebar TOC + media page-size cap + build timestamp + mobile Analytics additions. The audit ran the `ui-ux-pro-max` skill against the current chrome (app shell, sidebar, mobile nav, topbar), workspace settings, global users page, media library, workspace team, agency settings, account, error boundaries, loading states, and the build-info surfaces. Picked the highest-impact fixes that respect the existing design system (44px touch targets, focus rings, bilingual catalog parity, semantic color tokens).
+
+- **fix(ui): `SettingsSidebar` no longer tears down its scroll-spy effect on every active-id flip.** The `setActiveId` setter is now stored in a ref so the scroll + `IntersectionObserver` effect depends only on `items`. The observer is also restricted to PROMOTE the active state (never demote), which kills the active-state jitter users saw when two sections were simultaneously visible. Added `px-2` to the mobile strip so the chips aren't hard-against the viewport edge (`src/components/workspace/settings-sidebar.tsx`).
+
+- **fix(ui): `/app/users` member rows stack on `<sm` and collapse action buttons into a dedicated group on wide viewports.** Previously the row used `flex-wrap` and the action buttons could end up mid-line on 360-414px phones; the new `flex-col sm:flex-row` + nested action group guarantees the buttons always live on a single row below the avatar+name block, then settle into a horizontal pill strip on tablet+. (`src/app/(app)/app/users/member-list.tsx`).
+
+- **fix(ui): workspace team pending invitations use a `Mail` icon instead of the literal `@` glyph.** The `@` was the only non-icon character rendered through `IconTile` in the app shell; replacing it with a lucide `Mail` keeps the stroke + weight consistent with every other member row. (`src/app/(app)/app/w/[slug]/team/page.tsx`).
+
+- **fix(ui): agency-settings service rows use `hover:bg-surface-subtle active:opacity-80` instead of `hover:opacity-80`.** Hover-opacity on text caused contrast flicker against the row separator; the new treatment keeps contrast stable and gives a tactile press state. (`src/app/(app)/app/agency-settings/page.tsx:502`).
+
+- **fix(ui): remove the redundant `sr-only` "Copy build information" suffix from both the user-menu dropdown item and the mobile sheet action.** The visible `Build <short-sha>` + environment + build-time label already names the row; the duplicated sr-only suffix produced a doubled screen-reader announcement. Tests updated to look up the row by its visible name. (`src/components/build-info/copy-build-info.tsx`, `tests/unit/build-info-ui.test.tsx`).
+
+- **fix(ui): `ApplicationInfoCard` grid label column widened from 7rem to 8rem** so the new "Built at" label fits without wrapping at common locale formats. (`src/components/build-info/application-info-card.tsx`).
+
+- **chore(refactor): drop the dead `void React` line in `sidebar.tsx`** left over from an earlier refactor. (`src/components/app-shell/sidebar.tsx:124`).
+
+- **test: `tests/unit/users/member-list.test.tsx` — new file, 5 cases.** Covers per-workspace role-chip overflow (`+N`), the responsive `flex-col sm:flex-row` class set on each row, the Edit / Deactivate / Reactivate aria-labels, and the empty-state path. All 414 test files / 3693 tests pass (`pnpm test:unit`). tsc clean.
+
+- **Companion**: `chore/ui-ux-pass2` (round 2) shipped the settings sidebar TOC, the media page-size cap (48→24), the build-timestamp in the user avatar menu + account card, and the mobile Analytics link. Both rounds share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity).
+
 ### 2026-09-22 — media Cloudflare-asset audit + refinement (chore/audit-cloudflare-assets)
 
 Follow-up audit after the three media-perf PRs landed (Tier 1 cache + fetchpriority, Tier 2 480px WebP preview variant, Tier 3 per-page R2 signed URLs). The audit traced every Cloudflare R2-backed read path, every cache header, and the full trash → expunge → hard-delete lifecycle. Four real issues shipped; one deferral recorded.

@@ -499,7 +499,7 @@ function Service({
     return (
       <Link
         href={href}
-        className="border-border focus-visible:ring-focus-ring flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border-b pb-3 last:border-0 last:pb-0 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
+        className="border-border focus-visible:ring-focus-ring flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border-b pb-3 transition-colors last:border-0 last:pb-0 hover:bg-surface-subtle focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 active:opacity-80"
         data-testid={testId}
       >
         {inner}
