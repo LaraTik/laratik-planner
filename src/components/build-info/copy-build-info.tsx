@@ -60,7 +60,7 @@ export function CopyBuildInfoButton({
 }
 
 export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
-  const { copied, copy, t } = useCopyBuildInfo(buildInfo);
+  const { copied, copy } = useCopyBuildInfo(buildInfo);
 
   return (
     <DropdownMenuItem
@@ -98,7 +98,7 @@ export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
 }
 
 export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }) {
-  const { copied, copy, t } = useCopyBuildInfo(buildInfo);
+  const { copied, copy } = useCopyBuildInfo(buildInfo);
 
   return (
     <button
