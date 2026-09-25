@@ -1,4 +1,4 @@
-import { GitCommitHorizontal, Server } from "lucide-react";
+import { Calendar, GitCommitHorizontal, Server } from "lucide-react";
 import type { BuildInfo } from "@/lib/build-info";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ export function ApplicationInfoCard({ buildInfo, t }: { buildInfo: BuildInfo; t:
     description: t("buildInfo.description"),
     build: t("buildInfo.build"),
     environment: t("buildInfo.environment"),
+    builtAt: t("buildInfo.builtAt"),
   };
 
   return (
@@ -33,6 +34,20 @@ export function ApplicationInfoCard({ buildInfo, t }: { buildInfo: BuildInfo; t:
         >
           {buildInfo.fullSha ?? buildInfo.displayLabel}
         </dd>
+        {buildInfo.builtAtLabel ? (
+          <>
+            <dt className="text-body text-fg-muted flex items-center gap-1.5">
+              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+              {copy.builtAt}
+            </dt>
+            <dd
+              className="border-border bg-surface-subtle text-fg-primary min-w-0 rounded-[var(--radius-control)] border px-3 py-2 text-[13px] leading-5 break-words"
+              data-testid="application-built-at"
+            >
+              {buildInfo.builtAtLabel}
+            </dd>
+          </>
+        ) : null}
         <dt className="text-body text-fg-muted flex items-center gap-1.5">
           <Server className="h-3.5 w-3.5" aria-hidden="true" />
           {copy.environment}

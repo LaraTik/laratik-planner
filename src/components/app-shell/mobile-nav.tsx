@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BarChart3,
   Bot,
   Briefcase,
   CalendarDays,
@@ -345,6 +346,19 @@ export function MobileNav({
                   icon={<Share2 />}
                   label={labelFor("channels", "Social channels")}
                   active={isActivePath(`${wsBase}/channels`, pathname)}
+                />
+                {/* Analytics (Social). The desktop sidebar has this in
+                    the Channels group; the mobile menu was missing it
+                    entirely (only the URL-driven `isAnalyticsRoute`
+                    check existed for hiding the create-content FAB).
+                    Surfacing it here matches the sidebar so the user
+                    can always reach the analytics surface from a
+                    phone. */}
+                <MobileMenuLink
+                  href={`${wsBase}/analytics/social`}
+                  icon={<BarChart3 />}
+                  label={labelFor("analytics", "Analytics")}
+                  active={isActivePath(`${wsBase}/analytics/social`, pathname, { exact: true })}
                 />
                 <MobileMenuLink
                   href={`${wsBase}/brand-kit`}

@@ -89,6 +89,7 @@ export default async function AccountPage() {
   const agency = agencyRows[0];
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
+    builtAt: serverEnv.APP_BUILD_AT,
     environment: serverEnv.NODE_ENV,
   });
 

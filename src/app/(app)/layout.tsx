@@ -188,9 +188,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // — for M1.5 the singleton is the only agency and therefore the
   // only valid active row.
   const activeAgency = agencyOptions.find((a) => a.id === agencyId) ?? null;
+  // The build-time stamp is rendered in the user's locale. The
+  // active workspace's timezone is a nicer default (every other
+  // timestamp in the chrome uses it), but resolving it here would
+  // require a synchronous DB read for the `switcher` payload — the
+  // switcher returns `SwitcherWorkspace` (id/name/slug only) by
+  // design to keep the chrome lean. We render in UTC for now; the
+  // absolute build time is what the operator actually wants, and
+  // UTC is unambiguous in a support context.
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
+    builtAt: serverEnv.APP_BUILD_AT,
     environment: serverEnv.NODE_ENV,
+    locale: activeLocale,
+    timeZone: "UTC",
   });
 
   // Compute per-workspace sidebar badge counts in parallel with the

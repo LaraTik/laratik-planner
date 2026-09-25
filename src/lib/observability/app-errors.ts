@@ -118,6 +118,7 @@ export async function captureAppError(input: CaptureAppErrorInput): Promise<void
     const requestId = getRequestId();
     const build = createBuildInfo({
       version: serverEnv.APP_VERSION,
+      builtAt: serverEnv.APP_BUILD_AT,
       environment: serverEnv.NODE_ENV,
     });
     // Persist the short SHA when we have one; otherwise leave the

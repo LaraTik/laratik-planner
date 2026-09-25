@@ -243,6 +243,7 @@ function buildInfoShortSha(): string {
     return (
       createBuildInfo({
         version: serverEnv.APP_VERSION,
+        builtAt: serverEnv.APP_BUILD_AT,
         environment: serverEnv.NODE_ENV,
       }).shortSha ?? "unknown"
     );
@@ -271,6 +272,7 @@ export async function GET() {
     (r2StorageStatus === "up" || r2StorageStatus === "disabled");
   const buildInfo = createBuildInfo({
     version: serverEnv.APP_VERSION,
+    builtAt: serverEnv.APP_BUILD_AT,
     environment: serverEnv.NODE_ENV,
   });
 

@@ -282,6 +282,7 @@ jobs:
         run: |
           docker buildx build \
             --build-arg APP_VERSION="$GITHUB_SHA" \
+            --build-arg "APP_BUILD_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --tag "laratik-planner:ci-${GITHUB_SHA}" \
             --tag "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner:latest \
@@ -300,6 +301,7 @@ jobs:
         run: |
           docker buildx build \
             --build-arg APP_VERSION="$GITHUB_SHA" \
+            --build-arg "APP_BUILD_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             --tag "laratik-planner-migrator:ci-${GITHUB_SHA}" \
             --tag "ghcr.io/laratik/laratik-planner-migrator:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner-migrator:latest \

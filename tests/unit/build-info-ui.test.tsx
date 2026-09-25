@@ -16,7 +16,21 @@ vi.mock("sonner", () => ({
 }));
 
 const SHA = "a1b2c3d4e5f678901234567890abcdef12345678";
+// 2026-09-25 round — `createBuildInfo` now takes an optional
+// `builtAt` stamp. Default fixtures leave it null (local dev) so the
+// existing assertions about the SHA + environment + copy text stay
+// authoritative.
 const buildInfo = createBuildInfo({ version: SHA, environment: "production" });
+// Separate fixture with a build stamp so we can assert the new "Built
+// at" row in `ApplicationInfoCard` + the new menu-row copy.
+const BUILT_AT = "2026-09-25T09:42:11Z";
+const stampedBuildInfo = createBuildInfo({
+  version: SHA,
+  builtAt: BUILT_AT,
+  environment: "production",
+  locale: "en-US",
+  timeZone: "UTC",
+});
 const t = tFor("en");
 
 describe("build information UI", () => {
@@ -40,6 +54,21 @@ describe("build information UI", () => {
     expect(toastSuccess).toHaveBeenCalledWith("Build information copied", { duration: 1500 });
   });
 
+  it("surfaces the build time in the account card when the stamp is known", () => {
+    render(<ApplicationInfoCard buildInfo={stampedBuildInfo} t={t} />);
+
+    expect(screen.getByTestId("application-build-sha")).toHaveTextContent(SHA);
+    expect(screen.getByTestId("application-built-at")).toBeVisible();
+    expect(screen.getByTestId("application-built-at").textContent ?? "").toMatch(/Sep.*2026/);
+    expect(screen.queryByText("Local build")).not.toBeInTheDocument();
+  });
+
+  it("hides the build time row when no stamp is available", () => {
+    render(<ApplicationInfoCard buildInfo={buildInfo} t={t} />);
+
+    expect(screen.queryByTestId("application-built-at")).not.toBeInTheDocument();
+  });
+
   it("renders the account card through the Arabic catalog when provided", () => {
     render(<ApplicationInfoCard buildInfo={buildInfo} t={tFor("ar")} />);
 
@@ -60,6 +89,18 @@ describe("build information UI", () => {
 
     await user.click(action);
     expect(writeText).toHaveBeenCalledWith(buildInfo.copyText);
+  });
+
+  it("renders the build time as the secondary row when stamped, with env as the third", () => {
+    render(<CopyBuildInfoSheetAction buildInfo={stampedBuildInfo} />);
+
+    const action = screen.getByRole("menuitem", { name: /copy build information/i });
+    expect(action).toHaveTextContent("Build a1b2c3d");
+    // Localised stamp + UTC: Sep 25, 2026, 09:42 (UTC) — the exact
+    // phrasing depends on Node's Intl, so we just assert the date is
+    // somewhere in the row + the environment is preserved.
+    expect(action.textContent ?? "").toMatch(/2026/);
+    expect(action).toHaveTextContent("Production");
   });
 
   it("keeps the action retryable when clipboard access fails", async () => {
