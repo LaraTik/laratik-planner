@@ -1,6 +1,7 @@
 {
   "title": "إعدادات مساحة العمل",
   "breadcrumb": "الإعدادات",
+  "sidebarAria": "أقسام الإعدادات",
   "browsePresets": "استعراض القوالب",
   "kpi": {
     "lifecycle": "دورة الحياة",

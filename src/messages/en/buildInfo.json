@@ -2,6 +2,7 @@
   "title": "Application information",
   "description": "Use these details when reporting a problem.",
   "build": "Build",
+  "builtAt": "Built at",
   "environment": "Environment",
   "copied": "Build information copied",
   "copy": "Copy build information",

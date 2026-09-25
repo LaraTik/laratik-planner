@@ -72,8 +72,16 @@ export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
       <span className="min-w-0 flex-1">
         <span className="block truncate">{buildInfo.displayLabel}</span>
         <span className="text-label text-fg-muted block font-normal">
-          {buildInfo.environmentLabel}
+          {buildInfo.builtAtLabel ?? buildInfo.environmentLabel}
         </span>
+        {buildInfo.builtAtLabel ? (
+          <span
+            className="text-label text-fg-muted block truncate font-normal"
+            data-testid="copy-build-info-menuitem-env"
+          >
+            {buildInfo.environmentLabel}
+          </span>
+        ) : null}
       </span>
       {copied ? (
         <Check className="text-success h-4 w-4 shrink-0" aria-hidden="true" />
@@ -101,7 +109,17 @@ export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }
         <span className="text-body text-fg-primary block truncate font-semibold">
           {buildInfo.displayLabel}
         </span>
-        <span className="text-label text-fg-muted block">{buildInfo.environmentLabel}</span>
+        <span className="text-label text-fg-muted block truncate">
+          {buildInfo.builtAtLabel ?? buildInfo.environmentLabel}
+        </span>
+        {buildInfo.builtAtLabel ? (
+          <span
+            className="text-label text-fg-muted block truncate"
+            data-testid="copy-build-info-sheet-action-env"
+          >
+            {buildInfo.environmentLabel}
+          </span>
+        ) : null}
       </span>
       {copied ? (
         <Check className="text-success h-4 w-4 shrink-0" aria-hidden="true" />

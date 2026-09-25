@@ -92,9 +92,22 @@ export function MemberList({
           {members.map((m) => {
             const active = m.status === "active";
             const canEdit = active; // deactivated members are not editable here
+            // Per-workspace role chips so the user can see at a
+            // glance which workspaces a member is in. Mirrors the
+            // `Roles` column on the workspace Team page so the two
+            // surfaces look consistent.
+            const memberRoles = rolesByUser[m.id] ?? {};
+            const assignedWorkspaceIds = Object.keys(memberRoles).filter((wid) => {
+              const list = memberRoles[wid];
+              return Array.isArray(list) && list.length > 0;
+            });
             return (
-              <li key={m.id} className="text-body flex items-center gap-3 py-3">
-                <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 items-center justify-center rounded-full font-semibold">
+              <li
+                key={m.id}
+                className="text-body flex flex-wrap items-center gap-3 py-3"
+                data-testid={`users-member-row-${m.id}`}
+              >
+                <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-semibold">
                   {m.name.charAt(0).toUpperCase()}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -102,6 +115,35 @@ export function MemberList({
                   <p className="text-label text-fg-muted truncate">
                     {m.email} · {t("users.memberList.joined", { date: m.joinedAt })}
                   </p>
+                  {assignedWorkspaceIds.length > 0 ? (
+                    <ul
+                      className="mt-1 flex flex-wrap items-center gap-1"
+                      data-testid={`users-member-roles-${m.id}`}
+                    >
+                      {assignedWorkspaceIds.slice(0, 3).map((wid) => {
+                        const wsName = workspaces.find((w) => w.id === wid)?.name ?? "";
+                        const roles = memberRoles[wid] ?? [];
+                        return (
+                          <li key={wid} className="contents">
+                            <Badge
+                              variant="info"
+                              className="font-normal"
+                              title={wsName ? `${wsName}: ${roles.join(", ")}` : roles.join(", ")}
+                            >
+                              <span className="truncate">
+                                {wsName ? `${wsName}: ${roles.join(", ")}` : roles.join(", ")}
+                              </span>
+                            </Badge>
+                          </li>
+                        );
+                      })}
+                      {assignedWorkspaceIds.length > 3 ? (
+                        <Badge variant="default" className="font-normal">
+                          +{assignedWorkspaceIds.length - 3}
+                        </Badge>
+                      ) : null}
+                    </ul>
+                  ) : null}
                 </div>
                 {m.isAgencyAdmin ? (
                   <Badge variant="primary">{t("users.memberList.admin")}</Badge>

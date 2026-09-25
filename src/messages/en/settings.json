@@ -1,6 +1,7 @@
 {
   "title": "Workspace settings",
   "breadcrumb": "Settings",
+  "sidebarAria": "Settings sections",
   "browsePresets": "Browse presets",
   "kpi": {
     "lifecycle": "Lifecycle",

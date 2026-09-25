@@ -57,6 +57,13 @@ const clientSchema = z.object({
   // without a round-trip. Empty when the server env is empty
   // (the report falls back to "local build" in that case).
   NEXT_PUBLIC_APP_VERSION: stringOrEmpty,
+  // 2026-09-25 — the user avatar menu surfaces the wall-clock UTC
+  // time of the deploy so an operator can confirm the user is on
+  // the expected build at a glance. Stamped at image build time
+  // (see `Dockerfile` ARG APP_BUILD_AT) and mirrored as `NEXT_PUBLIC_`
+  // for the client copy. Optional — falls back to "Local build" when
+  // the env is empty (dev, CI without the arg, etc.).
+  NEXT_PUBLIC_APP_BUILD_AT: stringOrEmpty,
 });
 
 const _clientParsed = clientSchema.safeParse({
@@ -64,6 +71,7 @@ const _clientParsed = clientSchema.safeParse({
   NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
   NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
   NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION,
+  NEXT_PUBLIC_APP_BUILD_AT: process.env.NEXT_PUBLIC_APP_BUILD_AT,
 });
 
 if (!_clientParsed.success) {
@@ -82,6 +90,11 @@ const serverSchema = z.object({
   // Immutable Git commit SHA injected by the Docker build. This is
   // operational metadata, not a secret or an operator-managed setting.
   APP_VERSION: stringOrEmpty,
+  // 2026-09-25 — ISO 8601 UTC wall-clock stamp injected at image
+  // build time (`ARG APP_BUILD_AT` in `Dockerfile`). Lets the user
+  // menu + health endpoint report WHEN the deployed image was built,
+  // not just the SHA it was built from. Optional; empty in local dev.
+  APP_BUILD_AT: stringOrEmpty,
 
   // Database
   DATABASE_URL: optionalInDev(z.string().url()),

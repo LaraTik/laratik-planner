@@ -94,7 +94,12 @@ export default async function AgencyMediaPage({
     includeTrashed: filters.trash === "1",
     sort,
     page,
-    pageSize: 48,
+    // Cap the agency-wide media page at 24 to keep the initial paint
+    // under ~25 preview fetches (the signed-URL Cloudflare pipeline
+    // is bandwidth-bound, and a 48-row page routinely produced bursts
+    // of 401/proxy-redirect retries on a cold cache). Users can still
+    // widen the page with `?size=48` if they want a denser grid.
+    pageSize: 24,
   });
   const storageSummary = await getAgencyStorageSummary(context.agencyId);
   const writable = await Promise.all(
