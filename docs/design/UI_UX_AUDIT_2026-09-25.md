@@ -23,43 +23,43 @@ followed in a single commit on `chore/ui-ux-pass3`.
 
 ### SettingsSidebar (new component from round 2)
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 1 | **P1** | The scroll + IntersectionObserver effect depended on `activeId`, so every active-id flip tore down + re-attached the observer and scroll listener — visible as flicker on long pages. | Store `setActiveId` in a ref; depend only on `items`. |
-| 2 | **P1** | The IntersectionObserver could demote the active section when two sections were visible at once, producing active-state jitter. | Restrict the observer to PROMOTE; the scroll heuristic owns demotion. |
-| 3 | **P2** | The mobile chip strip had no horizontal padding, so the first / last chip sat hard against the viewport edge. | Add `px-2` to the mobile `<ul>` (collapses to `lg:px-0`). |
+| #   | Severity | Issue                                                                                                                                                                                 | Fix                                                                   |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| 1   | **P1**   | The scroll + IntersectionObserver effect depended on `activeId`, so every active-id flip tore down + re-attached the observer and scroll listener — visible as flicker on long pages. | Store `setActiveId` in a ref; depend only on `items`.                 |
+| 2   | **P1**   | The IntersectionObserver could demote the active section when two sections were visible at once, producing active-state jitter.                                                       | Restrict the observer to PROMOTE; the scroll heuristic owns demotion. |
+| 3   | **P2**   | The mobile chip strip had no horizontal padding, so the first / last chip sat hard against the viewport edge.                                                                         | Add `px-2` to the mobile `<ul>` (collapses to `lg:px-0`).             |
 
 ### MemberList (`/app/users`)
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 4 | **P1** | The row used `flex-wrap`, so on 360-414px phones the Edit / Deactivate buttons ended up mid-line, sometimes wrapping awkwardly under the email. | Restructure to `flex-col sm:flex-row` + a dedicated action group. |
-| 5 | **P1** | Action buttons (Edit / Deactivate / Reactivate) were spread across the row rather than grouped — wide rows had three separate tap targets intermingled with the avatar/info. | Wrap the action cluster in a single `<div>` so it reads as a unit on wide screens and as a horizontal pill on narrow. |
+| #   | Severity | Issue                                                                                                                                                                        | Fix                                                                                                                   |
+| --- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 4   | **P1**   | The row used `flex-wrap`, so on 360-414px phones the Edit / Deactivate buttons ended up mid-line, sometimes wrapping awkwardly under the email.                              | Restructure to `flex-col sm:flex-row` + a dedicated action group.                                                     |
+| 5   | **P1**   | Action buttons (Edit / Deactivate / Reactivate) were spread across the row rather than grouped — wide rows had three separate tap targets intermingled with the avatar/info. | Wrap the action cluster in a single `<div>` so it reads as a unit on wide screens and as a horizontal pill on narrow. |
 
 ### Workspace team page (`/app/w/[slug]/team`)
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 6 | **P2** | Pending invitations rendered a literal `@` glyph inside `IconTile` — the only non-icon character going through the icon primitive. | Replace with a lucide `Mail` icon so the row matches the visual language of every other member row. |
+| #   | Severity | Issue                                                                                                                              | Fix                                                                                                 |
+| --- | -------- | ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 6   | **P2**   | Pending invitations rendered a literal `@` glyph inside `IconTile` — the only non-icon character going through the icon primitive. | Replace with a lucide `Mail` icon so the row matches the visual language of every other member row. |
 
 ### Agency settings page
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 7 | **P2** | Service rows used `hover:opacity-80` for the row press state. Opacity on text + border caused contrast flicker against the row separator. | Switch to `hover:bg-surface-subtle active:opacity-80` so contrast stays stable and the press feels tactile. |
+| #   | Severity | Issue                                                                                                                                     | Fix                                                                                                         |
+| --- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 7   | **P2**   | Service rows used `hover:opacity-80` for the row press state. Opacity on text + border caused contrast flicker against the row separator. | Switch to `hover:bg-surface-subtle active:opacity-80` so contrast stays stable and the press feels tactile. |
 
 ### Build-info surfaces
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 8 | **P2** | The user-menu dropdown item + mobile sheet action appended a `sr-only` "Copy build information" suffix to the visible `Build <short-sha>` row. The visible label already names the row; the suffix doubled the screen-reader announcement. | Remove the `sr-only` suffix from both variants. Update the lookup in `build-info-ui.test.tsx` to find the row by its visible name. |
-| 9 | **P2** | `ApplicationInfoCard` grid used a `7rem` label column. The new "Built at" label wrapped on common locale formats. | Widen to `8rem`. |
+| #   | Severity | Issue                                                                                                                                                                                                                                      | Fix                                                                                                                                |
+| --- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 8   | **P2**   | The user-menu dropdown item + mobile sheet action appended a `sr-only` "Copy build information" suffix to the visible `Build <short-sha>` row. The visible label already names the row; the suffix doubled the screen-reader announcement. | Remove the `sr-only` suffix from both variants. Update the lookup in `build-info-ui.test.tsx` to find the row by its visible name. |
+| 9   | **P2**   | `ApplicationInfoCard` grid used a `7rem` label column. The new "Built at" label wrapped on common locale formats.                                                                                                                          | Widen to `8rem`.                                                                                                                   |
 
 ### App sidebar
 
-| # | Severity | Issue | Fix |
-|---|----------|-------|-----|
-| 10 | **P3** | `void React;` dead line in `sidebar.tsx`. | Remove. |
+| #   | Severity | Issue                                     | Fix     |
+| --- | -------- | ----------------------------------------- | ------- |
+| 10  | **P3**   | `void React;` dead line in `sidebar.tsx`. | Remove. |
 
 ## Out of scope (deferred)
 

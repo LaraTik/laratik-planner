@@ -126,11 +126,7 @@ export function SettingsSidebar({
         if (!allowDemote) {
           const prevIdx = sectionOrder.get(prev);
           const nextIdx = sectionOrder.get(nextId);
-          if (
-            typeof prevIdx === "number" &&
-            typeof nextIdx === "number" &&
-            nextIdx < prevIdx
-          ) {
+          if (typeof prevIdx === "number" && typeof nextIdx === "number" && nextIdx < prevIdx) {
             return prev;
           }
         }
@@ -203,10 +199,7 @@ export function SettingsSidebar({
         {items.map((item) => {
           const isActive = item.id === activeId;
           return (
-            <li
-              key={item.id}
-              className={cn(isStack ? "" : "shrink-0 lg:shrink lg:grow-0")}
-            >
+            <li key={item.id} className={cn(isStack ? "" : "shrink-0 lg:shrink lg:grow-0")}>
               <a
                 href={`#${item.id}`}
                 aria-current={isActive ? "true" : undefined}

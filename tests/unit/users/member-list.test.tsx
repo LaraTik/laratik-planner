@@ -6,10 +6,8 @@ vi.mock("@/components/i18n/locale-provider", () => ({
   useLocaleT: () => (key: string, params?: Record<string, string | number>) => {
     if (key === "users.memberList.joined") return `Joined ${params?.date}`;
     if (key === "users.memberList.editAria") return `Edit ${params?.name}`;
-    if (key === "users.memberList.deactivateAria")
-      return `Deactivate ${params?.name}`;
-    if (key === "users.memberList.reactivateAria")
-      return `Reactivate ${params?.name}`;
+    if (key === "users.memberList.deactivateAria") return `Deactivate ${params?.name}`;
+    if (key === "users.memberList.reactivateAria") return `Reactivate ${params?.name}`;
     return key;
   },
 }));
