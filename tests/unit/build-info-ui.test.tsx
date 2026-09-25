@@ -83,7 +83,11 @@ describe("build information UI", () => {
     const writeText = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue();
     render(<CopyBuildInfoSheetAction buildInfo={buildInfo} />);
 
-    const action = screen.getByRole("menuitem", { name: /copy build information/i });
+    // The accessible name is the visible "Build a1b2c3d" label, not
+    // a redundant "Copy build information" suffix (removed in the
+    // round-3 audit; the old sr-only produced a doubled AT
+    // announcement).
+    const action = screen.getByRole("menuitem", { name: /build a1b2c3d/i });
     expect(action).toHaveTextContent("Build a1b2c3d");
     expect(action).toHaveTextContent("Production");
 
@@ -94,7 +98,7 @@ describe("build information UI", () => {
   it("renders the build time as the secondary row when stamped, with env as the third", () => {
     render(<CopyBuildInfoSheetAction buildInfo={stampedBuildInfo} />);
 
-    const action = screen.getByRole("menuitem", { name: /copy build information/i });
+    const action = screen.getByRole("menuitem", { name: /build a1b2c3d/i });
     expect(action).toHaveTextContent("Build a1b2c3d");
     // Localised stamp + UTC: Sep 25, 2026, 09:42 (UTC) — the exact
     // phrasing depends on Node's Intl, so we just assert the date is

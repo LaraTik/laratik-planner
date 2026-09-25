@@ -104,7 +104,7 @@ export function MemberList({
             return (
               <li
                 key={m.id}
-                className="text-body flex flex-wrap items-center gap-3 py-3"
+                className="text-body flex flex-col gap-3 py-3 sm:flex-row sm:flex-wrap sm:items-center"
                 data-testid={`users-member-row-${m.id}`}
               >
                 <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-semibold">
@@ -145,52 +145,58 @@ export function MemberList({
                     </ul>
                   ) : null}
                 </div>
-                {m.isAgencyAdmin ? (
-                  <Badge variant="primary">{t("users.memberList.admin")}</Badge>
-                ) : null}
-                <Badge variant={active ? "success" : "default"}>
-                  {active ? t("users.memberList.active") : t("users.memberList.deactivated")}
-                </Badge>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending || !canEdit}
-                  onClick={() => setEditing(m)}
-                  aria-label={t("users.memberList.editAria", { name: m.name })}
-                  data-testid={`users-member-edit-${m.id}`}
-                >
-                  <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                  {t("users.memberList.edit")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  disabled={pending}
-                  onClick={() => {
-                    start(async () => {
-                      setError(null);
-                      const result = await toggleDeactivationAction(m.id, active);
-                      if ("error" in result && result.error) setError(result.error);
-                    });
-                  }}
-                  aria-label={
-                    active
-                      ? t("users.memberList.deactivateAria", { name: m.name })
-                      : t("users.memberList.reactivateAria", { name: m.name })
-                  }
-                >
-                  {active ? (
-                    <>
-                      <UserX className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t("users.memberList.deactivate")}
-                    </>
-                  ) : (
-                    <>
-                      <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t("users.memberList.reactivate")}
-                    </>
-                  )}
-                </Button>
+                {/* Status pills + action buttons collapse below the
+                    member info on narrow viewports (`sm:flex-row`).
+                    On wide viewports the row stays a horizontal pill
+                    strip aligned to the right. */}
+                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                  {m.isAgencyAdmin ? (
+                    <Badge variant="primary">{t("users.memberList.admin")}</Badge>
+                  ) : null}
+                  <Badge variant={active ? "success" : "default"}>
+                    {active ? t("users.memberList.active") : t("users.memberList.deactivated")}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending || !canEdit}
+                    onClick={() => setEditing(m)}
+                    aria-label={t("users.memberList.editAria", { name: m.name })}
+                    data-testid={`users-member-edit-${m.id}`}
+                  >
+                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                    {t("users.memberList.edit")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => {
+                      start(async () => {
+                        setError(null);
+                        const result = await toggleDeactivationAction(m.id, active);
+                        if ("error" in result && result.error) setError(result.error);
+                      });
+                    }}
+                    aria-label={
+                      active
+                        ? t("users.memberList.deactivateAria", { name: m.name })
+                        : t("users.memberList.reactivateAria", { name: m.name })
+                    }
+                  >
+                    {active ? (
+                      <>
+                        <UserX className="h-3.5 w-3.5" aria-hidden="true" />
+                        {t("users.memberList.deactivate")}
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                        {t("users.memberList.reactivate")}
+                      </>
+                    )}
+                  </Button>
+                </div>
               </li>
             );
           })}

@@ -88,7 +88,11 @@ export function CopyBuildInfoMenuItem({ buildInfo }: { buildInfo: BuildInfo }) {
       ) : (
         <Copy className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="sr-only">{t("buildInfo.copy")}</span>
+      {/* Accessible name: the visible `Build a1b2c3d` + environment
+          label already names the row. The redundant sr-only "Copy
+          build information" suffix produced a doubled announcement
+          (the copy button's accessible name + the trigger's
+          visible label). */}
     </DropdownMenuItem>
   );
 }
@@ -126,7 +130,8 @@ export function CopyBuildInfoSheetAction({ buildInfo }: { buildInfo: BuildInfo }
       ) : (
         <Copy className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
       )}
-      <span className="sr-only">{t("buildInfo.copy")}</span>
+      {/* See DropdownMenu counterpart above — the visible row text
+          already provides the accessible name. */}
     </button>
   );
 }

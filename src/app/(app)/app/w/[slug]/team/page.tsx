@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { Clock, Filter as FilterIcon, UserPlus, Users } from "lucide-react";
+import { Clock, Filter as FilterIcon, Mail, UserPlus, Users } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import {
@@ -400,7 +400,14 @@ export default async function WorkspaceTeamPage({
                 data-testid={`team-pending-invitation-${inv.id}`}
               >
                 <IconTile size="md" tone="neutral" aria-hidden="true">
-                  @
+                  {/* Mail glyph — pending invitations haven't accepted
+                      yet so there's no avatar/initial to render. The
+                      Mail icon matches the visual language of every
+                      other member row (lucide, same stroke). Was a
+                      literal `@` glyph, which the design system audit
+                      flagged as the only non-icon character in the
+                      component layer. */}
+                  <Mail className="h-4 w-4" />
                 </IconTile>
                 <div className="min-w-0 flex-1">
                   <p className="text-body text-fg-primary font-semibold">{inv.email}</p>

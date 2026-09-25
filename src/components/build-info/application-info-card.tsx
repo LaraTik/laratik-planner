@@ -23,7 +23,7 @@ export function ApplicationInfoCard({ buildInfo, t }: { buildInfo: BuildInfo; t:
       </CardTitle>
       <p className="text-body text-fg-muted mb-5">{copy.description}</p>
 
-      <dl className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-[7rem_minmax(0,1fr)] sm:items-start">
+      <dl className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:items-start">
         <dt className="text-body text-fg-muted flex items-center gap-1.5">
           <GitCommitHorizontal className="h-3.5 w-3.5" aria-hidden="true" />
           {copy.build}

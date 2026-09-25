@@ -35,8 +35,14 @@ import { cn } from "@/lib/utils";
  *   - On scroll, the section whose top has crossed ~30% of the
  *     viewport height is marked active (rAF-throttled to avoid
  *     layout thrash). An `IntersectionObserver` runs in parallel as
- *     a tie-breaker when the section is short enough that the
- *     scroll heuristic alone is unreliable.
+ *     a *confirm* (not a primary source) — it can only promote the
+ *     scroll heuristic to a more visible section, never demote it,
+ *     which kills the active-state jitter users saw when two
+ *     sections were simultaneously visible.
+ *   - The scroll + observer effect depends ONLY on `items`. The
+ *     `setActiveId` setter is stored in a ref so the effect doesn't
+ *     tear down + re-bind every time the active id changes (the
+ *     bug class the round-3 audit caught).
  */
 export interface SettingsSectionNavItem {
   id: string;
@@ -72,6 +78,18 @@ export function SettingsSidebar({
 }: SettingsSidebarProps) {
   const [activeId, setActiveId] = React.useState<string>(() => initialActiveId(items));
 
+  // Stash the latest setter in a ref so the scroll + observer effect
+  // can read it without depending on it. This prevents the effect
+  // from tearing down + re-binding on every active-id flip.
+  // Without this, every time the user scrolled past a section
+  // boundary, the IntersectionObserver disconnected, the scroll
+  // listener was removed, and a fresh observer was attached — which
+  // manifested as a visible active-state flicker on long pages.
+  const setActiveIdRef = React.useRef(setActiveId);
+  React.useEffect(() => {
+    setActiveIdRef.current = setActiveId;
+  }, [setActiveId]);
+
   React.useEffect(() => {
     function onHashChange() {
       const next = window.location.hash.replace(/^#/, "");
@@ -92,10 +110,34 @@ export function SettingsSidebar({
 
     if (sections.length === 0) return;
 
-    // Tie-breaker: when two sections are visible at once (long
-    // viewports + short sections), the IntersectionObserver picks
-    // the most-visible one. Otherwise the scroll-position heuristic
-    // is enough.
+    // The scroll heuristic owns the active state. The
+    // IntersectionObserver only fires when its candidate is
+    // strictly *later* in the document order than the current
+    // activeId — so it can PROMOTE the active state when the user
+    // scrolls quickly, but never demote it (the demote case is
+    // what produced the jitter).
+    const sectionOrder = new Map<string, number>();
+    sections.forEach((s, idx) => sectionOrder.set(s.id, idx));
+
+    const updateActive = (nextId: string, allowDemote: boolean) => {
+      const setter = setActiveIdRef.current;
+      setter((prev) => {
+        if (prev === nextId) return prev;
+        if (!allowDemote) {
+          const prevIdx = sectionOrder.get(prev);
+          const nextIdx = sectionOrder.get(nextId);
+          if (
+            typeof prevIdx === "number" &&
+            typeof nextIdx === "number" &&
+            nextIdx < prevIdx
+          ) {
+            return prev;
+          }
+        }
+        return nextId;
+      });
+    };
+
     let observer: IntersectionObserver | null = null;
     if (typeof IntersectionObserver !== "undefined") {
       observer = new IntersectionObserver(
@@ -103,7 +145,7 @@ export function SettingsSidebar({
           const visible = entries
             .filter((e) => e.isIntersecting)
             .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-          if (visible[0]) setActiveId(visible[0].target.id);
+          if (visible[0]) updateActive(visible[0].target.id, false);
         },
         { rootMargin: "-30% 0px -50% 0px", threshold: [0, 0.25, 0.5, 0.75, 1] },
       );
@@ -125,7 +167,7 @@ export function SettingsSidebar({
             break;
           }
         }
-        if (current && current !== activeId) setActiveId(current);
+        if (current) updateActive(current, true);
       });
     }
     onScroll();
@@ -135,7 +177,7 @@ export function SettingsSidebar({
       if (rafId !== null) window.cancelAnimationFrame(rafId);
       observer?.disconnect();
     };
-  }, [items, activeId]);
+  }, [items]);
 
   const isStack = variant === "stack";
 
@@ -155,13 +197,16 @@ export function SettingsSidebar({
         className={cn(
           isStack
             ? "flex flex-col gap-1"
-            : "flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible",
+            : "flex gap-1 overflow-x-auto px-2 lg:flex-col lg:overflow-visible lg:px-0",
         )}
       >
         {items.map((item) => {
           const isActive = item.id === activeId;
           return (
-            <li key={item.id} className={cn(isStack ? "" : "shrink-0 lg:shrink lg:grow-0")}>
+            <li
+              key={item.id}
+              className={cn(isStack ? "" : "shrink-0 lg:shrink lg:grow-0")}
+            >
               <a
                 href={`#${item.id}`}
                 aria-current={isActive ? "true" : undefined}
