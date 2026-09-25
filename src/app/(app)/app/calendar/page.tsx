@@ -120,20 +120,28 @@ export default async function GlobalCalendarPage({
     : undefined;
   // The showPlans / showTasks checkboxes are paired with a hidden
   // `<input value="false">` so the form always carries an explicit
-  // value. We read the array (Next.js searchParams can be
-  // `string | string[]`) and resolve with "true wins" — a checked
-  // checkbox submits `["false", "true"]`, an unchecked one submits
-  // `["false"]`. The "first wins" fallback that was here before
-  // (and the implicit default-true when the param was absent) made
-  // unchecking the box a silent no-op.
+  // value when the user submits. We read the array (Next.js
+  // searchParams can be `string | string[]`) and resolve with
+  // "true wins" — a checked checkbox submits `["false", "true"]`,
+  // an unchecked one submits `["false"]`.
+  //
+  // IMPORTANT: a fresh visit (no query string at all, no form
+  // submission yet) delivers `undefined` here, NOT `["false"]`.
+  // The hidden input only goes on the wire when the form is
+  // submitted. So `undefined` must mean "default to true" — both
+  // the previous `!== "false"` form and the current
+  // `.includes("true")` form assumed the value would always be
+  // present; the current one regressed because `undefined.includes
+  // ...` short-circuits to `false` and silently hid every event on
+  // a cold visit.
   const showPlansValues = requestedParams.showPlans
     ? ([] as string[]).concat(requestedParams.showPlans)
     : [];
   const showTasksValues = requestedParams.showTasks
     ? ([] as string[]).concat(requestedParams.showTasks)
     : [];
-  const showPlans = showPlansValues.includes("true");
-  const showTasks = showTasksValues.includes("true");
+  const showPlans = showPlansValues.length === 0 ? true : showPlansValues.includes("true");
+  const showTasks = showTasksValues.length === 0 ? true : showTasksValues.includes("true");
   const [agencyTimezone, members, workspaces] = await Promise.all([
     getAgencyTimezone(actor, context.agencyId),
     listAgencyMembers(context.agencyId),
