@@ -91,8 +91,12 @@ export default async function GlobalCalendarPage({
     workspaceId?: string;
     assigneeId?: string;
     taskStatus?: string;
-    showPlans?: string;
-    showTasks?: string;
+    // The hidden-input + checkbox pair below sends the same name
+    // twice when the box is checked, so Next.js delivers these as
+    // `string[]`. We use `[].concat(value)` to normalise both
+    // single-value and array shapes before reading.
+    showPlans?: string | string[];
+    showTasks?: string | string[];
   }>;
 }) {
   const { t, code } = await tForActive();
@@ -114,8 +118,22 @@ export default async function GlobalCalendarPage({
   const taskStatus = TASK_STATUSES.includes(requestedParams.taskStatus as TaskStatus)
     ? (requestedParams.taskStatus as TaskStatus)
     : undefined;
-  const showPlans = requestedParams.showPlans !== "false";
-  const showTasks = requestedParams.showTasks !== "false";
+  // The showPlans / showTasks checkboxes are paired with a hidden
+  // `<input value="false">` so the form always carries an explicit
+  // value. We read the array (Next.js searchParams can be
+  // `string | string[]`) and resolve with "true wins" — a checked
+  // checkbox submits `["false", "true"]`, an unchecked one submits
+  // `["false"]`. The "first wins" fallback that was here before
+  // (and the implicit default-true when the param was absent) made
+  // unchecking the box a silent no-op.
+  const showPlansValues = requestedParams.showPlans
+    ? ([] as string[]).concat(requestedParams.showPlans)
+    : [];
+  const showTasksValues = requestedParams.showTasks
+    ? ([] as string[]).concat(requestedParams.showTasks)
+    : [];
+  const showPlans = showPlansValues.includes("true");
+  const showTasks = showTasksValues.includes("true");
   const [agencyTimezone, members, workspaces] = await Promise.all([
     getAgencyTimezone(actor, context.agencyId),
     listAgencyMembers(context.agencyId),
@@ -150,6 +168,13 @@ export default async function GlobalCalendarPage({
     if (!showTasks) params.set("showTasks", "false");
     return `?${params.toString()}`;
   };
+  // Bare URL with no filter params — the "Clear filters" link
+  // must NOT round-trip the active filters or the action is a
+  // no-op. The round-4 audit found `Clear filters` was wired to
+  // `queryFor(selectedMonth)`, which kept every active filter in
+  // the URL (workspaceId / assigneeId / taskStatus / showPlans /
+  // showTasks), making the link functionally a refresh.
+  const monthOnlyHref = `?month=${selectedMonth}`;
   const monthHref = (offset: number) => {
     const date = new Date(year, month + offset, 1);
     return queryFor(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
@@ -224,7 +249,7 @@ export default async function GlobalCalendarPage({
           </div>
           {hasFilters ? (
             <Link
-              href={queryFor(selectedMonth)}
+              href={monthOnlyHref}
               className="text-body text-primary font-semibold underline-offset-4 hover:underline"
             >
               {t("calendar.globalClearFilters")}
@@ -283,10 +308,20 @@ export default async function GlobalCalendarPage({
           </FormField>
           <fieldset className="border-border flex min-h-11 flex-wrap items-center gap-x-4 gap-y-2 rounded-[var(--radius-control)] border px-3 py-2 sm:col-span-2 lg:col-span-3">
             <legend className="text-label text-fg-muted px-1">{t("calendar.globalShow")}</legend>
+            {/* Hidden inputs guarantee the boolean ALWAYS submits
+                regardless of checkbox state. Without them, an
+                unchecked checkbox is omitted from the form payload
+                and the server falls back to its default (true), so
+                unchecking "Show plans" / "Show tasks" was a silent
+                no-op. The pair (`hidden=false` + `checkbox=true`)
+                resolves to `getAll("...").includes("true")` on the
+                server when the checkbox is checked, and `["false"]`
+                when it is not. */}
             <label
               htmlFor="calendar-show-plans"
               className="text-body text-fg-primary inline-flex min-h-8 cursor-pointer items-center gap-2"
             >
+              <input type="hidden" name="showPlans" value="false" />
               <Checkbox
                 id="calendar-show-plans"
                 name="showPlans"
@@ -299,6 +334,7 @@ export default async function GlobalCalendarPage({
               htmlFor="calendar-show-tasks"
               className="text-body text-fg-primary inline-flex min-h-8 cursor-pointer items-center gap-2"
             >
+              <input type="hidden" name="showTasks" value="false" />
               <Checkbox
                 id="calendar-show-tasks"
                 name="showTasks"
