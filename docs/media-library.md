@@ -73,14 +73,24 @@ single-file link contract stay unchanged.
   shifted twice: pre-2024 Drive wrapped each row as `[id, name, mime, …]`,
   post-2024 Drive wraps it as `[null, "<id>"], null, null, null, "<mime>", …`.
   `parseDriveFolderHtml` runs three independent passes (modern AF → legacy
-  AF → data-id + aria-label scrape) and merges by file id, so a folder
-  page always yields the maximum available metadata. When Drive lists a
-  file as `application/octet-stream` (common for mobile uploads or
-  renamed files), the parser falls back to the filename extension via
-  `contentTypeFromFilename` so the kind badge is correct; the import path
-  still validates the real bytes via `validateMediaSignature`. Per-row
-  size is sourced from the `Size: … MB` aria-label when present (EU
-  comma + US dot number formats both supported).
+  AF → data-id + aria-label + data-tooltip scrape) and merges by file id,
+  so a folder page always yields the maximum available metadata. When
+  Drive lists a file as `application/octet-stream` (common for mobile
+  uploads or renamed files), the parser falls back to the filename
+  extension via `contentTypeFromFilename` so the kind badge is correct;
+  the import path still validates the real bytes via
+  `validateMediaSignature`.
+- **Row boundary uses the next DIFFERENT file id, not the next data-id
+  match.** Modern Drive renders every row with ~3 `data-id="..."`
+  attributes (one on `<tr>`, one on the icon `<div>`, one on the cell
+  wrapper), so the upper bound for a row's metadata search is the
+  position of the next match with a different file id. The filename
+  comes from the row's `data-tooltip="<name> <type>"` attribute (with
+  trailing chrome tokens stripped via `cleanRowLabel`), the size comes
+  from the row's `aria-label="Size: <n> MB"` in a separate cell, and
+  the mime comes from the modern AF block. Per-row size is sourced from
+  the `Size: … MB` aria-label when present (EU comma + US dot number
+  formats both supported).
 - **Per-item import.** The server fans out across four workers and
   reuses `importPublicMediaAsset` per file, so every item lands through
   the existing storage-intent, signature, and quarantine paths. No new

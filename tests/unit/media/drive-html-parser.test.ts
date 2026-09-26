@@ -61,13 +61,15 @@ describe("parseDriveFolderHtml", () => {
     expect(names).toEqual(sorted);
   });
 
-  it('parses the modern Drive HTML shape ([null,"<id>"], null, null, null, "<mime>") and merges markup names', () => {
+  it('parses the modern Drive HTML shape ([null,"<id>"], null, null, null, "<mime>") and merges markup names + sizes', () => {
     const html = readFixture("modern-folder.html");
     const { items, warnings } = parseDriveFolderHtml(html);
 
     // Modern fixture has 4 importable files: 1-1.png, 2-1.png, 3-1.mp4, 4-1.pdf
-    // The mime for each is sourced from AF_initDataCallback; the name from
-    // the data-id + aria-label scrape.
+    // The mime for each is sourced from AF_initDataCallback; the name
+    // comes from the row's `data-tooltip` (with the trailing `<type>`
+    // token stripped); the size comes from the row's `aria-label="Size:
+    // … MB"`. This is the same structure Drive renders today.
     expect(items.map((i) => i.name).sort()).toEqual(["1-1.png", "2-1.png", "3-1.mp4", "4-1.pdf"]);
 
     const byId = new Map(items.map((i) => [i.id, i]));
@@ -76,11 +78,68 @@ describe("parseDriveFolderHtml", () => {
     expect(byId.get("1dDiio5t_5Q2x1Zz-My9r31ovTfxRHZS6")?.mimeType).toBe("image/png");
     expect(byId.get("1AcZYycV8J6wWHBhelQQdz3y9d4mEwjrw")?.mimeType).toBe("video/mp4");
     expect(byId.get("1H-4vAL4EqQqGuuq8CoWjStYRe_rdNSx3")?.mimeType).toBe("application/pdf");
+    // Sizes are sourced from the row's "Size: … MB" aria-label.
+    expect(byId.get("1EX3YWNgXEs9UHAfE8uACdYfdJlRZQwGb")?.sizeBytes).toBe(
+      Math.round(2.2 * 1024 * 1024),
+    );
+    expect(byId.get("1dDiio5t_5Q2x1Zz-My9r31ovTfxRHZS6")?.sizeBytes).toBe(2 * 1024 * 1024);
+    expect(byId.get("1AcZYycV8J6wWHBhelQQdz3y9d4mEwjrw")?.sizeBytes).toBe(
+      Math.round(9.4 * 1024 * 1024),
+    );
+    expect(byId.get("1H-4vAL4EqQqGuuq8CoWjStYRe_rdNSx3")?.sizeBytes).toBe(86 * 1024);
     expect(items.every((i) => i.status === "importable")).toBe(true);
     // No Drive-native types, no shortcuts, no folders → no skip warnings.
     expect(warnings).not.toContain("native_apps_skipped");
     expect(warnings).not.toContain("subfolders_skipped");
     expect(warnings).not.toContain("shortcuts_skipped");
+  });
+
+  it("extracts the filename from data-tooltip when the row has multiple data-id attributes", () => {
+    // Regression for the bug where the parser used the immediate next
+    // data-id match as the row boundary, collapsing each row to ~1KB
+    // and hiding the row's name + size labels (which live 2-4KB after
+    // the row's first data-id). Modern Drive renders every row with
+    // ~3 data-id attributes — so the window between the row's first
+    // data-id and the next DIFFERENT file id is the actual row scope.
+    const html = `
+      <table>
+        <tbody>
+          <tr data-id="1AAAAAAAAAAAAAAAAAAAA1" role="row">
+            <td>
+              <div
+                aria-label="holiday.png Image Shared"
+                data-id="1AAAAAAAAAAAAAAAAAAAA1"
+                data-tooltip="holiday.png Image"
+              >
+                <strong>holiday.png</strong>
+              </div>
+            </td>
+            <td>
+              <span aria-label="Size: 4,2 MB&#10;Storage used: 4,2 MB">4,2 MB</span>
+            </td>
+          </tr>
+          <tr data-id="1AAAAAAAAAAAAAAAAAAAA2" role="row">
+            <td>
+              <div
+                aria-label="launch.mp4 Video Shared"
+                data-id="1AAAAAAAAAAAAAAAAAAAA2"
+                data-tooltip="launch.mp4 Video"
+              >
+                <strong>launch.mp4</strong>
+              </div>
+            </td>
+            <td>
+              <span aria-label="Size: 18 MB&#10;Storage used: 18 MB">18 MB</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+    const { items } = parseDriveFolderHtml(html);
+    const byName = new Map(items.map((i) => [i.name, i]));
+    // Filenames are extracted, not the file-id fallback.
+    expect(byName.get("holiday.png")?.sizeBytes).toBe(Math.round(4.2 * 1024 * 1024));
+    expect(byName.get("launch.mp4")?.sizeBytes).toBe(18 * 1024 * 1024);
   });
 
   it("falls back to filename-extension mime when listing mime is octet-stream", () => {

@@ -61,6 +61,15 @@ const FOLDER_EXT = ".folder";
  */
 const DATA_ID_PATTERN = /data-id="([A-Za-z0-9_-]{20,})"/g;
 const ARIA_LABEL_PATTERN = /aria-label="([^"]{1,160})"/g;
+/**
+ * Modern Drive carries the filename in a `data-tooltip="<name> <type>"`
+ * attribute on the row's name cell — usually on the element directly
+ * next to the row's data-id, so distance is a much stronger signal
+ * than the row-level aria-label. The trailing `<type>` token (Image /
+ * Video / PDF / etc.) and any trailing "Shared" qualifier come from
+ * Drive's chrome, not the actual filename.
+ */
+const DATA_TOOLTIP_PATTERN = /data-tooltip="([^"]{1,160})"/g;
 
 /**
  * Modern Drive AF_initDataCallback row shape (post-2024):
@@ -314,72 +323,111 @@ function mergeEntries(af: RawEntry, markup: RawEntry): RawEntry {
 function extractEntriesFromMarkup(html: string): RawEntry[] {
   // Drive's HTML anchors are not 1:1 with data-ids because every
   // list item has many `[data-id="..."]` attributes (one per row,
-  // one per icon, etc.). We bound the search for each data-id to its
-  // own row — from just after the previous row's data-id (skipping
-  // 100 chars of trailing markup) up to right before the next
-  // row's data-id (stopping 50 chars early). This prevents cross-row
-  // label leakage.
+  // one per icon, one per <div>, etc. — typically 3+ per file). For
+  // the row boundary we need the position of the NEXT row's first
+  // data-id (a different file id), not the next data-id match in
+  // the document. Using the immediate next data-id match collapses
+  // every row to ~1KB of markup and hides the row's actual metadata
+  // (filename label sits ~2KB after the row's data-id; size label
+  // ~4KB after — both well past the duplicate-data-id boundary).
   const seen = new Set<string>();
   const entries: RawEntry[] = [];
 
   const dataIdMatches = [...html.matchAll(DATA_ID_PATTERN)];
+  // Build a "next unique row start" index per data-id match. For
+  // match index `i`, this is the document position of the next match
+  // whose id differs from dataIdMatches[i]. Falls through to the end
+  // of the document for the last unique id.
+  const nextRowStart: number[] = new Array(dataIdMatches.length);
+  let lastUniqueEnd = html.length;
+  for (let j = dataIdMatches.length - 1; j >= 0; j -= 1) {
+    nextRowStart[j] = lastUniqueEnd;
+    const prevId = dataIdMatches[j - 1]?.[1];
+    if (prevId && prevId !== dataIdMatches[j]![1]) {
+      lastUniqueEnd = dataIdMatches[j]!.index ?? html.length;
+    }
+  }
+
   for (let i = 0; i < dataIdMatches.length; i += 1) {
     const idMatch = dataIdMatches[i]!;
     const id = idMatch[1];
     if (!id || seen.has(id)) continue;
     seen.add(id);
     const idAt = idMatch.index ?? 0;
-    const nextIdAt = dataIdMatches[i + 1]?.index ?? html.length;
-    // Walk the aria-label matches document-wide; only keep those that
-    // belong to THIS row. Drive's modern markup places the label after
-    // the data-id; older markup places it before. We accept either,
-    // but require the label to be the nearest label to our data-id
-    // (no other data-id between us and the label).
-    const labelMatches = [...html.matchAll(ARIA_LABEL_PATTERN)];
+    const rowEnd = nextRowStart[i] ?? html.length;
+
+    // Walk the data-tooltip matches document-wide; only keep those
+    // that belong to THIS row. Modern Drive puts the tooltip
+    // (`<name> <type>`) directly next to the row's data-id — that's
+    // our primary filename signal. Fall back to aria-label when the
+    // tooltip is missing (older markup).
     let chosenLabel: string | undefined;
-    let chosenSizeLabel: string | undefined;
     let bestLabelDistance = Number.POSITIVE_INFINITY;
-    let bestSizeDistance = Number.POSITIVE_INFINITY;
-    for (const labelMatch of labelMatches) {
-      const label = labelMatch[1] ?? "";
-      if (!label || label === "select" || label === "selected") continue;
-      const labelAt = labelMatch.index ?? 0;
-      // Modern Drive markup places the aria-label AFTER the row's
-      // data-id (inside the row's <div>). Older markup puts it before
-      // — for that we allow a small backward tolerance (30 chars) so
-      // a label that sits just before our data-id is still considered
-      // ours. Anything further back belongs to a previous row.
-      if (labelAt + 30 < idAt) continue;
-      // Reject labels whose start lies past the next data-id —
-      // those belong to the next row.
-      if (labelAt >= nextIdAt) continue;
-      // Reject labels that come after a different data-id that
-      // appeared between this row's data-id and the label (would
-      // belong to a later row). Skip past the leading data-id that
-      // we own so we don't match ourselves.
-      const searchStart = Math.min(idAt, labelAt);
-      const searchEnd = Math.max(idAt, labelAt);
-      const between = html.slice(searchStart, searchEnd);
-      const afterOwnId = between.indexOf('"', between.indexOf('data-id="')) + 1;
-      const tail = afterOwnId >= 1 ? between.slice(afterOwnId) : between;
-      const otherId = tail.match(/data-id="([A-Za-z0-9_-]{20,})"/);
-      if (otherId && otherId.index !== undefined) continue;
-      const distance = Math.abs(labelAt - idAt);
-      // Drive puts the filename in a label near the row's data-id
-      // and the size in a separate "Size: <n> MB" label. We track
-      // them as independent nearest-neighbour lookups so a "Size: …"
-      // label further from the data-id than the filename label can
-      // still win for the size slot.
-      if (label.startsWith("Size:")) {
-        if (distance < bestSizeDistance) {
-          bestSizeDistance = distance;
-          chosenSizeLabel = label;
-        }
-      } else if (distance < bestLabelDistance) {
+    for (const tipMatch of html.matchAll(DATA_TOOLTIP_PATTERN)) {
+      const tip = tipMatch[1] ?? "";
+      if (!tip) continue;
+      const tipAt = tipMatch.index ?? 0;
+      // Tooltips outside the row are not ours.
+      if (tipAt < idAt - 30) continue;
+      if (tipAt >= rowEnd) continue;
+      // Skip Drive chrome tooltips that aren't filenames.
+      if (
+        tip === "select" ||
+        tip === "selected" ||
+        tip.startsWith("Sortierung:") ||
+        tip.startsWith("Freigegeben") ||
+        tip === "Shared"
+      ) {
+        continue;
+      }
+      const cleaned = cleanRowLabel(tip);
+      if (!cleaned || cleaned === id) continue;
+      const distance = Math.abs(tipAt - idAt);
+      if (distance < bestLabelDistance) {
         bestLabelDistance = distance;
-        chosenLabel = label;
+        chosenLabel = cleaned;
       }
     }
+
+    // Walk aria-label matches for the size. The size label lives
+    // further down in the row (in a different cell) than the name
+    // tooltip, but is still inside the row boundary. We track it
+    // independently because the two labels live in different cells.
+    let chosenSizeLabel: string | undefined;
+    let bestSizeDistance = Number.POSITIVE_INFINITY;
+    for (const labelMatch of html.matchAll(ARIA_LABEL_PATTERN)) {
+      const label = labelMatch[1] ?? "";
+      if (!label || !label.startsWith("Size:")) continue;
+      const labelAt = labelMatch.index ?? 0;
+      if (labelAt + 30 < idAt) continue;
+      if (labelAt >= rowEnd) continue;
+      const distance = Math.abs(labelAt - idAt);
+      if (distance < bestSizeDistance) {
+        bestSizeDistance = distance;
+        chosenSizeLabel = label;
+      }
+    }
+
+    // If the tooltip scrape didn't yield a name, fall back to the
+    // legacy aria-label scrape (older Drive markup).
+    if (!chosenLabel) {
+      for (const labelMatch of html.matchAll(ARIA_LABEL_PATTERN)) {
+        const label = labelMatch[1] ?? "";
+        if (!label || label === "select" || label === "selected" || label.startsWith("Size:"))
+          continue;
+        const labelAt = labelMatch.index ?? 0;
+        if (labelAt + 30 < idAt) continue;
+        if (labelAt >= rowEnd) continue;
+        const cleaned = cleanRowLabel(label);
+        if (!cleaned || cleaned === id) continue;
+        const distance = Math.abs(labelAt - idAt);
+        if (distance < bestLabelDistance) {
+          bestLabelDistance = distance;
+          chosenLabel = cleaned;
+        }
+      }
+    }
+
     entries.push({
       id,
       name: decodeHtmlEntities(chosenLabel ?? id),
@@ -389,6 +437,38 @@ function extractEntriesFromMarkup(html: string): RawEntry[] {
     if (entries.length >= MAX_FOLDER_ITEMS) break;
   }
   return entries;
+}
+
+/**
+ * Strip Drive chrome from a row label. The tooltip / aria-label is
+ * typically `<name> <type> [Shared]` — the filename is everything up
+ * to the first Drive chrome token. We treat the label as the filename
+ * directly when it already contains a file-extension (`.png`, `.pdf`,
+ * etc.) before any chrome tokens, so filenames like `Aerial shot.jpg`
+ * (which contain a space) round-trip intact.
+ *
+ * Walk the whitespace-split tokens; the filename is the leading run
+ * that contains the file-extension character. Once we hit a chrome
+ * token (`Image`, `Video`, `Shared`, …) the rest of the string is
+ * chrome regardless of whether it has more dots.
+ */
+const DRIVE_CHROME_TOKEN =
+  /^(Image|Video|PDF|Document|Shared|Folder|Modified|Image|select|selected)$/i;
+
+function cleanRowLabel(label: string): string | null {
+  const tokens = label.split(/\s+/).filter(Boolean);
+  const nameTokens: string[] = [];
+  for (const token of tokens) {
+    if (DRIVE_CHROME_TOKEN.test(token)) break;
+    nameTokens.push(token);
+  }
+  const name = nameTokens.join(" ").trim();
+  if (!name) return null;
+  // Guard against using the file id as a name. The parser falls back
+  // to the id when no label is found; this helper is only consulted
+  // when we DO have a label, so a label that exactly matches the id
+  // means the label is just placeholder text.
+  return name;
 }
 
 /**
