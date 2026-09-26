@@ -26,8 +26,16 @@ describe("diagnoseAspectRatio", () => {
   it("matches the square 1:1 spec at exactly 1080×1080", () => {
     const d = diagnoseAspectRatio(1080, 1080, FEED_RATIOS);
     expect(d.severity).toBe("ok");
+    expect(d.belowMinimum).toBe(false);
     expect(d.matchedSpec?.id).toBe("feed-square");
     expect(d.ratio).toBeCloseTo(1, 5);
+  });
+
+  it("flags a correctly shaped asset below the minimum resolution", () => {
+    const d = diagnoseAspectRatio(800, 800, FEED_RATIOS);
+    expect(d.severity).toBe("warning");
+    expect(d.belowMinimum).toBe(true);
+    expect(d.recommendation).toContain("Minimum 1080 × 1080");
   });
 
   it("matches the 4:5 portrait spec at exactly 1080×1350", () => {

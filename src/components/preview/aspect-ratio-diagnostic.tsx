@@ -6,6 +6,7 @@ import {
   type AspectRatioSpec,
   type DiagnosticSeverity,
 } from "@/lib/preview/instagram-aspect-ratios";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * AspectRatioDiagnosticView — the visual block rendered
@@ -44,6 +45,7 @@ export function AspectRatioDiagnosticView({
   diagnostic,
   slideLabel,
 }: AspectRatioDiagnosticViewProps) {
+  const t = useLocaleT();
   const Icon = SEVERITY_ICON[diagnostic.severity];
   const tone = SEVERITY_TONE[diagnostic.severity];
   return (
@@ -56,6 +58,11 @@ export function AspectRatioDiagnosticView({
         <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         {slideLabel ? <span>{slideLabel} · </span> : null}
         <span>{diagnostic.summary}</span>
+        {diagnostic.belowMinimum ? (
+          <span className="bg-warning/15 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase">
+            {t("contentDetail.preview.lowResolution")}
+          </span>
+        ) : null}
       </p>
       {diagnostic.recommendation ? (
         <p className="flex items-start gap-1.5">

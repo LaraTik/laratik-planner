@@ -84,6 +84,46 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
     expect(screen.getByTestId("platform-preview-carousel-label")).toBeInTheDocument();
   });
 
+  it("switches the media canvas to the portrait minimum", () => {
+    render(<PlatformPreview {...baseProps} thumbnailUrl={null} />);
+
+    fireEvent.click(screen.getByTestId("platform-preview-dimension-portrait"));
+
+    expect(screen.getByTestId("platform-preview-media")).toHaveClass("aspect-[4/5]");
+    expect(screen.getByTestId("platform-preview-dimension-portrait")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+  });
+
+  it("compares every supported dimension in one responsive surface", () => {
+    render(<PlatformPreview {...baseProps} thumbnailUrl={null} />);
+
+    fireEvent.click(screen.getByTestId("platform-preview-dimension-all"));
+
+    expect(screen.getByTestId("platform-preview-compare")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-preview-compare-square")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-preview-compare-portrait")).toBeInTheDocument();
+    expect(screen.getByTestId("platform-preview-compare-vertical")).toBeInTheDocument();
+    expect(screen.getByText("Minimum 1080 × 1080")).toBeInTheDocument();
+    expect(screen.getByText("Minimum 1080 × 1350")).toBeInTheDocument();
+    expect(screen.getByText("Minimum 1080 × 1920")).toBeInTheDocument();
+  });
+
+  it("labels a correctly shaped asset below the minimum resolution", () => {
+    render(
+      <PlatformPreview
+        {...baseProps}
+        thumbnailUrl="https://x.com/hero.png"
+        thumbnailWidth={800}
+        thumbnailHeight={800}
+      />,
+    );
+
+    expect(screen.getByText("Low resolution")).toBeInTheDocument();
+    expect(screen.getByText("Minimum 1080 × 1080 for Square 1:1.")).toBeInTheDocument();
+  });
+
   it("renders preview chrome from the active Arabic catalog", () => {
     render(
       <LocaleProvider locale="ar">

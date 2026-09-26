@@ -860,6 +860,15 @@
     "noMedia": "No media yet",
     "reelBadge": "Reel",
     "carouselLabel": "Carousel preview",
+    "dimensionControlLabel": "Preview dimensions",
+    "compareAllDimensions": "Compare all",
+    "lowResolution": "Low resolution",
+    "minimumResolution": "Minimum {width} × {height}",
+    "dimensionLabels": {
+      "square": "Square post",
+      "portrait": "Portrait post",
+      "vertical": "Story / Reel"
+    },
     "captionPlaceholder": "Caption preview will appear here.",
     "justNow": "Just now",
     "formats": {

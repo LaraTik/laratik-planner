@@ -120,6 +120,8 @@ export type DiagnosticSeverity = "ok" | "warning" | "error";
 
 export interface AspectRatioDiagnostic {
   severity: DiagnosticSeverity;
+  /** True when the shape matches but one or both dimensions are below the minimum. */
+  belowMinimum: boolean;
   /** The closest matching spec, if any. */
   matchedSpec: AspectRatioSpec | null;
   /** All specs that would also match (e.g. multiple
@@ -154,6 +156,7 @@ export function diagnoseAspectRatio(
   if (width === null || height === null || width <= 0 || height <= 0) {
     return {
       severity: "warning",
+      belowMinimum: false,
       matchedSpec: null,
       candidateSpecs: candidates,
       ratio: 0,
@@ -166,15 +169,21 @@ export function diagnoseAspectRatio(
   const ratio = width / height;
   const matches = candidates.filter((c) => Math.abs(c.ratio - ratio) <= c.tolerance);
   if (matches.length > 0) {
+    const matchedSpec = matches[0]!;
+    const belowMinimum =
+      width < matchedSpec.recommended.width || height < matchedSpec.recommended.height;
     return {
-      severity: "ok",
-      matchedSpec: matches[0]!,
+      severity: belowMinimum ? "warning" : "ok",
+      belowMinimum,
+      matchedSpec,
       candidateSpecs: matches,
       ratio,
       width,
       height,
-      summary: `${width} × ${height} (${describeRatio(ratio)}) — matches ${matches[0]!.label}.`,
-      recommendation: matches[0]!.description,
+      summary: `${width} × ${height} (${describeRatio(ratio)}) — matches ${matchedSpec.label}.`,
+      recommendation: belowMinimum
+        ? `Minimum ${matchedSpec.recommended.width} × ${matchedSpec.recommended.height} for ${matchedSpec.label}.`
+        : matchedSpec.description,
     };
   }
   // No match — pick the nearest spec to give actionable advice.
@@ -184,6 +193,7 @@ export function diagnoseAspectRatio(
   if (nearest) {
     return {
       severity: "warning",
+      belowMinimum: false,
       matchedSpec: null,
       candidateSpecs: [],
       ratio,
@@ -195,6 +205,7 @@ export function diagnoseAspectRatio(
   }
   return {
     severity: "warning",
+    belowMinimum: false,
     matchedSpec: null,
     candidateSpecs: candidates,
     ratio,

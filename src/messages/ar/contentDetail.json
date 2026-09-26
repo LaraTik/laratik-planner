@@ -860,6 +860,15 @@
     "noMedia": "لا توجد وسائط بعد",
     "reelBadge": "ريل",
     "carouselLabel": "معاينة منشور متعدد الصور",
+    "dimensionControlLabel": "أبعاد المعاينة",
+    "compareAllDimensions": "مقارنة الكل",
+    "lowResolution": "دقة منخفضة",
+    "minimumResolution": "الحد الأدنى {width} × {height}",
+    "dimensionLabels": {
+      "square": "منشور مربع",
+      "portrait": "منشور عمودي",
+      "vertical": "قصة / ريل"
+    },
     "captionPlaceholder": "ستظهر معاينة النص هنا.",
     "justNow": "الآن",
     "formats": {

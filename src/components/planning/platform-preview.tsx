@@ -14,7 +14,6 @@ import { cn } from "@/lib/utils";
 import { useImageDimensions } from "@/lib/preview/use-image-dimensions";
 import {
   diagnoseAspectRatio,
-  CAROUSEL_RATIOS,
   FEED_RATIOS,
   REEL_RATIOS,
   type AspectRatioSpec,
@@ -32,8 +31,8 @@ import { platformLabel } from "@/components/workspace/platform-icon";
  *
  * The preview supports three Instagram-shaped formats (feed /
  * reel / story) and a generic "post" fallback for other
- * platforms. The user can switch formats inline so the preview
- * matches the platform's actual treatment.
+ * platforms. The user can switch formats inline and inspect the
+ * same asset at Square, Portrait, or Story/Reel dimensions.
  *
  * Why not fetch a real preview from the platform API? The
  * platform's own OG image / embed requires the post to exist;
@@ -61,6 +60,7 @@ import { platformLabel } from "@/components/workspace/platform-icon";
  *     is small.)
  */
 export type PreviewFormat = "feed" | "reel" | "story" | "post";
+type PreviewDimension = "square" | "portrait" | "vertical";
 
 export interface PlatformPreviewProps {
   platform: string;
@@ -83,9 +83,8 @@ export interface PlatformPreviewProps {
   className?: string;
   /**
    * Optional content format (e.g. "carousel", "short_form_video").
-   * When "carousel" the preview swaps the feed candidates for
-   * the carousel candidate set (square + 4:5) and shows a
-   * "carousel preview" label.
+   * When "carousel", the dimension selector is limited to
+   * square + 4:5 and shows a "carousel preview" label.
    */
   contentFormat?: string | null;
 }
@@ -104,21 +103,30 @@ function formatOptionsFor(platform: string): PreviewFormat[] {
   }
 }
 
-function candidatesFor(
-  format: PreviewFormat,
-  contentFormat: string | null | undefined,
-): ReadonlyArray<AspectRatioSpec> {
-  if (contentFormat === "carousel") return CAROUSEL_RATIOS;
-  if (format === "reel" || format === "story") return REEL_RATIOS;
-  return FEED_RATIOS;
-}
-
 function safeAreaShapeFor(format: PreviewFormat): SafeAreaShape | null {
   if (format === "story") return "story";
   if (format === "reel") return "reel";
   if (format === "feed") return "feed";
   return null;
 }
+
+const DIMENSION_SPECS: Record<PreviewDimension, AspectRatioSpec> = {
+  square: FEED_RATIOS[0]!,
+  portrait: FEED_RATIOS[1]!,
+  vertical: REEL_RATIOS[0]!,
+};
+
+const DIMENSION_ASPECT_CLASSES: Record<PreviewDimension, string> = {
+  square: "aspect-square",
+  portrait: "aspect-[4/5]",
+  vertical: "aspect-[9/16] max-h-[420px]",
+};
+
+const DIMENSION_LABEL_KEYS: Record<PreviewDimension, string> = {
+  square: "contentDetail.preview.dimensionLabels.square",
+  portrait: "contentDetail.preview.dimensionLabels.portrait",
+  vertical: "contentDetail.preview.dimensionLabels.vertical",
+};
 
 function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: string): string {
   const key = `contentDetail.publishForm.platformLabels.${platform}`;
@@ -144,7 +152,16 @@ export function PlatformPreview({
   const [format, setFormat] = React.useState<PreviewFormat>(
     initialFormat && options.includes(initialFormat) ? initialFormat : options[0]!,
   );
-  const candidates = candidatesFor(format, contentFormat);
+  const availableDimensions: ReadonlyArray<PreviewDimension> =
+    contentFormat === "carousel" ? ["square", "portrait"] : ["square", "portrait", "vertical"];
+  const [dimension, setDimension] = React.useState<PreviewDimension>(
+    initialFormat === "reel" || initialFormat === "story" ? "vertical" : "square",
+  );
+  const [compareAll, setCompareAll] = React.useState(false);
+  const activeDimension = availableDimensions.includes(dimension)
+    ? dimension
+    : availableDimensions[0]!;
+  const targetSpec = DIMENSION_SPECS[activeDimension];
   // Prefer the server-supplied intrinsic dimensions (sourced from
   // `storage_objects.width/height`, populated at upload time). Fall
   // back to the client-side probe only when those are unavailable
@@ -162,17 +179,40 @@ export function PlatformPreview({
       ? { width: thumbnailWidth, height: thumbnailHeight }
       : { width: probeDims.width, height: probeDims.height };
   const diagnostic = React.useMemo(
-    () => diagnoseAspectRatio(imageDims.width, imageDims.height, candidates),
-    [imageDims.width, imageDims.height, candidates],
+    () => diagnoseAspectRatio(imageDims.width, imageDims.height, [targetSpec]),
+    [imageDims.width, imageDims.height, targetSpec],
   );
   const safeAreaShape = safeAreaShapeFor(format);
-  const mediaBody = (
+  const selectFormat = (nextFormat: PreviewFormat) => {
+    setFormat(nextFormat);
+    setCompareAll(false);
+    const nextDimension = nextFormat === "reel" || nextFormat === "story" ? "vertical" : "square";
+    if (availableDimensions.includes(nextDimension)) setDimension(nextDimension);
+  };
+  const selectDimension = (nextDimension: PreviewDimension) => {
+    setDimension(nextDimension);
+    setCompareAll(false);
+    const nextFormat =
+      nextDimension === "vertical"
+        ? options.includes("reel")
+          ? "reel"
+          : format
+        : options.includes("feed")
+          ? "feed"
+          : format;
+    setFormat(nextFormat);
+  };
+  const renderMedia = (
+    targetDimension: PreviewDimension,
+    targetFormat: PreviewFormat,
+    testId: string,
+  ) => (
     <div
       className={cn(
         "bg-surface-subtle relative flex items-center justify-center",
-        format === "story" ? "aspect-[9/16] max-h-[420px]" : "aspect-square",
+        DIMENSION_ASPECT_CLASSES[targetDimension],
       )}
-      data-testid="platform-preview-media"
+      data-testid={testId}
     >
       {thumbnailUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -199,7 +239,7 @@ export function PlatformPreview({
           className="text-fg-muted flex flex-col items-center gap-1"
           data-testid="platform-preview-empty"
         >
-          {format === "reel" ? (
+          {targetDimension === "vertical" || targetFormat === "reel" ? (
             <Play className="h-12 w-12" aria-hidden="true" />
           ) : (
             <ImageIcon className="h-12 w-12" aria-hidden="true" />
@@ -207,7 +247,7 @@ export function PlatformPreview({
           <p className="text-label">{t("contentDetail.preview.noMedia")}</p>
         </div>
       )}
-      {format === "reel" ? (
+      {targetFormat === "reel" ? (
         <span
           className="absolute end-2 bottom-2 inline-flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-xs font-semibold text-white"
           aria-hidden="true"
@@ -218,6 +258,7 @@ export function PlatformPreview({
       ) : null}
     </div>
   );
+  const mediaBody = renderMedia(activeDimension, format, "platform-preview-media");
 
   return (
     <div
@@ -243,7 +284,7 @@ export function PlatformPreview({
             <button
               key={opt}
               type="button"
-              onClick={() => setFormat(opt)}
+              onClick={() => selectFormat(opt)}
               data-testid={`platform-preview-format-${opt}`}
               data-active={opt === format || undefined}
               className={cn(
@@ -267,6 +308,61 @@ export function PlatformPreview({
         </div>
       ) : null}
 
+      <div
+        className="border-border bg-canvas flex flex-wrap items-center gap-2 border-b px-3 py-2"
+        data-testid="platform-preview-dimensions"
+        role="group"
+        aria-label={t("contentDetail.preview.dimensionControlLabel")}
+      >
+        <span className="text-label text-fg-muted me-1 font-semibold">
+          {t("contentDetail.preview.dimensionControlLabel")}
+        </span>
+        {availableDimensions.map((targetDimension) => {
+          const spec = DIMENSION_SPECS[targetDimension];
+          const isActive = !compareAll && targetDimension === activeDimension;
+          return (
+            <button
+              key={targetDimension}
+              type="button"
+              onClick={() => selectDimension(targetDimension)}
+              aria-pressed={isActive}
+              data-testid={`platform-preview-dimension-${targetDimension}`}
+              className={cn(
+                "text-label focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold transition-colors",
+                isActive
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-surface text-fg-secondary hover:bg-surface-subtle",
+              )}
+            >
+              <span>{t(DIMENSION_LABEL_KEYS[targetDimension])}</span>
+              <span className="opacity-75">{spec.label.split(" ").at(-1)}</span>
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          onClick={() => setCompareAll(true)}
+          aria-pressed={compareAll}
+          data-testid="platform-preview-dimension-all"
+          className={cn(
+            "text-label focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-full border px-2.5 py-1 font-semibold transition-colors",
+            compareAll
+              ? "border-primary bg-primary text-primary-foreground"
+              : "border-border bg-surface text-fg-secondary hover:bg-surface-subtle",
+          )}
+        >
+          {t("contentDetail.preview.compareAllDimensions")}
+        </button>
+        {!compareAll ? (
+          <span
+            className="text-label text-fg-muted basis-full sm:ms-auto sm:basis-auto"
+            data-testid="platform-preview-dimension-minimum"
+          >
+            {t("contentDetail.preview.minimumResolution", targetSpec.recommended)}
+          </span>
+        ) : null}
+      </div>
+
       {/* Header */}
       <header className="flex items-center gap-2 p-3">
         <span
@@ -287,7 +383,45 @@ export function PlatformPreview({
       {/* Media area — wrapped in the safe-area overlay for
           Reel/Story so the planner can see the regions the
           app's own UI covers. */}
-      {safeAreaShape ? (
+      {compareAll ? (
+        <div
+          className="grid grid-cols-1 items-start gap-3 p-3 sm:grid-cols-3"
+          data-testid="platform-preview-compare"
+        >
+          {availableDimensions.map((targetDimension) => {
+            const spec = DIMENSION_SPECS[targetDimension];
+            const comparisonDiagnostic = diagnoseAspectRatio(imageDims.width, imageDims.height, [
+              spec,
+            ]);
+            return (
+              <article
+                key={targetDimension}
+                className="border-border bg-surface-subtle min-w-0 overflow-hidden rounded-[var(--radius-control)] border"
+                data-testid={`platform-preview-compare-${targetDimension}`}
+              >
+                <div className="px-2.5 py-2">
+                  <h3 className="text-label text-fg-primary font-semibold">
+                    {t(DIMENSION_LABEL_KEYS[targetDimension])}
+                  </h3>
+                  <p className="text-label text-fg-muted">
+                    {t("contentDetail.preview.minimumResolution", spec.recommended)}
+                  </p>
+                </div>
+                {renderMedia(
+                  targetDimension,
+                  targetDimension === "vertical" ? "reel" : "feed",
+                  `platform-preview-compare-media-${targetDimension}`,
+                )}
+                {thumbnailUrl ? (
+                  <div className="px-2 pb-2">
+                    <AspectRatioDiagnosticView diagnostic={comparisonDiagnostic} />
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      ) : safeAreaShape ? (
         <SafeAreaOverlay shape={safeAreaShape}>{mediaBody}</SafeAreaOverlay>
       ) : (
         mediaBody
@@ -299,7 +433,7 @@ export function PlatformPreview({
           the planner-facing signal: "this 1080×1920 image
           matches Reel 9:16" or "this 1920×1080 image is
           landscape — try 1080×566 for the feed". */}
-      {thumbnailUrl ? (
+      {thumbnailUrl && !compareAll ? (
         <div className="px-3 pt-2" data-testid="platform-preview-aspect-diagnostic">
           <AspectRatioDiagnosticView diagnostic={diagnostic} />
         </div>
