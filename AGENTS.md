@@ -673,6 +673,76 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-26 — Drive folder import round 2: row-boundary bug + filename/size extraction (fix/drive-folder-modern-parser)
+
+Round-1 shipped the modern AF-block parser + preflight + filename-extension
+fallback fixes, but the wizard still showed every file's raw id as the
+filename and `Size unavailable` for the size. The mime was correct; the row
+boundary was wrong. Two more concrete fixes shipped.
+
+- **fix(media): row boundary uses the next DIFFERENT file id, not the next
+  data-id match.** Modern Drive renders every row with ~3 `data-id="..."`
+  attributes (one on `<tr>`, one on the icon `<div>`, one on the cell
+  wrapper). The previous code used `dataIdMatches[i + 1]` as the row's
+  upper bound, which collapsed every row to ~1KB of markup and hid the
+  row's actual metadata — the filename label sits ~2KB after the row's
+  first data-id; the size label ~4KB after. The parser now pre-computes
+  `nextRowStart[i]` = position of the next match with a different id. This
+  was the root cause: mimes were correct, but every row showed the file
+  id as the filename.
+
+- **fix(media): filename from `data-tooltip="<name> <type>"` with trailing
+  chrome stripped.** Modern Drive renders the row's name as a
+  `data-tooltip="1-1.png Image"` attribute on the cell directly next to the
+  row's data-id. `cleanRowLabel` keeps the leading run of tokens up to the
+  first Drive chrome token (`Image`, `Video`, `PDF`, `Shared`, `Modified`,
+  …), so `1-1.png Image` → `1-1.png` and the legacy markup's
+  `Aerial shot.jpg` (space in filename) round-trips intact. Falls through
+  to aria-label when no tooltip is present.
+
+- **feat(media): size from `aria-label="Size: <n> MB\nStorage used: …"` in
+  a different cell.** The size label sits in a separate column from the
+  name, ~4KB after the row's data-id — same row boundary fix applies.
+  Parser walks aria-labels in the row window independently and picks the
+  nearest `Size: …` label for the sizeBytes field. European comma + US dot
+  number formats both supported.
+
+- **test(media): `tests/fixtures/drive-folder-html/modern-folder.html`** is
+  rebuilt to mirror what Drive renders today (multiple `data-id` per row,
+  `data-tooltip` for the filename, `aria-label="Size: …"` in a separate
+  cell). 6 new parser assertions cover the row-boundary bug, the modern
+  data-tooltip extraction, the size-label parser, and the chrome-strip
+  behavior on filenames with embedded spaces. The modern Drive URL
+  `https://drive.google.com/drive/folders/1JWqxiknoZdX3eHs-NukvcD7cj9uonSZc`
+  was the live test target — running the parser against the real Drive HTML
+  now yields `name: "1-1.png", mimeType: "image/png", sizeBytes: 2306867`
+  (and 4 more files), instead of `name: "<fileId>", mimeType: "image/png",
+sizeBytes: null`. Full 125 media tests + 3680 total tests pass;
+  typecheck + lint + prettier clean.
+
+**Companion**: round-1 (`ui-ux-pro-max`) shipped the modern AF-block parser,
+filename-extension mime fallback, and lenient preflight. Round-2 (this PR)
+closes the name + size gap on the same parser. Same code path; no new
+adapter, no new route, no schema migration.
+
+### 2026-09-26 — Drive folder import: modern HTML shape + filename mime fallback + lenient preflight (fix/drive-folder-modern-parser)
+
+Reported symptom: pasting a Google Drive folder URL into the "From link" wizard rendered "0 importable files in this folder. N were skipped", with every row tagged `application/octet-stream` + "Unsupported type" even for public "Anyone with the link can view" folders that contain perfectly valid PNG / MP4 / PDF files. Three concrete fixes shipped.
+
+- **fix(media): parser reads the modern `AF_initDataCallback({key: 'ds:4'})` row shape.** Modern Drive wraps each row as `[null, "<fileId>"], null, null, null, "<mime>", null, ...` instead of the legacy `[id, name, mime, ...]` form. The legacy regex was the only one the parser knew, so it never matched and the parser fell back to the data-id + aria-label scrape — which has the ID + filename but not the mime. The parser now runs three independent passes (modern AF → legacy AF → data-id + aria-label) and merges by file id, so AF supplies the mime when available and markup always supplies the human-friendly filename. `src/lib/media/folder-sources/drive-html-parser.ts:46-148,260-300`.
+
+- **fix(media): filename-extension mime fallback when Drive lists `application/octet-stream`.** Drive does this for mobile uploads and renamed files — the bytes are fine, the type sniffing just gave up. We re-use `contentTypeFromFilename` from the existing media contract so the kind badge (image / video / document) is correct without a second round-trip. The import path still validates the real bytes via `validateMediaSignature`, so a misleading listing mime is a display problem, never a security one. `src/lib/media/folder-sources/drive-html-parser.ts:171-189`.
+
+- **fix(media): per-row preflight no longer pre-marks items as "unsupported" on transient HEAD errors.** The preflight HEAD on `drive.usercontent.google.com/download` is a connection-required detector, not a classifier. 401/403 (and sign-in-wall 30x) still downgrade to `provider_connection_required`, but 4xx-other, 5xx, and network exceptions now leave the row as `importable` so the user can still try. The actual import GET does the full mime + signature validation and emits a precise error code if anything is broken. Marking transient responses as "unsupported" hid legitimate files behind a verdict the user couldn't override — that's exactly the bug the user reported. `src/lib/media/folder-sources/drive-html.ts:231-281`.
+
+- **feat(media): markup scrape also reads the row size from the per-row `Size: 2,2 MB` aria-label** (EU comma + US dot number formats both supported). The wizard was already showing "Size unavailable" for every folder file because the parser never populated `sizeBytes`. Falls through to the Content-Length header on import if the label is still missing.
+
+- **test(media): `tests/fixtures/drive-folder-html/modern-folder.html`** captures the post-2024 Drive HTML shape. 4 new parser assertions cover the new AF shape, the filename-extension mime fallback, the size-label parser, and mixed-shape pages (legacy + modern AF rows side-by-side). 2 new adapter assertions cover transient-preflight tolerance and end-to-end listing against the modern fixture. Full 412 files / 3680 tests pass; typecheck + lint + prettier clean.
+
+**Deferred**: rich per-row metadata (last-modified, owner email, thumbnail URL signing). The scrape only covers what the wizard needs to display + import — Drive's structured `data:` blob carries more, but it's not on the critical path for the import flow.
+
+**Companion**: this is the same code path the four prior folder-import PRs (FEAT-FOLDER-IMPORT-2026-09-19, perf/audit-cloudflare-assets, etc.) shipped — same adapter, same route, same `GoogleDriveHtmlAdapter`. The parser fix is a one-file change with a one-file fixture; the preflight change is documented inline so the next reviewer doesn't accidentally re-tighten it.
+
 ### 2026-09-26 — Drive folder import: modern HTML shape + filename mime fallback + lenient preflight (fix/drive-folder-modern-parser)
 
 Reported symptom: pasting a Google Drive folder URL into the "From link" wizard renders `0 importable files in this folder. N were skipped`, with every row tagged `application/octet-stream` + "Unsupported type" — even for public "Anyone with the link can view" folders that contain perfectly valid PNG / MP4 / PDF files. The import itself would have worked; the wizard's listing was just lying about what was available. Three concrete fixes shipped.

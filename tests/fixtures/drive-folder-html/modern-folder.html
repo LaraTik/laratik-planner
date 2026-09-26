@@ -11,9 +11,15 @@
       like:
           [null, "<fileId>"], null, null, null, "<mime>", null, ..., [meta]
       The legacy `[id, name, mime, size, hash, ...]` shape is gone. The
-      filename and size are NOT in this JSON — they only appear as
-      `aria-label` attributes on the surrounding <tr> markup and as
-      `["<name>.png", null, 1]` literals deep inside the row meta array.
+      filename appears in `data-tooltip="<name> <type>"` and an
+      `aria-label="<name> <type> Shared"` on the name cell. The size
+      appears in a separate column's `aria-label="Size: <n> MB"`.
+
+      Each row carries ~3 `data-id` attributes (one on `<tr>`, one on
+      the inner `<div>`, one on the icon). The parser must treat the
+      entire row — not just the duplicate-data-id window — as one
+      metadata scope, otherwise the name + size labels fall outside
+      the search window and the wizard shows the file id as the name.
     -->
     <script>
       AF_initDataCallback({
@@ -94,33 +100,6 @@
                 [18, null, null, null, null, null, null, null, 1],
               ],
             ],
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            [null, null, [[["Modified"], ["20. Sept."]]]],
-            null,
-            [
-              [2, "Download", 0, 2, null, [[null, "1EX3YWNgXEs9UHAfE8uACdYfdJlRZQwGb"]]],
-              "More actions",
-            ],
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            null,
-            [[["1-1.png", null, 1]]],
-            null,
-            null,
-            null,
-            null,
-            null,
             [55465, "image/png", []],
           ],
           [
@@ -151,7 +130,32 @@
             [
               [[""], [null, ["image/png"]], null, null, null, "Image"],
               null,
-              [[16, null, [null, [[["2-1.png", null, 1]]]], null, null]],
+              [
+                [
+                  16,
+                  null,
+                  [null, [[["2-1.png", null, 1]]]],
+                  null,
+                  null,
+                  [[["2-1.png", null, 1], ["Image"]]],
+                  null,
+                  null,
+                  1,
+                  [[["2-1.png"], ["Image"], ["Shared"]]],
+                ],
+                [
+                  1,
+                  null,
+                  [null, [[["2 MB"]]]],
+                  null,
+                  null,
+                  [[["Size: 2 MB\nStorage used: 2 MB"]]],
+                  null,
+                  null,
+                  1,
+                  [[["Size: 2 MB\nStorage used: 2 MB"]]],
+                ],
+              ],
             ],
             [55465, "image/png", []],
           ],
@@ -183,7 +187,32 @@
             [
               [[""], [null, ["video/mp4"]], null, null, null, "Video"],
               null,
-              [[16, null, [null, [[["3-1.mp4", null, 1]]]], null, null]],
+              [
+                [
+                  16,
+                  null,
+                  [null, [[["3-1.mp4", null, 1]]]],
+                  null,
+                  null,
+                  [[["3-1.mp4", null, 1], ["Video"]]],
+                  null,
+                  null,
+                  1,
+                  [[["3-1.mp4"], ["Video"], ["Shared"]]],
+                ],
+                [
+                  1,
+                  null,
+                  [null, [[["9,4 MB"]]]],
+                  null,
+                  null,
+                  [[["Size: 9,4 MB\nStorage used: 9,4 MB"]]],
+                  null,
+                  null,
+                  1,
+                  [[["Size: 9,4 MB\nStorage used: 9,4 MB"]]],
+                ],
+              ],
             ],
             [9876543, "video/mp4", []],
           ],
@@ -215,7 +244,32 @@
             [
               [[""], [null, ["application/pdf"]], null, null, null, "PDF"],
               null,
-              [[16, null, [null, [[["4-1.pdf", null, 1]]]], null, null]],
+              [
+                [
+                  16,
+                  null,
+                  [null, [[["4-1.pdf", null, 1]]]],
+                  null,
+                  null,
+                  [[["4-1.pdf", null, 1], ["PDF"]]],
+                  null,
+                  null,
+                  1,
+                  [[["4-1.pdf"], ["PDF"], ["Shared"]]],
+                ],
+                [
+                  1,
+                  null,
+                  [null, [[["86 KB"]]]],
+                  null,
+                  null,
+                  [[["Size: 86 KB\nStorage used: 86 KB"]]],
+                  null,
+                  null,
+                  1,
+                  [[["Size: 86 KB\nStorage used: 86 KB"]]],
+                ],
+              ],
             ],
             [87654, "application/pdf", []],
           ],
@@ -225,39 +279,102 @@
     </script>
 
     <!--
-      Modern markup: <tr data-id="..."> with the filename in the nearest
-      aria-label and the size in a tooltip-style "Size: 2,2 MB" label.
-      Drive renders this both for human users and for crawlers.
+      Modern Drive markup: <tr data-id="..."> with three data-id attributes
+      per row (one on the <tr>, one on the icon <div>, one on the cell
+      wrapper), then a name cell with `aria-label="<name> Image Shared"`
+      and `data-tooltip="<name> Image"`, then a "Modified" cell, then a
+      "Size" cell with `aria-label="Size: <n> MB\nStorage used: <n> MB"`.
     -->
     <div class="folder-content">
       <table>
         <tbody>
-          <tr data-id="1EX3YWNgXEs9UHAfE8uACdYfdJlRZQwGb" role="row" class="qwPkcb">
+          <tr
+            data-id="1EX3YWNgXEs9UHAfE8uACdYfdJlRZQwGb"
+            role="row"
+            class="qwPkcb"
+          >
             <td>
-              <div aria-label="1-1.png">
-                <span aria-label="Size: 2,2 MB&#10;Storage used: 2,2 MB">2,2 MB</span>
+              <div
+                aria-label="1-1.png Image Shared"
+                data-id="1EX3YWNgXEs9UHAfE8uACdYfdJlRZQwGb"
+                data-tooltip="1-1.png Image"
+              >
+                <strong class="DNoYtb">1-1.png</strong>
               </div>
+              <span aria-label="Freigegeben">Shared</span>
+            </td>
+            <td>
+              <span aria-label="Modified 20. Sept.">20. Sept.</span>
+            </td>
+            <td>
+              <span aria-label="Size: 2,2 MB&#10;Storage used: 2,2 MB"
+                >2,2 MB</span
+              >
             </td>
           </tr>
-          <tr data-id="1dDiio5t_5Q2x1Zz-My9r31ovTfxRHZS6" role="row" class="qwPkcb">
+          <tr
+            data-id="1dDiio5t_5Q2x1Zz-My9r31ovTfxRHZS6"
+            role="row"
+            class="qwPkcb"
+          >
             <td>
-              <div aria-label="2-1.png">
-                <span aria-label="Size: 2 MB&#10;Storage used: 2 MB">2 MB</span>
+              <div
+                aria-label="2-1.png Image Shared"
+                data-id="1dDiio5t_5Q2x1Zz-My9r31ovTfxRHZS6"
+                data-tooltip="2-1.png Image"
+              >
+                <strong class="DNoYtb">2-1.png</strong>
               </div>
             </td>
-          </tr>
-          <tr data-id="1AcZYycV8J6wWHBhelQQdz3y9d4mEwjrw" role="row" class="qwPkcb">
             <td>
-              <div aria-label="3-1.mp4">
-                <span aria-label="Size: 9,4 MB&#10;Storage used: 9,4 MB">9,4 MB</span>
-              </div>
+              <span aria-label="Modified 20. Sept.">20. Sept.</span>
+            </td>
+            <td>
+              <span aria-label="Size: 2 MB&#10;Storage used: 2 MB">2 MB</span>
             </td>
           </tr>
-          <tr data-id="1H-4vAL4EqQqGuuq8CoWjStYRe_rdNSx3" role="row" class="qwPkcb">
+          <tr
+            data-id="1AcZYycV8J6wWHBhelQQdz3y9d4mEwjrw"
+            role="row"
+            class="qwPkcb"
+          >
             <td>
-              <div aria-label="4-1.pdf">
-                <span aria-label="Size: 86 KB&#10;Storage used: 86 KB">86 KB</span>
+              <div
+                aria-label="3-1.mp4 Video Shared"
+                data-id="1AcZYycV8J6wWHBhelQQdz3y9d4mEwjrw"
+                data-tooltip="3-1.mp4 Video"
+              >
+                <strong class="DNoYtb">3-1.mp4</strong>
               </div>
+            </td>
+            <td>
+              <span aria-label="Modified 20. Sept.">20. Sept.</span>
+            </td>
+            <td>
+              <span aria-label="Size: 9,4 MB&#10;Storage used: 9,4 MB"
+                >9,4 MB</span
+              >
+            </td>
+          </tr>
+          <tr
+            data-id="1H-4vAL4EqQqGuuq8CoWjStYRe_rdNSx3"
+            role="row"
+            class="qwPkcb"
+          >
+            <td>
+              <div
+                aria-label="4-1.pdf PDF Shared"
+                data-id="1H-4vAL4EqQqGuuq8CoWjStYRe_rdNSx3"
+                data-tooltip="4-1.pdf PDF"
+              >
+                <strong class="DNoYtb">4-1.pdf</strong>
+              </div>
+            </td>
+            <td>
+              <span aria-label="Modified 20. Sept.">20. Sept.</span>
+            </td>
+            <td>
+              <span aria-label="Size: 86 KB&#10;Storage used: 86 KB">86 KB</span>
             </td>
           </tr>
         </tbody>
