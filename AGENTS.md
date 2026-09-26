@@ -219,6 +219,24 @@ Settings is a **nested group in the main sidebar**, not an inline nav inside a s
 
 For native HTML form controls, use the shared primitives in `src/components/forms/` (FormField, FormSubmitButton, PasswordInput, PasswordStrengthMeter). For checkboxes, **use `<Checkbox>` from `src/components/ui/checkbox.tsx`** — never raw `<input type="checkbox">`. The Radix-powered primitive bakes in the `checkbox` role, `aria-checked` state, keyboard handling (space to toggle), and indeterminate state, which are easy to get wrong with a native input. Pair the checkbox with a `<label htmlFor={id}>` and a helper `<p id="${id}-help">` (linked via `aria-describedby`) when the affordance needs explanation — see `app/users/add-directly-form.tsx` for the canonical pattern. The shared primitive intentionally includes `min-h-0`: the global mobile touch-target rule applies to every `button`/`role="button"`, and allowing that rule to stretch a 16px checkbox produces a broken tall rectangle. Put the checkbox in a labeled row/card that supplies the 44px touch target instead.
 
+**`"use client"` is mandatory ONLY when the file uses a client-only React API
+(`useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`, `useReducer`,
+`useContext` over a client store, event handlers like `onClick`, browser-only
+APIs like `window`/`document`/`localStorage`).** Presentational wrappers like
+`FormField`, `FormSubmitButton`, `EmptyState`, `Card`, `SectionHeader`, `KpiCard`
+do NOT need `"use client"` — they take a `children: ReactNode` prop and the
+React tree resolves whether each child is server- or client-rendered on its
+own merits. Marking them `"use client"` anyway causes Next.js 16 / Turbopack to
+register them as a `client reference proxy` that the SSR tree then walks into,
+and any nested client primitive (Radix `Label`, `Checkbox`, etc.) resolves to
+`undefined` and throws **Minified React error #130** ("Element type is invalid
+… but got: undefined") on every cold render. Symptom: the page renders fine
+(client-side fallback after the SSR throw), but the throw lands in every
+server log and every `/app/platform/errors` row. Fix: drop the directive.
+`src/components/forms/form-field.tsx` is the canonical example — it uses only
+`React.cloneElement` (a React API, not a hook) and was the trigger for the
+round-of-2026-09-26 #130.
+
 For bilingual (English + Arabic) text inputs, use the shared
 `DirAwareTextarea` / `DirAwareInput` from
 `src/components/forms/dir-aware-textarea.tsx`. They auto-switch

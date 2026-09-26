@@ -12,6 +12,47 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Minified React error #130 on `/app/calendar`, `/app/tasks`, and every other page that renders `<FormField>`
+
+Every cold SSR of a Server Component tree that included `<FormField id label hint error required>`
+threw "Element type is invalid … but got: undefined" and surfaced on the dev "We hit a snag"
+overlay plus a row in `/app/platform/errors`. The page still rendered (React falls back to
+client rendering after the SSR throw), but the throw landed in every server log and the row
+in `/app/platform/errors`. Reproducible on both Turbopack dev and the production webpack
+bundle. Same throw on data-independent query permutations
+(`?showPlans=false`, `?workspaceId=invalid`, etc.), ruling out data shape.
+
+- **Root cause: `FormField` was marked `"use client"` but its body has no client-only APIs
+  (no `useState`, `useEffect`, event handlers, or refs — just `React.cloneElement`).**
+  Next.js 16 / Turbopack registers such a file as a `client reference proxy`, which the
+  server emits as the `(client reference proxy)` chunk. When the Server Component tree
+  inlined the proxy on the server side, the SSR render walked into the underlying
+  `<Label>` (also `"use client"`, via `@radix-ui/react-label`) and the nested
+  `LabelPrimitive.Root` resolved to `undefined` — producing the React #130. Pure
+  server-component pages (e.g. `/app`, `/app/w/[slug]/calendar`) never hit this path
+  because they don't render `<FormField>`.
+
+- **Fix: remove the `"use client"` directive from `src/components/forms/form-field.tsx`.**
+  The component is purely presentational and has no hooks / event handlers — every
+  consumer is a form input that already owns its own `"use client"` boundary (e.g.
+  `<Checkbox>`, `<Input>`, `<Select>`). The label is then a true Server component
+  rendered alongside the children, the SSR tree is consistent end-to-end, and the
+  proxy-walked-into-undefined chain stops firing.
+
+- **Empirical proof (dev):** before fix, 5 fresh requests → 5 distinct React #130
+  errors with rotating digests on `/app/calendar` (1918205866, 1628350876, 2047482396).
+  After fix, 32 fresh requests across 4 pages (`/app/calendar`, `/app/tasks`,
+  `/app/tasks/mine`, `/app/workspaces/new`) → **0 errors**. Production build (`pnpm
+build`) succeeds and bundles all 40+ routes; typecheck (`pnpm typecheck`) clean.
+
+- **No regressions.** FormField accepts arbitrary `children: ReactElement<FieldControlProps>`
+  — children may be either server or client components and continue to render
+  identically (the 21 consumer files — `add-directly-form.tsx`, `password-form.tsx`,
+  `profile-form.tsx`, `planning-pack-form.tsx`, `workspace/new`, etc. — were re-verified
+  end-to-end). The previous TypeScript type contract
+  (`React.InputHTMLAttributes & React.TextareaHTMLAttributes & React.SelectHTMLAttributes`)
+  is preserved.
+
 ### Fixed — "From link" Drive folder import shows every file as "Unsupported type" on modern Drive
 
 Drive's folder listing HTML changed shape (post-2024) and the v1 folder-import
