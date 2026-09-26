@@ -162,4 +162,105 @@ describe("CalendarEventCard", () => {
     const link = screen.getByTestId("calendar-event-u");
     expect(link.textContent ?? "").toContain("Unknown Thing");
   });
+
+  // ─── Round-2026-09-26: task-kind + default variant ────────────────────
+  // The unified card is consumed by both the workspace calendar
+  // (compact variant, plan kind) and the agency-overview calendar
+  // (default variant, plan OR task kind). The compact-plan path is
+  // already covered above; the tests below pin down the new
+  // behaviour so a future refactor can't silently regress task
+  // status colour or priority rendering on the global calendar.
+
+  it("task kind renders the task status label with a colour cue (success for done)", () => {
+    const { container } = renderCard({
+      id: "t-done",
+      kind: "task",
+      status: "done",
+      format: undefined as never,
+      priority: "normal",
+    });
+    expect(screen.getByText(/done/i)).toBeInTheDocument();
+    const success = container.querySelector('[class*="text-success"]');
+    expect(success).not.toBeNull();
+    const card = screen.getByTestId("calendar-event-t-done");
+    expect(card.className).toMatch(/border-s-success/);
+  });
+
+  it("task kind renders blocked / cancelled with the danger colour cue", () => {
+    const { container } = renderCard({
+      id: "t-blocked",
+      kind: "task",
+      status: "blocked",
+      format: undefined as never,
+    });
+    const danger = container.querySelector('[class*="text-danger"]');
+    expect(danger).not.toBeNull();
+    const card = screen.getByTestId("calendar-event-t-blocked");
+    expect(card.className).toMatch(/border-s-danger/);
+  });
+
+  it("task kind uses the priority as the secondary line (not the format)", () => {
+    renderCard({
+      id: "t-prio",
+      kind: "task",
+      status: "in_progress",
+      format: undefined as never,
+      priority: "urgent",
+      priorityLabel: "Urgent",
+    });
+    // The secondary line should carry the priority label, not a
+    // humanized status / format string.
+    expect(screen.getByText("Urgent")).toBeInTheDocument();
+  });
+
+  it("default variant renders the kind label + workspace + assignee metadata", () => {
+    renderCard({
+      id: "t-default",
+      kind: "task",
+      variant: "default",
+      status: "in_progress",
+      format: undefined as never,
+      priority: "high",
+      priorityLabel: "High",
+      workspaceName: "Acme HQ",
+      assigneeName: "Sara Designer",
+      kindLabel: "Task",
+      noWorkspaceLabel: "No workspace",
+    });
+    expect(screen.getByText("Task")).toBeInTheDocument();
+    expect(screen.getByText("Acme HQ")).toBeInTheDocument();
+    expect(screen.getByText("Sara Designer")).toBeInTheDocument();
+    expect(screen.getByText("High")).toBeInTheDocument();
+  });
+
+  it("default variant falls back to the noWorkspaceLabel when workspaceName is null", () => {
+    renderCard({
+      id: "t-orphan",
+      kind: "task",
+      variant: "default",
+      status: "in_progress",
+      format: undefined as never,
+      workspaceName: null,
+      noWorkspaceLabel: "—",
+    });
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("default variant hides the assignee row on plans (only tasks have assignees)", () => {
+    renderCard({
+      id: "p-default",
+      kind: "plan",
+      variant: "default",
+      status: "in_design",
+      format: "static_post",
+      formatLabel: "Static post",
+      assigneeName: "Should not show",
+      kindLabel: "Plan",
+      noWorkspaceLabel: "—",
+      workspaceName: "Acme",
+    });
+    expect(screen.getByText("Plan")).toBeInTheDocument();
+    expect(screen.getByText("Acme")).toBeInTheDocument();
+    expect(screen.queryByText("Should not show")).toBeNull();
+  });
 });

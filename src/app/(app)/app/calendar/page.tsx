@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CalendarDays, CheckSquare2, FileText, ListTodo } from "lucide-react";
+import { CalendarDays, ListTodo } from "lucide-react";
 import { toZonedTime } from "date-fns-tz";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -17,6 +17,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
+import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
 import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,47 +41,27 @@ function weekdays(code: LocaleCode) {
   );
 }
 
-function eventLabel(
+/**
+ * Resolve the humanized status / priority / workspace labels for a
+ * single agency-overview event. Centralised so the
+ * `CalendarEventCard` consumers below share a single source of
+ * truth for `t(...)` keys.
+ */
+function eventStatusLabel(
   event: AgencyCalendarEvent,
   t: (key: string, params?: Record<string, string | number>) => string,
-) {
+): string {
   return event.kind === "task"
     ? t(`tasks.status.${event.status}`)
     : t(`planningFilters.statusLabels.${event.status}`);
 }
 
-function EventCard({
-  event,
-  t,
-}: {
-  event: AgencyCalendarEvent;
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  return (
-    <Link
-      href={event.href}
-      className="border-border bg-surface hover:border-primary/50 focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-2 transition-colors focus-visible:ring-2 focus-visible:outline-none"
-    >
-      <span className="text-label text-fg-muted inline-flex items-center gap-1 font-semibold">
-        {event.kind === "task" ? (
-          <CheckSquare2 className="h-3 w-3" aria-hidden="true" />
-        ) : (
-          <FileText className="h-3 w-3" aria-hidden="true" />
-        )}
-        {event.kind === "task" ? t("calendar.globalTask") : t("calendar.globalPlan")}
-      </span>
-      <span className="text-label text-fg-primary mt-1 block font-semibold wrap-break-word">
-        {event.title}
-      </span>
-      <span className="text-label text-fg-muted mt-1 block truncate">
-        {event.workspaceName ?? t("calendar.globalNoWorkspace")}
-      </span>
-      <span className="text-label text-fg-secondary mt-1 block">{eventLabel(event, t)}</span>
-      {event.kind === "task" && event.assigneeName ? (
-        <span className="text-label text-fg-muted mt-1 block truncate">{event.assigneeName}</span>
-      ) : null}
-    </Link>
-  );
+function eventPriorityLabel(
+  event: AgencyCalendarEvent,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): string | undefined {
+  if (event.kind !== "task" || !event.priority) return undefined;
+  return t(`tasks.priority.${event.priority}`);
 }
 
 export default async function GlobalCalendarPage({
@@ -416,7 +397,21 @@ export default async function GlobalCalendarPage({
                   timeZone: agencyTimezone,
                 })}
               </time>
-              <EventCard event={event} t={t} />
+              <CalendarEventCard
+                id={`${event.kind}-${event.id}`}
+                href={event.href}
+                title={event.title}
+                kind={event.kind}
+                variant="default"
+                status={event.status}
+                statusLabel={eventStatusLabel(event, t)}
+                priority={event.priority}
+                priorityLabel={eventPriorityLabel(event, t)}
+                workspaceName={event.workspaceName}
+                assigneeName={event.assigneeName ?? null}
+                noWorkspaceLabel={t("calendar.globalNoWorkspace")}
+                kindLabel={event.kind === "task" ? t("calendar.globalTask") : t("calendar.globalPlan")}
+              />
             </div>
           ))
         )}
@@ -465,7 +460,24 @@ export default async function GlobalCalendarPage({
                 </span>
                 <div className="mt-2 space-y-1">
                   {events.slice(0, 5).map((event) => (
-                    <EventCard key={`${event.kind}-${event.id}`} event={event} t={t} />
+                    <CalendarEventCard
+                      key={`${event.kind}-${event.id}`}
+                      id={`${event.kind}-${event.id}-${day}`}
+                      href={event.href}
+                      title={event.title}
+                      kind={event.kind}
+                      variant="default"
+                      status={event.status}
+                      statusLabel={eventStatusLabel(event, t)}
+                      priority={event.priority}
+                      priorityLabel={eventPriorityLabel(event, t)}
+                      workspaceName={event.workspaceName}
+                      assigneeName={event.assigneeName ?? null}
+                      noWorkspaceLabel={t("calendar.globalNoWorkspace")}
+                      kindLabel={
+                        event.kind === "task" ? t("calendar.globalTask") : t("calendar.globalPlan")
+                      }
+                    />
                   ))}
                   {events.length > 5 ? (
                     <p className="text-label text-fg-muted px-1">+{events.length - 5}</p>

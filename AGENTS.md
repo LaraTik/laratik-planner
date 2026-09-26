@@ -673,6 +673,20 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-26 — Unified calendar card (feat/unified-calendar-card)
+
+DRY + accessibility fix across the two calendar surfaces. The per-workspace `/app/w/[slug]/calendar` and the agency-wide `/app/calendar` previously rendered the same event with two different components: the workspace calendar used `CalendarEventCard` (status badge + left-border colour accent + format chip) while the global calendar inlined its own `EventCard` with status as plain text. Admins using the global overview could not spot blocked / in-review / done items at a glance — exactly the quick-overview use case the surface is meant to serve.
+
+- **feat(ui): unify `CalendarEventCard` — one component, two surfaces.** New `kind: "plan" | "task"` and `variant: "compact" | "default"` props let the same component render the tight workspace day-cell chip (`compact` + `plan`) and the agency-overview card (`default` + plan or task). The workspace calendar keeps its current rendering via the defaults; the global calendar now consumes the same component with `variant="default"` and gets the status badge + left-border accent for free. (`src/components/workspace/calendar-event-card.tsx`).
+
+- **feat(ui): agency-overview calendar gains status + priority colour cues (admin quick overview).** Status badge maps plan + task statuses to the existing `Badge` variant set (`success` / `warning` / `danger` / `info` / `default`); the same colour drives the left-border accent so the day cell carries the cue even when the badge text is truncated. Tasks additionally render the priority as a coloured secondary line (urgent → danger, high → warning, low → info, normal → default) so admins can scan a dense month grid for blockers without reading every card. (`src/app/(app)/app/calendar/page.tsx`).
+
+- **feat(lib): `taskBadgeVariant(status)` + `priorityBadgeVariant(priority)` helpers.** Single source of truth for the task-side colour mapping; the existing `TaskStatusBadge` continues to use its inline classes (no visual regression on `/app/tasks`) but the calendar surfaces now use the variant-aware path so the swatches stay in lock-step with content statuses. (`src/lib/tasks/status-badge.ts`).
+
+- **test: 6 new cases on `CalendarEventCard`** for task kind (success/danger swatches, priority secondary line), default variant (kind label + workspace + assignee metadata), noWorkspace fallback, and plan-without-assignee. **11 new cases on `taskBadgeVariant` / `priorityBadgeVariant`** pinning every enum value to its swatch so a future status/priority addition can't silently desync. All 30 cases pass; tsc clean.
+
+- **Companion**: `chore/ui-ux-pass3` (round 3, 2026-09-25) — scroll-spy jitter, member-list responsive collapse, Mail icon for pending invites, agency-settings hover treatment, sr-only duplication removal, `ApplicationInfoCard` label column widening. Both rounds share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity, status never colour alone).
+
 ### 2026-09-25 — UI/UX round 2 (chore/ui-ux-pass2)
 
 Round-2 of the `/ui-ux-pro-max` polish pass. Built on the round-1 sidebar rebuild + mobile `My Work` route restore + trend-radar glyph swap.
