@@ -24,3 +24,8 @@ pnpm-lock.yaml
 # Evaluation contracts use XML and are maintained as machine-readable
 # fixtures; Prettier has no XML parser in this project.
 docs/api/*.xml
+
+# Drive HTML fixtures simulate real-world payloads we have to parse; their
+# whitespace / quoting is part of the test surface and reformatting them
+# would silently mutate the input the parser sees.
+tests/fixtures/drive-folder-html/

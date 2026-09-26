@@ -233,10 +233,29 @@ export class GoogleDriveHtmlAdapter implements MediaFolderSourceAdapter {
     opts: { fetcher: typeof fetch; signal?: AbortSignal | null },
   ): Promise<MediaFolderItemStatus> {
     // Preflight hits `drive.usercontent.google.com/download?id=<id>` with
-    // a HEAD; we abort the body. If the folder is private, this is also
-    // where we get 401/403. Drive also returns a streaming redirect to
-    // an HTML sign-in wall — we treat any non-2xx as a connection-required
-    // signal so the wizard surfaces the friendly message.
+    // a HEAD; we abort the body. The role of this preflight is narrow:
+    // detect folders that aren't actually publicly downloadable, so the
+    // wizard can surface the friendly "Connect Drive or make this folder
+    // 'Anyone with the link can view'" message up front. It is NOT a
+    // classification gate for whether the file is importable — the
+    // single-file import path validates mime + signature on the real
+    // download response and emits a precise error code if anything
+    // actually goes wrong.
+    //
+    // Concretely:
+    //   - 401 / 403 → the folder or file isn't publicly accessible.
+    //     Mark `provider_connection_required` so the wizard surfaces the
+    //     "needs Drive connection" hint.
+    //   - 30x redirect to a sign-in wall → same as above. Common on
+    //     private folders where Drive serves an HTML sign-in page
+    //     instead of the file.
+    //   - 2xx → file is publicly downloadable; let the wizard pre-select
+    //     it and the actual import flow do the full validation.
+    //   - Any other status (4xx other than 401/403, 5xx, or a network
+    //     exception) → leave as `importable` so the user can still try.
+    //     Marking these as `unsupported` would hide legitimate files
+    //     behind a transient signal — the import endpoint will reject
+    //     them with the right code if they're truly broken.
     try {
       const url = `https://drive.usercontent.google.com/download?id=${encodeURIComponent(
         item.id,
@@ -251,9 +270,14 @@ export class GoogleDriveHtmlAdapter implements MediaFolderSourceAdapter {
       if (response.status >= 200 && response.status < 300) return "importable";
       // 30x redirect to a sign-in wall is common — treat as connection-required.
       if (response.status >= 300 && response.status < 400) return "provider_connection_required";
-      return "unsupported";
+      // Any other status (404, 429, 5xx, …) is treated as a transient
+      // signal. The real import GET will validate properly.
+      return "importable";
     } catch {
-      return "provider_connection_required";
+      // Network errors (DNS, connection reset, etc.) are transient too.
+      // Same rationale as above: don't hide the file behind a hard
+      // "unsupported" verdict the user can't override.
+      return "importable";
     }
   }
 }
