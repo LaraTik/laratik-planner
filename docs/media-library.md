@@ -69,6 +69,18 @@ single-file link contract stay unchanged.
   exposes an inline title override so the user can rename before
   importing. A per-batch visibility toggle (`workspace` default,
   `agency` opt-in) sits above the list.
+- **Listing parser covers both Drive HTML shapes.** The folder HTML has
+  shifted twice: pre-2024 Drive wrapped each row as `[id, name, mime, …]`,
+  post-2024 Drive wraps it as `[null, "<id>"], null, null, null, "<mime>", …`.
+  `parseDriveFolderHtml` runs three independent passes (modern AF → legacy
+  AF → data-id + aria-label scrape) and merges by file id, so a folder
+  page always yields the maximum available metadata. When Drive lists a
+  file as `application/octet-stream` (common for mobile uploads or
+  renamed files), the parser falls back to the filename extension via
+  `contentTypeFromFilename` so the kind badge is correct; the import path
+  still validates the real bytes via `validateMediaSignature`. Per-row
+  size is sourced from the `Size: … MB` aria-label when present (EU
+  comma + US dot number formats both supported).
 - **Per-item import.** The server fans out across four workers and
   reuses `importPublicMediaAsset` per file, so every item lands through
   the existing storage-intent, signature, and quarantine paths. No new

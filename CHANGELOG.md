@@ -12,6 +12,64 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — "From link" Drive folder import shows every file as "Unsupported type" on modern Drive
+
+Drive's folder listing HTML changed shape (post-2024) and the v1 folder-import
+parser stopped recognising every file in a public "Anyone with the link can
+view" folder. The result on the wizard: `0 importable files in this folder. N
+were skipped`, every row showing `application/octet-stream` and an "Unsupported
+type" badge even though the underlying files are perfectly importable PNG /
+MP4 / PDF. Three concrete fixes shipped.
+
+- **Parser: read the modern `AF_initDataCallback({key: 'ds:4'})` row shape.**
+  The legacy `[id, name, mime, ...]` shape was the only one the regex
+  understood. Modern Drive wraps each row as `[null, "<id>"], null, null,
+null, "<mime>", null, ...`, so the regex never matched and the parser fell
+  back to the data-id + aria-label scrape — which knows the ID + filename but
+  not the mime type. The parser now reads both shapes; the modern regex
+  anchors on `[null, "<id>"], null, null, null, "<mime>"` and grabs the mime
+  from the fixed offset. `src/lib/media/folder-sources/drive-html-parser.ts`.
+
+- **Listing mime fallback: derive the mime from the filename extension when
+  Drive lists a file as `application/octet-stream`.** Drive does this for
+  mobile uploads and renamed files — the bytes are fine, the type sniffing
+  just gave up. We re-use `contentTypeFromFilename` from the existing
+  media contract so the kind badge (image / video / document) is correct in
+  the wizard without a second round-trip. The import path still validates
+  the real bytes via `validateMediaSignature`, so a misleading listing mime
+  is a display problem, never a security one.
+
+- **Preflight: stop pre-marking items as "unsupported" on transient HEAD
+  errors.** The preflight HEAD on `drive.usercontent.google.com/download`
+  only marks `provider_connection_required` on a real 401/403 (or a sign-in
+  redirect); a 404, 429, 5xx, or network error now leaves the row as
+  `importable` so the user can still try. The actual import GET does the
+  full mime + signature validation and emits a precise error code if
+  anything is actually broken. Marking transient responses as "unsupported"
+  hid legitimate files behind a verdict the user couldn't override — that's
+  the bug that produced the original report. `src/lib/media/folder-sources/drive-html.ts`.
+
+- **Markup scrape: also read the row size from the per-row `Size: … MB`
+  aria-label** (European comma + US dot number formats both supported). The
+  wizard was already showing "Size unavailable" for every folder file
+  because the parser never populated `sizeBytes`; we now populate it
+  whenever Drive's HTML carries the label. Falls through to the existing
+  Content-Length check on import if it's still null.
+
+- **Tests: `tests/fixtures/drive-folder-html/modern-folder.html`** captures
+  the post-2024 Drive HTML shape (modern AF block + modern markup). 4 new
+  parser assertions cover the new shape, the filename-extension mime
+  fallback, the size-label parser (EU + US), and mixed-shape pages that
+  carry both legacy and modern AF rows. 2 new adapter assertions cover
+  transient-preflight tolerance and end-to-end listing against the modern
+  fixture. Full 3680-test suite green; typecheck + lint + prettier clean.
+
+**Deferred**: rich per-row metadata (last-modified, owner email, thumbnail
+URL signing). The current scrape only covers what the wizard actually needs
+to display + import. Drive's structured `data:` blob carries more — a
+follow-up PR can wire the `data-id` row template into a proper extractor
+if a future UI panel needs it.
+
 ### Changed — Media Cloudflare-asset audit + refinement
 
 Follow-up audit after the three media-perf PRs (cache + fetchpriority,

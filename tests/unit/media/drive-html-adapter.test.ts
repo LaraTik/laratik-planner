@@ -102,4 +102,60 @@ describe("GoogleDriveHtmlAdapter", () => {
     if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result)}`);
     expect(result.items.every((i) => i.status === "provider_connection_required")).toBe(true);
   });
+
+  it("leaves per-row as importable when the preflight HEAD returns a transient error (404/429/5xx)", async () => {
+    // The preflight is a best-effort connection-required detector, not a
+    // hard classifier. A 404 / 429 / 5xx response is a transient signal —
+    // the actual import GET will retry against the real download endpoint
+    // and emit a precise error code if anything's actually broken. Marking
+    // these as `unsupported` hides legitimate files behind a verdict the
+    // user can't override, which is what produced the original bug where
+    // every file in a public folder showed "Unsupported type" badges.
+    const html = readFixture("public-folder.html");
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://drive.google.com/drive/folders/")) {
+        return new Response(html, { status: 200 });
+      }
+      // Simulate Drive returning a transient error on the preflight.
+      return new Response(null, { status: 429 });
+    });
+    const adapter = new GoogleDriveHtmlAdapter({ fetchImpl: fetcher, dnsLookup: publicDns() });
+    const result = await adapter.inspect({
+      folderUrl: "https://drive.google.com/drive/folders/abc",
+    });
+    if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+    expect(result.items.every((i) => i.status === "importable")).toBe(true);
+  });
+
+  it("parses the modern Drive HTML shape (post-2024) and surfaces mime + size for every file", async () => {
+    const html = readFixture("modern-folder.html");
+    const fetcher = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://drive.google.com/drive/folders/")) {
+        return new Response(html, {
+          status: 200,
+          headers: { "content-type": "text/html" },
+        });
+      }
+      if (url.startsWith("https://drive.usercontent.google.com/download")) {
+        return new Response(null, { status: 200 });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    const adapter = new GoogleDriveHtmlAdapter({ fetchImpl: fetcher, dnsLookup: publicDns() });
+    const result = await adapter.inspect({
+      folderUrl: "https://drive.google.com/drive/folders/1JWqxiknoZdX3eHs-NukvcD7cj9uonSZc",
+    });
+    if (!result.ok) throw new Error(`expected ok, got ${JSON.stringify(result)}`);
+    expect(result.items).toHaveLength(4);
+    expect(result.items.every((i) => i.status === "importable")).toBe(true);
+    // Every item should have a real mime (not the octet-stream default)
+    // because the modern AF block carries it for each row.
+    const mimes = new Set(result.items.map((i) => i.mimeType));
+    expect(mimes.has("application/octet-stream")).toBe(false);
+    expect(mimes.has("image/png")).toBe(true);
+    expect(mimes.has("video/mp4")).toBe(true);
+    expect(mimes.has("application/pdf")).toBe(true);
+  });
 });
