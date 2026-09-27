@@ -94,11 +94,19 @@ describe("MediaSourcePicker", () => {
     expect(upload?.contentItemId).toBeUndefined();
   });
 
-  it("forwards onAssetReady to the device child only", () => {
+  it("forwards onAssetReady to BOTH the device and link children so the picker's in-memory list updates after any import", async () => {
     const handler = () => {};
+    const user = userEvent.setup();
     renderPicker({ onAssetReady: handler });
     expect(uploadCalls).toHaveLength(1);
     const [upload] = uploadCalls;
     expect(upload?.onAssetReady).toBe(handler);
+    await user.click(screen.getByRole("tab", { name: "From link" }));
+    expect(linkCalls).toHaveLength(1);
+    const [link] = linkCalls;
+    // Regression: prior to the link-tab forwarding fix, the link child's
+    // onAssetReady was undefined and parents had to manual-refresh after a
+    // link import to surface the new asset in the picker dropdown.
+    expect(link?.onAssetReady).toBe(handler);
   });
 });

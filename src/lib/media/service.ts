@@ -688,7 +688,7 @@ export async function registerUploadedMediaAsset(input: {
   sourceReference?: string;
   sourceUrl?: string;
   sourceModifiedAt?: Date;
-}) {
+}): Promise<{ id: string; storageObjectId: string }> {
   if (!(await canWriteToWorkspace(input.actor, input.workspaceId))) {
     throw new MediaPermissionError("Read-only users cannot add media.");
   }
@@ -864,8 +864,11 @@ export async function registerUploadedMediaAsset(input: {
     }
 
     // A concurrent request may have won the unique storage-object race.
+    // Select storageObjectId too so the public-asset import flow can
+    // look up the joined storage object shape (kind/byteSize/mimeType)
+    // for the caller without a second round-trip.
     const [alreadyRegistered] = await db
-      .select({ id: mediaAssets.id })
+      .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);
@@ -884,7 +887,7 @@ export async function registerUploadedMediaAsset(input: {
     // fails. If another request registered it concurrently, preserve that
     // winner and avoid quarantining its live object.
     const [alreadyRegistered] = await db
-      .select({ id: mediaAssets.id })
+      .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);

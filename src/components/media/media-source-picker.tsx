@@ -34,10 +34,13 @@ export function MediaSourcePicker({
    */
   defaultFolderId?: string;
   /**
-   * Fired by the device tab once an asset has finished registering. The
-   * link tab refreshes the router on success, so parents that rely on the
-   * "new asset appears in the picker" flow should refresh on their own
-   * after a link import (or render the picker outside of `useState`).
+   * Fired by every source (device upload, single-file link, folder
+   * batch) once an asset has finished registering. Carries the canonical
+   * `MediaUploadResult` shape so the parent can add the new asset to its
+   * in-memory list and pre-select it without waiting for a full page
+   * refresh. The link flow historically only called `router.refresh()`,
+   * which left parents whose picker reads from `useState` with a stale
+   * asset list until the user hard-refreshed; this prop closes that gap.
    */
   onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
@@ -77,6 +80,7 @@ export function MediaSourcePicker({
           <MediaLinkImporter
             workspaceOptions={workspaceOptions}
             {...(contentItemId ? { contentItemId } : {})}
+            {...(onAssetReady ? { onAssetReady } : {})}
           />
         </TabsContent>
       </Tabs>

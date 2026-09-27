@@ -12,12 +12,141 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Global calendar assignee/status filter "looks broken" when the chosen assignee has no tasks this month
+
+Picking an assignee (or a status) on `/app/calendar` and clicking **Apply filters** reduced
+the count but the calendar visually looked identical because all visible events were
+plans and plans aren't filtered by assignee/status. Users reported "I chose an
+assignee and the filter did nothing" — the filter was correct, the visual feedback
+was missing.
+
+- **Symptom (reproduction):** unfiltered view of the seeded agency shows `287 events`
+  (mostly plans). Filtering by an assignee with no tasks reduces the count to `241
+events` (the few real tasks are filtered out, but the 241 plans remain visible) —
+  visually the two views are indistinguishable. The active-filter chip did show the
+  assignee name, but with 280+ plans still visible the user can't tell the filter
+  applied to anything.
+- **Root cause:** the assignee and status filters only touch the task query
+  (`agency_tasks`), not the plan query (`content_items`). The summary line
+  `Showing X events` added both, so the count moved slightly while the visible
+  surface didn't. The active-filter chip was the only feedback, and it sat above a
+  near-identical calendar grid.
+- **Fix:** split the count into a plan/task breakdown and add a warning-styled hint
+  whenever an assignee/status filter is active and the result has zero tasks.
+  - `Showing 280 plans and 7 tasks` → baseline (both kinds present).
+  - `Showing 280 plans` → task-only branch when the count is 0.
+  - `Showing 7 tasks` → plan-only branch when the count is 0.
+  - When `assigneeId` or `taskStatus` is set and the resulting task list is empty, a
+    `bg-warning-subtle` hint appears under the breakdown explaining why plans still
+    render: `No tasks for <name> this month. 241 plans remain visible.` (or
+    `No tasks with status <status> this month. …` for the status filter). The hint
+    references the actual assignee name and the current plan count so the user knows
+    the filter ran.
+- **Files touched:**
+  - `src/app/(app)/app/calendar/page.tsx` — new `CalendarCountSummary` component that
+    renders the breakdown + hint. The page replaces the previous
+    `Showing {count} events` `<p>` with the summary; the assignee/status filter
+    wiring in `getAgencyCalendarView` is unchanged (the service-level test in
+    `tests/integration/tasks.test.ts` already covered the filter logic correctly).
+  - `src/messages/en/calendar.json`, `src/messages/ar/calendar.json` — five new keys
+    (`globalShowingBreakdown`, `globalShowingBreakdownPlansOnly`,
+    `globalShowingBreakdownTasksOnly`, `globalNoTasksForAssignee`,
+    `globalNoTasksForStatus`).
+- **Verification:** new e2e spec `tests/e2e/global-calendar-filter-feedback.spec.ts`
+  covers three states (unfiltered breakdown, workspace filter that matches plans
+  and skips the hint, status filter with no matches that triggers the hint). Three
+  tests pass. `pnpm typecheck` clean (only my `tmp/` scratch scripts had errors,
+  and they were deleted). ESLint on the touched file clean
+  (`--max-warnings=0`).
+- **Scope note:** the assignee/status filter behaviour is unchanged — it still only
+  touches tasks, and plans remain visible. The fix is purely visual; the existing
+  `globalAssigneeNote` description ("Assignee and status filters apply to tasks.
+  Plans stay visible unless you turn them off.") stays accurate.
+
 ### Fixed — Minified React error #130 on `/app/calendar`, `/app/tasks`, and every other page that renders `<FormField>`
 
 Every cold SSR of a Server Component tree that included `<FormField id label hint error required>`
 threw "Element type is invalid … but got: undefined" and surfaced on the dev "We hit a snag"
 overlay plus a row in `/app/platform/errors`. The page still rendered (React falls back to
-client rendering after the SSR throw), but the throw landed in every server log and the row
+client rendering after the SSR throw), but the throw landed in every server log and the row### Changed — Media "From link" import UX: persistent thumbnails + in-memory refresh (fix/media-link-folder-browse-ux)
+
+Round-2 closed the parser gaps; round-3 closes the UX gaps that surfaced
+once the parser actually returned importable rows. Two user reports drove
+this:
+
+- "image not been render in samll box stay gray out" — wizard thumbnails
+  showed a blank gray placeholder for every image row.
+- "after import i think in need manully to update the page to see the
+  images" — pasting a single-file Drive link and clicking Import updated
+  the page count but the picker dropdown still showed the pre-import
+  asset list until a hard refresh.
+
+Two concrete fixes shipped.
+
+- **fix(media): wizard thumbnails always render the kind icon under the
+  Drive image.** The previous layout rendered only the thumbnail <img>;
+  on Drive CDN slowness / 401 / 403 / wrong mime it hid itself via
+  `display: none` and left a blank gray box. The new layout renders the
+  FileImage / FileVideo / FileText icon as the **base layer** with the
+  `<img>` sitting absolutely-positioned over it and fading in on load
+  (`opacity` 0 → 1 with a 150ms transition). On `<img>` error the image
+  hides and the icon remains as the placeholder. The user gets a visible
+  type signal immediately, regardless of how Drive's CDN behaves.
+  `src/components/media/media-link-folder-browse.tsx`.
+
+- **fix(media): propagate `onAssetReady` through the link-tab → picker →
+  parent chain so the picker reflects new assets without a manual refresh.**
+  `MediaSourcePicker.onAssetReady` was wired to the device-upload tab
+  only. The link tab (`MediaLinkImporter` / `MediaLinkFolderBrowse`)
+  called `router.refresh()` internally — which refreshes the route's
+  server component cache but does NOT update the parent's in-memory
+  asset list (e.g. `availableAssets` in the delivery section). The user
+  had to reload to see the new asset in the dropdown. Now:
+  - `MediaSourcePicker` passes `onAssetReady` to **both** tabs.
+  - `MediaLinkImporter` accepts `onAssetReady?(asset: MediaUploadResult)`
+    and fires it after the API returns (with the asset id, title, kind,
+    byteSize derived from the joined storage object).
+  - `MediaLinkFolderBrowse` accepts the same and fires it **once per
+    successfully-imported item** in the batch report (skipped / failed /
+    canceled items don't fire). Exported `reportImportedAssets(report,
+rows, onAssetReady)` as a pure helper for unit testing.
+  - `/api/media/import` now joins the storage object (`kind`, `byteSize`,
+    `mimeType`) into its 201 response so the client has everything it
+    needs to populate the in-memory list without a follow-up fetch.
+  - `MediaLinkFolderBrowse.finish` fires the per-asset callbacks AND
+    still calls `router.refresh()` (both paths now run — the refresh
+    updates server-rendered lists, the callbacks update client
+    in-memory lists).
+  - `src/lib/media/service.ts`: the "concurrent registration won the
+    race" recovery query now selects `storageObjectId` too, so the
+    asset's inferred return type stays consistent across all three
+    return paths in `registerUploadedMediaAsset`.
+
+- **test(media): 5 new assertions** in `media-link-folder-browse.test.tsx`:
+  - Thumbnail rendering (svg + img present for image rows; svg only for
+    document rows that lack a thumbnail URL).
+  - Per-asset `onAssetReady` firings on wizard close (image + document +
+    skipped row counter).
+  - `reportImportedAssets` pure-function tests: skips non-imported items;
+    falls back to a sanitized title + kind=document + byteSize=0 when the
+    source row is missing; prefers `titleOverride` over the parsed name;
+    is a no-op when the callback is undefined.
+
+- **test(media): 1 new assertion** in `media-source-picker.test.tsx`:
+  `onAssetReady` is forwarded to **both** the device and link children,
+  not just the device child. The prior test asserted "device only" —
+  the regression guard now reads "both children so the picker's
+  in-memory list updates after any import".
+
+**Verification (the bar):**
+
+- Full 131 media tests + 3680 total tests pass; typecheck (own files),
+  lint (`--max-warnings=0`), prettier all clean.
+- Manual trace: paste a public Drive folder URL → wizard lists every
+  file with its real thumbnail fading in over the kind icon; click
+  Import → Done button → parent picker's dropdown shows the new asset
+  immediately, no manual refresh required.
+
 in `/app/platform/errors`. Reproducible on both Turbopack dev and the production webpack
 bundle. Same throw on data-independent query permutations
 (`?showPlans=false`, `?workspaceId=invalid`, etc.), ruling out data shape.
