@@ -308,6 +308,45 @@ the per-format Zod schema; a row that exceeds a per-format
 limit rolls back the whole batch. v1 paste rows (4 fields)
 still parse.
 
+## Media floor on deliveries (optional media)
+
+`content_item.media_required` (default `true`) decides whether a post
+must ship stored media with its delivery. It exists because a real class
+of posts has no creative file at all — caption-only announcements,
+text-first/thread posts, link drops — and the old floor was
+unconditional in three places (Zod `.min(1)`, the service guard, and the
+form's `onSubmit`). Designers were attaching filler media to get past a
+validator.
+
+- **The floor lives in `submitDelivery`, not in `SubmitDeliverySchema`.**
+  It is conditional on a column, and a static schema cannot read a
+  column. Do not re-add `.min(1)` — it silently closes the bypass while
+  looking like a safety net. The `.max(20)` ceiling is unconditional and
+  _does_ belong in the schema.
+- **Only `workspace_manager` / `content_planner` may set the flag**
+  (`setMediaRequired`), matching `updateContentItem`. A designer
+  submitting the delivery must not be able to lift the floor on their own
+  submission. The form's checkbox is therefore `disabled` for them, with
+  explanatory copy rather than a hidden control.
+- **Only the pre-creative statuses** (`draft`, `content_review`,
+  `approved_for_design`, `in_design`, `changes_requested`). The single
+  source of truth is `MEDIA_REQUIRED_STATUSES`, exported from the
+  service and consumed by both the guard and the page's
+  `canSetMediaRequired` — do not re-enumerate the list at a call site.
+- **An assetless delivery requires a non-empty `description`.** With no
+  files attached, the `delivery_version` description is the only record
+  of what was delivered. The service enforces it; the form mirrors it.
+- **The review gate is untouched.** A zero-asset delivery still creates
+  a `delivery_version`, still opens a `creative_internal` approval
+  request, and still sets `approvedDeliveryVersionId` on approval — so
+  `evaluateReadiness`'s `no_approved_delivery` blocker is unaffected. If
+  you ever find yourself editing `readiness.ts` for this feature, the
+  scope has drifted.
+- **The checkbox is inverted relative to the column.** The control means
+  "no creative" (`!media_required`); the conversion happens once, inside
+  `setAssetsOptional` in `delivery-section.tsx`. Passing the checkbox
+  state straight through as `mediaRequired` inverts the flag silently.
+
 ## Interface localization and bilingual content (EN/AR + RTL)
 
 The canonical implementation and verification contract is

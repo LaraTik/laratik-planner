@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
-import { submitDeliveryAction } from "../actions";
+import { submitDeliveryAction, setMediaRequiredAction } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { type MediaUploadResult } from "@/components/media/media-upload-form";
 import { MediaSourcePicker } from "@/components/media/media-source-picker";
@@ -63,6 +63,8 @@ export function DeliverySection({
   defaultFolderId,
   approvalGates = [],
   viewerIsClient = false,
+  mediaRequired = true,
+  canSetMediaRequired = false,
 }: {
   workspaceId?: string;
   workspaceName?: string;
@@ -82,6 +84,15 @@ export function DeliverySection({
   defaultFolderId?: string;
   approvalGates?: string[];
   viewerIsClient?: boolean;
+  /**
+   * `content_item.media_required`. When false this post may be delivered
+   * with no stored assets at all (caption-only, thread, link drop).
+   * Defaults to true so a caller that forgets the prop keeps the
+   * historical floor rather than silently opening a bypass.
+   */
+  mediaRequired?: boolean;
+  /** Whether the viewer may flip the flag (planner/manager, pre-creative). */
+  canSetMediaRequired?: boolean;
 }) {
   const t = useLocaleT();
   const previousAssetIds = deliveries[0] ? deliveryAssetIds(deliveries[0]) : [];
@@ -106,6 +117,13 @@ export function DeliverySection({
   const uploaderTriggerRef = useRef<HTMLButtonElement>(null);
   const wasMediaSearchOpen = useRef(showMediaSearch);
   const wasUploaderOpen = useRef(showUploader);
+  // Mirrors the persisted `content_item.media_required` so the form can
+  // re-validate client-side the moment it is toggled, without waiting
+  // for the router refresh that follows the server action.
+  const [mediaRequiredState, setMediaRequiredState] = useState(mediaRequired);
+  const [savingMediaRequired, startSaveMediaRequired] = useTransition();
+  const [mediaRequiredError, setMediaRequiredError] = useState<string | null>(null);
+  const assetsOptional = !mediaRequiredState;
   const canUploadInline = workspaceId.length > 0;
   const previousAssetSet = new Set(previousAssetIds);
   const nextVersionNumber = (deliveries[0]?.versionNumber ?? 0) + 1;
@@ -228,6 +246,33 @@ export function DeliverySection({
     setAvailableAssets((current) => current.filter((asset) => selectedAssetIds.includes(asset.id)));
   }
 
+  /**
+   * Persist the "this post ships no creative" decision. Optimistic so
+   * the client-side floor relaxes immediately, and reverted if the
+   * server refuses — the flag is a planner/manager decision, so a
+   * designer toggling it here is a no-op and must not look like it
+   * worked.
+   *
+   * The parameter is the *checkbox* value ("no creative"), which is the
+   * inverse of the stored `mediaRequired` column. The inversion is
+   * resolved here, once, rather than at the call site — passing the
+   * checkbox state straight through as `mediaRequired` silently
+   * inverted the flag.
+   */
+  function setAssetsOptional(nextAssetsOptional: boolean) {
+    const nextMediaRequired = !nextAssetsOptional;
+    const previous = mediaRequiredState;
+    setMediaRequiredState(nextMediaRequired);
+    setMediaRequiredError(null);
+    startSaveMediaRequired(async () => {
+      const res = await setMediaRequiredAction(workspaceSlug, contentItemId, nextMediaRequired);
+      if (!res.ok) {
+        setMediaRequiredState(previous);
+        setMediaRequiredError(res.error ?? null);
+      }
+    });
+  }
+
   return (
     <div className="space-y-4">
       <Card
@@ -340,8 +385,20 @@ export function DeliverySection({
                 const data = new FormData(form);
                 const nextErrors: Record<string, string> = {};
                 const selectedMedia = data.getAll("mediaAssetId");
-                if (selectedMedia.length === 0) {
+                // Mirror the service floor exactly: assets are only
+                // required while the post is marked as needing them.
+                // When they are optional the `description` becomes the
+                // load-bearing field instead, so an assetless version
+                // is never an empty row.
+                if (selectedMedia.length === 0 && !assetsOptional) {
                   nextErrors.deliverySources = t("contentDetail.deliveries.sourceRequired");
+                } else if (
+                  selectedMedia.length === 0 &&
+                  !String(data.get("description") ?? "").trim()
+                ) {
+                  nextErrors.description = t(
+                    "contentDetail.deliveries.assetlessDescriptionRequired",
+                  );
                 }
                 setFieldErrors(nextErrors);
                 if (Object.keys(nextErrors).length > 0) {
@@ -398,12 +455,64 @@ export function DeliverySection({
                 />
               </FormField>
 
+              {/*
+                "This post ships no creative" — the escape hatch from the
+                media floor, for caption-only / thread / link-drop posts.
+
+                A `<fieldset>`-level `<legend>` is already taken by the
+                media list below, so this is a standalone labelled group
+                rather than a nested fieldset. The label is a real
+                `<label htmlFor>` and the explanation is wired via
+                `aria-describedby` (AGENTS.md §Form controls). Planners
+                and managers only — a designer must not be able to lift
+                the floor on their own submission; that is the whole
+                reason the flag lives on the content item.
+              */}
+              <div
+                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                data-testid="delivery-media-required-toggle"
+              >
+                <div className="flex min-h-11 items-start gap-3">
+                  <Checkbox
+                    id="delivery-no-media"
+                    checked={assetsOptional}
+                    disabled={!canSetMediaRequired || savingMediaRequired}
+                    onCheckedChange={(checked) => setAssetsOptional(checked === true)}
+                    aria-describedby="delivery-no-media-help"
+                    className="mt-0.5"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <label
+                      htmlFor="delivery-no-media"
+                      className="text-body text-fg-primary block cursor-pointer font-semibold"
+                    >
+                      {t("contentDetail.deliveries.noMediaLabel")}
+                    </label>
+                    <p id="delivery-no-media-help" className="text-label text-fg-muted mt-0.5">
+                      {canSetMediaRequired
+                        ? t("contentDetail.deliveries.noMediaHelp")
+                        : t("contentDetail.deliveries.noMediaHelpReadOnly")}
+                    </p>
+                  </div>
+                </div>
+                {mediaRequiredError ? (
+                  <p role="alert" className="text-label text-danger mt-2 font-semibold">
+                    {mediaRequiredError}
+                  </p>
+                ) : null}
+              </div>
+
               <fieldset
                 className="space-y-2"
                 aria-describedby="delivery-media-help delivery-sources-error"
               >
                 <legend className="text-body text-fg-primary font-semibold">
                   {t("contentDetail.deliveries.mediaTitle")}
+                  {assetsOptional ? (
+                    <span className="text-fg-muted ms-2 font-normal">
+                      {t("contentDetail.deliveries.mediaOptionalBadge")}
+                    </span>
+                  ) : null}
                 </legend>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <p id="delivery-media-help" className="text-label text-fg-muted mt-1">

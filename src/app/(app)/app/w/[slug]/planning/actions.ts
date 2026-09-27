@@ -43,6 +43,8 @@ import {
   submitDelivery,
   DecideApprovalSchema,
   decideApproval,
+  SetMediaRequiredSchema,
+  setMediaRequired,
 } from "@/lib/deliveries/service";
 import { RecordPublicationSchema, recordPublication } from "@/lib/publishing/service";
 import {
@@ -519,6 +521,35 @@ export async function submitDeliveryAction(
     }
   } catch (error) {
     return actionFailure<SubmitDeliveryFields>(error, "The delivery could not be submitted.");
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+  return { ok: true };
+}
+
+// ─── Set media requirement ────────────────────────────────────────────
+/**
+ * Lifts (or restores) the "at least one stored media asset" floor for
+ * a single post. Separate from `submitDelivery` on purpose: the flag is
+ * a property of the post owned by planners/managers, and the designer
+ * submitting the delivery must not be able to set it.
+ */
+export async function setMediaRequiredAction(
+  workspaceSlug: string,
+  contentItemId: string,
+  mediaRequired: boolean,
+): Promise<{ ok: boolean; error?: string }> {
+  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  const parsed = SetMediaRequiredSchema.safeParse({ contentItemId, mediaRequired });
+  if (!parsed.success) {
+    return { ok: false, error: "That request was not valid." };
+  }
+  try {
+    await setMediaRequired(actor, parsed.data);
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "The media requirement could not be updated.",
+    };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };

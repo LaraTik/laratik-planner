@@ -45,9 +45,19 @@ export const SubmitDeliverySchema = z
     // The description is optional because the stored files are the
     // deliverable. A designer should not have to duplicate their filenames
     // in a narrative field just to advance the workflow.
+    //
+    // The one exception is an assetless delivery (see `mediaRequired` in
+    // `submitDelivery`): with no files attached, the description is the
+    // only record of what was delivered, so the service requires it there.
     description: z.string().max(500).optional(),
     designerNote: z.string().max(2000).optional(),
-    mediaAssetIds: z.array(z.string().uuid()).min(1).max(20),
+    // The `.min(1)` floor is NOT expressed here. Whether zero assets is
+    // legal depends on `content_item.media_required`, which is a column
+    // on the row — a static schema cannot see it, and hard-coding it here
+    // would have to be duplicated in the service guard and the form.
+    // `submitDelivery` owns the conditional floor; the `.max(20)` bound
+    // stays here because it is unconditional.
+    mediaAssetIds: z.array(z.string().uuid()).max(20),
   })
   .strict();
 
@@ -55,21 +65,37 @@ export type SubmitDeliveryInput = z.infer<typeof SubmitDeliverySchema>;
 
 export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
   const mediaAssetIds = [...new Set(input.mediaAssetIds ?? [])];
-  if (mediaAssetIds.length === 0) {
-    throw new Error("At least one stored media asset is required");
-  }
   const [item] = await db
     .select({
       agencyId: workspaces.agencyId,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
       changeRequestGate: contentItems.changeRequestGate,
+      mediaRequired: contentItems.mediaRequired,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
+
+  // The media floor. Most posts must ship creative; a caption-only
+  // announcement or a thread post legitimately has none, and that
+  // decision is recorded on the content item (`media_required`) rather
+  // than inferred, so it survives reloads and is visible to reviewers.
+  if (mediaAssetIds.length === 0) {
+    if (item.mediaRequired) {
+      throw new Error("At least one stored media asset is required");
+    }
+    // Assetless still needs a description: with no files attached, the
+    // `delivery_version` row's description is the entire record of what
+    // was delivered. An empty version row would be unreviewable.
+    if (!input.description?.trim()) {
+      throw new Error(
+        "A description is required when this post has no media assets, so reviewers know what was delivered",
+      );
+    }
+  }
 
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
@@ -83,18 +109,25 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     throw new Error(`Cannot submit a delivery while content is ${item.status}`);
   }
 
-  const mediaRows = await db
-    .select({
-      id: mediaAssets.id,
-      agencyId: mediaAssets.agencyId,
-      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
-      visibility: mediaAssets.visibility,
-      status: mediaAssets.status,
-      objectStatus: storageObjects.status,
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .where(inArray(mediaAssets.id, mediaAssetIds));
+  // An assetless delivery has nothing to authorise, and `inArray` with
+  // an empty list is not a no-op we want to rely on (it can compile to
+  // an `IN ()` that Postgres rejects). Skip the lookup entirely and let
+  // the `length` comparison below trivially pass.
+  const mediaRows =
+    mediaAssetIds.length > 0
+      ? await db
+          .select({
+            id: mediaAssets.id,
+            agencyId: mediaAssets.agencyId,
+            ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+            visibility: mediaAssets.visibility,
+            status: mediaAssets.status,
+            objectStatus: storageObjects.status,
+          })
+          .from(mediaAssets)
+          .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+          .where(inArray(mediaAssets.id, mediaAssetIds))
+      : [];
   if (
     mediaRows.length !== mediaAssetIds.length ||
     mediaRows.some(
@@ -150,17 +183,23 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       })
       .returning({ id: deliveryVersions.id });
 
-    await tx.insert(mediaAssetLinks).values(
-      mediaAssetIds.map((mediaAssetId) => ({
-        agencyId: mediaRows[0]!.agencyId,
-        workspaceId: item.workspaceId,
-        mediaAssetId,
-        targetType: "delivery",
-        targetId: created!.id,
-        clientVisible: true,
-        createdBy: actor.id,
-      })),
-    );
+    // Skip the insert entirely for an assetless delivery — Drizzle
+    // rejects an empty `.values([])`. `mediaRows[0]` is safe to read
+    // inside the guard because it is only non-empty when at least one
+    // id was validated above.
+    if (mediaAssetIds.length > 0) {
+      await tx.insert(mediaAssetLinks).values(
+        mediaAssetIds.map((mediaAssetId) => ({
+          agencyId: mediaRows[0]!.agencyId,
+          workspaceId: item.workspaceId,
+          mediaAssetId,
+          targetType: "delivery",
+          targetId: created!.id,
+          clientVisible: true,
+          createdBy: actor.id,
+        })),
+      );
+    }
 
     // Open an internal creative-review request
     await tx.insert(approvalRequests).values({
@@ -811,4 +850,94 @@ export async function listDeliveryVersionsForItem(
       : { id: v.submittedBy, name: v.submittedByName },
     links: linksByVersion.get(v.id) ?? [],
   }));
+}
+
+/**
+ * §10 — Set whether this post must ship stored media.
+ *
+ * The "no creative file for this one" decision belongs to whoever owns
+ * the brief, not to the designer hitting the submit button: it is a
+ * statement about the post, it is visible in review, and it must not
+ * be something a designer can flip to get past the media floor. So the
+ * role set here is `workspace_manager` / `content_planner` — the same
+ * gate `updateContentItem` uses.
+ *
+ * Restricted to the pre-creative statuses for the same reason
+ * `updateContentItem` is: once a version is in `creative_review` the
+ * reviewer is looking at a specific set of files, and silently changing
+ * the requirement underneath them would make the approved version mean
+ * something different than what was reviewed. A post that legitimately
+ * turns out to be assetless is a `changes_requested` / draft conversation,
+ * not a checkbox.
+ */
+export const SetMediaRequiredSchema = z
+  .object({
+    contentItemId: z.string().uuid(),
+    mediaRequired: z.boolean(),
+  })
+  .strict();
+
+export type SetMediaRequiredInput = z.infer<typeof SetMediaRequiredSchema>;
+
+const MEDIA_REQUIRED_EDITABLE_STATUSES = [
+  "draft",
+  "content_review",
+  "approved_for_design",
+  "in_design",
+  "changes_requested",
+] as const;
+
+/**
+ * Exported so the delivery form and the service guard cannot drift: the
+ * UI hides the toggle outside these statuses, and `setMediaRequired`
+ * throws outside them. One list, two consumers.
+ */
+export const MEDIA_REQUIRED_STATUSES = MEDIA_REQUIRED_EDITABLE_STATUSES;
+
+export async function setMediaRequired(actor: Actor, input: SetMediaRequiredInput) {
+  const [item] = await db
+    .select({
+      workspaceId: contentItems.workspaceId,
+      status: contentItems.status,
+      current: contentItems.mediaRequired,
+    })
+    .from(contentItems)
+    .where(eq(contentItems.id, input.contentItemId))
+    .limit(1);
+  if (!item) throw new Error("Content item not found");
+
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    "set_media_required",
+  );
+
+  if (
+    !MEDIA_REQUIRED_EDITABLE_STATUSES.includes(
+      item.status as (typeof MEDIA_REQUIRED_EDITABLE_STATUSES)[number],
+    )
+  ) {
+    throw new Error(`Cannot change the media requirement while content is ${item.status}`);
+  }
+
+  if (item.current === input.mediaRequired) return { mediaRequired: item.current };
+
+  await db
+    .update(contentItems)
+    .set({ mediaRequired: input.mediaRequired, updatedAt: new Date() })
+    .where(eq(contentItems.id, input.contentItemId));
+
+  await db.insert(activityEvents).values({
+    workspaceId: item.workspaceId,
+    contentItemId: input.contentItemId,
+    actorId: actor.id,
+    kind: "delivery",
+    summary: input.mediaRequired
+      ? "Marked as requiring media assets"
+      : "Marked as not requiring media assets",
+    beforeData: { mediaRequired: item.current },
+    afterData: { mediaRequired: input.mediaRequired },
+  });
+
+  revalidatePath(`/app/w/`);
+  return { mediaRequired: input.mediaRequired };
 }

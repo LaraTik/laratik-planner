@@ -1,10 +1,12 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
+import { setMediaRequiredAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   submitDeliveryAction: vi.fn(),
+  setMediaRequiredAction: vi.fn(),
 }));
 vi.mock("@/components/media/media-upload-form", () => ({
   MediaUploadForm: () => null,
@@ -388,5 +390,89 @@ describe("DeliverySection uploader", () => {
     expect(
       document.querySelector('video[aria-label="Imported reel via link"]'),
     ).toBeInTheDocument();
+  });
+});
+
+describe("DeliverySection — optional media (caption-only posts)", () => {
+  beforeEach(() => {
+    vi.mocked(setMediaRequiredAction).mockResolvedValue({ ok: true });
+  });
+
+  it("blocks an empty submission while the post requires media", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    await user.click(screen.getByRole("button", { name: /submit for creative review/i }));
+
+    expect(
+      await screen.findByText("Select at least one stored Media Library asset."),
+    ).toBeInTheDocument();
+  });
+
+  it("lets a designer submit with no assets once the post is marked assetless", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired={false} canSetMediaRequired />);
+
+    // The floor is lifted, so the missing-asset error must NOT appear.
+    await user.click(screen.getByRole("button", { name: /submit for creative review/i }));
+    expect(
+      screen.queryByText("Select at least one stored Media Library asset."),
+    ).not.toBeInTheDocument();
+
+    // …but the description becomes load-bearing, because with no files
+    // it is the only record reviewers will see.
+    expect(await screen.findByText(/describe what is being delivered/i)).toBeInTheDocument();
+  });
+
+  it("persists the toggle through the server action and reflects the new state", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    const toggle = screen.getByRole("checkbox", { name: /this post ships no creative/i });
+    expect(toggle).toHaveAttribute("data-state", "unchecked");
+
+    await user.click(toggle);
+
+    await waitFor(() => {
+      expect(setMediaRequiredAction).toHaveBeenCalledWith(
+        baseProps.workspaceSlug,
+        baseProps.contentItemId,
+        false,
+      );
+    });
+    await waitFor(() => {
+      expect(toggle).toHaveAttribute("data-state", "checked");
+    });
+    expect(screen.getByText("(optional)")).toBeInTheDocument();
+  });
+
+  it("rolls the toggle back and surfaces the error when the server refuses", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setMediaRequiredAction).mockResolvedValue({
+      ok: false,
+      error: "Cannot change the media requirement while content is creative_review",
+    });
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    const toggle = screen.getByRole("checkbox", { name: /this post ships no creative/i });
+    await user.click(toggle);
+
+    // `role="alert"` carries no accessible name — it is announced from
+    // its text content, so match the text rather than a `name` option.
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /cannot change the media requirement/i,
+    );
+    // A designer must never be left believing the floor was lifted.
+    await waitFor(() => {
+      expect(toggle).toHaveAttribute("data-state", "unchecked");
+    });
+  });
+
+  it("disables the toggle for viewers who cannot set it", () => {
+    render(<DeliverySection {...baseProps} mediaRequired={false} canSetMediaRequired={false} />);
+
+    const toggle = screen.getByRole("checkbox", { name: /this post ships no creative/i });
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText(/a planner or workspace manager decides/i)).toBeInTheDocument();
   });
 });

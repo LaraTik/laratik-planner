@@ -1,0 +1,64 @@
+-- 0055_content_item_media_required.sql
+--
+-- Problem
+-- -------
+-- `submitDelivery` hard-required at least one stored media asset
+-- (`SubmitDeliverySchema.mediaAssetIds` = `.min(1)`, plus a redundant
+-- guard in the service body). That floor is correct for the common
+-- case but wrong for a real class of posts that have no creative file
+-- at all: a caption-only announcement, a text-first/thread post, a
+-- link drop. A designer working one of those was stuck — the only way
+-- forward was to attach filler media to satisfy the validator, which
+-- pollutes the delivery and the agency media library.
+--
+-- Design
+-- ------
+-- Add `content_item.media_required boolean NOT NULL DEFAULT true`.
+--
+-- The DEFAULT is `true`, not `false`, deliberately:
+--
+--   * It is a no-op for every existing row. All 83 production content
+--     items keep the historical requirement, so no in-flight post
+--     changes behaviour the moment this ships.
+--   * `NOT NULL DEFAULT` in one statement takes a short ACCESS EXCLUSIVE
+--     lock, and Postgres 16 satisfies it with a fast default (no table
+--     rewrite). Safe to run against live traffic.
+--   * The new column is also `ADD COLUMN ... NOT NULL DEFAULT`, which
+--     is safe in Postgres 11+ regardless of the `rewrite` default for
+--     volatile defaults — `true` is a constant, so the fast path is
+--     always taken.
+--
+-- Why a column and not `formatPayload`
+-- ------------------------------------
+-- `formatPayload` is the per-format creative brief (§11/§17/§23) and
+-- is validated by the per-format Zod schemas on every write. This flag
+-- gates the *delivery workflow* — it is read by `submitDelivery` and by
+-- the delivery form before any format schema is involved, and it must
+-- be readable without parsing a creative brief that may not exist yet
+-- (a post can be in `in_design` with a sparse payload). Hiding a
+-- workflow gate inside the creative brief would also silently drop it
+-- whenever a per-format schema is re-validated, since those schemas are
+-- `.strict()`-shaped and would reject an unknown key.
+--
+-- What this does NOT change
+-- -------------------------
+-- A zero-asset delivery still creates a `delivery_version` row, still
+-- opens a `creative_internal` approval request, and still moves the item
+-- to `creative_review`. `decideApproval` still sets
+-- `approvedDeliveryVersionId`, so `evaluateReadiness`'s
+-- `no_approved_delivery` blocker resolves exactly as before. This
+-- migration lifts the *media* floor only — the review gate is intact.
+--
+-- Rollback
+-- --------
+--   DROP COLUMN IF EXISTS content_item.media_required;
+--
+-- Purely additive: no other column, table, or constraint is touched, so
+-- the down-migration cannot lose data written by the new code path. The
+-- application code is the only other thing to revert, and the deploy
+-- script rolls the image back independently of the schema.
+-->
+--> statement-breakpoint
+
+ALTER TABLE "content_item"
+  ADD COLUMN IF NOT EXISTS "media_required" boolean NOT NULL DEFAULT true;

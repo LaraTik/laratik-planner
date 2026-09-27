@@ -24,7 +24,12 @@ import {
   UPDATEABLE_STATUSES,
 } from "@/lib/content/service";
 import { INLINE_EDITABLE_STATUSES } from "@/lib/content/inline-update-actions";
-import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
+import {
+  listApprovalsForItem,
+  listDeliveryVersionsForItem,
+  MEDIA_REQUIRED_STATUSES as MEDIA_REQUIRED_EDITABLE_STATUSES,
+} from "@/lib/deliveries/service";
+
 import {
   listPublicationsForItem,
   evaluateReadiness,
@@ -1025,6 +1030,13 @@ export default async function ContentDetailPage({
                       ? { defaultFolderId: canonicalDeliveryFolderId }
                       : {})}
                     approvalGates={visiblePendingApprovalGates}
+                    mediaRequired={item.mediaRequired}
+                    canSetMediaRequired={
+                      (actorRoles.isManager || actorRoles.isPlanner) &&
+                      MEDIA_REQUIRED_EDITABLE_STATUSES.includes(
+                        item.status as (typeof MEDIA_REQUIRED_EDITABLE_STATUSES)[number],
+                      )
+                    }
                     deliveries={deliveries.map((d) => ({
                       id: d.id,
                       versionNumber: d.versionNumber,

@@ -58,6 +58,25 @@ export const contentItems = pgTable(
     statusReturnTarget: contentStatusEnum("status_return_target"),
     changeRequestGate: reviewGateEnum("change_request_gate"),
     priority: text("priority").notNull().default("normal"), // 'low' | 'normal' | 'high' | 'urgent'
+    /**
+     * Whether this post must ship stored media assets with its delivery.
+     *
+     * Defaults to `true` — the historical rule, and the safe one: a
+     * designer must attach at least one verified asset before the
+     * delivery can advance to creative review.
+     *
+     * Some posts genuinely have no creative file: a caption-only
+     * announcement, a text-first/thread post, a link drop. Those set
+     * this to `false` so `submitDelivery` accepts a zero-asset version.
+     * The delivery version row is still created and still goes through
+     * the same creative review — only the media floor is lifted, so
+     * `approvedDeliveryVersionId` and publish readiness are unaffected.
+     *
+     * NOT a `formatPayload` field: this gates the delivery workflow
+     * (service-layer + readiness), not the creative brief, and it has
+     * to be readable on its own without parsing the per-format schema.
+     */
+    mediaRequired: boolean("media_required").notNull().default(true),
     contentOwnerId: uuid("content_owner_id")
       .notNull()
       .references(() => users.id, { onDelete: "restrict" }),

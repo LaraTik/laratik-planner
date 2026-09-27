@@ -197,8 +197,22 @@ describe("SubmitDeliverySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("requires at least one stored media asset", () => {
-    const result = SubmitDeliverySchema.safeParse({ contentItemId });
+  it("accepts an empty asset list at the schema layer", () => {
+    // The `.min(1)` floor moved out of the schema: whether zero assets
+    // is legal depends on `content_item.media_required`, which is a
+    // column the static schema cannot see. `submitDelivery` owns the
+    // conditional floor. Asserting `.min(1)` here would pin the
+    // unconditional behaviour back in place.
+    const result = SubmitDeliverySchema.safeParse({ contentItemId, mediaAssetIds: [] });
+    expect(result.success).toBe(true);
+  });
+
+  it("still enforces the unconditional 20-asset ceiling", () => {
+    const tooMany = Array.from({ length: 21 }, () => "1e4c2d66-0e8e-4d2a-9f5b-5c4f7c2d1a90");
+    const result = SubmitDeliverySchema.safeParse({
+      contentItemId,
+      mediaAssetIds: tooMany,
+    });
     expect(result.success).toBe(false);
   });
 
@@ -236,6 +250,83 @@ describe("submitDelivery", () => {
       { workspaceId: "ws-1", status: "draft", changeRequestGate: null },
     ]);
     await expect(submitDelivery(actor, input)).rejects.toThrow(/cannot submit a delivery/i);
+  });
+
+  // ── Media floor (content_item.media_required) ──────────────────────
+  //
+  // The floor used to be unconditional. It is now conditional on a flag
+  // stored on the content item, so both branches are pinned here: a post
+  // that needs media must still be blocked at zero, and a post explicitly
+  // marked assetless must go through and still open a creative review.
+  const assetlessInput = {
+    contentItemId,
+    description: "Caption-only announcement — copy is the deliverable",
+    mediaAssetIds: [],
+  };
+
+  it("blocks a zero-asset delivery when the post requires media", async () => {
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: true,
+      },
+    ]); // item
+
+    await expect(submitDelivery(actor, assetlessInput)).rejects.toThrow(
+      /at least one stored media asset/i,
+    );
+    // Nothing may be written on the blocked path.
+    expect(dbMock.state.transactionCalls).toBe(0);
+  });
+
+  it("requires a description when the delivery is assetless", async () => {
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: false,
+      },
+    ]); // item
+
+    await expect(submitDelivery(actor, { ...assetlessInput, description: "   " })).rejects.toThrow(
+      /description is required/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+  });
+
+  it("accepts a zero-asset delivery when the post does not require media", async () => {
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: false,
+      },
+    ]); // item
+    // inside tx: max version query
+    dbMock.state.selectResults.push([{ max: 0 }]);
+    dbMock.state.insertReturningIds.push({ id: "v-1" });
+
+    const result = await submitDelivery(actor, assetlessInput);
+
+    expect(result).toEqual({ deliveryVersionId: "v-1", versionNumber: 1 });
+    // No media_asset_link rows — an empty `.values([])` would have thrown.
+    const linkInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["mediaAssetId"] !== undefined,
+    );
+    expect(linkInsert).toBeUndefined();
+    // The creative review still opens, so the version is actually
+    // reviewable and `approvedDeliveryVersionId` can still be set.
+    const approvalInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["gate"] === "creative_internal",
+    );
+    expect(approvalInsert).toBeDefined();
   });
 
   it("submits a delivery version, cancels prior approval requests, and opens a new internal review", async () => {

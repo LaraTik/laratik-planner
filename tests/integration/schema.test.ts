@@ -180,6 +180,41 @@ describe("schema invariants", () => {
       );
     });
 
+    it("defaults media_required to true so no existing post loses its floor", async () => {
+      // The DEFAULT is the whole safety argument for migration 0055: a
+      // row inserted without the column must still require media, so
+      // shipping the migration cannot silently open the assetless path
+      // for content that already exists.
+      const [row] = await db
+        .insert(contentItems)
+        .values({
+          workspaceId,
+          title: "T",
+          format: "static_post",
+          plannedPublishAt: new Date(),
+          contentOwnerId: userId,
+          createdBy: userId,
+        })
+        .returning({ mediaRequired: contentItems.mediaRequired });
+      expect(row!.mediaRequired).toBe(true);
+    });
+
+    it("stores an explicit media_required=false for a text-only post", async () => {
+      const [row] = await db
+        .insert(contentItems)
+        .values({
+          workspaceId,
+          title: "Caption only",
+          format: "static_post",
+          plannedPublishAt: new Date(),
+          contentOwnerId: userId,
+          createdBy: userId,
+          mediaRequired: false,
+        })
+        .returning({ mediaRequired: contentItems.mediaRequired });
+      expect(row!.mediaRequired).toBe(false);
+    });
+
     it("valid status with required reason succeeds", async () => {
       await expect(
         db.insert(contentItems).values({
