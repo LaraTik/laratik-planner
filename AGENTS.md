@@ -421,8 +421,8 @@ the **shared formatter + renderer**:
   ID → name lookups (users, channels, status enums) into one
   pass per workspace per page render.
 - **Shared renderer:** `components/activity/activity-entry.tsx`
-  + `<ActivityDiff />` consume the spec and emit the row. The
-  same row shape renders on both surfaces.
+  - `<ActivityDiff />` consume the spec and emit the row. The
+    same row shape renders on both surfaces.
 - **Verb templates:** `messages/{en,ar}/activity.json` under
   `activity.verbs.<kind>`. `{target}`, `{before}`, `{after}`,
   `{metadata}`, `{count}` placeholders.

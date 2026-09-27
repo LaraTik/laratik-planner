@@ -145,7 +145,10 @@ export function CalendarEventCard({
           )}
           {kindLabel ?? (kind === "task" ? "Task" : "Plan")}
         </span>
-        <span className="text-label text-fg-primary mt-1 block font-semibold wrap-break-word" dir="auto">
+        <span
+          className="text-label text-fg-primary mt-1 block font-semibold wrap-break-word"
+          dir="auto"
+        >
           {title}
         </span>
         <span className="text-label text-fg-muted mt-1 block truncate">

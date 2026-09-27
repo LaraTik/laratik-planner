@@ -240,6 +240,5 @@ function buildEnumLabelMap(
   return map;
 }
 
-
 // Suppress an unused-import warning when callers only use the type.
 export type { LocaleCode } from "@/lib/i18n/locales";
