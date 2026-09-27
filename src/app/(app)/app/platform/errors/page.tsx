@@ -11,7 +11,12 @@ import { PermissionNotice } from "@/components/platform/permission-notice";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
-import { listAppErrors, type AppErrorRow } from "@/lib/observability/app-errors";
+import {
+  listAppErrorGroups,
+  listAppErrors,
+  type AppErrorGroupRow,
+  type AppErrorRow,
+} from "@/lib/observability/app-errors";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { cn } from "@/lib/utils";
@@ -46,12 +51,32 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 50;
 const SEARCH_PARAM = "q";
+const GROUP_PAGE_SIZE = 25;
 
 type SearchParams = {
   page?: string;
   q?: string;
   focus?: string;
+  /** `grouped` (default — one row per error class) or `events` (raw occurrences). */
+  view?: string;
+  /** Exact source filter. */
+  source?: string;
+  /** Time window: `24h` | `7d` | `30d`. */
+  range?: string;
 };
+
+const SOURCE_LABEL_KEY: Record<string, string> = {
+  "app.error": "platform.sourceAppError",
+  "global.error": "platform.sourceGlobalError",
+  server_action: "platform.sourceServerAction",
+  "client.unhandled": "platform.sourceClientUnhandled",
+  "server.render": "platform.sourceServerRender",
+  "server.route": "platform.sourceServerRoute",
+  "server.proxy": "platform.sourceServerProxy",
+  "server.unhandled": "platform.sourceServerUnhandled",
+};
+
+const ERROR_SOURCES = Object.keys(SOURCE_LABEL_KEY);
 
 function parsePage(raw: string | undefined): number {
   const n = Number.parseInt(raw ?? "1", 10);
@@ -59,12 +84,15 @@ function parsePage(raw: string | undefined): number {
   return n;
 }
 
-const SOURCE_LABEL_KEY: Record<string, string> = {
-  "app.error": "platform.sourceAppError",
-  "global.error": "platform.sourceGlobalError",
-  server_action: "platform.sourceServerAction",
-  "client.unhandled": "platform.sourceClientUnhandled",
-};
+/** Resolve the `range` filter into an absolute lower bound. */
+function rangeSince(range: string | undefined): Date | undefined {
+  const days = range === "7d" ? 7 : range === "30d" ? 30 : range === "24h" ? 1 : undefined;
+  // No `range` means "all time" for the event view (it has its own
+  // pagination), but the grouped view is a triage queue and defaults to
+  // the last 7 days so it stays scannable.
+  if (days === undefined) return undefined;
+  return new Date(new Date().getTime() - days * 86_400_000);
+}
 
 export default async function PlatformErrorsPage({
   searchParams,
@@ -95,14 +123,39 @@ export default async function PlatformErrorsPage({
   const sp = await searchParams;
   const page = parsePage(sp.page);
   const query = (sp.q ?? "").trim();
+  const view = sp.view === "events" ? "events" : "grouped";
+  const sourceFilter = sp.source && ERROR_SOURCES.includes(sp.source) ? sp.source : undefined;
+  const since = rangeSince(sp.range);
+
+  // The grouped view is the triage queue: one row per distinct failure
+  // with its occurrence count, so "this broke 47 times" is the first
+  // thing on screen rather than 47 identical rows. The events view keeps
+  // the original raw-occurrence log for hunting one specific failure.
+  const groups =
+    view === "grouped"
+      ? await listAppErrorGroups({
+          limit: GROUP_PAGE_SIZE,
+          ...(query ? { query } : {}),
+          ...(sourceFilter ? { source: sourceFilter } : {}),
+          ...(since ? { since } : {}),
+        })
+      : [];
+
   const { rows, total, matched } = await listAppErrors({
     page,
     pageSize: PAGE_SIZE,
     ...(query ? { query } : {}),
+    ...(sourceFilter ? { source: sourceFilter } : {}),
+    ...(since ? { since } : {}),
   });
   const totalPages = Math.max(1, Math.ceil(matched / PAGE_SIZE));
   const showingFrom = matched === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
   const showingTo = Math.min(matched, page * PAGE_SIZE);
+
+  // Total occurrences across the groups currently in view — the number
+  // that actually answers "how bad is this".
+  const groupOccurrenceTotal = groups.reduce((sum, group) => sum + group.occurrenceCount, 0);
+  const openGroupCount = groups.filter((group) => !group.resolvedAt).length;
 
   // Capture the request-time clock once at the top of the server
   // component. `new Date().getTime()` is the same pattern used by
@@ -113,10 +166,20 @@ export default async function PlatformErrorsPage({
   const last7Cutoff = new Date().getTime() - 7 * 86_400_000;
   const last7Count = rows.filter((r) => r.createdAt.getTime() >= last7Cutoff).length;
 
-  const buildHref = (nextPage: number, nextQuery: string) => {
+  // Preserve the active view + filters across pagination and the
+  // grouped/events toggle, so switching view does not silently drop a
+  // filter the operator just set.
+  const buildHref = (
+    nextPage: number,
+    nextQuery: string,
+    nextView: "grouped" | "events" = view,
+  ) => {
     const params = new URLSearchParams();
+    if (nextView === "events") params.set("view", "events");
     if (nextPage > 1) params.set("page", String(nextPage));
     if (nextQuery) params.set(SEARCH_PARAM, nextQuery);
+    if (sourceFilter) params.set("source", sourceFilter);
+    if (sp.range) params.set("range", sp.range);
     const qs = params.toString();
     return qs ? `/app/platform/errors?${qs}` : "/app/platform/errors";
   };
@@ -185,6 +248,81 @@ export default async function PlatformErrorsPage({
     },
   ];
 
+  const groupColumns: DataTableColumnDef<AppErrorGroupRow>[] = [
+    {
+      key: "count",
+      header: t("platform.colOccurrences"),
+      cell: (row) => (
+        <span
+          className={cn(
+            "font-mono font-semibold",
+            row.occurrenceCount > 1 ? "text-danger" : "text-fg-secondary",
+          )}
+          data-testid={`platform-error-group-count-${row.fingerprint}`}
+        >
+          {row.occurrenceCount}×
+        </span>
+      ),
+    },
+    {
+      key: "message",
+      header: t("platform.colMessage"),
+      cell: (row) => (
+        <div className="min-w-0">
+          <p className="text-body text-fg-primary max-w-md truncate" title={row.sampleMessage}>
+            {row.sampleMessage}
+          </p>
+          <p className="text-label text-fg-muted font-mono">
+            {row.errorName ?? "—"} ·{" "}
+            <code title="Error-group fingerprint — the key the diagnostics MCP searches by">
+              {row.fingerprint}
+            </code>
+          </p>
+        </div>
+      ),
+    },
+    {
+      key: "route",
+      header: t("platform.colRoute"),
+      cell: (row) => (
+        <code className="text-label text-fg-primary bg-surface-subtle rounded px-1.5 py-0.5 font-mono">
+          {row.route}
+        </code>
+      ),
+    },
+    {
+      key: "source",
+      header: t("platform.colSource"),
+      hideOn: "md",
+      cell: (row) => (
+        <Badge variant="outline">{t(SOURCE_LABEL_KEY[row.source] ?? row.source)}</Badge>
+      ),
+    },
+    {
+      key: "window",
+      header: t("platform.colSeenWindow"),
+      hideOn: "lg",
+      cell: (row) => (
+        <div className="text-label text-fg-muted space-y-0.5 font-mono">
+          <p>first {row.firstSeenAt.toISOString().replace("T", " ").slice(0, 19)}Z</p>
+          <p>last {row.lastSeenAt.toISOString().replace("T", " ").slice(0, 19)}Z</p>
+        </div>
+      ),
+    },
+    {
+      key: "state",
+      header: t("platform.colState"),
+      cell: (row) =>
+        row.resolvedAt ? (
+          <Badge variant="outline" data-testid={`platform-error-group-resolved-${row.fingerprint}`}>
+            {t("platform.groupResolved")}
+          </Badge>
+        ) : (
+          <Badge variant="outline">{t("platform.groupOpen")}</Badge>
+        ),
+    },
+  ];
+
   return (
     <div className="space-y-6" data-testid="platform-errors">
       <PageHeader
@@ -202,23 +340,69 @@ export default async function PlatformErrorsPage({
         }
       />
 
+      <div className="flex flex-wrap items-center gap-2" data-testid="platform-errors-view-toggle">
+        <Link
+          href={buildHref(1, query, "grouped")}
+          className={cn(
+            buttonVariants({ variant: view === "grouped" ? "default" : "ghost", size: "sm" }),
+          )}
+          aria-current={view === "grouped" ? "page" : undefined}
+          data-testid="platform-errors-view-grouped"
+        >
+          {t("platform.viewGrouped")}
+        </Link>
+        <Link
+          href={buildHref(1, query, "events")}
+          className={cn(
+            buttonVariants({ variant: view === "events" ? "default" : "ghost", size: "sm" }),
+          )}
+          aria-current={view === "events" ? "page" : undefined}
+          data-testid="platform-errors-view-events"
+        >
+          {t("platform.viewEvents")}
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="platform-errors-kpis">
-        <KpiTile
-          label={t("platform.kpiTotalCaptured")}
-          value={total}
-          icon={<AlertOctagon className="h-4 w-4" />}
-        />
-        <KpiTile
-          label={query ? t("platform.kpiMatching") : t("platform.kpiOnThisPage")}
-          value={query ? matched : showingTo}
-          tone={query ? "warning" : "default"}
-          icon={<Search className="h-4 w-4" />}
-        />
-        <KpiTile
-          label={t("platform.kpiLast7Days")}
-          value={last7Count}
-          icon={<ExternalLink className="h-4 w-4" />}
-        />
+        {view === "grouped" ? (
+          <>
+            <KpiTile
+              label={t("platform.kpiOccurrences")}
+              value={groupOccurrenceTotal}
+              icon={<AlertOctagon className="h-4 w-4" />}
+            />
+            <KpiTile
+              label={t("platform.kpiDistinct")}
+              value={groups.length}
+              tone={openGroupCount > 0 ? "warning" : "default"}
+              icon={<Search className="h-4 w-4" />}
+            />
+            <KpiTile
+              label={t("platform.kpiOpen")}
+              value={openGroupCount}
+              icon={<ExternalLink className="h-4 w-4" />}
+            />
+          </>
+        ) : (
+          <>
+            <KpiTile
+              label={t("platform.kpiTotalCaptured")}
+              value={total}
+              icon={<AlertOctagon className="h-4 w-4" />}
+            />
+            <KpiTile
+              label={query ? t("platform.kpiMatching") : t("platform.kpiOnThisPage")}
+              value={query ? matched : showingTo}
+              tone={query ? "warning" : "default"}
+              icon={<Search className="h-4 w-4" />}
+            />
+            <KpiTile
+              label={t("platform.kpiLast7Days")}
+              value={last7Count}
+              icon={<ExternalLink className="h-4 w-4" />}
+            />
+          </>
+        )}
       </div>
 
       <Card padding="none" className="overflow-hidden" data-testid="platform-errors-card">
@@ -246,13 +430,48 @@ export default async function PlatformErrorsPage({
             />
           </div>
           {page > 1 ? <input type="hidden" name="page" value="1" /> : null}
+          {view === "events" ? <input type="hidden" name="view" value="events" /> : null}
+          {sourceFilter ? <input type="hidden" name="source" value={sourceFilter} /> : null}
+          {sp.range ? <input type="hidden" name="range" value={sp.range} /> : null}
+          <label htmlFor="platform-errors-source" className="sr-only">
+            {t("platform.filterSourceAria")}
+          </label>
+          <select
+            id="platform-errors-source"
+            name="source"
+            defaultValue={sourceFilter ?? ""}
+            className="border-border bg-surface text-body text-fg-primary h-9 rounded-[var(--radius-control)] border px-2"
+            data-testid="platform-errors-source-filter"
+          >
+            <option value="">{t("platform.filterAllSources")}</option>
+            {ERROR_SOURCES.map((value) => (
+              <option key={value} value={value}>
+                {t(SOURCE_LABEL_KEY[value] ?? value)}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="platform-errors-range" className="sr-only">
+            {t("platform.filterRangeAria")}
+          </label>
+          <select
+            id="platform-errors-range"
+            name="range"
+            defaultValue={sp.range ?? ""}
+            className="border-border bg-surface text-body text-fg-primary h-9 rounded-[var(--radius-control)] border px-2"
+            data-testid="platform-errors-range-filter"
+          >
+            <option value="">{t("platform.filterAllTime")}</option>
+            <option value="24h">{t("platform.filterLast24h")}</option>
+            <option value="7d">{t("platform.filterLast7d")}</option>
+            <option value="30d">{t("platform.filterLast30d")}</option>
+          </select>
           <button
             type="submit"
             className={cn(buttonVariants({ variant: "secondary", size: "sm" }))}
           >
             {t("platform.searchSubmit")}
           </button>
-          {query ? (
+          {query || sourceFilter || sp.range ? (
             <Link
               href="/app/platform/errors"
               className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
@@ -262,7 +481,28 @@ export default async function PlatformErrorsPage({
           ) : null}
         </form>
 
-        {rows.length === 0 ? (
+        {view === "grouped" ? (
+          groups.length === 0 ? (
+            <div className="p-6" data-testid="platform-errors-empty">
+              <EmptyState
+                icon={<AlertOctagon className="h-8 w-8" />}
+                title={query ? t("platform.emptyNoMatch") : t("platform.emptyNoErrors")}
+                description={
+                  query ? t("platform.emptyNoMatchBody") : t("platform.emptyNoErrorsBody")
+                }
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <DataTable
+                getRowKey={(row) => row.id}
+                getRowTestId={(row) => `platform-error-group-row-${row.fingerprint}`}
+                rows={groups}
+                columns={groupColumns}
+              />
+            </div>
+          )
+        ) : rows.length === 0 ? (
           <div className="p-6" data-testid="platform-errors-empty">
             <EmptyState
               icon={<AlertOctagon className="h-8 w-8" />}

@@ -37,6 +37,48 @@ assessment is enough — over-paging is better than under-paging at v1.
 6. **Post the first customer-facing status note** within 5 min for P0, within 15 min for P1. Use the [status template](#comms-templates) below.
 7. **Loop in stakeholders** — for security incidents, page the platform owner (`security@laratik.com`) immediately. For data-loss incidents, also notify the legal contact per the LaraTik escalation tree (kept in the team vault).
 
+## Diagnosing: ask the app before you read logs
+
+Docker's log rotation is `10m × 5` (~50 MB per container), so `docker logs` is a
+**minutes-long** window under load, and Sentry is a no-op until a DSN is
+supplied. The database mirror is the durable record, and it survives both.
+
+Prefer the diagnostics MCP — it answers the question directly instead of
+hand-correlating log lines. Requires a token with
+`platform:diagnostics:read` and the caller's `platform.console.read`
+permission (see [`../api/mcp.md`](../api/mcp.md)):
+
+| Question                                         | Tool                                                 |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| Is the app broken, or did one user hit an error? | `laratik_planner_app_health`                         |
+| What is failing, and how often?                  | `laratik_planner_list_app_errors`                    |
+| What is the root cause and how do I fix it?      | `laratik_planner_diagnose_app_error`                 |
+| What exactly did this one request do?            | `laratik_planner_get_app_error` (by `request_id`)    |
+| Has someone already looked at this?              | `laratik_planner_triage_app_error` (`confirm: true`) |
+
+`diagnose_app_error` is the one that answers "why". It returns a root-cause
+hypothesis with concrete fix steps, the occurrence count and window, an hourly
+histogram, the **distinct build versions** the error appeared on, and the
+recent occurrences with their cause chains.
+
+**A group confined to a single `buildVersion` is a regression signal.** Compare
+that SHA against the deploy log — it usually turns a 30-minute investigation
+into a one-line "reverted the 14:02 deploy".
+
+Without an MCP client, the same data is at `/app/platform/errors` (grouped
+triage view by default; `?view=events` for the raw log), or query directly:
+
+```bash
+ssh laratik-vps "docker exec laratik-planner-postgres-1 \
+  psql -U planner -d planner -c \
+  \"select fingerprint, occurrence_count, error_name, left(sample_message,60) as msg, last_seen_at from app_error_group where resolved_at is null order by occurrence_count desc limit 10;\""
+```
+
+Once a fingerprint is in hand, its full detail — stack, cause chain, and the
+request's own log lines under `context.logs` — is one `get_app_error` call
+away. See [`app-error-event.md`](./app-error-event.md) for the schema and the
+scrubbing rules.
+
 ## Data-loss sub-flow
 
 If the incident is or may be a data-loss event:

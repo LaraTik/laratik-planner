@@ -1,37 +1,103 @@
 import { sql } from "drizzle-orm";
-import { index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import {
+  index,
+  integer,
+  jsonb,
+  pgTable,
+  text,
+  timestamp,
+  uniqueIndex,
+  uuid,
+} from "drizzle-orm/pg-core";
 import { users } from "./identity";
 
 /**
  * Goal 13 / OBS-002 — In-app mirror of error events.
  *
- * Sentry is the long-term archive and the alert source. The `app_error_event`
- * table is a **lightweight, in-app mirror** of the same events so a platform
- * administrator can see the recent failure shape from the app shell
- * (`/app/platform/errors`) without leaving the product to open Sentry. The
- * table is intentionally narrow:
+ * Sentry is the optional long-term archive. The `app_error_event` table is
+ * the **in-app source of truth for "what just broke"**: it has no SDK
+ * dependency, so a Sentry outage or a missing DSN cannot take the
+ * debugging surface down with it. A platform administrator reads it from
+ * the app shell (`/app/platform/errors`) and, since the diagnostics MCP,
+ * from an agent over `/api/mcp`.
  *
- *   - One row per captured error (server or client boundary).
- *   - The `digest` is the Next.js error digest (stable across reloads); a
- *     NULL digest means the error was raised client-side without a server
- *     digest, which is rare on app-router error boundaries.
- *   - `route` is the URL path the user was on; `method` is the HTTP verb
- *     (server-side rows only — client rows have `method = null`).
- *   - `message` is the sanitized error message; the raw error is
- *     truncated to 4 KB to keep the row size bounded. The full payload
- *     is still in Sentry.
- *   - `actor_id` is set when the session is resolvable server-side; it
- *     is NULL for unauthenticated visitors hitting the sign-in or
- *     marketing pages.
- *   - `request_id` is the per-request id from `AsyncLocalStorage` so a
- *     Sentry event links back to the same row in this table.
+ * ## What gets written
  *
- * This is NOT a replacement for Sentry. There is no retention policy here
- * beyond the index (a 30-day prune is added in a follow-up); the table is
- * a debugging aid, not an audit log. `security_audit_event` remains the
- * authorization-action source of truth; this table is the rendering-failure
- * source of truth.
+ * Every failure path converges on `captureAppError`:
+ *
+ *   - **Server** — `onRequestError` in `instrumentation.ts`, which covers
+ *     server-component renders, route handlers, server actions, and the
+ *     proxy. `route_type` records which.
+ *   - **Process-level** — `unhandledRejection` / `uncaughtException`
+ *     registered in `instrumentation.ts`, for work outside a request.
+ *   - **Client** — the two React boundaries via
+ *     `recordErrorBoundaryAction`, which ships a plain serializable
+ *     object (a client component cannot hand a real `Error` across the
+ *     server-action boundary).
+ *
+ * ## What is deliberately NOT stored
+ *
+ *   - Raw request bodies or form data.
+ *   - Cookie values, `authorization` headers, or IP addresses.
+ *   - The raw `user-agent` string — only `user_agent_hash`, because a UA
+ *     is a stable cross-session fingerprint.
+ *   - Any value that has not been through `observability/redact.ts`.
+ *
+ * Retention is enforced by `/api/cron/error-retention` (30 days for
+ * events, 90 days for resolved groups); the previous "no prune" caveat
+ * was removed with that job. `security_audit_event` remains the
+ * authorization-action source of truth; this table is the
+ * rendering-failure source of truth.
  */
+
+/**
+ * One row per *class* of failure, keyed by a stable fingerprint.
+ *
+ * This is what makes "this broke 47 times since the 14:02 deploy"
+ * answerable, and it is the row an operator triages. Individual
+ * occurrences stay in `app_error_event` and point here.
+ *
+ * `occurrence_count` is incremented with a single `INSERT … ON CONFLICT
+ * DO UPDATE` (see `captureAppError`) rather than a read-modify-write, so
+ * two concurrent captures of the same error cannot lose an increment.
+ */
+export const appErrorGroups = pgTable(
+  "app_error_group",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    /** 12 hex chars — the unique conflict target of the group upsert. */
+    fingerprint: text("fingerprint").notNull(),
+    /** Error class name for this group. */
+    errorName: text("error_name"),
+    /** Most recent scrubbed message, for display in the console. */
+    sampleMessage: text("sample_message").notNull(),
+    /** Route where this group was most recently seen. */
+    route: text("route").notNull(),
+    /** Source label of the most recent occurrence. */
+    source: text("source").notNull(),
+    /** Total occurrences recorded for this fingerprint. */
+    occurrenceCount: integer("occurrence_count").notNull().default(1),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    /** Set by triage; non-NULL means an operator acknowledged the group. */
+    resolvedAt: timestamp("resolved_at", { withTimezone: true, mode: "date" }),
+    /** Free-form triage note attached via the diagnostics MCP. */
+    triageNote: text("triage_note"),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (t) => [
+    uniqueIndex("app_error_group_fingerprint_key").on(t.fingerprint),
+    index("app_error_group_last_seen_at_idx").on(sql`${t.lastSeenAt} DESC`),
+    index("app_error_group_open_idx").on(t.resolvedAt, sql`${t.lastSeenAt} DESC`),
+  ],
+);
+
 export const appErrorEvents = pgTable(
   "app_error_event",
   {
@@ -42,11 +108,14 @@ export const appErrorEvents = pgTable(
     route: text("route").notNull(),
     /** HTTP method (server rows only). NULL on client-boundary rows. */
     method: text("method"),
-    /** "server" | "client" | "unknown" — which boundary raised the error. */
+    /** Which boundary raised the error — see the `source` union in
+     *  `app-errors.ts`: `app.error`, `global.error`, `server_action`,
+     *  `client.unhandled`, `server.render`, `server.route`, `server.proxy`,
+     *  `server.unhandled`. */
     source: text("source").notNull(),
     /** Error class name (e.g. "PostgresError", "TypeError", "ZodError"). */
     errorName: text("error_name"),
-    /** Sanitized error message; full message lives in Sentry. */
+    /** Scrubbed error message (first 2 KB). */
     message: text("message").notNull(),
     /**
      * Chained cause message, one level deep.
@@ -67,6 +136,28 @@ export const appErrorEvents = pgTable(
     actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
     /** Build version / commit SHA (cheap correlation back to a deploy). */
     buildVersion: text("build_version"),
+    /** The `app_error_group` this occurrence rolls up into. */
+    groupId: uuid("group_id").references(() => appErrorGroups.id, { onDelete: "set null" }),
+    /** SHA-256 of the user agent. The raw UA is a stable cross-session
+     *  fingerprint and is never stored. */
+    userAgentHash: text("user_agent_hash"),
+    /**
+     * Source-specific structured context, allowlisted per origin:
+     * `routeType` / `routePath` / `renderSource` for server rows, and
+     * the request's recent `error` / `warn` lines under `logs` (from the
+     * `request-context` ring buffer). Never request bodies, cookies, or
+     * authorization headers.
+     */
+    context: jsonb("context"),
+    /**
+     * Next.js `onRequestError` classification: `render` | `route` |
+     * `action` | `proxy`. Distinguishes a server-component render
+     * failure from a route-handler or server-action failure, which the
+     * `source` column also records but at a coarser grain.
+     */
+    routeType: text("route_type"),
+    /** The filesystem route file, e.g. `/app/w/[slug]/planning/[id]`. */
+    routePath: text("route_path"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()
       .default(sql`now()`),
@@ -76,5 +167,7 @@ export const appErrorEvents = pgTable(
     index("app_error_event_digest_idx").on(t.digest),
     index("app_error_event_route_idx").on(t.route),
     index("app_error_event_actor_id_idx").on(t.actorId, sql`${t.createdAt} DESC`),
+    index("app_error_event_group_id_idx").on(t.groupId, sql`${t.createdAt} DESC`),
+    index("app_error_event_source_idx").on(t.source, sql`${t.createdAt} DESC`),
   ],
 );

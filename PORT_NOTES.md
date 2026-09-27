@@ -119,6 +119,59 @@ Product-owner approval for the backfill and collision policy is recorded in
 
 If a deviation becomes stable (e.g. we keep Mailcow long-term, or we add a second VPS), promote the relevant section to `docs/decisions/000N-*.md` and link it from `AGENTS.md`. For now, this single file is enough.
 
+## Error capture and crash semantics (2026-09-27)
+
+The master prompt's §21 observability intent is implemented with a different
+ordering than specified: the **database mirror is the primary signal and
+Sentry is the optional archive**, not the other way round. Sentry is fully
+wired but gated on an owner-supplied `SENTRY_DSN` that has not been set, so
+every Sentry path is a no-op in production. Building the debugging surface on
+it would have left the app with no error record at all.
+
+Three behaviour changes follow from that, and each is a deliberate deviation
+from what the code previously did:
+
+**1. `onRequestError` records to the database first.** It was
+`Sentry.captureRequestError`, which is a no-op without a DSN — so all 84 route
+handlers, every server action, and every server render had no durable record.
+It now upserts into `app_error_group` and inserts into `app_error_event`, then
+forwards to Sentry so a future DSN still receives everything. The hook has a
+2-second budget because Next.js awaits it, and it can never throw: it is
+itself the failure path.
+
+**2. `uncaughtException` now exits the process.** Node's default is to print
+and continue; we now take a best-effort capture and then `process.exit(1)`, so
+Docker's restart policy brings the container back. Impact: an uncaught
+exception now causes a visible restart (a few seconds of downtime, one
+captured row) instead of a silently degraded process. Rationale: continuing
+after an uncaught exception risks serving corrupted responses or crashing again
+inside an error handler. Security/data implications: none — no data is written
+by the exit path beyond the capture row; the app is stateless across restarts
+and the session cookie is an Auth.js JWT.
+
+**3. Error messages and stacks are persisted, not blanked.** The previous
+logger collapsed every `Error` to `{ name, message: "[redacted]" }`, which made
+both the log stream and the mirror unable to say what had failed. Redaction is
+now a targeted secret-scrubber (`src/lib/observability/redact.ts`) applied
+_before_ the write. It removes bearer tokens, JWTs, `lpm_…` MCP tokens,
+provider key prefixes, `secret`/`password`/`token`/`key=value` pairs, Postgres
+`DETAIL` values, email addresses, secret query-string parameters, and
+high-entropy blobs; it preserves error class names, routes, constraint and
+column names, SQL, file paths, and stack frames. The `context` jsonb is built
+from an **allowlist** and never records a cookie or authorization value; the
+user agent is stored only as a SHA-256, never raw. Fail-closed: a scrubber
+failure yields `[unavailable]`, never the raw input.
+
+Schema impact: migration `0054_app_error_diagnostics` adds `app_error_group`
+and five `app_error_event` columns. It is additive and idempotent; every
+pre-existing column is untouched, so the error boundaries and the platform
+console keep working throughout. Rollback is `DROP TABLE app_error_group` plus
+`DROP COLUMN` on the five new columns.
+
+Approval: implementation of the reviewed app-error capture plan; the
+owner-supplied Sentry DSN and its alert rules remain outstanding under
+OBS-001/OPS-001 and are no longer on the critical path for "what broke".
+
 ## Meta external publication linking (2026-09-22)
 
 The Planner adds a semi-automated read-only bridge to Meta: a user can fetch

@@ -32,12 +32,36 @@ describe("sanitizeLogContext", () => {
     expect(out["username"]).toBe("alice");
   });
 
-  it("serializes Error objects as { name, message: '[redacted]' }", () => {
-    const err = new Error("secret value");
+  it("serializes Error objects with the message preserved", () => {
+    const err = new Error("Workspace not found");
     err.name = "CustomError";
     const out = sanitizeLogContext(err) as Record<string, unknown>;
     expect(out["name"]).toBe("CustomError");
-    expect(out["message"]).toBe("[redacted]");
+    // The old behaviour collapsed this to "[redacted]", which made the
+    // log stream unable to say what had failed.
+    expect(out["message"]).toBe("Workspace not found");
+    expect(out["stack"]).toContain("CustomError");
+  });
+
+  it("scrubs a secret out of an Error message but keeps the stack", () => {
+    const err = new Error("upstream said Bearer sk-abcdefghij0123456789ABCDEF");
+    const out = sanitizeLogContext(err) as Record<string, unknown>;
+    expect(out["message"]).not.toContain("sk-abcdefghij0123456789ABCDEF");
+    expect(out["message"]).toContain("[redacted]");
+    expect(String(out["stack"])).toContain("at ");
+  });
+
+  it("serializes error-like plain objects (the server-action boundary shape)", () => {
+    // `recordErrorBoundaryAction` cannot pass a real `Error` across the
+    // server-action boundary, so it sends `{ name, message, stack, cause }`.
+    const out = sanitizeLogContext({
+      name: "ZodError",
+      message: "Invalid input: expected string, received number",
+      stack: "ZodError: Invalid input\n    at parse (/app/src/lib/schemas.ts:88:20)",
+    }) as Record<string, unknown>;
+    expect(out["name"]).toBe("ZodError");
+    expect(out["message"]).toBe("Invalid input: expected string, received number");
+    expect(out["stack"]).toContain("at parse");
   });
 
   it("recursively sanitizes arrays and nested objects", () => {
@@ -101,6 +125,22 @@ describe("logError", () => {
     const parsed = JSON.parse(line as string);
     expect(parsed.level).toBe("error");
     expect(parsed.event).toBe("event-only");
+  });
+
+  it("keeps the error message in the emitted line", () => {
+    logError("content.update", { err: new Error("record new has no field updated_at") });
+    const [line] = (console.error as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    const parsed = JSON.parse(line as string);
+    expect(parsed.err.name).toBe("Error");
+    expect(parsed.err.message).toBe("record new has no field updated_at");
+  });
+
+  it("does not throw on a circular context", () => {
+    const circular: Record<string, unknown> = { name: "loop" };
+    circular.self = circular;
+    expect(() => logError("circular", { ctx: circular })).not.toThrow();
+    const [line] = (console.error as ReturnType<typeof vi.fn>).mock.calls[0]!;
+    expect(JSON.parse(line as string).serializationError).toBe(true);
   });
 });
 

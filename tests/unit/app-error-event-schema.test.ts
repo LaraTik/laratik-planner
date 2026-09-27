@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { appErrorEvents } from "@/lib/db/schema/app-errors";
+import { appErrorEvents, appErrorGroups } from "@/lib/db/schema/app-errors";
 import migrationJournal from "@/lib/db/migrations/meta/_journal.json";
 
 /**
@@ -63,6 +63,108 @@ describe("app_error_event schema (OBS-002)", () => {
     // event ids).
     const idCol = (appErrorEvents as unknown as { id: { columnType: string } }).id;
     expect(idCol).toBeDefined();
+  });
+});
+
+describe("app_error_event schema — diagnostics columns (0054)", () => {
+  it("declares the columns the server capture path writes to", () => {
+    const cols = appErrorEvents;
+    expect(cols.groupId, "groupId rolls the occurrence up into app_error_group").toBeDefined();
+    expect(
+      cols.context,
+      "context carries the allowlisted JSONB payload + request log lines",
+    ).toBeDefined();
+    expect(
+      cols.userAgentHash,
+      "userAgentHash is the hashed UA — the raw string is never stored",
+    ).toBeDefined();
+    expect(cols.routeType, "routeType records render | route | action | proxy").toBeDefined();
+    expect(cols.routePath, "routePath records the filesystem route file").toBeDefined();
+    // error_name / cause_message / component_stack were added in 0021 and
+    // are read by matchErrorHint; guard against an accidental removal.
+    expect(cols.errorName).toBeDefined();
+    expect(cols.causeMessage).toBeDefined();
+    expect(cols.componentStack).toBeDefined();
+  });
+});
+
+describe("app_error_group schema (0054)", () => {
+  it("declares the grouping + triage columns", () => {
+    expect(
+      appErrorGroups.fingerprint,
+      "the unique conflict target of the group upsert",
+    ).toBeDefined();
+    expect(
+      appErrorGroups.occurrenceCount,
+      "the answer to 'how many times did this break'",
+    ).toBeDefined();
+    expect(appErrorGroups.firstSeenAt).toBeDefined();
+    expect(appErrorGroups.lastSeenAt).toBeDefined();
+    expect(appErrorGroups.sampleMessage, "scrubbed message shown in the console").toBeDefined();
+    expect(appErrorGroups.resolvedAt, "triage state set by the diagnostics MCP").toBeDefined();
+    expect(appErrorGroups.triageNote).toBeDefined();
+  });
+
+  it("defaults occurrence_count to 1 so the first insert needs no explicit count", () => {
+    const col = (
+      appErrorGroups as unknown as { occurrenceCount: { default: unknown; notNull: boolean } }
+    ).occurrenceCount;
+    expect(col.notNull).toBe(true);
+    expect(col.default).toBeDefined();
+  });
+});
+
+describe("migration — 0054_app_error_diagnostics", () => {
+  const path = join(
+    process.cwd(),
+    "src",
+    "lib",
+    "db",
+    "migrations",
+    "0054_app_error_diagnostics.sql",
+  );
+  const sql = () => readFileSync(path, "utf8");
+
+  it("has a SQL file on disk", () => {
+    expect(existsSync(path), `${path} should exist`).toBe(true);
+  });
+
+  it("is present in the journal with a monotonic `when`", () => {
+    const idx = migrationJournal.entries.findIndex((e) => e.tag === "0054_app_error_diagnostics");
+    expect(idx, "journal entry must exist for the new migration").toBeGreaterThan(0);
+    const entry = migrationJournal.entries[idx]!;
+    const prev = migrationJournal.entries[idx - 1]!;
+    expect(entry.when).toBeGreaterThan(prev.when);
+  });
+
+  it("creates the group table with the unique fingerprint index", () => {
+    const text = sql();
+    expect(text).toContain('CREATE TABLE IF NOT EXISTS "app_error_group"');
+    expect(text).toContain("app_error_group_fingerprint_key");
+    expect(text).toContain("app_error_group_last_seen_at_idx");
+    expect(text).toContain("app_error_group_open_idx");
+  });
+
+  it("adds every new event column and the group foreign key", () => {
+    const text = sql();
+    for (const column of ["group_id", "context", "user_agent_hash", "route_type", "route_path"]) {
+      expect(text, `${column} must be added`).toContain(`ADD COLUMN IF NOT EXISTS "${column}"`);
+    }
+    expect(text).toContain("app_error_event_group_id_app_error_group_id_fk");
+    expect(text).toContain("ON DELETE set null");
+    // The indexes the grouped console and diagnostics reads depend on.
+    expect(text).toContain("app_error_event_group_id_idx");
+    expect(text).toContain("app_error_event_source_idx");
+  });
+
+  it("is idempotent so a re-apply cannot fail on a duplicate object", () => {
+    const text = sql();
+    expect(text).toContain("CREATE TABLE IF NOT EXISTS");
+    expect(text).toContain("CREATE UNIQUE INDEX IF NOT EXISTS");
+    expect(text).toContain("CREATE INDEX IF NOT EXISTS");
+    expect(text).toContain("ADD COLUMN IF NOT EXISTS");
+    // The FK is added inside a guarded DO block for the same reason.
+    expect(text).toContain("IF NOT EXISTS (\n    SELECT 1 FROM pg_constraint");
   });
 });
 

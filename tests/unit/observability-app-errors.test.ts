@@ -11,6 +11,10 @@ const dbMock = vi.hoisted(() => {
 });
 const requestContextMock = vi.hoisted(() => ({
   getRequestId: vi.fn(),
+  // The request log ring buffer. Defaults to empty in `beforeEach`;
+  // `captureAppError` calls it on every capture, so an absent mock would
+  // throw and (correctly) be swallowed as a fail-silent capture failure.
+  getRequestLogs: vi.fn(),
 }));
 const buildInfoMock = vi.hoisted(() => ({
   createBuildInfo: vi.fn(),
@@ -43,6 +47,43 @@ import {
   getAppErrorById,
   listAppErrors,
 } from "@/lib/observability/app-errors";
+import { appErrorEvents, appErrorGroups } from "@/lib/db/schema";
+
+/** Row id the faked group upsert resolves to. */
+const GROUP_ID = "11111111-1111-1111-1111-111111111111";
+
+/**
+ * `captureAppError` now performs **two** writes: an `INSERT … ON CONFLICT`
+ * into `app_error_group` (which resolves a group id) and then the
+ * `INSERT` into `app_error_event`. A single `mockReturnValue` would hand
+ * the same builder to both and the assertions would read the group's
+ * values instead of the event's, so the mock dispatches on the table.
+ */
+function mockInserts(eventValues: ReturnType<typeof vi.fn>, groupId: string | null = GROUP_ID) {
+  // `values()` must return the next link in the chain, not a promise —
+  // Drizzle is fluent here, and the code does
+  // `.insert(g).values(v).onConflictDoUpdate(o).returning(r)`.
+  // The typed parameter makes `.mock.calls[n][0]` resolve to
+  // `Record<string, unknown>` instead of an empty tuple, so the
+  // assertions can read fields off the payload without an `as` cast. The
+  // `Object.keys` reference keeps it "used" for the strict no-unused-vars
+  // rule (same pattern as `tests/unit/cron-history.test.ts`).
+  const groupValues = vi.fn((payload: Record<string, unknown>) => {
+    void Object.keys(payload);
+    return {
+      onConflictDoUpdate: () => ({
+        returning: async () => (groupId ? [{ id: groupId }] : []),
+      }),
+    };
+  });
+  dbMock.db.insert.mockImplementation((table: unknown) => {
+    if (table === appErrorGroups) {
+      return { values: groupValues };
+    }
+    return { values: eventValues };
+  });
+  return groupValues;
+}
 
 // ── Test fixtures ────────────────────────────────────────────────────────
 
@@ -68,6 +109,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Default: requestId present, build has a shortSha, logWarn is a no-op
   requestContextMock.getRequestId.mockReturnValue("req-test-123");
+  requestContextMock.getRequestLogs.mockReturnValue([]);
   buildInfoMock.createBuildInfo.mockReturnValue({ shortSha: "abc1234" });
   platformAccessMock.hasPlatformPermission.mockResolvedValue(true);
 });
@@ -77,12 +119,7 @@ beforeEach(() => {
 describe("captureAppError (OBS-002 write path)", () => {
   it("inserts a row with the sanitized fields and no stack when input is a string", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue(makeChain(undefined));
-    // Override insert chain to actually capture the .values() call.
-    const insertBuilder = {
-      values: insertValues,
-    };
-    dbMock.db.insert.mockReturnValue(insertBuilder);
+    const groupValues = mockInserts(insertValues);
 
     await captureAppError({
       digest: "next-digest-1",
@@ -93,8 +130,23 @@ describe("captureAppError (OBS-002 write path)", () => {
       actorId: "user-1",
     });
 
-    expect(dbMock.db.insert).toHaveBeenCalledTimes(1);
+    // Two writes: the group upsert, then the occurrence row.
+    expect(dbMock.db.insert).toHaveBeenCalledTimes(2);
+    expect(dbMock.db.insert).toHaveBeenNthCalledWith(1, appErrorGroups);
+    expect(dbMock.db.insert).toHaveBeenNthCalledWith(2, appErrorEvents);
+    expect(groupValues).toHaveBeenCalledTimes(1);
+    // The group keeps the scrubbed sample message for display in the
+    // console, keyed by a stable 12-hex fingerprint. `occurrenceCount`
+    // is intentionally absent from the insert — it is the column default
+    // of 1, and the increment happens in the ON CONFLICT branch.
+    expect(groupValues.mock.calls[0]![0]).toMatchObject({
+      sampleMessage: "Something broke",
+      route: "/app/foo",
+      source: "app.error",
+    });
+    expect(groupValues.mock.calls[0]![0].fingerprint).toMatch(/^[0-9a-f]{12}$/);
     const row = insertValues.mock.calls[0]![0];
+    expect(row.groupId).toBe(GROUP_ID);
     expect(row.digest).toBe("next-digest-1");
     expect(row.route).toBe("/app/foo");
     expect(row.method).toBe("GET");
@@ -109,7 +161,7 @@ describe("captureAppError (OBS-002 write path)", () => {
 
   it("truncates the stack to 4 KB and appends a truncation marker", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     const bigStack = "x".repeat(5_000);
     const err = new Error("Boom");
@@ -125,8 +177,8 @@ describe("captureAppError (OBS-002 write path)", () => {
 
     const row = insertValues.mock.calls[0]![0];
     // 4 KB cap + the marker line
-    expect(row.stack.length).toBeLessThanOrEqual(4 * 1024 + "\n…(truncated)".length);
-    expect(row.stack.endsWith("\n…(truncated)")).toBe(true);
+    expect(row.stack.length).toBeLessThanOrEqual(4 * 1024 + "…(truncated)".length);
+    expect(row.stack.endsWith("…(truncated)")).toBe(true);
     // digest/method are absent when undefined
     expect(row.digest).toBeUndefined();
     expect(row.method).toBeUndefined();
@@ -134,7 +186,7 @@ describe("captureAppError (OBS-002 write path)", () => {
 
   it("uses err.name when err.message is empty", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     const err = new TypeError();
     err.message = "";
@@ -154,7 +206,7 @@ describe("captureAppError (OBS-002 write path)", () => {
 
   it("falls back to 'Unknown error' for non-Error, non-string values", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -175,7 +227,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     // resulting row has no `buildVersion` property at all.
     buildInfoMock.createBuildInfo.mockReturnValue({ shortSha: null });
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -240,7 +292,7 @@ describe("captureAppError (OBS-002 write path)", () => {
       }
     }
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -263,7 +315,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("no stack");
     Object.defineProperty(err, "stack", { value: undefined, configurable: true });
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -285,7 +337,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("empty stack");
     err.stack = "";
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -310,7 +362,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("Failed query: insert into …");
     (err as { cause?: unknown }).cause = cause;
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -328,7 +380,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("wrapper");
     (err as { cause?: unknown }).cause = "underlying reason";
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -352,7 +404,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("wrapper");
     (err as { cause?: unknown }).cause = new EmptyCause();
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -370,7 +422,7 @@ describe("captureAppError (OBS-002 write path)", () => {
     const err = new Error("wrapper");
     (err as { cause?: unknown }).cause = { not: "an error" };
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -387,7 +439,7 @@ describe("captureAppError (OBS-002 write path)", () => {
   it("omits cause_message when there is no cause at all", async () => {
     const err = new Error("plain error");
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -408,7 +460,7 @@ describe("captureAppError (OBS-002 write path)", () => {
       override name = "PostgresError";
     }
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -424,7 +476,7 @@ describe("captureAppError (OBS-002 write path)", () => {
 
   it("persists a component stack as-is when it fits in the budget", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -442,7 +494,7 @@ describe("captureAppError (OBS-002 write path)", () => {
   it("truncates a long component stack and appends a marker", async () => {
     const long = "x".repeat(8 * 1024);
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",
@@ -460,7 +512,7 @@ describe("captureAppError (OBS-002 write path)", () => {
 
   it("omits component_stack when the field is undefined", async () => {
     const insertValues = vi.fn().mockResolvedValue(undefined);
-    dbMock.db.insert.mockReturnValue({ values: insertValues });
+    mockInserts(insertValues);
 
     await captureAppError({
       digest: "d",

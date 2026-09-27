@@ -12,18 +12,162 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the error mirror was recording nothing useful
+
+Two defects made `/app/platform/errors` and the structured log stream unable
+to answer "what broke":
+
+**1. Server errors were never recorded at all.** `instrumentation.ts` exported
+`onRequestError = Sentry.captureRequestError`, which is a no-op without a
+`SENTRY_DSN` — and the DSN is still an open owner-supplied item. So all 84 API
+routes, every server action, and every server-component render produced no
+durable record anywhere. The only trace was a container stdout line that
+Docker's `10m × 5` rotation discarded within hours.
+
+`onRequestError` now writes to the in-app mirror first and still forwards to
+Sentry, so the mirror is the primary signal and Sentry the optional archive. The
+hook also gained a 2-second budget (Next.js awaits it, so every millisecond
+lands on an already-failing request) and can never throw.
+
+**2. Every client-boundary row stored `message = "Unknown error"`.**
+`recordErrorBoundaryAction` cannot hand a real `Error` across the server-action
+boundary — a client component can only ship a plain serializable object — but
+the capture helpers used `instanceof Error` for the name, message, stack, and
+cause. The one caller that mattered was the one shape those checks rejected, so
+`error_name`, `stack`, and `cause_message` were all `NULL` on every row. The
+helpers now read the error structurally. Regression-locked in
+`tests/integration/error-diagnostics.test.ts`.
+
+**3. The log stream blanked every error message.** `sanitizeLogContext`
+collapsed any `Error` to `{ name, message: "[redacted]" }`, so a
+`captureError(scope, err, …)` line shipped with no message, no stack, and no
+cause. Redaction is now a targeted secret-scrubber
+(`src/lib/observability/redact.ts`) that removes credential shapes, Postgres
+`DETAIL` values, and email addresses while keeping the error class, route,
+constraint names, SQL, and stack frames.
+
+### Added — error grouping, retention, and a diagnostics MCP
+
+Repeat failures were previously indistinguishable from new ones — every
+occurrence was its own row, so "broke 47 times since the 14:02 deploy" was
+unanswerable, and `docs/operations/app-error-event.md` said outright that the
+30-day prune was _"not implemented yet"_.
+
+- **`app_error_group`** (migration `0054_app_error_diagnostics`) — one row per
+  error class, keyed by a stable fingerprint, with `occurrence_count`,
+  first/last-seen, and a triage state. Incremented by a single
+  `INSERT … ON CONFLICT DO UPDATE`, so concurrent captures cannot lose an
+  increment.
+- **A burst cap** (`APP_ERROR_BURST_LIMIT`, default 20/min/fingerprint) plus
+  30/90-day retention via `/api/cron/error-retention` and
+  `scripts/vps/error-retention.sh`. Retention ships in the same change as the
+  wider capture for a reason: a hot loop must not become a disk incident.
+- **A request-scoped log ring buffer** — each captured error carries the
+  request's own recent `error` / `warn` lines under `context.logs`. This is the
+  substitute for a log tail over HTTP, and costs no extra queries or writes.
+- **Five diagnostics MCP tools** behind two new token scopes:
+  `laratik_planner_list_app_errors`, `_get_app_error`, `_diagnose_app_error`,
+  `_app_health`, and `_triage_app_error`. `diagnose_app_error` is the one-call
+  triage tool: it returns a root-cause hypothesis with concrete fix steps
+  (reusing the existing `matchErrorHint` catalogue rather than inventing a
+  second taxonomy), the occurrence window, an hourly histogram, and the
+  distinct build versions the error appeared on.
+- **Process-level capture** for `unhandledRejection` and `uncaughtException`,
+  which never reached `onRequestError` at all.
+- **`/app/platform/errors`** now defaults to a grouped triage view with
+  occurrence counts, triaged state, and `source` / time-range filters; the raw
+  occurrence log stays available at `?view=events`.
+
+### Changed — diagnostics authorization is a two-gate check
+
+The `platform:diagnostics:*` scopes are a separate privilege domain from
+`content:*`: nothing crosses between the families in either direction, and
+every diagnostics tool requires the token scope **and** the caller's
+`platform.console.read` permission. `app_error_event` holds routes, messages,
+stacks, and actor ids from every workspace, so a scope check on its own would
+let any workspace member read another agency's failures.
+
+### Changed — `uncaughtException` now exits the process
+
+Previously an uncaught exception was swallowed by Node's default handler and
+the app continued in an undefined state. It is now captured best-effort and
+then `process.exit(1)`, letting Docker's restart policy bring the container
+back. Deliberate: continuing after an uncaught exception risks serving
+corrupted responses or crashing again inside the error handler. See
+`PORT_NOTES.md`.
+
+### Added — Optional media for posts that ship no creative
+
+A post with no creative file — a caption-only announcement, a
+text-first/thread post, a link drop — could not be delivered. The media
+floor was unconditional in three places:
+
+```
+SubmitDeliverySchema.mediaAssetIds   z.array().min(1)   ← Zod
+submitDelivery()                     "At least one stored media asset is required"
+DeliverySection onSubmit             blocks submit when 0 mediaAssetId
+```
+
+A designer working a text-only post had to attach filler media to
+satisfy the validator, which polluted the delivery and the agency media
+library.
+
+- **feat(db):** added `content_item.media_required boolean NOT NULL
+DEFAULT true` (migration `0055_content_item_media_required`). Defaults
+  to `true`, so the change is a no-op for every existing row and no
+  in-flight post changes behaviour on deploy.
+- **fix(deliveries):** moved the floor out of the Zod schema into
+  `submitDelivery`, where the item row is in hand — a static schema
+  cannot read a column, and leaving `.min(1)` there would have kept the
+  bypass closed. The unconditional `.max(20)` ceiling stays in the
+  schema. An empty `inArray` lookup and the `mediaAssetLinks` insert are
+  both skipped for an assetless delivery; Drizzle rejects
+  `.values([])`.
+- **feat(deliveries):** added `setMediaRequired` /
+  `setMediaRequiredAction`, gated to `workspace_manager` /
+  `content_planner` — the same gate `updateContentItem` uses. A designer
+  cannot lift the floor on their own submission, because that decision
+  belongs to whoever owns the brief and is visible to reviewers. Further
+  restricted to the pre-creative statuses (`draft`, `content_review`,
+  `approved_for_design`, `in_design`, `changes_requested`): once a
+  version is in `creative_review` the reviewer is looking at a specific
+  set of files, and changing the requirement underneath them would make
+  the approved version mean something other than what was reviewed.
+- **feat(ui):** added a "This post ships no creative" checkbox to the
+  delivery form, using the shared `Checkbox` primitive with a real
+  `<label htmlFor>` and `aria-describedby` help text. It is optimistic
+  and **rolls back, surfacing the error**, if the server refuses — a
+  designer must never be left believing the floor was lifted.
+- **fix(deliveries):** an assetless delivery now requires a non-empty
+  `description`. With no files attached, the `delivery_version`
+  description is the only record of what was delivered; an empty version
+  row would be unreviewable. Enforced in the service and mirrored in the
+  form's client-side validation.
+
+**Scope statement — what deliberately did _not_ change.** An assetless
+delivery still creates a `delivery_version` row, still opens a
+`creative_internal` approval request, and still moves the item to
+`creative_review`. `decideApproval` still sets
+`approvedDeliveryVersionId`, so `evaluateReadiness`'s
+`no_approved_delivery` blocker resolves exactly as before and no
+readiness code needed to change. Only the _media_ floor is lifted; the
+review gate is fully intact. Publishing to a platform whose API
+requires media will still fail at the provider for such a post — that is
+a channel-selection concern, not a delivery-gate one, and is left alone
+deliberately.
+
 ### Added — Ephemeral publications: link a Story without a permanent link
 
 An Instagram Story is live for 24 hours and has no durable public link, so it
 could never satisfy `publication_published_needs_url_time_publisher` — the
 `CHECK` that required `published_url IS NOT NULL` whenever `status = 'published'`.
-Stories were therefore *unlinkable*, not merely linkless: the Meta link flow
+Stories were therefore _unlinkable_, not merely linkless: the Meta link flow
 wrote `status = 'published'` with a null permalink and the whole transaction
 rolled back, while `recordPublication` independently threw
 `published requires a publishedUrl`. There was no way to mark a Story published.
 
 - **feat(db):** new nullable `publication_record.expires_at` (migration
-  `0053_ephemeral_publication_expiry`). The invariant is *widened*, not removed —
+  `0053_ephemeral_publication_expiry`). The invariant is _widened_, not removed —
   a published row still needs `actual_published_at` and `publisher_id`, and needs
   a URL only when `expires_at IS NULL`. Pure widening: every existing published
   row already has a URL, so no backfill. The DROP/ADD sits in one `DO` block so it
@@ -35,7 +179,7 @@ rolled back, while `recordPublication` independently threw
   `expires_at` is derived as `published_at + 24h` (`META_STORY_TTL_MS`) with a
   `?? now` fallback so a Story always satisfies the relaxed `CHECK`.
 - **feat(social):** a new Meta-free expiry pass in `reconcileMetaPublicationLinks`
-  degrades an expired Story's *external* status to `unavailable` and records a
+  degrades an expired Story's _external_ status to `unavailable` and records a
   `meta_expired` activity event. It never touches the Planner `status` — the
   content was published, the artifact is gone by design — and it makes no
   provider call, so it cannot fail on a Meta outage.
@@ -54,7 +198,6 @@ rolled back, while `recordPublication` independently threw
   en/ar key parity (895 keys each).
 - **docs:** ADR 0016, a Stories section in the Meta linking runbook, the
   `expires_at` column in the data model, and a Story UAT row.
-
 
 ### Added — Workspace rename (display name) from Settings → Lifecycle
 

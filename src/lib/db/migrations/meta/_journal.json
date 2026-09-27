@@ -372,6 +372,13 @@
       "when": 1790531606070,
       "tag": "0053_ephemeral_publication_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1790533842959,
+      "tag": "0054_app_error_diagnostics",
+      "breakpoints": true
     }
   ]
 }

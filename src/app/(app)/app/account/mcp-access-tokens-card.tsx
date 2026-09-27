@@ -200,6 +200,44 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
               </span>
             </span>
           </label>
+          {/* Diagnostics scopes are a separate privilege domain from the
+              content pair: they expose cross-tenant error data, and the
+              server requires the platform.console.read permission on top
+              of the scope. The help text says so, because an operator
+              issuing a token here needs to know the scope alone is not
+              sufficient. */}
+          <label className="text-body text-fg-primary flex min-h-11 items-center gap-2 font-semibold">
+            <Checkbox
+              name="mcpTokenScope"
+              value="platform:diagnostics:read"
+              aria-describedby="mcp-diagnostics-read-scope-help"
+            />
+            <span>
+              {t("account.mcpDiagnosticsReadScope")}
+              <span
+                id="mcp-diagnostics-read-scope-help"
+                className="text-label text-fg-muted mt-0.5 block"
+              >
+                {t("account.mcpDiagnosticsReadScopeHelp")}
+              </span>
+            </span>
+          </label>
+          <label className="text-body text-fg-primary flex min-h-11 items-center gap-2 font-semibold">
+            <Checkbox
+              name="mcpTokenScope"
+              value="platform:diagnostics:write"
+              aria-describedby="mcp-diagnostics-write-scope-help"
+            />
+            <span>
+              {t("account.mcpDiagnosticsWriteScope")}
+              <span
+                id="mcp-diagnostics-write-scope-help"
+                className="text-label text-fg-muted mt-0.5 block"
+              >
+                {t("account.mcpDiagnosticsWriteScopeHelp")}
+              </span>
+            </span>
+          </label>
         </div>
         <FormSubmitButton label={t("account.mcpCreate")} pendingLabel={t("account.mcpCreating")} />
       </form>

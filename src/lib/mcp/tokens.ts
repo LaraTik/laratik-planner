@@ -5,8 +5,37 @@ import { and, desc, eq, isNull, lt } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { mcpAccessTokens } from "@/lib/db/schema";
 
-export const MCP_TOKEN_SCOPES = ["content:read", "content:write"] as const;
+/**
+ * Token scopes for the remote Planner MCP.
+ *
+ * The two `platform:diagnostics:*` scopes are a **separate privilege
+ * domain** from the `content:*` pair. They grant read (or triage) access
+ * to the in-app error mirror — routes, scrubbed messages, stacks, and
+ * actor ids across every tenant — so they are never implied by, and
+ * never imply, a content scope. `requireScope` in `server.ts` enforces
+ * that asymmetry deliberately, and every diagnostics tool additionally
+ * requires the `platform.console.read` platform permission, so holding a
+ * diagnostics scope is not by itself sufficient.
+ */
+export const MCP_TOKEN_SCOPES = [
+  "content:read",
+  "content:write",
+  "platform:diagnostics:read",
+  "platform:diagnostics:write",
+] as const;
 export type McpTokenScope = (typeof MCP_TOKEN_SCOPES)[number];
+
+/** True when a token may read the error mirror / triage data. */
+export function canReadDiagnostics(scopes: readonly McpTokenScope[]): boolean {
+  return (
+    scopes.includes("platform:diagnostics:read") || scopes.includes("platform:diagnostics:write")
+  );
+}
+
+/** True when a token may change triage state. */
+export function canWriteDiagnostics(scopes: readonly McpTokenScope[]): boolean {
+  return scopes.includes("platform:diagnostics:write");
+}
 
 const TOKEN_PREFIX = "lpm_";
 const TOKEN_BYTES = 32;

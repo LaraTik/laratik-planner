@@ -131,6 +131,80 @@ ssh laratik-vps 'sudo ls -la /var/lib/docker/containers/*/'
 # Each container's log JSON file should be < 10MB, with at most 5 rotations.
 ```
 
+> **Read this before reaching for `docker logs`.** `10m × 5` is ~50 MB per
+> container. Under a burst of traffic that is minutes, not hours. Anything you
+> need to keep must be in the database — which is what the section below is
+> for.
+
+## Error capture — what is actually recorded
+
+**The database mirror is the primary signal; Sentry is the optional archive.**
+That ordering is deliberate: the Sentry DSN has been an open owner-supplied
+item, and every Sentry path is a no-op without it.
+
+| Path                                                  | Where it lands                               | Notes                                                      |
+| ----------------------------------------------------- | -------------------------------------------- | ---------------------------------------------------------- |
+| Server render / route handler / server action / proxy | `onRequestError` → `app_error_event`         | The single funnel for all server failures.                 |
+| Unhandled rejection                                   | `process.on("unhandledRejection")`           | Outside a request scope; attributed to `server.unhandled`. |
+| Uncaught exception                                    | `process.on("uncaughtException")`            | Captured, then **`process.exit(1)`** so Docker restarts.   |
+| Client render error                                   | the two React boundaries → `app_error_event` |                                                            |
+
+Three properties worth knowing:
+
+- **Messages and stacks are preserved, not blanked.** The logger used to emit
+  `{ name, message: "[redacted]" }` for every `Error`, which meant the log
+  stream could not say what had failed. It now runs a targeted
+  secret-scrubber (`src/lib/observability/redact.ts`) that removes credential
+  shapes, Postgres `DETAIL` values, and email addresses while keeping the
+  error class, route, constraint names, SQL, and stack frames.
+- **Each error carries the request's own recent log lines** under
+  `context.logs` (a bounded 50-line ring buffer in
+  `request-context.ts`). This is the substitute for a log tail over HTTP.
+- **Repeat errors group.** `app_error_group` counts occurrences per
+  fingerprint, so "broke 47 times since the 14:02 deploy" is answerable, and a
+  group confined to one build SHA is the regression signal.
+
+Bounded by a per-fingerprint, per-minute burst cap
+(`APP_ERROR_BURST_LIMIT`, default 20) plus 30/90-day retention
+(`/api/cron/error-retention`, `scripts/vps/error-retention.sh`). Full detail in
+[`app-error-event.md`](./app-error-event.md).
+
+### Ask the app instead of reading logs
+
+With a token holding `platform:diagnostics:read` (and the caller's
+`platform.console.read` permission), the diagnostics MCP answers in one call:
+
+```text
+laratik_planner_app_health                  → is it broken, or one user?
+laratik_planner_list_app_errors             → what is failing, how often
+laratik_planner_diagnose_app_error          → root cause + concrete fixes
+```
+
+`diagnose_app_error` is the one to reach for. It returns a `matchErrorHint`
+hypothesis with fix steps, the occurrence window, an hourly histogram, the
+distinct build versions the group appeared on, and the most recent occurrences
+with their cause chains. See [`docs/api/mcp.md`](../api/mcp.md).
+
+### Verify capture is live
+
+```bash
+# 1. Force a real server error: hit an API route that 500s.
+curl -si https://planner.laratik.com/api/health/live | head -1
+# (any endpoint that raises — the point is that a row appears)
+
+# 2. Confirm the row exists, with its route_type and correlation id.
+ssh laratik-vps "docker exec laratik-planner-postgres-1 \
+  psql -U planner -d planner -c \
+  \"select source, route_type, request_id, left(message, 80) from app_error_event order by created_at desc limit 5;\""
+
+# 3. Confirm the failure path itself was captured (should be empty in normal operation).
+ssh laratik-vps "docker exec laratik-planner-postgres-1 \
+  psql -U planner -d planner -c \
+  \"select count(*) from app_error_event where source = 'server.unhandled';\""
+```
+
+If step 2 returns rows, capture is live **regardless of the Sentry DSN**.
+
 ## What's still owner-supplied (one-time)
 
 The following tracking table replaces the previous empty checkbox list. The columns mirror the `EXTERNAL_SERVICES_UAT.md` row template (`Owner` / `Date` / `Result` / `Evidence link`) so OBS-001 closure can be cross-referenced with the existing UAT evidence. Each row's `Surface` matches a row in the Status table above; the `Result` and `Date` columns close the loop.

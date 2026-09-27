@@ -27,7 +27,30 @@ used by a trusted automation. A token does not grant access by itself: every
 tool call still runs the existing user, agency, workspace, role, and workflow
 policy checks.
 
+### Scopes
+
+| Scope                        | Grants                                                                       |
+| ---------------------------- | ---------------------------------------------------------------------------- |
+| `content:read`               | Read planning data and brand kits. `content:write` implies it.               |
+| `content:write`              | Create / update / transition / archive planning data and import a brand kit. |
+| `platform:diagnostics:read`  | Read the in-app error mirror. `platform:diagnostics:write` implies it.       |
+| `platform:diagnostics:write` | Additionally mark an error group triaged. Changes no product data.           |
+
+The two `platform:diagnostics:*` scopes are a **separate privilege domain** from
+the `content:*` pair. Nothing crosses between them in either direction: a
+`content:write` token cannot read errors, and a `platform:diagnostics:read`
+token cannot read planning data.
+
+They are also **not sufficient on their own**. `app_error_event` holds routes,
+error messages, stacks, and actor ids from _every_ workspace, so each
+diagnostics tool requires the token scope **and** the caller's
+`platform.console.read` platform permission — the same gate the in-app
+`/app/platform/errors` console uses. A workspace member holding a diagnostics
+token is refused.
+
 ## Tools
+
+### Planning and brand kit
 
 | Tool                                 | Scope           | Purpose                                                                                                                                                                                                             |
 | ------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -43,6 +66,46 @@ policy checks.
 | `laratik_planner_duplicate_content`  | `content:write` | Create a new draft copy                                                                                                                                                                                             |
 | `laratik_planner_export_brand_kit`   | `content:read`  | Read the full brand-kit (logos, colors, fonts, voice rules, publishing rules, linked resources, content pillars); logo binaries referenced by signed download URL                                                   |
 | `laratik_planner_import_brand_kit`   | `content:write` | Apply a brand-kit envelope to a workspace; supports `merge`/`fail`/`overwrite` conflict strategies; logo binaries via `base64`, `source_url`, or `external_url`                                                     |
+
+### Error diagnostics
+
+| Tool                                 | Scope                        | Purpose                                                                                                                               |
+| ------------------------------------ | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `laratik_planner_list_app_errors`    | `platform:diagnostics:read`  | Recent failures grouped by error class, with occurrence counts and first/last-seen timestamps. Newest first.                          |
+| `laratik_planner_get_app_error`      | `platform:diagnostics:read`  | One occurrence in full: scrubbed message, chained cause, truncated stack, and the request's recent log lines.                         |
+| `laratik_planner_diagnose_app_error` | `platform:diagnostics:read`  | **The one-call triage tool.** Root-cause hypothesis with fix steps, occurrence window, hourly histogram, and the build versions seen. |
+| `laratik_planner_app_health`         | `platform:diagnostics:read`  | App + database reachability, build, error volume for the last hour and 24 hours, and the top untriaged groups.                        |
+| `laratik_planner_triage_app_error`   | `platform:diagnostics:write` | Mark an error group triaged or reopen it. Requires `confirm: true`. Idempotent.                                                       |
+
+### What the diagnostics tools can and cannot see
+
+These tools read the **in-app error mirror** (`app_error_event` /
+`app_error_group`), not the VPS container's stdout. The endpoint is public HTTP
+and has no host access, so there is deliberately **no** tool for restarting a
+container, tailing `docker logs`, running SQL, or deploying. The mirror closes
+that gap from the other side: every captured error carries the request's own
+recent `error` / `warn` lines under `context.logs` (a bounded 50-line ring
+buffer from `AsyncLocalStorage`), because the raw container lines only reach
+Docker's `json-file` driver at `10m × 5` and are gone within hours.
+
+`laratik_planner_diagnose_app_error` is the intended starting point. Given a
+fingerprint — or a free-text `query` when no fingerprint is known — it returns:
+
+- a **root-cause hypothesis** (`id`, `title`, `why`, and concrete `fixes`),
+  matched by the same `matchErrorHint` catalogue the user-facing error page
+  uses, so there is one root-cause taxonomy rather than two;
+- the occurrence count and the first/last-seen window;
+- an hourly histogram;
+- the **distinct build versions** the group has appeared on — a group confined
+  to a single SHA is the regression signal, and the SHA correlates to the
+  deploy log;
+- the distinct routes and sources it has hit;
+- the most recent occurrences with their cause chains.
+
+All persisted text has been through the scrubber in
+`src/lib/observability/redact.ts` before it reached the database, so messages
+and stacks are readable while credential shapes, Postgres `DETAIL` values, and
+email addresses are not.
 
 Write tools use the domain services already used by the web UI. The MCP
 surface does not offer direct SQL, raw file access, publishing credentials,
