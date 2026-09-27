@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
-import { submitDeliveryAction, setMediaRequiredAction } from "../actions";
+import {
+  submitDeliveryAction,
+  setMediaRequiredAction,
+  type SetMediaRequiredErrorCode,
+} from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { type MediaUploadResult } from "@/components/media/media-upload-form";
 import { MediaSourcePicker } from "@/components/media/media-source-picker";
@@ -122,7 +126,9 @@ export function DeliverySection({
   // for the router refresh that follows the server action.
   const [mediaRequiredState, setMediaRequiredState] = useState(mediaRequired);
   const [savingMediaRequired, startSaveMediaRequired] = useTransition();
-  const [mediaRequiredError, setMediaRequiredError] = useState<string | null>(null);
+  const [mediaRequiredError, setMediaRequiredError] = useState<SetMediaRequiredErrorCode | null>(
+    null,
+  );
   const assetsOptional = !mediaRequiredState;
   const canUploadInline = workspaceId.length > 0;
   const previousAssetSet = new Set(previousAssetIds);
@@ -268,7 +274,7 @@ export function DeliverySection({
       const res = await setMediaRequiredAction(workspaceSlug, contentItemId, nextMediaRequired);
       if (!res.ok) {
         setMediaRequiredState(previous);
-        setMediaRequiredError(res.error ?? null);
+        setMediaRequiredError(res.errorCode);
       }
     });
   }
@@ -497,7 +503,7 @@ export function DeliverySection({
                 </div>
                 {mediaRequiredError ? (
                   <p role="alert" className="text-label text-danger mt-2 font-semibold">
-                    {mediaRequiredError}
+                    {t(`contentDetail.deliveries.noMediaError.${mediaRequiredError}`)}
                   </p>
                 ) : null}
               </div>

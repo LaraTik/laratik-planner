@@ -12,6 +12,64 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — pre-deploy review of the observability batch
+
+Reviewed the five unpushed `main` commits (observability, ephemeral
+publications, workspace rename, activity jsonb, assetless deliveries)
+before they reached production. Three high-severity defects, two of them
+secret-leak paths in the module built to prevent secret leakage and one a
+silently over-granted token scope.
+
+**Security**
+
+- A free-text log-context string bypassed the scrubber entirely. Only
+  `Error` values were serialized; every other non-object value was
+  returned verbatim, so a credential under an innocuous key (`detail`,
+  `dsn`, `url`, `reason`) reached Docker **and** `app_error_event.context.logs`
+  byte-identical. Strings now pass through `scrubText`; numbers, booleans,
+  `null`, and `undefined` are untouched.
+- `redact.ts` had no rule for `scheme://user:pass@host`. `DATABASE_URL` —
+  the highest-value secret in the stack — matched no key name, had no query
+  parameter, and is shorter than the entropy floor, so
+  `postgres://planner:hunter2@db:5432/planner` survived scrubbing intact.
+  New rule 5 redacts only the password half and leaves scheme, user, host,
+  port, and database, which are the diagnostic part. Ordinary URLs with no
+  userinfo are not matched.
+
+**Authorization**
+
+- `issueMcpTokenAction` validated submitted scopes against a hardcoded
+  `content:read | content:write` pair instead of `MCP_TOKEN_SCOPES`, so
+  every `platform:diagnostics:*` checkbox the Account UI renders was
+  discarded and the `content:read` fallback fired. The five diagnostics MCP
+  tools were unreachable from the product's own UI, and an operator who
+  selected only diagnostics received a content grant they never chose. The
+  filter now derives from `MCP_TOKEN_SCOPES`.
+- `submitDelivery` ran the media floor and the assetless-description check
+  before `requirePolicy`, letting an unauthorized caller tell "requires
+  media" from "assetless" from the error text. Authorization now precedes
+  business validation.
+
+**User interface**
+
+- The "this post ships no creative" toggle returned hardcoded English and,
+  on the failure path, the raw `error.message` — showing an English error
+  to an Arabic user and surfacing driver internals. The action now returns a
+  stable `SetMediaRequiredErrorCode`, logs the real reason, and renders
+  translated EN/AR copy.
+- The error mirror's two filter `<select>`s gained the
+  `focus-visible:ring-focus-ring` treatment used everywhere else in the app.
+
+**Tooling and CI**
+
+- `src/lib/observability/fingerprint.ts` contained a literal NUL byte and was
+  committed as a binary blob, so it never appeared in a diff. Now `"\u0000"`,
+  identical at runtime and reviewable as text.
+- Four Markdown files failed `prettier --check` (`AGENTS.md`, ADR 0016,
+  `docs/architecture/data-model.md`, `EXTERNAL_SERVICES_UAT.md`). The Deploy
+  workflow fires on `workflow_run: CI success` and CI's first step is
+  `format check`, so this would have taken the pipeline red.
+
 ### Fixed — the error mirror was recording nothing useful
 
 Two defects made `/app/platform/errors` and the structured log stream unable

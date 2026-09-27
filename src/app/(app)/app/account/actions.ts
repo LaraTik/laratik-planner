@@ -16,7 +16,12 @@ import {
 import { setUser } from "@/lib/observability/sentry";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { setPublicLocale } from "@/lib/i18n/cookie";
-import { issueMcpAccessToken, revokeMcpAccessToken, type McpTokenScope } from "@/lib/mcp/tokens";
+import {
+  issueMcpAccessToken,
+  revokeMcpAccessToken,
+  MCP_TOKEN_SCOPES,
+  type McpTokenScope,
+} from "@/lib/mcp/tokens";
 
 /**
  * Own-profile server actions. All three:
@@ -79,8 +84,15 @@ export async function issueMcpTokenAction(
   const name = String(formData.get("mcpTokenName") ?? "").trim();
   const durationDays = Number(formData.get("mcpTokenDuration") ?? 90);
   const rawScopes = formData.getAll("mcpTokenScope").map(String);
-  const scopes = rawScopes.filter(
-    (scope): scope is McpTokenScope => scope === "content:read" || scope === "content:write",
+  // Validate against MCP_TOKEN_SCOPES — the single source of truth —
+  // rather than an inline pair. A hardcoded list silently discarded the
+  // `platform:diagnostics:*` scopes the token UI already offers: the
+  // filter emptied, and the `content:read` fallback below then granted a
+  // cross-domain scope the operator never selected. Deriving it means a
+  // future scope cannot reach this filter without also being accepted
+  // here, and an unknown value still falls through as invalid input.
+  const scopes = rawScopes.filter((scope): scope is McpTokenScope =>
+    (MCP_TOKEN_SCOPES as readonly string[]).includes(scope),
   );
   if (!name || !Number.isInteger(durationDays) || ![30, 90, 365].includes(durationDays)) {
     return { errorCode: "invalidTokenRequest" };

@@ -760,13 +760,117 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-27 — Pre-deploy review of the observability / publications / rename / assetless batch
+
+Reviewed the five unpushed commits on `main` (`ff5ef3b1` observability,
+`80df5e6f` ephemeral publications, `35224b8a` workspace rename, `daa9b17d`
+activity jsonb, `4eadc7f1` assetless deliveries) before they reached
+production. Three high-severity defects and three smaller ones were found and
+fixed. Two were secret-leak paths inside the module introduced specifically to
+prevent secret leakage, and one silently granted a privilege the operator never
+selected.
+
+- **fix(security) — a free-text log-context string bypassed the scrubber.**
+  `sanitizeLogContext` returned every non-object value verbatim, so only `Error`
+  instances ever reached `serializeError`. A credential arriving under an
+  innocuous key (`detail`, `dsn`, `url`, `reason`) was written to Docker **and**
+  to `app_error_event.context.logs` byte-identical. This contradicted
+  `redact.ts`'s own axis-2 contract ("a log context string"). Strings now route
+  through `scrubText`; numbers, booleans, `null` and `undefined` still pass
+  through untouched, and the key-name denylist is unchanged.
+
+- **fix(security) — `redact.ts` had no rule for `scheme://user:pass@host`.**
+  Every driver uses that shape, and `DATABASE_URL` — the highest-value secret in
+  this stack, and a named hard-rule secret — matched no key name in the rule
+  table, carried no query parameter, and is far shorter than the 64-character
+  entropy floor. `DATABASE_URL=postgres://planner:hunter2@db:5432/planner` came
+  through completely unsanitized. New rule 5 replaces **only** the password half;
+  scheme, user, host, port and database are the diagnostic part. It requires
+  userinfo (`:` and `@` together), so `https://example.com:8080/health` and
+  stack frames are untouched. Downstream rules renumbered 6–10.
+
+- **fix(authz) — diagnostics token scopes were silently downgraded to
+  `content:read`.** `issueMcpTokenAction` filtered the submitted scopes against a
+  hardcoded `content:read | content:write` pair instead of consulting
+  `MCP_TOKEN_SCOPES`, which is documented as the single source of truth. Every
+  `platform:diagnostics:*` checkbox the Account UI already renders was discarded,
+  the filter came back empty, and the fallback issued a **content** token. So the
+  five diagnostics MCP tools were unreachable from the product's own UI, and an
+  operator who ticked only the diagnostics boxes received a cross-domain content
+  grant they had never selected — in a module that goes out of its way to
+  document the two domains as strictly non-implying. The filter now derives from
+  `MCP_TOKEN_SCOPES`, so a future scope cannot be added to the list without also
+  being accepted here, and an unrecognised value still falls through as invalid.
+
+- **fix(authz) — `submitDelivery` validated the media floor before authorizing.**
+  The floor and its assetless-description check ran ahead of `requirePolicy`, so a
+  caller with no role in the workspace could still distinguish "this item
+  requires media" from "this item is assetless" from the error text.
+  Authorization now precedes all business validation, which is also the ordering
+  the sibling delivery action already used.
+
+- **fix(i18n) — the "this post ships no creative" toggle returned English prose.**
+  `setMediaRequiredAction` returned a hardcoded English string and, on the catch
+  path, the raw `error.message` — so an Arabic user read an English error and
+  whatever the driver said (constraint names, SQL fragments) reached the surface.
+  The bilingual contract requires server actions to return _stable codes_ and the
+  client boundary to translate them, which the sibling `MetaPublication` action
+  twenty lines below already did. The action now returns
+  `SetMediaRequiredErrorCode` (`invalidRequest` / `forbidden` / `updateFailed`),
+  the real reason goes to the log, and `DeliverySection` renders
+  `contentDetail.deliveries.noMediaError.*` with full EN/AR parity. `forbidden`
+  maps on the typed `PermissionDeniedError`; the service's "not found" and
+  status-guard paths throw plain `Error`, and guessing between them by message
+  would show the user a distinction the code cannot actually make, so they share
+  `updateFailed`.
+
+- **fix(tooling) — `fingerprint.ts` was committed as a binary blob.** A literal
+  NUL byte in `HASH_SEPARATOR` made `file` report `data` and `git show --stat`
+  report `Bin`, so the fingerprinting core for the entire error mirror never
+  appeared in a diff and was opaque to `git blame`. Replaced with `"\u0000"` —
+  identical runtime behaviour, reviewable text from now on.
+
+- **fix(ci) — four Markdown files failed `prettier --check`.** `AGENTS.md`,
+  `docs/decisions/0016-ephemeral-publication-expiry.md`,
+  `docs/architecture/data-model.md`, and
+  `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` carried hand-edited
+  `*italic*` and unaligned table columns. This is a hard deploy blocker: the
+  Deploy workflow fires on `workflow_run: CI success`, and CI's first step is
+  `format check`, so these four files would have taken the whole pipeline red.
+
+- **fix(a11y) — the error mirror's two filter `<select>`s had no focus ring.**
+  Every other control in the codebase uses `focus-visible:ring-focus-ring`
+  (145 files); these two were the outliers, against AGENTS.md §I.
+
+- **Repo hygiene.** `fix/planning-detail-500-activity-jsonb` and
+  `feat/optional-media-landing` were deleted. Both were fully superseded — the
+  first was a strict subset of `daa9b17d` / `35224b8a`, the second pointed at
+  the same SHA as `main` — and the single worktree is now `main`.
+
+- **Known follow-up (not deploy-blocking).** The Drizzle snapshot chain in
+  `src/lib/db/migrations/meta/` still ends at `0053_snapshot.json`; `0052`,
+  `0054`, and `0055` have no snapshot, and `0047` / `0048` were already missing
+  before this batch. The migrator (`src/lib/db/migrate.ts`) and the migration
+  drill read the journal and the `.sql` files only, so **neither the deploy nor
+  `pnpm migration-drill` is affected**. The hazard is the _next_
+  `pnpm db:generate`, which diffs the live schema against the stale `0053`
+  snapshot and will emit duplicate `CREATE TABLE` / `ADD COLUMN` statements.
+  Backfilling the chain needs a live database and a real `drizzle-kit generate`
+  pass, which would also mint a `0056`; it is deliberately left as a separate
+  scoped task rather than attempted blind.
+
+- **Verified.** `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, and the full
+  unit suite (428 files / 4013 tests) are green. Each fix is locked by a test
+  that was confirmed to **fail** against the pre-fix code first: 10 failures for
+  the three security/authorization fixes, 1 for the authorization ordering.
+
 ### 2026-09-27 — Ephemeral publications: Stories without a permanent link
 
 **Gap.** `publication_record` carried a hard `CHECK`
 (`publication_published_needs_url_time_publisher`) requiring
 `published_url IS NOT NULL` whenever `status = 'published'`. An Instagram Story
 is live for 24 hours and has no durable public link, so it could never satisfy
-that invariant. Stories were not merely hard to link — they were *unlinkable*:
+that invariant. Stories were not merely hard to link — they were _unlinkable_:
 `persistLinkedCandidate` wrote `status = 'published'` with a null permalink and
 the whole `db.transaction` rolled back, and `recordPublication` independently
 threw `published requires a publishedUrl`. Nothing in the product could record a
@@ -776,7 +880,7 @@ Story with `media_type` IMAGE/VIDEO and carries the real type in
 discarded — so every Story rendered as "Image" or "Video".
 
 - **feat(db):** `publication_record.expires_at` (migration
-  `0053_ephemeral_publication_expiry`). The invariant is *widened*, not removed:
+  `0053_ephemeral_publication_expiry`). The invariant is _widened_, not removed:
   a published row still needs `actual_published_at` + `publisher_id`, and needs a
   URL only when `expires_at IS NULL`. No backfill — every existing published row
   already has a URL. DROP/ADD live in one `DO` block so the swap is atomic even
@@ -792,12 +896,12 @@ discarded — so every Story rendered as "Image" or "Video".
   it already requested `media_product_type` on both the list and by-id paths.
 
 - **feat(social):** Meta-free `expireEphemeralMetaPublications` pass in
-  `reconcileMetaPublicationLinks` degrades an expired Story's *external* status to
+  `reconcileMetaPublicationLinks` degrades an expired Story's _external_ status to
   `unavailable` and writes a `meta_expired` activity event. It never touches the
   Planner `status`: the content was published, the artifact is gone by design.
   Idempotent (only matches rows still at `externalStatus = 'published'`) and it
   issues no provider call, so it cannot fail on a Meta outage. `expires_at` is
-  written on *every* link/refresh/reconcile — including as `null` — because
+  written on _every_ link/refresh/reconcile — including as `null` — because
   `publication_record_channel_unique` means re-linking mutates the same row.
 
 - **feat(publishing):** `RecordPublicationSchema` gains `expiresAt`; the
@@ -825,7 +929,7 @@ discarded — so every Story rendered as "Image" or "Video".
   `EXTERNAL_SERVICES_UAT.md`.
 
 - **Known limits:** the 24h Story window is hardcoded (Meta exposes no expiry
-  field); and Stories arriving via `/{ig-user-id}/media` is an *observed*
+  field); and Stories arriving via `/{ig-user-id}/media` is an _observed_
   behaviour, not a documented guarantee — Meta documents a separate `/stories`
   edge. The labelling ships either way; only a Stories-disappeared regression
   would justify adding that fetch path, and the UAT row is what catches it.

@@ -299,6 +299,31 @@ describe("submitDelivery", () => {
     expect(dbMock.state.transactionCalls).toBe(0);
   });
 
+  it("authorizes before validating the media floor, so an unauthorized caller learns nothing", async () => {
+    // The media floor used to run *before* `requirePolicy`, so a caller
+    // with no role in the workspace could still tell "this item requires
+    // media" from "this item is assetless" from the error text — a small
+    // but real oracle over content items the actor cannot touch.
+    // Authorization must come first; only then may business rules run.
+    dbMock.state.selectResults.push([
+      {
+        agencyId: "agency-1",
+        workspaceId: "ws-1",
+        status: "in_design",
+        changeRequestGate: null,
+        mediaRequired: true,
+      },
+    ]); // item
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+
+    await expect(submitDelivery(actor, assetlessInput)).rejects.toThrow(/permission denied/i);
+    // Crucially, NOT the media-floor message.
+    await expect(submitDelivery(actor, assetlessInput)).rejects.not.toThrow(
+      /at least one stored media asset/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+  });
+
   it("accepts a zero-asset delivery when the post does not require media", async () => {
     dbMock.state.selectResults.push([
       {

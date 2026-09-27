@@ -446,11 +446,11 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
     expect(screen.getByText("(optional)")).toBeInTheDocument();
   });
 
-  it("rolls the toggle back and surfaces the error when the server refuses", async () => {
+  it("rolls the toggle back and surfaces the translated code when the server refuses", async () => {
     const user = userEvent.setup();
     vi.mocked(setMediaRequiredAction).mockResolvedValue({
       ok: false,
-      error: "Cannot change the media requirement while content is creative_review",
+      errorCode: "updateFailed",
     });
     render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
 
@@ -460,12 +460,25 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
     // `role="alert"` carries no accessible name — it is announced from
     // its text content, so match the text rather than a `name` option.
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      /cannot change the media requirement/i,
+      /media requirement could not be updated/i,
     );
     // A designer must never be left believing the floor was lifted.
     await waitFor(() => {
       expect(toggle).toHaveAttribute("data-state", "unchecked");
     });
+  });
+
+  it("translates a permission refusal instead of showing an English-only code", async () => {
+    const user = userEvent.setup();
+    vi.mocked(setMediaRequiredAction).mockResolvedValue({ ok: false, errorCode: "forbidden" });
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    await user.click(screen.getByRole("checkbox", { name: /this post ships no creative/i }));
+
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(/do not have permission/i);
+    // The raw code must never reach the surface.
+    expect(alert).not.toHaveTextContent(/forbidden/);
   });
 
   it("disables the toggle for viewers who cannot set it", () => {

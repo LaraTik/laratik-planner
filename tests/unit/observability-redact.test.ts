@@ -65,7 +65,33 @@ const SECRET_FIXTURES: Array<{ label: string; input: string; forbidden: string }
     input: "aws AKIAIOSFODNN7EXAMPLE denied",
     forbidden: "AKIAIOSFODNN7EXAMPLE",
   },
-  // Rule 5 — key/value pairs
+  // Rule 5 — credential-bearing connection strings
+  {
+    label: "postgres connection string",
+    input: "connect ECONNREFUSED postgres://planner:sup3rs3cret@laratik-pg:5432/planner",
+    forbidden: "sup3rs3cret",
+  },
+  {
+    label: "DATABASE_URL assignment",
+    input: "DATABASE_URL=postgres://planner:hunter2@db:5432/planner",
+    forbidden: "hunter2",
+  },
+  {
+    label: "quoted dsn",
+    input: 'dsn: "postgresql://planner:hunter2@db:5432/planner"',
+    forbidden: "hunter2",
+  },
+  {
+    label: "redis connection string with no user",
+    input: "redis://:mypassword@cache:6379/0",
+    forbidden: "mypassword",
+  },
+  {
+    label: "mongodb connection string",
+    input: "mongodb://admin:letmein@mongo:27017/admin",
+    forbidden: "letmein",
+  },
+  // Rule 6 — key/value pairs
   { label: "password pair", input: "smtp password=hunter2 rejected", forbidden: "hunter2" },
   { label: "api key pair", input: "api_key: AKIA-not-real-1234", forbidden: "AKIA-not-real-1234" },
   { label: "secret pair", input: "mySecret=abc123", forbidden: "abc123" },
@@ -85,7 +111,7 @@ const SECRET_FIXTURES: Array<{ label: string; input: string; forbidden: string }
     input: 'token="quoted-secret-value"',
     forbidden: "quoted-secret-value",
   },
-  // Rule 6 — Postgres detail leaks
+  // Rule 7 — Postgres detail leaks
   {
     label: "postgres key detail",
     input:
@@ -98,13 +124,13 @@ const SECRET_FIXTURES: Array<{ label: string; input: string; forbidden: string }
       'new row for relation "users" violates check constraint\nFailing row contains (1, secretvalue, a@b.co)',
     forbidden: "secretvalue",
   },
-  // Rule 7 — email
+  // Rule 8 — email
   {
     label: "bare email",
     input: "could not deliver to bob.smith+tag@example.co.uk",
     forbidden: "bob.smith+tag@example.co.uk",
   },
-  // Rule 8 — query-string secrets
+  // Rule 9 — query-string secrets
   {
     label: "query token",
     input: "GET /api/x?token=supersecretvalue123 failed",
@@ -115,7 +141,7 @@ const SECRET_FIXTURES: Array<{ label: string; input: string; forbidden: string }
     input: "https://cdn.example.com/file?sig=abc123def456&size=10",
     forbidden: "abc123def456",
   },
-  // Rule 9 — entropy blob
+  // Rule 10 — entropy blob
   {
     label: "opaque blob",
     input:
@@ -139,6 +165,10 @@ const SAFE_FIXTURES: string[] = [
   "digest=abc123def456 not found",
   'column "session_count" does not exist',
   "Network request failed: ECONNREFUSED 10.0.0.5:5432",
+  "GET https://planner.laratik.com/app/w/acme/planning 200",
+  "at fetch (https://api.example.com/v1:443)",
+  "https://example.com:8080/health",
+  "postgres://db:5432/planner",
   "hydration failed because the server rendered HTML didn't match the client",
   "Failed to load resource: the server responded with a status of 500",
 ];

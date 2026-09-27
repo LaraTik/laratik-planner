@@ -58,7 +58,7 @@ const TRUNCATED = "…(truncated)";
  *
  * Order is load-bearing. `Bearer sk-…` must be caught by the bearer rule
  * (1) so the provider-key rule (4) never sees the token, and a JWT
- * (2) must be caught before the generic blob rule (9) so the output
+ * (2) must be caught before the generic blob rule (10) so the output
  * stays readable.
  *
  * Each rule is `{ pattern, replacement }` where `replacement` is a plain
@@ -97,7 +97,23 @@ const RULES: ScrubRule[] = [
       /\b(?:sk-ant-[A-Za-z0-9_-]{8,}|sk-[A-Za-z0-9]{16,}|ghp_[A-Za-z0-9]{20,}|glpat-[A-Za-z0-9_-]{16,}|xox[baprs]-[A-Za-z0-9-]{10,}|AKIA[0-9A-Z]{16})\b/g,
     replacement: "[key]",
   },
-  // 5. `secret-ish key = value` / `secret-ish key: value` pairs. The
+  // 5. Credential-bearing connection strings. `scheme://user:pass@host`
+  //    is the shape every driver uses (`postgres://`, `redis://`,
+  //    `mongodb://`, `amqp://`, …) and it carried the highest-value
+  //    secret in this stack straight through: `DATABASE_URL` matches no
+  //    key name in rule 6, has no query parameter for rule 9, and is
+  //    usually far shorter than rule 10's 64-character floor.
+  //
+  //    Only the password half is replaced. Scheme, user, host, port and
+  //    database are the diagnostic part — "which database refused the
+  //    connection" is exactly the question this mirror exists to answer.
+  //    The userinfo must be present (`:` and `@` together) so an ordinary
+  //    `https://example.com:8080/health` never matches.
+  {
+    pattern: /(\b[a-z][a-z0-9+.-]*:\/\/)([^/\s:@]*):([^/\s:@]*)@/gi,
+    replacement: "$1$2:[redacted]@",
+  },
+  // 6. `secret-ish key = value` / `secret-ish key: value` pairs. The
   //    separator is mandatory, which is what keeps ordinary prose safe:
   //    "auth failed" and "session expired" never match, but
   //    `password=hunter2` and `authorization: Bearer x` do.
@@ -115,7 +131,7 @@ const RULES: ScrubRule[] = [
       /\b([A-Za-z0-9_-]*(?:secret|password|passwd|token|api[_-]?key|apikey|auth|credential|cookie|brief|session)[A-Za-z0-9_-]*)(\s*[:=]\s*)(?:"[^"]*"|'[^']*'|bearer\s+[^\s,;)&]+|[^\s,;)&]+)/gi,
     replacement: "$1$2[redacted]",
   },
-  // 6. Postgres detail leaks. A unique-violation surfaces the offending
+  // 7. Postgres detail leaks. A unique-violation surfaces the offending
   //    row values on the DETAIL line, and `check_violation` surfaces them
   //    on a "Failing row contains" line. This is the single most common
   //    server error in this schema, so it is the one that must not leak.
@@ -136,21 +152,21 @@ const RULES: ScrubRule[] = [
     pattern: /(\bFailing row contains\s*)\(.*?\)/gi,
     replacement: "$1([redacted])",
   },
-  // 7. Email addresses. Postgres and Drizzle messages routinely quote
+  // 8. Email addresses. Postgres and Drizzle messages routinely quote
   //    the value that violated a unique index, and an address is PII we
   //    do not want in a diagnostics table.
   {
     pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+\b/g,
     replacement: "[email]",
   },
-  // 8. Secret-bearing query-string parameters. The parameter name is
+  // 9. Secret-bearing query-string parameters. The parameter name is
   //    kept (it is diagnostic); only the value is dropped.
   {
     pattern:
       /([?&](?:token|access_token|api[_-]?key|apikey|key|secret|password|sig|signature|auth|code)=)[^&\s"'<>]+/gi,
     replacement: "$1[redacted]",
   },
-  // 9. High-entropy opaque blobs: a single run of ≥ 64 characters made
+  // 10. High-entropy opaque blobs: a single run of ≥ 64 characters made
   //    only of base64url characters that contains an uppercase, a
   //    lowercase, and a digit. The character class deliberately excludes
   //    `/`, `.` and `:` so file paths, URLs, and stack frames

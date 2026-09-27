@@ -79,6 +79,11 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     .limit(1);
   if (!item) throw new Error("Content item not found");
 
+  await requirePolicy(
+    hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
+    "submit_delivery",
+  );
+
   // The media floor. Most posts must ship creative; a caption-only
   // announcement or a thread post legitimately has none, and that
   // decision is recorded on the content item (`media_required`) rather
@@ -97,10 +102,6 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     }
   }
 
-  await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
-    "submit_delivery",
-  );
   const isCreativeRevision =
     item.status === "changes_requested" &&
     (item.changeRequestGate === "creative_internal" ||

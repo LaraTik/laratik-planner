@@ -27,14 +27,14 @@ indistinguishable from a feed post when choosing a candidate.
 ## Decision
 
 - Add a nullable `publication_record.expires_at`.
-- Relax the invariant to *"published implies a URL **or** a known expiry"*, not
+- Relax the invariant to _"published implies a URL **or** a known expiry"_, not
   remove it. A published row still requires `actual_published_at` and
   `publisher_id`.
 - Detect Stories via `media_product_type`, which the provider already requests
   on both the list and by-id paths. No new fetch path is introduced.
 - Keep a Story's permalink when Meta returns one, and stamp `expires_at`
   alongside it, so the card shows a real link while live and drops it once dead.
-- An expired Story stays `published` in Planner forever. Only the *external*
+- An expired Story stays `published` in Planner forever. Only the _external_
   link degrades to `unavailable`, matching the ADR 0015 rule for objects that
   stop being returned.
 - Derive the expiry as `published_at + 24h`. Meta exposes no expiry field, so
@@ -49,7 +49,7 @@ thing to say, gives the sync worker a precise and cheap rule, and generalises to
 other ephemeral formats — TikTok, already a provider in this repo, expires too —
 without a second migration.
 
-An explicit field also keeps the relaxation *honest*. The predicate is
+An explicit field also keeps the relaxation _honest_. The predicate is
 `published_url IS NOT NULL OR expires_at IS NOT NULL`, so a permanent
 publication is still held to the original all-or-nothing rule.
 

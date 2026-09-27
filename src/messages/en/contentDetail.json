@@ -826,6 +826,11 @@
     "noMediaLabel": "This post ships no creative",
     "noMediaHelp": "Mark this post as text-only so it can be submitted without stored media. Use it for caption-only announcements, threads, and link drops.",
     "noMediaHelpReadOnly": "A planner or workspace manager decides whether this post needs media.",
+    "noMediaError": {
+      "invalidRequest": "That change was not valid. Reload the page and try again.",
+      "forbidden": "You do not have permission to change whether this post needs media.",
+      "updateFailed": "The media requirement could not be updated. Try again."
+    },
     "noMediaApplied": "Media is optional for this post. Add assets if you have them, or describe the delivery and submit it as text-only.",
     "mediaOptionalBadge": "(optional)",
     "assetlessDescriptionRequired": "Describe what is being delivered. Without media this is the only record reviewers will see.",

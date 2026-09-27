@@ -440,7 +440,7 @@ export default async function PlatformErrorsPage({
             id="platform-errors-source"
             name="source"
             defaultValue={sourceFilter ?? ""}
-            className="border-border bg-surface text-body text-fg-primary h-9 rounded-[var(--radius-control)] border px-2"
+            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             data-testid="platform-errors-source-filter"
           >
             <option value="">{t("platform.filterAllSources")}</option>
@@ -457,7 +457,7 @@ export default async function PlatformErrorsPage({
             id="platform-errors-range"
             name="range"
             defaultValue={sp.range ?? ""}
-            className="border-border bg-surface text-body text-fg-primary h-9 rounded-[var(--radius-control)] border px-2"
+            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-9 rounded-[var(--radius-control)] border px-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
             data-testid="platform-errors-range-filter"
           >
             <option value="">{t("platform.filterAllTime")}</option>

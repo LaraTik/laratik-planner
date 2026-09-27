@@ -3,7 +3,7 @@ import {
   pushRequestLog,
   type BufferedLogEntry,
 } from "@/lib/observability/request-context";
-import { serializeError } from "@/lib/observability/redact";
+import { scrubText, serializeError } from "@/lib/observability/redact";
 
 /**
  * Structured log stream (OBS-001).
@@ -44,6 +44,13 @@ export function sanitizeLogContext(value: unknown): unknown {
   // (`{ name, message, stack, cause }`); see `serializeError`.
   if (value instanceof Error) return serializeError(value);
   if (Array.isArray(value)) return value.map(sanitizeLogContext);
+  // A bare string is a free-text value, so it gets the value scrubber
+  // (axis 2). Key-name redaction cannot reach it: a credential that
+  // arrives under an innocuous key — `detail`, `dsn`, `url`, `reason` —
+  // is exactly the case that reached the log and `app_error_event`
+  // byte-identical. Non-string primitives (number, boolean, null,
+  // undefined) carry no shape to scrub and pass through untouched.
+  if (typeof value === "string") return scrubText(value);
   if (!value || typeof value !== "object") return value;
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, item]) => [

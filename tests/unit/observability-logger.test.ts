@@ -32,6 +32,33 @@ describe("sanitizeLogContext", () => {
     expect(out["username"]).toBe("alice");
   });
 
+  it("scrubs a free-text string value that carries a credential shape", () => {
+    // Key-name redaction cannot reach this: the value arrives under an
+    // innocuous key, so only the value scrubber (axis 2) can catch it.
+    // This is the path that reached Docker *and* `app_error_event`
+    // byte-identical before strings were routed through `scrubText`.
+    const out = sanitizeLogContext({
+      detail: "postgres://planner:sup3rs3cret@laratik-pg:5432/planner",
+      note: "upstream rejected sk-ant-api03-AAAAAAAAAAAAAAAAAAAAAAAA",
+      actorId: "user-1",
+      attempt: 3,
+      ok: true,
+    }) as Record<string, unknown>;
+
+    expect(String(out["detail"])).not.toContain("sup3rs3cret");
+    expect(String(out["note"])).not.toContain("sk-ant-api03");
+    // Non-secret strings survive, and non-string primitives are untouched.
+    expect(out["detail"]).toContain("laratik-pg:5432/planner");
+    expect(out["actorId"]).toBe("user-1");
+    expect(out["attempt"]).toBe(3);
+    expect(out["ok"]).toBe(true);
+  });
+
+  it("leaves an ordinary string value byte-identical", () => {
+    const input = { reason: "Workspace not found", hint: "retry after 30s" };
+    expect(sanitizeLogContext(input)).toEqual(input);
+  });
+
   it("serializes Error objects with the message preserved", () => {
     const err = new Error("Workspace not found");
     err.name = "CustomError";

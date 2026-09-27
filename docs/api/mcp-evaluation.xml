@@ -23,4 +23,14 @@
   <case id="20">create_content accepts a complete format_payload for the selected format, writes it through the per-format Zod service, and get_content returns the normalized creative fields.</case>
   <case id="21">update_content accepts a complete format_payload for an editable draft, preserves the existing authorization and workflow rules, and rejects payload fields that do not satisfy the selected format schema.</case>
   <case id="22">Workbook-shaped format_payload preserves the full caption and visual direction, stores optional onImageText, weekday, platforms, requiredImageLinks, designReadyLink, publicationStatus, and additionalNotes, and does not infer hook/scenes/references when those fields are omitted.</case>
+  <case id="23">A content-only token invoking a diagnostics tool is refused with `scope_required`; a content:write token does not imply platform:diagnostics:read, and vice versa.</case>
+  <case id="24">A token holding platform:diagnostics:read but whose owner lacks the platform.console.read permission is refused with the generic permission error, and no error data is read or returned.</case>
+  <case id="25">list_app_errors returns one row per error class with occurrenceCount, firstSeenAt, and lastSeenAt, newest first; a `query` matches the scrubbed message or the route.</case>
+  <case id="26">diagnose_app_error returns a matchErrorHint root-cause hypothesis (id, why, fixes) plus the occurrence window, hourly histogram, and the distinct build versions the group was seen on.</case>
+  <case id="27">diagnose_app_error reports found=false (not an error) for an unknown fingerprint, so an agent can branch on it without handling a tool failure.</case>
+  <case id="28">get_app_error requires exactly one of id / fingerprint / request_id; zero or more than one fails input validation.</case>
+  <case id="29">triage_app_error without confirm=true is rejected with invalid_request and performs no write; with confirm=true it sets resolvedAt idempotently, and action='reopen' clears it.</case>
+  <case id="30">A platform:diagnostics:read token cannot invoke triage_app_error; that tool requires platform:diagnostics:write AND the platform.console.read permission.</case>
+  <case id="31">Error messages, causes, and stacks returned by any diagnostics tool are scrubbed: credential shapes, Postgres DETAIL values, and email addresses never appear, while the constraint / route / class identifiers that make the error diagnosable do.</case>
+  <case id="32">A hot error loop is bounded: the group's occurrenceCount keeps incrementing exactly while the number of persisted event rows stays within the per-minute burst cap, and app_health reports how many occurrences were capped.</case>
 </evaluation>

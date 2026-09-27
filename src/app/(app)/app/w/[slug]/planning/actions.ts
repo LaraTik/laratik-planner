@@ -6,6 +6,7 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { PermissionDeniedError } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
@@ -533,22 +534,49 @@ export async function submitDeliveryAction(
  * a property of the post owned by planners/managers, and the designer
  * submitting the delivery must not be able to set it.
  */
+/**
+ * Stable failure codes for the "this post ships no creative" toggle.
+ *
+ * The action returns a *code*, never a sentence: AGENTS.md's bilingual
+ * contract requires server actions to return stable codes and the client
+ * boundary to translate them, and an Arabic user must not read an English
+ * error. The previous shape returned a hardcoded English string and, on
+ * the catch path, the raw `error.message` — which put whatever the driver
+ * said (constraint names, SQL fragments) in front of the user.
+ */
+export type SetMediaRequiredErrorCode = "invalidRequest" | "forbidden" | "updateFailed";
+
 export async function setMediaRequiredAction(
   workspaceSlug: string,
   contentItemId: string,
   mediaRequired: boolean,
-): Promise<{ ok: boolean; error?: string }> {
-  const { actor } = await requireWorkspaceContext(workspaceSlug);
+): Promise<{ ok: true } | { ok: false; errorCode: SetMediaRequiredErrorCode }> {
+  let actor;
+  try {
+    ({ actor } = await requireWorkspaceContext(workspaceSlug));
+  } catch {
+    return { ok: false, errorCode: "forbidden" };
+  }
   const parsed = SetMediaRequiredSchema.safeParse({ contentItemId, mediaRequired });
   if (!parsed.success) {
-    return { ok: false, error: "That request was not valid." };
+    return { ok: false, errorCode: "invalidRequest" };
   }
   try {
     await setMediaRequired(actor, parsed.data);
   } catch (error) {
+    // Log the real reason, show a stable code. `requirePolicy` throws the
+    // typed `PermissionDeniedError`, so that one distinction is reliable;
+    // the service's "not found" and status-guard paths throw plain
+    // `Error`, and guessing between them by message would be a lie the
+    // user then sees, so they share `updateFailed`.
+    console.error("[setMediaRequired] update failed", {
+      workspaceSlug,
+      contentItemId,
+      message: error instanceof Error ? error.message : String(error),
+    });
     return {
       ok: false,
-      error: error instanceof Error ? error.message : "The media requirement could not be updated.",
+      errorCode: error instanceof PermissionDeniedError ? "forbidden" : "updateFailed",
     };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
