@@ -153,12 +153,16 @@ function templateForKind(event: RawActivityEvent): string | null {
     return "activity.verbs.assignment_designer";
   }
 
-  // publication kind has three meta subkinds.
+  // publication kind has four meta subkinds.
   if (kind === "publication") {
     const subkind = readSubkind(mergedFields(event));
     if (subkind === "meta_linked") return "activity.verbs.publication_meta_linked";
     if (subkind === "meta_refreshed") return "activity.verbs.publication_meta_refreshed";
     if (subkind === "meta_reconciled") return "activity.verbs.publication_meta_reconciled";
+    // An expired ephemeral publication (a Story) is a separate outcome from
+    // the scheduled/live reconcile cycle: the artifact closed on its own, so
+    // it is neither a link nor a provider failure.
+    if (subkind === "meta_expired") return "activity.verbs.publication_meta_expired";
     return "activity.verbs.publication";
   }
 

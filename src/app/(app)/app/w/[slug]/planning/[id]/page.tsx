@@ -1286,6 +1286,8 @@ export default async function ContentDetailPage({
                                   externalLastSyncedAt:
                                     pub.publication_record.externalLastSyncedAt?.toISOString() ??
                                     null,
+                                  expiresAt:
+                                    pub.publication_record.expiresAt?.toISOString() ?? null,
                                 }
                               : null
                           }

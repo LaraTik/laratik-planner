@@ -89,7 +89,8 @@
     "content_updated": "updated content details on {target}",
     "brand_update": "updated the brand kit",
     "delivery_submitted": "submitted delivery {after} for {target}",
-    "publication_recorded": "recorded a publication outcome for {target}"
+    "publication_recorded": "recorded a publication outcome for {target}",
+    "publication_meta_expired": "recorded the expired Meta publication for {target}"
   },
   "diff": {
     "title": "Title",

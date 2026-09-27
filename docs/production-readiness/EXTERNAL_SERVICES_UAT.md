@@ -129,6 +129,7 @@ account:
 | 5   | Scheduled reconciliation            | A scheduled Meta candidate remains Planner-pending, then becomes Planner-published only after Meta returns it as live.                                                                                                                         |
 | 6   | Unavailable preservation            | Removing or hiding a linked Meta object marks it unavailable while preserving provider ID, URL, timestamps, snapshot, and audit history.                                                                                                       |
 | 7   | Permission/error states             | Denied permission, expired token, provider outage, empty results, refresh, and keyboard/a11y states are captured in English and Arabic, LTR and RTL.                                                                                           |
+| 8   | Story (ephemeral) linking           | A live Instagram Story is labelled Story in the candidate list (Meta reports it as media_type IMAGE/VIDEO; the label comes from media_product_type). Linking succeeds even when Meta returns no permalink. After the 24h window the card drops the link and shows the expiry notice while the status stays Published. Also confirm Stories still appear via /media — this is an observed behaviour, not a documented guarantee, and a disappearance is the trigger to add the /stories edge. |
 
 ## TikTok (Login Kit + Display API v2)
 

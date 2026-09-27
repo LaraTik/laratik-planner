@@ -146,6 +146,23 @@ beforeEach(() => {
   );
 });
 
+/**
+ * Prime the queued select results for a run that gets all the way to the
+ * insert/update: channel lookup, item lookup, then the in-transaction
+ * lockedItem / channel re-fetch / existing-record / all-records /
+ * channel-count sequence. Centralised so the ephemeral-outcome cases do not
+ * each re-derive a positional list of mocks.
+ */
+function seedPublishableSelects() {
+  dbMock.state.selectResults.push([{ contentItemId }]); // channel lookup
+  dbMock.state.selectResults.push([{ workspaceId: "ws-1", status: "ready_to_publish" }]); // item
+  dbMock.state.selectResults.push([{ status: "ready_to_publish" }]); // lockedItem
+  dbMock.state.selectResults.push([{ contentItemId }]); // channel re-fetch
+  dbMock.state.selectResults.push([]); // no existing publication record
+  dbMock.state.selectResults.push([{ status: "published" }]); // all records
+  dbMock.state.selectResults.push([{ id: contentItemChannelId }]); // channel count
+}
+
 describe("RecordPublicationSchema", () => {
   it("accepts a published record with https url", () => {
     expect(
@@ -182,13 +199,69 @@ describe("RecordPublicationSchema", () => {
       RecordPublicationSchema.safeParse({ contentItemChannelId, status: "weird" }).success,
     ).toBe(false);
   });
+
+  it("accepts a published record with an expiry and no url", () => {
+    expect(
+      RecordPublicationSchema.safeParse({
+        contentItemChannelId,
+        status: "published",
+        expiresAt: "2026-09-22T12:00:00.000Z",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects a non-datetime expiry", () => {
+    expect(
+      RecordPublicationSchema.safeParse({
+        contentItemChannelId,
+        status: "published",
+        expiresAt: "tomorrow",
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe("recordPublication", () => {
-  it("requires a publishedUrl for published", async () => {
+  it("requires a publishedUrl or an expiresAt for published", async () => {
     await expect(
       recordPublication(actor, { contentItemChannelId, status: "published" }),
-    ).rejects.toThrow(/publishedurl/i);
+    ).rejects.toThrow(/publishedurl or expiresat/i);
+  });
+
+  it("accepts a published outcome with no url when an expiry is declared", async () => {
+    seedPublishableSelects();
+
+    const result = await recordPublication(actor, {
+      contentItemChannelId,
+      status: "published",
+      expiresAt: "2026-09-22T12:00:00.000Z",
+    });
+
+    expect(result).toEqual({ ok: true });
+    const pubInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["status"] === "published",
+    );
+    const values = pubInsert?.values as Record<string, unknown>;
+    // The exact row shape the relaxed CHECK now accepts: a published
+    // ephemeral outcome carries a null url and a set window.
+    expect(values["publishedUrl"]).toBeNull();
+    expect(values["expiresAt"]).toBeInstanceOf(Date);
+    expect((values["expiresAt"] as Date).toISOString()).toBe("2026-09-22T12:00:00.000Z");
+  });
+
+  it("clears the expiry when a later outcome is not published", async () => {
+    seedPublishableSelects();
+
+    await recordPublication(actor, {
+      contentItemChannelId,
+      status: "skipped",
+      note: "Replaced with a feed post",
+    });
+
+    const pubInsert = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["status"] === "skipped",
+    );
+    expect((pubInsert?.values as Record<string, unknown>)["expiresAt"]).toBeNull();
   });
 
   it("requires a note for skipped", async () => {

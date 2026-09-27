@@ -117,3 +117,135 @@ describe("ChannelPublishingCard localization", () => {
     expect(screen.getByTestId("channel-card-record-outcome")).toHaveTextContent("Record outcome");
   });
 });
+
+describe("ChannelPublishingCard ephemeral publications", () => {
+  const ephemeral = (over: Record<string, unknown>) => ({
+    status: "published" as const,
+    publishedUrl: null,
+    note: null,
+    failureReason: null,
+    ...over,
+  });
+
+  it("renders no link and says so when the window has closed", () => {
+    const past = new Date(Date.now() - 60_000).toISOString();
+
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={ephemeral({ expiresAt: past })}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    // A link we already know is dead is worse than no link.
+    expect(screen.queryByTestId("channel-card-published-url")).not.toBeInTheDocument();
+    expect(screen.getByTestId("channel-card-expired")).toHaveTextContent(
+      "Temporary content · link no longer available",
+    );
+  });
+
+  it("marks a published outcome with no link at all", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={ephemeral({ expiresAt: new Date(Date.now() + 3_600_000).toISOString() })}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.queryByTestId("channel-card-published-url")).not.toBeInTheDocument();
+    expect(screen.getByTestId("channel-card-no-link")).toHaveTextContent(
+      "Published · temporary content (no permanent link)",
+    );
+  });
+
+  it("keeps a live link and adds the expiry hint while the window is open", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true, timeZone: "UTC" }}
+          publication={ephemeral({
+            publishedUrl: "https://example.com/story-1",
+            expiresAt: new Date(Date.now() + 3_600_000).toISOString(),
+          })}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("channel-card-published-url")).toBeInTheDocument();
+    expect(screen.getByTestId("channel-card-expires-hint")).toHaveTextContent("Link expires");
+    expect(screen.queryByTestId("channel-card-expired")).not.toBeInTheDocument();
+  });
+
+  it("leaves a permanent publication completely unchanged", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={{
+            status: "published" as const,
+            publishedUrl: "https://example.com/post-1",
+            expiresAt: null,
+            note: null,
+            failureReason: null,
+          }}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("channel-card-published-url")).toBeInTheDocument();
+    expect(screen.queryByTestId("channel-card-expired")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("channel-card-no-link")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("channel-card-expires-hint")).not.toBeInTheDocument();
+  });
+
+  it("renders the expiry state in Arabic", () => {
+    render(
+      <LocaleProvider locale="ar">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={ephemeral({ expiresAt: new Date(Date.now() - 60_000).toISOString() })}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("channel-card-expired")).toHaveTextContent(
+      "محتوى مؤقت · لم يعد الرابط متاحًا",
+    );
+    expect(screen.queryByTestId("channel-card-published-url")).not.toBeInTheDocument();
+  });
+
+  it("hides a dead link even when the permalink is still stored", () => {
+    // The preserved permalink from ADR 0015 must not resurrect as a live
+    // anchor once the window has closed.
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={ephemeral({
+            publishedUrl: "https://example.com/story-1",
+            expiresAt: new Date(Date.now() - 60_000).toISOString(),
+          })}
+          isPublisher={false}
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.queryByTestId("channel-card-published-url")).not.toBeInTheDocument();
+    expect(screen.getByTestId("channel-card-expired")).toBeInTheDocument();
+  });
+});

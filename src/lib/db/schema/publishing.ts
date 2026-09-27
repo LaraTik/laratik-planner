@@ -44,6 +44,23 @@ export const publicationRecords = pgTable(
       mode: "date",
     }),
     publishedUrl: text("published_url"),
+    /**
+     * Set when the published artifact is ephemeral and will disappear on
+     * its own — an Instagram Story is the canonical case, live for 24 hours.
+     *
+     * This is what makes `publishedUrl` optional. A Story genuinely has no
+     * permanent public link, so requiring one made Stories *unlinkable*
+     * rather than merely linkless. With `expiresAt` set, the row stays
+     * `published` forever while the link is treated as informational: the
+     * sync worker degrades the *external* status to `unavailable` once the
+     * window closes, and never touches the Planner `status` (the content
+     * was published; the artifact is gone by design, not deleted).
+     *
+     * Null means the publication has a permanent link, and
+     * `published_url` is then required by
+     * `publication_published_needs_url_time_publisher`.
+     */
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }),
     publisherId: uuid("publisher_id").references(() => users.id, { onDelete: "set null" }),
     note: text("note"),
     failureReason: text("failure_reason"),
@@ -91,10 +108,13 @@ export const publicationRecords = pgTable(
     index("publication_record_status_idx").on(t.status),
     check(
       "publication_published_needs_url_time_publisher",
+      // A published row always needs a time and a publisher. The URL is
+      // required only for a permanent publication: an ephemeral one
+      // (`expires_at` set, e.g. a Story) has no durable link by nature.
       sql`${t.status} <> 'published' OR (
         ${t.actualPublishedAt} IS NOT NULL
-        AND ${t.publishedUrl} IS NOT NULL
         AND ${t.publisherId} IS NOT NULL
+        AND (${t.publishedUrl} IS NOT NULL OR ${t.expiresAt} IS NOT NULL)
       )`,
     ),
     check("publication_skipped_needs_note", sql`${t.status} <> 'skipped' OR ${t.note} IS NOT NULL`),

@@ -12,6 +12,50 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Ephemeral publications: link a Story without a permanent link
+
+An Instagram Story is live for 24 hours and has no durable public link, so it
+could never satisfy `publication_published_needs_url_time_publisher` — the
+`CHECK` that required `published_url IS NOT NULL` whenever `status = 'published'`.
+Stories were therefore *unlinkable*, not merely linkless: the Meta link flow
+wrote `status = 'published'` with a null permalink and the whole transaction
+rolled back, while `recordPublication` independently threw
+`published requires a publishedUrl`. There was no way to mark a Story published.
+
+- **feat(db):** new nullable `publication_record.expires_at` (migration
+  `0053_ephemeral_publication_expiry`). The invariant is *widened*, not removed —
+  a published row still needs `actual_published_at` and `publisher_id`, and needs
+  a URL only when `expires_at IS NULL`. Pure widening: every existing published
+  row already has a URL, so no backfill. The DROP/ADD sits in one `DO` block so it
+  is atomic even under `migrate-concurrent.ts`, which runs outside a transaction.
+- **fix(social):** Stories are now detected via `media_product_type`, which the
+  provider already requested and discarded. Meta reports a Story with
+  `media_type` IMAGE/VIDEO, so every Story previously rendered as "Image" or
+  "Video" and was indistinguishable from a feed post when picking a candidate.
+  `expires_at` is derived as `published_at + 24h` (`META_STORY_TTL_MS`) with a
+  `?? now` fallback so a Story always satisfies the relaxed `CHECK`.
+- **feat(social):** a new Meta-free expiry pass in `reconcileMetaPublicationLinks`
+  degrades an expired Story's *external* status to `unavailable` and records a
+  `meta_expired` activity event. It never touches the Planner `status` — the
+  content was published, the artifact is gone by design — and it makes no
+  provider call, so it cannot fail on a Meta outage.
+- **feat(publishing):** `recordPublication` accepts `published` with an expiry and
+  no URL, and clears `expires_at` on any non-published transition.
+- **feat(ui):** the link dialog labels Stories and explains a missing link instead
+  of rendering an absent control. The channel card has three distinct states —
+  live link plus expiry hint, expired (no link, `Clock` icon), or published with no
+  link by nature — and never renders a link already known to be dead. When
+  `expires_at` is null the markup is unchanged. The manual outcome form reveals an
+  optional "Link expires at" field once the URL is left blank.
+- **test:** 10 normalizer cases pinning Story detection and the expiry window, 4
+  snapshot cases, 4 schema-`CHECK` integration cases against real Postgres
+  (accepts url-less+expiry; still rejects no-url+no-expiry, no-publisher, and
+  no-publish-time), plus card and dialog coverage in both locales. Full
+  en/ar key parity (895 keys each).
+- **docs:** ADR 0016, a Stories section in the Meta linking runbook, the
+  `expires_at` column in the data model, and a Story UAT row.
+
+
 ### Added — Workspace rename (display name) from Settings → Lifecycle
 
 A workspace's display name was write-once: `workspace.name` was set at
@@ -108,7 +152,6 @@ route and the workspace activity feed.
   turn this page-level 500 into write-level 500s during any rollback.
 - **Added** 66 regression tests (34 formatter, 32 writer), both verified
   to fail against the pre-fix code.
-
 
 ### Changed — Activity log: shared formatter + readable rows
 

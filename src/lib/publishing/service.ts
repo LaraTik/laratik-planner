@@ -33,6 +33,14 @@ export const RecordPublicationSchema = z.object({
   contentItemChannelId: z.string().uuid(),
   status: z.enum(["published", "skipped", "failed"]),
   publishedUrl: z.string().url().optional(),
+  /**
+   * Set when the published artifact is ephemeral and will disappear on its
+   * own — an Instagram Story, live for 24 hours. It is the alternative to
+   * `publishedUrl`: a published row needs one or the other, which is what
+   * `publication_published_needs_url_time_publisher` enforces. Null means a
+   * permanent link is required.
+   */
+  expiresAt: z.string().datetime().optional(),
   note: z.string().max(500).optional(),
   failureReason: z.string().max(500).optional(),
 });
@@ -40,8 +48,10 @@ export const RecordPublicationSchema = z.object({
 export type RecordPublicationInput = z.infer<typeof RecordPublicationSchema>;
 
 export async function recordPublication(actor: Actor, input: RecordPublicationInput) {
-  if (input.status === "published" && !input.publishedUrl) {
-    throw new Error("published requires a publishedUrl");
+  // An ephemeral publication legitimately has no durable link, so a URL is
+  // required only when the operator has not declared an expiry.
+  if (input.status === "published" && !input.publishedUrl && !input.expiresAt) {
+    throw new Error("published requires a publishedUrl or expiresAt");
   }
   if (input.status === "skipped" && !input.note) {
     throw new Error("skipped requires a note");
@@ -134,6 +144,9 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       status: input.status,
       actualPublishedAt: input.status === "published" ? new Date() : null,
       publishedUrl: input.status === "published" ? (input.publishedUrl ?? null) : null,
+      // Cleared on any non-published transition so a stale window cannot
+      // outlive the outcome it described.
+      expiresAt: input.status === "published" && input.expiresAt ? new Date(input.expiresAt) : null,
       publisherId: input.status === "published" ? actor.id : null,
       note: input.status === "skipped" ? (input.note ?? null) : null,
       failureReason: input.status === "failed" ? (input.failureReason ?? null) : null,
@@ -228,6 +241,9 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
           workspaceId: item.workspaceId,
           channelStatus: input.status,
           publishedUrl: input.publishedUrl ?? null,
+          // Carried so a downstream consumer can tell "published with a
+          // link" from "published, artifact now ephemeral".
+          expiresAt: input.expiresAt ?? null,
           failureReason: input.failureReason ?? null,
           actorId: actor.id,
         },

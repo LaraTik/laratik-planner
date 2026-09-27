@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   Check,
+  Clock,
   ExternalLink,
   Loader2,
   Send,
@@ -72,6 +73,9 @@ export interface ChannelPublishingCardProps {
   publication: {
     status: "pending" | "published" | "failed" | "skipped";
     publishedUrl: string | null;
+    /** Set when the published artifact is ephemeral (e.g. a Story) and
+     *  `publishedUrl` may therefore be null. */
+    expiresAt?: string | null;
     note: string | null;
     failureReason: string | null;
     externalProvider?: string | null;
@@ -86,6 +90,8 @@ export interface ChannelPublishingCardProps {
    *  card's footer when the channel is in setup. */
   publishPackageHref?: string;
 }
+
+type OutcomeStatus = "published" | "skipped" | "failed";
 
 const STATUS_VARIANT: Record<
   | NonNullable<ChannelPublishingCardProps["publication"]>["status"]
@@ -135,6 +141,10 @@ export function ChannelPublishingCard({
   const [metaOpen, setMetaOpen] = React.useState(false);
   const [metaPending, startMeta] = React.useTransition();
   const [metaError, setMetaError] = React.useState<string | null>(null);
+  // Drives the progressive-disclosure expiry field: an ephemeral outcome
+  // only needs a link when one actually exists.
+  const [outcomeStatus, setOutcomeStatus] = React.useState<OutcomeStatus>("published");
+  const [outcomeUrl, setOutcomeUrl] = React.useState("");
   const status = publication
     ? publication.status === "failed" || publication.status === "skipped"
       ? "needs_attention"
@@ -148,6 +158,16 @@ export function ChannelPublishingCard({
     isMetaChannel &&
     channel.connectionStatus === "connected" &&
     Boolean(channel.externalAccountId);
+  // An ephemeral publication whose window has closed. `Date.now()` is impure
+  // and cannot be called during render, so the reference point is captured
+  // once at mount — the card re-renders on refresh and navigation, and the
+  // sync worker independently flips the external status, so a mount-scoped
+  // value is both pure and sufficient. The point is to stop rendering a link
+  // we already know is dead, not to run a timer.
+  const [nowMs] = React.useState(() => Date.now());
+  const expiresAtTime = publication?.expiresAt ? new Date(publication.expiresAt).getTime() : null;
+  const expiryPassed =
+    expiresAtTime !== null && !Number.isNaN(expiresAtTime) && expiresAtTime < nowMs;
 
   function refreshMeta() {
     startMeta(async () => {
@@ -208,7 +228,15 @@ export function ChannelPublishingCard({
       </div>
 
       {/* Outcome details */}
-      {publication?.publishedUrl ? (
+      {/*
+        Ephemeral publications (Instagram Stories) have no durable link, and
+        a Story link dies after 24h. Rendering a link we already know is dead
+        is worse than rendering none, so the three states are distinct:
+        live link + expiry hint, expired (no link at all), or published with
+        no link by nature. When `expiresAt` is null the original behaviour is
+        untouched.
+      */}
+      {publication?.publishedUrl && !expiryPassed ? (
         <p className="text-label text-fg-muted mt-2 break-all">
           <a
             href={publication.publishedUrl}
@@ -221,6 +249,31 @@ export function ChannelPublishingCard({
             <ExternalLink className="h-3 w-3" aria-hidden="true" />
             {publication.publishedUrl}
           </a>
+        </p>
+      ) : null}
+      {expiryPassed ? (
+        <p
+          className="text-label text-fg-muted mt-2 flex items-center gap-1"
+          data-testid="channel-card-expired"
+        >
+          <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {t("contentDetail.publishingCard.linkExpired")}
+        </p>
+      ) : null}
+      {!publication?.publishedUrl && publication?.expiresAt ? (
+        <p
+          className="text-label text-fg-muted mt-2 flex items-center gap-1"
+          data-testid="channel-card-no-link"
+        >
+          <Check className="h-3 w-3 shrink-0" aria-hidden="true" />
+          {t("contentDetail.publishingCard.temporaryNoLink")}
+        </p>
+      ) : null}
+      {publication?.expiresAt && !expiryPassed ? (
+        <p className="text-label text-fg-muted mt-1" data-testid="channel-card-expires-hint">
+          {t("contentDetail.publishingCard.linkExpires", {
+            date: localizedDate(publication.expiresAt, locale, channel.timeZone ?? "UTC") ?? "",
+          })}
         </p>
       ) : null}
       {publication?.note ? (
@@ -336,6 +389,16 @@ export function ChannelPublishingCard({
               const publishedUrl = (fd.get("publishedUrl") as string) || undefined;
               const note = (fd.get("note") as string) || undefined;
               const failureReason = (fd.get("failureReason") as string) || undefined;
+              // `datetime-local` carries no offset, so `new Date(value)` reads
+              // it as local time — which is what the operator typed. A blank
+              // or unparseable value is dropped rather than sent, so the
+              // service still rejects "published with neither".
+              const rawExpiresAt = (fd.get("expiresAt") as string) || undefined;
+              const parsedExpiresAt = rawExpiresAt ? new Date(rawExpiresAt) : null;
+              const expiresAt =
+                parsedExpiresAt && !Number.isNaN(parsedExpiresAt.getTime())
+                  ? parsedExpiresAt.toISOString()
+                  : undefined;
               start(async () => {
                 setError(null);
                 const result = await recordPublicationAction({
@@ -343,6 +406,7 @@ export function ChannelPublishingCard({
                   contentItemChannelId: channel.id,
                   status: fd.get("status") as "published" | "skipped" | "failed",
                   ...(publishedUrl ? { publishedUrl } : {}),
+                  ...(expiresAt ? { expiresAt } : {}),
                   ...(note ? { note } : {}),
                   ...(failureReason ? { failureReason } : {}),
                 });
@@ -366,7 +430,8 @@ export function ChannelPublishingCard({
                 <select
                   id={`publication-status-${channel.id}`}
                   name="status"
-                  defaultValue="published"
+                  value={outcomeStatus}
+                  onChange={(event) => setOutcomeStatus(event.target.value as OutcomeStatus)}
                   className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
                   data-testid="channel-card-outcome-select"
                 >
@@ -390,12 +455,42 @@ export function ChannelPublishingCard({
                   id={`published-url-${channel.id}`}
                   type="url"
                   name="publishedUrl"
+                  value={outcomeUrl}
+                  onChange={(event) => setOutcomeUrl(event.target.value)}
                   placeholder="https://…"
                   className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
                   data-testid="channel-card-published-url-input"
                 />
               </div>
             </div>
+            {/* Progressive disclosure: ephemeral content (a Story) has no
+                permanent link, so the expiry field only appears once the
+                operator has actually left the URL blank. */}
+            {outcomeStatus === "published" && outcomeUrl.trim() === "" ? (
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
+                <p
+                  className="text-label text-fg-muted md:col-span-4"
+                  data-testid="channel-card-expires-hint"
+                >
+                  {t("contentDetail.publishingCard.expiresAtHint")}
+                </p>
+                <div className="md:col-span-3">
+                  <label
+                    htmlFor={`expires-at-${channel.id}`}
+                    className="text-label mb-1 block font-medium"
+                  >
+                    {t("contentDetail.publishingCard.expiresAtLabel")}
+                  </label>
+                  <input
+                    id={`expires-at-${channel.id}`}
+                    type="datetime-local"
+                    name="expiresAt"
+                    className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                    data-testid="channel-card-expires-at-input"
+                  />
+                </div>
+              </div>
+            ) : null}
             <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
               <div>
                 <label

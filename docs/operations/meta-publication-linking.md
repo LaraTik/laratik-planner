@@ -23,6 +23,31 @@ Facebook and Instagram are linked independently. Linking stores publication
 metadata only; it does not overwrite the Planner title, brief, caption, or
 assets.
 
+## Stories (temporary content)
+
+An Instagram Story is live for 24 hours and has **no permanent link**. Planner
+still lets you link one, and records it as Published — there is simply nothing
+durable to open later. Stories are labelled **Story** in the candidate list;
+Meta reports them as an Image or a Video, so the label comes from
+`media_product_type`, not `media_type`.
+
+- **No link** — the story row shows "Published · temporary content (no
+  permanent link)". This is normal for a story, not a failed fetch.
+- **Link expires {date}** — Meta returned a permalink and the story is still
+  live. Open it while it lasts.
+- **Temporary content · link no longer available** — the 24-hour window has
+  closed. The link is removed from the card rather than left as a dead anchor.
+  The status stays **Published**: the content was published, the artifact is
+  gone by design.
+
+Recording a story does not need a URL. In the manual **Record outcome** form,
+leaving **Published URL** blank reveals an optional **Link expires at** field;
+filling it is what allows a published outcome with no link.
+
+Expired stories are handled by the background social sync worker, which needs no
+Meta call — the stored expiry is authoritative. It only ever changes the Meta
+link state, never the Planner publication status.
+
 ## States and recovery
 
 - **Scheduled** — Meta has the post scheduled; Planner remains pending.

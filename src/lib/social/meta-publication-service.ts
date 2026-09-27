@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNotNull, lt, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -46,6 +46,7 @@ export function externalPublicationSnapshot(
     createdAt: candidate.createdAt?.toISOString() ?? null,
     scheduledAt: candidate.scheduledAt?.toISOString() ?? null,
     publishedAt: candidate.publishedAt?.toISOString() ?? null,
+    expiresAt: candidate.expiresAt?.toISOString() ?? null,
   };
 }
 
@@ -386,12 +387,21 @@ async function persistLinkedCandidate(
         externalLinkedBy: actor?.id ?? null,
         externalLinkedAt: now,
         updatedAt: now,
+        // Cleared by default and only set on the transition into `published`.
+        // `publication_record_channel_unique` means re-linking mutates the
+        // same row, so a stale window must not survive a re-link to a
+        // permanent post. Deliberately NOT written for a scheduled
+        // candidate: only a live publication has a window.
+        expiresAt: null,
       };
       if (externalStatus === "published") {
         Object.assign(update, {
           status: "published",
           actualPublishedAt: candidate.publishedAt ?? now,
+          // May legitimately be null: an Instagram Story has no permanent
+          // link, and `expires_at` is what makes that valid.
           publishedUrl: candidate.permalink,
+          expiresAt: candidate.expiresAt,
           publisherId: actor?.id ?? existing?.publisherId ?? null,
           failureReason: null,
         });
@@ -600,6 +610,7 @@ export async function unlinkMetaPublication(
       externalSnapshot: {},
       externalLinkedBy: null,
       externalLinkedAt: null,
+      expiresAt: null,
       updatedAt: now,
     })
     .where(eq(publicationRecords.id, record.id));
@@ -753,5 +764,79 @@ export async function reconcileMetaPublicationLinks(now = new Date()) {
       }
     }
   }
+  await expireEphemeralMetaPublications(now);
   return rows.length;
+}
+
+/**
+ * Degrade the *external* link of an expired ephemeral publication.
+ *
+ * An Instagram Story is live for 24 hours and then simply stops existing.
+ * That is a property of the content, not a provider fault, so this is kept
+ * deliberately distinct from the `not_found` handling above: the Planner
+ * `status` stays `published` forever, because the content genuinely was
+ * published — only the artifact is gone. Every other external field
+ * (provider id, permalink, snapshot, timestamps) is preserved, matching the
+ * ADR 0015 rule for objects that stop being returned.
+ *
+ * There is no provider call here. `expires_at` is authoritative, so this
+ * pass cannot fail on a Meta outage, and it never re-reads an already
+ * published object — the bound that keeps the background worker cheap.
+ *
+ * Idempotent: it only matches rows still at `externalStatus = 'published'`,
+ * so a row already moved by a concurrent refresh is skipped.
+ */
+async function expireEphemeralMetaPublications(now: Date): Promise<number> {
+  const expired = await db
+    .select({
+      id: publicationRecords.id,
+      contentItemChannelId: publicationRecords.contentItemChannelId,
+      externalPostId: publicationRecords.externalPostId,
+      externalLinkedBy: publicationRecords.externalLinkedBy,
+      workspaceId: contentItems.workspaceId,
+      contentItemId: contentItems.id,
+    })
+    .from(publicationRecords)
+    .innerJoin(
+      contentItemChannels,
+      eq(contentItemChannels.id, publicationRecords.contentItemChannelId),
+    )
+    .innerJoin(contentItems, eq(contentItems.id, contentItemChannels.contentItemId))
+    .where(
+      and(
+        isNotNull(publicationRecords.expiresAt),
+        lt(publicationRecords.expiresAt, now),
+        eq(publicationRecords.externalProvider, "meta"),
+        eq(publicationRecords.externalStatus, "published"),
+      ),
+    );
+
+  for (const row of expired) {
+    await db
+      .update(publicationRecords)
+      .set({
+        externalStatus: "unavailable",
+        externalLastSyncedAt: now,
+        externalErrorCode: "expired",
+        updatedAt: now,
+      })
+      .where(eq(publicationRecords.id, row.id));
+    await db.insert(activityEvents).values({
+      workspaceId: row.workspaceId,
+      contentItemId: row.contentItemId,
+      actorId: row.externalLinkedBy,
+      kind: "publication",
+      // Formatter picks the verb via `metadata.subkind`; `summary` stays as
+      // the fallback for older clients and data exports.
+      summary: "Linked Meta publication expired",
+      beforeData: { externalPostId: row.externalPostId, externalStatus: "published" },
+      afterData: { externalStatus: "unavailable", errorCode: "expired" },
+      metadata: {
+        contentItemChannelId: row.contentItemChannelId,
+        event: "meta_publication_expired",
+        subkind: "meta_expired",
+      },
+    });
+  }
+  return expired.length;
 }

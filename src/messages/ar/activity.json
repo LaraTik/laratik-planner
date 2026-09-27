@@ -89,7 +89,8 @@
     "content_updated": "حدّث تفاصيل المحتوى لـ {target}",
     "brand_update": "حدّث حقيبة العلامة",
     "delivery_submitted": "سلّم التسليم {after} لـ {target}",
-    "publication_recorded": "سجّل نتيجة نشر لـ {target}"
+    "publication_recorded": "سجّل نتيجة نشر لـ {target}",
+    "publication_meta_expired": "سجّل انتهاء صلاحية منشور ميتا لـ {target}"
   },
   "diff": {
     "title": "العنوان",

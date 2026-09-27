@@ -23,12 +23,14 @@ export type MetaPublicationCandidateDto = {
   platform: "facebook" | "instagram";
   status: "scheduled" | "published";
   caption: string | null;
-  mediaType: "image" | "video" | "carousel" | "reel" | "unknown";
+  mediaType: "image" | "video" | "carousel" | "reel" | "story" | "unknown";
   permalink: string | null;
   thumbnailUrl: string | null;
   createdAt: string | null;
   scheduledAt: string | null;
   publishedAt: string | null;
+  /** Set for Stories. The live artifact disappears at this time. */
+  expiresAt: string | null;
 };
 
 function dateLabel(value: string | null, locale: "en" | "ar", timeZone: string): string {
@@ -257,6 +259,18 @@ export function MetaPublicationLinkDialog({
                         <ExternalLink className="h-3 w-3" aria-hidden="true" />
                         {t("contentDetail.publishingCard.meta.previewLink")}
                       </a>
+                    ) : candidate.mediaType === "story" ? (
+                      // Explain the absence rather than rendering a
+                      // missing control: a Story has no permanent link, and
+                      // that is expected — not a failed fetch.
+                      <span className="text-label text-fg-muted mt-1 block">
+                        {t("contentDetail.publishingCard.meta.storyNoLink")}
+                      </span>
+                    ) : null}
+                    {candidate.permalink && candidate.mediaType === "story" ? (
+                      <span className="text-label text-fg-muted mt-1 block">
+                        {t("contentDetail.publishingCard.meta.storyExpiresHint")}
+                      </span>
                     ) : null}
                   </span>
                 </label>

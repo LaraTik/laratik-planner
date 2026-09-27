@@ -560,6 +560,8 @@ export async function recordPublicationAction(input: {
   contentItemChannelId: string;
   status: "published" | "skipped" | "failed";
   publishedUrl?: string;
+  /** ISO datetime. Makes `published` valid without a permanent URL. */
+  expiresAt?: string;
   note?: string;
   failureReason?: string;
 }): Promise<ActionState<RecordPublicationFields>> {
@@ -568,6 +570,7 @@ export async function recordPublicationAction(input: {
     contentItemChannelId: input.contentItemChannelId,
     status: input.status,
     ...(input.publishedUrl ? { publishedUrl: input.publishedUrl } : {}),
+    ...(input.expiresAt ? { expiresAt: input.expiresAt } : {}),
     ...(input.note ? { note: input.note } : {}),
     ...(input.failureReason ? { failureReason: input.failureReason } : {}),
   });
@@ -585,11 +588,12 @@ export async function recordPublicationAction(input: {
 
 type MetaPublicationCandidateDto = Omit<
   MetaPublicationCandidate,
-  "createdAt" | "scheduledAt" | "publishedAt"
+  "createdAt" | "scheduledAt" | "publishedAt" | "expiresAt"
 > & {
   createdAt: string | null;
   scheduledAt: string | null;
   publishedAt: string | null;
+  expiresAt: string | null;
 };
 
 function metaPublicationDto(candidate: MetaPublicationCandidate): MetaPublicationCandidateDto {
@@ -598,6 +602,7 @@ function metaPublicationDto(candidate: MetaPublicationCandidate): MetaPublicatio
     createdAt: candidate.createdAt?.toISOString() ?? null,
     scheduledAt: candidate.scheduledAt?.toISOString() ?? null,
     publishedAt: candidate.publishedAt?.toISOString() ?? null,
+    expiresAt: candidate.expiresAt?.toISOString() ?? null,
   };
 }
 

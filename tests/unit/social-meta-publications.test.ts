@@ -118,3 +118,82 @@ describe("Meta publication candidates", () => {
     ).toBe("strong");
   });
 });
+
+describe("Meta Story publications", () => {
+  it("identifies a Story via media_product_type instead of its reported media_type", () => {
+    // Meta reports Stories with media_type IMAGE or VIDEO, so before the
+    // STORY branch this rendered as "Image"/"Video" and was indistinguishable
+    // from a feed post.
+    const candidate = normalizeMetaPublication("instagram", {
+      id: "ig-story-1",
+      caption: "Behind the scenes",
+      media_type: "VIDEO",
+      media_product_type: "STORY",
+      timestamp: "2026-09-21T12:00:00+0000",
+    });
+
+    expect(candidate.mediaType).toBe("story");
+    expect(candidate.publishedAt?.toISOString()).toBe("2026-09-21T12:00:00.000Z");
+    expect(candidate.expiresAt?.toISOString()).toBe("2026-09-22T12:00:00.000Z");
+  });
+
+  it("keeps a Story permalink and still stamps the expiry window", () => {
+    const candidate = normalizeMetaPublication("instagram", {
+      id: "ig-story-2",
+      media_type: "IMAGE",
+      media_product_type: "STORY",
+      timestamp: "2026-09-21T08:00:00+0000",
+      permalink: "https://instagram.com/stories/acme/1234",
+    });
+
+    expect(candidate.permalink).toBe("https://instagram.com/stories/acme/1234");
+    expect(candidate.expiresAt?.toISOString()).toBe("2026-09-22T08:00:00.000Z");
+  });
+
+  it("still stamps an expiry when Meta omits every timestamp", () => {
+    // The `?? now` fallback is what guarantees a linkless Story can satisfy
+    // `publication_published_needs_url_time_publisher`.
+    const now = new Date("2026-09-21T10:00:00.000Z");
+    const candidate = normalizeMetaPublication(
+      "instagram",
+      { id: "ig-story-3", media_type: "VIDEO", media_product_type: "STORY" },
+      now,
+    );
+
+    expect(candidate.expiresAt?.toISOString()).toBe("2026-09-22T10:00:00.000Z");
+  });
+
+  it("leaves permanent media without an expiry window", () => {
+    for (const raw of [
+      { media_type: "IMAGE" },
+      { media_type: "VIDEO" },
+      { media_type: "VIDEO", media_product_type: "FEED" },
+      { media_type: "CAROUSEL_ALBUM", media_product_type: "FEED" },
+      { media_type: "VIDEO", media_product_type: "REELS" },
+    ]) {
+      expect(
+        normalizeMetaPublication("instagram", { id: `x-${JSON.stringify(raw)}`, ...raw }).expiresAt,
+      ).toBeNull();
+    }
+  });
+
+  it("stamps the window from publish time for a scheduled Story that is not live yet", () => {
+    const candidate = normalizeMetaPublication(
+      "instagram",
+      {
+        id: "ig-story-scheduled",
+        media_type: "VIDEO",
+        media_product_type: "STORY",
+        timestamp: "2026-09-25T09:00:00+0000",
+        scheduled_publish_time: "2026-09-26T09:00:00+0000",
+        is_published: false,
+      },
+      new Date("2026-09-24T10:00:00.000Z"),
+    );
+
+    expect(candidate.status).toBe("scheduled");
+    // Window is measured from the object's own timestamp; the service is what
+    // decides not to persist it until the record is actually published.
+    expect(candidate.expiresAt?.toISOString()).toBe("2026-09-26T09:00:00.000Z");
+  });
+});

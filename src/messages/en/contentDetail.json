@@ -258,7 +258,10 @@
       "unlinkConfirm": "Unlink this Meta post? You can link it again later.",
       "reconnectToManage": "Reconnect Meta to manage this link",
       "lastChecked": "Last checked {date}",
-      "platform": { "facebook": "Facebook", "instagram": "Instagram" },
+      "platform": {
+        "facebook": "Facebook",
+        "instagram": "Instagram"
+      },
       "status": {
         "scheduled": "Scheduled",
         "published": "Published",
@@ -270,7 +273,8 @@
         "video": "Video",
         "carousel": "Carousel",
         "reel": "Reel",
-        "unknown": "Media"
+        "unknown": "Media",
+        "story": "Story"
       },
       "errors": {
         "channel_not_found": "This channel could not be found.",
@@ -285,11 +289,20 @@
         "duplicate_link": "That Meta post is already linked to another Planner item.",
         "invalid_candidate": "That Meta post cannot be linked.",
         "invalid_state": "This Planner item is not ready for publication linking."
-      }
-    }
+      },
+      "storyNoLink": "Story · no permanent link. It can be linked, but there is nothing to open later.",
+      "storyExpiresHint": "Story link expires 24 hours after publishing."
+    },
+    "linkExpired": "Temporary content · link no longer available",
+    "temporaryNoLink": "Published · temporary content (no permanent link)",
+    "linkExpires": "Link expires {date}",
+    "expiresAtLabel": "Link expires at",
+    "expiresAtHint": "No permanent link? If this content disappears on its own — an Instagram Story lives for 24 hours — set when the link expires."
   },
   "comments": {
-    "trigger": { "open": "Open discussion ({count} comments)" },
+    "trigger": {
+      "open": "Open discussion ({count} comments)"
+    },
     "drawer": {
       "backdropAria": "Close discussion",
       "title": "Discussion",
@@ -810,6 +823,12 @@
     "hideUploader": "Hide uploader",
     "storedOnlyNotice": "All delivery files are copied into private agency storage before review. External access links are not submitted.",
     "sourceRequired": "Select at least one stored Media Library asset.",
+    "noMediaLabel": "This post ships no creative",
+    "noMediaHelp": "Mark this post as text-only so it can be submitted without stored media. Use it for caption-only announcements, threads, and link drops.",
+    "noMediaHelpReadOnly": "A planner or workspace manager decides whether this post needs media.",
+    "noMediaApplied": "Media is optional for this post. Add assets if you have them, or describe the delivery and submit it as text-only.",
+    "mediaOptionalBadge": "(optional)",
+    "assetlessDescriptionRequired": "Describe what is being delivered. Without media this is the only record reviewers will see.",
     "assetsReadyToSubmit": "{count} asset(s) attached to this post. Submit the delivery to send them for creative review.",
     "preview": "Preview",
     "statusFinalApproved": "Final approved",

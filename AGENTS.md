@@ -721,6 +721,76 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-27 — Ephemeral publications: Stories without a permanent link
+
+**Gap.** `publication_record` carried a hard `CHECK`
+(`publication_published_needs_url_time_publisher`) requiring
+`published_url IS NOT NULL` whenever `status = 'published'`. An Instagram Story
+is live for 24 hours and has no durable public link, so it could never satisfy
+that invariant. Stories were not merely hard to link — they were *unlinkable*:
+`persistLinkedCandidate` wrote `status = 'published'` with a null permalink and
+the whole `db.transaction` rolled back, and `recordPublication` independently
+threw `published requires a publishedUrl`. Nothing in the product could record a
+Story as published. Behind that, Stories were also mislabelled: Meta reports a
+Story with `media_type` IMAGE/VIDEO and carries the real type in
+`media_product_type`, which the provider already requested and `mediaTypeValue()`
+discarded — so every Story rendered as "Image" or "Video".
+
+- **feat(db):** `publication_record.expires_at` (migration
+  `0053_ephemeral_publication_expiry`). The invariant is *widened*, not removed:
+  a published row still needs `actual_published_at` + `publisher_id`, and needs a
+  URL only when `expires_at IS NULL`. No backfill — every existing published row
+  already has a URL. DROP/ADD live in one `DO` block so the swap is atomic even
+  under `migrate-concurrent.ts`, which bypasses the transaction. Deliberately did
+  NOT tighten `publication_pending_clears_published_fields`: a scheduled Story is
+  legitimately `pending` while carrying a notional window, so the service only
+  writes `expires_at` on the transition into `published`.
+
+- **fix(social):** `STORY` branch in `mediaTypeValue()` + `expiresAt` on
+  `MetaPublicationCandidate`, derived as `published_at + 24h`
+  (`META_STORY_TTL_MS`) with a `?? now` fallback so a linkless Story always
+  satisfies the relaxed `CHECK`. `src/lib/social/providers/meta.ts` is unchanged —
+  it already requested `media_product_type` on both the list and by-id paths.
+
+- **feat(social):** Meta-free `expireEphemeralMetaPublications` pass in
+  `reconcileMetaPublicationLinks` degrades an expired Story's *external* status to
+  `unavailable` and writes a `meta_expired` activity event. It never touches the
+  Planner `status`: the content was published, the artifact is gone by design.
+  Idempotent (only matches rows still at `externalStatus = 'published'`) and it
+  issues no provider call, so it cannot fail on a Meta outage. `expires_at` is
+  written on *every* link/refresh/reconcile — including as `null` — because
+  `publication_record_channel_unique` means re-linking mutates the same row.
+
+- **feat(publishing):** `RecordPublicationSchema` gains `expiresAt`; the
+  unconditional throw becomes "published requires a publishedUrl or expiresAt".
+
+- **feat(ui):** link dialog labels Stories and explains a missing link rather than
+  rendering an absent control. Channel card has three states — live link + expiry
+  hint, expired (no link, `Clock` icon), or published with no link by nature — and
+  never renders a link already known to be dead, even when the permalink is still
+  stored per ADR 0015. Markup is unchanged when `expires_at` is null. The manual
+  outcome form reveals an optional "Link expires at" field once the URL is blank.
+  Icons are `aria-hidden` beside visible text, so status is never colour alone.
+
+- **test:** Story detection + expiry window pinned in
+  `social-meta-publications.test.ts`; snapshot shape in
+  `meta-publication-service.test.ts`; url-less published accepted and expiry
+  cleared on non-published outcomes in `publishing-service.test.ts`; three-state
+  card coverage in both locales; dialog Story label / no-anchor cases; and four
+  `CHECK` cases against real Postgres proving the relaxation accepts
+  url-less+expiry while still rejecting no-url+no-expiry, no-publisher, and
+  no-publish-time. en/ar parity holds at 895 keys each.
+
+- **docs:** ADR 0016, a Stories section in `docs/operations/meta-publication-linking.md`,
+  `expires_at` in `docs/architecture/data-model.md`, and a Story row in
+  `EXTERNAL_SERVICES_UAT.md`.
+
+- **Known limits:** the 24h Story window is hardcoded (Meta exposes no expiry
+  field); and Stories arriving via `/{ig-user-id}/media` is an *observed*
+  behaviour, not a documented guarantee — Meta documents a separate `/stories`
+  edge. The labelling ships either way; only a Stories-disappeared regression
+  would justify adding that fetch path, and the UAT row is what catches it.
+
 ### 2026-09-27 — Workspace rename (display name) from Settings → Lifecycle
 
 **Gap.** `workspace.name` was write-once. It was set by the seed route
@@ -815,7 +885,6 @@ TypeError: Cannot use 'in' operator to search for 'status' in 2026-09-26T21:00:0
 - **test:** 34 cases in `tests/unit/activity/format.test.ts` (every scalar shape × every kind that reads before/after, plus degradation-not-throw and "a real object still renders unchanged") and 32 in `tests/unit/publishing-materiality.test.ts` (the `toAuditData` contract + a persisted-row assertion that no writer path can emit a non-object). Both suites were verified to **fail** against the pre-fix code (11 failures) before being accepted.
 
 **Lesson.** `jsonb` has no shape. Two independent halves had to be wrong for this to reach production: a writer that stored a scalar where a `Record` was declared (hidden by `as never`), and a reader that used `?? {}` as if it validated the type. `??` defends against `null` and `undefined` only — never against a wrong _type_. Guard reads of untyped `jsonb` at the boundary, and type the boundary `unknown` so the compiler enforces it.
-
 
 ### 2026-09-26 — Unified calendar card (feat/unified-calendar-card)
 

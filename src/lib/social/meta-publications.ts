@@ -3,17 +3,28 @@ import "server-only";
 export type MetaPublicationPlatform = "facebook" | "instagram";
 export type MetaPublicationStatus = "scheduled" | "published";
 
+export type MetaPublicationMediaType =
+  "image" | "video" | "carousel" | "reel" | "story" | "unknown";
+
 export type MetaPublicationCandidate = {
   id: string;
   platform: MetaPublicationPlatform;
   status: MetaPublicationStatus;
   caption: string | null;
-  mediaType: "image" | "video" | "carousel" | "reel" | "unknown";
+  mediaType: MetaPublicationMediaType;
   permalink: string | null;
   thumbnailUrl: string | null;
   createdAt: Date | null;
   scheduledAt: Date | null;
   publishedAt: Date | null;
+  /**
+   * When the live artifact disappears on its own. Only Stories set this.
+   * Stories are visible for 24 hours, so their link is useful while live
+   * and dead afterwards; the service uses this to stamp
+   * `publication_record.expires_at`, which in turn is what lets a Story be
+   * recorded as `published` with no `published_url` at all.
+   */
+  expiresAt: Date | null;
 };
 
 export type MetaPublicationCandidateRaw = Record<string, unknown>;
@@ -48,10 +59,23 @@ function firstAttachment(raw: MetaPublicationCandidateRaw): Record<string, unkno
   return first && typeof first === "object" ? (first as Record<string, unknown>) : null;
 }
 
+/**
+ * How long an Instagram Story stays live. Meta exposes no expiry field on
+ * the media object, so the window is derived from publish time. Isolated as
+ * a named constant because it is the one number that would silently rot if
+ * Instagram ever changes the retention window.
+ */
+export const META_STORY_TTL_MS = 24 * 60 * 60_000;
+
 function mediaTypeValue(raw: MetaPublicationCandidateRaw): MetaPublicationCandidate["mediaType"] {
   const attachment = firstAttachment(raw);
-  const value = stringValue(raw.media_product_type)?.toUpperCase();
-  if (value === "REELS") return "reel";
+  // `media_product_type` is the only field that distinguishes a Story: Meta
+  // reports Stories with `media_type` of IMAGE or VIDEO, so without this
+  // branch a Story is indistinguishable from a feed post. Documented values
+  // are AD / FEED / STORY / REELS.
+  const productType = stringValue(raw.media_product_type)?.toUpperCase();
+  if (productType === "STORY") return "story";
+  if (productType === "REELS") return "reel";
   const mediaType = stringValue(raw.media_type ?? attachment?.media_type)?.toUpperCase();
   if (mediaType === "CAROUSEL_ALBUM") return "carousel";
   if (mediaType === "IMAGE") return "image";
@@ -74,13 +98,22 @@ export function normalizeMetaPublication(
   const status: MetaPublicationStatus =
     explicitlyUnpublished || scheduledInFuture ? "scheduled" : "published";
   const publishedAt = status === "published" ? createdAt : null;
+  const mediaType = mediaTypeValue(raw);
+
+  // Only Stories expire. `now` is the last fallback so a Story always yields
+  // a non-null window even when Meta omits every timestamp — that guarantee
+  // is what keeps a linkless Story satisfiable against
+  // `publication_published_needs_url_time_publisher`.
+  const expiresFrom = publishedAt ?? createdAt ?? now;
+  const expiresAt =
+    mediaType === "story" ? new Date(expiresFrom.getTime() + META_STORY_TTL_MS) : null;
 
   return {
     id,
     platform,
     status,
     caption: stringValue(raw.message ?? raw.caption),
-    mediaType: mediaTypeValue(raw),
+    mediaType,
     permalink: httpsUrl(raw.permalink_url ?? raw.permalink),
     thumbnailUrl: httpsUrl(
       raw.thumbnail_url ??
@@ -91,6 +124,7 @@ export function normalizeMetaPublication(
     createdAt,
     scheduledAt,
     publishedAt,
+    expiresAt,
   };
 }
 

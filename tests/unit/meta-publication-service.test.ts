@@ -43,6 +43,7 @@ describe("Meta publication persistence helpers", () => {
       createdAt: null,
       scheduledAt: "2026-09-30T09:00:00.000Z",
       publishedAt: null,
+      expiresAt: null,
     });
   });
 
@@ -57,5 +58,28 @@ describe("Meta publication persistence helpers", () => {
 
     expect(externalPublicationStatusFromCandidate(candidate)).toBe("published");
     expect(externalPublicationSnapshot(candidate).publishedAt).toBe("2026-09-21T12:00:00.000Z");
+    expect(externalPublicationSnapshot(candidate).expiresAt).toBeNull();
+  });
+
+  it("snapshots a Story as a story with a nullable permalink and an expiry", () => {
+    // This is the record that used to fail the whole link transaction: a
+    // published candidate with `permalink === null` violated
+    // `publication_published_needs_url_time_publisher`.
+    const candidate = normalizeMetaPublication("instagram", {
+      id: "ig-story-1",
+      caption: "Launch teaser",
+      media_type: "VIDEO",
+      media_product_type: "STORY",
+      timestamp: "2026-09-21T12:00:00Z",
+    });
+
+    expect(candidate.mediaType).toBe("story");
+    expect(candidate.permalink).toBeNull();
+    expect(candidate.status).toBe("published");
+
+    const snapshot = externalPublicationSnapshot(candidate);
+    expect(snapshot.mediaType).toBe("story");
+    expect(snapshot.permalink).toBeNull();
+    expect(snapshot.expiresAt).toBe("2026-09-22T12:00:00.000Z");
   });
 });

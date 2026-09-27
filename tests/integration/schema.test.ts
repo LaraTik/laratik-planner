@@ -28,6 +28,41 @@ if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration
 const pool = new Pool({ connectionString: TEST_DB_URL });
 const db = drizzle(pool);
 
+/**
+ * Build the agency → workspace → channel → content item → channel link chain
+ * that `publication_record` hangs off. Each test truncates in `beforeEach`, so
+ * the fixed slugs are safe; what varies is the `expires_at` / `published_url`
+ * combination under test.
+ */
+async function seedPublicationChannel() {
+  const [agency] = await db.insert(agencies).values({ name: "A", slug: "a" }).returning();
+  const [user] = await db.insert(users).values({ email: "a@x.io", displayName: "A" }).returning();
+  const [ws] = await db
+    .insert(workspaces)
+    .values({ agencyId: agency!.id, slug: "w", name: "W", createdBy: user!.id })
+    .returning();
+  const [ch] = await db
+    .insert(socialChannels)
+    .values({ workspaceId: ws!.id, platform: "instagram", accountName: "IG" })
+    .returning();
+  const [ci] = await db
+    .insert(contentItems)
+    .values({
+      workspaceId: ws!.id,
+      title: "T",
+      format: "static_post",
+      plannedPublishAt: new Date(),
+      contentOwnerId: user!.id,
+      createdBy: user!.id,
+    })
+    .returning();
+  const [cic] = await db
+    .insert(contentItemChannels)
+    .values({ contentItemId: ci!.id, socialChannelId: ch!.id })
+    .returning();
+  return { cic: cic!.id, user: user!.id };
+}
+
 describe("schema invariants", () => {
   beforeAll(async () => {
     await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
@@ -221,6 +256,74 @@ describe("schema invariants", () => {
         db.insert(publicationRecords).values({
           contentItemChannelId: cic!.id,
           status: "published",
+        }),
+        "publication_published_needs_url_time_publisher",
+      );
+    });
+
+    it("accepts an ephemeral published row with a null url", async () => {
+      // The regression this feature exists for: an Instagram Story has no
+      // permanent link, and the old invariant made that insert impossible.
+      const { cic, user } = await seedPublicationChannel();
+
+      const [record] = await db
+        .insert(publicationRecords)
+        .values({
+          contentItemChannelId: cic,
+          status: "published",
+          publishedUrl: null,
+          actualPublishedAt: new Date(),
+          publisherId: user,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+        })
+        .returning({ id: publicationRecords.id, expiresAt: publicationRecords.expiresAt });
+
+      expect(record?.id).toBeDefined();
+      expect(record?.expiresAt).toBeInstanceOf(Date);
+    });
+
+    it("still rejects published with neither a url nor an expiry", async () => {
+      const { cic, user } = await seedPublicationChannel();
+
+      await expectPgConstraint(
+        db.insert(publicationRecords).values({
+          contentItemChannelId: cic,
+          status: "published",
+          actualPublishedAt: new Date(),
+          publisherId: user,
+          publishedUrl: null,
+          expiresAt: null,
+        }),
+        "publication_published_needs_url_time_publisher",
+      );
+    });
+
+    it("still rejects an ephemeral published row with no publisher", async () => {
+      // The relaxation only covers the url; time and publisher stay required.
+      const { cic } = await seedPublicationChannel();
+
+      await expectPgConstraint(
+        db.insert(publicationRecords).values({
+          contentItemChannelId: cic,
+          status: "published",
+          actualPublishedAt: new Date(),
+          publisherId: null,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
+        }),
+        "publication_published_needs_url_time_publisher",
+      );
+    });
+
+    it("still rejects an ephemeral published row with no publish time", async () => {
+      const { cic, user } = await seedPublicationChannel();
+
+      await expectPgConstraint(
+        db.insert(publicationRecords).values({
+          contentItemChannelId: cic,
+          status: "published",
+          actualPublishedAt: null,
+          publisherId: user,
+          expiresAt: new Date(Date.now() + 24 * 60 * 60_000),
         }),
         "publication_published_needs_url_time_publisher",
       );

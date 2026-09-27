@@ -107,4 +107,72 @@ describe("Meta publication linking UI", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("تعذر الوصول إلى Meta");
     expect(screen.getByRole("button", { name: "ربط المنشور المحدد" })).toBeDisabled();
   });
+
+  it("labels a Story and explains the missing link instead of rendering a dead control", async () => {
+    const storyCandidate = {
+      ...candidate,
+      id: "ig-story-1",
+      mediaType: "story" as const,
+      caption: null,
+      permalink: null,
+      expiresAt: "2026-09-22T12:00:00.000Z",
+    };
+    actions.list.mockResolvedValue({
+      ok: true,
+      candidates: [storyCandidate],
+      nextCursor: null,
+      scheduledCoverage: "published_only",
+    });
+
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={channel}
+          publication={null}
+          isPublisher={true}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Link Meta post" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+
+    // Meta reports Stories with media_type IMAGE/VIDEO, so "Story" proves
+    // media_product_type is now being read.
+    expect(await screen.findByText("Story")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Story · no permanent link. It can be linked, but there is nothing to open later.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Open preview" })).not.toBeInTheDocument();
+  });
+
+  it("keeps a Story permalink and warns that it will expire", async () => {
+    actions.list.mockResolvedValue({
+      ok: true,
+      candidates: [
+        { ...candidate, mediaType: "story" as const, expiresAt: "2026-09-22T12:00:00.000Z" },
+      ],
+      nextCursor: null,
+      scheduledCoverage: "published_only",
+    });
+
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={channel}
+          publication={null}
+          isPublisher={true}
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Link Meta post" }));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Open preview" })).toBeInTheDocument();
+    expect(screen.getByText("Story link expires 24 hours after publishing.")).toBeInTheDocument();
+  });
 });
