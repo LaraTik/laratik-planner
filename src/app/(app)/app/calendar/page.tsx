@@ -9,7 +9,11 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import {
   getAgencyCalendarView,
   getAgencyTimezone,
+  getUserWorkload,
   type AgencyCalendarEvent,
+  type UserWorkload,
+  type WorkloadPlan,
+  type WorkloadTask,
 } from "@/lib/planning/calendar";
 import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { formatDate } from "@/lib/i18n/format-locale";
@@ -83,6 +87,568 @@ function EventCard({
   );
 }
 
+/**
+ * Calendar filter feedback (gap from round-of-2026-09-27):
+ * The assignee + status filters only affect tasks. When the user
+ * picks an assignee with no tasks this month, the calendar visually
+ * looks identical to the unfiltered view (plans dominate the count)
+ * — making the filter feel broken. This component:
+ *   1. Always splits the count into plan/task breakdown so the user
+ *      sees WHICH side of the calendar the filter is touching.
+ *   2. When an assignee/status filter is active AND the resulting
+ *      task list is empty, renders a prominent hint explaining why
+ *      the calendar still shows plans. Without this hint, users
+ *      report "I chose an assignee and the filter did nothing."
+ */
+function CalendarCountSummary({
+  events,
+  assigneeName,
+  statusLabel,
+  hasTaskFilter,
+  t,
+}: {
+  events: AgencyCalendarEvent[];
+  assigneeName: string | null;
+  statusLabel: string | null;
+  hasTaskFilter: boolean;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const planCount = events.reduce((acc, event) => acc + (event.kind === "plan" ? 1 : 0), 0);
+  const taskCount = events.length - planCount;
+  const noTasksForFilter = hasTaskFilter && taskCount === 0 && planCount > 0;
+  return (
+    <div className="space-y-1" aria-live="polite">
+      <p className="text-label text-fg-muted">{renderBreakdownText({ planCount, taskCount, t })}</p>
+      {noTasksForFilter ? (
+        <p
+          className="border-warning/40 bg-warning-subtle text-warning text-label rounded-[var(--radius-control)] border px-2.5 py-1 font-semibold"
+          role="status"
+        >
+          {assigneeName
+            ? t("calendar.globalNoTasksForAssignee", {
+                assignee: assigneeName,
+                plans: planCount,
+              })
+            : statusLabel
+              ? t("calendar.globalNoTasksForStatus", {
+                  status: statusLabel,
+                  plans: planCount,
+                })
+              : null}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function renderBreakdownText({
+  planCount,
+  taskCount,
+  t,
+}: {
+  planCount: number;
+  taskCount: number;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}): string {
+  if (planCount === 0 && taskCount === 0) return t("calendar.globalShowing", { count: 0 });
+  if (taskCount === 0) {
+    return t("calendar.globalShowingBreakdownPlansOnly", { plans: planCount });
+  }
+  if (planCount === 0) {
+    return t("calendar.globalShowingBreakdownTasksOnly", { tasks: taskCount });
+  }
+  return t("calendar.globalShowingBreakdown", { plans: planCount, tasks: taskCount });
+}
+
+/**
+ * View toggle (round-of-2026-09-27, workload feature):
+ * segmented control above the filters that swaps between the
+ * agency-wide calendar grid and the per-user workload panel.
+ * Pure URL navigation — no client JS — so the server stays the
+ * single source of truth and the state survives reloads.
+ */
+function ViewToggle({
+  view,
+  calendarHref,
+  workloadHref,
+  t,
+}: {
+  view: "calendar" | "workload";
+  calendarHref: string;
+  workloadHref: string;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label={t("calendar.viewToggleAriaLabel")}
+      data-testid="calendar-view-toggle"
+      className="border-border bg-surface-subtle inline-flex items-center gap-1 rounded-[var(--radius-control)] border p-1"
+    >
+      <Link
+        role="tab"
+        href={calendarHref}
+        aria-selected={view === "calendar"}
+        data-testid="calendar-view-tab"
+        className={cn(
+          "text-body focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] px-3 font-semibold focus-visible:ring-2 focus-visible:outline-none",
+          view === "calendar"
+            ? "bg-surface text-fg-primary shadow-sm"
+            : "text-fg-secondary hover:text-fg-primary",
+        )}
+      >
+        {t("calendar.viewCalendar")}
+      </Link>
+      <Link
+        role="tab"
+        href={workloadHref}
+        aria-selected={view === "workload"}
+        data-testid="workload-view-tab"
+        className={cn(
+          "text-body focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] px-3 font-semibold focus-visible:ring-2 focus-visible:outline-none",
+          view === "workload"
+            ? "bg-surface text-fg-primary shadow-sm"
+            : "text-fg-secondary hover:text-fg-primary",
+        )}
+      >
+        {t("calendar.viewWorkload")}
+      </Link>
+    </div>
+  );
+}
+
+/**
+ * Workload view (round-of-2026-09-27, user request):
+ * Single-user panel that shows a person's tasks + plans they
+ * touch (owner / designer / reviewer) for the selected month.
+ * Built for "if it's a designer, what they have left" — summary
+ * chips call out overdue + in-progress + blocked tasks, then a
+ * filtered month grid (only that person's events), then two
+ * right-rail lists (Tasks / Plans) for at-a-glance triage.
+ */
+function WorkloadView({
+  workload,
+  month,
+  year,
+  agencyTimezone,
+  code,
+  days,
+  cells,
+  todayYear,
+  todayMonth,
+  todayDay,
+  members,
+  assigneeId,
+  t,
+}: {
+  workload: UserWorkload | null;
+  month: number;
+  year: number;
+  agencyTimezone: string;
+  code: LocaleCode;
+  days: number;
+  cells: number[];
+  todayYear: number;
+  todayMonth: number;
+  todayDay: number;
+  members: { id: string; name: string }[];
+  assigneeId: string | undefined;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  // "Pick a person" empty state — user toggled workload but hasn't
+  // chosen an assignee yet.
+  if (!assigneeId) {
+    return (
+      <div
+        className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-6"
+        data-testid="workload-empty-pick-assignee"
+      >
+        <h3 className="text-title-section text-fg-primary font-semibold">
+          {t("calendar.workloadPickAssigneeTitle")}
+        </h3>
+        <p className="mt-2">{t("calendar.workloadPickAssigneeBody")}</p>
+      </div>
+    );
+  }
+
+  if (!workload) {
+    return null;
+  }
+
+  const userName = workload.user?.name ?? t("calendar.workloadUnknownUser");
+  const selectedMember = members.find((m) => m.id === assigneeId);
+  if (!selectedMember) {
+    return (
+      <div
+        className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-6"
+        data-testid="workload-empty-no-member"
+      >
+        <h3 className="text-title-section text-fg-primary font-semibold">
+          {t("calendar.workloadMemberNotFoundTitle")}
+        </h3>
+      </div>
+    );
+  }
+
+  // Merge tasks + plans into a single set of events for the grid,
+  // marked with kind so the EventCard can render the right icon.
+  const eventsForGrid: AgencyCalendarEvent[] = [
+    ...workload.tasks.map((task) => ({
+      id: task.id,
+      kind: "task" as const,
+      title: task.title,
+      status: task.status,
+      startsAt: task.startsAt,
+      workspaceId: task.workspaceId,
+      workspaceName: task.workspaceName,
+      workspaceSlug: null,
+      workspaceTimezone: null,
+      assigneeName: userName,
+      href: task.href,
+    })),
+    ...workload.plans.map((plan) => ({
+      id: plan.id,
+      kind: "plan" as const,
+      title: plan.title,
+      status: plan.status,
+      startsAt: plan.startsAt,
+      workspaceId: plan.workspaceId,
+      workspaceName: plan.workspaceName,
+      workspaceSlug: null,
+      workspaceTimezone: null,
+      assigneeName: userName,
+      href: plan.href,
+    })),
+  ].sort((a, b) => a.startsAt.getTime() - b.startsAt.getTime());
+
+  const eventDateIsToday = (date: Date) => {
+    const zoned = toZonedTime(date, agencyTimezone);
+    return (
+      zoned.getFullYear() === todayYear &&
+      zoned.getMonth() === todayMonth &&
+      zoned.getDate() === todayDay
+    );
+  };
+
+  const dayEvents = (day: number) =>
+    eventsForGrid.filter((event) => {
+      const zoned = toZonedTime(event.startsAt, agencyTimezone);
+      return zoned.getFullYear() === year && zoned.getMonth() === month && zoned.getDate() === day;
+    });
+
+  return (
+    <div className="space-y-4" data-testid="workload-view">
+      <header className="space-y-1">
+        <h2 className="text-title-section text-fg-primary font-semibold">
+          {t("calendar.workloadTitle", { name: userName })}
+        </h2>
+        <p className="text-body text-fg-secondary">{t("calendar.workloadSubtitle")}</p>
+      </header>
+
+      {/* Summary chips: overdue / in-progress / blocked / month totals.
+       * Ordered by urgency so the eye lands on overdue first. */}
+      <div
+        className="flex flex-wrap items-center gap-2"
+        role="group"
+        aria-label={t("calendar.workloadSummaryAriaLabel")}
+        data-testid="workload-summary"
+      >
+        <SummaryChip
+          label={t("calendar.workloadOverdue")}
+          count={workload.summary.overdueTasks}
+          tone={workload.summary.overdueTasks > 0 ? "danger" : "muted"}
+          testId="workload-summary-overdue"
+        />
+        <SummaryChip
+          label={t("calendar.workloadInProgress")}
+          count={workload.summary.inProgressTasks}
+          tone="primary"
+          testId="workload-summary-in-progress"
+        />
+        <SummaryChip
+          label={t("calendar.workloadBlocked")}
+          count={workload.summary.blockedTasks}
+          tone={workload.summary.blockedTasks > 0 ? "warning" : "muted"}
+          testId="workload-summary-blocked"
+        />
+        <SummaryChip
+          label={t("calendar.workloadTasksThisMonth")}
+          count={workload.summary.tasksThisMonth}
+          tone="muted"
+          testId="workload-summary-tasks-this-month"
+        />
+        <SummaryChip
+          label={t("calendar.workloadPlansThisMonth")}
+          count={workload.summary.plansThisMonth}
+          tone="muted"
+          testId="workload-summary-plans-this-month"
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="border-border bg-surface overflow-x-auto rounded-[var(--radius-card)] border">
+          <div className="grid min-w-[760px] grid-cols-7">
+            {weekdays(code).map((day) => (
+              <div
+                key={day}
+                className="border-border text-label text-fg-muted border-b p-3 font-semibold"
+              >
+                {day}
+              </div>
+            ))}
+            {cells.map((day, index) => {
+              const inMonth = day >= 1 && day <= days;
+              const events = inMonth ? dayEvents(day) : [];
+              const isToday =
+                inMonth && year === todayYear && month === todayMonth && day === todayDay;
+              return (
+                <div
+                  key={index}
+                  className={cn(
+                    "border-border min-h-32 border-e border-b p-2",
+                    !inMonth && "bg-surface-subtle/40",
+                    isToday && "bg-primary/5 ring-primary/30 ring-1 ring-inset",
+                  )}
+                >
+                  <span
+                    {...(isToday ? { "aria-current": "date" as const } : {})}
+                    className={cn(
+                      "text-label",
+                      isToday ? "text-primary font-bold" : "text-fg-muted",
+                      !inMonth && "invisible",
+                    )}
+                  >
+                    {day}
+                  </span>
+                  <div className="mt-2 space-y-1">
+                    {events.slice(0, 4).map((event) => (
+                      <EventCard key={`${event.kind}-${event.id}`} event={event} t={t} />
+                    ))}
+                    {events.length > 4 ? (
+                      <p className="text-label text-fg-muted px-1">+{events.length - 4}</p>
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Right rail (desktop) / below grid (mobile). Two lists:
+         *  - Tasks: sorted by due date, status-coded.
+         *  - Plans they're touching: role badge per row.
+         * The unscheduled tasks (no due date) land in a sub-section
+         * at the bottom so "what's on their plate" doesn't miss
+         * work without a deadline.
+         */}
+        <aside className="space-y-4" data-testid="workload-rail">
+          <WorkloadTasksList tasks={workload.tasks} unscheduled={workload.unscheduledTasks} t={t} />
+          <WorkloadPlansList plans={workload.plans} t={t} />
+        </aside>
+      </div>
+
+      {/* Mobile agenda (mirrors the calendar view pattern). Hidden
+       * on md+ where the grid + rail take over. */}
+      <section className="space-y-2 md:hidden" aria-label={t("calendar.workloadAgendaAriaLabel")}>
+        {eventsForGrid.length === 0 ? (
+          <div className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4">
+            {t("calendar.workloadEmptyMonth")}
+          </div>
+        ) : (
+          eventsForGrid.map((event) => (
+            <div
+              key={`${event.kind}-${event.id}`}
+              className="border-border bg-surface grid grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
+            >
+              <time className="text-label text-fg-secondary font-semibold">
+                {eventDateIsToday(event.startsAt) ? `${t("calendar.globalToday")} · ` : ""}
+                {formatDate(event.startsAt, code, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                  timeZone: agencyTimezone,
+                })}
+              </time>
+              <EventCard event={event} t={t} />
+            </div>
+          ))
+        )}
+      </section>
+    </div>
+  );
+}
+
+function SummaryChip({
+  label,
+  count,
+  tone,
+  testId,
+}: {
+  label: string;
+  count: number;
+  tone: "primary" | "warning" | "danger" | "muted";
+  testId: string;
+}) {
+  const toneClasses = {
+    primary: "bg-primary-subtle text-primary",
+    warning: "bg-warning-subtle text-warning",
+    danger: "bg-danger-subtle text-danger",
+    muted: "bg-surface-subtle text-fg-secondary",
+  }[tone];
+  return (
+    <span
+      data-testid={testId}
+      className={cn("text-label rounded-full px-2.5 py-1 font-semibold", toneClasses)}
+    >
+      {label}: {count}
+    </span>
+  );
+}
+
+function WorkloadTasksList({
+  tasks,
+  unscheduled,
+  t,
+}: {
+  tasks: WorkloadTask[];
+  unscheduled: WorkloadTask[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  if (tasks.length === 0 && unscheduled.length === 0) {
+    return (
+      <section
+        className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4"
+        data-testid="workload-tasks-empty"
+      >
+        <h3 className="text-title-section text-fg-primary font-semibold">
+          {t("calendar.workloadTasksTitle")}
+        </h3>
+        <p className="mt-2">{t("calendar.workloadTasksEmpty")}</p>
+      </section>
+    );
+  }
+  return (
+    <section
+      className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
+      data-testid="workload-tasks-list"
+    >
+      <h3 className="text-title-section text-fg-primary font-semibold">
+        {t("calendar.workloadTasksTitle")}
+      </h3>
+      <ul className="mt-3 space-y-2">
+        {tasks.map((task) => (
+          <li key={task.id}>
+            <Link
+              href={task.href}
+              className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-2 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <span className="text-label text-fg-secondary font-semibold">
+                {formatDate(task.startsAt, "en", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </span>
+              <span className="text-body text-fg-primary mt-1 block font-semibold wrap-break-word">
+                {task.title}
+              </span>
+              <span className="text-label text-fg-muted mt-1 block">
+                {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
+                {t(`tasks.status.${task.status}`)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+      {unscheduled.length > 0 ? (
+        <details className="mt-3">
+          <summary className="text-label text-fg-secondary cursor-pointer font-semibold">
+            {t("calendar.workloadUnscheduledLabel", { count: unscheduled.length })}
+          </summary>
+          <ul className="mt-2 space-y-2">
+            {unscheduled.map((task) => (
+              <li key={task.id}>
+                <Link
+                  href={task.href}
+                  className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-2 focus-visible:ring-2 focus-visible:outline-none"
+                >
+                  <span className="text-body text-fg-primary block font-semibold wrap-break-word">
+                    {task.title}
+                  </span>
+                  <span className="text-label text-fg-muted mt-1 block">
+                    {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
+                    {t(`tasks.status.${task.status}`)}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
+function WorkloadPlansList({
+  plans,
+  t,
+}: {
+  plans: WorkloadPlan[];
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  if (plans.length === 0) {
+    return (
+      <section
+        className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4"
+        data-testid="workload-plans-empty"
+      >
+        <h3 className="text-title-section text-fg-primary font-semibold">
+          {t("calendar.workloadPlansTitle")}
+        </h3>
+        <p className="mt-2">{t("calendar.workloadPlansEmpty")}</p>
+      </section>
+    );
+  }
+  return (
+    <section
+      className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
+      data-testid="workload-plans-list"
+    >
+      <h3 className="text-title-section text-fg-primary font-semibold">
+        {t("calendar.workloadPlansTitle")}
+      </h3>
+      <ul className="mt-3 space-y-2">
+        {plans.map((plan) => (
+          <li key={plan.id}>
+            <Link
+              href={plan.href}
+              className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-2 focus-visible:ring-2 focus-visible:outline-none"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <span className="text-body text-fg-primary font-semibold wrap-break-word">
+                  {plan.title}
+                </span>
+                <span
+                  data-testid={`workload-role-${plan.role}`}
+                  className="bg-primary-subtle text-primary text-label shrink-0 rounded-full px-2 py-0.5 font-semibold"
+                >
+                  {t(`calendar.workloadRole.${plan.role}`)}
+                </span>
+              </div>
+              <span className="text-label text-fg-muted mt-1 block">
+                {formatDate(plan.startsAt, "en", {
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                · {plan.workspaceName} · {t(`planningFilters.statusLabels.${plan.status}`)}
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
 export default async function GlobalCalendarPage({
   searchParams,
 }: {
@@ -91,6 +657,15 @@ export default async function GlobalCalendarPage({
     workspaceId?: string;
     assigneeId?: string;
     taskStatus?: string;
+    /**
+     * View mode (round-of-2026-09-27, workload feature):
+     *  - "calendar" (default) — the agency-wide month grid with
+     *    existing filter behaviour. Assignee filter is task-only.
+     *  - "workload" — single-user workload panel: summary chips,
+     *    monthly grid filtered to that user's tasks + plans they
+     *    touch (owner / designer / reviewer), right-rail lists.
+     */
+    view?: string;
     // The hidden-input + checkbox pair below sends the same name
     // twice when the box is checked, so Next.js delivers these as
     // `string[]`. We use `[].concat(value)` to normalise both
@@ -142,6 +717,10 @@ export default async function GlobalCalendarPage({
     : [];
   const showPlans = showPlansValues.length === 0 ? true : showPlansValues.includes("true");
   const showTasks = showTasksValues.length === 0 ? true : showTasksValues.includes("true");
+  // "workload" forces assigneeId — fall back to whatever is on the
+  // URL, or "no assignee yet" empty state in the view.
+  const view: "calendar" | "workload" =
+    requestedParams.view === "workload" ? "workload" : "calendar";
   const [agencyTimezone, members, workspaces] = await Promise.all([
     getAgencyTimezone(actor, context.agencyId),
     listAgencyMembers(context.agencyId),
@@ -160,6 +739,14 @@ export default async function GlobalCalendarPage({
     monthRange.end,
     { workspaceId, assigneeId, taskStatus, showPlans, showTasks },
   );
+  // Workload view: only loaded when the user has selected the view
+  // AND picked a valid assignee. Skipping the fetch when assigneeId
+  // is missing keeps cold visits to /app/calendar?view=workload
+  // cheap (the page renders the "pick a person" empty state).
+  const workload: UserWorkload | null =
+    view === "workload" && assigneeId
+      ? await getUserWorkload(actor, context.agencyId, assigneeId, monthRange.start, monthRange.end)
+      : null;
   const firstWeekday = new Date(year, month, 1).getDay();
   const days = new Date(year, month + 1, 0).getDate();
   const cells = Array.from(
@@ -197,6 +784,26 @@ export default async function GlobalCalendarPage({
   if (assigneeId) taskViewParams.set("assigneeId", assigneeId);
   if (taskStatus) taskViewParams.set("status", taskStatus);
   const tasksHref = `/app/tasks${taskViewParams.toString() ? `?${taskViewParams.toString()}` : ""}`;
+  // Build the "switch view" URLs. The toggle preserves the current
+  // month + assignee + workspaceId + status + show flags so the user
+  // doesn't lose their filter context when flipping modes.
+  const workloadHref = (() => {
+    const params = new URLSearchParams();
+    params.set("month", selectedMonth);
+    params.set("view", "workload");
+    if (assigneeId) params.set("assigneeId", assigneeId);
+    if (workspaceId) params.set("workspaceId", workspaceId);
+    return `?${params.toString()}`;
+  })();
+  const calendarHref = (() => {
+    const params = new URLSearchParams({ month: selectedMonth });
+    if (workspaceId) params.set("workspaceId", workspaceId);
+    if (assigneeId) params.set("assigneeId", assigneeId);
+    if (taskStatus) params.set("taskStatus", taskStatus);
+    if (!showPlans) params.set("showPlans", "false");
+    if (!showTasks) params.set("showTasks", "false");
+    return `?${params.toString()}`;
+  })();
   const eventDateIsToday = (date: Date) => {
     const zonedDate = toZonedTime(date, agencyTimezone);
     return (
@@ -241,6 +848,8 @@ export default async function GlobalCalendarPage({
           </div>
         }
       />
+      {/* View toggle (round-of-2026-09-27, workload feature). */}
+      <ViewToggle view={view} calendarHref={calendarHref} workloadHref={workloadHref} t={t} />
       <section
         className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
         aria-labelledby="global-calendar-filters"
@@ -269,6 +878,10 @@ export default async function GlobalCalendarPage({
           className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(3,minmax(0,1fr))_auto] lg:items-end"
         >
           <input type="hidden" name="month" value={selectedMonth} />
+          {/* Preserve the current view across filter submissions so
+           * toggling "Show tasks" or picking an assignee doesn't
+           * accidentally knock the user back to Calendar view. */}
+          {view === "workload" ? <input type="hidden" name="view" value="workload" /> : null}
           <FormField id="calendar-workspace" label={t("calendar.globalWorkspaceFilter")}>
             <select
               id="calendar-workspace"
@@ -393,134 +1006,183 @@ export default async function GlobalCalendarPage({
           ) : null}
         </div>
       ) : null}
-      <p className="text-label text-fg-muted" aria-live="polite">
-        {t("calendar.globalShowing", { count: calendar.events.length })}
-      </p>
-      <section className="space-y-2 md:hidden" aria-label={t("calendar.globalAgendaAriaLabel")}>
-        {calendar.events.length === 0 ? (
-          <div className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4">
-            {t("calendar.globalEmptyMonth")}
-          </div>
-        ) : (
-          calendar.events.map((event) => (
-            <div
-              key={`${event.kind}-${event.id}`}
-              className="border-border bg-surface grid grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
-            >
-              <time className="text-label text-fg-secondary font-semibold">
-                {eventDateIsToday(event.startsAt) ? `${t("calendar.globalToday")} · ` : ""}
-                {formatDate(event.startsAt, code, {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  timeZone: agencyTimezone,
-                })}
-              </time>
-              <EventCard event={event} t={t} />
-            </div>
-          ))
-        )}
-      </section>
-      <div className="border-border bg-surface hidden overflow-x-auto rounded-[var(--radius-card)] border md:block">
-        <div className="grid min-w-[900px] grid-cols-7">
-          {weekdays(code as LocaleCode).map((day) => (
-            <div
-              key={day}
-              className="border-border text-label text-fg-muted border-b p-3 font-semibold"
-            >
-              {day}
-            </div>
-          ))}
-          {cells.map((day, index) => {
-            const inMonth = day >= 1 && day <= days;
-            const events = inMonth ? dayEvents(day) : [];
-            return (
-              <div
-                key={index}
-                className={cn(
-                  "border-border min-h-36 border-e border-b p-2",
-                  !inMonth && "bg-surface-subtle/40",
-                  inMonth &&
-                    year === todayYear &&
-                    month === todayMonth &&
-                    day === todayDay &&
-                    "bg-primary/5 ring-primary/30 ring-1 ring-inset",
-                )}
-              >
-                <span
-                  {...(inMonth && year === todayYear && month === todayMonth && day === todayDay
-                    ? { "aria-current": "date" as const }
-                    : {})}
-                  className={cn(
-                    "text-label",
-                    inMonth ? "text-fg-muted" : "invisible",
-                    inMonth &&
-                      year === todayYear &&
-                      month === todayMonth &&
-                      day === todayDay &&
-                      "text-primary font-bold",
-                  )}
+      {/*
+        Calendar filter feedback (gap from round-of-2026-09-27):
+        The assignee + status filters ONLY affect tasks; plans stay
+        visible regardless. When the user picks an assignee who has no
+        tasks this month, `calendar.events.length` barely moves (plans
+        dominate the count) and the calendar looks visually identical
+        to the unfiltered view — making the filter feel broken.
+
+        To make the filter behaviour obvious, the count is split into
+        plan / task breakdown and a hint is rendered when the active
+        task filter reduces the task list to zero. The hint is shown
+        only when an assignee OR status filter is active AND the
+        task count is zero — otherwise the breakdown alone is enough.
+      */}
+      <CalendarCountSummary
+        events={calendar.events}
+        assigneeName={
+          assigneeId ? (members.find((member) => member.id === assigneeId)?.name ?? null) : null
+        }
+        statusLabel={taskStatus ? (t(`tasks.status.${taskStatus}`) as string) : null}
+        hasTaskFilter={Boolean(assigneeId || taskStatus)}
+        t={t}
+      />
+      {/* Workload view body (round-of-2026-09-27). Replaces the
+       * calendar grid + unscheduled section when the user toggles
+       * the Workload tab. The filters above remain visible so the
+       * user can still pick a different assignee without bouncing
+       * back to Calendar view. */}
+      {view === "workload" ? (
+        <WorkloadView
+          workload={workload}
+          month={month}
+          year={year}
+          agencyTimezone={calendar.agencyTimezone}
+          code={code as LocaleCode}
+          days={days}
+          cells={cells}
+          todayYear={todayYear}
+          todayMonth={todayMonth}
+          todayDay={todayDay}
+          members={members}
+          assigneeId={assigneeId}
+          t={t}
+        />
+      ) : null}
+      {/* The mobile agenda + desktop grid + unscheduled section are
+       * the agency-wide Calendar view body. Workload view already
+       * rendered its own grid + rail above, so we hide these. */}
+      {view === "calendar" ? (
+        <>
+          <section className="space-y-2 md:hidden" aria-label={t("calendar.globalAgendaAriaLabel")}>
+            {calendar.events.length === 0 ? (
+              <div className="border-border bg-surface text-body text-fg-secondary rounded-[var(--radius-card)] border p-4">
+                {t("calendar.globalEmptyMonth")}
+              </div>
+            ) : (
+              calendar.events.map((event) => (
+                <div
+                  key={`${event.kind}-${event.id}`}
+                  className="border-border bg-surface grid grid-cols-[5rem_minmax(0,1fr)] gap-3 rounded-[var(--radius-card)] border p-3"
+                >
+                  <time className="text-label text-fg-secondary font-semibold">
+                    {eventDateIsToday(event.startsAt) ? `${t("calendar.globalToday")} · ` : ""}
+                    {formatDate(event.startsAt, code, {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      timeZone: agencyTimezone,
+                    })}
+                  </time>
+                  <EventCard event={event} t={t} />
+                </div>
+              ))
+            )}
+          </section>
+          <div className="border-border bg-surface hidden overflow-x-auto rounded-[var(--radius-card)] border md:block">
+            <div className="grid min-w-[900px] grid-cols-7">
+              {weekdays(code as LocaleCode).map((day) => (
+                <div
+                  key={day}
+                  className="border-border text-label text-fg-muted border-b p-3 font-semibold"
                 >
                   {day}
-                </span>
-                <div className="mt-2 space-y-1">
-                  {events.slice(0, 5).map((event) => (
-                    <EventCard key={`${event.kind}-${event.id}`} event={event} t={t} />
-                  ))}
-                  {events.length > 5 ? (
-                    <p className="text-label text-fg-muted px-1">+{events.length - 5}</p>
-                  ) : null}
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-      {showTasks && calendar.unscheduledTasks.length > 0 ? (
-        <section
-          className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
-          aria-labelledby="global-calendar-unscheduled"
-        >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <h2
-                id="global-calendar-unscheduled"
-                className="text-title-section text-fg-primary font-semibold"
-              >
-                <span className="inline-flex items-center gap-2">
-                  <ListTodo className="h-4 w-4" aria-hidden="true" />
-                  {t("calendar.globalUnscheduledTitle")}
-                </span>
-              </h2>
-              <p className="text-body text-fg-secondary mt-1">
-                {t("calendar.globalUnscheduledDescription")}
-              </p>
+              ))}
+              {cells.map((day, index) => {
+                const inMonth = day >= 1 && day <= days;
+                const events = inMonth ? dayEvents(day) : [];
+                return (
+                  <div
+                    key={index}
+                    className={cn(
+                      "border-border min-h-36 border-e border-b p-2",
+                      !inMonth && "bg-surface-subtle/40",
+                      inMonth &&
+                        year === todayYear &&
+                        month === todayMonth &&
+                        day === todayDay &&
+                        "bg-primary/5 ring-primary/30 ring-1 ring-inset",
+                    )}
+                  >
+                    <span
+                      {...(inMonth && year === todayYear && month === todayMonth && day === todayDay
+                        ? { "aria-current": "date" as const }
+                        : {})}
+                      className={cn(
+                        "text-label",
+                        inMonth ? "text-fg-muted" : "invisible",
+                        inMonth &&
+                          year === todayYear &&
+                          month === todayMonth &&
+                          day === todayDay &&
+                          "text-primary font-bold",
+                      )}
+                    >
+                      {day}
+                    </span>
+                    <div className="mt-2 space-y-1">
+                      {events.slice(0, 5).map((event) => (
+                        <EventCard key={`${event.kind}-${event.id}`} event={event} t={t} />
+                      ))}
+                      {events.length > 5 ? (
+                        <p className="text-label text-fg-muted px-1">+{events.length - 5}</p>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <Link
-              href={tasksHref}
-              className="text-body text-primary focus-visible:ring-focus-ring inline-flex min-h-10 items-center font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-            >
-              {t("calendar.globalViewAllTasks")}
-            </Link>
           </div>
-          <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {calendar.unscheduledTasks.map((task) => (
-              <li key={task.id}>
+          {showTasks && calendar.unscheduledTasks.length > 0 ? (
+            <section
+              className="border-border bg-surface rounded-[var(--radius-card)] border p-4"
+              aria-labelledby="global-calendar-unscheduled"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h2
+                    id="global-calendar-unscheduled"
+                    className="text-title-section text-fg-primary font-semibold"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <ListTodo className="h-4 w-4" aria-hidden="true" />
+                      {t("calendar.globalUnscheduledTitle")}
+                    </span>
+                  </h2>
+                  <p className="text-body text-fg-secondary mt-1">
+                    {t("calendar.globalUnscheduledDescription")}
+                  </p>
+                </div>
                 <Link
-                  href={task.href}
-                  className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block min-h-20 rounded-[var(--radius-control)] border p-3 focus-visible:ring-2 focus-visible:outline-none"
+                  href={tasksHref}
+                  className="text-body text-primary focus-visible:ring-focus-ring inline-flex min-h-10 items-center font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
                 >
-                  <span className="text-body text-fg-primary block font-semibold wrap-break-word">
-                    {task.title}
-                  </span>
-                  <span className="text-label text-fg-muted mt-1 block truncate">
-                    {task.workspaceName ?? t("calendar.globalNoWorkspace")}
-                  </span>
+                  {t("calendar.globalViewAllTasks")}
                 </Link>
-              </li>
-            ))}
-          </ul>
-        </section>
+              </div>
+              <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {calendar.unscheduledTasks.map((task) => (
+                  <li key={task.id}>
+                    <Link
+                      href={task.href}
+                      className="border-border bg-surface-subtle hover:border-primary/50 focus-visible:ring-focus-ring block min-h-20 rounded-[var(--radius-control)] border p-3 focus-visible:ring-2 focus-visible:outline-none"
+                    >
+                      <span className="text-body text-fg-primary block font-semibold wrap-break-word">
+                        {task.title}
+                      </span>
+                      <span className="text-label text-fg-muted mt-1 block truncate">
+                        {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
+        </>
       ) : null}
     </div>
   );

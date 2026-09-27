@@ -12,6 +12,82 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Global calendar Workload view (per-user tasks + plans they're touching)
+
+"What's important to me in the global calendar is the ability to select a user and see
+all his tasks and current plans" — for a designer, "what they have left"; for a
+reviewer, "what's waiting on me"; for a manager, "is my team on top of it."
+
+The agency calendar now exposes two views via a segmented control above the filter
+section. **Calendar view** is the existing agency-wide grid; **Workload view** is a
+new single-user panel that reuses the calendar surface for fast switching.
+
+- **Service (`getUserWorkload`)** — new function in `src/lib/planning/calendar.ts`:
+  - Tasks the user is assigned to, in the selected month (`due_at ∈ [start, end)`).
+  - Unscheduled tasks assigned to them (no due date) — capped at 50, sorted by recency.
+  - Plans they touch, scoped to `content_owner_id`, `designer_id`, or
+    `content_reviewer_id` — each row carries a `role: "owner" | "designer" | "reviewer"`
+    badge resolved by a SQL `CASE` expression (priority: owner > designer > reviewer).
+  - Summary counters: overdue (not done/cancelled, past due), in-progress, blocked,
+    tasks this month, plans this month.
+  - Authorisation: caller must be an active agency member (`isAgencyMember`).
+
+- **UI** — new `WorkloadView` server component on `src/app/(app)/app/calendar/page.tsx`:
+  - **Summary chip strip:** overdue / in-progress / blocked / tasks-this-month /
+    plans-this-month. Tone-coded (danger for overdue > 0, warning for blocked > 0,
+    muted when zero).
+  - **Filtered monthly grid** showing only the user's tasks + plans for the month.
+  - **Right rail (desktop) / below grid (mobile):** sorted task list with status badge
+    and workspace; collapsible "Unscheduled tasks" sub-section so work without a
+    due date doesn't fall through the cracks; "Plans they're touching" list with
+    role badge per row.
+  - **Empty states:** "Pick a person" card when `view=workload` is on but
+    `assigneeId` is empty; "That person is no longer an agency member" when the
+    ID no longer resolves; per-list empty states for "no tasks / no plans".
+  - **Mobile agenda:** a stacked agenda section so the rail + grid are reachable on
+    narrow screens.
+
+- **View toggle** — new `ViewToggle` component above the filters:
+  - URL-driven (`view=calendar` default, `view=workload` opt-in).
+  - Tab semantics: `role="tablist"` / `role="tab"` / `aria-selected`.
+  - Toggle preserves `month`, `assigneeId`, and `workspaceId` across switches.
+  - Hidden `view` input on the filter form so submitting "Apply filters" doesn't
+    kick the user back to Calendar view.
+
+- **Scope decisions (vs the grill-me answers):**
+  - **Plan role scope = owner + designer + reviewer.** Every plan the user touches
+    appears with a role badge. Designers see the assets they're producing,
+    reviewers see their approval queue, owners see plans they created — without
+    three separate modes.
+  - **Calendar view stays task-only on the assignee filter.** Per the existing
+    description ("Assignee and status filters apply to tasks. Plans stay visible
+    unless you turn them off."), the agency grid keeps its old semantics. Workload
+    view is the dedicated surface for the cross-cutting "person" view.
+
+- **i18n:** 17 new keys per locale (`src/messages/{en,ar}/calendar.json`) covering
+  the view-toggle labels, workload titles/subtitles, summary chip labels, role
+  badges (`workloadRole.owner | designer | reviewer`), and the three empty-state
+  messages. Arabic translations included.
+
+- **Tests:** new e2e spec `tests/e2e/global-calendar-workload-view.spec.ts`
+  covers six states — Calendar default, Workload with no assignee, Workload with
+  an assignee (rail + summary chips), tab toggling both directions, and filter
+  form submission preserving `view=workload`. All 6 tests pass. Combined with the
+  3 filter-feedback tests from the previous entry, the calendar page now has
+  9 e2e tests covering both the new visual feedback and the new view.
+
+- **Files touched:**
+  - `src/lib/planning/calendar.ts` — `getUserWorkload` + 5 new exported types
+    (`WorkloadRole`, `WorkloadTask`, `WorkloadPlan`, `WorkloadSummary`, `UserWorkload`).
+  - `src/app/(app)/app/calendar/page.tsx` — `ViewToggle`, `WorkloadView`,
+    `SummaryChip`, `WorkloadTasksList`, `WorkloadPlansList` components; `view`
+    search-param parsing; workload data fetch gated on `view === "workload" &&
+assigneeId`; agency grid + unscheduled section gated on `view === "calendar"`.
+  - `src/messages/{en,ar}/calendar.json` — workload keys.
+
+- **Verification:** `pnpm typecheck` (project files) clean, ESLint on the touched
+  files clean (`--max-warnings=0`), all 9 calendar e2e tests pass.
+
 ### Fixed — Global calendar assignee/status filter "looks broken" when the chosen assignee has no tasks this month
 
 Picking an assignee (or a status) on `/app/calendar` and clicking **Apply filters** reduced

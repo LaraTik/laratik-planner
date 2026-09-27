@@ -1,6 +1,7 @@
 import "server-only";
 import { db } from "@/lib/db";
 import {
+  agencyMemberships,
   agencyTasks,
   agencies,
   contentItems,
@@ -9,7 +10,7 @@ import {
   workspaceSettings,
   workspaces,
 } from "@/lib/db/schema";
-import { and, asc, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, isNull, lt, or, sql } from "drizzle-orm";
 import {
   hasWorkspaceRole,
   isAgencyAdmin,
@@ -345,5 +346,202 @@ export async function getAgencyCalendarView(
       ...task,
       href: `/app/tasks/${task.id}`,
     })),
+  };
+}
+
+// ─── Workload view (round-of-2026-09-27, user request) ────────────────────
+//
+// "What's important to me in the global calendar is the ability to
+// select a user and see all his tasks and current plans" — pick a
+// designer and see what they still owe, what's on their plate this
+// month, and which plans they're touching.
+//
+// Plans have three user columns that count as "theirs":
+//   - content_owner_id       (who created / owns the plan)
+//   - designer_id            (who's producing the visuals)
+//   - content_reviewer_id    (who's approving)
+// Each plan the user touches is returned with a `role` badge so the
+// right-rail list can show "Owner", "Designer", or "Reviewer".
+// Future role additions (internal_creative_reviewer, client_reviewer)
+// can be added to `PlanRole` without breaking the API.
+
+export type WorkloadRole = "owner" | "designer" | "reviewer";
+
+export type WorkloadTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string;
+  startsAt: Date;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  href: string;
+};
+
+export type WorkloadPlan = {
+  id: string;
+  title: string;
+  status: string;
+  startsAt: Date;
+  workspaceId: string;
+  workspaceName: string;
+  role: WorkloadRole;
+  href: string;
+};
+
+export type WorkloadSummary = {
+  overdueTasks: number;
+  inProgressTasks: number;
+  blockedTasks: number;
+  tasksThisMonth: number;
+  plansThisMonth: number;
+};
+
+export type UserWorkload = {
+  user: { id: string; name: string } | null;
+  tasks: WorkloadTask[];
+  unscheduledTasks: WorkloadTask[];
+  plans: WorkloadPlan[];
+  summary: WorkloadSummary;
+};
+
+export async function getUserWorkload(
+  actor: Actor,
+  agencyId: string,
+  userId: string,
+  monthStart: Date,
+  monthEnd: Date,
+): Promise<UserWorkload> {
+  if (!(await isAgencyMember(actor, agencyId))) throw new Error("calendar.forbidden");
+
+  const [userRow] = await db
+    .select({ id: users.id, name: users.displayName })
+    .from(users)
+    .innerJoin(agencyMemberships, eq(agencyMemberships.userId, users.id))
+    .where(
+      and(
+        eq(users.id, userId),
+        eq(agencyMemberships.agencyId, agencyId),
+        eq(agencyMemberships.status, "active"),
+      ),
+    )
+    .limit(1);
+
+  const taskWhere = and(
+    eq(agencyTasks.agencyId, agencyId),
+    eq(agencyTasks.assigneeId, userId),
+    isNull(agencyTasks.archivedAt),
+  );
+
+  const [monthTasks, unscheduledTasks, allPlans] = await Promise.all([
+    db
+      .select({
+        id: agencyTasks.id,
+        title: agencyTasks.title,
+        status: agencyTasks.status,
+        priority: agencyTasks.priority,
+        startsAt: agencyTasks.dueAt,
+        workspaceId: agencyTasks.workspaceId,
+        workspaceName: workspaces.name,
+      })
+      .from(agencyTasks)
+      .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
+      .where(and(taskWhere, gte(agencyTasks.dueAt, monthStart), lt(agencyTasks.dueAt, monthEnd)))
+      .orderBy(asc(agencyTasks.dueAt)),
+    db
+      .select({
+        id: agencyTasks.id,
+        title: agencyTasks.title,
+        status: agencyTasks.status,
+        priority: agencyTasks.priority,
+        startsAt: agencyTasks.dueAt,
+        workspaceId: agencyTasks.workspaceId,
+        workspaceName: workspaces.name,
+      })
+      .from(agencyTasks)
+      .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
+      .where(and(taskWhere, isNull(agencyTasks.dueAt)))
+      .orderBy(desc(agencyTasks.createdAt))
+      .limit(50),
+    // Plans the user touches: owner OR designer OR reviewer.
+    // Each row carries a CASE expression that resolves the role
+    // for THIS user (priority: owner > designer > reviewer, since
+    // a single plan can have multiple roles filled by the same
+    // user in theory — owner wins for the badge).
+    db
+      .select({
+        id: contentItems.id,
+        title: contentItems.title,
+        status: contentItems.status,
+        startsAt: contentItems.plannedPublishAt,
+        workspaceId: workspaces.id,
+        workspaceName: workspaces.name,
+        workspaceSlug: workspaces.slug,
+        role: sql<WorkloadRole>`CASE
+          WHEN ${contentItems.contentOwnerId} = ${userId} THEN 'owner'
+          WHEN ${contentItems.designerId} = ${userId} THEN 'designer'
+          WHEN ${contentItems.contentReviewerId} = ${userId} THEN 'reviewer'
+        END`,
+      })
+      .from(contentItems)
+      .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+      .where(
+        and(
+          eq(workspaces.agencyId, agencyId),
+          isNull(contentItems.archivedAt),
+          or(
+            eq(contentItems.contentOwnerId, userId),
+            eq(contentItems.designerId, userId),
+            eq(contentItems.contentReviewerId, userId),
+          ),
+          gte(contentItems.plannedPublishAt, monthStart),
+          lt(contentItems.plannedPublishAt, monthEnd),
+        ),
+      )
+      .orderBy(asc(contentItems.plannedPublishAt)),
+  ]);
+
+  const tasks: WorkloadTask[] = monthTasks
+    .filter((t): t is typeof t & { startsAt: Date } => t.startsAt !== null)
+    .map((t) => ({
+      ...t,
+      href: `/app/tasks/${t.id}`,
+    }));
+  const unscheduled: WorkloadTask[] = unscheduledTasks.map((t) => ({
+    ...t,
+    // The unscheduled query filters on `isNull(due_at)`, but TS
+    // doesn't narrow the nullable column from the where clause.
+    // The synthetic date lets the list render in a stable order.
+    startsAt: t.startsAt ?? new Date(0),
+    href: `/app/tasks/${t.id}`,
+  }));
+  const plans: WorkloadPlan[] = allPlans.map((p) => ({
+    id: p.id,
+    title: p.title,
+    status: p.status,
+    startsAt: p.startsAt,
+    workspaceId: p.workspaceId,
+    workspaceName: p.workspaceName,
+    role: p.role,
+    href: `/app/w/${p.workspaceSlug}/planning/${p.id}`,
+  }));
+
+  const now = new Date();
+  const summary: WorkloadSummary = {
+    overdueTasks: tasks.filter(
+      (t) => t.status !== "done" && t.status !== "cancelled" && t.startsAt < now,
+    ).length,
+    inProgressTasks: tasks.filter((t) => t.status === "in_progress").length,
+    blockedTasks: tasks.filter((t) => t.status === "blocked").length,
+    tasksThisMonth: tasks.length,
+    plansThisMonth: plans.length,
+  };
+
+  return {
+    user: userRow ? { id: userRow.id, name: userRow.name } : null,
+    tasks,
+    unscheduledTasks: unscheduled,
+    plans,
+    summary,
   };
 }
