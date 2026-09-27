@@ -131,6 +131,10 @@ describe("MobileNav", () => {
 
     await user.click(screen.getByTestId("mobile-navigation-more"));
 
+    // Round-4a parity: on global routes the mobile sheet shows
+    // BOTH a Personal section (My tasks) and a Global section
+    // (All tasks + Global calendar). My tasks is personal
+    // regardless of context, so it must stay reachable here.
     expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
       "href",
       "/app/tasks/mine",

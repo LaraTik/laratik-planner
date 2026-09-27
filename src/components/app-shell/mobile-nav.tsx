@@ -263,14 +263,34 @@ export function MobileNav({
           </DialogHeader>
 
           <div className="overflow-y-auto overscroll-contain px-4 py-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-            <div className="border-border bg-surface-subtle mb-5 grid gap-2 rounded-[var(--radius-card)] border p-3">
+            <div
+              className="border-border bg-surface-subtle mb-5 grid gap-2 rounded-[var(--radius-card)] border p-3"
+              role="group"
+              aria-label={labelFor("contextLabel", "Agency and workspace context")}
+            >
+              {/* Round-4b parity: surface the "Tenant" header on the
+                  mobile sheet too so the user reads the two stacked
+                  switchers as one context card. */}
+              <div
+                className="text-label text-fg-muted px-1 pt-0.5 font-semibold tracking-wide uppercase"
+                data-testid="mobile-tenant-label"
+              >
+                {labelFor("tenantLabel", "Tenant")}
+              </div>
               <AgencySwitcher
                 active={agencySwitcher.active}
                 options={agencySwitcher.options}
                 isPlatformAdmin={platformAccess.canEnter}
                 testId="mobile-agency-switcher-trigger"
+                // Round-4b: same single-agency shortcut as the
+                // desktop sidebar so users with one agency don't
+                // see a one-row popover.
+                asSettingsLink={
+                  Boolean(agencySwitcher.active) && agencySwitcher.options.length <= 1
+                }
                 copy={agencySwitcherCopy(labels)}
               />
+              <div className="border-border mx-1 border-t" aria-hidden="true" />
               <WorkspaceSwitcher
                 active={currentWorkspace}
                 options={workspaces}
@@ -280,26 +300,41 @@ export function MobileNav({
               />
             </div>
 
-            <MenuSection label={labelFor("work", "Work")}>
+            {/* Round-4a parity: split the personal / global menus
+                to match the sidebar. "My tasks" is personal
+                regardless of context, so it stays visible on both
+                global and in-workspace routes. The cross-tenant
+                destinations (All tasks + Global calendar) only
+                make sense on global routes, so the Global section
+                is omitted once the user is inside a workspace —
+                that removes the "I'm in Acme Co. → All tasks →
+                every tenant's tasks" confusion without ever
+                hiding a destination outright. */}
+            <MenuSection label={labelFor("personal", "Personal")}>
               <MobileMenuLink
                 href="/app/tasks/mine"
                 icon={<ClipboardList />}
                 label={labelFor("my-tasks", "My tasks")}
                 active={pathname === "/app/tasks/mine"}
               />
-              <MobileMenuLink
-                href="/app/tasks"
-                icon={<ClipboardList />}
-                label={labelFor("all-tasks", "All tasks")}
-                active={pathname === "/app/tasks"}
-              />
-              <MobileMenuLink
-                href="/app/calendar"
-                icon={<CalendarDays />}
-                label={labelFor("global-calendar", "Global calendar")}
-                active={pathname === "/app/calendar"}
-              />
             </MenuSection>
+
+            {!currentWorkspace ? (
+              <MenuSection label={labelFor("global", "Global")}>
+                <MobileMenuLink
+                  href="/app/tasks"
+                  icon={<ClipboardList />}
+                  label={labelFor("all-tasks", "All tasks")}
+                  active={pathname === "/app/tasks"}
+                />
+                <MobileMenuLink
+                  href="/app/calendar"
+                  icon={<CalendarDays />}
+                  label={labelFor("global-calendar", "Global calendar")}
+                  active={pathname === "/app/calendar"}
+                />
+              </MenuSection>
+            ) : null}
 
             {currentWorkspace && !clientOnly ? (
               <MenuSection label={labelFor("workspaceSection", "Workspace")}>
@@ -549,8 +584,14 @@ function BottomNavLink({
       href={href}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] px-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
-        active ? "bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface-subtle",
+        // Round-4a: a 2px logical-top rail on the active bottom
+        // nav item matches the desktop sidebar's left-edge rail
+        // so users get the same "where am I" affordance on
+        // mobile. RTL mirrors automatically.
+        "text-label focus-visible:ring-focus-ring flex min-h-[var(--control-touch)] flex-col items-center justify-center gap-1 rounded-[var(--radius-control)] border-t-2 px-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        active
+          ? "bg-primary-subtle text-primary border-t-primary"
+          : "text-fg-secondary hover:bg-surface-subtle border-t-transparent",
       )}
     >
       <span className="[&>svg]:h-5 [&>svg]:w-5" aria-hidden="true">

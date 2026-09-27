@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 import { isActivePath, cn } from "@/lib/utils";
+import { clampBadge } from "@/lib/nav/badge-format";
+import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
@@ -118,9 +120,11 @@ export function Sidebar({
       isActivePath(`${wsBase}/board`, pathname) ||
       isActivePath(`${wsBase}/calendar`, pathname)),
   );
-  // Subscribe to the URL hash so the Settings page highlights the
-  // correct sub-anchor (Lifecycle / Lead times / etc).
-  React.useSyncExternalStore(subscribeToHash, readHash, () => "");
+  // The Settings branch used to subscribe to `hashchange` here to
+  // re-render on anchor navigation. Round-4c moves that
+  // responsibility into `useScrollSpyActiveId` inside
+  // `ExpandableNavGroup` (so the spy observes actual viewport
+  // position, not just hashchange events).
 
   // Build the navigation tree from the model. Each branch keeps the
   // build pure (no JSX) so the renderer is just dispatch.
@@ -259,7 +263,7 @@ function SidebarHeader({
           ) : null}
         </Link>
         {!collapsed && onCollapsedChange ? (
-          <SidebarCollapseToggle collapsed={collapsed} variant="header" />
+          <SidebarCollapseToggle collapsed={collapsed} variant="header" labels={labels} />
         ) : null}
       </div>
       {!collapsed || currentWorkspace || workspaceSwitcherOptions.length > 0 ? (
@@ -267,14 +271,35 @@ function SidebarHeader({
           className="border-border bg-surface-subtle mt-2 flex flex-col gap-0.5 rounded-[var(--radius-card)] border p-1"
           role="group"
           aria-label={labels["contextLabel"] ?? "Agency and workspace context"}
+          // Round-4b: announce an agency / workspace switch to
+          // screen readers without stealing focus. The switcher
+          // updates this subtree in place (the cookie POST
+          // refreshes the RSC layout), so the new context is read
+          // out politely.
+          aria-live="polite"
           data-testid="sidebar-context-switchers"
         >
+          {/* Round-4b: "Tenant" header label so the user reads the
+              two stacked switchers as a single context card. */}
+          {!collapsed ? (
+            <div
+              className="text-label text-fg-muted px-2 pt-1 pb-0.5 font-semibold tracking-wide uppercase"
+              data-testid="sidebar-tenant-label"
+            >
+              {labels["tenantLabel"] ?? "Tenant"}
+            </div>
+          ) : null}
           {agencySwitcher && (agencySwitcher.options.length > 0 || platformAccess.canEnter) ? (
             <AgencySwitcher
               active={agencySwitcher.active}
               options={agencySwitcher.options}
               isPlatformAdmin={platformAccess.canEnter}
               compact
+              // Round-4b: single-agency users skip the popover and
+              // land on agency settings directly. Saves a tap and
+              // removes the dead affordance of "switch" when there
+              // is only one choice.
+              asSettingsLink={Boolean(agencySwitcher.active) && agencySwitcher.options.length <= 1}
               copy={{
                 activeAria:
                   labels["agencySwitcherActiveAria"] ?? "Active agency: {name}. Click to switch.",
@@ -302,6 +327,16 @@ function SidebarHeader({
                   "Couldn't switch agencies. Please try again.",
               }}
               testId="sidebar-agency-switcher-trigger"
+            />
+          ) : null}
+          {/* Round-4b: 1px logical divider between agency and
+              workspace rows so each switcher reads as its own
+              entity sharing the card. */}
+          {!collapsed ? (
+            <div
+              className="border-border mx-1 my-0.5 border-t"
+              aria-hidden="true"
+              data-testid="sidebar-tenant-divider"
             />
           ) : null}
           <WorkspaceSwitcher
@@ -364,7 +399,7 @@ function SidebarFooter({
       {/* Footer toggle (only visible when collapsed — header toggle covers expanded). */}
       {collapsed ? (
         <div className="flex justify-center pt-1">
-          <SidebarCollapseToggle collapsed={collapsed} variant="footer" />
+          <SidebarCollapseToggle collapsed={collapsed} variant="footer" labels={labels} />
         </div>
       ) : null}
     </div>
@@ -399,7 +434,9 @@ function WorkspaceNavTree({
           labels={labels}
         />
       ))}
-      {groups.map((group) => (
+      {groups.map((group, idx) => (
+        // Round-4a: every group except the first gets a top
+        // divider so the buckets read as distinct sections.
         <NavGroup
           key={group.key}
           group={group}
@@ -407,6 +444,7 @@ function WorkspaceNavTree({
           planningActive={planningActive}
           collapsed={collapsed}
           labels={labels}
+          showTopDivider={idx > 0}
         />
       ))}
     </div>
@@ -461,7 +499,7 @@ function AgencyNavTree({
           labels={labels}
         />
       ))}
-      {groups.map((group) => (
+      {groups.map((group, idx) => (
         <NavGroup
           key={group.key}
           group={group}
@@ -469,6 +507,7 @@ function AgencyNavTree({
           planningActive={false}
           collapsed={false}
           labels={labels}
+          showTopDivider={idx > 0}
         />
       ))}
     </div>
@@ -481,22 +520,55 @@ function NavGroup({
   planningActive,
   collapsed,
   labels = {},
+  showTopDivider = true,
 }: {
   group: SidebarGroupSpec;
   pathname: string;
   planningActive: boolean;
   collapsed: boolean;
   labels?: Record<string, string>;
+  showTopDivider?: boolean;
 }) {
   const groupLabel = labels[group.key] ?? group.label;
   return (
-    <div className="space-y-1">
+    <div
+      className={cn(
+        // Round-4a: every group except the first gets a 1px top
+        // divider so the five buckets read as five buckets, not
+        // a continuous stack of rows.
+        showTopDivider && !collapsed ? "border-border mt-2 border-t pt-2" : undefined,
+        showTopDivider && collapsed ? "border-border mt-2 border-t pt-2" : undefined,
+      )}
+    >
       {group.heading ? (
-        <div className="text-label text-fg-muted hidden px-2 pt-3 pb-1 font-semibold tracking-wide uppercase xl:block">
-          {groupLabel}
-        </div>
+        collapsed ? (
+          // Round-4b: 72px rail gets a vertical-rl rotated label so
+          // the user can still tell which group an icon belongs to.
+          // `writing-mode: vertical-rl` mirrors automatically under
+          // `dir="rtl"`.
+          <div
+            className="text-label text-fg-muted ms-1 -mb-1 hidden font-semibold tracking-wide uppercase xl:block"
+            style={{ writingMode: "vertical-rl" }}
+            aria-hidden="true"
+            data-testid={`sidebar-group-label-${group.key}`}
+          >
+            {groupLabel}
+          </div>
+        ) : (
+          // Round-4a: lowercase + --fg-muted + visible from md
+          // onward. Removed the `hidden xl:block` guard so the
+          // heading renders on every expanded viewport.
+          <div
+            className="text-label text-fg-muted px-3 pt-1 pb-1 font-semibold"
+            data-testid={`sidebar-group-label-${group.key}`}
+          >
+            {groupLabel}
+          </div>
+        )
       ) : null}
-      {group.items.map((item) => renderItem(item, pathname, planningActive, collapsed, labels))}
+      <div className="space-y-1">
+        {group.items.map((item) => renderItem(item, pathname, planningActive, collapsed, labels))}
+      </div>
     </div>
   );
 }
@@ -507,22 +579,30 @@ function renderItem(
   planningActive: boolean,
   collapsed: boolean,
   labels: Record<string, string>,
+  spiedActiveId: string | null = null,
 ): React.ReactNode {
   switch (item.kind) {
-    case "link":
+    case "link": {
+      // Round-4c: when the scroll-spy has pinned a section id
+      // (currently only the workspace Settings group uses this),
+      // treat a child whose href hash matches the active id as
+      // active. Otherwise fall back to pathname matching so
+      // non-scroll-spy children still highlight correctly.
+      const hashIndex = item.href.indexOf("#");
+      const childHash = hashIndex >= 0 ? item.href.slice(hashIndex + 1) : null;
+      const isActive =
+        (spiedActiveId !== null && childHash === spiedActiveId) ||
+        isActivePath(item.href, pathname, item.exact === undefined ? {} : { exact: item.exact });
       return (
         <SidebarLinkRow
           key={item.key}
           spec={item}
-          active={isActivePath(
-            item.href,
-            pathname,
-            item.exact === undefined ? {} : { exact: item.exact },
-          )}
+          active={isActive}
           collapsed={collapsed}
           labels={labels}
         />
       );
+    }
     case "expandable":
       return (
         <ExpandableNavGroup
@@ -582,9 +662,16 @@ function SidebarLinkRow({
       title={ariaLabel}
       data-testid={spec.testId ?? `sidebar-${spec.key}`}
       className={cn(
-        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-[var(--radius-control)] px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
+        // Round-4a: 4px logical-left rail gives the active row a
+        // third signal (color + weight + edge indicator) per
+        // `nav-state-active`. `border-s-transparent` reserves the
+        // slot on inactive rows so the layout doesn't shift when
+        // the active state flips. RTL mirrors automatically.
+        "text-body focus-visible:ring-focus-ring flex min-h-11 items-center gap-3 rounded-s-none rounded-e-[var(--radius-control)] border-s-4 px-3 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none",
         collapsed ? "justify-center" : "justify-start",
-        active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
+        active
+          ? "bg-primary-subtle text-primary border-s-primary"
+          : "text-fg-primary hover:bg-surface-subtle border-s-transparent",
       )}
     >
       <span
@@ -600,7 +687,7 @@ function SidebarLinkRow({
           aria-label={pendingTemplate.replace("{label}", label).replace("{count}", String(badge))}
           data-testid={`sidebar-badge-${spec.key}`}
         >
-          {badge > 99 ? "99+" : badge}
+          {clampBadge(badge)}
         </span>
       ) : null}
     </Link>
@@ -621,7 +708,37 @@ function ExpandableNavGroup({
   labels?: Record<string, string>;
 }) {
   const Icon = spec.icon;
-  const active = spec.activePrefixes.some((p) => isActivePath(p, pathname));
+  // Round-4c: for groups whose children are hash-anchored
+  // sections (currently only the workspace `Settings` group),
+  // derive the active id from scroll position via the shared
+  // scroll-spy hook. The hashchange subscription that previously
+  // owned active detection (line 123) misses scroll-driven
+  // section transitions and leaves a stale highlight when the
+  // user scrolls past an anchor.
+  const hashAnchoredChildren = React.useMemo(
+    () => hashAnchoredSectionIds(spec.children),
+    [spec.children],
+  );
+  const spiedActiveId = useScrollSpyActiveId(hashAnchoredChildren.map((id) => ({ id })));
+  // Round-4c: scroll-spy only contributes when the user is
+  // actually on one of the group's prefix routes. Off-route the
+  // spied id is meaningless (no `<section id="…">` exists in the
+  // DOM, the spy stays on its initial id) and would otherwise
+  // force the group open.
+  const onGroupRoute = spec.activePrefixes.some((p) => isActivePath(p, pathname));
+  // The group is "active" if the user is on one of its routes
+  // AND (a) the scroll-spy pinned a child id (workspace
+  // Settings), OR (b) any child matches the pathname via the
+  // standard active-predicate (Agency settings, etc.). Either
+  // path keeps the group expanded while the user is inside it.
+  const childActive = spec.children.some((child) =>
+    child.kind === "link"
+      ? isActivePath(child.href, pathname, child.exact === undefined ? {} : { exact: child.exact })
+      : false,
+  );
+  const active =
+    onGroupRoute &&
+    (childActive || (spiedActiveId !== null && hashAnchoredChildren.includes(spiedActiveId)));
   const [forcedOpen, setForcedOpen] = React.useState<boolean | null>(null);
   // For the planning group we want the route family to auto-open;
   // for other groups we follow the spec's defaultOpen semantics.
@@ -634,8 +751,10 @@ function ExpandableNavGroup({
     <div className="space-y-1">
       <div
         className={cn(
-          "flex min-h-11 items-center rounded-[var(--radius-control)] font-semibold transition-colors",
-          active ? "bg-primary-subtle text-primary" : "text-fg-primary hover:bg-surface-subtle",
+          "flex min-h-11 items-center rounded-s-none rounded-e-[var(--radius-control)] border-s-4 border-s-transparent font-semibold transition-colors",
+          active
+            ? "bg-primary-subtle text-primary border-s-primary"
+            : "text-fg-primary hover:bg-surface-subtle",
         )}
       >
         <Link
@@ -644,7 +763,7 @@ function ExpandableNavGroup({
           aria-label={label}
           title={label}
           className={cn(
-            "text-body focus-visible:ring-focus-ring flex min-h-11 flex-1 items-center gap-3 rounded-[var(--radius-control)] px-3 focus:outline-none focus-visible:ring-2",
+            "text-body focus-visible:ring-focus-ring flex min-h-11 flex-1 items-center gap-3 rounded-s-none rounded-e-[var(--radius-control)] px-3 focus:outline-none focus-visible:ring-2",
             collapsed ? "justify-center" : "justify-start",
           )}
           data-testid={spec.testId}
@@ -680,13 +799,37 @@ function ExpandableNavGroup({
         <ul className="ms-4 hidden space-y-0.5 border-s border-[var(--color-border)] ps-3 xl:block">
           {spec.children.map((child) => (
             <li key={child.key}>
-              {renderItem(child, pathname, planningActive, collapsed, labels)}
+              {renderItem(child, pathname, planningActive, collapsed, labels, spiedActiveId)}
             </li>
           ))}
         </ul>
       ) : null}
     </div>
   );
+}
+
+/**
+ * Extract the hash-anchored section ids from a list of sidebar
+ * items. Returns the deduplicated list of `#foo` fragments that
+ * appear in any child's `href`. Items without a hash fragment are
+ * ignored — the scroll-spy hook is only meaningful for groups
+ * whose children navigate to in-page anchors.
+ *
+ * Example: an item with `href = "/w/foo/settings#lifecycle"`
+ * contributes `"lifecycle"`.
+ */
+function hashAnchoredSectionIds(items: SidebarItemSpec[]): string[] {
+  const out: string[] = [];
+  for (const item of items) {
+    if (item.kind === "link") {
+      const hashIndex = item.href.indexOf("#");
+      if (hashIndex >= 0) {
+        const id = item.href.slice(hashIndex + 1);
+        if (id && !out.includes(id)) out.push(id);
+      }
+    }
+  }
+  return out;
 }
 
 function NestedNavGroup({
@@ -745,17 +888,6 @@ function NestedNavGroup({
       ) : null}
     </div>
   );
-}
-
-// ─── Hooks ─────────────────────────────────────────────────────────────────
-
-function subscribeToHash(onStoreChange: () => void) {
-  window.addEventListener("hashchange", onStoreChange);
-  return () => window.removeEventListener("hashchange", onStoreChange);
-}
-
-function readHash() {
-  return window.location.hash;
 }
 
 // Re-export the icon type so consumers can type their own sub-trees.

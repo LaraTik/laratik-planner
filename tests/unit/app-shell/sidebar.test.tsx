@@ -631,6 +631,164 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
 });
 
 /**
+ * Round-4 ui-ux-pro-max refinement cases.
+ *
+ * The earlier `/ui-ux-pro-max refinement` block above covers the
+ * first three pass-rounds. Round-4 adds:
+ *   - Active state with three signals (color + weight + left rail)
+ *   - Group dividers between the five nav buckets
+ *   - Group headings visible at every expanded breakpoint
+ *   - Tenant card header label + divider between agency/workspace
+ *   - Personal group in workspace mode (My tasks only)
+ *   - Global group in agency mode (All tasks + Global calendar)
+ *   - Single-agency shortcut → /app/agency-settings link
+ *   - Workspace switcher tab indicator
+ *   - clampBadge formatter
+ */
+describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
+  beforeEach(() => {
+    usePathnameMock.mockReset();
+  });
+
+  it("renders the Personal group (My tasks only) inside workspace mode", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    // The Personal group must show My tasks …
+    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
+      "href",
+      "/app/tasks/mine",
+    );
+    // … but NOT All tasks or Global calendar (those are agency-only).
+    expect(screen.queryByRole("link", { name: "All tasks" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Global calendar" })).toBeNull();
+  });
+
+  it("keeps My tasks reachable on global routes too (no orphaned destination)", () => {
+    usePathnameMock.mockReturnValue("/app/tasks");
+    render(<Sidebar {...baseProps} />);
+    // Round-4a moved All tasks / Global calendar into the agency-only
+    // Global group. My tasks is personal, so it has to stay
+    // reachable on BOTH sides of the workspace boundary —
+    // otherwise global-mode users lose the destination entirely.
+    expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
+      "href",
+      "/app/tasks/mine",
+    );
+    expect(screen.getByRole("link", { name: "All tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Global calendar" })).toBeInTheDocument();
+  });
+
+  it("resolves the Tenant header + group headings through the labels map (bilingual)", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(
+      <Sidebar
+        {...baseProps}
+        labels={{
+          tenantLabel: "المؤسسة",
+          personal: "شخصي",
+          global: "عام",
+          content: "المحتوى",
+        }}
+      />,
+    );
+    // Regression guard for the round-4 threading bug: the group
+    // heading reads `labels[group.key]` (the SPEC key, e.g.
+    // "personal" / "global"), NOT the catalog suffix
+    // ("globalGroup"). If the layout threads the wrong key the
+    // heading silently falls back to the hardcoded English
+    // `group.label` and Arabic users see untranslated chrome.
+    expect(screen.getByTestId("sidebar-tenant-label")).toHaveTextContent("المؤسسة");
+    expect(screen.getByTestId("sidebar-group-label-personal")).toHaveTextContent("شخصي");
+    expect(screen.getByTestId("sidebar-group-label-content")).toHaveTextContent("المحتوى");
+  });
+
+  it("resolves the Global group heading through the labels map (bilingual)", () => {
+    usePathnameMock.mockReturnValue("/app/tasks");
+    render(<Sidebar {...baseProps} labels={{ global: "عام", agency: "الوكالة" }} />);
+    // `global` is the only genuinely new nav key in round 4 — the
+    // workspace `personal` group reuses the pre-existing account
+    // `personal` key. This pins the agency-side threading so the
+    // Global heading can't silently fall back to English.
+    expect(screen.getByTestId("sidebar-group-label-global")).toHaveTextContent("عام");
+  });
+
+  it("announces tenant context changes politely without stealing focus", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    // An agency switch replaces this subtree in place after the
+    // cookie POST; `aria-live="polite"` makes the new context
+    // audible without yanking the caret.
+    expect(screen.getByTestId("sidebar-context-switchers")).toHaveAttribute("aria-live", "polite");
+  });
+
+  it("renders the Global group (All tasks + Global calendar) on global routes", () => {
+    usePathnameMock.mockReturnValue("/app/calendar");
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByRole("link", { name: "All tasks" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Global calendar" })).toBeInTheDocument();
+  });
+
+  it("marks the active workspace link with a left-edge primary rail", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    const planning = screen.getByRole("link", { name: "Planning" });
+    expect(planning).toHaveAttribute("aria-current", "page");
+    // The left-edge rail uses logical `border-s-4` + `border-s-primary`
+    // on the row container. Planning is an expandable group, so
+    // the rail lives on the parent `<div>` that wraps both the
+    // link and the chevron toggle — walk up to find it.
+    const planningRow = planning.closest("[class*='border-s-4']");
+    expect(planningRow).not.toBeNull();
+    expect(planningRow!.className).toMatch(/border-s-primary/);
+  });
+
+  it("renders group dividers between every pair of groups (after the first)", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    // The sidebar carries a Personal group heading and a Brand
+    // group heading; the divider between them is the `border-t
+    // border-border` class on the Brand group container.
+    const brandHeading = screen.getByTestId("sidebar-group-label-brand");
+    expect(brandHeading.parentElement?.className ?? "").toMatch(/border-t/);
+  });
+
+  it("renders the Tenant header label on the context card", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByTestId("sidebar-tenant-label")).toHaveTextContent("Tenant");
+  });
+
+  it("renders a divider between the agency and workspace switchers", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    expect(screen.getByTestId("sidebar-tenant-divider")).toBeInTheDocument();
+  });
+
+  it("renders the workspace switcher tab indicator (border-b-primary) when active", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(<Sidebar {...baseProps} />);
+    const wsTrigger = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    expect(wsTrigger.className).toMatch(/border-b-primary/);
+  });
+
+  it("uses a single-agency shortcut link to /app/agency-settings", () => {
+    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    render(
+      <Sidebar
+        {...baseProps}
+        agencySwitcher={{
+          active: { id: "agency-1", name: "Northstar Studio", slug: "northstar", isAdmin: true },
+          options: [{ id: "agency-1", name: "Northstar Studio", slug: "northstar", isAdmin: true }],
+        }}
+      />,
+    );
+    const agencyLink = screen.getByTestId("sidebar-agency-switcher-trigger");
+    expect(agencyLink.tagName).toBe("A");
+    expect(agencyLink).toHaveAttribute("href", "/app/agency-settings");
+  });
+});
+
+/**
  * Workspace switcher — detail-suffix behaviour (M1.5 + fix).
  *
  * The pre-fix switcher hard-coded `/planning/<id>` as the only

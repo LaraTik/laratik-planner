@@ -144,7 +144,13 @@ export function WorkspaceSwitcher({
           aria-label={active ? withName(copy.activeAria, active.name) : copy.selectAria}
           data-testid={testId}
           className={cn(
-            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+            // Round-4b: a 2px logical-bottom border under the
+            // active workspace row gives the user the visual cue
+            // "you're currently inside this workspace" without
+            // claiming new vertical space. The border is logical
+            // so it mirrors automatically under `dir="rtl"`.
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-s-none rounded-e-[var(--radius-control)] border-b-2 px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+            active ? "border-b-primary" : "border-b-transparent",
             compact ? "justify-center xl:justify-start" : "justify-start",
           )}
         >

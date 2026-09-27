@@ -265,6 +265,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       collapseGroup: t("sidebar.collapseGroup"),
       expandGroup: t("sidebar.expandGroup"),
       contextLabel: t("sidebar.contextLabel"),
+      tenantLabel: t("sidebar.tenantLabel"),
+      expandSidebar: t("sidebar.expandSidebar"),
+      collapseSidebar: t("sidebar.collapseSidebar"),
+      expandSidebarTablet: t("sidebar.expandSidebarTablet"),
       agencySwitcherActiveAria: t("sidebar.agencySwitcherActiveAria"),
       agencySwitcherSelectAria: t("sidebar.agencySwitcherSelectAria"),
       agencySwitcherSelect: t("sidebar.agencySwitcherSelect"),
@@ -344,7 +348,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       // Agency navigation (matches the `key` field of each
       // buildAgencyNavigation spec).
       "my-work": t("sidebar.myWork"),
-      work: t("sidebar.workGroup"),
+      // Round-4a: the `work` group was split into `personal`
+      // (workspace-only, My tasks) and `global` (agency-only,
+      // All tasks + Global calendar). The `personal` key is
+      // already threaded above for the account section — both
+      // resolve to the same word in EN and AR, so one key serves
+      // both headings. `global` is new and needs its own entry or
+      // the heading falls back to the hardcoded English
+      // `group.label` and Arabic users see untranslated chrome.
+      global: t("sidebar.globalGroup"),
       "my-tasks": t("sidebar.myTasks"),
       "all-tasks": t("sidebar.allTasks"),
       "global-calendar": t("sidebar.globalCalendar"),

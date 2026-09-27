@@ -77,6 +77,14 @@ export function AgencySwitcher({
   testId,
   isPlatformAdmin = false,
   compact = false,
+  /**
+   * Round-4b single-agency micro-affordance: when the user is a
+   * member of exactly one agency, the switcher collapses to a
+   * plain `<Link>` to `/app/agency-settings` instead of opening a
+   * one-row popover. Saves a tap + clarifies that "this is your
+   * one agency, click to manage it". Set by the caller.
+   */
+  asSettingsLink = false,
   copy = DEFAULT_COPY,
 }: {
   active: AgencyRow | null;
@@ -84,6 +92,7 @@ export function AgencySwitcher({
   testId?: string;
   isPlatformAdmin?: boolean;
   compact?: boolean;
+  asSettingsLink?: boolean;
   copy?: AgencySwitcherCopy;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -197,6 +206,38 @@ export function AgencySwitcher({
         </span>
         <span className={compact ? "hidden xl:inline" : "inline"}>{copy.noAgency}</span>
       </button>
+    );
+  }
+
+  // Round-4b single-agency shortcut: the user is a member of
+  // exactly one agency AND the caller asked for the link variant.
+  // Skip the popover entirely — clicking the row navigates to
+  // agency settings. The active agency is the only one so there's
+  // no switch choice to surface.
+  if (asSettingsLink && active && options.length <= 1) {
+    return (
+      <Link
+        href="/app/agency-settings"
+        aria-label={withName(copy.activeAria, active.name)}
+        title={active.name}
+        data-testid={testId}
+        className={cn(
+          "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+          compact ? "justify-center xl:justify-start" : "justify-start",
+        )}
+      >
+        <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
+          {active.name.charAt(0).toUpperCase()}
+        </span>
+        <span className={compact ? "hidden xl:inline" : "inline"}>{active.name}</span>
+        {active.isAdmin ? (
+          <Shield
+            className="text-primary h-3.5 w-3.5"
+            aria-label={copy.adminLabel}
+            data-testid={testId ? `${testId}-admin-badge` : undefined}
+          />
+        ) : null}
+      </Link>
     );
   }
 
