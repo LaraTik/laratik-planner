@@ -35,7 +35,7 @@ import type {
   ActivityRenderSpec,
   RawActivityEvent,
 } from "./types";
-import { resolveActorName, resolveChannelLabel, resolveStatusLabel } from "./resolve";
+import { resolveActorName, resolveChannelLabel, resolveStatusLabel } from "./lookups";
 
 /** Translator signature mirroring `next-intl`'s `t()`. */
 export type Translator = (key: string, params?: Record<string, string | number>) => string;

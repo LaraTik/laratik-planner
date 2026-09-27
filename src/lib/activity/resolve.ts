@@ -8,6 +8,22 @@ import { tFor } from "@/messages";
 import type { ActivityContext, RawActivityEvent } from "./types";
 
 /**
+ * The pure Map-read helpers live in `./lookups` (no `server-only`),
+ * because `./format` is imported by a `"use client"` component and
+ * importing them from this module would drag `server-only` into
+ * the client bundle. They are re-exported here so server-side
+ * callers of `@/lib/activity/resolve` keep a single import site.
+ */
+export {
+  resolveActorName,
+  resolveActorEmail,
+  resolveStatusLabel,
+  resolveChannelLabel,
+  resolveDesignerName,
+  resolveOwnerName,
+} from "./lookups";
+
+/**
  * Activity context resolver.
  *
  * Batches all the lookups the formatter needs (status names,
@@ -224,63 +240,6 @@ function buildEnumLabelMap(
   return map;
 }
 
-/** Look up a user by id; returns a fallback for unknown / null. */
-export function resolveActorName(
-  ctx: Pick<ActivityContext, "userById">,
-  actorId: string | null | undefined,
-  fallback: string,
-): string {
-  if (!actorId) return fallback;
-  return ctx.userById.get(actorId)?.name ?? fallback;
-}
-
-/** Look up a user by id; returns a fallback for unknown / null. */
-export function resolveActorEmail(
-  ctx: Pick<ActivityContext, "userById">,
-  actorId: string | null | undefined,
-): string | null {
-  if (!actorId) return null;
-  return ctx.userById.get(actorId)?.email ?? null;
-}
-
-/** Look up a status by enum value; returns the raw enum if unknown. */
-export function resolveStatusLabel(
-  ctx: Pick<ActivityContext, "statusLabels">,
-  status: string | null | undefined,
-): string {
-  if (!status) return "";
-  return ctx.statusLabels.get(status) ?? status;
-}
-
-/** Look up a social channel by `contentItemChannelId`; returns a
- *  fallback for unknown / null. The `platform` is included in the
- *  fallback so the formatter can still produce a meaningful label. */
-export function resolveChannelLabel(
-  ctx: Pick<ActivityContext, "channelByContentItemChannelId">,
-  contentItemChannelId: string | null | undefined,
-  fallback: string,
-): string {
-  if (!contentItemChannelId) return fallback;
-  return ctx.channelByContentItemChannelId.get(contentItemChannelId)?.label ?? fallback;
-}
-
-/** Best-effort: the active designer for a content item. */
-export function resolveDesignerName(
-  ctx: Pick<ActivityContext, "designerByContentItemId">,
-  contentItemId: string | null | undefined,
-): { id: string; name: string } | null {
-  if (!contentItemId) return null;
-  return ctx.designerByContentItemId.get(contentItemId) ?? null;
-}
-
-/** Best-effort: the active owner for a content item. */
-export function resolveOwnerName(
-  ctx: Pick<ActivityContext, "ownerByContentItemId">,
-  contentItemId: string | null | undefined,
-): { id: string; name: string } | null {
-  if (!contentItemId) return null;
-  return ctx.ownerByContentItemId.get(contentItemId) ?? null;
-}
 
 // Suppress an unused-import warning when callers only use the type.
 export type { LocaleCode } from "@/lib/i18n/locales";

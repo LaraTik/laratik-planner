@@ -219,24 +219,6 @@ Settings is a **nested group in the main sidebar**, not an inline nav inside a s
 
 For native HTML form controls, use the shared primitives in `src/components/forms/` (FormField, FormSubmitButton, PasswordInput, PasswordStrengthMeter). For checkboxes, **use `<Checkbox>` from `src/components/ui/checkbox.tsx`** — never raw `<input type="checkbox">`. The Radix-powered primitive bakes in the `checkbox` role, `aria-checked` state, keyboard handling (space to toggle), and indeterminate state, which are easy to get wrong with a native input. Pair the checkbox with a `<label htmlFor={id}>` and a helper `<p id="${id}-help">` (linked via `aria-describedby`) when the affordance needs explanation — see `app/users/add-directly-form.tsx` for the canonical pattern. The shared primitive intentionally includes `min-h-0`: the global mobile touch-target rule applies to every `button`/`role="button"`, and allowing that rule to stretch a 16px checkbox produces a broken tall rectangle. Put the checkbox in a labeled row/card that supplies the 44px touch target instead.
 
-**`"use client"` is mandatory ONLY when the file uses a client-only React API
-(`useState`, `useEffect`, `useRef`, `useMemo`, `useCallback`, `useReducer`,
-`useContext` over a client store, event handlers like `onClick`, browser-only
-APIs like `window`/`document`/`localStorage`).** Presentational wrappers like
-`FormField`, `FormSubmitButton`, `EmptyState`, `Card`, `SectionHeader`, `KpiCard`
-do NOT need `"use client"` — they take a `children: ReactNode` prop and the
-React tree resolves whether each child is server- or client-rendered on its
-own merits. Marking them `"use client"` anyway causes Next.js 16 / Turbopack to
-register them as a `client reference proxy` that the SSR tree then walks into,
-and any nested client primitive (Radix `Label`, `Checkbox`, etc.) resolves to
-`undefined` and throws **Minified React error #130** ("Element type is invalid
-… but got: undefined") on every cold render. Symptom: the page renders fine
-(client-side fallback after the SSR throw), but the throw lands in every
-server log and every `/app/platform/errors` row. Fix: drop the directive.
-`src/components/forms/form-field.tsx` is the canonical example — it uses only
-`React.cloneElement` (a React API, not a hook) and was the trigger for the
-round-of-2026-09-26 #130.
-
 For bilingual (English + Arabic) text inputs, use the shared
 `DirAwareTextarea` / `DirAwareInput` from
 `src/components/forms/dir-aware-textarea.tsx`. They auto-switch
@@ -422,8 +404,6 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 
 > Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs changed-line coverage and critical Chromium on every `main` push, then strict coverage and the full browser/visual matrix nightly and for release candidates. Format / lint / typecheck / full unit suite run locally in `.husky/pre-commit` and `.husky/pre-push`; critical E2E is advisory locally. `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
 
-## Conventions
-
 ## Activity log rendering
 
 The workspace-wide feed (`/app/w/[slug]/activity`) and the
@@ -441,8 +421,8 @@ the **shared formatter + renderer**:
   ID → name lookups (users, channels, status enums) into one
   pass per workspace per page render.
 - **Shared renderer:** `components/activity/activity-entry.tsx`
-  - `<ActivityDiff />` consume the spec and emit the row. The
-    same row shape renders on both surfaces.
+  + `<ActivityDiff />` consume the spec and emit the row. The
+  same row shape renders on both surfaces.
 - **Verb templates:** `messages/{en,ar}/activity.json` under
   `activity.verbs.<kind>`. `{target}`, `{before}`, `{after}`,
   `{metadata}`, `{count}` placeholders.
@@ -473,7 +453,7 @@ diff shapes, and extension recipe.
 
 ## Conventions
 
-- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`, `activity`.
+- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
@@ -740,251 +720,19 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
-### 2026-09-27 — Global calendar Workload view (per-user tasks + plans they're touching) (feat/calendar-workload)
+### 2026-09-26 — Unified calendar card (feat/unified-calendar-card)
 
-Round-of-2026-09-27 user request: "What's important to me in the global calendar is the
-ability to select a user and see all his tasks and current plans" — for a designer, "what
-they have left"; for a reviewer, "what's waiting on me." Adds a `view=workload` URL
-state, a `ViewToggle` segmented control, and a single-user panel inside the existing
-`/app/calendar` page. The agency-wide Calendar view is preserved.
+DRY + accessibility fix across the two calendar surfaces. The per-workspace `/app/w/[slug]/calendar` and the agency-wide `/app/calendar` previously rendered the same event with two different components: the workspace calendar used `CalendarEventCard` (status badge + left-border colour accent + format chip) while the global calendar inlined its own `EventCard` with status as plain text. Admins using the global overview could not spot blocked / in-review / done items at a glance — exactly the quick-overview use case the surface is meant to serve.
 
-- **feat(calendar): `getUserWorkload` service.** New function in
-  `src/lib/planning/calendar.ts` returning:
-  - `tasks[]` — assignee's tasks due in the selected month
-  - `unscheduledTasks[]` — assignee's tasks with no due date (capped 50)
-  - `plans[]` — plans the user touches as `content_owner_id`,
-    `designer_id`, or `content_reviewer_id`, each with a `role: "owner" |
-"designer" | "reviewer"` badge resolved by SQL `CASE`
-  - `summary` — overdue / in-progress / blocked / tasks-this-month /
-    plans-this-month counts
-    Auth: `isAgencyMember(actor, agencyId)` required.
+- **feat(ui): unify `CalendarEventCard` — one component, two surfaces.** New `kind: "plan" | "task"` and `variant: "compact" | "default"` props let the same component render the tight workspace day-cell chip (`compact` + `plan`) and the agency-overview card (`default` + plan or task). The workspace calendar keeps its current rendering via the defaults; the global calendar now consumes the same component with `variant="default"` and gets the status badge + left-border accent for free. (`src/components/workspace/calendar-event-card.tsx`).
 
-- **feat(calendar): `WorkloadView` server component.** New component in
-  `src/app/(app)/app/calendar/page.tsx`:
-  - **Summary chip strip** — tone-coded (danger for overdue > 0, warning for
-    blocked > 0, primary for in-progress, muted for totals).
-  - **Filtered monthly grid** — only the user's tasks + plans.
-  - **Right rail (desktop) / below grid (mobile):** sorted task list with
-    status badge + workspace, collapsible "Unscheduled tasks" sub-section,
-    "Plans they're touching" list with role badge per row.
-  - **Three empty states:** "Pick a person" when `assigneeId` is empty,
-    "That person is no longer an agency member" when the ID no longer
-    resolves, and per-list empties for "no tasks / no plans this month".
-  - **Mobile agenda** — stacked agenda section for narrow screens.
+- **feat(ui): agency-overview calendar gains status + priority colour cues (admin quick overview).** Status badge maps plan + task statuses to the existing `Badge` variant set (`success` / `warning` / `danger` / `info` / `default`); the same colour drives the left-border accent so the day cell carries the cue even when the badge text is truncated. Tasks additionally render the priority as a coloured secondary line (urgent → danger, high → warning, low → info, normal → default) so admins can scan a dense month grid for blockers without reading every card. (`src/app/(app)/app/calendar/page.tsx`).
 
-- **feat(calendar): `ViewToggle` segmented control.** URL-driven:
-  - `view=calendar` (default) / `view=workload`.
-  - `role="tablist"` + `role="tab"` + `aria-selected` for a11y.
-  - Toggle preserves `month`, `assigneeId`, `workspaceId` across switches.
-  - Hidden `view` input on the filter form keeps the view param alive
-    across "Apply filters" submissions.
+- **feat(lib): `taskBadgeVariant(status)` + `priorityBadgeVariant(priority)` helpers.** Single source of truth for the task-side colour mapping; the existing `TaskStatusBadge` continues to use its inline classes (no visual regression on `/app/tasks`) but the calendar surfaces now use the variant-aware path so the swatches stay in lock-step with content statuses. (`src/lib/tasks/status-badge.ts`).
 
-- **scope:** Plan role scope = **owner + designer + reviewer**. Every plan
-  the user touches appears with a role badge; designers see the assets
-  they're producing, reviewers see their approval queue, owners see plans
-  they created — without three separate modes. Calendar view's assignee
-  filter stays task-only (matches the existing `globalAssigneeNote` text).
+- **test: 6 new cases on `CalendarEventCard`** for task kind (success/danger swatches, priority secondary line), default variant (kind label + workspace + assignee metadata), noWorkspace fallback, and plan-without-assignee. **11 new cases on `taskBadgeVariant` / `priorityBadgeVariant`** pinning every enum value to its swatch so a future status/priority addition can't silently desync. All 30 cases pass; tsc clean.
 
-- **i18n:** 17 new keys per locale (`viewToggleAriaLabel`, `viewCalendar`,
-  `viewWorkload`, `workloadTitle`, `workloadSubtitle`, `workloadSummary*`,
-  `workloadOverdue` / `InProgress` / `Blocked` / `TasksThisMonth` /
-  `PlansThisMonth`, `workloadTasksTitle` / `Empty` / `List`, `workloadPlansTitle`
-  / `Empty` / `List`, `workloadPickAssignee*`, `workloadMemberNotFoundTitle`,
-  `workloadUnscheduledLabel`, `workloadEmptyMonth`, `workloadAgendaAriaLabel`,
-  `workloadUnknownUser`, `workloadRole.{owner|designer|reviewer}`). Arabic
-  translations match.
-
-- **tests:** `tests/e2e/global-calendar-workload-view.spec.ts` — six tests:
-  Calendar default (no toggle highlight), Workload without assignee (empty
-  state), Workload with assignee (summary chips + rail render), tab
-  toggling both directions, filter form preserving `view=workload`. All
-  six pass. Combined with the filter-feedback spec the calendar page
-  now has 9 e2e tests.
-
-- **files:**
-  - `src/lib/planning/calendar.ts` — `getUserWorkload` + types.
-  - `src/app/(app)/app/calendar/page.tsx` — `ViewToggle`, `WorkloadView`,
-    `SummaryChip`, `WorkloadTasksList`, `WorkloadPlansList`; `view` param
-    parsing + workload data fetch; grid + unscheduled section gated on
-    `view === "calendar"`.
-  - `src/messages/{en,ar}/calendar.json` — workload keys.
-
-- **verification:** `pnpm typecheck` (project files) clean; ESLint clean
-  (`--max-warnings=0`); all 9 calendar e2e tests pass.
-
-### 2026-09-27 — Global calendar assignee/status filter is now visibly effective (fix/calendar-filter-feedback)
-
-Round-of-2026-09-27 user report: "Check global calendar filter — doesn't make sense.
-I choose an assignee and the filter gives all results like nothing happened." The filter
-logic was correct (`getAgencyCalendarView` already filtered tasks by assigneeId and
-status), but the visual feedback was missing: with hundreds of plans visible, picking
-an assignee who has no tasks this month reduced the count by 0–6 events while
-the visible calendar looked identical. Active-filter chips showed the assignee name
-but they sat above a near-identical grid.
-
-- **feat(calendar): split the count into plan/task breakdown.** The previous
-  `Showing 287 events` is now `Showing 280 plans and 7 tasks` (or `Showing 280 plans`
-  when the task count is 0). New helper `CalendarCountSummary` in
-  `src/app/(app)/app/calendar/page.tsx` is the single source for this render and
-  picks the right pluralization branch per side.
-- **feat(calendar): warning hint when assignee/status filter has no task matches.**
-  `bg-warning-subtle` banner appears under the breakdown when the filter is active
-  and the resulting task list is empty: `No tasks for <name> this month. 280 plans
-remain visible.` (or status variant). The hint names the assignee / status and
-  shows the current plan count, so the user knows the filter ran (and why plans
-  still render).
-- **i18n:** five new keys in `src/messages/{en,ar}/calendar.json`
-  (`globalShowingBreakdown`, `globalShowingBreakdownPlansOnly`,
-  `globalShowingBreakdownTasksOnly`, `globalNoTasksForAssignee`,
-  `globalNoTasksForStatus`). Arabic translations follow the same branch shape.
-- **tests:** new e2e spec `tests/e2e/global-calendar-filter-feedback.spec.ts` covers
-  three states (unfiltered breakdown, workspace filter that matches plans and skips
-  the hint, status filter that triggers the hint). Three tests pass against the
-  existing dev seed.
-- **Scope:** the assignee/status filter semantics are unchanged — they still only
-  affect tasks; plans remain visible. The fix is purely visual. The existing
-  `globalAssigneeNote` description ("Assignee and status filters apply to tasks.
-  Plans stay visible unless you turn them off.") stays accurate and now matches
-  the visible hint text when the filter yields zero tasks.
-
-### 2026-09-27 — Drive folder import round 3: persistent thumbnails + in-memory picker refresh (fix/media-link-folder-browse-ux)
-
-Round-1 shipped the modern AF-block parser + preflight + filename-extension
-fallback fixes. Round-2 closed the name + size gap on the markup scrape.
-Round-3 closes the two UX gaps that became visible once the wizard
-actually rendered the right file metadata: blank-gray thumbnail boxes
-and the "I imported from the link tab and the picker didn't update until
-I refreshed" complaint.
-
-- **fix(media): wizard thumbnails always render the kind icon under the
-  Drive image.** The previous layout rendered only the `<img>` and hid
-  it via `display: none` on error, leaving a blank gray box whenever
-  Drive's CDN was slow / 401 / 403 / wrong mime. New layout renders the
-  FileImage / FileVideo / FileText icon as the **base layer**, with the
-  `<img>` absolutely positioned over it and fading in on load (`opacity`
-  0 → 1, 150ms transition). On `<img>` error the image hides and the
-  icon stays as the placeholder. The user always sees a type signal.
-
-- **fix(media): `onAssetReady` propagates through the link tab →
-  picker → parent chain.** `MediaSourcePicker.onAssetReady` was wired
-  to the device tab only; the link tab called `router.refresh()` only,
-  which refreshes the server cache but not the parent's in-memory
-  asset list (e.g. `availableAssets` on the delivery section). The
-  user had to hard-refresh to see the new asset in the dropdown. Now:
-  - `MediaSourcePicker` forwards `onAssetReady` to **both** tabs.
-  - `MediaLinkImporter` accepts `onAssetReady?(asset: MediaUploadResult)`
-    and fires it after the single-file API returns (asset id, title,
-    kind, byteSize from the joined storage object).
-  - `MediaLinkFolderBrowse` accepts the same and fires it **once per
-    successfully-imported item** in the batch report. The helper
-    `reportImportedAssets(report, rows, onAssetReady)` is exported as a
-    pure function for unit testing.
-  - `/api/media/import` joins the storage object (`kind`, `byteSize`,
-    `mimeType`) into its 201 response, so the client has what it needs
-    to populate the in-memory list without a follow-up fetch.
-  - `registerUploadedMediaAsset`'s race-recovery select now also reads
-    `storageObjectId`, keeping the return type consistent across all
-    three return paths.
-
-- **test(media): 5 new assertions** in `media-link-folder-browse.test.tsx`:
-  thumbnail layering, per-asset `onAssetReady` firings on close, and
-  `reportImportedAssets` (skips non-imported, falls back on missing
-  rows, honours title override, no-op when callback is undefined).
-- **test(media): 1 new assertion** in `media-source-picker.test.tsx`:
-  `onAssetReady` is forwarded to **both** tabs (the prior test asserted
-  device-only — that was the bug).
-
-**Companion**: same code path as round-1 (`ui-ux-pro-max`) and round-2
-(`fix/drive-folder-row-boundary`). Round-3 stays in the same wizard +
-API surface — no new component, no schema migration.
-
-### 2026-09-26 — Drive folder import round 2: row-boundary bug + filename/size extraction (fix/drive-folder-modern-parser)
-
-Round-1 shipped the modern AF-block parser + preflight + filename-extension
-fallback fixes, but the wizard still showed every file's raw id as the
-filename and `Size unavailable` for the size. The mime was correct; the row
-boundary was wrong. Two more concrete fixes shipped.
-
-- **fix(media): row boundary uses the next DIFFERENT file id, not the next
-  data-id match.** Modern Drive renders every row with ~3 `data-id="..."`
-  attributes (one on `<tr>`, one on the icon `<div>`, one on the cell
-  wrapper). The previous code used `dataIdMatches[i + 1]` as the row's
-  upper bound, which collapsed every row to ~1KB of markup and hid the
-  row's actual metadata — the filename label sits ~2KB after the row's
-  first data-id; the size label ~4KB after. The parser now pre-computes
-  `nextRowStart[i]` = position of the next match with a different id. This
-  was the root cause: mimes were correct, but every row showed the file
-  id as the filename.
-
-- **fix(media): filename from `data-tooltip="<name> <type>"` with trailing
-  chrome stripped.** Modern Drive renders the row's name as a
-  `data-tooltip="1-1.png Image"` attribute on the cell directly next to the
-  row's data-id. `cleanRowLabel` keeps the leading run of tokens up to the
-  first Drive chrome token (`Image`, `Video`, `PDF`, `Shared`, `Modified`,
-  …), so `1-1.png Image` → `1-1.png` and the legacy markup's
-  `Aerial shot.jpg` (space in filename) round-trips intact. Falls through
-  to aria-label when no tooltip is present.
-
-- **feat(media): size from `aria-label="Size: <n> MB\nStorage used: …"` in
-  a different cell.** The size label sits in a separate column from the
-  name, ~4KB after the row's data-id — same row boundary fix applies.
-  Parser walks aria-labels in the row window independently and picks the
-  nearest `Size: …` label for the sizeBytes field. European comma + US dot
-  number formats both supported.
-
-- **test(media): `tests/fixtures/drive-folder-html/modern-folder.html`** is
-  rebuilt to mirror what Drive renders today (multiple `data-id` per row,
-  `data-tooltip` for the filename, `aria-label="Size: …"` in a separate
-  cell). 6 new parser assertions cover the row-boundary bug, the modern
-  data-tooltip extraction, the size-label parser, and the chrome-strip
-  behavior on filenames with embedded spaces. The modern Drive URL
-  `https://drive.google.com/drive/folders/1JWqxiknoZdX3eHs-NukvcD7cj9uonSZc`
-  was the live test target — running the parser against the real Drive HTML
-  now yields `name: "1-1.png", mimeType: "image/png", sizeBytes: 2306867`
-  (and 4 more files), instead of `name: "<fileId>", mimeType: "image/png",
-sizeBytes: null`. Full 125 media tests + 3680 total tests pass;
-  typecheck + lint + prettier clean.
-
-**Companion**: round-1 (`ui-ux-pro-max`) shipped the modern AF-block parser,
-filename-extension mime fallback, and lenient preflight. Round-2 (this PR)
-closes the name + size gap on the same parser. Same code path; no new
-adapter, no new route, no schema migration.
-
-### 2026-09-26 — Drive folder import: modern HTML shape + filename mime fallback + lenient preflight (fix/drive-folder-modern-parser)
-
-Reported symptom: pasting a Google Drive folder URL into the "From link" wizard rendered "0 importable files in this folder. N were skipped", with every row tagged `application/octet-stream` + "Unsupported type" even for public "Anyone with the link can view" folders that contain perfectly valid PNG / MP4 / PDF files. Three concrete fixes shipped.
-
-- **fix(media): parser reads the modern `AF_initDataCallback({key: 'ds:4'})` row shape.** Modern Drive wraps each row as `[null, "<fileId>"], null, null, null, "<mime>", null, ...` instead of the legacy `[id, name, mime, ...]` form. The legacy regex was the only one the parser knew, so it never matched and the parser fell back to the data-id + aria-label scrape — which has the ID + filename but not the mime. The parser now runs three independent passes (modern AF → legacy AF → data-id + aria-label) and merges by file id, so AF supplies the mime when available and markup always supplies the human-friendly filename. `src/lib/media/folder-sources/drive-html-parser.ts:46-148,260-300`.
-
-- **fix(media): filename-extension mime fallback when Drive lists `application/octet-stream`.** Drive does this for mobile uploads and renamed files — the bytes are fine, the type sniffing just gave up. We re-use `contentTypeFromFilename` from the existing media contract so the kind badge (image / video / document) is correct without a second round-trip. The import path still validates the real bytes via `validateMediaSignature`, so a misleading listing mime is a display problem, never a security one. `src/lib/media/folder-sources/drive-html-parser.ts:171-189`.
-
-- **fix(media): per-row preflight no longer pre-marks items as "unsupported" on transient HEAD errors.** The preflight HEAD on `drive.usercontent.google.com/download` is a connection-required detector, not a classifier. 401/403 (and sign-in-wall 30x) still downgrade to `provider_connection_required`, but 4xx-other, 5xx, and network exceptions now leave the row as `importable` so the user can still try. The actual import GET does the full mime + signature validation and emits a precise error code if anything is broken. Marking transient responses as "unsupported" hid legitimate files behind a verdict the user couldn't override — that's exactly the bug the user reported. `src/lib/media/folder-sources/drive-html.ts:231-281`.
-
-- **feat(media): markup scrape also reads the row size from the per-row `Size: 2,2 MB` aria-label** (EU comma + US dot number formats both supported). The wizard was already showing "Size unavailable" for every folder file because the parser never populated `sizeBytes`. Falls through to the Content-Length header on import if the label is still missing.
-
-- **test(media): `tests/fixtures/drive-folder-html/modern-folder.html`** captures the post-2024 Drive HTML shape. 4 new parser assertions cover the new AF shape, the filename-extension mime fallback, the size-label parser, and mixed-shape pages (legacy + modern AF rows side-by-side). 2 new adapter assertions cover transient-preflight tolerance and end-to-end listing against the modern fixture. Full 412 files / 3680 tests pass; typecheck + lint + prettier clean.
-
-**Deferred**: rich per-row metadata (last-modified, owner email, thumbnail URL signing). The scrape only covers what the wizard needs to display + import — Drive's structured `data:` blob carries more, but it's not on the critical path for the import flow.
-
-**Companion**: this is the same code path the four prior folder-import PRs (FEAT-FOLDER-IMPORT-2026-09-19, perf/audit-cloudflare-assets, etc.) shipped — same adapter, same route, same `GoogleDriveHtmlAdapter`. The parser fix is a one-file change with a one-file fixture; the preflight change is documented inline so the next reviewer doesn't accidentally re-tighten it.
-
-### 2026-09-26 — Drive folder import: modern HTML shape + filename mime fallback + lenient preflight (fix/drive-folder-modern-parser)
-
-Reported symptom: pasting a Google Drive folder URL into the "From link" wizard renders `0 importable files in this folder. N were skipped`, with every row tagged `application/octet-stream` + "Unsupported type" — even for public "Anyone with the link can view" folders that contain perfectly valid PNG / MP4 / PDF files. The import itself would have worked; the wizard's listing was just lying about what was available. Three concrete fixes shipped.
-
-- **fix(media): parser reads the modern `AF_initDataCallback({key: 'ds:4'})` row shape.** Modern Drive wraps each row as `[null, "<fileId>"], null, null, null, "<mime>", null, ...` instead of the legacy `[id, name, mime, ...]` form. The legacy regex was the only one the parser knew, so it never matched and the parser fell back to the data-id + aria-label scrape — which has the ID + filename but not the mime. The parser now runs three independent passes (modern AF → legacy AF → markup) and merges by file id, so AF supplies the mime when available and markup always supplies the human-friendly filename. `src/lib/media/folder-sources/drive-html-parser.ts:46-148,260-300`.
-
-- **fix(media): filename-extension mime fallback when Drive lists `application/octet-stream`.** Drive does this for mobile uploads and renamed files — the bytes are fine, the type sniffing just gave up. We re-use `contentTypeFromFilename` from the existing media contract so the kind badge (image / video / document) is correct without a second round-trip. The import path still validates the real bytes via `validateMediaSignature`, so a misleading listing mime is a display problem, never a security one. `src/lib/media/folder-sources/drive-html-parser.ts:171-189`.
-
-- **fix(media): per-row preflight no longer pre-marks items as "unsupported" on transient HEAD errors.** The preflight HEAD on `drive.usercontent.google.com/download` is a connection-required detector, not a classifier. 401/403 (and sign-in-wall 30x) still downgrade to `provider_connection_required`, but 4xx-other, 5xx, and network exceptions now leave the row as `importable` so the user can still try. The actual import GET does the full mime + signature validation and emits a precise error code if anything is broken. Marking transient responses as "unsupported" hid legitimate files behind a verdict the user couldn't override — that's exactly the bug the user reported. `src/lib/media/folder-sources/drive-html.ts:231-281`.
-
-- **feat(media): markup scrape also reads the row size from the per-row `Size: 2,2 MB` aria-label** (EU comma + US dot number formats both supported). The wizard was already showing "Size unavailable" for every folder file because the parser never populated `sizeBytes`. Falls through to the Content-Length header on import if the label is still missing.
-
-- **test(media): `tests/fixtures/drive-folder-html/modern-folder.html`** captures the post-2024 Drive HTML shape. 4 new parser assertions cover the new AF shape, the filename-extension mime fallback, the size-label parser, and mixed-shape pages (legacy + modern AF rows side-by-side). 2 new adapter assertions cover transient-preflight tolerance and end-to-end listing against the modern fixture. Full 412 files / 3680 tests pass; typecheck + lint + prettier clean.
-
-**Deferred**: rich per-row metadata (last-modified, owner email, thumbnail URL signing). The scrape only covers what the wizard needs to display + import — Drive's structured `data:` blob carries more, but it's not on the critical path for the import flow.
-
-**Companion**: this is the same code path the four prior folder-import PRs (FEAT-FOLDER-IMPORT-2026-09-19, perf/audit-cloudflare-assets, etc.) shipped — same adapter, same route, same `GoogleDriveHtmlAdapter`. The parser fix is a one-file change with a one-file fixture; the preflight change is documented inline so the next reviewer doesn't accidentally re-tighten it.
+- **Companion**: `chore/ui-ux-pass3` (round 3, 2026-09-25) — scroll-spy jitter, member-list responsive collapse, Mail icon for pending invites, agency-settings hover treatment, sr-only duplication removal, `ApplicationInfoCard` label column widening. Both rounds share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity, status never colour alone).
 
 ### 2026-09-25 — UI/UX round 2 (chore/ui-ux-pass2)
 
@@ -1023,38 +771,6 @@ Round-3 of the `/ui-ux-pro-max` polish pass. Built on the round-2 sidebar TOC + 
 - **test: `tests/unit/users/member-list.test.tsx` — new file, 5 cases.** Covers per-workspace role-chip overflow (`+N`), the responsive `flex-col sm:flex-row` class set on each row, the Edit / Deactivate / Reactivate aria-labels, and the empty-state path. All 414 test files / 3693 tests pass (`pnpm test:unit`). tsc clean.
 
 - **Companion**: `chore/ui-ux-pass2` (round 2) shipped the settings sidebar TOC, the media page-size cap (48→24), the build-timestamp in the user avatar menu + account card, and the mobile Analytics link. Both rounds share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity).
-
-### 2026-09-27 — UI/UX round 4 — sidebar tenant card + IA split + active-state rail (chore/ui-ux-pass4)
-
-Round-4 of the `/ui-ux-pro-max` polish pass. Built on rounds 1–3 (sidebar rebuild, mobile `My Work` route restore, settings-sidebar scroll-spy, member-list responsive collapse, build-timestamp). The audit ran the `ui-ux-pro-max` skill against the persistent app-shell sidebar (desktop + collapsed-rail + mobile sheet), the agency/workspace tenant card, the Settings branch active detection, and the work-items surface that was bleeding cross-tenant destinations into the workspace rail. Picked the highest-impact fixes that respect the existing design system.
-
-- **fix(ui): split "Work" → "Personal" (workspace) + "Global" (agency-only).** `buildWorkspaceNavigation` now returns a single-item Personal group (My tasks only); `buildAgencyNavigation` gains a new `Global` group with All tasks + Global calendar. Eliminates the "I'm in Acme Co. workspace → Work → All tasks" cross-tenant bleed. `my-tasks` is re-added as a top link in agency nav so users on `/app` still reach their personal tasks without scrolling — My tasks is _personal_, not workspace-scoped, so it stays reachable on BOTH sides of the workspace boundary. (`src/components/app-shell/navigation-model.ts`).
-
-- **fix(ui): active row gets a third signal — 4px logical-left primary rail.** `SidebarLinkRow` + `ExpandableNavGroup` parent `<div>` carry `border-s-4 border-s-primary` on the active state, `border-s-transparent` on inactive (reserves the slot so layout doesn't shift on toggle). Honors `nav-state-active` (color + weight + edge indicator) + `color-not-only`. Logical utilities mirror automatically under `dir="rtl"`. (`src/components/app-shell/sidebar.tsx`).
-
-- **feat(ui): group dividers between the five nav buckets.** `NavGroup` gains a `showTopDivider` prop threaded from `WorkspaceNavTree` + `AgencyNavTree`; every group except the first gets `border-t border-border` + 8px breathing room. Group headings are now lowercase `--fg-muted` (was uppercase tracking-wide) and visible at every expanded breakpoint ≥ `md` (was `hidden xl:block`). Collapsed rail (72px) gets a `writing-mode: vertical-rl` rotated label per group so the icon-only rail keeps its five-bucket context. (`src/components/app-shell/sidebar.tsx`).
-
-- **feat(ui): tenant card gets a "Tenant" header label + 1px inter-row divider + `aria-live`.** The two stacked switchers (`AgencySwitcher` + `WorkspaceSwitcher`) now read as one context card with a labeled header (`sidebar.tenantLabel`) + a 1px logical-top divider between the two rows. `aria-live="polite"` announces a tenant switch to screen readers without stealing focus. (`src/components/app-shell/sidebar.tsx`, `src/components/app-shell/mobile-nav.tsx`, `src/messages/{en,ar}/sidebar.json`).
-
-- **fix(ui): collapse-toggle `aria-label` was hardcoded English — now threaded + tablet-aware.** The label was a literal `"Expand sidebar" / "Collapse sidebar"`, violating the "no hard-coded user-facing copy in components" rule. Copy now arrives through the `labels` prop. The label ALSO distinguishes _why_ the rail is narrow: below the `xl` breakpoint the rail is auto-collapsed by CSS regardless of the user's cookie, so `matchMedia("(min-width: 1280px)")` flips the label to "Expand sidebar (tablet)" and sets `data-tablet-collapsed="true"`. The **icon follows the rail's visual state** (`isTablet || collapsed` → `PanelLeftOpen`) so the glyph never contradicts the accessible name. `isDesktop` starts `true` so the SSR label is the stable plain one. (`src/components/app-shell/sidebar-collapse-toggle.tsx`, `src/app/(app)/layout.tsx`, `src/messages/{en,ar}/sidebar.json`).
-
-- **feat(ui): single-agency users get a one-tap shortcut to `/app/agency-settings`.** New `asSettingsLink` prop on `AgencySwitcher`; when `agencySwitcher.active !== null && options.length <= 1`, the switcher renders as a plain `<Link>` instead of opening a one-row popover. Saves a tap and removes the dead "switch" affordance. Same shortcut surfaces in the mobile sheet. (`src/components/app-shell/agency-switcher.tsx`, `src/components/app-shell/sidebar.tsx`, `src/components/app-shell/mobile-nav.tsx`).
-
-- **feat(ui): workspace switcher tab indicator.** Active workspace row gets `border-b-2 border-primary` (logical bottom border) — gives the user the visual "I'm currently in this workspace" cue without claiming new vertical space. (`src/components/app-shell/workspace-switcher.tsx`).
-
-- **feat(ui): `clampBadge(count)` formatter.** New client-safe `src/lib/nav/badge-format.ts` (separate from `badges.ts` which is `server-only`) with `clampBadge(n)` that returns `99+` for counts above the cap, `"0"` for zero / non-finite / negative inputs, and `String(n)` otherwise. Wired into `SidebarLinkRow`. Replaces the inline `badge > 99 ? "99+" : badge` ternary. (`src/lib/nav/badge-format.ts`, `src/components/app-shell/sidebar.tsx`).
-
-- **feat(ui): mobile sheet parity.** `mobile-nav.tsx` gets the same tenant header + divider + single-agency shortcut + Personal/Global split. The bottom nav `BottomNavLink` gets a 2px logical-top active rail so the four (or three for client reviewers) primary destinations get the same "where am I" affordance as the desktop rail. (`src/components/app-shell/mobile-nav.tsx`).
-
-- **refactor(ui): extract `useScrollSpyActiveId` hook.** Round-3 already shipped the IntersectionObserver + scroll-heuristic scroll-spy pattern inside `src/components/workspace/settings-sidebar.tsx`. Round-4 extracts it into a shared `src/lib/nav/use-scroll-spy-active-id.ts` hook (promote-only rule, hashchange fallback, ref-stashed setter). The workspace Settings branch in the main sidebar wires to it so `/w/[slug]/settings` highlights the section the user is actually looking at (not just the URL hash). Dead `subscribeToHash` / `readHash` helpers removed. (`src/lib/nav/use-scroll-spy-active-id.ts` NEW, `src/components/app-shell/sidebar.tsx`).
-
-- **docs: `docs/design/UI_UX_REFINEMENT_2026-09-27.md`** records the round-4 change table, the "why", the final-review findings, the acceptance gate, and the pre-existing failures that are explicitly NOT from this round.
-
-- **test: 19 new cases + 2 new test files.** 13 round-4 sidebar cases (Personal/Global split, My tasks reachability on both sides of the workspace boundary, active-state rail, group dividers, tenant header + divider, bilingual labels-map threading, `aria-live`, workspace-switcher tab indicator, single-agency shortcut). New `tests/unit/nav/badge-format.test.ts` pins the `clampBadge` contract. New `tests/unit/app-shell/sidebar-collapse-toggle.test.tsx` (6 cases) pins the EN + AR + tablet + fallback accessible-name contract. `navigation-model.test.ts` (3 cases) and `mobile-nav.test.tsx` (1 case) updated for the key renames. Catalog parity auto-passes.
-
-- **Verification gate**: `pnpm test:unit` (full suite) → **420 files / 3767 tests, all pass**. `pnpm test:unit tests/unit/app-shell tests/unit/nav tests/unit/i18n` → **210/210 pass (27 files)**. `tsc --noEmit` clean on every touched file. `eslint` clean (0 errors, 0 warnings) on every touched file. Catalog parity green. EN + AR resolution of every new key verified.
-
-- **Companion**: rounds 1–3 share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity, scroll-spy via the new shared hook).
 
 ### 2026-09-22 — media Cloudflare-asset audit + refinement (chore/audit-cloudflare-assets)
 
