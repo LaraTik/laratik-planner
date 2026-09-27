@@ -25,6 +25,7 @@ import { SettingsHealth } from "./_components/settings-health";
 import { LastSaved } from "./_components/last-saved";
 import { LeadTimeDeadline } from "./_components/lead-time-deadline";
 import { LifecycleForm } from "./_components/lifecycle-form";
+import { WorkspaceNameForm } from "./_components/workspace-name-form";
 import { LeadTimesForm } from "./_components/lead-times-form";
 import { DefaultsForm } from "./_components/defaults-form";
 import { ApprovalsForm } from "./_components/approvals-form";
@@ -64,7 +65,7 @@ export default async function WorkspaceSettingsPage({
   const { slug } = await params;
   const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code: locale } = await tForActive();
   const actor = await currentActor();
   const [canBulkReset, bulkCounts] = await Promise.all([
     actor ? hasPlatformPermission(actor, "platform.destructive.execute") : Promise.resolve(false),
@@ -328,6 +329,36 @@ export default async function WorkspaceSettingsPage({
             title={t("settings.lifecycle.title")}
             description={t("settings.lifecycle.description")}
           >
+            {/* The workspace display name lives on the `workspaces`
+                table alongside the timezone, so it belongs in this
+                section rather than in a route of its own (see the
+                "Settings architecture" rule in AGENTS.md: sections
+                share one page when the data is one row). */}
+            <WorkspaceNameForm
+              slug={slug}
+              name={workspace.name}
+              locale={locale}
+              canManage={canManage}
+              copy={{
+                title: t("settings.rename.title"),
+                description: t("settings.rename.description"),
+                nameLabel: t("settings.rename.nameLabel"),
+                nameHint: t("settings.rename.nameHint"),
+                urlLabel: t("settings.rename.urlLabel"),
+                urlHint: t("settings.rename.urlHint"),
+                submit: t("settings.rename.submit"),
+                saving: t("common.saving"),
+                saved: t("settings.rename.saved"),
+                unchanged: t("settings.rename.unchanged"),
+                errors: {
+                  unauthorized: t("settings.rename.errors.unauthorized"),
+                  not_found: t("settings.rename.errors.notFound"),
+                  forbidden: t("settings.rename.errors.forbidden"),
+                  invalid_name: t("settings.rename.errors.invalidName"),
+                  save_failed: t("settings.rename.errors.saveFailed"),
+                },
+              }}
+            />
             <SettingsHealth
               slug={slug}
               section="lifecycle"

@@ -16,12 +16,28 @@ import {
   workspaceSettingsCommandSchema,
 } from "@/lib/workspaces/settings-command";
 import { updateWorkspaceSettings } from "@/lib/workspaces/settings-service";
+import { nameFromForm, workspaceRenameCommandSchema } from "@/lib/workspaces/rename-command";
+import { renameWorkspace, WorkspaceNotFoundError } from "@/lib/workspaces/rename-service";
 
 export type SettingsActionState = { saved?: boolean; error?: string };
 
 export type MetaPublishingActionState = {
   saved?: boolean;
   error?: "unauthorized" | "not_found" | "forbidden" | "save_failed";
+};
+
+/**
+ * Rename state is code-based rather than a ready-made English
+ * sentence, for the same reason `MetaPublishingActionState` is: the
+ * form renders `state.error` through the active locale catalog, so
+ * an Arabic workspace manager gets an Arabic error instead of an
+ * English one leaking out of the action module.
+ */
+export type RenameWorkspaceActionState = {
+  saved?: boolean;
+  unchanged?: boolean;
+  name?: string;
+  error?: "unauthorized" | "not_found" | "forbidden" | "invalid_name" | "save_failed";
 };
 
 /**
@@ -243,6 +259,54 @@ export async function updateApprovalsSettingsAction(
   }
   revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
+}
+
+// ─── Workspace rename ──────────────────────────────────────────────────────
+//
+// Owns `workspace.name` only. Separate from the settings-row actions
+// above because it writes a different table, and because it is the
+// only one of these actions that changes something rendered by the
+// app shell (the workspace switcher, the page-header eyebrow, the
+// mobile context header) rather than by the settings page alone.
+
+export async function renameWorkspaceAction(
+  slug: string,
+  _previous: RenameWorkspaceActionState,
+  formData: FormData,
+): Promise<RenameWorkspaceActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "unauthorized" };
+  const workspace = await getAccessibleWorkspace({ id: session.user.id }, slug);
+  if (!workspace) return { error: "not_found" };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
+    return { error: "forbidden" };
+  }
+
+  const parsed = workspaceRenameCommandSchema.safeParse({
+    workspaceId: workspace.id,
+    name: nameFromForm(formData.get("name")),
+  });
+  if (!parsed.success) return { error: "invalid_name" };
+
+  let result: Awaited<ReturnType<typeof renameWorkspace>>;
+  try {
+    result = await renameWorkspace({ id: session.user.id }, parsed.data);
+  } catch (error) {
+    if (error instanceof WorkspaceNotFoundError) return { error: "not_found" };
+    return { error: "save_failed" };
+  }
+
+  if (!result.changed) return { unchanged: true, name: result.name };
+
+  // The workspace name is app-shell chrome: the sidebar switcher, the
+  // `PageHeader` eyebrow, the mobile context header, and the task /
+  // media / bulk-reset surfaces all render it. Narrowing this to the
+  // settings path would leave every one of those serving the stale
+  // name until a hard refresh, so the whole `/app` tree is
+  // revalidated — the rename is rare and the surface is genuinely
+  // global.
+  revalidatePath("/app", "layout");
+  return { saved: true, name: result.name };
 }
 
 function clampLeadDays(value: FormDataEntryValue | null): number {

@@ -211,6 +211,7 @@ Settings is a **nested group in the main sidebar**, not an inline nav inside a s
 - **Workspace manager sidebar** — `Settings` is a top-level expandable group under the workspace tabs. Sub-items live as `SidebarSubLink` inside it. Current sections: `Lifecycle`, `Lead times`, `Assignment defaults`, `Approval mode`, `AI assistance`.
 - **Admin sidebar (global)** — `Agency Settings` is a top-level expandable group under the Admin section. Sub-items: `General` (the existing agency overview) and `AI configuration` (the editable surface at `/app/agency-settings/ai`).
 - **Sections share one page when the data is one row.** Lifecycle / Lead times / Assignment defaults / Approval mode all read from the same `workspace_settings` row and live as anchor fieldsets on `/w/[slug]/settings`. Don't split them into separate routes until the data diverges.
+- **The workspace display name is a Lifecycle card, not a route.** `WorkspaceNameForm` edits `workspace.name` (`lib/workspaces/rename-service.ts`). It lives in Lifecycle because the name sits on the same `workspaces` row as the timezone. **The slug is not editable** — it is the URL identity and the key of the anti-IDOR lookup; the card shows it read-only. See the Changelog entry above before adding a slug field.
 - **AI lives inside Settings on both sides.** Agency admins configure at `/app/agency-settings/ai`. Workspace managers and planners see a read-only status card at `/w/[slug]/ai-settings` with a link to the agency config. The capability toggles are the agency's, not the workspace's.
 - **New section** = add a `SidebarSubLink` in `src/components/app-shell/sidebar.tsx`, an anchor `id` on a `<Card>` or `<fieldset>` in the page, and the corresponding `Section` shape in the page's data load. Don't add a route unless the section needs its own server-only auth path.
 - **Settings pages are not full-page replacements of the sidebar.** They are scrollable surfaces with the sidebar as the primary nav. The settings page may show a compact "overview strip" linking each section (the current implementation does this), but never a duplicate vertical nav.
@@ -719,6 +720,102 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 - Tests covering A1→A2, A1→B1, B1→A1, browser refresh, browser back, direct URL, workspace removed, stale cached API response live in `tests/unit/workspace-isolation.test.ts` and `tests/e2e/workspace.spec.ts`.
 
 ## Changelog
+
+### 2026-09-27 — Workspace rename (display name) from Settings → Lifecycle
+
+**Gap.** `workspace.name` was write-once. It was set by the seed route
+and had no editing surface anywhere in the app — renaming a workspace
+required a direct SQL update against production. This adds the first
+write path for that column.
+
+- **`lib/workspaces/rename-command.ts`** is the single definition of a
+  valid workspace name. It normalises (trim, then collapse internal
+  whitespace runs) **before** validating, so the stored value is the
+  value that was length-checked — a name cannot pass the 80-char bound
+  by padding with spaces that collapse away afterwards.
+
+- **`lib/workspaces/rename-service.ts`** — `renameWorkspace(actor, cmd)`
+  follows the shape of `updateWorkspaceSettings`:
+  `requirePolicy(hasWorkspaceRole(actor, workspaceId, ["workspace_manager"]), "rename_workspace")`,
+  then a transaction that locks the workspace row `FOR UPDATE` before
+  reading the current name. Every real rename writes a
+  `workspace_rename` row to `security_audit_event` with the
+  `{ from, to }` pair. The name appears in app chrome, in the bulk-reset
+  typed confirmation, and in exported reports, so the change is
+  audit-relevant even though the value is not sensitive.
+
+  A rename that changes nothing is a **no-op** — no `UPDATE`, no audit
+  row. `changed: false` lets the UI say "that is already the name"
+  instead of writing a duplicate event on every double-click.
+
+- **The slug is deliberately immutable.** `workspace.slug` is the URL
+  identity (`/app/w/[slug]/…`) _and_ the key of the anti-IDOR lookup in
+  `lib/workspaces/context.ts`. Changing it would invalidate every
+  bookmark, notification deep link, and browser-history entry, and
+  keeping the old URL resolving needs a slug-redirect table the current
+  lookup has no support for. The settings card renders the slug
+  read-only with an explicit line that the URL does not follow the
+  rename. The reasoning is in `rename-command.ts` so the next person to
+  add a slug field meets it before inventing a field. Changing the URL
+  later is a migration, not a form field.
+
+- **Action returns error codes, not sentences.** `renameWorkspaceAction`
+  returns `unauthorized` / `not_found` / `forbidden` / `invalid_name` /
+  `save_failed`, resolved to copy on the server page — same pattern as
+  `MetaPublishingActionState`, so the AR catalog actually reaches the
+  AR user instead of an English string leaking out of the action module.
+
+- **Revalidation is `/app` layout-wide, not the settings path.** The
+  name is app-shell chrome: sidebar switcher, `PageHeader` eyebrow,
+  mobile context header, task / media / bulk-reset surfaces.
+
+- **No migration.** Existing column, plus the free-text
+  `security_audit_event.action`. Nothing in `src/lib/db/migrations/`
+  changed, so no migration-drill evidence applies.
+
+- **React note.** `WorkspaceNameForm` reconciles the controlled input
+  with the server-normalised value using the render-phase
+  "adjust state when a prop changes" pattern (guarded by `syncedName`),
+  **not** `useEffect` — `react-hooks/set-state-in-effect` rejects the
+  effect form, and the render-phase form also avoids a frame with a
+  stale draft.
+
+Tests: `tests/unit/workspaces-rename.test.ts`,
+`tests/integration/workspace-rename.test.ts` (audit row lands; client
+reviewer and cross-agency manager both denied; slug + old URL survive),
+`tests/unit/workspace-settings/workspace-name-form.test.tsx`.
+
+### 2026-09-27 — Planning-detail 500: bare scalars in `activity_event` jsonb (fix/planning-detail-500)
+
+**Symptom.** `/app/w/just-halal/planning/c80a552a-…` (and any content item with a material-edit audit row) failed to open with "We hit an error loading this content item". Production logs:
+
+```
+TypeError: Cannot use 'in' operator to search for 'status' in 2026-09-26T21:00:00.000Z
+    at <unknown> (.next/server/app/(app)/app/w/[slug]/planning/[id]/page.js)
+    at Array.map
+    digest: 288870229
+```
+
+**Scope found in production:** 18 malformed rows across **12 of 83** content items — i.e. the detail route and the workspace activity feed (`/app/w/[slug]/activity`) were broken for 14% of items.
+
+- **Root cause — the writer.** `recordMaterialityEvent` (`src/lib/publishing/materiality.ts`) is the single funnel for material mutations. Its schema types `beforeValue` / `afterValue` as `z.unknown()`, and callers legitimately pass **scalars**: `inlineUpdateBriefAction` / `inlineUpdateTitleAction` pass the raw text, `inlineUpdateDateAction` passes an ISO string, `platform-payload-service` passes the literal `"(payload)"`. The service wrote those straight into `activity_event.before_data` / `after_data`, coercing only `null`, behind an `as never` cast that silenced the Drizzle type check. `jsonb` accepts any JSON value, so the bad shape persisted silently. Every other writer in the repo (`content/service.ts`, `publishing/service.ts`, `deliveries/service.ts`, `social/meta-publication-service.ts`, `planning/*`) writes an object literal — this funnel was the sole offender.
+
+- **Root cause — the reader.** `activity/format.ts` did `const before = event.beforeData ?? {}` then `"status" in before`. `??` does **not** help: a string is not nullish, so it reached the `in` operator, which throws on primitives. The blast radius came from `buildVerb` computing `beforeLabel` / `afterLabel` **unconditionally for every event** to populate template params — and the `update` verb template (`"updated {target}"`) never even interpolates them. A value that was computed, discarded, and rendered nowhere was enough to 500 the page.
+
+- **fix(writer): `toAuditData(resource, value)`** normalises every before/after value at the funnel into the JSON object the columns are documented to hold. Objects pass through untouched (so `{ changedKeys }` from `content/service.ts` keeps its shape), `null`/`undefined` → `{}` (the columns are `NOT NULL`), `Date` → ISO string, and scalars are wrapped under a key the formatter can actually render (`schedule` → `plannedPublishAt`, the long-form text resources → `brief`, everything else → `value`). The `as never` cast is gone. The untouched value is still preserved in `metadata.before` / `metadata.after`, so no audit fidelity is lost.
+
+- **fix(reader): shared `asRecord()` in `lib/activity/lookups.ts`.** All reads of the `jsonb` payload columns in `format.ts` (`beforeLabel`, `afterLabel`, `buildDiff`, `buildMetadataLabel`, `mergedFields`, `readCount`, `templateForKind`) and in `resolve.ts` (`collectChannelIds`, `collectUserIds`) now go through it. It lives in `lookups.ts` rather than `format.ts` because both the server resolver and the client formatter need it, and `lookups.ts` is the module `ca37cd3e` created for exactly that reason. The reader fix alone unbreaks the already-persisted rows; the writer fix alone would not have.
+
+- **fix(types): `RawActivityEvent.beforeData` / `afterData` / `metadata` are now `unknown`.** They are `jsonb`; the old `Record<string, unknown> | null` was a contract the runtime did not honour, and that lie is what let the bug through review. `ActivityEventView` in `activity-timeline.tsx` follows. This is what makes the normalisation mandatory rather than optional for the next writer.
+
+- **fix(schema): migration `0052_activity_event_jsonb_object_guard.sql`.** (1) Backfills the historical rows from `metadata.before` / `metadata.after` + `metadata.resource`, so the audit data is _readable_ again, not merely non-crashing — `schedule` rows become `{ plannedPublishAt }` and render a real date chip instead of vanishing. (2) Installs a `BEFORE INSERT OR UPDATE` trigger that **coerces** any non-object into the resource-keyed object shape, mirroring `toAuditData`. Records the pre-migration row/item counts in `migration_evidence_0052`. Idempotent.
+
+  A **coercing trigger, deliberately not a `CHECK` constraint**: `scripts/deploy.sh` runs migrations (line 70) _before_ recreating the app (line 74) and its rollback path (line 83) restores the previous _image_ without touching the schema. A validated `CHECK (jsonb_typeof(before_data) = 'object')` would therefore bind against code that still writes scalars — every date / brief / title / payload edit during the migration window, or after a failed deploy rolled back to the buggy image, would 500 on a constraint violation. Trading a page-level 500 for write-level 500s is not a fix. The trigger gives the same invariant (the columns only ever hold objects) while an older writer degrades gracefully and its row still saves, so schema and code version stay independent. Verified on a scratch database against the real Postgres 16: backfill values asserted, an old-code scalar `INSERT` accepted and coerced, the `UPDATE` path coerced, re-run a no-op.
+
+- **test:** 34 cases in `tests/unit/activity/format.test.ts` (every scalar shape × every kind that reads before/after, plus degradation-not-throw and "a real object still renders unchanged") and 32 in `tests/unit/publishing-materiality.test.ts` (the `toAuditData` contract + a persisted-row assertion that no writer path can emit a non-object). Both suites were verified to **fail** against the pre-fix code (11 failures) before being accepted.
+
+**Lesson.** `jsonb` has no shape. Two independent halves had to be wrong for this to reach production: a writer that stored a scalar where a `Record` was declared (hidden by `as never`), and a reader that used `?? {}` as if it validated the type. `??` defends against `null` and `undefined` only — never against a wrong _type_. Guard reads of untyped `jsonb` at the boundary, and type the boundary `unknown` so the compiler enforces it.
+
 
 ### 2026-09-26 — Unified calendar card (feat/unified-calendar-card)
 

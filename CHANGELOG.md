@@ -12,6 +12,104 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — Workspace rename (display name) from Settings → Lifecycle
+
+A workspace's display name was write-once: `workspace.name` was set at
+seed time and had no editing surface anywhere in the app. A manager who
+created a workspace called `test` had no way to change it — the only
+option was a direct SQL update against production. The new card is the
+first write path for that column.
+
+- **`lib/workspaces/rename-command.ts`** — the single definition of a
+  valid workspace name. Normalises (trim, then collapse internal
+  whitespace runs) **before** validating, so the stored value is the
+  value that was length-checked and a name cannot smuggle past the
+  80-character bound by hiding characters in spaces.
+- **`lib/workspaces/rename-service.ts`** — `renameWorkspace(actor, cmd)`.
+  Gates on `workspace_manager` via `requirePolicy`/`hasWorkspaceRole`
+  (so a client reviewer, and a manager in another agency, are both
+  denied), locks the workspace row `FOR UPDATE` before reading the
+  current name, and writes a `workspace_rename` row to
+  `security_audit_event` carrying the `{ from, to }` pair. A rename
+  that changes nothing is a no-op: no `UPDATE`, no audit row, so a
+  double-click does not spam the log with identical events.
+- **`renameWorkspaceAction`** on the settings page — returns error
+  _codes_ (`unauthorized` / `not_found` / `forbidden` / `invalid_name` /
+  `save_failed`) rather than English sentences, so an Arabic workspace
+  manager gets an Arabic error instead of an English string leaking out
+  of the action module. Same pattern as `MetaPublishingActionState`.
+- **`WorkspaceNameForm`** in the Settings → Lifecycle section. The slug
+  is rendered beside the field as read-only, with a line stating that
+  the URL does not follow the rename — a manager renaming
+  `old-name` → `Lara Tik` reasonably expects the URL to change, and
+  saying so is better than letting them discover it from a stale
+  bookmark.
+- **Slug stays immutable, deliberately.** `workspace.slug` is the URL
+  identity (`/app/w/[slug]/…`) and the key of the anti-IDOR workspace
+  lookup in `lib/workspaces/context.ts`. Mutating it would invalidate
+  every bookmark, notification deep link, and history entry for the
+  workspace, and keeping the old URL alive needs a slug-redirect table
+  that the current lookup path has no support for. Renaming is
+  therefore non-destructive; changing the URL is a separate migration.
+  This is recorded in `rename-command.ts` so the next person to add a
+  slug field finds the reasoning.
+- **Broad revalidation.** The name is app-shell chrome (sidebar
+  switcher, `PageHeader` eyebrow, mobile context header, task / media /
+  bulk-reset surfaces), so the action revalidates the whole `/app`
+  layout rather than the settings path. Narrowing it would leave every
+  one of those rendering the stale name until a hard refresh.
+- **No migration.** The feature writes an existing column and uses the
+  existing free-text `security_audit_event.action` column, so there is
+  no schema change and no migration-drill evidence to collect.
+
+Tests: `tests/unit/workspaces-rename.test.ts` (schema normalisation +
+bounds, policy gate, no-op, audit payload, slug never written),
+`tests/integration/workspace-rename.test.ts` (audit row lands, client
+reviewer and cross-agency manager both denied, slug and old URL
+survive a rename), and
+`tests/unit/workspace-settings/workspace-name-form.test.tsx` (field
+seeding, read-only slug, no form without `workspace_manager`).
+EN/AR catalogs stay key-identical — the new `settings.rename.*` block
+ships in both.
+
+### Fixed — Planning detail 500 on items with a material-edit audit row
+
+Opening `/app/w/<slug>/planning/<id>` failed with "We hit an error
+loading this content item" for **12 of 83** content items. Production
+logs showed:
+
+```
+TypeError: Cannot use 'in' operator to search for 'status' in 2026-09-26T21:00:00.000Z
+```
+
+`recordMaterialityEvent` wrote bare scalars (an ISO date for
+`schedule`, caption text, the literal `"(payload)"`) into the
+`activity_event.before_data` / `after_data` `jsonb` columns behind an
+`as never` cast. The activity formatter then ran `"status" in <string>`,
+which throws — and because it computes before/after labels for _every_
+event regardless of `kind`, one malformed historical row 500'd the whole
+route and the workspace activity feed.
+
+- **Fixed** the writer to normalise every before/after value into the
+  documented JSON-object shape (`toAuditData`), dropping the `as never`.
+  Objects pass through unchanged; scalars are wrapped under a key the
+  formatter renders.
+- **Fixed** every reader of those columns to normalise via a shared
+  `asRecord()` helper, so already-persisted rows degrade to a rendered
+  row instead of throwing.
+- **Hardened** `RawActivityEvent.beforeData` / `afterData` / `metadata`
+  to `unknown`, since `jsonb` does not guarantee a shape.
+- **Added** migration `0052` which backfills the 18 historical rows
+  (recovering the real values from `metadata`) and installs a
+  `BEFORE INSERT/UPDATE` trigger that coerces any non-object into the
+  object shape, so the columns can only ever hold objects. A coercing
+  trigger rather than a `CHECK` constraint on purpose: the deploy script
+  rolls the app image back without the schema, so a hard constraint would
+  turn this page-level 500 into write-level 500s during any rollback.
+- **Added** 66 regression tests (34 formatter, 32 writer), both verified
+  to fail against the pre-fix code.
+
+
 ### Changed — Activity log: shared formatter + readable rows
 
 Both activity surfaces (the workspace-wide feed and the

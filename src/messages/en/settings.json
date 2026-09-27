@@ -103,6 +103,24 @@
     "submit": "Save lifecycle",
     "saved": "Lifecycle settings saved."
   },
+  "rename": {
+    "title": "Workspace name",
+    "description": "The name your team sees in the workspace switcher, page headers, and reports.",
+    "nameLabel": "Workspace name",
+    "nameHint": "Up to 80 characters. This does not change the workspace URL.",
+    "urlLabel": "Workspace URL",
+    "urlHint": "The URL stays the same after a rename, so existing links keep working.",
+    "submit": "Rename workspace",
+    "saved": "Workspace renamed.",
+    "unchanged": "That is already the workspace name.",
+    "errors": {
+      "unauthorized": "Sign in again to rename this workspace.",
+      "notFound": "Workspace not found.",
+      "forbidden": "Only workspace managers can rename this workspace.",
+      "invalidName": "Enter a workspace name between 1 and 80 characters.",
+      "saveFailed": "The workspace could not be renamed. Try again."
+    }
+  },
   "leadTimes": {
     "title": "Lead times",
     "description": "Four numbers that drive every 'auto-suggest a planned date' on the planning surface. They sum to the end-to-end cycle for a normal post.",
