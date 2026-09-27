@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
-import { workspaces } from "@/lib/db/schema";
+import { storageObjects, workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { importPublicMediaAsset, MediaPermissionError } from "@/lib/media/service";
 import { MediaSourceError } from "@/lib/media/source";
@@ -51,7 +51,21 @@ export async function POST(req: NextRequest) {
       ...(parsed.data.contentItemId ? { contentItemId: parsed.data.contentItemId } : {}),
       ...(parsed.data.visibility ? { visibility: parsed.data.visibility } : {}),
     });
-    return NextResponse.json({ asset }, { status: 201 });
+    // Bundle the storage object's kind + byteSize + mimeType so the
+    // client-side `onAssetReady` callback can populate the picker's
+    // in-memory list without a follow-up fetch. The asset row alone
+    // carries only `storageObjectId`; joining the object shape keeps
+    // the wizard's "Import → dropped into picker instantly" flow true.
+    const [object] = await db
+      .select({
+        kind: storageObjects.kind,
+        byteSize: storageObjects.byteSize,
+        mimeType: storageObjects.mimeType,
+      })
+      .from(storageObjects)
+      .where(eq(storageObjects.id, asset.storageObjectId))
+      .limit(1);
+    return NextResponse.json({ asset, storageObject: object ?? null }, { status: 201 });
   } catch (error) {
     if (error instanceof MediaPermissionError)
       return NextResponse.json({ error: error.message }, { status: 403 });

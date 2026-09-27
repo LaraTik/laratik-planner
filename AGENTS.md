@@ -691,6 +691,92 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-09-27 — Global calendar assignee/status filter is now visibly effective (fix/calendar-filter-feedback)
+
+Round-of-2026-09-27 user report: "Check global calendar filter — doesn't make sense.
+I choose an assignee and the filter gives all results like nothing happened." The filter
+logic was correct (`getAgencyCalendarView` already filtered tasks by assigneeId and
+status), but the visual feedback was missing: with hundreds of plans visible, picking
+an assignee who has no tasks this month reduced the count by 0–6 events while
+the visible calendar looked identical. Active-filter chips showed the assignee name
+but they sat above a near-identical grid.
+
+- **feat(calendar): split the count into plan/task breakdown.** The previous
+  `Showing 287 events` is now `Showing 280 plans and 7 tasks` (or `Showing 280 plans`
+  when the task count is 0). New helper `CalendarCountSummary` in
+  `src/app/(app)/app/calendar/page.tsx` is the single source for this render and
+  picks the right pluralization branch per side.
+- **feat(calendar): warning hint when assignee/status filter has no task matches.**
+  `bg-warning-subtle` banner appears under the breakdown when the filter is active
+  and the resulting task list is empty: `No tasks for <name> this month. 280 plans
+remain visible.` (or status variant). The hint names the assignee / status and
+  shows the current plan count, so the user knows the filter ran (and why plans
+  still render).
+- **i18n:** five new keys in `src/messages/{en,ar}/calendar.json`
+  (`globalShowingBreakdown`, `globalShowingBreakdownPlansOnly`,
+  `globalShowingBreakdownTasksOnly`, `globalNoTasksForAssignee`,
+  `globalNoTasksForStatus`). Arabic translations follow the same branch shape.
+- **tests:** new e2e spec `tests/e2e/global-calendar-filter-feedback.spec.ts` covers
+  three states (unfiltered breakdown, workspace filter that matches plans and skips
+  the hint, status filter that triggers the hint). Three tests pass against the
+  existing dev seed.
+- **Scope:** the assignee/status filter semantics are unchanged — they still only
+  affect tasks; plans remain visible. The fix is purely visual. The existing
+  `globalAssigneeNote` description ("Assignee and status filters apply to tasks.
+  Plans stay visible unless you turn them off.") stays accurate and now matches
+  the visible hint text when the filter yields zero tasks.
+
+### 2026-09-27 — Drive folder import round 3: persistent thumbnails + in-memory picker refresh (fix/media-link-folder-browse-ux)
+
+Round-1 shipped the modern AF-block parser + preflight + filename-extension
+fallback fixes. Round-2 closed the name + size gap on the markup scrape.
+Round-3 closes the two UX gaps that became visible once the wizard
+actually rendered the right file metadata: blank-gray thumbnail boxes
+and the "I imported from the link tab and the picker didn't update until
+I refreshed" complaint.
+
+- **fix(media): wizard thumbnails always render the kind icon under the
+  Drive image.** The previous layout rendered only the `<img>` and hid
+  it via `display: none` on error, leaving a blank gray box whenever
+  Drive's CDN was slow / 401 / 403 / wrong mime. New layout renders the
+  FileImage / FileVideo / FileText icon as the **base layer**, with the
+  `<img>` absolutely positioned over it and fading in on load (`opacity`
+  0 → 1, 150ms transition). On `<img>` error the image hides and the
+  icon stays as the placeholder. The user always sees a type signal.
+
+- **fix(media): `onAssetReady` propagates through the link tab →
+  picker → parent chain.** `MediaSourcePicker.onAssetReady` was wired
+  to the device tab only; the link tab called `router.refresh()` only,
+  which refreshes the server cache but not the parent's in-memory
+  asset list (e.g. `availableAssets` on the delivery section). The
+  user had to hard-refresh to see the new asset in the dropdown. Now:
+  - `MediaSourcePicker` forwards `onAssetReady` to **both** tabs.
+  - `MediaLinkImporter` accepts `onAssetReady?(asset: MediaUploadResult)`
+    and fires it after the single-file API returns (asset id, title,
+    kind, byteSize from the joined storage object).
+  - `MediaLinkFolderBrowse` accepts the same and fires it **once per
+    successfully-imported item** in the batch report. The helper
+    `reportImportedAssets(report, rows, onAssetReady)` is exported as a
+    pure function for unit testing.
+  - `/api/media/import` joins the storage object (`kind`, `byteSize`,
+    `mimeType`) into its 201 response, so the client has what it needs
+    to populate the in-memory list without a follow-up fetch.
+  - `registerUploadedMediaAsset`'s race-recovery select now also reads
+    `storageObjectId`, keeping the return type consistent across all
+    three return paths.
+
+- **test(media): 5 new assertions** in `media-link-folder-browse.test.tsx`:
+  thumbnail layering, per-asset `onAssetReady` firings on close, and
+  `reportImportedAssets` (skips non-imported, falls back on missing
+  rows, honours title override, no-op when callback is undefined).
+- **test(media): 1 new assertion** in `media-source-picker.test.tsx`:
+  `onAssetReady` is forwarded to **both** tabs (the prior test asserted
+  device-only — that was the bug).
+
+**Companion**: same code path as round-1 (`ui-ux-pro-max`) and round-2
+(`fix/drive-folder-row-boundary`). Round-3 stays in the same wizard +
+API surface — no new component, no schema migration.
+
 ### 2026-09-26 — Drive folder import round 2: row-boundary bug + filename/size extraction (fix/drive-folder-modern-parser)
 
 Round-1 shipped the modern AF-block parser + preflight + filename-extension

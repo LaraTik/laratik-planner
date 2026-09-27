@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { MediaLinkFolderBrowse } from "./media-link-folder-browse";
 import type { MediaFolderListing } from "@/lib/media/folder-sources/types";
+import type { MediaUploadResult } from "./media-upload-form";
 
 /**
  * "From link" intake. Three top-level branches:
@@ -38,9 +39,17 @@ function looksLikeFolderUrl(url: string): boolean {
 export function MediaLinkImporter({
   workspaceOptions,
   contentItemId,
+  onAssetReady,
 }: {
   workspaceOptions: { id: string; name: string }[];
   contentItemId?: string;
+  /**
+   * Fired once per successfully-imported asset (single-file or per file
+   * in a folder batch). Carries the canonical `MediaUploadResult` shape
+   * so the parent can add the new asset to its in-memory list and
+   * pre-select it without waiting for a full page refresh.
+   */
+  onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -141,6 +150,29 @@ export function MediaLinkImporter({
         setErrorCode(result?.code ?? "fetch_failed");
         throw new Error("import failed");
       }
+      // Surface the new asset to the parent immediately. Without this
+      // hop, parents that hold an in-memory asset list (e.g. the
+      // delivery section's `availableAssets`) need a full page refresh
+      // to see the imported file — the user-visible regression was
+      // "I imported an asset from the link tab and the picker dropdown
+      // didn't show it until I hard-refreshed the page."
+      const data = (await response.json().catch(() => null)) as {
+        asset?: { id?: string; title?: string };
+        storageObject?: { kind?: string; byteSize?: number } | null;
+      } | null;
+      if (data?.asset?.id) {
+        const rawKind = data.storageObject?.kind;
+        const kind: MediaUploadResult["kind"] =
+          rawKind === "image" || rawKind === "video" || rawKind === "document"
+            ? rawKind
+            : "document";
+        onAssetReady?.({
+          id: data.asset.id,
+          title: data.asset.title ?? (title.trim() || "Imported media"),
+          kind,
+          byteSize: data.storageObject?.byteSize ?? 0,
+        });
+      }
       setState("idle");
       setErrorCode(null);
       setUrl("");
@@ -165,7 +197,8 @@ export function MediaLinkImporter({
           folder={folder}
           workspaceId={workspaceId}
           onClose={resetToLink}
-          onAssetReady={() => {
+          onAssetReady={(asset) => {
+            onAssetReady?.(asset);
             router.refresh();
           }}
         />

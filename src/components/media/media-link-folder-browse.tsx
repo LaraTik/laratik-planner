@@ -21,12 +21,14 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { classifyMediaKind, sanitizeAssetTitle } from "@/lib/media/contract";
 import {
   MAX_FOLDER_BATCH_IMPORT,
   type MediaFolderItem,
   type MediaFolderListing,
 } from "@/lib/media/folder-sources/types";
 import type { FolderImportItemReport, FolderImportReport } from "@/lib/media/folder-import";
+import type { MediaUploadResult } from "./media-upload-form";
 
 export type { FolderImportReport };
 
@@ -76,7 +78,14 @@ export function MediaLinkFolderBrowse({
   folder: MediaFolderListing;
   workspaceId: string;
   onClose?: () => void;
-  onAssetReady?: () => void;
+  /**
+   * Fired once per successfully-imported asset after the wizard closes.
+   * Carries the canonical `MediaUploadResult` shape used by the device
+   * upload tab so the parent (e.g. delivery section) can add the new
+   * asset to its in-memory list and pre-select it without waiting for a
+   * full page refresh.
+   */
+  onAssetReady?: (asset: MediaUploadResult) => void;
 }) {
   const t = useLocaleT();
   const router = useRouter();
@@ -192,7 +201,14 @@ export function MediaLinkFolderBrowse({
   };
 
   const finish = () => {
-    onAssetReady?.();
+    // Propagate the canonical asset list to the parent. This is what
+    // closes the "import finished but the new asset isn't in the picker
+    // until I refresh the page" UX gap — the parent (e.g. delivery
+    // section) reads these IDs to add to its in-memory asset list and
+    // pre-select them.
+    if (state.step === "done") {
+      reportImportedAssets(state.report, state.rows, onAssetReady);
+    }
     router.refresh();
     onClose?.();
   };
@@ -262,6 +278,33 @@ export function MediaLinkFolderBrowse({
       </Card>
     </section>
   );
+}
+
+/**
+ * Walk the report, fire `onAssetReady` once per successfully-imported
+ * item. Kept outside the component so it stays a pure function over
+ * data and is straightforward to unit-test.
+ *
+ * `kind` is derived from the original row's mime type (which the
+ * parser already normalises to the IANA shape), and `byteSize` falls
+ * back to 0 when the parser couldn't read Drive's size cell — the
+ * parent treats 0 as "size unknown" and renders accordingly.
+ */
+export function reportImportedAssets(
+  report: FolderImportReport,
+  rows: Row[],
+  onAssetReady?: (asset: MediaUploadResult) => void,
+) {
+  if (!onAssetReady) return;
+  const rowIndex = new Map(rows.map((row) => [row.id, row]));
+  for (const item of report.items) {
+    if (item.status !== "imported" || !item.assetId) continue;
+    const row = rowIndex.get(item.id);
+    const title = sanitizeAssetTitle(item.titleOverride ?? row?.name ?? item.id);
+    const kind = row ? (classifyMediaKind(row.mimeType) ?? "document") : "document";
+    const byteSize = row?.sizeBytes ?? 0;
+    onAssetReady({ id: item.assetId, title, kind, byteSize });
+  }
 }
 
 async function postFolderImport(payload: {
@@ -419,6 +462,18 @@ function FolderRow(props: {
       data-status={row.status}
     >
       <div className="bg-surface-subtle relative h-12 w-12 shrink-0 overflow-hidden rounded-[var(--radius-control)]">
+        {/* Always render the type icon as the base layer. The thumbnail
+            <img> sits absolutely-positioned over it; when the image loads,
+            it fades in on top of the icon; when it errors (Drive's
+            thumbnail endpoint occasionally 403s or returns an HTML
+            sign-in wall instead of the PNG), the image stays hidden and
+            the icon remains the visible placeholder. This avoids the
+            previous "gray box with no signal" state where a slow or
+            blocked Drive CDN left the row looking broken even though the
+            file was perfectly importable. */}
+        <div className="text-fg-secondary flex h-full w-full items-center justify-center">
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
         {row.thumbnailUrl && kind === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -427,16 +482,17 @@ function FolderRow(props: {
             width={48}
             height={48}
             loading="lazy"
-            className="h-full w-full object-cover"
+            decoding="async"
+            className="absolute inset-0 h-full w-full object-cover transition-opacity duration-150"
+            style={{ opacity: 0 }}
+            onLoad={(event) => {
+              (event.currentTarget as HTMLImageElement).style.opacity = "1";
+            }}
             onError={(event) => {
               (event.currentTarget as HTMLImageElement).style.display = "none";
             }}
           />
-        ) : (
-          <div className="text-fg-secondary flex h-full w-full items-center justify-center">
-            <Icon className="h-5 w-5" aria-hidden="true" />
-          </div>
-        )}
+        ) : null}
       </div>
       <div className="min-w-0 flex-1">
         <Input
