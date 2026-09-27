@@ -6,6 +6,7 @@ import { humanStatus, humanFormat } from "@/lib/content/status";
 import { resolveLocale } from "@/lib/i18n/locales";
 import { tFor } from "@/messages";
 import type { ActivityContext, RawActivityEvent } from "./types";
+import { asRecord } from "./lookups";
 
 /**
  * The pure Map-read helpers live in `./lookups` (no `server-only`),
@@ -15,6 +16,7 @@ import type { ActivityContext, RawActivityEvent } from "./types";
  * callers of `@/lib/activity/resolve` keep a single import site.
  */
 export {
+  asRecord,
   resolveActorName,
   resolveActorEmail,
   resolveStatusLabel,
@@ -45,9 +47,9 @@ export {
 function collectChannelIds(events: readonly RawActivityEvent[]): string[] {
   const out = new Set<string>();
   for (const e of events) {
-    const visit = (bag: Record<string, unknown> | null | undefined) => {
-      if (!bag) return;
-      const id = bag.contentItemChannelId ?? bag.channelId;
+    const visit = (bag: unknown) => {
+      const record = asRecord(bag);
+      const id = record.contentItemChannelId ?? record.channelId;
       if (typeof id === "string") out.add(id);
     };
     visit(e.metadata);
@@ -74,9 +76,8 @@ function collectUserIds(events: readonly RawActivityEvent[]): string[] {
   const out = new Set<string>();
   for (const e of events) {
     if (e.actorId) out.add(e.actorId);
-    const visit = (bag: Record<string, unknown> | null | undefined) => {
-      if (!bag) return;
-      for (const v of Object.values(bag)) {
+    const visit = (bag: unknown) => {
+      for (const v of Object.values(asRecord(bag))) {
         if (typeof v === "string" && looksLikeUuid(v)) out.add(v);
       }
     };

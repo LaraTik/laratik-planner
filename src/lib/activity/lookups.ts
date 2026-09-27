@@ -34,6 +34,47 @@ import type { ActivityContext } from "./types";
  * That is the whole reason this file is separate.
  */
 
+/**
+ * Coerce a `beforeData` / `afterData` / `metadata` payload into a
+ * plain record, or `{}` when it is anything else.
+ *
+ * This is the **single** sanctioned reader for the `jsonb` payload
+ * columns on `activity_event`, and it lives here (not in
+ * `format.ts`) so the server resolver and the client formatter
+ * share one implementation.
+ *
+ * Why it exists (incident 2026-09-27): those columns are `jsonb`,
+ * so the runtime value is whatever the writer put there — and
+ * `lib/publishing/materiality.ts::recordMaterialityEvent` stored
+ * **bare scalars** (an ISO date string for `schedule`, the caption
+ * text for `caption`, the literal `"(payload)"` for
+ * `platform_payload`) instead of an object. It coerced only `null`,
+ * and an `as never` cast silenced the Drizzle type check that
+ * would have caught it.
+ *
+ * The formatter then ran `"status" in before` against a *string*:
+ *
+ *     TypeError: Cannot use 'in' operator to search for
+ *     'status' in 2026-09-26T21:00:00.000Z
+ *
+ * Because `buildVerb` computes before/after labels for **every**
+ * event regardless of `kind`, one malformed historical row took
+ * down the entire planning-detail route and the workspace activity
+ * feed instead of degrading to one ugly row. 12 of 83 production
+ * content items were affected.
+ *
+ * `?? {}` is NOT sufficient — a string is not nullish, so it sails
+ * straight through to the `in` operator. Nor is `Object.values()`
+ * (it returns the characters of a string). Every read of these
+ * columns must go through this helper.
+ */
+export function asRecord(value: unknown): Record<string, unknown> {
+  if (value !== null && typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+
 /** Look up a user by id; returns a fallback for unknown / null. */
 export function resolveActorName(
   ctx: Pick<ActivityContext, "userById">,

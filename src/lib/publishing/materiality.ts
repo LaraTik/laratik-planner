@@ -109,6 +109,60 @@ export class MaterialityError extends Error {
 }
 
 /**
+ * Field key the activity formatter renders for each material
+ * resource. `schedule` maps to `plannedPublishAt` because that is
+ * the key `activity/format.ts` reads to render a date chip; the
+ * long-form text resources map to `brief`, the key it reads for a
+ * text diff. Anything not listed falls back to `value`.
+ */
+const AUDIT_FIELD_KEY: Partial<Record<MaterialResource, string>> = {
+  schedule: "plannedPublishAt",
+  caption: "brief",
+  audience_copy: "brief",
+  description: "brief",
+  call_to_action: "brief",
+  hashtags: "brief",
+};
+
+/**
+ * Coerce a `beforeValue` / `afterValue` into the JSON **object**
+ * that `activity_event.before_data` / `after_data` are documented
+ * to hold.
+ *
+ * Incident 2026-09-27: callers legitimately pass scalars — an ISO
+ * date for `schedule`, the caption text for `caption`, the literal
+ * `"(payload)"` for `platform_payload` — because the schema types
+ * them as `z.unknown()`. This function used to write them straight
+ * through, coercing only `null`, with an `as never` cast that
+ * silenced the Drizzle type check. The `jsonb` column happily
+ * accepted the bare string, and the activity formatter later ran
+ * `"status" in "2026-09-26T21:00:00.000Z"`, which throws. Because
+ * the formatter computes before/after labels for *every* event, one
+ * such row 500'd the whole planning-detail route. 12 of 83 content
+ * items in production had at least one.
+ *
+ * Objects pass through untouched (so `{ changedKeys }` from
+ * `content/service.ts` keeps its shape), `null`/`undefined` become
+ * `{}` (the column is NOT NULL), and scalars get wrapped under a
+ * key the formatter can render. The untouched value is always also
+ * preserved in `metadata.before` / `metadata.after`, so no audit
+ * information is lost.
+ */
+export function toAuditData(resource: MaterialResource, value: unknown): Record<string, unknown> {
+  if (value === null || value === undefined) return {};
+  // `Date` is a scalar to JSONB (it serialises to a string) but is
+  // not a key/value bag — normalise it to the ISO string the
+  // formatter's date chip expects.
+  if (value instanceof Date) {
+    return { [AUDIT_FIELD_KEY[resource] ?? "value"]: value.toISOString() };
+  }
+  if (typeof value === "object" && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return { [AUDIT_FIELD_KEY[resource] ?? "value"]: value };
+}
+
+/**
  * The single funnel. Call this from any service that mutates
  * one of the documented material fields on a content item or
  * its channel. The actor must be a workspace member of the
@@ -200,8 +254,8 @@ export async function recordMaterialityEvent(
       kind: "update", // M4.3 migration adds 'material_edit' to the enum
       contentItemId: input.contentItemId,
       summary: `Material edit on '${input.resource}' (revision ${newRevision}).`,
-      beforeData: (input.beforeValue === null ? {} : input.beforeValue) as never,
-      afterData: (input.afterValue === null ? {} : input.afterValue) as never,
+      beforeData: toAuditData(input.resource, input.beforeValue),
+      afterData: toAuditData(input.resource, input.afterValue),
       metadata: {
         resource: input.resource,
         reasonCode: input.reasonCode,

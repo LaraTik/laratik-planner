@@ -38,8 +38,17 @@ export interface ActivityEventView {
    *  target — useful when the caller doesn't know the title. */
   targetLabel?: string | null;
   metadata?: Record<string, unknown> | null;
-  afterData?: Record<string, unknown> | null;
-  beforeData?: Record<string, unknown> | null;
+  /**
+   * Typed `unknown` rather than `Record<string, unknown>` on
+   * purpose. These come straight out of `activity_event`'s `jsonb`
+   * columns, which accept any JSON value — and until 2026-09-27
+   * one writer stored bare scalars there, which made this route
+   * throw. Declaring the honest type keeps the normalisation in
+   * `formatActivityEvent` (the single boundary) mandatory rather
+   * than optional.
+   */
+  afterData?: unknown;
+  beforeData?: unknown;
 }
 
 export interface ActivityTimelineProps {

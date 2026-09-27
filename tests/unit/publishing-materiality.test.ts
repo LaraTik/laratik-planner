@@ -171,6 +171,7 @@ const {
   MaterialityReasonCodeSchema,
   RecordMaterialityEventInputSchema,
   RecordNonMaterialityEventInputSchema,
+  toAuditData,
 } = await import("@/lib/publishing/materiality");
 
 const actor = { id: "99999999-9999-9999-9999-999999999999" };
@@ -498,5 +499,161 @@ describe("listMaterialEdits", () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]?.id).toBe("evt-1");
     expect(rows[0]?.metadata).toEqual({ material: true, resource: "caption" });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────
+// Regression: 2026-09-27 — bare scalars in activity_event jsonb
+//
+// `recordMaterialityEvent` used to write `beforeValue` / `afterValue`
+// straight into `activity_event.before_data` / `after_data` with an
+// `as never` cast, coercing only `null`. Callers legitimately pass
+// scalars (an ISO date for `schedule`, the caption for `caption`,
+// the literal "(payload)" for `platform_payload`), so the jsonb
+// columns received bare strings. The activity formatter then ran
+// `"status" in "2026-09-26T21:00:00.000Z"` and threw, 500-ing the
+// whole /app/w/[slug]/planning/[id] route for 12 of 83 items.
+//
+// The contract pinned here: these columns are ALWAYS JSON objects.
+// ─────────────────────────────────────────────────────────────────
+describe("toAuditData — before/after jsonb shape (2026-09-27 regression)", () => {
+  it("wraps an ISO date under plannedPublishAt for schedule", () => {
+    // The exact production payload that caused the crash.
+    expect(toAuditData("schedule", "2026-09-26T21:00:00.000Z")).toEqual({
+      plannedPublishAt: "2026-09-26T21:00:00.000Z",
+    });
+  });
+
+  it("never returns a scalar for any scalar input", () => {
+    const scalars: unknown[] = [
+      "2026-09-26T21:00:00.000Z",
+      "(payload)",
+      "caption text",
+      "",
+      42,
+      true,
+      ["a", "b"],
+    ];
+    for (const value of scalars) {
+      const out = toAuditData("caption", value);
+      expect(typeof out).toBe("object");
+      expect(out).not.toBeNull();
+      expect(Array.isArray(out)).toBe(false);
+    }
+  });
+
+  it("wraps a Date under the ISO string the formatter's date chip expects", () => {
+    expect(toAuditData("schedule", new Date("2026-09-26T21:00:00.000Z"))).toEqual({
+      plannedPublishAt: "2026-09-26T21:00:00.000Z",
+    });
+  });
+
+  it("maps long-form text resources onto the brief key the formatter reads", () => {
+    const textResources = [
+      "caption",
+      "audience_copy",
+      "description",
+      "call_to_action",
+      "hashtags",
+    ] as const;
+    for (const resource of textResources) {
+      expect(toAuditData(resource, "hello")).toEqual({ brief: "hello" });
+    }
+  });
+
+  it("falls back to a neutral value key for unmapped resources", () => {
+    expect(toAuditData("platform_payload", "(payload)")).toEqual({ value: "(payload)" });
+    expect(toAuditData("crop", 3)).toEqual({ value: 3 });
+  });
+
+  it("passes an object through untouched (no shape change)", () => {
+    const bag = { changedKeys: ["caption"] };
+    expect(toAuditData("audience_copy", bag)).toBe(bag);
+  });
+
+  it("maps null / undefined to an empty object (the column is NOT NULL)", () => {
+    expect(toAuditData("caption", null)).toEqual({});
+    expect(toAuditData("caption", undefined)).toEqual({});
+  });
+});
+
+describe("recordMaterialityEvent — persists objects, not scalars (2026-09-27 regression)", () => {
+  async function captureActivityRow(input: {
+    beforeValue: unknown;
+    afterValue: unknown;
+    resource: "schedule" | "platform_payload" | "audience_copy";
+  }) {
+    dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
+    dbState.selectResults.push([]);
+    dbState.selectResults.push([]);
+    await recordMaterialityEvent({
+      actor,
+      contentItemId,
+      resource: input.resource,
+      beforeValue: input.beforeValue,
+      afterValue: input.afterValue,
+      reasonCode: "schedule.update",
+    });
+    const insert = dbState.insertCalls.find((c) =>
+      (c.values as Record<string, unknown>).summary?.toString().includes("Material edit"),
+    );
+    return insert?.values as Record<string, unknown>;
+  }
+
+  it("stores objects for the reschedule scalar that used to break the page", async () => {
+    const row = await captureActivityRow({
+      resource: "schedule",
+      beforeValue: "2026-09-26T21:00:00.000Z",
+      afterValue: "2026-09-27T21:00:00.000Z",
+    });
+    expect(row.beforeData).toEqual({ plannedPublishAt: "2026-09-26T21:00:00.000Z" });
+    expect(row.afterData).toEqual({ plannedPublishAt: "2026-09-27T21:00:00.000Z" });
+  });
+
+  it("stores an object for the '(payload)' scalar", async () => {
+    const row = await captureActivityRow({
+      resource: "platform_payload",
+      beforeValue: "(payload)",
+      afterValue: null,
+    });
+    expect(row.beforeData).toEqual({ value: "(payload)" });
+    expect(row.afterData).toEqual({});
+  });
+
+  it("preserves the untouched values in metadata for audit fidelity", async () => {
+    const row = await captureActivityRow({
+      resource: "schedule",
+      beforeValue: "2026-09-26T21:00:00.000Z",
+      afterValue: "2026-09-27T21:00:00.000Z",
+    });
+    const meta = row.metadata as Record<string, unknown>;
+    expect(meta.before).toBe("2026-09-26T21:00:00.000Z");
+    expect(meta.after).toBe("2026-09-27T21:00:00.000Z");
+  });
+
+  it("asserts no writer path can emit a non-object into the jsonb columns", async () => {
+    const cases: Array<{
+      resource: "schedule" | "audience_copy";
+      beforeValue: unknown;
+      afterValue: unknown;
+    }> = [
+      {
+        resource: "schedule",
+        beforeValue: "2026-09-26T21:00:00.000Z",
+        afterValue: "2026-09-27T21:00:00.000Z",
+      },
+      { resource: "audience_copy", beforeValue: "old copy", afterValue: "new copy" },
+      { resource: "audience_copy", beforeValue: null, afterValue: null },
+      { resource: "audience_copy", beforeValue: { changedKeys: ["caption"] }, afterValue: 7 },
+    ];
+    for (const c of cases) {
+      const row = await captureActivityRow(c);
+      for (const key of ["beforeData", "afterData"] as const) {
+        const value = row[key];
+        expect(value).toBeTypeOf("object");
+        expect(value).not.toBeNull();
+        expect(Array.isArray(value)).toBe(false);
+      }
+    }
   });
 });

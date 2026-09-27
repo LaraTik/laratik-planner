@@ -49,11 +49,28 @@ export interface RawActivityEvent {
   href?: string | null;
   /** Free-form key/value bag. Convention: never embed raw UUIDs
    *  in human copy here — store the ID and resolve in the formatter. */
-  metadata?: Record<string, unknown> | null;
-  /** State before the change. */
-  beforeData?: Record<string, unknown> | null;
-  /** State after the change. */
-  afterData?: Record<string, unknown> | null;
+  metadata?: unknown;
+  /** State before the change. Typed `unknown` because the backing
+   *  `activity_event.before_data` column is `jsonb` and accepts any
+   *  JSON value.
+   *
+   *  INVARIANT: this MUST be a JSON object (or null/absent) — read
+   *  it through `asRecord()` in `format.ts`, never with a bare `in`
+   *  or spread.
+   *
+   *  Incident 2026-09-27: `recordMaterialityEvent` wrote bare
+   *  scalars (an ISO date for `schedule`, `"(payload)"` for
+   *  `platform_payload`) into this column behind an `as never`
+   *  cast. The formatter's `"status" in before` then threw
+   *  `TypeError: Cannot use 'in' operator`, and because
+   *  `buildVerb` computes before/after labels for *every* event,
+   *  one bad row 500'd the whole planning-detail route. 12 of 83
+   *  production content items were affected. The writer and the
+   *  reader are both fixed; the honest `unknown` type is what stops
+   *  a third writer from repeating it. */
+  beforeData?: unknown;
+  /** State after the change. Same invariant as `beforeData`. */
+  afterData?: unknown;
   /** Workspace-scoped label (e.g. content item title). The
    *  formatter renders this as the entry's target. */
   targetLabel?: string | null;

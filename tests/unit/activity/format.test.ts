@@ -369,3 +369,134 @@ describe("formatActivityEvent — happenedAt", () => {
     expect(spec.occurredAtIso).toBe("2026-09-27T10:00:00.000Z");
   });
 });
+
+// ─────────────────────────────────────────────────────────────────
+// Regression: 2026-09-27 production 500 on /app/w/[slug]/planning/[id]
+//
+// `recordMaterialityEvent` wrote bare scalars into the
+// `activity_event.before_data` / `after_data` jsonb columns (an ISO
+// date for `schedule`, caption text for `caption`, the literal
+// `"(payload)"` for `platform_payload`). The formatter then ran
+// `"status" in "2026-09-26T21:00:00.000Z"` and threw:
+//
+//   TypeError: Cannot use 'in' operator to search for 'status'
+//   in 2026-09-26T21:00:00.000Z
+//
+// Because `buildVerb` computes before/after labels for EVERY event
+// regardless of `kind`, one bad historical row took down the whole
+// planning-detail route. 12 of 83 production items were affected.
+//
+// These tests pin the reader contract: any JSON value is acceptable
+// input and must degrade to a rendered row, never a thrown error.
+// ─────────────────────────────────────────────────────────────────
+describe("formatActivityEvent — malformed jsonb payloads (2026-09-27 regression)", () => {
+  const SCALARS: Array<[string, unknown]> = [
+    ["ISO date string", "2026-09-26T21:00:00.000Z"],
+    ["placeholder string", "(payload)"],
+    ["arabic caption text", "يوجد صور للفكرة العامة وصور المنتجات"],
+    ["empty string", ""],
+    ["number", 42],
+    ["boolean", true],
+    ["array", ["a", "b"]],
+    ["Date instance", new Date("2026-09-26T21:00:00.000Z")],
+  ];
+
+  for (const [label, value] of SCALARS) {
+    it(`does not throw when beforeData/afterData is a ${label}`, () => {
+      const run = () =>
+        formatActivityEvent(
+          makeEvent({ kind: "update", beforeData: value, afterData: value }),
+          emptyContext(),
+          t,
+          opts(),
+        );
+      expect(run).not.toThrow();
+      // The 'update' verb template is "updated {target}" and does
+      // not interpolate before/after — so the labels are computed
+      // and discarded. That discarded computation is what used to
+      // take the page down.
+      expect(run().verb).toBe("updated Spring drop");
+    });
+  }
+
+  it("does not throw for a scalar payload on every kind that reads before/after", () => {
+    const kinds = [
+      "status_transition",
+      "schedule_change",
+      "date_updated",
+      "assignment",
+      "publication",
+      "brief_updated",
+      "title_updated",
+      "content_updated",
+      "content_copy_patched",
+      "delivery",
+      "update",
+    ];
+    for (const kind of kinds) {
+      expect(() =>
+        formatActivityEvent(
+          makeEvent({
+            kind,
+            beforeData: "2026-09-26T21:00:00.000Z",
+            afterData: "2026-09-27T21:00:00.000Z",
+          }),
+          emptyContext(),
+          t,
+          opts(),
+        ),
+      ).not.toThrow();
+    }
+  });
+
+  it("does not throw when metadata is a scalar", () => {
+    expect(() =>
+      formatActivityEvent(
+        makeEvent({ kind: "publication", metadata: "2026-09-26T21:00:00.000Z" }),
+        emptyContext(),
+        t,
+        opts(),
+      ),
+    ).not.toThrow();
+  });
+
+  it("still renders a real object payload unchanged", () => {
+    // The guard must not regress well-formed rows.
+    const spec = formatActivityEvent(
+      makeEvent({
+        kind: "status_transition",
+        beforeData: { status: "draft" },
+        afterData: { status: "content_review" },
+      }),
+      emptyContext(),
+      t,
+      opts(),
+    );
+    expect(spec.diff?.before.label).toBe("Draft");
+    expect(spec.diff?.after.label).toBe("Content review");
+  });
+
+  it("degrades a scalar status_transition to an empty-value diff instead of throwing", () => {
+    const spec = formatActivityEvent(
+      makeEvent({ kind: "status_transition", beforeData: "draft", afterData: "in_design" }),
+      emptyContext(),
+      t,
+      opts(),
+    );
+    expect(spec.diff?.field).toBe("status");
+    expect(spec.diff?.before.label).toBe("");
+    expect(spec.diff?.after.label).toBe("");
+  });
+
+  it("reads an array payload as empty, not as index keys", () => {
+    // `{ ..."ab" }` would produce {0:'a',1:'b'} — a subtle wrong
+    // render rather than a throw. Pin the intended behaviour.
+    const spec = formatActivityEvent(
+      makeEvent({ kind: "status_transition", beforeData: ["draft"], afterData: ["in_design"] }),
+      emptyContext(),
+      t,
+      opts(),
+    );
+    expect(spec.diff?.before.label).toBe("");
+  });
+});

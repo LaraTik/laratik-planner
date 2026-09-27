@@ -35,7 +35,7 @@ import type {
   ActivityRenderSpec,
   RawActivityEvent,
 } from "./types";
-import { resolveActorName, resolveChannelLabel, resolveStatusLabel } from "./lookups";
+import { asRecord, resolveActorName, resolveChannelLabel, resolveStatusLabel } from "./lookups";
 
 /** Translator signature mirroring `next-intl`'s `t()`. */
 export type Translator = (key: string, params?: Record<string, string | number>) => string;
@@ -147,7 +147,7 @@ function templateForKind(event: RawActivityEvent): string | null {
     }
     // Release: the after designerId is null/undefined.
     const afterId = merged.designerId;
-    if ("designerId" in (event.beforeData ?? {}) && (afterId === null || afterId === undefined)) {
+    if ("designerId" in asRecord(event.beforeData) && (afterId === null || afterId === undefined)) {
       return "activity.verbs.assignment_designer_released";
     }
     return "activity.verbs.assignment_designer";
@@ -170,7 +170,7 @@ function templateForKind(event: RawActivityEvent): string | null {
 }
 
 function mergedFields(e: RawActivityEvent): Record<string, unknown> {
-  return { ...(e.metadata ?? {}), ...(e.beforeData ?? {}), ...(e.afterData ?? {}) };
+  return { ...asRecord(e.metadata), ...asRecord(e.beforeData), ...asRecord(e.afterData) };
 }
 
 function readSubkind(bag: Record<string, unknown>): string | null {
@@ -179,8 +179,7 @@ function readSubkind(bag: Record<string, unknown>): string | null {
 }
 
 function readCount(event: RawActivityEvent): number | null {
-  const bag = event.metadata;
-  if (!bag) return null;
+  const bag = asRecord(event.metadata);
   const v = bag.count ?? bag.archivedCount ?? bag.deletedCount;
   return typeof v === "number" ? v : null;
 }
@@ -211,7 +210,7 @@ function beforeLabel(
   opts: FormatOptions,
 ): string {
   const empty = t("activity.diff.empty_value");
-  const before = event.beforeData ?? {};
+  const before = asRecord(event.beforeData);
   if ("status" in before) {
     return resolveStatusLabel(ctx, stringOrNull(before.status)) || empty;
   }
@@ -243,7 +242,7 @@ function afterLabel(
   opts: FormatOptions,
 ): string {
   const empty = t("activity.diff.empty_value");
-  const after = event.afterData ?? {};
+  const after = asRecord(event.afterData);
   if ("status" in after) {
     return resolveStatusLabel(ctx, stringOrNull(after.status)) || empty;
   }
@@ -310,8 +309,8 @@ function buildDiff(
   opts: FormatOptions,
 ): ActivityDiff | null {
   const kind = event.kind;
-  const before = event.beforeData;
-  const after = event.afterData;
+  const before = asRecord(event.beforeData);
+  const after = asRecord(event.afterData);
 
   // Text-shaped diffs (long-form content)
   if (
@@ -416,7 +415,7 @@ function buildMetadataLabel(
   ctx: ActivityContext,
   t: Translator,
 ): string | null {
-  const meta = event.metadata ?? {};
+  const meta = asRecord(event.metadata);
   const channelId =
     typeof meta.contentItemChannelId === "string" ? meta.contentItemChannelId : null;
   if (channelId) {

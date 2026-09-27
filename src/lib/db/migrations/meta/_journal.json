@@ -367,6 +367,13 @@
       "breakpoints": true
     },
     {
+      "idx": 52,
+      "version": "7",
+      "when": 1790531010404,
+      "tag": "0052_activity_event_jsonb_object_guard",
+      "breakpoints": true
+    },
+    {
       "idx": 53,
       "version": "7",
       "when": 1790531606070,
