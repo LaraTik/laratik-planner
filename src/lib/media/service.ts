@@ -756,8 +756,11 @@ export async function registerUploadedMediaAsset(input: {
     if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
   }
 
+  // Select storageObjectId alongside the id so the declared return
+  // shape (`{ id, storageObjectId }`) holds on this early return,
+  // matching the already-registered race check further down.
   const [existing] = await db
-    .select({ id: mediaAssets.id })
+    .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
     .from(mediaAssets)
     .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
     .limit(1);
