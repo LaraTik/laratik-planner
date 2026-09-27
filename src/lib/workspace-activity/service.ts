@@ -59,6 +59,19 @@ export interface WorkspaceActivityRow {
     name: string | null;
     email: string | null;
   } | null;
+  /** Stable id of the target row (e.g. `content_item.id`). When
+   *  present, the resolver uses it to look up the active
+   *  designer / owner names. */
+  targetId?: string | null;
+  /** Snapshot of the before-state from `activity_event.before_data`.
+   *  The formatter uses this for diff rendering. */
+  beforeData?: Record<string, unknown> | null;
+  /** Snapshot of the after-state from `activity_event.after_data`. */
+  afterData?: Record<string, unknown> | null;
+  /** Snapshot of `activity_event.metadata` (channel / version /
+   *  subkind). The formatter uses this to attach a label like
+   *  "Instagram · LaraTik Main" to the row. */
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface ListWorkspaceActivityFilters {
@@ -191,10 +204,11 @@ export async function listWorkspaceActivity(
       actorEmail: users.email,
       createdAt: activityEvents.createdAt,
       contentItemTitle: contentItems.title,
-      // We grab the content item scope to give the planning chip a
-      // stable mapping: if the linked item is a plan/idea we still
-      // group as "content" today (the chip vocabulary doesn't
-      // distinguish a plan from a post — content *is* what we have).
+      // Structured payload — the formatter consumes these to
+      // render the before → after diff and the channel label.
+      beforeData: activityEvents.beforeData,
+      afterData: activityEvents.afterData,
+      metadata: activityEvents.metadata,
     })
     .from(activityEvents)
     .leftJoin(users, eq(users.id, activityEvents.actorId))
@@ -249,6 +263,7 @@ export async function listWorkspaceActivity(
     summary: row.summary,
     scope: kindToScope(row.kind),
     targetLabel: row.contentItemTitle ?? "(deleted item)",
+    targetId: row.contentItemId,
     href: buildActivityHref({
       workspaceSlug: workspace.slug,
       contentItemId: row.contentItemId,
@@ -262,6 +277,9 @@ export async function listWorkspaceActivity(
           email: row.actorEmail,
         }
       : null,
+    beforeData: row.beforeData,
+    afterData: row.afterData,
+    metadata: row.metadata,
   }));
 
   const combined = [...aeMerged, ...brandFiltered];

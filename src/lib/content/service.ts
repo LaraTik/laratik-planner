@@ -32,6 +32,7 @@ import {
   type WorkflowAction,
   type WorkspaceRole,
 } from "@/lib/content/workflow";
+import { humanStatus as humanizeForSummary } from "@/lib/content/status";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
@@ -1408,10 +1409,20 @@ export async function transitionContent(
       contentItemId: item.id,
       actorId: actor.id,
       kind: "status_transition",
-      summary: `${item.status} → ${transition.to}`,
+      // `summary` is the legacy fallback; the new
+      // `activity.verbs.status_transition` template renders the
+      // localised status names. Keeping the human-friendly copy
+      // in `summary` ensures older clients / data exports still
+      // surface a sensible string.
+      summary: `${humanizeForSummary(item.status)} → ${humanizeForSummary(transition.to)}`,
       beforeData: { status: item.status },
       afterData: { status: transition.to },
-      metadata: { action: input.action },
+      metadata: {
+        action: input.action,
+        field: "status",
+        before: item.status,
+        after: transition.to,
+      },
     });
 
     // FEAT-01 — fire the right in-app notification for each
@@ -1628,9 +1639,19 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
       contentItemId: parsed.data.contentItemId,
       actorId: actor.id,
       kind: "assignment",
-      summary: `Assigned designer ${parsed.data.designerId} to "${item.title}"`,
+      // `summary` is the legacy fallback; the new
+      // `activity.verbs.assignment_designer` template renders the
+      // designer's display name (resolved server-side by
+      // `buildActivityContext`). The raw UUID no longer reaches
+      // the UI.
+      summary: `Assigned a designer to "${item.title}"`,
       beforeData: { designerId: previousDesigner },
       afterData: { designerId: parsed.data.designerId },
+      metadata: {
+        field: "designer",
+        before: previousDesigner,
+        after: parsed.data.designerId,
+      },
     });
     // FEAT-01 — fire an assignment notification to the new designer
     // and, if there was a previous designer, a release to them.
@@ -1735,9 +1756,16 @@ export async function assignContentOwner(actor: Actor, input: AssignContentOwner
       contentItemId: parsed.data.contentItemId,
       actorId: actor.id,
       kind: "assignment",
-      summary: `Changed owner of "${item.title}"`,
+      // The formatter picks `activity.verbs.assignment_owner` because
+      // `contentOwnerId` is present in `beforeData`/`afterData`.
+      summary: `Changed the owner of "${item.title}"`,
       beforeData: { contentOwnerId: previousOwner },
       afterData: { contentOwnerId: parsed.data.ownerId },
+      metadata: {
+        field: "owner",
+        before: previousOwner,
+        after: parsed.data.ownerId,
+      },
     });
     if (parsed.data.ownerId !== actor.id) {
       await enqueueAssignmentNotification(
@@ -1834,9 +1862,17 @@ export async function releaseDesignTask(actor: Actor, input: ReleaseDesignTaskIn
       contentItemId: parsed.data.contentItemId,
       actorId: actor.id,
       kind: "assignment",
-      summary: `Released designer hold on "${item.title}"`,
+      // Formatter picks `activity.verbs.assignment_designer_released`
+      // because `beforeData.designerId` is set and `afterData.designerId`
+      // is null.
+      summary: `Released the designer hold on "${item.title}"`,
       beforeData: { designerId: releasedDesigner, status: item.status },
       afterData: { designerId: null },
+      metadata: {
+        field: "designer",
+        before: releasedDesigner,
+        after: null,
+      },
     });
     // FEAT-01 — notify the released designer.
     if (releasedDesigner !== actor.id) {
@@ -1909,6 +1945,11 @@ export async function rescheduleContentItem(actor: Actor, input: RescheduleConte
       summary: `Rescheduled "${item.title}"`,
       beforeData: { plannedPublishAt: item.plannedPublishAt.toISOString() },
       afterData: { plannedPublishAt: parsed.data.plannedPublishAt.toISOString() },
+      metadata: {
+        field: "date",
+        before: item.plannedPublishAt.toISOString(),
+        after: parsed.data.plannedPublishAt.toISOString(),
+      },
     });
   });
   // FEAT-MEDIA-LIBRARY-2026-09-16 — silent folder reconcile when the

@@ -12,6 +12,81 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — Activity log: shared formatter + readable rows
+
+Both activity surfaces (the workspace-wide feed and the
+per-item timeline) used to render raw enum values and raw
+UUIDs straight from the database, e.g.:
+
+```
+ghaleb karmanshahi Assigned designer c66f7afa-44fc-4464-877c-c0730e11444e to "Errätst du das? — Level 1"
+ghaleb karmanshahi draft → content_review
+ghaleb karmanshahi creative_internal approved
+ghaleb karmanshahi Publication marked published
+```
+
+After this change every row reads as a real sentence with
+the right names resolved server-side and the before → after
+diff rendered in-place:
+
+> **Ghaleb Karmanshahi** moved _Errätst du das? — Level 1_ from **Draft** to **Content review** · 5 Sep 11:14
+>
+> **Hasan Arisha** submitted delivery **V1** for _Errätst du das? — Level 1_ · 3 Sep 12:02
+>
+> **Ghaleb Karmanshahi** assigned _Errätst du das? — Level 1_ to **Maya Cohen** (was _unassigned_) · 2 Sep 16:16
+>
+> **Ghaleb Karmanshahi** marked _Errätst du das? — Level 1_ as published on **Instagram · LaraTik Main** · 5 Sep 12:28
+
+What's in this PR:
+
+- **One shared formatter + renderer.** `lib/activity/format.ts`
+  → `formatActivityEvent()` produces an `ActivityRenderSpec`.
+  `<ActivityEntry />` renders it identically on both
+  surfaces. No more per-surface `humanizeKind` ladders.
+- **Server-side ID resolution.** `lib/activity/resolve.ts`
+  → `buildActivityContext()` batches users / channels /
+  status enums into one query per workspace per page render.
+- **Field-level diff.** Brief / title / date / status /
+  publication channel changes render with the previous value
+  struck through and the new value underlined. Long copy is
+  collapsible. Status changes show tone-coded chips
+  (success for promoting, warning for regressing).
+- **Channel context.** Publication events now include the
+  channel name ("Instagram · LaraTik Main") so the
+  workspace feed stops showing four identical
+  "Publication marked published" rows in a row.
+- **Verb templates.** New canonical namespace
+  `activity.verbs.<kind>` in `messages/{en,ar}/activity.json`
+  (en + ar). Old duplicated `kindLabels` + `contentDetail.activity.kindXxx`
+  keys removed.
+- **Emitter cleanup.** `inline-update.ts`,
+  `content/service.ts`, `publishing/service.ts`,
+  `meta-publication-service.ts` now write structured
+  `beforeData` / `afterData` / `metadata`. No raw UUID or raw
+  enum in `summary`.
+- **Tests.** `tests/unit/activity/format.test.ts` (21),
+  `activity-entry.test.tsx` (5), `activity-diff.test.tsx` (5),
+  plus an updated `activity-timeline.test.tsx` that pins the
+  new contract. The "renders a verb for every known kind
+  without leaking the raw enum" guard now uses the canonical
+  `activityKindEnum` from `lib/db/schema/enums.ts`.
+- **Docs.** `docs/architecture/activity-log.md` is the new
+  architecture reference. `AGENTS.md` gains the "Activity
+  log rendering" section with the rule: **never edit
+  `<ActivityEntry />` to support a new kind** — add a verb
+  template + structured payload instead.
+
+Migration of old i18n keys:
+
+- `contentDetail.activity.kindXxx` (per-item timeline) → removed;
+  the per-item timeline now reads from `activity.verbs.<kind>`.
+- `activity.kindLabels` (workspace feed) → kept as a legacy
+  fallback during the migration window; will be removed in a
+  follow-up PR once all consumers are migrated.
+
+No DB migration. No new routes. No breaking changes to the
+`activity_event` table schema.
+
 ### Added — Global calendar Workload view (per-user tasks + plans they're touching)
 
 "What's important to me in the global calendar is the ability to select a user and see

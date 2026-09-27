@@ -1,6 +1,5 @@
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { and, asc, eq } from "drizzle-orm";
 import { fromZonedTime } from "date-fns-tz";
 import { Activity, Filter as FilterIcon, History } from "lucide-react";
@@ -13,7 +12,6 @@ import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar
 import { ListPagination } from "@/components/ui/list-pagination";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { KpiTile } from "@/components/workspace/kpi-tile";
-import { IconTile } from "@/components/workspace/icon-button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import {
@@ -24,14 +22,17 @@ import {
   type AllowedPageSize,
   type ListFilters,
 } from "@/lib/list-page-utils";
-import { formatDate } from "@/lib/i18n/format-locale";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import {
   type ActivityScope,
   type ListWorkspaceActivityFilters,
   listWorkspaceActivity,
   listWorkspaceActivityCounts,
 } from "@/lib/workspace-activity/service";
-import { Badge } from "@/components/ui/badge";
+import { buildActivityContext } from "@/lib/activity/resolve";
+import { formatActivityEvent } from "@/lib/activity/format";
+import { ActivityFeedCard } from "@/components/activity";
+import type { ActivityRenderSpec } from "@/lib/activity/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -209,6 +210,76 @@ export default async function WorkspaceActivityPage({
   ]);
 
   const rows = feed.rows;
+
+  // Build the resolver context for the visible rows. We only
+  // include the page slice in the lookup so the batched
+  // queries stay bounded. The resolver handles missing IDs by
+  // falling back to "Unknown" labels with `data-*` test ids.
+  const context = await buildActivityContext(
+    workspace.id,
+    rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      summary: row.summary,
+      actorId: row.actor?.id ?? null,
+      occurredAt: row.at,
+      href: row.href,
+      metadata: row.metadata ?? null,
+      beforeData: row.beforeData ?? null,
+      afterData: row.afterData ?? null,
+      targetLabel: row.targetLabel,
+      targetId: row.targetId ?? null,
+    })),
+    code,
+  );
+
+  // Format every visible row once on the server. The result is
+  // a serialisable spec consumed by the shared `<ActivityEntry
+  // />` (server-renderable). Per-row name resolution happens
+  // through the resolver; the page never touches `db`.
+  const specs: ActivityRenderSpec[] = rows.map((row) =>
+    formatActivityEvent(
+      {
+        id: row.id,
+        kind: row.kind,
+        summary: row.summary,
+        actorId: row.actor?.id ?? null,
+        occurredAt: row.at,
+        href: row.href,
+        metadata: row.metadata ?? null,
+        beforeData: row.beforeData ?? null,
+        afterData: row.afterData ?? null,
+        targetLabel: row.targetLabel,
+        targetId: row.targetId ?? null,
+      },
+      context,
+      t,
+      {
+        formatDate: (value) =>
+          formatDate(value, code, {
+            timeZone: workspace.timezone,
+            ...DateFormat.dateTime,
+          }),
+        systemActorFallback: t("activity.systemActor"),
+      },
+    ),
+  );
+
+  const scopeLabelMap = new Map<string, string>(
+    SCOPE_CHIP_VALUES.map((s) => [s, t(`activity.scopeLabels.${s}`)]),
+  );
+  // The spec carries the event `kind` (e.g. "publication") but
+  // the chip on the workspace feed wants the *scope* (e.g.
+  // "Publications"). Map per-row.
+  const scopeByKind = (kind: string): string => {
+    if (kind.startsWith("brand.")) return "brand_kit";
+    return rows.find((r) => r.kind === kind)?.scope ?? "content";
+  };
+  const specScopeLabels = new Map<string, string>();
+  for (const spec of specs) {
+    const scope = scopeByKind(spec.kind);
+    specScopeLabels.set(spec.id, scopeLabelMap.get(scope) ?? scope);
+  }
   // Wrap into the existing `paginate` helper so the toolbar's pagination
   // contract stays identical to the Team & Access lists.
   const total = counts.all;
@@ -371,59 +442,29 @@ export default async function WorkspaceActivityPage({
             />
           </div>
         ) : (
-          <ol
-            className="divide-border divide-y"
-            data-testid="activity-feed"
-            aria-label={t("activity.feedAriaLabel")}
-          >
-            {finalRows.map((row) => (
-              <li
-                key={row.id}
-                data-testid={`activity-row-${row.id}`}
-                className="hover:bg-surface-subtle px-4 py-3 transition-colors"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <IconTile
-                    size="sm"
-                    tone={actorTone(row.actor?.name ?? row.actor?.email ?? "?")}
-                    className="mt-1 shrink-0"
-                    aria-hidden={true}
-                  >
-                    {(row.actor?.name ?? row.actor?.email ?? "?").charAt(0).toUpperCase()}
-                  </IconTile>
-                  <span className="text-body text-fg-primary font-semibold">
-                    {row.actor?.name ?? row.actor?.email ?? t("activity.systemActor")}
-                  </span>
-                  <span className="text-body text-fg-secondary">{humanizeKind(row.kind, t)}</span>
-                  {row.targetLabel ? (
-                    row.href ? (
-                      <Link
-                        href={row.href}
-                        className="text-primary text-body focus-visible:ring-focus-ring rounded-[var(--radius-control)] underline-offset-2 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
-                      >
-                        {row.targetLabel}
-                      </Link>
-                    ) : (
-                      <span className="text-body text-fg-secondary">{row.targetLabel}</span>
-                    )
-                  ) : null}
-                  <Badge variant="outline" className="ms-auto">
-                    {t(`activity.scopeLabels.${row.scope}`)}
-                  </Badge>
-                </div>
-                <p className="text-label text-fg-muted ms-12 mt-1 font-mono">
-                  {formatDate(row.at, code, {
+          (() => {
+            const ids = new Set(finalRows.map((r) => r.id));
+            const visibleSpecs = specs.filter((spec) => ids.has(spec.id));
+            return (
+              <ActivityFeedCard
+                title=""
+                specs={visibleSpecs}
+                emptyTitle={t("activity.emptyNoActivity")}
+                emptyBody={t("activity.emptyNoActivityBody")}
+                scopeLabels={specScopeLabels}
+                renderTime={(iso) =>
+                  formatDate(iso, code, {
                     timeZone: workspace.timezone,
                     day: "numeric",
                     month: "short",
                     year: "numeric",
                     hour: "numeric",
                     minute: "2-digit",
-                  })}
-                </p>
-              </li>
-            ))}
-          </ol>
+                  })
+                }
+              />
+            );
+          })()
         )}
 
         {finalRows.length > 0 ? (
@@ -456,35 +497,9 @@ export default async function WorkspaceActivityPage({
 }
 
 /* ── helpers ──────────────────────────────────────────────────────────── */
-
-/**
- * Convert an event `kind` to a human-readable verb. Falls back to the
- * raw key (with the dot replaced) so an unmapped kind surfaces
- * without lying ("content_copy_patched" reads better than "Unknown").
- */
-function humanizeKind(
-  kind: string,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  const localised = t(`activity.kindLabels.${kind}`);
-  if (localised && !localised.startsWith("[")) return localised;
-  // Fallback: clean up the dotted kind for display.
-  if (kind.startsWith("brand.")) return t("activity.kindLabels.brand_update");
-  return kind.replace(/_/g, " ");
-}
-
-/**
- * Hash a name fragment to a stable IconTile tone so each actor always
- * renders in the same color. Avoids the page shifting colour on every
- * load. `tone` accepts "primary" | "info" | "warning" etc.
- */
-function actorTone(seed: string): "primary" | "neutral" | "active" {
-  if (seed.length === 0) return "neutral";
-  let h = 0;
-  for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-  const tones: Array<"primary" | "neutral" | "active"> = ["primary", "neutral", "active"];
-  // Modulo into [0, tones.length) means the index is always in range;
-  // without the `!` TypeScript widens the array lookup to `T | undefined`
-  // under `noUncheckedIndexedAccess`, which the return type forbids.
-  return tones[h % tones.length]!;
-}
+// Local helpers for this page were retired in 2026-09-27 when the
+// page migrated to the shared `<ActivityFeedCard />` + the
+// `formatActivityEvent` formatter (see `src/lib/activity/format.ts`).
+// The verb templates live in `messages/{en,ar}/activity.json`
+// under `activity.verbs.<kind>` and are interpolated with the
+// resolver-resolved user / channel / status names.

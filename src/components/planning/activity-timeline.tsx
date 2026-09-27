@@ -1,35 +1,30 @@
 "use client";
 
 import * as React from "react";
-import {
-  ArrowRight,
-  FileEdit,
-  Upload,
-  MessageCircle,
-  Sparkles,
-  Eye,
-  ShieldX,
-  Play,
-  Trash2,
-} from "lucide-react";
-import { Card, CardTitle } from "@/components/ui/card";
-import { humanStatus, humanFormat } from "@/lib/content/status";
+import { ActivityTimeline as SharedActivityTimeline } from "@/components/activity";
+import type { ActivityContext, ActivityRenderSpec } from "@/lib/activity/types";
+import { formatActivityEvent } from "@/lib/activity/format";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 
 /**
- * ActivityTimeline — visual history of meaningful lifecycle
- * events for a content item.
+ * Per-item ActivityTimeline — thin client wrapper around the
+ * shared `<ActivityTimeline />` server component.
  *
- * Sourced from the `activityEvents` table. The events are
- * server-rendered (the page already loads them) and passed
- * into this component as a normalised array.
+ * The shared renderer does the actual formatting (verb
+ * templates, diff chips, channel labels, status names). This
+ * client wrapper exists only because the timeline sits inside
+ * a `"use client"` boundary (the planning detail shell
+ * already has client-only state for the discussion / messages
+ * panels). We do NOT call the server-only resolver here —
+ * the parent (a server component) passes a pre-built
+ * `ActivityContext` as a prop.
  *
- * The timeline is intentionally not a duplicate of the
- * Discussion thread. It's a *lifecycle* view (status
- * transitions, deliveries uploaded, publish-recorded) so a
- * planner can answer "what happened to this item?" at a
- * glance. Comments are kept on the Discussion surface.
+ * Migration note (2026-09-27): the previous implementation
+ * carried its own `ICON_BY_KIND`, `TONE_BY_KIND`, and
+ * `humanizeKind`. Both surfaces (this + the workspace feed)
+ * now read from the shared formatter, so a new `kind` is one
+ * verb template + (optionally) one resolver entry.
  */
 
 export interface ActivityEventView {
@@ -38,8 +33,13 @@ export interface ActivityEventView {
   summary: string;
   actorName: string;
   occurredAt: string;
+  /** Optional target label (e.g. content item title). When
+   *  omitted, the formatter renders "(deleted item)" as the
+   *  target — useful when the caller doesn't know the title. */
+  targetLabel?: string | null;
   metadata?: Record<string, unknown> | null;
   afterData?: Record<string, unknown> | null;
+  beforeData?: Record<string, unknown> | null;
 }
 
 export interface ActivityTimelineProps {
@@ -56,185 +56,135 @@ export interface ActivityTimelineProps {
    * the active message catalog.
    */
   t: (key: string, params?: Record<string, string | number>) => string;
+  /**
+   * Pre-built `ActivityContext` from a server-side call to
+   * `buildActivityContext`. When omitted, the timeline builds
+   * a minimal context from the event's pre-joined
+   * `actorName` (works for the per-item shell, where the
+   * actor is the only foreign key we render).
+   */
+  context?: ActivityContext | null;
 }
 
-const ICON_BY_KIND: Record<string, React.ComponentType<{ className?: string }>> = {
-  status_transition: ArrowRight,
-  brief_updated: FileEdit,
-  title_updated: FileEdit,
-  date_updated: FileEdit,
-  content_updated: FileEdit,
-  delivery_submitted: Upload,
-  comment_added: MessageCircle,
-  mention: MessageCircle,
-  ai_draft_applied: Sparkles,
-  publication_recorded: Eye,
-  publication: Eye,
-  blocked: ShieldX,
-  claimed: Play,
-  assignment: Play,
-  schedule_change: FileEdit,
-  bulk_archive: FileEdit,
-  create: Sparkles,
-  update: FileEdit,
-  system: ArrowRight,
-  delete: Trash2,
-  bulk_delete: Trash2,
-};
-
-const TONE_BY_KIND: Record<string, string> = {
-  status_transition: "border-primary/30 bg-primary-subtle text-primary",
-  brief_updated: "border-info/30 bg-info-subtle text-info",
-  title_updated: "border-info/30 bg-info-subtle text-info",
-  date_updated: "border-info/30 bg-info-subtle text-info",
-  content_updated: "border-info/30 bg-info-subtle text-info",
-  delivery_submitted: "border-success/30 bg-success-subtle text-success",
-  comment_added: "border-border bg-surface text-fg-secondary",
-  mention: "border-border bg-surface text-fg-secondary",
-  ai_draft_applied: "border-warning/30 bg-warning-subtle text-warning",
-  publication_recorded: "border-success/30 bg-success-subtle text-success",
-  publication: "border-success/30 bg-success-subtle text-success",
-  blocked: "border-danger/30 bg-danger-subtle text-danger",
-  claimed: "border-primary/30 bg-primary-subtle text-primary",
-  assignment: "border-primary/30 bg-primary-subtle text-primary",
-  schedule_change: "border-info/30 bg-info-subtle text-info",
-  bulk_archive: "border-warning/30 bg-warning-subtle text-warning",
-  create: "border-primary/30 bg-primary-subtle text-primary",
-  update: "border-info/30 bg-info-subtle text-info",
-  system: "border-border bg-surface text-fg-secondary",
-  delete: "border-danger/30 bg-danger-subtle text-danger",
-  bulk_delete: "border-danger/30 bg-danger-subtle text-danger",
-};
-
-export function ActivityTimeline({ events, title, maxEvents = 25, t }: ActivityTimelineProps) {
+export function ActivityTimeline({
+  events,
+  title,
+  maxEvents = 25,
+  t,
+  context: providedContext,
+}: ActivityTimelineProps) {
   const locale = useLocaleCode();
-  const visible = events.slice(0, maxEvents);
-  // Default title comes from the catalog; callers can still
-  // override (the planning detail's overview-command-center
-  // passes `title=""` to suppress the heading).
-  const resolvedTitle = title ?? t("contentDetail.activity.title");
-  if (visible.length === 0) {
-    return (
-      <Card padding="md" data-testid="activity-timeline">
-        <CardTitle className="text-body text-fg-primary font-semibold">{resolvedTitle}</CardTitle>
-        <p className="text-body text-fg-muted mt-2">{t("contentDetail.activity.emptyState")}</p>
-      </Card>
+  // Build a minimal context from the per-event `actorName`
+  // already pre-joined by `listActivityEvents`. This keeps the
+  // per-item timeline self-sufficient when no upstream
+  // context is provided (the common case for the planning
+  // detail page). The shared formatter falls back to the
+  // empty-value labels for IDs that the per-item context
+  // doesn't know about; the workspace feed's full context
+  // is the upgrade path for richer rows.
+  const context = React.useMemo<ActivityContext>(() => {
+    if (providedContext) return providedContext;
+    const userById = new Map<string, { name: string; email: string | null }>();
+    for (const e of events) {
+      if (e.actorName) {
+        // The per-item timeline already knows the actor's
+        // display name; we seed it under a stable sentinel
+        // (the event id) so the formatter can resolve it.
+        userById.set(e.id, { name: e.actorName, email: null });
+      }
+    }
+    // Seed the status + format labels from the canonical
+    // humanizers. The per-item timeline doesn't pre-join
+    // status names — it relies on the formatter to map
+    // enum → label. Without this seed, status transitions
+    // render as "from (empty) to (empty)".
+    const statusLabels = new Map<string, string>();
+    const STATUSES = [
+      "draft",
+      "content_review",
+      "approved_for_design",
+      "in_design",
+      "creative_review",
+      "ready_to_publish",
+      "partially_published",
+      "published",
+      "changes_requested",
+      "blocked",
+      "cancelled",
+    ];
+    for (const v of STATUSES) {
+      statusLabels.set(
+        v,
+        v.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
+      );
+    }
+    return {
+      workspaceId: "",
+      statusLabels,
+      formatLabels: new Map(),
+      userById,
+      channelByContentItemChannelId: new Map(),
+      designerByContentItemId: new Map(),
+      ownerByContentItemId: new Map(),
+    };
+  }, [providedContext, events]);
+
+  const renderTime = React.useCallback(
+    (iso: string) => formatDate(iso, locale, DateFormat.dateTime),
+    [locale],
+  );
+
+  const formatDateForDiff = React.useCallback(
+    (value: string | Date) => formatDate(value, locale, DateFormat.dateTime),
+    [locale],
+  );
+
+  const specs: ActivityRenderSpec[] = events.map((e) => {
+    const ctx = providedContext ?? {
+      ...context,
+      // Use the per-event actorName as the lookup key so the
+      // formatter can resolve "system" / "Ada Lovelace"
+      // without a separate server round-trip. The full
+      // workspace context replaces this on the server side.
+      userById: (() => {
+        const next = new Map(context.userById);
+        if (e.actorName) next.set(e.id, { name: e.actorName, email: null });
+        return next;
+      })(),
+    };
+    return formatActivityEvent(
+      {
+        id: e.id,
+        kind: e.kind,
+        summary: e.summary,
+        // The formatter uses the context's userById map to
+        // resolve actor names. For the per-item timeline we
+        // look up by event id, not actor id, because the
+        // server-side `actorId` is not in the projection.
+        actorId: e.id,
+        occurredAt: e.occurredAt,
+        metadata: e.metadata ?? null,
+        beforeData: e.beforeData ?? null,
+        afterData: e.afterData ?? null,
+        targetLabel: e.targetLabel ?? null,
+        targetId: null,
+      },
+      ctx,
+      t,
+      {
+        formatDate: formatDateForDiff,
+        systemActorFallback: e.actorName,
+      },
     );
-  }
+  });
+
   return (
-    <Card padding="md" data-testid="activity-timeline">
-      <CardTitle className="text-body text-fg-primary mb-3 font-semibold">
-        {resolvedTitle}
-      </CardTitle>
-      <ol className="space-y-2">
-        {visible.map((e) => {
-          const Icon = ICON_BY_KIND[e.kind] ?? MessageCircle;
-          const tone = TONE_BY_KIND[e.kind] ?? "border-border bg-surface text-fg-secondary";
-          return (
-            <li
-              key={e.id}
-              className="flex items-start gap-2"
-              data-testid="activity-event"
-              data-event-kind={e.kind}
-            >
-              <span
-                className={`mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border ${tone}`}
-                aria-hidden="true"
-              >
-                <Icon className="h-3 w-3" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-body text-fg-primary">
-                  <bdi className="font-semibold" dir="auto">
-                    {e.actorName}
-                  </bdi>{" "}
-                  <bdi className="text-fg-secondary" dir="auto">
-                    {humanizeKind(t, e.kind, e.summary)}
-                  </bdi>
-                </p>
-                <p className="text-label text-fg-muted">
-                  <time dateTime={e.occurredAt}>
-                    {formatDate(e.occurredAt, locale, DateFormat.dateTime)}
-                  </time>
-                </p>
-              </div>
-            </li>
-          );
-        })}
-      </ol>
-      {events.length > maxEvents ? (
-        <p className="text-label text-fg-muted mt-2">
-          {t("contentDetail.activity.olderEvents", { count: events.length - maxEvents })}
-        </p>
-      ) : null}
-    </Card>
+    <SharedActivityTimeline
+      specs={specs}
+      {...(title !== undefined ? { title } : {})}
+      maxEvents={maxEvents}
+      renderTime={renderTime}
+      t={t}
+    />
   );
 }
-
-function humanizeKind(
-  t: (key: string, params?: Record<string, string | number>) => string,
-  kind: string,
-  summary: string,
-): string {
-  if (summary) return summary;
-  switch (kind) {
-    case "status_transition":
-      return t("contentDetail.activity.kindStatusTransition");
-    case "brief_updated":
-      return t("contentDetail.activity.kindBriefUpdated");
-    case "title_updated":
-      return t("contentDetail.activity.kindTitleUpdated");
-    case "date_updated":
-      return t("contentDetail.activity.kindDateUpdated");
-    case "content_updated":
-      return t("contentDetail.activity.kindContentUpdated");
-    case "content_copy_patched":
-      return t("contentDetail.activity.kindContentCopyPatched");
-    case "delivery_submitted":
-      return t("contentDetail.activity.kindDeliverySubmitted");
-    case "comment_added":
-      return t("contentDetail.activity.kindCommentAdded");
-    case "mention":
-      return t("contentDetail.activity.kindMention");
-    case "ai_draft_applied":
-      return t("contentDetail.activity.kindAiDraftApplied");
-    case "publication_recorded":
-      return t("contentDetail.activity.kindPublicationRecorded");
-    case "publication":
-      return t("contentDetail.activity.kindPublication");
-    case "blocked":
-      return t("contentDetail.activity.kindBlocked");
-    case "claimed":
-      return t("contentDetail.activity.kindClaimed");
-    case "assignment":
-      return t("contentDetail.activity.kindAssignment");
-    case "schedule_change":
-      return t("contentDetail.activity.kindScheduleChange");
-    case "bulk_archive":
-      return t("contentDetail.activity.kindBulkArchive");
-    case "create":
-      return t("contentDetail.activity.kindCreate");
-    case "update":
-      return t("contentDetail.activity.kindUpdate");
-    case "system":
-      return t("contentDetail.activity.kindSystem");
-    case "delete":
-      return t("contentDetail.activity.kindDelete");
-    case "bulk_delete":
-      return t("contentDetail.activity.kindBulkDelete");
-    default:
-      // Last-resort fallback: turn `creative_internal_decision` into
-      // "creative internal decision" so we never render raw enum
-      // strings to the user. The list above is the canonical map
-      // (one entry per `kind:` we emit) — when a new kind is added
-      // it MUST be added here in the same PR.
-      return kind.replace(/_/g, " ");
-  }
-}
-
-// Re-export the humanizers from `lib/content/status` so
-// callers that use the timeline can also format status /
-// format enum values in the rendered text. The `void`
-// statement below keeps tree-shaking honest.
-void humanStatus;
-void humanFormat;

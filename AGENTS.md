@@ -424,7 +424,56 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 
 ## Conventions
 
-- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`.
+## Activity log rendering
+
+The workspace-wide feed (`/app/w/[slug]/activity`) and the
+per-content-item timeline on the planning detail page both
+read from the same `activity_event` table and render through
+the **shared formatter + renderer**:
+
+- **Pure formatter:** `lib/activity/format.ts` →
+  `formatActivityEvent(event, context, t)` returns an
+  `ActivityRenderSpec`. The function is a single
+  `switch (event.kind)` covering every `activity_kind` enum
+  value plus the `brand.<x>` dotted namespace.
+- **Resolver:** `lib/activity/resolve.ts` →
+  `buildActivityContext(workspaceId, events, locale)` batches
+  ID → name lookups (users, channels, status enums) into one
+  pass per workspace per page render.
+- **Shared renderer:** `components/activity/activity-entry.tsx`
+  - `<ActivityDiff />` consume the spec and emit the row. The
+    same row shape renders on both surfaces.
+- **Verb templates:** `messages/{en,ar}/activity.json` under
+  `activity.verbs.<kind>`. `{target}`, `{before}`, `{after}`,
+  `{metadata}`, `{count}` placeholders.
+
+**Rule — adding a new `kind`:**
+
+1. Add the new value to `activityKindEnum` (DDL migration).
+2. Write the emitter call site with structured
+   `beforeData` / `afterData` / `metadata`. **No raw UUID or
+   raw enum in `summary`** — the renderer reads the structured
+   payload.
+3. Add one verb template under `activity.verbs.<kind>` in
+   both catalogs.
+4. (Only if the kind carries new ID-bearing fields) extend
+   `buildActivityContext` to look them up.
+
+**Never edit `<ActivityEntry />` to support a new kind.** The
+contract is: a kind is rendered iff its verb template exists
+and its structured payload is well-formed.
+
+The kind list is exercised in
+`tests/unit/planning/activity-timeline.test.tsx` ("renders a
+verb for every known kind without leaking the raw enum").
+Adding a kind without a verb template fails that test.
+
+See `docs/architecture/activity-log.md` for the full pipeline,
+diff shapes, and extension recipe.
+
+## Conventions
+
+- **Commits:** `<type>(<scope>): <description>`. Types: `feat`, `fix`, `chore`, `docs`, `test`, `refactor`, `upgrade`. Scopes: `db`, `auth`, `content`, `planning`, `workflow`, `discussions`, `deliveries`, `publishing`, `notifications`, `ai`, `infra`, `ci`, `deps`, `i18n`, `format-payload`, `activity`.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
@@ -974,6 +1023,32 @@ Round-3 of the `/ui-ux-pro-max` polish pass. Built on the round-2 sidebar TOC + 
 - **test: `tests/unit/users/member-list.test.tsx` — new file, 5 cases.** Covers per-workspace role-chip overflow (`+N`), the responsive `flex-col sm:flex-row` class set on each row, the Edit / Deactivate / Reactivate aria-labels, and the empty-state path. All 414 test files / 3693 tests pass (`pnpm test:unit`). tsc clean.
 
 - **Companion**: `chore/ui-ux-pass2` (round 2) shipped the settings sidebar TOC, the media page-size cap (48→24), the build-timestamp in the user avatar menu + account card, and the mobile Analytics link. Both rounds share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity).
+
+### 2026-09-27 — UI/UX round 4 — sidebar tenant card + IA split + active-state rail (chore/ui-ux-pass4)
+
+Round-4 of the `/ui-ux-pro-max` polish pass. Built on rounds 1–3 (sidebar rebuild, mobile `My Work` route restore, settings-sidebar scroll-spy, member-list responsive collapse, build-timestamp). The audit ran the `ui-ux-pro-max` skill against the persistent app-shell sidebar (desktop + collapsed-rail + mobile sheet), the agency/workspace tenant card, the Settings branch active detection, and the work-items surface that was bleeding cross-tenant destinations into the workspace rail. Picked the highest-impact fixes that respect the existing design system.
+
+- **fix(ui): split "Work" → "Personal" (workspace-only) + "Global" (agency-only).** `buildWorkspaceNavigation` now returns a single-item Personal group (My tasks only); `buildAgencyNavigation` gains a new `Global` group with All tasks + Global calendar. Eliminates the "I'm in Acme Co. workspace → Work → All tasks" cross-tenant bleed. `my-tasks` re-appears as a top link in agency nav so users on `/app` still reach their personal tasks without scrolling. (`src/components/app-shell/navigation-model.ts`).
+
+- **feat(ui): active row gets a third signal — 4px logical-left primary rail.** `SidebarLinkRow` + `ExpandableNavGroup` parent `<div>` carry `border-s-4 border-s-primary` on the active state, `border-s-transparent` on inactive (reserves the slot so layout doesn't shift on toggle). Honors `nav-state-active` (color + weight + edge indicator) + `color-not-only`. Logical utilities mirror automatically under `dir="rtl"`. (`src/components/app-shell/sidebar.tsx`).
+
+- **feat(ui): group dividers between the five nav buckets.** `NavGroup` gains a `showTopDivider` prop threaded from `WorkspaceNavTree` + `AgencyNavTree`; every group except the first gets `border-t border-border` + 8px breathing room. Group headings are now lowercase `--fg-muted` (was uppercase tracking-wide) and visible at every expanded breakpoint ≥ `md` (was `hidden xl:block`). Collapsed rail (72px) gets a `writing-mode: vertical-rl` rotated label per group so the icon-only rail keeps its five-bucket context. (`src/components/app-shell/sidebar.tsx`).
+
+- **feat(ui): tenant card gets a "Tenant" header label + 1px inter-row divider.** The two stacked switchers (`AgencySwitcher` + `WorkspaceSwitcher`) now read as one context card with a labeled header (`sidebar.tenantLabel`) + a 1px logical-top divider between the two rows. New `aria-live="polite"` on the card announces agency switches. (`src/components/app-shell/sidebar.tsx`, `src/components/app-shell/mobile-nav.tsx`, `src/messages/{en,ar}/sidebar.json`).
+
+- **feat(ui): single-agency users get a one-tap shortcut to `/app/agency-settings`.** New `asSettingsLink` prop on `AgencySwitcher`; when `agencySwitcher.active !== null && options.length <= 1`, the switcher renders as a plain `<Link>` instead of opening a one-row popover. Saves a tap and removes the dead "switch" affordance. Same shortcut surfaces in the mobile sheet. (`src/components/app-shell/agency-switcher.tsx`, `src/components/app-shell/sidebar.tsx`, `src/components/app-shell/mobile-nav.tsx`).
+
+- **feat(ui): workspace switcher tab indicator.** Active workspace row gets `border-b-2 border-primary` (logical bottom border) — gives the user the visual "I'm currently in this workspace" cue without claiming new vertical space. (`src/components/app-shell/workspace-switcher.tsx`).
+
+- **feat(ui): `clampBadge(count)` formatter.** New client-safe `src/lib/nav/badge-format.ts` (separate from `badges.ts` which is `server-only`) with `clampBadge(n)` that returns `99+` for counts above the cap, `"0"` for zero / non-finite / negative inputs, and `String(n)` otherwise. Wired into `SidebarLinkRow`. Replaces the inline `badge > 99 ? "99+" : badge` ternary. (`src/lib/nav/badge-format.ts`, `src/components/app-shell/sidebar.tsx`).
+
+- **feat(ui): mobile sheet parity.** `mobile-nav.tsx` gets the same tenant header + divider + single-agency shortcut + Personal/Global split. The bottom nav `BottomNavLink` gets a 2px logical-top active rail so the four (or three for client reviewers) primary destinations get the same "where am I" affordance as the desktop rail. (`src/components/app-shell/mobile-nav.tsx`).
+
+- **refactor(ui): extract `useScrollSpyActiveId` hook.** Round-3 already shipped the IntersectionObserver + scroll-heuristic scroll-spy pattern inside `src/components/workspace/settings-sidebar.tsx`. Round-4 extracts it into a shared `src/lib/nav/use-scroll-spy-active-id.ts` hook (promote-only rule, hashchange fallback, ref-stashed setter). The workspace Settings branch in the main sidebar wires to it so `/w/[slug]/settings` highlights the section the user is actually looking at (not just the URL hash). Dead `subscribeToHash` / `readHash` helpers removed. (`src/lib/nav/use-scroll-spy-active-id.ts` NEW, `src/components/app-shell/sidebar.tsx`).
+
+- **test: round-4 cases + `tests/unit/nav/badge-format.test.ts`.** 8 new sidebar cases (Personal group in workspace mode, Global group on global routes, active-state rail, group dividers, tenant header, tenant divider, workspace-switcher tab indicator, single-agency shortcut). New `clampBadge` test pins the contract: `0 → "0"`, in-range → `String(n)`, `99 → "99"`, `100 → "99+"`, `NaN / Infinity / negative → "0"`. Catalog parity auto-passes (`tests/unit/i18n/catalogs.test.ts` green).
+
+- **Companion**: rounds 1–3 share the same design-system contract (44px touch targets, focus rings, semantic color tokens, bilingual catalog parity, scroll-spy via the new shared hook).
 
 ### 2026-09-22 — media Cloudflare-asset audit + refinement (chore/audit-cloudflare-assets)
 

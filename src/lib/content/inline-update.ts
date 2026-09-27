@@ -148,8 +148,22 @@ export async function inlineUpdateBriefAction(
         contentItemId,
         actorId: ctx.actor.id,
         kind: "brief_updated",
+        // `summary` is the legacy fallback only; the new
+        // `activity.verbs.brief_updated` template + the diff
+        // (before → after) are the canonical render path. Keeping
+        // the summary here means the per-item timeline tests
+        // that pre-date the shared renderer still pass.
         summary: "Updated the brief inline",
-        metadata: { before: beforeBrief, after: parsed.data.brief },
+        // Structured payload for the formatter: `field` selects
+        // the i18n key under `activity.diff.<field>`, `before`
+        // and `after` are the chip / strikethrough inputs.
+        metadata: {
+          field: "brief",
+          before: beforeBrief,
+          after: parsed.data.brief,
+        },
+        beforeData: { brief: beforeBrief },
+        afterData: { brief: parsed.data.brief },
       });
     });
   } catch (e) {
@@ -211,7 +225,13 @@ export async function inlineUpdateTitleAction(
         actorId: ctx.actor.id,
         kind: "title_updated",
         summary: "Renamed the item",
-        metadata: { before: beforeTitle, after: parsed.data.title },
+        metadata: {
+          field: "title",
+          before: beforeTitle,
+          after: parsed.data.title,
+        },
+        beforeData: { title: beforeTitle },
+        afterData: { title: parsed.data.title },
       });
     });
   } catch (e) {
@@ -280,9 +300,12 @@ export async function inlineUpdateDateAction(
         kind: "date_updated",
         summary: "Changed the planned publish date",
         metadata: {
+          field: "date",
           before: beforeIso,
           after: parsed.data.plannedPublishAt.toISOString(),
         },
+        beforeData: { plannedPublishAt: beforeIso },
+        afterData: { plannedPublishAt: parsed.data.plannedPublishAt.toISOString() },
       });
     });
   } catch (e) {

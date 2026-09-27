@@ -7,6 +7,7 @@ import {
   contentItems,
   outboxEvents,
   publicationRecords,
+  socialChannels,
 } from "@/lib/db/schema";
 import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
@@ -54,8 +55,13 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
 
   // Resolve workspace for policy check
   const [chan] = await db
-    .select({ contentItemId: contentItemChannels.contentItemId })
+    .select({
+      contentItemId: contentItemChannels.contentItemId,
+      platform: socialChannels.platform,
+      accountName: socialChannels.accountName,
+    })
     .from(contentItemChannels)
+    .innerJoin(socialChannels, eq(socialChannels.id, contentItemChannels.socialChannelId))
     .where(eq(contentItemChannels.id, input.contentItemChannelId))
     .limit(1);
   if (!chan) throw new Error("Channel link not found");
@@ -185,10 +191,25 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       contentItemId: chan.contentItemId,
       actorId: actor.id,
       kind: "publication",
+      // `summary` is the legacy fallback; the new
+      // `activity.verbs.publication` template renders
+      // "marked {target} as {after} on {metadata}" with the
+      // channel label ("Instagram · LaraTik Main") resolved
+      // server-side by `buildActivityContext`.
       summary: `Publication marked ${input.status}`,
       beforeData: { status: lockedItem.status },
       afterData: { status: newStatus, channelStatus: input.status },
-      metadata: { contentItemChannelId: input.contentItemChannelId },
+      metadata: {
+        contentItemChannelId: input.contentItemChannelId,
+        platform: chan.platform,
+        channelAccount: chan.accountName,
+        // Channel + platform snapshot so the activity row
+        // remains readable even if the channel is later
+        // renamed or archived.
+        field: "channelStatus",
+        before: lockedItem.status,
+        after: input.status,
+      },
     });
 
     // Outbox event for the notification dispatcher. A
@@ -232,6 +253,8 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
         afterData: { status: newStatus },
         metadata: {
           contentItemChannelId: input.contentItemChannelId,
+          platform: chan.platform,
+          channelAccount: chan.accountName,
           resource: "retry_publication",
           recordedCount,
         },

@@ -446,6 +446,9 @@ async function persistLinkedCandidate(
           contentItemId: context.contentItemId,
           actorId: actor?.id ?? null,
           kind: "publication",
+          // Formatter picks the right verb template via
+          // `metadata.subkind`. The legacy `summary` is kept as
+          // the fallback for older clients / data exports.
           summary: `Meta publication ${event === "linked" ? "linked" : event === "refreshed" ? "refreshed" : "reconciled"}${externalStatus === "published" ? " and confirmed" : ""}`,
           beforeData: {
             externalProvider: existing?.externalProvider ?? null,
@@ -453,7 +456,18 @@ async function persistLinkedCandidate(
             externalStatus: previousExternalStatus,
           },
           afterData: { externalProvider: "meta", externalPostId: candidate.id, externalStatus },
-          metadata: { contentItemChannelId, event: `meta_publication_${event}` },
+          metadata: {
+            contentItemChannelId,
+            event: `meta_publication_${event}`,
+            subkind:
+              event === "linked"
+                ? "meta_linked"
+                : event === "refreshed"
+                  ? "meta_refreshed"
+                  : "meta_reconciled",
+            platform: candidate.platform,
+            externalPostId: candidate.id,
+          },
         });
       }
       return { contentItemId: context.contentItemId, recordId, candidate };
