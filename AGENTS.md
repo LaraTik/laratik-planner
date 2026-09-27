@@ -830,6 +830,38 @@ selected.
   appeared in a diff and was opaque to `git blame`. Replaced with `"\u0000"` —
   identical runtime behaviour, reviewable text from now on.
 
+- **fix(ci) — `tests/integration/error-diagnostics.test.ts` failed 6 of 22
+  against a real Postgres.** This was the deploy blocker nobody would have seen
+  locally, because the file has never been on `origin` and so has never run in
+  CI. Confirmed pre-existing by re-running it at `HEAD~1`. Four distinct causes,
+  all test-isolation defects rather than product bugs — the product behaviour
+  under test was correct in every case:
+
+  1. The burst-cap, ring-buffer, and aggregation blocks call `captureAppError`
+     **directly** (they must control `APP_ERROR_BURST_LIMIT`, the request
+     scope, and the loop), so they bypassed the `capture()` helper that owns
+     cleanup. Their groups and event rows were never registered, survived
+     `beforeEach`, and inflated every later table-wide count. A new
+     `rememberEventsFor(route)` helper registers the rows a direct call wrote,
+     scoped to a route so a test never deletes another test's rows.
+  2. The retention tests aged rows with an **unscoped** `update app_error_event
+set created_at = …` / `update app_error_group set last_seen_at = …`. That
+     ages out every row in the table, including anything a prior test leaked, so
+     `groupsDeleted` was 1 instead of 0 for a reason that had nothing to do with
+     the retention rule. Both are now scoped with `where route = …`.
+  3. Single-row reads used a bare `select().limit(1)`, which returns whichever
+     row Postgres hands back first. Nine assertions about "the row I just wrote"
+     were really assertions about row order. Replaced with `latestEvent(route)`
+     / `latestGroup(route)`, ordered by `createdAt` / `lastSeenAt desc`.
+  4. **The aggregation assertion was unsatisfiable.** It captured
+     `row a` / `row b` / `row c` — three messages differing by a _letter_ — and
+     then asserted `occurrenceCount === 3`. `normalizeErrorMessage` collapses
+     numbers, not letters, so those are three distinct fingerprints and three
+     groups of one. The fixtures now vary a bare number (`row 1042 / 2077 /
+3391`), which is the case grouping actually exists to handle: the same bug
+     from three row ids must land on one fingerprint. The old assertion only
+     ever "passed" or "failed" by accident, depending on which row came back.
+
 - **fix(ci) — four Markdown files failed `prettier --check`.** `AGENTS.md`,
   `docs/decisions/0016-ephemeral-publication-expiry.md`,
   `docs/architecture/data-model.md`, and

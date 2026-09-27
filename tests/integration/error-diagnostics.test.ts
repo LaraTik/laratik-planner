@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { appErrorEvents, appErrorGroups } from "@/lib/db/schema";
 import {
@@ -90,6 +90,54 @@ async function capture(
   if (rows[0]) createdEventIds.push(rows[0].id);
 }
 
+/**
+ * The newest event row, optionally scoped to a route.
+ *
+ * Every assertion below is about the row a helper in this file *just*
+ * wrote, so it has to ask for the newest one. A bare
+ * `select().limit(1)` silently returns whichever row Postgres hands back
+ * first, which turns any leaked row into a failure somewhere else in the
+ * file and hides the real cause.
+ */
+async function latestEvent(route?: string) {
+  const rows = await db
+    .select()
+    .from(appErrorEvents)
+    .where(route ? eq(appErrorEvents.route, route) : undefined)
+    .orderBy(sql`${appErrorEvents.createdAt} desc`)
+    .limit(1);
+  return rows[0];
+}
+
+/**
+ * Register the event rows a *direct* `captureAppError` call wrote.
+ *
+ * `capture()` does this for you. The burst-cap, ring-buffer, and
+ * aggregation blocks call `captureAppError` themselves (they need to
+ * control the env / request scope / loop), so without this their rows are
+ * never deleted and the next block's table-wide count is off by however
+ * many leaked. Scoped to a route so a test never registers — and a later
+ * `cleanup` never deletes — another test's rows.
+ */
+async function rememberEventsFor(route: string): Promise<void> {
+  const rows = await db
+    .select({ id: appErrorEvents.id })
+    .from(appErrorEvents)
+    .where(eq(appErrorEvents.route, route));
+  for (const row of rows) if (!createdEventIds.includes(row.id)) createdEventIds.push(row.id);
+}
+
+/** The newest group row, optionally scoped to a route. */
+async function latestGroup(route?: string) {
+  const rows = await db
+    .select()
+    .from(appErrorGroups)
+    .where(route ? eq(appErrorGroups.route, route) : undefined)
+    .orderBy(sql`${appErrorGroups.lastSeenAt} desc`)
+    .limit(1);
+  return rows[0];
+}
+
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "src/lib/db/migrations" });
 }, 120_000);
@@ -119,7 +167,7 @@ describe("captureAppError — grouping", () => {
       error,
     });
 
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.groupId).toBeTruthy();
     const [group] = await db.select().from(appErrorGroups).limit(1);
     expect(group?.occurrenceCount).toBe(1);
@@ -175,7 +223,7 @@ describe("captureAppError — grouping", () => {
       routePath: "/app/w/[slug]/planning/actions.ts",
       error,
     });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.routeType).toBe("action");
     expect(event?.routePath).toBe("/app/w/[slug]/planning/actions.ts");
     expect(event?.source).toBe("server_action");
@@ -191,7 +239,7 @@ describe("captureAppError — scrubbing at rest", () => {
       source: "server.route",
       error,
     });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.message).not.toContain("sk-abcdefghij0123456789ABCDEF");
     expect(event?.message).toContain("[redacted]");
   });
@@ -201,7 +249,7 @@ describe("captureAppError — scrubbing at rest", () => {
       'duplicate key value violates unique constraint "users_email_key"\nDETAIL:  Key (email)=(alice@example.com) already exists.',
     );
     await capture({ route: "/api/users", method: "POST", source: "server.route", error });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.message).toContain("users_email_key");
     expect(event?.message).not.toContain("alice@example.com");
   });
@@ -217,7 +265,7 @@ describe("captureAppError — scrubbing at rest", () => {
       cause: { name: "Cause", message: 'column "updated_at" does not exist' },
     };
     await capture({ route: "/app/w/x", method: "GET", source: "app.error", error });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.message).toBe("Invalid input: expected string, received number");
     expect(event?.errorName).toBe("ZodError");
     expect(event?.stack).toContain("at parse");
@@ -233,7 +281,7 @@ describe("captureAppError — scrubbing at rest", () => {
       userAgent: "Mozilla/5.0 (fingerprintable)",
       error,
     });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const event = await latestEvent();
     expect(event?.userAgentHash).toMatch(/^[0-9a-f]{32}$/);
     expect(JSON.stringify(event)).not.toContain("fingerprintable");
   });
@@ -249,7 +297,8 @@ describe("captureAppError — request log ring buffer", () => {
       await captureAppError({ route: "/api/tasks", method: "GET", source: "server.route", error });
     });
 
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    await rememberEventsFor("/api/tasks");
+    const event = await latestEvent("/api/tasks");
     const context = event?.context as { logs?: Array<{ event: string; level: string }> } | null;
     expect(context?.logs).toBeTruthy();
     expect(context?.logs?.map((l) => l.event)).toEqual(["content.update", "workspace.resolve"]);
@@ -259,7 +308,12 @@ describe("captureAppError — request log ring buffer", () => {
   it("omits the logs key outside a request scope", async () => {
     const error = new Error("no scope");
     await capture({ route: "/api/cron/x", method: "GET", source: "server.unhandled", error });
-    const [event] = await db.select().from(appErrorEvents).limit(1);
+    const [event] = await db
+      .select()
+      .from(appErrorEvents)
+      .where(eq(appErrorEvents.route, "/api/cron/x"))
+      .orderBy(sql`${appErrorEvents.createdAt} desc`)
+      .limit(1);
     const context = (event?.context ?? {}) as { logs?: unknown };
     expect(context.logs).toBeUndefined();
   });
@@ -269,6 +323,12 @@ describe("captureAppError — burst cap", () => {
   it("keeps the occurrence count exact while bounding event rows", async () => {
     process.env.APP_ERROR_BURST_LIMIT = "5";
     const burst = 40;
+    const error = new Error("infinite loop detected");
+    // These two describe blocks call `captureAppError` directly instead of
+    // the `capture` helper, so the fingerprint has to be registered by hand
+    // or the group is never deleted by `cleanup` and its `occurrence_count`
+    // accumulates into every later test that reads the table.
+    await track("/api/loop", error);
     for (let i = 0; i < burst; i += 1) {
       await captureAppError({
         route: "/api/loop",
@@ -278,9 +338,16 @@ describe("captureAppError — burst cap", () => {
       });
     }
 
-    const [group] = await db.select().from(appErrorGroups);
-    expect(group?.occurrenceCount).toBe(burst);
-    const events = await db.select().from(appErrorEvents);
+    const groups = await db
+      .select()
+      .from(appErrorGroups)
+      .where(eq(appErrorGroups.route, "/api/loop"));
+    expect(groups).toHaveLength(1);
+    expect(groups[0]?.occurrenceCount).toBe(burst);
+    const events = await db
+      .select()
+      .from(appErrorEvents)
+      .where(eq(appErrorEvents.route, "/api/loop"));
     expect(events.length).toBeLessThanOrEqual(5);
     expect(rateLimitedOccurrenceCount()).toBe(burst - events.length);
 
@@ -292,15 +359,23 @@ describe("captureAppError — burst cap", () => {
 
   it("a limit of 0 suppresses every event row but still counts", async () => {
     process.env.APP_ERROR_BURST_LIMIT = "0";
+    const error = new Error("never stored");
+    await track("/api/silent", error);
     await captureAppError({
       route: "/api/silent",
       method: "GET",
       source: "server.route",
       error: new Error("never stored"),
     });
-    const events = await db.select().from(appErrorEvents);
+    const events = await db
+      .select()
+      .from(appErrorEvents)
+      .where(eq(appErrorEvents.route, "/api/silent"));
     expect(events).toHaveLength(0);
-    const [group] = await db.select().from(appErrorGroups);
+    const [group] = await db
+      .select()
+      .from(appErrorGroups)
+      .where(eq(appErrorGroups.route, "/api/silent"));
     expect(group?.occurrenceCount).toBe(1);
   });
 });
@@ -309,7 +384,7 @@ describe("triage + diagnostics read path", () => {
   it("toggles triage state idempotently", async () => {
     const error = new Error("triage me");
     await capture({ route: "/api/triage", method: "GET", source: "server.route", error });
-    const [group] = await db.select().from(appErrorGroups);
+    const group = await latestGroup();
     const fingerprint = group!.fingerprint;
 
     const resolved = await triageAppErrorGroup({ fingerprint, action: "resolve", note: "known" });
@@ -331,8 +406,21 @@ describe("triage + diagnostics read path", () => {
   });
 
   it("aggregates occurrences, builds, and samples for a fingerprint", async () => {
-    for (const id of ["a", "b", "c"]) {
-      const error = new Error(`row ${id} violates the constraint`);
+    // The three messages must differ only in the parts
+    // `normalizeErrorMessage` collapses (here: a bare number), because
+    // that normalisation is the whole point of grouping — three
+    // occurrences of the same bug from three different row ids have to
+    // land on ONE fingerprint with occurrenceCount 3. The previous
+    // fixtures varied a letter ("row a/b/c"), which normalises to three
+    // *different* messages and therefore three groups of one, so the
+    // assertion below was unsatisfiable and only ever passed or failed by
+    // accident depending on which row the query happened to return.
+    for (const rowId of ["1042", "2077", "3391"]) {
+      const error = new Error(`row ${rowId} violates the constraint`);
+      // Registered by hand for the same reason as the burst-cap block: a
+      // direct `captureAppError` never reaches the `capture` helper that
+      // owns cleanup, so the group survives into every later test.
+      await track("/api/constraint", error);
       await captureAppError({
         route: "/api/constraint",
         method: "POST",
@@ -340,7 +428,7 @@ describe("triage + diagnostics read path", () => {
         error,
       });
     }
-    const [group] = await db.select().from(appErrorGroups);
+    const group = await latestGroup();
     const fingerprint = group!.fingerprint;
 
     const diagnostics = await getAppErrorDiagnostics(fingerprint);
@@ -397,9 +485,16 @@ describe("pruneAppErrorRetention", () => {
       source: "server.route",
       error: new Error("aged failure"),
     });
-    // Backdate both rows past the retention horizon.
-    await db.execute(sql`update app_error_event set created_at = now() - interval '60 days'`);
-    await db.execute(sql`update app_error_group set last_seen_at = now() - interval '120 days'`);
+    // Backdate this test's rows past the retention horizon. Scoped on
+    // purpose: an unscoped `update ... set` ages out every row in the
+    // table, so anything another test left behind is pruned here too and
+    // the "unresolved groups are kept" assertion fails for the wrong reason.
+    await db.execute(
+      sql`update app_error_event set created_at = now() - interval '60 days' where route = '/api/old'`,
+    );
+    await db.execute(
+      sql`update app_error_group set last_seen_at = now() - interval '120 days' where route = '/api/old'`,
+    );
 
     const result = await pruneAppErrorRetention({ eventDays: 30, groupDays: 90 });
     expect(result.eventsDeleted).toBeGreaterThan(0);
@@ -416,9 +511,11 @@ describe("pruneAppErrorRetention", () => {
       source: "server.route",
       error: new Error("resolved and aged"),
     });
-    const [group] = await db.select().from(appErrorGroups);
+    const group = await latestGroup();
     await triageAppErrorGroup({ fingerprint: group!.fingerprint, action: "resolve" });
-    await db.execute(sql`update app_error_group set last_seen_at = now() - interval '120 days'`);
+    await db.execute(
+      sql`update app_error_group set last_seen_at = now() - interval '120 days' where route = '/api/resolved-old'`,
+    );
 
     const result = await pruneAppErrorRetention({ eventDays: 30, groupDays: 90 });
     expect(result.groupsDeleted).toBeGreaterThan(0);

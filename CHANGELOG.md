@@ -62,6 +62,18 @@ silently over-granted token scope.
 
 **Tooling and CI**
 
+- `tests/integration/error-diagnostics.test.ts` failed 6 of 22 against a real
+  Postgres — a deploy blocker invisible locally, because the file had never
+  reached `origin` and so had never run in CI. Confirmed pre-existing by
+  re-running at the previous commit. Four test-isolation defects, none of them
+  product bugs: direct `captureAppError` calls bypassed the helper that owns
+  cleanup, retention tests aged rows with an unscoped table-wide `UPDATE`, nine
+  assertions used a bare `select().limit(1)` and so really asserted row order,
+  and the aggregation fixture captured `row a/b/c` (differing by a letter, so
+  three distinct fingerprints) while asserting `occurrenceCount === 3` — an
+  assertion that was never satisfiable. The fixtures now vary a number, which
+  is the case grouping exists to handle. All 22 pass and both tables are left
+  empty afterwards.
 - `src/lib/observability/fingerprint.ts` contained a literal NUL byte and was
   committed as a binary blob, so it never appeared in a diff. Now `"\u0000"`,
   identical at runtime and reviewable as text.
