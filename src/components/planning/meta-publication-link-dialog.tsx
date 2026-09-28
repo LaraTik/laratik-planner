@@ -141,7 +141,7 @@ export function MetaPublicationLinkDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="max-h-[88vh] max-w-2xl overflow-y-auto"
+        className="flex h-[88vh] max-h-[calc(100dvh-2rem)] max-w-2xl flex-col overflow-hidden"
         closeAriaLabel={t("contentDetail.publishingCard.meta.close")}
       >
         <DialogHeader>
@@ -151,146 +151,151 @@ export function MetaPublicationLinkDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-label text-fg-muted">
-            {t(`contentDetail.publishingCard.meta.platform.${platform}`)}
-          </p>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => void load()}
-            disabled={loading || saving}
-          >
-            <RefreshCw
-              className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"}
-              aria-hidden="true"
-            />
-            {t("contentDetail.publishingCard.meta.refresh")}
-          </Button>
-        </div>
-
-        {errorText ? (
-          <p role="alert" className="text-label text-danger">
-            {errorText}
-          </p>
-        ) : null}
-        {scheduledCoverage === "published_only" ? (
-          <p
-            role="status"
-            className="text-label text-fg-muted rounded-[var(--radius-control)] border border-dashed p-3"
-          >
-            {t("contentDetail.publishingCard.meta.instagramScheduledUnavailable")}
-          </p>
-        ) : null}
-        {loading && candidates.length === 0 ? (
-          <div className="text-body text-fg-muted flex items-center gap-2 py-8" role="status">
-            <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-            {t("contentDetail.publishingCard.meta.loading")}
+        <div
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto pe-1"
+          data-testid="meta-publication-dialog-scroll-area"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-label text-fg-muted">
+              {t(`contentDetail.publishingCard.meta.platform.${platform}`)}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void load()}
+              disabled={loading || saving}
+            >
+              <RefreshCw
+                className={loading ? "h-3.5 w-3.5 animate-spin" : "h-3.5 w-3.5"}
+                aria-hidden="true"
+              />
+              {t("contentDetail.publishingCard.meta.refresh")}
+            </Button>
           </div>
-        ) : candidates.length === 0 ? (
-          <p className="text-body text-fg-muted rounded-[var(--radius-control)] border border-dashed p-6 text-center">
-            {t("contentDetail.publishingCard.meta.empty")}
-          </p>
-        ) : (
-          <div
-            className="space-y-2"
-            role="radiogroup"
-            aria-label={t("contentDetail.publishingCard.meta.candidatesLabel")}
-          >
-            {candidates.map((candidate) => {
-              const date =
-                candidate.status === "scheduled"
-                  ? candidate.scheduledAt
-                  : (candidate.publishedAt ?? candidate.createdAt);
-              return (
-                <label
-                  key={candidate.id}
-                  className="border-border hover:bg-surface-subtle flex cursor-pointer gap-3 rounded-[var(--radius-control)] border p-3"
-                >
-                  <input
-                    type="radio"
-                    name="meta-publication-candidate"
-                    value={candidate.id}
-                    checked={selectedId === candidate.id}
-                    onChange={() => setSelectedId(candidate.id)}
-                    className="mt-1"
-                  />
-                  {candidate.thumbnailUrl ? (
-                    <div
-                      className="h-14 w-14 shrink-0 rounded bg-cover bg-center"
-                      aria-hidden="true"
-                      style={{ backgroundImage: `url(${candidate.thumbnailUrl})` }}
+
+          {errorText ? (
+            <p role="alert" className="text-label text-danger">
+              {errorText}
+            </p>
+          ) : null}
+          {scheduledCoverage === "published_only" ? (
+            <p
+              role="status"
+              className="text-label text-fg-muted rounded-[var(--radius-control)] border border-dashed p-3"
+            >
+              {t("contentDetail.publishingCard.meta.instagramScheduledUnavailable")}
+            </p>
+          ) : null}
+          {loading && candidates.length === 0 ? (
+            <div className="text-body text-fg-muted flex items-center gap-2 py-8" role="status">
+              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+              {t("contentDetail.publishingCard.meta.loading")}
+            </div>
+          ) : candidates.length === 0 ? (
+            <p className="text-body text-fg-muted rounded-[var(--radius-control)] border border-dashed p-6 text-center">
+              {t("contentDetail.publishingCard.meta.empty")}
+            </p>
+          ) : (
+            <div
+              className="space-y-2"
+              role="radiogroup"
+              aria-label={t("contentDetail.publishingCard.meta.candidatesLabel")}
+            >
+              {candidates.map((candidate) => {
+                const date =
+                  candidate.status === "scheduled"
+                    ? candidate.scheduledAt
+                    : (candidate.publishedAt ?? candidate.createdAt);
+                return (
+                  <label
+                    key={candidate.id}
+                    className="border-border hover:bg-surface-subtle flex cursor-pointer gap-3 rounded-[var(--radius-control)] border p-3"
+                  >
+                    <input
+                      type="radio"
+                      name="meta-publication-candidate"
+                      value={candidate.id}
+                      checked={selectedId === candidate.id}
+                      onChange={() => setSelectedId(candidate.id)}
+                      className="mt-1"
                     />
-                  ) : (
-                    <div
-                      className="bg-surface-subtle h-14 w-14 shrink-0 rounded"
-                      aria-hidden="true"
-                    />
-                  )}
-                  <span className="min-w-0 flex-1">
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Badge variant={candidate.status === "published" ? "success" : "info"}>
-                        {t(`contentDetail.publishingCard.meta.status.${candidate.status}`)}
-                      </Badge>
-                      <span className="text-label text-fg-muted">
-                        {t(`contentDetail.publishingCard.meta.mediaType.${candidate.mediaType}`)}
-                      </span>
-                      {date ? (
+                    {candidate.thumbnailUrl ? (
+                      <div
+                        className="h-14 w-14 shrink-0 rounded bg-cover bg-center"
+                        aria-hidden="true"
+                        style={{ backgroundImage: `url(${candidate.thumbnailUrl})` }}
+                      />
+                    ) : (
+                      <div
+                        className="bg-surface-subtle h-14 w-14 shrink-0 rounded"
+                        aria-hidden="true"
+                      />
+                    )}
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <Badge variant={candidate.status === "published" ? "success" : "info"}>
+                          {t(`contentDetail.publishingCard.meta.status.${candidate.status}`)}
+                        </Badge>
                         <span className="text-label text-fg-muted">
-                          {dateLabel(date, locale, timeZone)}
+                          {t(`contentDetail.publishingCard.meta.mediaType.${candidate.mediaType}`)}
+                        </span>
+                        {date ? (
+                          <span className="text-label text-fg-muted">
+                            {dateLabel(date, locale, timeZone)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span
+                        dir="auto"
+                        className="text-body text-fg-primary mt-1 line-clamp-2 block break-words"
+                      >
+                        {candidate.caption || t("contentDetail.publishingCard.meta.noCaption")}
+                      </span>
+                      {candidate.permalink ? (
+                        <a
+                          href={candidate.permalink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-label text-primary mt-1 inline-flex items-center gap-1"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                          {t("contentDetail.publishingCard.meta.previewLink")}
+                        </a>
+                      ) : candidate.mediaType === "story" ? (
+                        // Explain the absence rather than rendering a
+                        // missing control: a Story has no permanent link, and
+                        // that is expected — not a failed fetch.
+                        <span className="text-label text-fg-muted mt-1 block">
+                          {t("contentDetail.publishingCard.meta.storyNoLink")}
+                        </span>
+                      ) : null}
+                      {candidate.permalink && candidate.mediaType === "story" ? (
+                        <span className="text-label text-fg-muted mt-1 block">
+                          {t("contentDetail.publishingCard.meta.storyExpiresHint")}
                         </span>
                       ) : null}
                     </span>
-                    <span
-                      dir="auto"
-                      className="text-body text-fg-primary mt-1 line-clamp-2 block break-words"
-                    >
-                      {candidate.caption || t("contentDetail.publishingCard.meta.noCaption")}
-                    </span>
-                    {candidate.permalink ? (
-                      <a
-                        href={candidate.permalink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-label text-primary mt-1 inline-flex items-center gap-1"
-                        onClick={(event) => event.stopPropagation()}
-                      >
-                        <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                        {t("contentDetail.publishingCard.meta.previewLink")}
-                      </a>
-                    ) : candidate.mediaType === "story" ? (
-                      // Explain the absence rather than rendering a
-                      // missing control: a Story has no permanent link, and
-                      // that is expected — not a failed fetch.
-                      <span className="text-label text-fg-muted mt-1 block">
-                        {t("contentDetail.publishingCard.meta.storyNoLink")}
-                      </span>
-                    ) : null}
-                    {candidate.permalink && candidate.mediaType === "story" ? (
-                      <span className="text-label text-fg-muted mt-1 block">
-                        {t("contentDetail.publishingCard.meta.storyExpiresHint")}
-                      </span>
-                    ) : null}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-        )}
+                  </label>
+                );
+              })}
+            </div>
+          )}
 
-        {nextCursor ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => void load(nextCursor)}
-            disabled={loading}
-          >
-            {t("contentDetail.publishingCard.meta.loadMore")}
-          </Button>
-        ) : null}
-        <DialogFooter>
+          {nextCursor ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => void load(nextCursor)}
+              disabled={loading}
+            >
+              {t("contentDetail.publishingCard.meta.loadMore")}
+            </Button>
+          ) : null}
+        </div>
+        <DialogFooter className="border-border mt-0 border-t pt-4">
           <Button
             type="button"
             variant="ghost"

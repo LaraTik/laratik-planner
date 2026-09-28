@@ -75,6 +75,9 @@ describe("Meta publication linking UI", () => {
         "Meta currently exposes published Instagram media here. Scheduled Instagram posts will appear after they go live.",
       ),
     ).toBeInTheDocument();
+    expect(screen.getByTestId("meta-publication-dialog-scroll-area")).not.toContainElement(
+      screen.getByRole("button", { name: "Link selected post" }),
+    );
 
     const radio = screen.getByRole("radio") as HTMLInputElement;
     expect(radio.checked).toBe(true);
