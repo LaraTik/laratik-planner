@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
@@ -8,8 +8,17 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
+vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+  recordPublicationAction: vi.fn(),
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 
 const contentItemId = "11111111-1111-4111-8111-111111111111";
@@ -198,6 +207,53 @@ describe("PublishPackageForm localization", () => {
     fireEvent.click(screen.getByTestId(`publish-channel-tab-${secondSocialChannelId}`));
     expect(checklist).toHaveTextContent("4 of 5 required checks complete for this channel.");
     expect(checklist).not.toHaveTextContent("88 of 99");
+  });
+
+  it("offers a localized exclusion action for a pending channel", () => {
+    vi.mocked(recordPublicationAction).mockResolvedValue({ ok: true });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(true);
+    render(
+      <LocaleProvider locale="ar">
+        <PublishPackageForm
+          workspaceId="33333333-3333-4333-8333-333333333333"
+          workspaceSlug="food-game"
+          workspaceTimezone="Europe/Berlin"
+          contentItemId={contentItemId}
+          itemTitle="Autumn campaign"
+          itemFormat="static_post"
+          channels={[
+            {
+              id: "44444444-4444-4444-8444-444444444444",
+              socialChannelId,
+              platform: "instagram",
+              accountName: "Food Game",
+              payload: null,
+              publicationStatus: "pending",
+            },
+          ]}
+          deliveryVersions={[]}
+          readiness={readiness}
+          canEdit={false}
+          canApproveFinalCopy={false}
+          canConfirmReadiness={false}
+          canExcludeChannel
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("publish-exclude-channel-button")).toHaveTextContent(
+      "استبعاد من النشر",
+    );
+
+    fireEvent.click(screen.getByTestId("publish-exclude-channel-button"));
+    return waitFor(() => {
+      expect(recordPublicationAction).toHaveBeenCalledWith({
+        workspaceSlug: "food-game",
+        contentItemChannelId: "44444444-4444-4444-8444-444444444444",
+        status: "skipped",
+        note: "تم الاستبعاد من النشر",
+      });
+    }).finally(() => confirm.mockRestore());
   });
 
   it("moves focus to the publish blocker resolution section", () => {

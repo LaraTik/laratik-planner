@@ -2,7 +2,8 @@
 
 import { useRef, useState, useTransition, type MouseEvent } from "react";
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, Info, Save, Send } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, CheckCircle2, Info, Save, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import {
   savePublishPackageAction,
   setFinalCopyApprovalAction,
 } from "./actions";
+import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
@@ -89,6 +91,7 @@ type ChannelSummary = {
   accountName: string;
   payload: PlatformPayload | null;
   copySourceRevision?: number | null;
+  publicationStatus?: "pending" | "published" | "failed" | "skipped";
 };
 
 function defaultPayloadFor(platform: string, socialChannelId: string): PlatformPayload {
@@ -215,6 +218,7 @@ export function PublishPackageForm({
   canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
+  canExcludeChannel = false,
   publishingSetupReady = false,
   metaPublishingReadiness,
   metaPublishingCopy,
@@ -245,6 +249,8 @@ export function PublishPackageForm({
   canEdit: boolean;
   canApproveFinalCopy: boolean;
   canConfirmReadiness: boolean;
+  /** Publishers and managers may exclude an unrecorded channel from publication. */
+  canExcludeChannel?: boolean;
   /** Package-level lifecycle gate, independent from platform capability. */
   publishingSetupReady?: boolean;
   metaPublishingReadiness?: MetaPublishingReadiness;
@@ -262,6 +268,7 @@ export function PublishPackageForm({
 }) {
   const localeT = useLocaleT();
   const locale = useLocaleCode();
+  const router = useRouter();
   const t = tProp ?? localeT;
   const localizedPlatformLabel = (platform: string) => {
     const key = `contentDetail.publishForm.platformLabels.${platform}`;
@@ -339,6 +346,11 @@ export function PublishPackageForm({
   const currentReadiness = current
     ? readiness.channels.find((channel) => channel.socialChannelId === current.socialChannelId)
     : undefined;
+  const canExcludeCurrentChannel =
+    canExcludeChannel &&
+    (!current?.publicationStatus ||
+      current.publicationStatus === "pending" ||
+      current.publicationStatus === "failed");
   const sharedCopyDiffers = Boolean(
     current?.payload != null &&
     currentDraft &&
@@ -500,6 +512,27 @@ export function PublishPackageForm({
           ? t("contentDetail.publish.statusFinalCopyApproved")
           : t("contentDetail.publish.statusFinalCopyRevoked"),
       );
+    });
+  }
+
+  function handleExcludeChannel() {
+    if (!current || !canExcludeCurrentChannel) return;
+    if (!window.confirm(t("contentDetail.publish.excludeChannelConfirm"))) return;
+    start(async () => {
+      setError(null);
+      setStatusMessage(null);
+      const result = await recordPublicationAction({
+        workspaceSlug,
+        contentItemChannelId: current.id,
+        status: "skipped",
+        note: t("contentDetail.publish.excludeChannelNote"),
+      });
+      if (result?.error) {
+        setError(result.error);
+        return;
+      }
+      setStatusMessage(t("contentDetail.publish.statusChannelExcluded"));
+      router.refresh();
     });
   }
 
@@ -685,6 +718,28 @@ export function PublishPackageForm({
               readOnly
               testId="publish-channel-name"
             />
+            {canExcludeCurrentChannel ? (
+              <div
+                className="border-warning/30 bg-warning-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                data-testid="publish-exclude-channel"
+              >
+                <p className="text-label text-fg-secondary">
+                  {t("contentDetail.publish.excludeChannelDescription")}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11"
+                  onClick={handleExcludeChannel}
+                  disabled={pending}
+                  data-testid="publish-exclude-channel-button"
+                >
+                  <X className="me-1 h-4 w-4" aria-hidden="true" />
+                  {t("contentDetail.publish.excludeChannel")}
+                </Button>
+              </div>
+            ) : null}
             <Field
               label={t("contentDetail.publishForm.itemTitle")}
               value={itemTitle}

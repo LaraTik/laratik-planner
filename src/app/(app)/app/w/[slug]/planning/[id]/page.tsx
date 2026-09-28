@@ -1345,6 +1345,12 @@ export default async function ContentDetailPage({
                               { copySourceRevision: number | null }
                             >
                           )[c.socialChannelId]?.copySourceRevision ?? null,
+                        ...(publicationByChannel.get(c.id)?.publication_record?.status
+                          ? {
+                              publicationStatus: publicationByChannel.get(c.id)!.publication_record
+                                .status,
+                            }
+                          : {}),
                       }))}
                       deliveryVersions={deliveries.map((d) => ({
                         id: d.id,
@@ -1355,6 +1361,11 @@ export default async function ContentDetailPage({
                       canEdit={canEdit}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
+                      canExcludeChannel={
+                        (actorRoles.isPublisher || actorRoles.isManager) &&
+                        (item.status === "ready_to_publish" ||
+                          item.status === "partially_published")
+                      }
                       publishingSetupReady={publishingSetupReady}
                       metaPublishingReadiness={metaPublishingReadiness}
                       metaPublishingCopy={metaPublishingCopy}
