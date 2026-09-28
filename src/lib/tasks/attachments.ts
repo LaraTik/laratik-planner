@@ -2,6 +2,7 @@ import "server-only";
 
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
+import type { Readable } from "node:stream";
 import { db } from "@/lib/db";
 import { agencyTasks, taskAttachments } from "@/lib/db/schema";
 import {
@@ -112,6 +113,34 @@ export async function completeTaskAttachment(actor: Actor, taskId: string, attac
     .where(eq(taskAttachments.id, attachment.id))
     .returning();
   return ready;
+}
+
+export async function uploadTaskAttachment(
+  actor: Actor,
+  taskId: string,
+  attachmentId: string,
+  body: Readable,
+) {
+  await taskForActor(actor, taskId);
+  const [attachment] = await db
+    .select()
+    .from(taskAttachments)
+    .where(
+      and(
+        eq(taskAttachments.id, attachmentId),
+        eq(taskAttachments.taskId, taskId),
+        eq(taskAttachments.status, "pending"),
+      ),
+    )
+    .limit(1);
+  if (!attachment) throw new Error("task.attachment_not_found");
+  const context = await getAgencyStorageContext(attachment.agencyId);
+  await context.adapter.uploadObject({
+    objectKey: attachment.objectKey,
+    contentType: attachment.mimeType,
+    contentLength: attachment.byteSize,
+    body,
+  });
 }
 
 export async function listTaskAttachmentUrls(actor: Actor, taskId: string) {

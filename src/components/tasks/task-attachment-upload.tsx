@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { FilePlus2, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
 export function TaskAttachmentUpload({
@@ -18,6 +19,7 @@ export function TaskAttachmentUpload({
   onUploaded?: () => void;
 }) {
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   async function upload(file: File) {
@@ -37,14 +39,24 @@ export function TaskAttachmentUpload({
       const payload = (await sign.json()) as {
         attachmentId: string;
         uploadUrl: string;
+        proxyUploadUrl?: string;
         requiredHeaders?: Record<string, string>;
       };
-      const uploaded = await fetch(payload.uploadUrl, {
-        method: "PUT",
-        ...(payload.requiredHeaders ? { headers: payload.requiredHeaders } : {}),
-        body: file,
-      });
-      if (!uploaded.ok) throw new Error("upload");
+      try {
+        const uploaded = await fetch(payload.uploadUrl, {
+          method: "PUT",
+          ...(payload.requiredHeaders ? { headers: payload.requiredHeaders } : {}),
+          body: file,
+        });
+        if (!uploaded.ok) throw new Error("upload");
+      } catch (error) {
+        if (!payload.proxyUploadUrl) throw error;
+        const proxied = await fetch(payload.proxyUploadUrl, {
+          method: "PUT",
+          body: file,
+        });
+        if (!proxied.ok) throw new Error("upload");
+      }
       const complete = await fetch(`/api/tasks/${taskId}/attachments/complete`, {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -52,6 +64,7 @@ export function TaskAttachmentUpload({
       });
       if (!complete.ok) throw new Error("complete");
       onUploaded?.();
+      router.refresh();
     } catch {
       setError(errorLabel);
     } finally {

@@ -26,8 +26,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const parsed = Body.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid body" }, { status: 400 });
   try {
+    const taskId = (await params).id;
+    const intent = await createTaskAttachmentIntent(actor, taskId, parsed.data);
     return NextResponse.json(
-      await createTaskAttachmentIntent(actor, (await params).id, parsed.data),
+      {
+        ...intent,
+        proxyUploadUrl: `/api/tasks/${encodeURIComponent(taskId)}/attachments/proxy?attachmentId=${encodeURIComponent(intent.attachmentId)}`,
+      },
       { status: 201 },
     );
   } catch (error) {
