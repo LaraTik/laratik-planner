@@ -427,6 +427,17 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
     expect(await screen.findByText(/describe what is being delivered/i)).toBeInTheDocument();
   });
 
+  it("explains the no-media path when the empty delivery form is collapsed", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired={false} canSetMediaRequired />);
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(
+      screen.getByText(/describe what was delivered and submit it without media/i),
+    ).toBeInTheDocument();
+  });
+
   it("persists the toggle through the server action and reflects the new state", async () => {
     const user = userEvent.setup();
     render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);

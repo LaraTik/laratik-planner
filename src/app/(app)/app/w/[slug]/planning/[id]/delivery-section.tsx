@@ -780,7 +780,11 @@ export function DeliverySection({
               </Button>
             </header>
             <p className="text-body text-fg-muted mt-3">
-              {t("contentDetail.deliveries.emptyBody")}
+              {t(
+                assetsOptional
+                  ? "contentDetail.deliveries.emptyBodyOptional"
+                  : "contentDetail.deliveries.emptyBody",
+              )}
             </p>
           </Card>
         ) : null

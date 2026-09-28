@@ -762,6 +762,7 @@
     "notReadyTitle": "Assets are waiting for an earlier step",
     "notReadyBody": "Complete the creative brief and move the idea to design review. A designer or manager can add and submit the first asset version afterward.",
     "emptyBody": "No deliveries yet. Add stored media to advance to creative review.",
+    "emptyBodyOptional": "No deliveries yet. Describe what was delivered and submit it without media, or attach stored media if available.",
     "versionOne": "{count} version on file",
     "versionMany": "{count} versions on file",
     "reviewHandoffTitle": "Review handoff",
