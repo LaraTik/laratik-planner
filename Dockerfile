@@ -31,13 +31,12 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV APP_VERSION=$APP_VERSION
 ENV APP_BUILD_AT=$APP_BUILD_AT
-# Drizzle Kit reads DATABASE_URL at generate time but never connects (it
-# only inspects the local schema), so a placeholder URL is sufficient.
-# The real URL is supplied at container runtime via docker-compose.
+# The real URL is supplied at container runtime via docker-compose. Migration
+# SQL is committed and must not be regenerated while building a deploy image.
 ENV DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN pnpm db:generate && pnpm build
+RUN pnpm build
 
 # ─── Migration runner ───────────────────────────────────────────────────────
 # Kept separate from the runtime image so production migrations have the

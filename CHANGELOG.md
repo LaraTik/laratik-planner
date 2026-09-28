@@ -12,6 +12,12 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — production images no longer regenerate committed migrations
+
+The Docker build now uses the checked-in Drizzle migration set verbatim. Running
+`db:generate` during image creation could regenerate a migration from the
+schema snapshots and block deploys against an existing production database.
+
 ### Fixed — the strict coverage gate was red on `main`, and several gates were lowered to hide it
 
 `pnpm test:coverage` failed on clean `main` at `894f79e5` with **14 threshold
