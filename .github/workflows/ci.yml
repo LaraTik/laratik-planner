@@ -246,29 +246,8 @@ jobs:
           persist-credentials: false
         timeout-minutes: 5
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.10.0
-        timeout-minutes: 5
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: pnpm
-        timeout-minutes: 5
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        timeout-minutes: 15
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      - name: Build
-        run: pnpm build
-        timeout-minutes: 20
 
       - name: Build Docker image (app)
         # Build the app image with buildx, tag it for the local smoke test
@@ -286,7 +265,8 @@ jobs:
             --tag "laratik-planner:ci-${GITHUB_SHA}" \
             --tag "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner:latest \
-            --cache-from type=gha \
+            --cache-from type=gha,scope=planner-app \
+            --cache-to type=gha,scope=planner-app,mode=max \
             --load \
             .
         timeout-minutes: 20
@@ -306,7 +286,9 @@ jobs:
             --tag "ghcr.io/laratik/laratik-planner-migrator:${GITHUB_SHA}" \
             --tag ghcr.io/laratik/laratik-planner-migrator:latest \
             --target migrator \
-            --cache-from type=gha \
+            --cache-from type=gha,scope=planner-app \
+            --cache-from type=gha,scope=planner-migrator \
+            --cache-to type=gha,scope=planner-migrator,mode=max \
             --load \
             .
         timeout-minutes: 10

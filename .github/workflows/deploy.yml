@@ -53,6 +53,10 @@ permissions: {}
 jobs:
   gate:
     name: Verify upstream CI conclusion
+    # A superseded push cancels the older CI run and still emits a
+    # workflow_run event. Treat that event as a no-op instead of creating a
+    # red Deploy run; the newer CI run owns deployment for the latest SHA.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     permissions: {}
     steps:
