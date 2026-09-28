@@ -491,7 +491,7 @@ export function DeliverySection({
                   <div className="min-w-0 flex-1">
                     <label
                       htmlFor="delivery-no-media"
-                      className="text-body text-fg-primary block cursor-pointer font-semibold"
+                      className="text-body text-fg-primary block font-semibold"
                     >
                       {t("contentDetail.deliveries.noMediaLabel")}
                     </label>
@@ -500,6 +500,18 @@ export function DeliverySection({
                         ? t("contentDetail.deliveries.noMediaHelp")
                         : t("contentDetail.deliveries.noMediaHelpReadOnly")}
                     </p>
+                    {canSetMediaRequired && !assetsOptional ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="mt-3"
+                        disabled={savingMediaRequired}
+                        onClick={() => setAssetsOptional(true)}
+                      >
+                        {t("contentDetail.deliveries.noMediaContinue")}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
                 {mediaRequiredError ? (

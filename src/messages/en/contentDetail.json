@@ -826,7 +826,8 @@
     "sourceRequired": "Select at least one stored Media Library asset.",
     "noMediaLabel": "This post ships no creative",
     "noMediaHelp": "Mark this post as text-only so it can be submitted without stored media. Use it for caption-only announcements, threads, and link drops.",
-    "noMediaHelpReadOnly": "A planner or workspace manager decides whether this post needs media.",
+    "noMediaHelpReadOnly": "Ask a planner or workspace manager to mark this post as text-only before you submit it without stored media.",
+    "noMediaContinue": "Continue without media",
     "noMediaError": {
       "invalidRequest": "That change was not valid. Reload the page and try again.",
       "forbidden": "You do not have permission to change whether this post needs media.",

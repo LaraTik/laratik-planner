@@ -449,6 +449,25 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
     ).toBeInTheDocument();
   });
 
+  it("offers a clear continue-without-media action to planners", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    await user.click(screen.getByRole("button", { name: /continue without media/i }));
+
+    await waitFor(() => {
+      expect(setMediaRequiredAction).toHaveBeenCalledWith(
+        baseProps.workspaceSlug,
+        baseProps.contentItemId,
+        false,
+      );
+    });
+    expect(screen.getByRole("checkbox", { name: /this post ships no creative/i })).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+  });
+
   it("persists the toggle through the server action and reflects the new state", async () => {
     const user = userEvent.setup();
     render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
@@ -530,6 +549,8 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
 
     const toggle = screen.getByRole("checkbox", { name: /this post ships no creative/i });
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(/a planner or workspace manager decides/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/ask a planner or workspace manager to mark this post as text-only/i),
+    ).toBeInTheDocument();
   });
 });
