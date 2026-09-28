@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
-import { setMediaRequiredAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import {
+  setMediaRequiredAction,
+  submitDeliveryAction,
+} from "@/app/(app)/app/w/[slug]/planning/actions";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
   submitDeliveryAction: vi.fn(),
@@ -444,6 +447,25 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
       expect(toggle).toHaveAttribute("data-state", "checked");
     });
     expect(screen.getByText("(optional)")).toBeInTheDocument();
+  });
+
+  it("waits for the optional-media decision before allowing submission", async () => {
+    const user = userEvent.setup();
+    let resolveToggle!: (result: { ok: true }) => void;
+    vi.mocked(setMediaRequiredAction).mockReturnValue(
+      new Promise((resolve) => {
+        resolveToggle = resolve;
+      }),
+    );
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    await user.click(screen.getByRole("checkbox", { name: /this post ships no creative/i }));
+    const submit = screen.getByRole("button", { name: /submit for creative review/i });
+
+    expect(submit).toBeDisabled();
+    resolveToggle({ ok: true });
+    await waitFor(() => expect(submit).toBeEnabled());
+    expect(submitDeliveryAction).not.toHaveBeenCalled();
   });
 
   it("rolls the toggle back and surfaces the translated code when the server refuses", async () => {

@@ -757,7 +757,7 @@ export function DeliverySection({
                 </p>
               ) : null}
 
-              <Button type="submit" disabled={pending}>
+              <Button type="submit" disabled={pending || savingMediaRequired}>
                 {pending
                   ? t("contentDetail.deliveries.submitting")
                   : t("contentDetail.deliveries.submitForReview")}
