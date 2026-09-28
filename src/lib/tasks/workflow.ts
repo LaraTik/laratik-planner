@@ -18,6 +18,10 @@ const TASK_STATUS_TRANSITIONS: Record<TaskStatus, readonly TaskStatus[]> = {
   cancelled: ["backlog"],
 };
 
+export function taskStatusOptions(from: TaskStatus): readonly TaskStatus[] {
+  return [from, ...TASK_STATUS_TRANSITIONS[from]];
+}
+
 export function canTransitionTaskStatus(from: TaskStatus, to: TaskStatus): boolean {
   return from === to || TASK_STATUS_TRANSITIONS[from].includes(to);
 }

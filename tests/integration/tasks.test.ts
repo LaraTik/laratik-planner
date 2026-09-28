@@ -12,6 +12,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { createTask, listTasks, updateTask } from "@/lib/tasks/service";
+import { createTaskAttachmentLink, listTaskAttachmentUrls } from "@/lib/tasks/attachments";
 import { getAgencyCalendarView } from "@/lib/planning/calendar";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
@@ -144,6 +145,27 @@ describe("agency tasks", () => {
       .from(taskActivityEvents)
       .where(eq(taskActivityEvents.taskId, task.id));
     expect(activity.filter((event) => event.kind === "status_changed")).toHaveLength(3);
+  });
+
+  it("lets agency viewers see external task links without storage configuration", async () => {
+    const { agency, creator, other } = await fixture();
+    const task = await createTask(
+      { id: creator.id },
+      { agencyId: agency.id, title: "Review link" },
+    );
+    await createTaskAttachmentLink({ id: creator.id }, task.id, {
+      url: "https://example.com/reference.png",
+    });
+
+    const attachments = await listTaskAttachmentUrls({ id: other.id }, task.id);
+    expect(attachments).toEqual([
+      expect.objectContaining({
+        originalName: "reference.png",
+        externalUrl: "https://example.com/reference.png",
+        url: "https://example.com/reference.png",
+        mimeType: "image/*",
+      }),
+    ]);
   });
 
   it("filters the global calendar by workspace and task assignee", async () => {

@@ -20,7 +20,7 @@ import { canTransitionTaskStatus, type TaskStatus } from "@/lib/tasks/workflow";
 
 type TaskTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-export { TASK_STATUSES, canTransitionTaskStatus } from "@/lib/tasks/workflow";
+export { TASK_STATUSES, canTransitionTaskStatus, taskStatusOptions } from "@/lib/tasks/workflow";
 export type { TaskStatus } from "@/lib/tasks/workflow";
 
 export const TASK_PRIORITIES = ["low", "normal", "high", "urgent"] as const;

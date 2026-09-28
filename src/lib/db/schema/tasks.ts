@@ -84,8 +84,9 @@ export const taskAttachments = pgTable(
     taskId: uuid("task_id")
       .notNull()
       .references(() => agencyTasks.id, { onDelete: "cascade" }),
-    bucket: text("bucket").notNull(),
-    objectKey: text("object_key").notNull(),
+    bucket: text("bucket"),
+    objectKey: text("object_key"),
+    externalUrl: text("external_url"),
     originalName: text("original_name").notNull(),
     mimeType: text("mime_type").notNull(),
     byteSize: bigint("byte_size", { mode: "number" }).notNull(),
@@ -100,5 +101,9 @@ export const taskAttachments = pgTable(
   (t) => [
     index("task_attachment_task_created_idx").on(t.taskId, sql`${t.createdAt} DESC`),
     check("task_attachment_status_valid", sql`${t.status} IN ('pending', 'ready', 'failed')`),
+    check(
+      "task_attachment_source_valid",
+      sql`(${t.externalUrl} IS NULL AND ${t.bucket} IS NOT NULL AND ${t.objectKey} IS NOT NULL) OR (${t.externalUrl} IS NOT NULL AND ${t.bucket} IS NULL AND ${t.objectKey} IS NULL)`,
+    ),
   ],
 );

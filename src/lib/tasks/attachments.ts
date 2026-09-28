@@ -25,6 +25,28 @@ const ALLOWED_TYPES = new Set([
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 ]);
 
+function assertExternalUrl(value: string) {
+  const url = new URL(value.trim());
+  if (url.protocol !== "https:") throw new Error("task.attachment_url_invalid");
+  return url.toString();
+}
+
+function externalMimeType(value: string) {
+  const path = new URL(value).pathname.toLowerCase();
+  if (/\.(jpe?g|png|webp|gif)$/.test(path)) return "image/*";
+  if (/\.(mp4|mov|webm)$/.test(path)) return "video/*";
+  return "text/uri-list";
+}
+
+function externalName(value: string) {
+  const segment = new URL(value).pathname.split("/").pop() || "External link";
+  try {
+    return decodeURIComponent(segment).slice(0, 255) || "External link";
+  } catch {
+    return segment.slice(0, 255) || "External link";
+  }
+}
+
 async function taskForActor(actor: Actor, taskId: string) {
   const [task] = await db.select().from(agencyTasks).where(eq(agencyTasks.id, taskId)).limit(1);
   if (!task || !(await isAgencyMember(actor, task.agencyId))) {
@@ -35,6 +57,14 @@ async function taskForActor(actor: Actor, taskId: string) {
     task.createdBy === actor.id ||
     task.assigneeId === actor.id;
   if (!canManage) throw new PermissionDeniedError("task.attachment");
+  return task;
+}
+
+async function taskForViewer(actor: Actor, taskId: string) {
+  const [task] = await db.select().from(agencyTasks).where(eq(agencyTasks.id, taskId)).limit(1);
+  if (!task || !(await isAgencyMember(actor, task.agencyId))) {
+    throw new PermissionDeniedError("task.view");
+  }
   return task;
 }
 
@@ -95,6 +125,7 @@ export async function completeTaskAttachment(actor: Actor, taskId: string, attac
     .where(and(eq(taskAttachments.id, attachmentId), eq(taskAttachments.taskId, taskId)))
     .limit(1);
   if (!attachment) throw new Error("task.attachment_not_found");
+  if (!attachment.objectKey) throw new Error("task.attachment_not_upload");
   const context = await getAgencyStorageContext(attachment.agencyId);
   const metadata = await context.adapter.completeUpload({ objectKey: attachment.objectKey });
   if (
@@ -113,6 +144,33 @@ export async function completeTaskAttachment(actor: Actor, taskId: string, attac
     .where(eq(taskAttachments.id, attachment.id))
     .returning();
   return ready;
+}
+
+export async function createTaskAttachmentLink(
+  actor: Actor,
+  taskId: string,
+  input: { url: string; originalName?: string | undefined },
+) {
+  const task = await taskForActor(actor, taskId);
+  const externalUrl = assertExternalUrl(input.url);
+  const name = input.originalName?.trim().slice(0, 255) || externalName(externalUrl);
+  const [attachment] = await db
+    .insert(taskAttachments)
+    .values({
+      agencyId: task.agencyId,
+      taskId,
+      bucket: null,
+      objectKey: null,
+      externalUrl,
+      originalName: name || "External link",
+      mimeType: externalMimeType(externalUrl),
+      byteSize: Buffer.byteLength(externalUrl),
+      status: "ready",
+      uploadedBy: actor.id,
+    })
+    .returning();
+  if (!attachment) throw new Error("task.attachment_create_failed");
+  return attachment;
 }
 
 export async function uploadTaskAttachment(
@@ -134,6 +192,7 @@ export async function uploadTaskAttachment(
     )
     .limit(1);
   if (!attachment) throw new Error("task.attachment_not_found");
+  if (!attachment.objectKey) throw new Error("task.attachment_not_upload");
   const context = await getAgencyStorageContext(attachment.agencyId);
   await context.adapter.uploadObject({
     objectKey: attachment.objectKey,
@@ -144,16 +203,22 @@ export async function uploadTaskAttachment(
 }
 
 export async function listTaskAttachmentUrls(actor: Actor, taskId: string) {
-  const task = await taskForActor(actor, taskId);
-  const context = await getAgencyStorageContext(task.agencyId);
+  const task = await taskForViewer(actor, taskId);
   const rows = await db
     .select()
     .from(taskAttachments)
     .where(and(eq(taskAttachments.taskId, taskId), eq(taskAttachments.status, "ready")));
+  const fileRows = rows.filter((row) => !row.externalUrl);
+  const context = fileRows.length ? await getAgencyStorageContext(task.agencyId) : null;
   return Promise.all(
     rows.map(async (row) => ({
       ...row,
-      url: await context.adapter.createReadUrl({ objectKey: row.objectKey, expiresInSeconds: 300 }),
+      url:
+        row.externalUrl ??
+        (await context!.adapter.createReadUrl({
+          objectKey: row.objectKey!,
+          expiresInSeconds: 300,
+        })),
     })),
   );
 }

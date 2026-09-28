@@ -16,7 +16,7 @@ import {
   listAgencyMembers,
   listAgencyWorkspaces,
   TASK_PRIORITIES,
-  TASK_STATUSES,
+  taskStatusOptions,
   type TaskStatus,
 } from "@/lib/tasks/service";
 import { listTaskAttachmentUrls } from "@/lib/tasks/attachments";
@@ -29,6 +29,7 @@ import { FormField } from "@/components/forms/form-field";
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
 import { TaskArchiveButton } from "@/components/tasks/task-archive-button";
+import { MediaAssetGallery } from "@/components/media/media-asset-gallery";
 import {
   updateTaskAction,
   archiveTaskAction,
@@ -126,7 +127,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                       defaultValue={task.status}
                       className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
                     >
-                      {TASK_STATUSES.map((status) => (
+                      {taskStatusOptions(task.status as TaskStatus).map((status) => (
                         <option key={status} value={status}>
                           {t(`tasks.status.${status}`)}
                         </option>
@@ -206,32 +207,62 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                   label={t("tasks.addAttachment")}
                   uploadingLabel={t("tasks.uploading")}
                   errorLabel={t("tasks.uploadError")}
+                  sourceDeviceLabel={t("tasks.sourceDevice")}
+                  sourceLinkLabel={t("tasks.sourceLink")}
+                  linkPlaceholder={t("tasks.linkPlaceholder")}
+                  addLinkLabel={t("tasks.addLink")}
+                  previewLabel={t("tasks.preview")}
+                  retryLabel={t("common.error.retry")}
+                  removeLabel={t("media.remove")}
                 />
               ) : null}
             </div>
             {attachments.length ? (
-              <ul className="mt-5 space-y-2">
-                {attachments.map((attachment) => (
-                  <li
-                    key={attachment.id}
-                    className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border px-3 py-2"
-                  >
-                    <span className="text-body inline-flex min-w-0 items-center gap-2">
-                      <Paperclip className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
-                      <span className="wrap-break-word">{attachment.originalName}</span>
-                    </span>
-                    <a
-                      href={attachment.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-label text-primary inline-flex min-h-9 items-center gap-1 font-semibold underline-offset-4 hover:underline"
+              <div className="mt-5 space-y-4">
+                {attachments.some(
+                  (attachment) =>
+                    attachment.mimeType.startsWith("image/") ||
+                    attachment.mimeType.startsWith("video/"),
+                ) ? (
+                  <MediaAssetGallery
+                    title={t("tasks.attachments")}
+                    assets={attachments
+                      .filter(
+                        (attachment) =>
+                          attachment.mimeType.startsWith("image/") ||
+                          attachment.mimeType.startsWith("video/"),
+                      )
+                      .map((attachment) => ({
+                        id: attachment.id,
+                        url: attachment.url,
+                        label: attachment.originalName,
+                        kind: attachment.mimeType.startsWith("video/") ? "video" : "image",
+                      }))}
+                  />
+                ) : null}
+                <ul className="space-y-2">
+                  {attachments.map((attachment) => (
+                    <li
+                      key={attachment.id}
+                      className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border px-3 py-2"
                     >
-                      <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                      {t("common.rowActionOpen")}
-                    </a>
-                  </li>
-                ))}
-              </ul>
+                      <span className="text-body inline-flex min-w-0 items-center gap-2">
+                        <Paperclip className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+                        <span className="wrap-break-word">{attachment.originalName}</span>
+                      </span>
+                      <a
+                        href={attachment.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-label text-primary inline-flex min-h-9 items-center gap-1 font-semibold underline-offset-4 hover:underline"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                        {t("common.rowActionOpen")}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : (
               <p className="text-body text-fg-muted mt-5">{t("common.empty")}</p>
             )}
