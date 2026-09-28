@@ -130,6 +130,7 @@ export function DeliverySection({
     null,
   );
   const assetsOptional = !mediaRequiredState;
+  const canSubmitWithoutMedia = assetsOptional || canSetMediaRequired;
   const canUploadInline = workspaceId.length > 0;
   const previousAssetSet = new Set(previousAssetIds);
   const nextVersionNumber = (deliveries[0]?.versionNumber ?? 0) + 1;
@@ -781,7 +782,7 @@ export function DeliverySection({
             </header>
             <p className="text-body text-fg-muted mt-3">
               {t(
-                assetsOptional
+                canSubmitWithoutMedia
                   ? "contentDetail.deliveries.emptyBodyOptional"
                   : "contentDetail.deliveries.emptyBody",
               )}

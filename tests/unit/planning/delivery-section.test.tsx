@@ -438,6 +438,17 @@ describe("DeliverySection — optional media (caption-only posts)", () => {
     ).toBeInTheDocument();
   });
 
+  it("explains the no-media path when a planner can enable it", async () => {
+    const user = userEvent.setup();
+    render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
+
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+
+    expect(
+      screen.getByText(/describe what was delivered and submit it without media/i),
+    ).toBeInTheDocument();
+  });
+
   it("persists the toggle through the server action and reflects the new state", async () => {
     const user = userEvent.setup();
     render(<DeliverySection {...baseProps} mediaRequired canSetMediaRequired />);
