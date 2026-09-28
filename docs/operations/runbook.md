@@ -361,6 +361,17 @@ pnpm exec playwright install --with-deps chromium firefox webkit
 # Keep this in the shell that runs the checks (or add it to direnv/.env.test).
 export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
 
+# PROVE the URL reaches the container before trusting any local result.
+# `docker exec … pg_isready` only proves the container is healthy — it says
+# nothing about which server the port actually resolves to. If a native
+# Postgres (Homebrew, Postgres.app, another project's container) is already
+# bound to 127.0.0.1:5432, the more specific loopback bind wins over Docker's
+# 0.0.0.0:5432 and every check silently runs against the wrong server. The
+# symptom is a migration that dies on `CREATE SCHEMA IF NOT EXISTS "drizzle"`
+# with "database planner_test does not exist" on a database you just created.
+docker exec laratik-test-pg psql -U planner -d planner_test -tAc 'select 1' >/dev/null 2>&1
+psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
+
 # Verify the disposable database and migration pipeline before browser tests.
 NODE_ENV=test pnpm migration-drill
 pnpm test:integration

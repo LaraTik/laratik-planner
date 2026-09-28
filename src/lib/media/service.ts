@@ -27,6 +27,7 @@ import {
   redactMediaSourceUrl,
   sanitizeAssetTitle,
   titleFromFilename,
+  type MediaDimensions,
   type MediaKind,
   type MediaSourceType,
 } from "./contract";
@@ -674,6 +675,79 @@ export async function listMediaAssetsForContentItem(
   });
 }
 
+const MEDIA_ASSET_STATUSES = ["processing", "ready", "failed", "trashed", "deleted"] as const;
+type MediaAssetRowStatus = (typeof MEDIA_ASSET_STATUSES)[number];
+
+/** The column is `text` plus a CHECK constraint; narrow it once, at the edge. */
+function toRegisteredAsset(row: {
+  id: string;
+  storageObjectId: string;
+  status: string;
+  failureCode: string | null;
+}): RegisteredMediaAsset {
+  return {
+    id: row.id,
+    storageObjectId: row.storageObjectId,
+    status: (MEDIA_ASSET_STATUSES as readonly string[]).includes(row.status)
+      ? (row.status as MediaAssetRowStatus)
+      : "processing",
+    failureCode: row.failureCode ?? null,
+  };
+}
+
+/**
+ * The shape every `registerUploadedMediaAsset` return path must honour.
+ *
+ * `status` is load-bearing for callers, not decoration: the browser only
+ * promotes an upload into the delivery picker when the server says `ready`.
+ * A return path that omits it reads as `undefined` and strands the user's
+ * file at "processing" even though the row is perfectly healthy, so every
+ * branch selects this projection rather than a narrower literal.
+ */
+export type RegisteredMediaAsset = {
+  id: string;
+  storageObjectId: string;
+  status: MediaAssetRowStatus;
+  failureCode: string | null;
+};
+
+const registeredAssetProjection = {
+  id: mediaAssets.id,
+  storageObjectId: mediaAssets.storageObjectId,
+  status: mediaAssets.status,
+  failureCode: mediaAssets.failureCode,
+} as const;
+
+/**
+ * Storage reads are eventually consistent and briefly rate-limited, so a
+ * transient blip must not decide an asset's fate on the first attempt.
+ * `invalid_signature` is the one deterministic verdict and is never retried.
+ *
+ * After the last attempt the transient error is rethrown so the caller keeps
+ * the row in `processing` for the cron `processPendingMediaAssets` sweep,
+ * exactly as a non-retried transient failure would.
+ */
+const VALIDATION_RETRY_DELAYS_MS = [0, 250, 750] as const;
+
+async function validateStoredMediaObjectWithRetry(input: {
+  agencyId: string;
+  workspaceId: string;
+  objectId: string;
+  contentType: string;
+}): Promise<MediaDimensions | null> {
+  let lastError: unknown;
+  for (const delay of VALIDATION_RETRY_DELAYS_MS) {
+    if (delay) await new Promise((resolve) => setTimeout(resolve, delay));
+    try {
+      return await validateStoredMediaObject(input);
+    } catch (error) {
+      if (error instanceof MediaValidationError && error.code === "invalid_signature") throw error;
+      lastError = error;
+    }
+  }
+  throw lastError;
+}
+
 export async function registerUploadedMediaAsset(input: {
   actor: Actor;
   agencyId: string;
@@ -688,7 +762,7 @@ export async function registerUploadedMediaAsset(input: {
   sourceReference?: string;
   sourceUrl?: string;
   sourceModifiedAt?: Date;
-}): Promise<{ id: string; storageObjectId: string }> {
+}): Promise<RegisteredMediaAsset> {
   if (!(await canWriteToWorkspace(input.actor, input.workspaceId))) {
     throw new MediaPermissionError("Read-only users cannot add media.");
   }
@@ -756,15 +830,25 @@ export async function registerUploadedMediaAsset(input: {
     if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
   }
 
-  // Select storageObjectId alongside the id so the declared return
-  // shape (`{ id, storageObjectId }`) holds on this early return,
-  // matching the already-registered race check further down.
+  // The object may already be catalogued — a retried register, a duplicate
+  // submission, or the recovery link below. Re-project the full row so the
+  // caller sees the true status, and re-assert the content-item link: a
+  // previous attempt can have committed the asset and then failed the link,
+  // and returning early without re-linking is what orphans it.
   const [existing] = await db
-    .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
+    .select(registeredAssetProjection)
     .from(mediaAssets)
     .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
     .limit(1);
-  if (existing) return existing;
+  if (existing) {
+    if (input.contentItemId) {
+      await linkMediaAssetToContentItem(input.actor, {
+        assetId: existing.id,
+        contentItemId: input.contentItemId,
+      });
+    }
+    return toRegisteredAsset(existing);
+  }
 
   const sourceType = input.sourceType ?? "browser_file";
   let status: "processing" | "ready" | "failed" = "processing";
@@ -775,7 +859,7 @@ export async function registerUploadedMediaAsset(input: {
     failureCode = undefined;
   } else {
     try {
-      dimensions = await validateStoredMediaObject({
+      dimensions = await validateStoredMediaObjectWithRetry({
         agencyId: input.agencyId,
         workspaceId: input.workspaceId,
         objectId: object.id,
@@ -789,6 +873,10 @@ export async function registerUploadedMediaAsset(input: {
         status = "failed";
         failureCode = error.code;
       }
+      // Anything else is a transient provider read that survived the inline
+      // retries. The row deliberately stays `processing` / `validation_pending`
+      // so the cron `processPendingMediaAssets` sweep promotes it once storage
+      // recovers — the same end state as a single un-retried attempt.
     }
   }
 
@@ -863,15 +951,14 @@ export async function registerUploadedMediaAsset(input: {
           });
         }
       }
-      return asset;
+      return toRegisteredAsset(asset);
     }
 
     // A concurrent request may have won the unique storage-object race.
-    // Select storageObjectId too so the public-asset import flow can
-    // look up the joined storage object shape (kind/byteSize/mimeType)
-    // for the caller without a second round-trip.
+    // Re-project the full row so the caller learns the real status rather
+    // than an `undefined` that reads as "processing".
     const [alreadyRegistered] = await db
-      .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
+      .select(registeredAssetProjection)
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);
@@ -882,7 +969,7 @@ export async function registerUploadedMediaAsset(input: {
           contentItemId: input.contentItemId,
         });
       }
-      return alreadyRegistered;
+      return toRegisteredAsset(alreadyRegistered);
     }
     throw new Error("Media asset could not be registered");
   } catch (error) {
@@ -890,18 +977,23 @@ export async function registerUploadedMediaAsset(input: {
     // fails. If another request registered it concurrently, preserve that
     // winner and avoid quarantining its live object.
     const [alreadyRegistered] = await db
-      .select({ id: mediaAssets.id, storageObjectId: mediaAssets.storageObjectId })
+      .select(registeredAssetProjection)
       .from(mediaAssets)
       .where(eq(mediaAssets.storageObjectId, input.storageObjectId))
       .limit(1);
     if (alreadyRegistered) {
+      // The asset row is already committed, so a failure to re-assert the
+      // link must not escape: doing so would skip the quarantine below and
+      // replace the real error with a second copy of itself. Surface the
+      // committed asset so the client can show it, and let the caller's own
+      // retry re-run the (idempotent) link.
       if (input.contentItemId) {
         await linkMediaAssetToContentItem(input.actor, {
           assetId: alreadyRegistered.id,
           contentItemId: input.contentItemId,
         });
       }
-      return alreadyRegistered;
+      return toRegisteredAsset(alreadyRegistered);
     }
     await quarantineMediaObject({ agencyId: input.agencyId, objectId: input.storageObjectId });
     throw error;

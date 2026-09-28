@@ -3,6 +3,49 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Coverage + gate re-tightening — 2026-09-28
+
+Two separate defects, both fixed in one change: tests that were missing, and
+gates that had been lowered in place of those tests. The strict coverage gate
+was **red on clean `main` (`894f79e5`)** with 14 threshold errors, and the
+2026-08-26 comment block in `vitest.config.ts` had promised the tests that
+would allow re-tightening. They had not landed.
+
+| Command / check                                | Result                                                                                                                                                                                                                 | Release interpretation                                                                                                                              |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:coverage` (before)                  | **Fail** — 14 threshold errors: observability 78.82/85.71/88.73/78.82, ai 66.92/81.25/80.95/66.92, content branches 75.68 < 80, deliveries 82.81 < 85, auth branches 89.52 < 90, storage branches 79.95 < 80           | The strict gate had been failing while the working tree looked green. This is the baseline this change closes.                                      |
+| `pnpm test:unit` (before)                      | Pass (428 files, 4,015 tests)                                                                                                                                                                                          | Correctness was never the problem; the tests did not exist to be run.                                                                               |
+| `TEST_DATABASE_URL=… pnpm test:integration`    | Pass (30 files, all green) against a real Postgres. The earlier `social-analytics` 31.4s timeout was the Docker daemon dying mid-run, **not** a test defect — it passes reliably once the container is up.             | Integration had no genuine failures. A test that fails only when its dependency vanishes is environmental, and was not "fixed" as if it were a bug. |
+| `pnpm test:coverage` (after, tightened floors) | **Pass** — 440 files, 4,252 tests, zero threshold errors, with auth 95/90/95/95, deliveries 95/90/95/95, content 80/80/85/80, ai 90/84/90/90, storage 95/82/95/95 and every other glob ratcheted to its measured value | The gate is green at the aspirational targets it was originally written to hold, so it can fail again on a real regression.                         |
+| `pnpm typecheck` / `pnpm lint` / `prettier`    | Pass (`tsc --noEmit` clean, `eslint --max-warnings=0` clean, `prettier --check` clean)                                                                                                                                 | No threshold was bought with a skipped type or lint gate.                                                                                           |
+
+Largest gaps closed, all in critical domains:
+
+- `src/lib/observability/app-errors.ts` — **50.81% lines / 61.90% functions → 98.61 / 100 / 92.61 branches.** The entire triage read path had never executed in any test: `listAppErrorGroups`, `getAppErrorGroupByFingerprint`, `triageAppErrorGroup`, `getAppErrorDiagnostics`, `getAppErrorHealth`, `pruneAppErrorRetention`, and the per-fingerprint burst limiter that keeps `app_error_event` bounded while keeping the group occurrence count exact.
+- `src/lib/ai/{monthly-planning,instruction-packs,default-planning-pack,governance-index}.ts` — **0% → 100%.** 544 lines, including the whole monthly-planning copilot and the instruction-pack draft→publish flow with its scope isolation and manifest validation.
+- `src/lib/content/enriched-list.ts` — **0% → 100%.** Includes the deliberate `healthIn` post-filter / unfiltered-`total` asymmetry, which is the kind of thing a refactor silently breaks.
+- `src/lib/content/inline-update.ts` — **32.35% → 97.43% branches.** The six-rejection shared gate, the cross-workspace "not found" boundary, and the distinction between a failed write and a failed materiality reset.
+- `src/lib/deliveries/service.ts` — `setMediaRequired` shipped in `4eadc7f1` with **zero** tests; the `decideApproval` notification fan-out was unreachable because the existing mock never primed the item-meta row, leaving ~125 lines dead. Glob now 96.42/90.45/100.
+- `src/lib/auth/config.ts` — **65.71% → 97.87% branches.** Credentials `authorize`, the `mustChangePassword` re-read on `trigger: "update"`, and the Google/SMTP provider branches.
+- `src/lib/storage/read-service.ts` — **71.88% → 97.91% branches, 100% lines.** The signed-URL cache prune and every `fetchStorageObject` failure path.
+
+Two findings recorded rather than encoded as desired behaviour:
+
+1. `decideApproval`'s notification fan-out de-duplicates nothing. A user who is both content owner and designer receives two identical "creative approved" notifications. `tests/unit/deliveries/approval-notifications.test.ts` pins the actual behaviour and says so in the test name, so a future fix has an obvious place to update it.
+2. `src/lib/security` cannot reach 95 from unit tests alone. The residual is the `upload_sign` / `password_reset_request` rate-limit scopes, which are integration-covered. The floor stays at 93 and the reason is written into `vitest.config.ts`.
+
+Documentation defect also fixed: `AGENTS.md` and `docs/operations/runbook.md` both specified
+`postgresql://…@127.0.0.1:5432/planner_test`. On a machine where a native Postgres already holds
+`127.0.0.1:5432`, its more specific loopback bind wins over Docker's `0.0.0.0:5432` and every
+check silently runs against the wrong server — `docker exec … pg_isready` still passes, so the
+only symptom is a migration failing with `database "planner_test" does not exist` for a database
+that was just created. Both docs now require proving the URL resolves before trusting a local
+result.
+
+Not covered by this snapshot: the full `pnpm verify` (including the Next.js production build),
+the e2e/visual matrices, and the GitHub-only rollout evidence. `src/lib/social` (~8.2k lines of
+provider adapters) remains the largest uncovered surface and is not addressed here.
+
 ## Planning workspace UX/IA refactor — 2026-09-15 @ `f992fb30`
 
 This implementation preserves the existing database schema, technical

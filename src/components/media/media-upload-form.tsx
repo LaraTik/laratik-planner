@@ -18,6 +18,15 @@ import {
 } from "@/lib/media/contract";
 
 type QueueStatus = "queued" | "uploading" | "verifying" | "processing" | "ready" | "failed";
+
+/**
+ * Bounded backoff for re-reading an asset that registered as `processing`.
+ * Storage read blips are short, so ~11s of in-session polling resolves the
+ * overwhelming majority without the user touching anything. Anything still
+ * pending after this is recovered by the cron `processPendingMediaAssets`
+ * sweep; the upload itself is never lost.
+ */
+const REGISTER_POLL_DELAYS_MS = [400, 1000, 2000, 3000, 5000] as const;
 type QueueItem = {
   id: string;
   file: File;
@@ -102,8 +111,16 @@ function formatBytes(value: number) {
 
 async function checksumFor(file: File): Promise<string | undefined> {
   if (file.size > 100 * 1024 * 1024 || !globalThis.crypto?.subtle) return undefined;
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-  return btoa(String.fromCharCode(...new Uint8Array(digest)));
+  // The checksum only powers advisory duplicate detection; the upload itself
+  // is valid without it and the server treats its absence as normal. Digesting
+  // is therefore never allowed to fail the upload — a large-file read error
+  // must degrade to "no checksum", not to a raw runtime message in the row.
+  try {
+    const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+    return btoa(String.fromCharCode(...new Uint8Array(digest)));
+  } catch {
+    return undefined;
+  }
 }
 
 function putFileWithProgress(
@@ -287,31 +304,58 @@ export function MediaUploadForm({
       });
       if (!complete.ok) throw await uploadResponseError(complete, t);
       const result = (await complete.json()) as { objectId: string };
-      const register = await fetch("/api/media/assets", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workspaceId,
-          storageObjectId: result.objectId,
-          title: sanitizeAssetTitle(item.title),
-          ...(folderId ? { folderId } : {}),
-          ...(contentItemId ? { contentItemId } : {}),
-        }),
-      });
-      if (!register.ok) throw await uploadResponseError(register, t);
-      const registered = (await register.json()) as {
-        asset?: { id?: string; status?: string };
+      // Registration is idempotent, so this POST doubles as the status probe
+      // for an asset the server could not finish validating inline.
+      const registerAsset = async () => {
+        const response = await fetch("/api/media/assets", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            workspaceId,
+            storageObjectId: result.objectId,
+            title: sanitizeAssetTitle(item.title),
+            ...(folderId ? { folderId } : {}),
+            ...(contentItemId ? { contentItemId } : {}),
+          }),
+        });
+        if (!response.ok) throw await uploadResponseError(response, t);
+        const body = (await response.json()) as {
+          asset?: { id?: string; status?: string };
+        };
+        return body.asset ?? {};
       };
-      const status = registered.asset?.status === "ready" ? "ready" : "processing";
-      update(item.id, { status });
-      if (status === "ready" && registered.asset?.id) {
+
+      // `processing` is a real, recoverable state — the bytes are stored and
+      // catalogued, only content validation is outstanding, because storage
+      // was briefly unreadable during registration. Poll the idempotent
+      // register here so the file surfaces in the picker on its own; without
+      // this the row sat at "processing" with no recovery short of a manual
+      // page reload, which is what users reported as a failed upload.
+      let asset = await registerAsset();
+      for (const delay of REGISTER_POLL_DELAYS_MS) {
+        if (asset.status !== "processing") break;
+        update(item.id, { status: "processing" });
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        asset = await registerAsset();
+      }
+
+      if (asset.status === "failed") {
+        update(item.id, { status: "failed", error: t("media.verificationFailed") });
+        return;
+      }
+      if (asset.status === "ready" && asset.id) {
+        update(item.id, { status: "ready" });
         onAssetReady?.({
-          id: registered.asset.id,
+          id: asset.id,
           title: sanitizeAssetTitle(item.title),
           kind: item.kind,
           byteSize: item.file.size,
         });
+        return;
       }
+      // Still pending after the bounded poll: the row is committed and the
+      // cron sweep will promote it. Leave the visible state honest.
+      update(item.id, { status: "processing" });
     } catch (error) {
       update(item.id, {
         status: "failed",

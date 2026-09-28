@@ -51,6 +51,15 @@ docker exec laratik-planner-pg-dev psql -U planner -d postgres -tAc \
   docker exec laratik-planner-pg-dev psql -U planner -d postgres \
   -c "CREATE DATABASE planner_test"
 export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test
+
+# Verify the URL actually reaches the container before trusting a local
+# result. If a native Postgres (Homebrew / Postgres.app / another container)
+# is already bound to 127.0.0.1:5432, the more specific loopback bind wins
+# over Docker's 0.0.0.0:5432 and every check silently runs against the wrong
+# server — `docker exec … pg_isready` still passes, so the failure only
+# surfaces as `database "planner_test" does not exist` on a database you
+# just created. Pick a free port for the test container if the two collide.
+psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 ```
 
 Run `NODE_ENV=test pnpm migration-drill` and `pnpm test:integration` before
