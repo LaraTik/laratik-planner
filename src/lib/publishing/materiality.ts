@@ -210,7 +210,13 @@ export async function recordMaterialityEvent(
     //    open request to `cancelled` and records
     //    `invalidation_reason` so the audit trail explains why.
     const openRequests = await tx
-      .select({ id: approvalRequests.id })
+      .select({
+        contentItemId: approvalRequests.contentItemId,
+        gate: approvalRequests.gate,
+        deliveryVersionId: approvalRequests.deliveryVersionId,
+        requestedBy: approvalRequests.requestedBy,
+        sequence: approvalRequests.sequence,
+      })
       .from(approvalRequests)
       .where(
         and(
@@ -235,6 +241,16 @@ export async function recordMaterialityEvent(
         )
         .returning({ id: approvalRequests.id });
       cancelledCount = cancelled.length;
+
+      for (const request of openRequests) {
+        await tx.insert(approvalRequests).values({
+          contentItemId: request.contentItemId,
+          gate: request.gate,
+          deliveryVersionId: request.deliveryVersionId,
+          requestedBy: request.requestedBy,
+          sequence: request.sequence + 1,
+        });
+      }
     }
 
     // 3. Audit. The `activity_event` table is the same writer

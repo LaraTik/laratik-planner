@@ -314,7 +314,24 @@ describe("recordMaterialityEvent", () => {
     // 1. content-item lookup (select.limit(1) → lastSelectRowCount=1)
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
     // 2. inside tx: openRequests (2 pending approvals → lastSelectRowCount=2)
-    dbState.selectResults.push([{ id: "approval-1" }, { id: "approval-2" }]);
+    dbState.selectResults.push([
+      {
+        id: "approval-1",
+        contentItemId,
+        gate: "creative_internal",
+        deliveryVersionId: "delivery-1",
+        requestedBy: "user-2",
+        sequence: 1,
+      },
+      {
+        id: "approval-2",
+        contentItemId,
+        gate: "creative_client",
+        deliveryVersionId: "delivery-1",
+        requestedBy: "user-3",
+        sequence: 2,
+      },
+    ]);
     // 3. reviewers query (after the cancel, the SUT re-selects
     //    approval_requests for the notification set).
     dbState.selectResults.push([{ requestedBy: userId }, { requestedBy: "user-2" }]);
@@ -335,6 +352,31 @@ describe("recordMaterialityEvent", () => {
     });
     expect(dbState.updateCalls.length).toBeGreaterThanOrEqual(2); // revision + cancel
     expect(dbState.insertCalls.length).toBeGreaterThanOrEqual(2); // activity + notification
+    expect(
+      dbState.insertCalls.filter((c) => {
+        const values = c.values as Record<string, unknown>;
+        return values.gate === "creative_internal" || values.gate === "creative_client";
+      }),
+    ).toEqual([
+      {
+        values: {
+          contentItemId,
+          gate: "creative_internal",
+          deliveryVersionId: "delivery-1",
+          requestedBy: "user-2",
+          sequence: 2,
+        },
+      },
+      {
+        values: {
+          contentItemId,
+          gate: "creative_client",
+          deliveryVersionId: "delivery-1",
+          requestedBy: "user-3",
+          sequence: 3,
+        },
+      },
+    ]);
     const activityInsert = dbState.insertCalls.find((c) =>
       (c.values as Record<string, unknown>).summary?.toString().includes("Material edit"),
     );
