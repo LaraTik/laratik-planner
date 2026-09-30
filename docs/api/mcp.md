@@ -52,20 +52,43 @@ token is refused.
 
 ### Planning and brand kit
 
-| Tool                                 | Scope           | Purpose                                                                                                                                                                                                             |
-| ------------------------------------ | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laratik_planner_list_workspaces`    | `content:read`  | List active internal workspaces available to the token owner; accepts optional `name_query` (1–120 chars, case-insensitive substring on `name` + `slug`) to resolve a single workspace UUID without paging 200 rows |
-| `laratik_planner_list_content`       | `content:read`  | Filter and paginate planning items                                                                                                                                                                                  |
-| `laratik_planner_get_content`        | `content:read`  | Read one item, selected channels, and assignment history                                                                                                                                                            |
-| `laratik_planner_create_content`     | `content:write` | Create a draft using Quick Create rules; optionally write a validated format-specific `format_payload` in the same create operation                                                                                 |
-| `laratik_planner_update_content`     | `content:write` | Update an editable draft or changes-requested item, including an optional validated format-specific `format_payload`                                                                                                |
-| `laratik_planner_reschedule_content` | `content:write` | Change the planned publish date only                                                                                                                                                                                |
-| `laratik_planner_change_owner`       | `content:write` | Reassign the coordinating owner                                                                                                                                                                                     |
-| `laratik_planner_transition_content` | `content:write` | Run an explicit workflow transition                                                                                                                                                                                 |
-| `laratik_planner_archive_content`    | `content:write` | Soft-archive one item; requires `confirm: true`                                                                                                                                                                     |
-| `laratik_planner_duplicate_content`  | `content:write` | Create a new draft copy                                                                                                                                                                                             |
-| `laratik_planner_export_brand_kit`   | `content:read`  | Read the full brand-kit (logos, colors, fonts, voice rules, publishing rules, linked resources, content pillars); logo binaries referenced by signed download URL                                                   |
-| `laratik_planner_import_brand_kit`   | `content:write` | Apply a brand-kit envelope to a workspace; supports `merge`/`fail`/`overwrite` conflict strategies; logo binaries via `base64`, `source_url`, or `external_url`                                                     |
+| Tool                                     | Scope           | Purpose                                                                                                                                                                                                                                                                                                             |
+| ---------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laratik_planner_list_workspaces`        | `content:read`  | List active internal workspaces available to the token owner; accepts optional `name_query` (1–120 chars, case-insensitive substring on `name` + `slug`) to resolve a single workspace UUID without paging 200 rows                                                                                                 |
+| `laratik_planner_list_workspace_members` | `content:read`  | List the people holding a membership in one workspace, with `displayName`, `email`, `roles[]`, `status`, and `lastActiveAt`; accepts optional `include_deactivated` (default `false`). This is the only way to resolve the owner/designer/reviewer UUIDs returned by `list_content` and `get_content` back to names |
+| `laratik_planner_list_content`           | `content:read`  | Filter and paginate planning items                                                                                                                                                                                                                                                                                  |
+| `laratik_planner_get_content`            | `content:read`  | Read one item, selected channels, and assignment history                                                                                                                                                                                                                                                            |
+| `laratik_planner_create_content`         | `content:write` | Create a draft using Quick Create rules; optionally write a validated format-specific `format_payload` in the same create operation                                                                                                                                                                                 |
+| `laratik_planner_update_content`         | `content:write` | Update an editable draft or changes-requested item, including an optional validated format-specific `format_payload`                                                                                                                                                                                                |
+| `laratik_planner_reschedule_content`     | `content:write` | Change the planned publish date only                                                                                                                                                                                                                                                                                |
+| `laratik_planner_change_owner`           | `content:write` | Reassign the coordinating owner                                                                                                                                                                                                                                                                                     |
+| `laratik_planner_transition_content`     | `content:write` | Run an explicit workflow transition                                                                                                                                                                                                                                                                                 |
+| `laratik_planner_archive_content`        | `content:write` | Soft-archive one item; requires `confirm: true`                                                                                                                                                                                                                                                                     |
+| `laratik_planner_duplicate_content`      | `content:write` | Create a new draft copy                                                                                                                                                                                                                                                                                             |
+| `laratik_planner_export_brand_kit`       | `content:read`  | Read the full brand-kit (logos, colors, fonts, voice rules, publishing rules, linked resources, content pillars); logo binaries referenced by signed download URL                                                                                                                                                   |
+| `laratik_planner_import_brand_kit`       | `content:write` | Apply a brand-kit envelope to a workspace; supports `merge`/`fail`/`overwrite` conflict strategies; logo binaries via `base64`, `source_url`, or `external_url`                                                                                                                                                     |
+
+### Resolving user IDs to people
+
+`list_content` and `get_content` identify people **only** by UUID —
+`contentOwnerId`, `designerId`, `clientReviewerId`, and an `assignments` array of
+`{ assignmentType, userId }`. That is deliberate (ids are the stable key), but it
+means a caller that wants to group work _per person_ — a daily ops report, a
+workload rollup, a "who is carrying the review queue" question — has to call
+`list_workspace_members` to map those ids onto names.
+
+Do not maintain a hand-written id→name map. It goes stale the moment someone joins
+or is renamed, and it fails silently: the report keeps rendering, just with the
+wrong names. Resolve names from `list_workspace_members` at call time.
+
+Two properties worth relying on:
+
+- **Roles are grouped per membership**, so a member holding several roles appears
+  once with all of them in `roles[]`, not once per role row.
+- **A member with no role row still appears**, with `roles: []`. Agency admins
+  implicitly hold every role in a workspace they administer, which is a policy
+  fact rather than a membership row, so it is reported as an empty array instead
+  of being invented here.
 
 ### Error diagnostics
 

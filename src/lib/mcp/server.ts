@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
 import {
@@ -10,7 +10,10 @@ import {
   appErrorGroups,
   brandAssets,
   contentItems,
+  users,
   workspaces,
+  workspaceMembershipRoles,
+  workspaceMemberships,
   workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema";
 import { canAccessInternalWorkspace, PermissionDeniedError, type Actor } from "@/lib/auth/policy";
@@ -532,6 +535,112 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
           if (await canAccessInternalWorkspace(context.actor, row.id)) allowed.push(row);
         }
         return result(allowed, response_format);
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  // Added 2026-09-30. Every other tool in this server resolves people to
+  // bare UUIDs — `list_content` returns `contentOwnerId` / `designerId` /
+  // `clientReviewerId` and `get_content` returns an `assignments` array of
+  // `{ assignmentType, userId }` with no name. A caller that had to group
+  // work per person (a daily ops report, a workload rollup) therefore had no
+  // way to turn those ids into anything a human could read, and the only
+  // options were a hand-maintained id→name map — which rots silently the
+  // moment someone joins — or grouping by role only, which hides who is
+  // actually carrying the work. This tool closes that gap from the
+  // authoritative tables (`user` + `workspace_membership` +
+  // `workspace_membership_role`) so names never have to be hardcoded.
+  //
+  // Read-only and gated on `content:read`, so it works with the same
+  // read-only token every other read tool already accepts. It returns
+  // membership-scoped people only; an agency admin's implicit access to all
+  // roles in a workspace they administer is a policy fact, not a membership
+  // row, so it is reported as `roles: []` rather than invented here.
+  server.registerTool(
+    "laratik_planner_list_workspace_members",
+    {
+      title: "List workspace members",
+      description:
+        "List the people who hold a membership in one accessible workspace, with their display name, email, workspace roles, and last activity. This is the only way to resolve the owner/designer/reviewer UUIDs returned by list_content and get_content back to names. Pass include_deactivated=true to include deactivated memberships (default: active only).",
+      inputSchema: z.object({
+        workspace_id: workspaceId,
+        include_deactivated: z
+          .boolean()
+          .default(false)
+          .describe("Include deactivated memberships. Default false (active only)."),
+        response_format: responseFormat,
+      }),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ workspace_id, include_deactivated, response_format }) => {
+      try {
+        requireScope(context, "content:read");
+        if (!(await canAccessInternalWorkspace(context.actor, workspace_id))) {
+          return errorResult(new PermissionDeniedError("list workspace members"));
+        }
+        const membershipClauses = [eq(workspaceMemberships.workspaceId, workspace_id)];
+        if (!include_deactivated) {
+          membershipClauses.push(eq(workspaceMemberships.status, "active"));
+        }
+        const membershipRows = await db
+          .select({
+            membershipId: workspaceMemberships.id,
+            userId: workspaceMemberships.userId,
+            status: workspaceMemberships.status,
+            displayName: users.displayName,
+            email: users.email,
+            lastActiveAt: users.lastActiveAt,
+          })
+          .from(workspaceMemberships)
+          .innerJoin(users, eq(users.id, workspaceMemberships.userId))
+          .where(and(...membershipClauses))
+          // Defensive upper bound; a workspace realistically has far fewer.
+          .orderBy(asc(users.displayName))
+          .limit(200);
+        if (membershipRows.length === 0) return result([], response_format);
+
+        // Roles live on a child table keyed by membership, so a second query
+        // avoids a row-per-role join that would duplicate the member fields.
+        const roleRows = await db
+          .select({
+            membershipId: workspaceMembershipRoles.workspaceMembershipId,
+            role: workspaceMembershipRoles.role,
+          })
+          .from(workspaceMembershipRoles)
+          .innerJoin(
+            workspaceMemberships,
+            eq(workspaceMemberships.id, workspaceMembershipRoles.workspaceMembershipId),
+          )
+          .where(
+            and(
+              eq(workspaceMemberships.workspaceId, workspace_id),
+              inArray(
+                workspaceMembershipRoles.workspaceMembershipId,
+                membershipRows.map((row) => row.membershipId),
+              ),
+            ),
+          )
+          .limit(1000);
+
+        const rolesByMembership = new Map<string, string[]>();
+        for (const row of roleRows) {
+          const bucket = rolesByMembership.get(row.membershipId);
+          if (bucket) bucket.push(row.role);
+          else rolesByMembership.set(row.membershipId, [row.role]);
+        }
+
+        const members = membershipRows.map((row) => ({
+          userId: row.userId,
+          displayName: row.displayName,
+          email: row.email,
+          status: row.status,
+          roles: rolesByMembership.get(row.membershipId) ?? [],
+          lastActiveAt: row.lastActiveAt,
+        }));
+        return result(members, response_format);
       } catch (error) {
         return errorResult(error);
       }

@@ -34,6 +34,9 @@
 # Deploy to VPS
 ./scripts/deploy.sh               # pulls :latest
 ./scripts/deploy.sh <sha>         # pulls specific commit
+
+# Daily ops report (read-only; see docs/operations/daily-report.md)
+PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
 ```
 
 ## Local disposable test database
