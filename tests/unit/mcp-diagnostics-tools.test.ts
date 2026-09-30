@@ -117,8 +117,8 @@ describe("diagnostics tool registration", () => {
   it("does not change the count of pre-existing content tools", async () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
-    // 14 content/brand tools + 5 diagnostics.
-    expect(tools).toHaveLength(19);
+    // 15 content/brand tools + 5 diagnostics.
+    expect(tools).toHaveLength(20);
   });
 });
 

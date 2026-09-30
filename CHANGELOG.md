@@ -12,6 +12,34 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — `laratik_planner_list_workspace_members` resolves user IDs to people
+
+Every other MCP tool identifies people only by UUID: `list_content` returns
+`contentOwnerId` / `designerId` / `clientReviewerId`, and `get_content` returns an
+`assignments` array of `{ assignmentType, userId }` with no name. A caller that
+wanted to group work per person — a daily ops report, a workload rollup, a "who is
+carrying the review queue" question — had no way to turn those ids into anything
+readable, leaving only a hand-maintained id→name map (which rots silently when
+someone joins) or grouping by role alone (which hides who is actually carrying the
+work).
+
+The new read-only tool lists the people holding a membership in one accessible
+workspace with `displayName`, `email`, `roles[]`, `status`, and `lastActiveAt`, and
+accepts `include_deactivated` (default `false`). Roles are grouped per membership,
+so a member holding several roles appears once with all of them. A member with no
+role row still appears, with `roles: []` — an agency admin implicitly holds every
+role in a workspace they administer, which is a policy fact rather than a
+membership row, so it is reported as empty rather than invented.
+
+Scope is `content:read` and the tool is gated on the same
+`canAccessInternalWorkspace` check as `get_workspace_settings`, so a read-only
+token that already works against the other read tools can call it. No migration,
+no schema change, no write path.
+
+Motivation: an ops review of the live board found 95 planning items across 6
+workspaces assigned to 6 distinct people, none of them resolvable to a name
+through the MCP surface.
+
 ### Fixed — production images no longer regenerate committed migrations
 
 The Docker build now uses the checked-in Drizzle migration set verbatim. Running
