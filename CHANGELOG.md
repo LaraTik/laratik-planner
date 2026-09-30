@@ -12,6 +12,30 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — `scripts/daily-report.py`, a read-only daily planning report
+
+Prints a per-person, per-workspace view of what needs attention and appends each
+run to a rolling log under `tmp/daily-report/`, so consecutive days can be
+compared. It is a snapshot: it never transitions, creates, or edits content.
+
+The report answers one question per person — _what should I do today?_ — so each
+item is counted in exactly one bucket and routed to whoever can actually move
+it: still planning goes to the content owner, still designing to the assigned
+designer, and a passed publish date to the designer if the work is unfinished or
+to the planner if it is already `ready_to_publish`. That last distinction comes
+from `WORKFLOW_RULES`, which restricts `record_published` to a manager or
+publisher; routing a finished design back to the designer would send them to
+chase work they had already completed. Items in `creative_review` /
+`ready_to_publish` are reported as a separate informational count rather than
+assigned to anyone, so nothing disappears without being assigned to a real
+action.
+
+Only items dated on or after `REPORT_FROM` (default `2026-10-01`) are included:
+the report tracks forward work, not the backlog that has already slipped. Names
+resolve through `laratik_planner_list_workspace_members`, falling back to short
+IDs on a deployment that predates that tool. Standard library only; documented in
+`docs/operations/daily-report.md`.
+
 ### Added — `laratik_planner_list_workspace_members` resolves user IDs to people
 
 Every other MCP tool identifies people only by UUID: `list_content` returns
