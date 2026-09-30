@@ -12,6 +12,7 @@ import { TabSwitchLink } from "./tab-switch-link";
 import {
   InlineBriefEditor,
   InlineDateEditor,
+  InlineProductionNotesEditor,
   InlineTitleEditor,
 } from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -90,6 +91,8 @@ export interface OverviewCommandCenterProps {
   finalApprovedCount: number;
   /** Creative references surfaced for fast review and handoff. */
   references?: string[];
+  /** Production guidance that remains editable after handoff. */
+  productionNotes?: string;
   /** Last N activity events (typically 3-5). */
   recentActivity: ActivityEventView[];
   /** Total activity events on record. */
@@ -146,6 +149,7 @@ export function OverviewCommandCenter({
   deliveryCount,
   finalApprovedCount,
   recentActivity,
+  productionNotes = "",
   totalActivityCount,
   canEdit,
   canEditOverview = canEdit,
@@ -195,6 +199,7 @@ export function OverviewCommandCenter({
           plannedPublishAtIso={plannedPublishAtIso}
           workspaceTimezone={workspaceTimezone}
           plannedPublishAtLabel={plannedPublishAt}
+          productionNotes={productionNotes}
           canEdit={canEditOverview}
           t={t}
         />
@@ -786,6 +791,7 @@ function DetailsSection({
   plannedPublishAtIso,
   plannedPublishAtLabel,
   workspaceTimezone,
+  productionNotes,
   canEdit,
   t,
 }: {
@@ -796,6 +802,7 @@ function DetailsSection({
   plannedPublishAtIso: string;
   plannedPublishAtLabel: string;
   workspaceTimezone: string;
+  productionNotes: string;
   canEdit: boolean;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
@@ -824,6 +831,26 @@ function DetailsSection({
             )}
           </dd>
         </div>
+        {canEdit || productionNotes.trim() ? (
+          <div className="grid gap-1">
+            <dt className="text-label text-fg-muted font-semibold">
+              {t("contentDetail.overview.productionNotes")}
+            </dt>
+            <dd data-testid="overview-details-production-notes">
+              {canEdit ? (
+                <InlineProductionNotesEditor
+                  workspaceSlug={workspaceSlug}
+                  contentItemId={contentItemId}
+                  value={productionNotes}
+                />
+              ) : (
+                <p className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
+                  {productionNotes}
+                </p>
+              )}
+            </dd>
+          </div>
+        ) : null}
         <div className="grid gap-1">
           <dt className="text-label text-fg-muted font-semibold">
             {t("contentDetail.overview.brief")}

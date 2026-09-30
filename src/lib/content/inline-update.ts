@@ -11,6 +11,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { INLINE_EDITABLE_STATUSES } from "./inline-update-actions";
 import { auth } from "@/lib/auth/config";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
+import { parseFormatPayload } from "@/lib/format-payload/schemas";
 
 /**
  * Inline-update server actions for the planning detail page.
@@ -53,6 +54,10 @@ const TitleUpdateSchema = z.object({
   title: z.string().trim().min(2).max(200),
 });
 
+const ProductionNotesUpdateSchema = z.object({
+  productionNotes: z.string().max(2_000),
+});
+
 /**
  * Run the shared inline-editability + workspace membership
  * gate. Returns either the resolved context (actor, workspace,
@@ -79,6 +84,8 @@ async function getEditableItem(workspaceSlug: string, contentItemId: string) {
       id: contentItems.id,
       workspaceId: contentItems.workspaceId,
       status: contentItems.status,
+      format: contentItems.format,
+      formatPayload: contentItems.formatPayload,
     })
     .from(contentItems)
     .where(eq(contentItems.id, contentItemId))
@@ -331,6 +338,75 @@ export async function inlineUpdateDateAction(
           ? `${e.message} Date was saved but approvals were not reset.`
           : "Date saved but approvals were not reset.",
     };
+  }
+  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+  return { ok: true };
+}
+
+/**
+ * Update production-only guidance after handoff. This stays separate from
+ * the audience copy fields: it is audited, but does not reset approvals.
+ */
+export async function inlineUpdateProductionNotesAction(
+  workspaceSlug: string,
+  contentItemId: string,
+  productionNotes: string,
+): Promise<{ error?: string; ok?: true }> {
+  const parsed = ProductionNotesUpdateSchema.safeParse({ productionNotes });
+  if (!parsed.success) {
+    return { error: parsed.error.issues.map((i) => i.message).join("; ") };
+  }
+  const ctx = await getEditableItem(workspaceSlug, contentItemId);
+  if ("error" in ctx) return { error: ctx.error };
+
+  let beforePayload: ReturnType<typeof parseFormatPayload>;
+  try {
+    beforePayload = parseFormatPayload(ctx.item.format, ctx.item.formatPayload);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not read production notes." };
+  }
+  const beforeNotes =
+    typeof beforePayload.additionalNotes === "string" ? beforePayload.additionalNotes : null;
+  const nextPayload = { ...beforePayload } as Record<string, unknown>;
+  if (parsed.data.productionNotes.trim()) {
+    nextPayload.additionalNotes = parsed.data.productionNotes.trim();
+  } else {
+    delete nextPayload.additionalNotes;
+  }
+
+  let validatedPayload: unknown;
+  try {
+    validatedPayload = parseFormatPayload(ctx.item.format, nextPayload);
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not save production notes." };
+  }
+
+  try {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(contentItems)
+        .set({
+          formatPayload: validatedPayload as Record<string, unknown>,
+          updatedAt: new Date(),
+        })
+        .where(eq(contentItems.id, contentItemId));
+      await tx.insert(activityEvents).values({
+        workspaceId: ctx.workspace.id,
+        contentItemId,
+        actorId: ctx.actor.id,
+        kind: "update",
+        summary: "Updated production notes",
+        metadata: {
+          field: "additionalNotes",
+          before: beforeNotes,
+          after: parsed.data.productionNotes.trim() || null,
+        },
+        beforeData: { additionalNotes: beforeNotes },
+        afterData: { additionalNotes: parsed.data.productionNotes.trim() || null },
+      });
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Could not save production notes." };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };

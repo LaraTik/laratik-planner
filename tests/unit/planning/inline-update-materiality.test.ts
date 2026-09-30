@@ -188,8 +188,12 @@ const actor = { id: "user-1" };
 const workspaceId = "ws-1";
 const contentItemId = "content-1";
 
-const { inlineUpdateBriefAction, inlineUpdateDateAction, inlineUpdateTitleAction } =
-  await import("@/lib/content/inline-update");
+const {
+  inlineUpdateBriefAction,
+  inlineUpdateDateAction,
+  inlineUpdateProductionNotesAction,
+  inlineUpdateTitleAction,
+} = await import("@/lib/content/inline-update");
 const { INLINE_EDITABLE_STATUSES } = await import("@/lib/content/inline-update-actions");
 
 beforeEach(() => {
@@ -314,5 +318,41 @@ describe("inline-update — materiality contract (idea edit publish data or time
       (c) => (c.values as { kind?: string })?.kind === "brief_updated",
     );
     expect(briefEvent).toBeDefined();
+  });
+
+  it("updates production notes after handoff without resetting approvals", async () => {
+    dbState.selectResults = [
+      [
+        {
+          workspaceId,
+          status: "in_design",
+          format: "static_post",
+          formatPayload: { schemaVersion: 1, additionalNotes: "Old note" },
+        },
+      ],
+    ];
+
+    const result = await inlineUpdateProductionNotesAction(
+      "food-game",
+      contentItemId,
+      "Use the approved logo and keep the headline clear.",
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(materialityMock.recordMaterialityEvent).not.toHaveBeenCalled();
+    expect(dbState.updateCalls[0]?.set).toMatchObject({
+      formatPayload: {
+        schemaVersion: 1,
+        additionalNotes: "Use the approved logo and keep the headline clear.",
+      },
+    });
+    expect(dbState.insertCalls[0]?.values).toMatchObject({
+      kind: "update",
+      metadata: {
+        field: "additionalNotes",
+        before: "Old note",
+        after: "Use the approved logo and keep the headline clear.",
+      },
+    });
   });
 });

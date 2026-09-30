@@ -457,7 +457,7 @@ export function PlatformPreview({
           className="text-body text-fg-primary break-words whitespace-pre-wrap"
           data-testid="platform-preview-caption"
         >
-          <span className="font-semibold">{accountName}</span>{" "}
+          <bdi className="font-semibold">{accountName}</bdi>{" "}
           {caption ? (
             // LinkifyText renders URLs in the caption as
             // clickable links (no target=_self; rel=noopener;
@@ -465,9 +465,11 @@ export function PlatformPreview({
             // The wrapper inherits the parent text styling so
             // the link sits inside the same `<div>` paragraph
             // as the bold account name.
-            <LinkifyText as="span" userGenerated testId="platform-preview-caption-text">
-              {caption}
-            </LinkifyText>
+            <span dir="auto" style={{ unicodeBidi: "plaintext" }}>
+              <LinkifyText as="span" userGenerated testId="platform-preview-caption-text">
+                {caption}
+              </LinkifyText>
+            </span>
           ) : (
             <span className="text-fg-muted italic">
               {t("contentDetail.preview.captionPlaceholder")}

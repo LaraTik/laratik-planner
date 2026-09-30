@@ -9,11 +9,9 @@
  * expects English in a hashtag to flow LTR even when the field
  * is in an otherwise RTL form.
  *
- * The detection rule is deliberately simple: scan the first
- * non-whitespace, non-control character; if it falls in the
- * Arabic Unicode block (U+0600–U+06FF, plus the Arabic
- * Supplement U+0750–U+077F and the Arabic Presentation
- * Forms-B U+FE70–U+FEFF), the field is RTL. Otherwise LTR.
+ * The detection rule is deliberately simple: scan the first strong letter;
+ * Arabic letters make the field RTL, while neutral leading punctuation,
+ * emoji, and numbers do not steal direction from the copy.
  *
  * The detector is cheap (no Unicode normalisation, no case
  * folding) and is called on every keystroke via React's
@@ -48,9 +46,8 @@ function isArabicCodePoint(code: number): boolean {
  * Inspect a string and return the direction the text should be
  * laid out in. Empty / whitespace-only / control-only strings
  * return the supplied `fallback` (typically the workspace
- * locale's direction). The detector is conservative: it scans
- * the first 8 non-whitespace chars and calls RTL on the first
- * Arabic char it sees; LTR otherwise.
+ * locale's direction). The detector scans at most 64 UTF-16 units and uses
+ * the first Unicode letter it sees; LTR otherwise.
  *
  * The 8-char cap is a small perf guard for pathologically long
  * single-line inputs. In practice the first char of real content
@@ -60,12 +57,27 @@ function isArabicCodePoint(code: number): boolean {
 export function detectDir(text: string, fallback: "ltr" | "rtl" = "ltr"): "ltr" | "rtl" {
   if (!text) return fallback;
   const max = Math.min(text.length, 64);
-  for (let i = 0; i < max; i += 1) {
-    const code = text.charCodeAt(i);
-    if (code <= 0x20) continue; // whitespace + control
-    return isArabicCodePoint(code) ? "rtl" : "ltr";
+  let scanned = 0;
+  for (const char of text) {
+    scanned += char.length;
+    if (scanned > max) break;
+    if (!/^\p{L}$/u.test(char)) continue;
+    return isArabicCodePoint(char.codePointAt(0) ?? 0) ? "rtl" : "ltr";
   }
   return fallback;
+}
+
+/** True when a field contains both Arabic and non-Arabic letters. */
+export function hasMixedScript(text: string): boolean {
+  let arabic = false;
+  let other = false;
+  for (const char of text) {
+    if (!/^\p{L}$/u.test(char)) continue;
+    if (isArabicCodePoint(char.codePointAt(0) ?? 0)) arabic = true;
+    else other = true;
+    if (arabic && other) return true;
+  }
+  return false;
 }
 
 /**

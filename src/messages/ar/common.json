@@ -10,6 +10,7 @@
   "editField": "تعديل {field}",
   "keyboardSave": "للحفظ",
   "keyboardCancel": "للإلغاء",
+  "mixedDirectionHint": "النص يجمع بين العربية والإنجليزية. راجع المعاينة قبل الحفظ للتأكد من بقاء علامات الترقيم والإشارات بالترتيب المقصود.",
   "contentWorkspace": "مساحة عمل المحتوى",
   "workflowRail": "شريط سير العمل",
   "close": "إغلاق",

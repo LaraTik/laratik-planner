@@ -245,13 +245,22 @@ export default async function ContentDetailPage({
   }).catch(() => null);
 
   const agencyId = ws.agencyId;
-  const references = (() => {
-    const payload = (item as { formatPayload?: unknown }).formatPayload;
-    if (!payload || typeof payload !== "object") return [];
-    const values = (payload as { references?: unknown }).references;
-    return Array.isArray(values)
-      ? values.filter((value): value is string => typeof value === "string")
-      : [];
+  const { references, productionNotes } = (() => {
+    try {
+      const payload = parseFormatPayload(
+        item.format,
+        (item as { formatPayload?: unknown }).formatPayload,
+      ) as Record<string, unknown>;
+      const values = payload.references;
+      return {
+        references: Array.isArray(values)
+          ? values.filter((value): value is string => typeof value === "string")
+          : [],
+        productionNotes: typeof payload.additionalNotes === "string" ? payload.additionalNotes : "",
+      };
+    } catch {
+      return { references: [], productionNotes: "" };
+    }
   })();
   const [feature, activeApiKey] = await Promise.all([
     db
@@ -800,6 +809,7 @@ export default async function ContentDetailPage({
                   deliveryCount={deliveryCount}
                   finalApprovedCount={finalApprovedCount}
                   references={references}
+                  productionNotes={productionNotes}
                   recentActivity={recentActivity}
                   totalActivityCount={activityEvents.length}
                   canEdit={canEdit}

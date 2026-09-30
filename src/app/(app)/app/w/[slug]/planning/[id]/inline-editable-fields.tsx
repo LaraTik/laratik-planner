@@ -58,6 +58,7 @@ import { InlineEditableField } from "@/components/forms/inline-editable-field";
 import {
   inlineUpdateBriefAction,
   inlineUpdateDateAction,
+  inlineUpdateProductionNotesAction,
   inlineUpdateTitleAction,
 } from "@/lib/content/inline-update";
 import { formatDateInTimeZoneForInput, parseInputAsWorkspaceDate } from "@/lib/utils/date";
@@ -365,6 +366,90 @@ export function InlineDateEditor({
       }
       onSave={(next) => inlineUpdateDateAction(workspaceSlug, contentItemId, new Date(next))}
       {...(onSaved ? { onSaved } : {})}
+    />
+  );
+}
+
+const PRODUCTION_NOTES_MAX = 2_000;
+const PRODUCTION_NOTES_WARN = Math.floor(PRODUCTION_NOTES_MAX * 0.9);
+
+export function InlineProductionNotesEditor({
+  workspaceSlug,
+  contentItemId,
+  value,
+}: {
+  workspaceSlug: string;
+  contentItemId: string;
+  value: string;
+}) {
+  const t = useLocaleT();
+  const locale = useLocaleCode();
+  return (
+    <InlineEditableField
+      testId="inline-edit-production-notes"
+      label={t("contentDetail.overview.productionNotes")}
+      value={value}
+      render={(v) =>
+        v ? (
+          <p
+            className="text-body text-fg-primary whitespace-pre-wrap"
+            dir="auto"
+            style={{ unicodeBidi: "plaintext" }}
+          >
+            {v}
+          </p>
+        ) : (
+          <p className="text-body text-fg-muted italic">
+            {t("contentDetail.overview.noProductionNotes")}
+          </p>
+        )
+      }
+      renderEditor={({ value, onChange, errorId }) => {
+        const overWarn = value.length >= PRODUCTION_NOTES_WARN;
+        const atMax = value.length >= PRODUCTION_NOTES_MAX;
+        return (
+          <div className="space-y-1">
+            <label
+              htmlFor="inline-edit-production-notes-input"
+              className="text-label text-fg-primary font-semibold"
+            >
+              {t("contentDetail.overview.productionNotes")}
+            </label>
+            <DirAwareTextarea
+              id="inline-edit-production-notes-input"
+              locale={locale}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              rows={5}
+              maxLength={PRODUCTION_NOTES_MAX}
+              className={cn(INPUT_CHROME, "resize-y")}
+              placeholder={t("contentDetail.overview.productionNotesPlaceholder")}
+              aria-describedby={`inline-edit-production-notes-hint inline-edit-production-notes-counter ${errorId}`}
+              data-testid="inline-edit-production-notes-textarea"
+            />
+            <p id="inline-edit-production-notes-hint" className="text-label text-fg-muted">
+              {t("contentDetail.overview.productionNotesHint")}
+            </p>
+            <p
+              id="inline-edit-production-notes-counter"
+              aria-live="polite"
+              className={cn(
+                "text-label text-fg-muted text-end tabular-nums",
+                overWarn && !atMax && "text-warning",
+                atMax && "text-danger font-semibold",
+              )}
+            >
+              {value.length.toLocaleString()} / {PRODUCTION_NOTES_MAX.toLocaleString()}
+            </p>
+          </div>
+        );
+      }}
+      validate={(next) =>
+        next.length > PRODUCTION_NOTES_MAX
+          ? t("contentDetail.inline.maxLength", { count: PRODUCTION_NOTES_MAX })
+          : undefined
+      }
+      onSave={(next) => inlineUpdateProductionNotesAction(workspaceSlug, contentItemId, next)}
     />
   );
 }

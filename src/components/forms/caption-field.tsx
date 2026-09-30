@@ -3,9 +3,10 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/i18n/format-locale";
-import { useLocaleCode } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { resolveLocale } from "@/lib/i18n/locales";
+import { hasMixedScript } from "@/lib/i18n/dir";
 
 /**
  * CaptionField — shared audience-facing caption composer.
@@ -84,11 +85,13 @@ export function CaptionField({
   maxLength = CAPTION_MAX,
 }: CaptionFieldProps) {
   const interfaceLocale = useLocaleCode();
+  const t = useLocaleT();
   const locale = resolveLocale(contentLocale ?? interfaceLocale).code;
   const len = value.length;
   const captionWarn = Math.floor(maxLength * 0.9);
   const overWarn = len >= captionWarn;
   const atMax = len >= maxLength;
+  const mixedScript = hasMixedScript(value);
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
       <label htmlFor={id} className="text-body text-fg-primary font-semibold">
@@ -109,6 +112,7 @@ export function CaptionField({
         aria-describedby={cn(
           error ? `${id}-error ` : "",
           hint ? `${id}-hint ` : "",
+          mixedScript ? `${id}-mixed-script ` : "",
           `${id}-counter`,
         ).trim()}
         data-testid={testId}
@@ -127,6 +131,17 @@ export function CaptionField({
           {error ? (
             <p id={`${id}-error`} role="alert" className="text-label text-danger font-semibold">
               {error}
+            </p>
+          ) : null}
+          {mixedScript ? (
+            <p
+              id={`${id}-mixed-script`}
+              role="status"
+              aria-live="polite"
+              className="text-label text-warning"
+              data-testid={`${testId}-mixed-script-warning`}
+            >
+              {t("common.mixedDirectionHint")}
             </p>
           ) : null}
         </div>

@@ -11,6 +11,7 @@
   "editField": "Edit {field}",
   "keyboardSave": "to save",
   "keyboardCancel": "to cancel",
+  "mixedDirectionHint": "Arabic and English are mixed. Check the preview before saving so punctuation and mentions stay in the intended order.",
   "contentWorkspace": "Content workspace",
   "workflowRail": "Workflow rail",
   "close": "Close",
