@@ -65,7 +65,9 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
     "placeholder",
     "ابحث في العنوان أو الوصف",
   );
-  await expect(page.getByRole("heading", { name: "أفكار", level: 2 })).toBeVisible();
+  // The board is grouped by localized workflow stages; "التخطيط" is the
+  // canonical first stage in the current board contract.
+  await expect(page.getByRole("heading", { name: "التخطيط", level: 2 })).toBeVisible();
   const boardOverflowsHorizontally = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
   );

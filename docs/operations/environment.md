@@ -113,17 +113,16 @@ This is deliberate: catching a missing `AUTH_SECRET` at boot is far better than 
 | Name                          | Required (prod) | Default | Purpose                                                                                                                                                                                                                               |
 | ----------------------------- | --------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `SOCIAL_TOKEN_ENCRYPTION_KEY` | conditional     | empty   | Base64-encoded 32-byte **platform KEK** that wraps each agency's DEK. **Optional at boot.** Required when any agency enables social OR when `SOCIAL_SYNC_ENABLED=true`. Generate with `openssl rand -base64 32`.                      |
-| `META_APP_ID`                 | conditional     | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                                                                                                             |
-| `META_APP_SECRET`             | conditional     | empty   | Facebook App secret. Required for Meta connection.                                                                                                                                                                                    |
-| `META_LOGIN_CONFIG_ID`        | conditional     | empty   | Facebook Login for Business configuration ID.                                                                                                                                                                                         |
-| `META_GRAPH_API_VERSION`      | no              | `v25.0` | Pinned Graph API version. Changing it requires re-applying the migration and re-running the App Review.                                                                                                                               |
-| `TIKTOK_CLIENT_KEY`           | conditional     | empty   | TikTok app key. Required for TikTok connection.                                                                                                                                                                                       |
-| `TIKTOK_CLIENT_SECRET`        | conditional     | empty   | TikTok app secret. Required for TikTok connection.                                                                                                                                                                                    |
-| `SOCIAL_SYNC_ENABLED`         | no              | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                                                                                                               |
-| `SOCIAL_TIKTOK_ENABLED`       | no              | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                                                                                                                       |
+| `SOCIAL_SYNC_ENABLED`         | no              | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials and the pinned Graph version are configured per agency in `/app/agency-settings/social/providers`.                       |
 | `META_PUBLISHING_ENABLED`     | no              | `false` | Platform kill switch for Meta publishing readiness and the future queue. Keep `false` until readiness, App Review, Business Verification, sandbox, and canary gates are approved. No live Meta mutation exists while this is `false`. |
 
 **None of these may be exposed as `NEXT_PUBLIC_*`.**
+
+Meta and TikTok app credentials are not environment variables. An agency
+administrator enters them at `/app/agency-settings/social/providers`; the app
+secret is sealed with that agency's DEK. The page then exposes the agency's
+callback URL, credential test, connected-profile status, and read-only
+analytics probe as four separate readiness steps.
 
 **Multi-tenant key model (M4.5).** Each agency has its own 32-byte **Data Encryption Key (DEK)** stored in `agency_social_dek`, wrapped by the platform KEK. The plaintext DEK is generated on first enable, shown to the agency admin exactly once, and never persisted. Rotating the platform KEK re-wraps every agency's DEK but does NOT touch per-connection envelopes. See `docs/operations/runbook.md` §"Platform KEK rotation" for the exact procedure.
 

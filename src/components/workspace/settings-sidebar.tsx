@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
  *   - Highlights the section the user is currently inside.
  *   - Lets the user click to jump (with the URL hash updated so the
  *     active section survives a refresh / shared link).
- *   - Stays visible on the left on `lg+` viewports and collapses
- *     behind a dropdown / top-tabs on smaller screens.
+ *   - Renders as one compact in-page strip at every viewport so the global
+ *     application sidebar remains the only persistent navigation rail.
  *
  * Accessibility:
  *   - Each link is an `<a href="#id">` — deep links, middle-click,
@@ -62,10 +62,8 @@ export interface SettingsSidebarProps {
   /** Optional className for the root `<nav>`. */
   className?: string;
   /**
-   * The list is rendered as a vertical sidebar on `lg+` and as a
-   * horizontal chip strip below the page header on smaller
-   * viewports. Set `variant="stack"` to render vertical-only
-   * (useful when the parent layout already provides a column).
+   * The default is a horizontal in-page strip. Set `variant="stack"` only
+   * for an embedded vertical list in a parent that already owns the layout.
    */
   variant?: "auto" | "stack";
 }
@@ -76,7 +74,9 @@ export function SettingsSidebar({
   className,
   variant = "auto",
 }: SettingsSidebarProps) {
-  const [activeId, setActiveId] = React.useState<string>(() => initialActiveId(items));
+  // Keep the first render identical on the server and client. The hash is
+  // applied in the effect below so deep links do not cause hydration drift.
+  const [activeId, setActiveId] = React.useState<string>(items[0]?.id ?? "");
 
   // Stash the latest setter in a ref so the scroll + observer effect
   // can read it without depending on it. This prevents the effect
@@ -97,6 +97,7 @@ export function SettingsSidebar({
         setActiveId(next);
       }
     }
+    onHashChange();
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [items]);
@@ -185,17 +186,11 @@ export function SettingsSidebar({
       className={cn(
         isStack
           ? "flex flex-col gap-1"
-          : "border-border bg-surface lg:sticky lg:top-20 lg:rounded-[var(--radius-card)] lg:border lg:p-2",
+          : "border-border bg-surface rounded-[var(--radius-card)] border p-2",
         className,
       )}
     >
-      <ul
-        className={cn(
-          isStack
-            ? "flex flex-col gap-1"
-            : "flex gap-1 overflow-x-auto px-2 lg:flex-col lg:overflow-visible lg:px-0",
-        )}
-      >
+      <ul className={cn(isStack ? "flex flex-col gap-1" : "flex gap-1 overflow-x-auto")}>
         {items.map((item) => {
           const isActive = item.id === activeId;
           return (
@@ -233,7 +228,7 @@ export function SettingsSidebar({
                     <span
                       className={cn(
                         "text-label mt-0.5 block truncate",
-                        isActive ? "text-primary/80" : "text-fg-muted",
+                        isActive ? "text-primary" : "text-fg-muted",
                       )}
                     >
                       {item.description}
@@ -247,11 +242,4 @@ export function SettingsSidebar({
       </ul>
     </nav>
   );
-}
-
-function initialActiveId(items: SettingsSectionNavItem[]): string {
-  if (typeof window === "undefined") return items[0]?.id ?? "";
-  const hash = window.location.hash.replace(/^#/, "");
-  if (hash && items.some((t) => t.id === hash)) return hash;
-  return items[0]?.id ?? "";
 }

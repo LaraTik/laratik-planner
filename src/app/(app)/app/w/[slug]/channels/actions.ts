@@ -1,6 +1,6 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -329,6 +329,49 @@ export async function testChannelConnectionAction(slug: string, channelId: strin
     return { success: true, lastSyncedAt: result.lastSyncedAt.toISOString() } as const;
   }
   return { errorCode: result.errorCode } as const;
+}
+
+/**
+ * Refresh every connected channel visible to the workspace Command Center.
+ * This deliberately reuses the single-channel pipeline and runs sequentially
+ * so a dashboard click cannot create an unbounded provider burst.
+ */
+export async function refreshWorkspaceSocialDataAction(slug: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { error: "Sign in is required." };
+  const actor = { id: session.user.id };
+  const context = await resolveActiveAgencyContext({ actor });
+  if (!context) return { error: "Agency not configured." };
+  const workspace = await getAccessibleWorkspace(actor, slug, context.agencyId);
+  if (!workspace) return { error: "Workspace not found." };
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"]))) {
+    return { error: "Workspace manager access is required." };
+  }
+
+  const channels = await db
+    .select({ id: socialChannels.id })
+    .from(socialChannels)
+    .where(
+      and(
+        eq(socialChannels.workspaceId, workspace.id),
+        eq(socialChannels.connectionStatus, "connected"),
+        isNotNull(socialChannels.socialConnectionId),
+        isNull(socialChannels.archivedAt),
+      ),
+    );
+
+  let synced = 0;
+  let failed = 0;
+  for (const channel of channels) {
+    const result = await runChannelTest(channel.id);
+    if (result.ok) synced += 1;
+    else failed += 1;
+  }
+
+  revalidatePath(`/app/w/${slug}`);
+  revalidatePath(`/app/w/${slug}/analytics/social`);
+  revalidatePath(`/app/w/${slug}/channels`);
+  return { success: failed === 0, synced, failed } as const;
 }
 
 /**

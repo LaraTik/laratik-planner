@@ -8,6 +8,7 @@ import {
   updateOwnProfile,
   type ProfileErrorCode,
   type Locale,
+  updateOwnThemePreference,
 } from "@/lib/auth/profile";
 import {
   setNotificationPreferencesForUser,
@@ -63,6 +64,9 @@ export type PasswordActionState =
       field?: string;
     }
   | Record<string, never>;
+
+export type ThemePreferenceActionState =
+  { saved: true } | { errorCode: "sessionExpired" | "unsupportedTheme" | "accountNotFound" };
 
 export type NotificationPreferencesActionState =
   | { saved: true }
@@ -166,6 +170,17 @@ export async function updateProfileAction(
   revalidatePath("/app/account");
   revalidatePath("/app", "layout");
   return warningCode ? { saved: true, warningCode } : { saved: true };
+}
+
+export async function updateThemePreferenceAction(
+  rawTheme: string,
+): Promise<ThemePreferenceActionState> {
+  const session = await auth();
+  if (!session?.user?.id) return { errorCode: "sessionExpired" };
+  const result = await updateOwnThemePreference(session.user.id, rawTheme);
+  if (!result.ok) return { errorCode: result.code };
+  revalidatePath("/app/account", "page");
+  return { saved: true };
 }
 
 export async function changePasswordAction(

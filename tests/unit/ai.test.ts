@@ -286,6 +286,38 @@ describe("improveBrief", () => {
     expect(userMsg.content).toContain("Brief: (empty)");
     expect(userMsg.content).not.toContain("Audience:");
   });
+
+  it("adds linked research evidence without sending source copy", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ content: [{ type: "text", text: "Hook: x\nMain message: y\nCTA: z" }] }),
+    });
+    const ai = await loadAi();
+    await ai.improveBrief({
+      title: "Research-led reel",
+      brief: "Build an original angle",
+      format: "short_form_video",
+      apiKey: "sk-1234",
+      researchContext: {
+        accountName: "Food Game",
+        platform: "instagram",
+        mediaType: "reel",
+        durationSeconds: 15,
+        views: 22000,
+        reach: null,
+        likes: 58,
+        comments: 4,
+        saved: null,
+        shares: null,
+      },
+    });
+    const body = JSON.parse((fetchMock.mock.calls[0] as [string, RequestInit])[1].body as string);
+    const userMsg = body.messages[0];
+    expect(userMsg.content).toContain("Source account: Food Game (instagram)");
+    expect(userMsg.content).toContain("views=22000");
+    expect(userMsg.content).toContain("do not copy source wording");
+  });
 });
 
 describe("checkCompleteness", () => {

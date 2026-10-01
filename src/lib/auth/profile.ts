@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { isPasswordStrong, setPassword, verifyPassword } from "@/lib/auth/password";
 import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
+import { parseThemePreference } from "@/lib/theme/preferences";
 
 /**
  * Own-profile helpers — used by the /app/account server actions.
@@ -46,6 +47,9 @@ const LOCALE_VALUES = SUPPORTED_LOCALES.map((l) => l.code) as unknown as readonl
   ...LocaleCode[],
 ];
 export type Locale = LocaleCode;
+
+export type ThemePreferenceUpdateResult =
+  { ok: true } | { ok: false; code: "unsupportedTheme" | "accountNotFound" };
 
 const profileSchema = z.object({
   displayName: z.string().trim().min(1).max(80),
@@ -139,6 +143,21 @@ export async function updateOwnProfile(userId: string, raw: unknown): Promise<Up
     return { ok: false, reason: "not_found", code: "accountNotFound" };
   }
   return { ok: true };
+}
+
+export async function updateOwnThemePreference(
+  userId: string,
+  raw: unknown,
+): Promise<ThemePreferenceUpdateResult> {
+  const themePreference = parseThemePreference(raw);
+  if (!themePreference) return { ok: false, code: "unsupportedTheme" };
+
+  const updated = await db
+    .update(users)
+    .set({ themePreference, updatedAt: new Date() })
+    .where(eq(users.id, userId))
+    .returning({ id: users.id });
+  return updated.length > 0 ? { ok: true } : { ok: false, code: "accountNotFound" };
 }
 
 // ─── Password change / set ────────────────────────────────────────────────

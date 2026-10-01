@@ -74,7 +74,14 @@ type DashboardLabels = {
 };
 
 const PLATFORMS: AnalyticsDashboardChannel["platform"][] = ["facebook", "instagram", "tiktok"];
-const COMPARISON_COLORS = ["#3525cd", "#dc5f00", "#16825d", "#a23a8c", "#087ea4", "#7a5c00"];
+const COMPARISON_COLORS = [
+  "var(--chart-series-1)",
+  "var(--chart-series-2)",
+  "var(--chart-series-3)",
+  "var(--chart-series-4)",
+  "var(--chart-series-5)",
+  "var(--chart-series-6)",
+];
 const COMPARISON_LINE_STYLES = [undefined, "8 4", "2 4", "12 4 2 4", "4 4", "8 2 2 2"];
 
 function formatNumber(value: number | null): string {

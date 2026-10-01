@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -19,62 +20,92 @@ const requestedTests = process.argv.slice(2).filter((arg) => arg !== "--");
 const testArgs = requestedTests.some((arg) => arg.startsWith("--workers"))
   ? requestedTests
   : [...requestedTests, "--workers=1"];
-const port = process.env.PORT ?? "3011";
-const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
 const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
 const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
-const e2eUploadsDir = mkdtempSync(join(tmpdir(), "laratik-planner-e2e-uploads-"));
-// Next's dev server may rewrite these tracked bootstrap files when it starts.
-// Snapshot them so an isolated browser run never leaves generated framework
-// edits mixed into the user's worktree, including when the caller already had
-// intentional local changes.
-const generatedFileSnapshots = ["tsconfig.json", "next-env.d.ts"].map((fileName) => ({
-  fileName,
-  contents: readFileSync(join(process.cwd(), fileName), "utf8"),
-}));
-const env: NodeJS.ProcessEnv = {
-  ...process.env,
-  DATABASE_URL: databaseUrl,
-  PORT: port,
-  PLAYWRIGHT_BASE_URL: baseUrl,
-  AUTH_URL: baseUrl,
-  NEXTAUTH_URL: baseUrl,
-  AUTH_TRUST_HOST: "true",
-  // The runner has already refused any database URL that does not
-  // contain test/ci. Supplying deterministic test-only secrets here
-  // makes the isolated command reproducible without relying on a
-  // developer's untracked .env file; production never executes this
-  // script or inherits these values.
-  AUTH_SECRET: process.env.AUTH_SECRET ?? testOnlyAuthSecret,
-  AGENCY_COOKIE_SECRET: process.env.AGENCY_COOKIE_SECRET ?? testOnlyAgencyCookieSecret,
-  // Trend Radar is intentionally off by default in production. Isolated E2E
-  // runs opt into the capability so the gated Trend Radar journeys are
-  // exercised without changing the production configuration.
-  // The readiness probe verifies the upload volume as well as Postgres.
-  // Give isolated browser runs a disposable writable volume so the probe
-  // exercises the real contract without touching /data/uploads.
-  UPLOADS_DIR: process.env.UPLOADS_DIR ?? e2eUploadsDir,
-};
 
-let exitCode = 0;
-
-try {
-  for (const [command, args] of [
-    ["pnpm", ["db:migrate"]],
-    ["pnpm", ["exec", "tsx", "scripts/reset-test-database.ts"]],
-    ["pnpm", ["exec", "playwright", "test", ...testArgs]],
-  ] as const) {
-    const result = spawnSync(command, args, { env, stdio: "inherit" });
-    if (result.status !== 0) {
-      exitCode = result.status ?? 1;
-      break;
-    }
-  }
-} finally {
-  rmSync(e2eUploadsDir, { recursive: true, force: true });
-  for (const { fileName, contents } of generatedFileSnapshots) {
-    writeFileSync(join(process.cwd(), fileName), contents);
-  }
+async function findFreePort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      const port = typeof address === "object" && address ? address.port : null;
+      server.close((error) => {
+        if (error) {
+          reject(error);
+        } else if (port) {
+          resolve(port);
+        } else {
+          reject(new Error("Could not discover a free E2E port."));
+        }
+      });
+    });
+  });
 }
 
-if (exitCode !== 0) process.exit(exitCode);
+async function main() {
+  // A fixed default made stale local Next servers collide with isolated runs.
+  // Explicit PORT remains available for CI and operators who need a stable URL.
+  const port = process.env.PORT ?? String(await findFreePort());
+  const baseUrl = process.env.PLAYWRIGHT_BASE_URL ?? `http://localhost:${port}`;
+  const e2eUploadsDir = mkdtempSync(join(tmpdir(), "laratik-planner-e2e-uploads-"));
+  // Next's dev server may rewrite these tracked bootstrap files when it starts.
+  // Snapshot them so an isolated browser run never leaves generated framework
+  // edits mixed into the user's worktree, including when the caller already had
+  // intentional local changes.
+  const generatedFileSnapshots = ["tsconfig.json", "next-env.d.ts"].map((fileName) => ({
+    fileName,
+    contents: readFileSync(join(process.cwd(), fileName), "utf8"),
+  }));
+  const env: NodeJS.ProcessEnv = {
+    ...process.env,
+    DATABASE_URL: databaseUrl,
+    PORT: port,
+    PLAYWRIGHT_BASE_URL: baseUrl,
+    AUTH_URL: baseUrl,
+    NEXTAUTH_URL: baseUrl,
+    AUTH_TRUST_HOST: "true",
+    // The runner has already refused any database URL that does not
+    // contain test/ci. Supplying deterministic test-only secrets here
+    // makes the isolated command reproducible without relying on a
+    // developer's untracked .env file; production never executes this
+    // script or inherits these values.
+    AUTH_SECRET: process.env.AUTH_SECRET ?? testOnlyAuthSecret,
+    AGENCY_COOKIE_SECRET: process.env.AGENCY_COOKIE_SECRET ?? testOnlyAgencyCookieSecret,
+    // Trend Radar is intentionally off by default in production. Isolated E2E
+    // runs opt into the capability so the gated Trend Radar journeys are
+    // exercised without changing the production configuration.
+    // The readiness probe verifies the upload volume as well as Postgres.
+    // Give isolated browser runs a disposable writable volume so the probe
+    // exercises the real contract without touching /data/uploads.
+    UPLOADS_DIR: process.env.UPLOADS_DIR ?? e2eUploadsDir,
+  };
+
+  let exitCode = 0;
+
+  try {
+    for (const [command, args] of [
+      ["pnpm", ["db:migrate"]],
+      ["pnpm", ["exec", "tsx", "scripts/reset-test-database.ts"]],
+      ["pnpm", ["exec", "playwright", "test", ...testArgs]],
+    ] as const) {
+      const result = spawnSync(command, args, { env, stdio: "inherit" });
+      if (result.status !== 0) {
+        exitCode = result.status ?? 1;
+        break;
+      }
+    }
+  } finally {
+    rmSync(e2eUploadsDir, { recursive: true, force: true });
+    for (const { fileName, contents } of generatedFileSnapshots) {
+      writeFileSync(join(process.cwd(), fileName), contents);
+    }
+  }
+
+  if (exitCode !== 0) process.exitCode = exitCode;
+}
+
+void main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

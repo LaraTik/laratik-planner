@@ -164,6 +164,7 @@ export async function devSeed(
     socialAnalyticsFixture?: boolean;
     includeDeliveryMediaFixture?: boolean;
     enableTrendRadar?: boolean;
+    visualFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -188,6 +189,7 @@ export async function devSeed(
           ? { includeDeliveryMediaFixture: options.includeDeliveryMediaFixture }
           : {}),
         ...(options.enableTrendRadar ? { enableTrendRadar: true } : {}),
+        ...(options.visualFixture ? { visualFixture: true } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step
@@ -245,6 +247,7 @@ export async function bootstrapTestSession(
     platformRole?: PlatformRole;
     authRole?: "agency_admin" | "user";
     enableTrendRadar?: boolean;
+    visualFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);
@@ -346,13 +349,14 @@ export async function bootstrapRoleSession(
   role: FixtureRole,
   workspaceSlug = "acme",
   options: {
+    email?: string;
     socialAnalyticsFixture?: boolean;
     includeDeliveryMediaFixture?: boolean;
     locale?: "en" | "ar";
     approvalMode?: "simple" | "internal_then_client";
   } = {},
 ): Promise<SeedResult> {
-  const email = `e2e-${role}@laratik.local`;
+  const email = options.email ?? `e2e-${role}@laratik.local`;
   const result = await devSeed(page.request, {
     email,
     workspaceSlug,

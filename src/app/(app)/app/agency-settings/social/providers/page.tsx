@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { KeyRound, PlugZap } from "lucide-react";
+import { CheckCircle2, CircleAlert, KeyRound, PlugZap } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
@@ -14,6 +14,7 @@ import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
 import { AnalyticsProbeCard } from "./analytics-probe-card";
 import { listAnalyticsProbeProfiles } from "@/lib/social/analytics-probe";
+import { Card } from "@/components/ui/card";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -104,6 +105,13 @@ export default async function AgencySocialProvidersPage() {
       .then((r) => r[0] ?? null),
     listAnalyticsProbeProfiles(agencyId),
   ]);
+  const metaProfiles = probeProfiles.filter(
+    (profile) => profile.platform === "facebook" || profile.platform === "instagram",
+  );
+  const metaConfigured = Boolean(metaRow?.enabled && metaRow.appId && metaRow.loginConfigId);
+  const credentialsPassed = metaRow?.lastTestedOk === true;
+  const credentialsFailed = metaRow?.lastTestedOk === false;
+  const probeReady = metaConfigured && metaProfiles.length > 0;
 
   return (
     <div className="space-y-6" data-testid="agency-providers-page">
@@ -154,6 +162,71 @@ export default async function AgencySocialProvidersPage() {
           />
         </div>
       </section>
+      <Card padding="md" data-testid="provider-readiness-card">
+        <div className="flex items-start gap-3">
+          <div className="bg-primary/10 text-primary rounded-full p-2" aria-hidden="true">
+            <CheckCircle2 className="h-4 w-4" />
+          </div>
+          <div>
+            <h2 className="text-body text-fg-primary font-semibold">
+              {t("agencyProviders.readinessHeading")}
+            </h2>
+            <p className="text-label text-fg-secondary mt-1">
+              {t("agencyProviders.readinessBody")}
+            </p>
+          </div>
+        </div>
+        <ol className="mt-4 grid gap-3 md:grid-cols-4">
+          <li className="border-border bg-surface-subtle rounded-md border p-3">
+            <p className="text-label text-fg-primary font-semibold">
+              {t("agencyProviders.readinessStepConfig")}
+            </p>
+            <p className="text-label text-fg-muted mt-1">
+              {metaConfigured
+                ? t("agencyProviders.readinessComplete")
+                : t("agencyProviders.readinessNeedsAction")}
+            </p>
+          </li>
+          <li className="border-border bg-surface-subtle rounded-md border p-3">
+            <p className="text-label text-fg-primary font-semibold">
+              {t("agencyProviders.readinessStepCredentials")}
+            </p>
+            <p className="text-label text-fg-muted mt-1 inline-flex items-center gap-1">
+              {credentialsFailed ? (
+                <CircleAlert className="text-warning h-3.5 w-3.5" aria-hidden="true" />
+              ) : null}
+              {credentialsPassed
+                ? t("agencyProviders.readinessComplete")
+                : credentialsFailed
+                  ? t("agencyProviders.readinessNeedsAction")
+                  : t("agencyProviders.readinessNotRun")}
+            </p>
+          </li>
+          <li className="border-border bg-surface-subtle rounded-md border p-3">
+            <p className="text-label text-fg-primary font-semibold">
+              {t("agencyProviders.readinessStepProfiles")}
+            </p>
+            <p className="text-label text-fg-muted mt-1">
+              {metaProfiles.length > 0
+                ? t("agencyProviders.readinessProfilesConnected", { count: metaProfiles.length })
+                : t("agencyProviders.readinessNeedsAction")}
+            </p>
+          </li>
+          <li className="border-border bg-surface-subtle rounded-md border p-3">
+            <p className="text-label text-fg-primary font-semibold">
+              {t("agencyProviders.readinessStepProbe")}
+            </p>
+            <p className="text-label text-fg-muted mt-1">
+              {probeReady
+                ? t("agencyProviders.readinessRunProbe")
+                : t("agencyProviders.readinessBlocked")}
+            </p>
+          </li>
+        </ol>
+        <p className="text-label text-fg-secondary border-border mt-4 border-t pt-3">
+          {t("agencyProviders.readinessCommandCenterNote")}
+        </p>
+      </Card>
       <AnalyticsProbeCard profiles={probeProfiles} />
     </div>
   );

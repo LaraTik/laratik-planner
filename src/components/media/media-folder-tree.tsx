@@ -575,14 +575,10 @@ export function MediaFolderTree(props: TreeProps) {
             {visibleRoots.map((root) => renderRow(root, 1))}
           </ul>
         ) : (
-          <p className="text-label text-fg-muted px-2 py-2" role="note">
-            {props.labels.polish.noFoldersYet}
-          </p>
+          <p className="text-label text-fg-muted px-2 py-2">{props.labels.polish.noFoldersYet}</p>
         )}
         {filteredOut ? (
-          <p className="text-label text-fg-muted px-2 py-2" role="note">
-            {props.labels.polish.noSearchMatch}
-          </p>
+          <p className="text-label text-fg-muted px-2 py-2">{props.labels.polish.noSearchMatch}</p>
         ) : null}
 
         <SectionHeading>{props.labels.polish.section.shared}</SectionHeading>

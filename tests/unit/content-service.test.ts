@@ -298,6 +298,52 @@ describe("quickCreateContentItem", () => {
     expect(values["designerId"]).toBe("des-1");
     expect(values["contentReviewerId"]).toBe("rev-1");
   });
+
+  it("preserves a workspace-scoped research post when creating a draft", async () => {
+    dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
+    dbMock.state.selectResults.push([{ id: "research-post-1" }]);
+    dbMock.state.insertReturningIds.push({ id: contentItemId });
+
+    const id = await quickCreateContentItem(actor, {
+      ...input,
+      channelIds: ["ch-1"],
+      researchPostObservationId: "11111111-1111-1111-1111-111111111111",
+    });
+
+    expect(id).toBe(contentItemId);
+    expect(dbMock.state.insertCalls).toContainEqual({
+      table: "insert",
+      values: {
+        workspaceId,
+        contentItemId,
+        socialPostObservationId: "research-post-1",
+        createdBy: actor.id,
+      },
+    });
+  });
+
+  it("preserves a workspace-scoped teardown when creating a draft", async () => {
+    dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
+    dbMock.state.selectResults.push([{ id: "teardown-1" }]);
+    dbMock.state.insertReturningIds.push({ id: contentItemId });
+
+    const id = await quickCreateContentItem(actor, {
+      ...input,
+      channelIds: ["ch-1"],
+      researchTeardownId: "22222222-2222-2222-2222-222222222222",
+    });
+
+    expect(id).toBe(contentItemId);
+    expect(dbMock.state.insertCalls).toContainEqual({
+      table: "insert",
+      values: {
+        workspaceId,
+        contentItemId,
+        researchTeardownId: "teardown-1",
+        createdBy: actor.id,
+      },
+    });
+  });
 });
 
 describe("updateContentItem", () => {

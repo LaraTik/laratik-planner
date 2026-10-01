@@ -64,7 +64,7 @@ export function DashboardPanel({
     <section
       aria-label={typeof title === "string" ? title : undefined}
       data-testid={testId}
-      className={cn("flex flex-col", className)}
+      className={cn("flex min-w-0 flex-col", className)}
       {...rest}
     >
       <Card padding={bleed ? "none" : "lg"} className="flex h-full flex-col">
@@ -87,7 +87,7 @@ export function DashboardPanel({
           </div>
           {headerAction ? <div className="flex items-center gap-2">{headerAction}</div> : null}
         </header>
-        <div className={cn("flex-1", bleed ? "mt-4" : "mt-4")}>{children}</div>
+        <div className={cn("min-w-0 flex-1", bleed ? "mt-4" : "mt-4")}>{children}</div>
         {footer ? (
           <div
             className={cn("border-border mt-4 border-t pt-3", bleed && "px-5 pb-5 sm:px-6 sm:pb-6")}

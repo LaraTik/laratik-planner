@@ -17,7 +17,9 @@ The shared types in `src/lib/social/types.ts` are the contract:
 - `ProfileSnapshot` — the exact shape persisted to `social_profile_daily_metric`.
 - `RefreshedCredentials` — the new credentials envelope after a refresh.
 - `SocialCredentials` — the AES-256-GCM-sealed envelope (see `src/lib/social/crypto.ts`).
-- `AppCredentials` — the platform's app secret for the provider (e.g. `META_APP_SECRET`, `TIKTOK_CLIENT_SECRET`).
+- `AppCredentials` — the agency-scoped app credentials resolved from
+  `agency_social_provider_config`. App secrets are sealed with the agency DEK;
+  they are not global environment variables.
 
 The adapter is the only file that knows the provider's wire format. The repository, sync worker, analytics engine, and UI are provider-agnostic.
 
@@ -69,15 +71,19 @@ The cron worker is the bounded daily sync. The pattern (see `src/lib/social/sync
 
 A new provider's adapter participates automatically — the worker is provider-agnostic. The provider key is on the `social_connection` row; the worker resolves the adapter via the `provider` lookup in `src/lib/social/providers/index.ts`.
 
-## 5. Per-provider flag (`SOCIAL_<PROVIDER>_ENABLED`)
+## 5. Per-agency provider gate
 
-The rollout gate is a per-provider env flag. The pattern (see `src/lib/validation/env.ts`):
+The M4.6 hard cutover removed global per-provider env flags. The provider is
+enabled per agency by the `enabled` column in
+`agency_social_provider_config`; the agency-admin surface is
+`/app/agency-settings/social/providers`. A new provider must expose the same
+four staged states there: not configured, configured, credentials tested, and
+connected/probed. `SOCIAL_SYNC_ENABLED` remains the only global gate and
+controls the daily worker for all providers.
 
-- `SOCIAL_META_ENABLED` (default `true`) — gates the Meta connect / callback routes.
-- `SOCIAL_TIKTOK_ENABLED` (default `false`) — gates the TikTok connect / callback routes; the flag is the 7-day observation window after M4.5.
-- `SOCIAL_SYNC_ENABLED` (default `false`) — gates the daily sync worker globally. The provider-specific flag is independent: an agency on `SOCIAL_META_ENABLED=true` is not affected by `SOCIAL_TIKTOK_ENABLED=false`.
-
-A new provider adds a new flag: `SOCIAL_<PROVIDER>_ENABLED` (default `false`). The flag is read at the connect / callback route entry; a `false` value returns `404` (the route is not exposed). The flag is the 7-day observation window for the new provider — see §7.
+Use a separate agency allowlist or deployment flag only when a provider needs a
+temporary rollout restriction; do not put app credentials or tenant policy in
+`.env`.
 
 ## 6. UAT rows in `EXTERNAL_SERVICES_UAT.md`
 

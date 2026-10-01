@@ -149,13 +149,21 @@ export type RegressionViewport = {
 
 export type SeedResultLike = { contentItemId: string; agencyId?: string };
 
+export const VISUAL_FIXTURE_MONTH = "2026-09";
+
 export function resolveStitchRoute(route: string, seed: SeedResultLike): string {
-  const resolved = route.replace(/\{contentItemId\}/g, seed.contentItemId);
-  if (!resolved.includes("{agencyId}")) return resolved;
-  if (!seed.agencyId) {
-    throw new Error(`Cannot resolve Stitch route ${route}: seed has no agencyId`);
+  let resolved = route.replace(/\{contentItemId\}/g, seed.contentItemId);
+  if (resolved.includes("{agencyId}")) {
+    if (!seed.agencyId) {
+      throw new Error(`Cannot resolve Stitch route ${route}: seed has no agencyId`);
+    }
+    resolved = resolved.replace(/\{agencyId\}/g, seed.agencyId);
   }
-  return resolved.replace(/\{agencyId\}/g, seed.agencyId);
+
+  if (resolved === "/app/w/acme" || resolved === "/app/w/acme/planning") {
+    return `${resolved}?month=${VISUAL_FIXTURE_MONTH}`;
+  }
+  return resolved;
 }
 
 const PORTABLE_VIEWPORT_NAME: Record<string, string> = {
@@ -227,6 +235,7 @@ export const APP_ONLY_SURFACES = [
   "/signin/forgot-password",
   "/signin/verify",
   "/app/w/acme/channels",
+  "/app/w/acme/research",
   "/app/w/acme/client/calendar",
   "/app/w/acme/library",
   "/app/w/acme/team",

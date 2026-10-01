@@ -1,0 +1,3 @@
+DROP INDEX "research_watchlist_workspace_platform_handle_unique";--> statement-breakpoint
+ALTER TABLE "research_watchlist_account" ADD COLUMN "archived_at" timestamp with time zone;--> statement-breakpoint
+CREATE UNIQUE INDEX "research_watchlist_workspace_platform_handle_unique" ON "research_watchlist_account" USING btree ("workspace_id","platform","handle") WHERE "research_watchlist_account"."archived_at" IS NULL;

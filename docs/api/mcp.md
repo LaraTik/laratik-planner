@@ -58,6 +58,7 @@ token is refused.
 | `laratik_planner_list_workspace_members` | `content:read`  | List the people holding a membership in one workspace, with `displayName`, `email`, `roles[]`, `status`, and `lastActiveAt`; accepts optional `include_deactivated` (default `false`). This is the only way to resolve the owner/designer/reviewer UUIDs returned by `list_content` and `get_content` back to names |
 | `laratik_planner_list_content`           | `content:read`  | Filter and paginate planning items                                                                                                                                                                                                                                                                                  |
 | `laratik_planner_get_content`            | `content:read`  | Read one item, selected channels, and assignment history                                                                                                                                                                                                                                                            |
+| `laratik_planner_list_research`          | `content:read`  | Read visible research collections, saved observed posts, reviewed teardowns, and source-only watchlist accounts for one workspace; provider media and raw provider bodies are excluded                                                                                                                              |
 | `laratik_planner_create_content`         | `content:write` | Create a draft using Quick Create rules; optionally write a validated format-specific `format_payload` in the same create operation                                                                                                                                                                                 |
 | `laratik_planner_update_content`         | `content:write` | Update an editable draft or changes-requested item, including an optional validated format-specific `format_payload`                                                                                                                                                                                                |
 | `laratik_planner_reschedule_content`     | `content:write` | Change the planned publish date only                                                                                                                                                                                                                                                                                |
@@ -89,6 +90,22 @@ Two properties worth relying on:
   implicitly hold every role in a workspace they administer, which is a policy
   fact rather than a membership row, so it is reported as an empty array instead
   of being invented here.
+
+### Research shelf
+
+`laratik_planner_list_research` is the read-only automation bridge for the
+Meedro-informed Research shelf. It accepts `workspace_id`, an optional
+`item_kind` (`all`, `collections`, `bookmarks`, `teardowns`, or `watchlist`),
+and a bounded `limit` (1–100). The response always keeps the same four arrays
+so callers can safely request one kind without changing their parsing shape.
+
+The tool applies the same internal workspace access check as the planning
+tools. Private collections are returned only to their creator; workspace
+collections are visible to workspace readers. Saved observations, reviewed
+teardowns, and watchlist rows remain workspace-scoped. A bookmark contains
+normalized metrics and its source permalink, while a teardown contains only
+the validated structured result. The tool never returns provider media, raw
+provider response bodies, OAuth tokens, or planner-entered raw notes.
 
 ### Error diagnostics
 

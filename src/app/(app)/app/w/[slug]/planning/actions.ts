@@ -31,6 +31,8 @@ import {
   mergeAiDraftIntoBrief,
   archiveContentItem,
   restoreContentItem,
+  applyResearchTeardownToFormatPayload,
+  ApplyResearchTeardownSchema,
 } from "@/lib/content/service";
 import {
   BatchClientRowSchema,
@@ -74,13 +76,24 @@ import { actionFailure, fieldErrorsFromZod, type ActionState } from "@/lib/valid
  * is the source of truth because the form's `<FormField id>`
  * is what the user sees + clicks on the form-summary card.
  */
-type QuickCreateFields = "title" | "format" | "plannedPublishAt" | "brief" | "channelIds";
-type UpdateContentFields = QuickCreateFields;
+type QuickCreateFields =
+  | "title"
+  | "format"
+  | "plannedPublishAt"
+  | "brief"
+  | "channelIds"
+  | "researchPostObservationId"
+  | "researchTeardownId";
+type UpdateContentFields = Exclude<
+  QuickCreateFields,
+  "researchPostObservationId" | "researchTeardownId"
+>;
 type BatchCreateFields = "rows";
 type TransitionFields = "action" | "reason";
 type AssignDesignerFields = "designerId";
 type AssignContentOwnerFields = "ownerId";
 type ApplyAiDraftFields = "draftText" | "mode";
+type ApplyResearchTeardownFields = "contentItemId" | "researchTeardownId";
 type SubmitDeliveryFields = "description" | "designerNote" | "mediaAssetId";
 type DecideApprovalFields = "decision" | "feedback";
 type RecordPublicationFields =
@@ -154,6 +167,8 @@ export async function quickCreateAction(
     plannedPublishAt: formData.get("plannedPublishAt"),
     channelIds: channelIdsRaw.length > 0 ? channelIdsRaw : undefined,
     trendSignalId: formData.get("trendSignalId") || undefined,
+    researchPostObservationId: formData.get("researchPostObservationId") || undefined,
+    researchTeardownId: formData.get("researchTeardownId") || undefined,
   });
   if (!parsed.success) {
     return fieldErrorsFromZod<QuickCreateFields>(parsed.error);
@@ -891,6 +906,34 @@ export async function updateFormatPayloadAction(
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };
+}
+
+export async function applyResearchTeardownAction(input: {
+  workspaceSlug: string;
+  contentItemId: string;
+  researchTeardownId: string;
+}): Promise<ActionState<ApplyResearchTeardownFields> & { appliedFields?: string[] }> {
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
+  const parsed = ApplyResearchTeardownSchema.safeParse({
+    workspaceId: workspace.id,
+    contentItemId: input.contentItemId,
+    researchTeardownId: input.researchTeardownId,
+  });
+  if (!parsed.success) return fieldErrorsFromZod<ApplyResearchTeardownFields>(parsed.error);
+  try {
+    const appliedFields = await applyResearchTeardownToFormatPayload(actor, {
+      workspaceId: workspace.id,
+      contentItemId: parsed.data.contentItemId,
+      researchTeardownId: parsed.data.researchTeardownId,
+    });
+    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${parsed.data.contentItemId}`);
+    return { ok: true, appliedFields };
+  } catch (error) {
+    return actionFailure<ApplyResearchTeardownFields>(
+      error,
+      "The research fields could not be applied.",
+    );
+  }
 }
 
 // ─── Canonical audience copy (material) ───────────────────────────────

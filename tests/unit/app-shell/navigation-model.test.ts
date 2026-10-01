@@ -15,7 +15,7 @@ import {
 const wsBase = "/app/w/acme";
 
 describe("buildWorkspaceNavigation", () => {
-  it("returns Overview as the top item, then grouped Personal/Content/Performance/Brand/Manage", () => {
+  it("returns Overview as the top item, then grouped Plan/Understand/Produce/Manage", () => {
     const nav = buildWorkspaceNavigation({
       wsBase,
       badges: {},
@@ -26,7 +26,7 @@ describe("buildWorkspaceNavigation", () => {
     expect(nav.top).toHaveLength(1);
     expect(nav.top[0]?.key).toBe("overview");
     const groupKeys = nav.groups.map((g) => g.key);
-    expect(groupKeys).toEqual(["personal", "content", "performance", "brand", "manage"]);
+    expect(groupKeys).toEqual(["plan", "understand", "produce", "manage"]);
   });
 
   it("omits the Manage group for non-managers (viewer role)", () => {
@@ -37,7 +37,7 @@ describe("buildWorkspaceNavigation", () => {
       canManage: false,
       canAccessTrendRadar: false,
     });
-    expect(nav.groups.map((g) => g.key)).toEqual(["personal", "content", "performance", "brand"]);
+    expect(nav.groups.map((g) => g.key)).toEqual(["plan", "understand", "produce"]);
   });
 
   it("exposes the workspace's Create content href only when the actor can create", () => {
@@ -117,7 +117,7 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/analytics/social`);
   });
 
-  it("adds Trend Radar to content and settings only when enabled", () => {
+  it("adds Trend Radar to understand and settings only when enabled", () => {
     const nav = buildWorkspaceNavigation({
       wsBase,
       badges: {},
@@ -125,8 +125,8 @@ describe("buildWorkspaceNavigation", () => {
       canManage: true,
       canAccessTrendRadar: true,
     });
-    const content = nav.groups.find((group) => group.key === "content");
-    const trends = content?.items.find((item) => item.key === "trends");
+    const understand = nav.groups.find((group) => group.key === "understand");
+    const trends = understand?.items.find((item) => item.key === "trends");
     expect(trends?.kind).toBe("link");
     if (trends?.kind === "link") expect(trends.href).toBe(`${wsBase}/trends`);
 

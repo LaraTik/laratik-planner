@@ -101,8 +101,10 @@ function sessionOptionsFor(entry: StitchCase): {
   platformRole?: PlatformRole;
   authRole?: "agency_admin" | "user";
   enableTrendRadar?: boolean;
+  visualFixture: true;
 } {
   return {
+    visualFixture: true,
     ...(entry.route === "/app/w/acme/client" || entry.route === "/app/w/acme/client/calendar"
       ? {
           agencyAdmin: false,
@@ -204,6 +206,7 @@ const STABLE_TESTID: Record<string, string> = {
   "/app/agency-settings": "agency-settings",
   "/app/account": "account-page",
   "/app/w/acme": "workspace-overview",
+  "/app/w/acme/research": "research-page",
   "/app/w/acme/planning": "workspace-planning",
   "/app/w/acme/planning/new": "workspace-planning-new",
   "/app/w/acme/planning/batch": "workspace-planning-batch",
@@ -506,13 +509,17 @@ test.describe("visual regression (responsive matrix)", () => {
           sharedSeed = await devSeed(
             request,
             surface.startsWith("/app/platform/")
-              ? { platformRole: "platform_owner" }
+              ? { platformRole: "platform_owner", visualFixture: true }
               : surface === "/app/w/acme/client" || surface === "/app/w/acme/client/calendar"
-                ? { agencyAdmin: false, workspaceRoles: ["client_reviewer"] }
+                ? {
+                    agencyAdmin: false,
+                    workspaceRoles: ["client_reviewer"],
+                    visualFixture: true,
+                  }
                 : surface === "/app/w/acme/trends" ||
                     surface === "/app/agency-settings/trend-sources"
-                  ? { enableTrendRadar: true }
-                  : {},
+                  ? { enableTrendRadar: true, visualFixture: true }
+                  : { visualFixture: true },
           );
         });
       }
@@ -549,13 +556,18 @@ test.describe("visual regression (responsive matrix)", () => {
               seedLike = await bootstrapTestSession(
                 page,
                 platformSurface
-                  ? { platformRole: "platform_owner", authRole: "user" }
+                  ? { platformRole: "platform_owner", authRole: "user", visualFixture: true }
                   : surface === "/app/w/acme/client" || surface === "/app/w/acme/client/calendar"
-                    ? { agencyAdmin: false, workspaceRoles: ["client_reviewer"], authRole: "user" }
+                    ? {
+                        agencyAdmin: false,
+                        workspaceRoles: ["client_reviewer"],
+                        authRole: "user",
+                        visualFixture: true,
+                      }
                     : surface === "/app/w/acme/trends" ||
                         surface === "/app/agency-settings/trend-sources"
-                      ? { enableTrendRadar: true }
-                      : {},
+                      ? { enableTrendRadar: true, visualFixture: true }
+                      : { visualFixture: true },
               );
             }
             if (surface === "/app/w/acme/trends") {

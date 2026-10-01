@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import { Clock } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { trendSignals } from "@/lib/db/schema";
+import { researchTeardowns, trendSignals } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ import Link from "next/link";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { QuickCreateForm } from "./quick-create-form";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { querySocialPostObservation } from "@/lib/social/analytics-query";
+import { z } from "zod";
+import { ResearchTeardownSchema } from "@/lib/research/teardown";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
@@ -23,7 +26,11 @@ export default async function QuickCreatePage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams?: Promise<{ trendSignalId?: string }>;
+  searchParams?: Promise<{
+    trendSignalId?: string;
+    researchPostObservationId?: string;
+    researchTeardownId?: string;
+  }>;
 }) {
   const { slug } = await params;
   const query = (await searchParams) ?? {};
@@ -62,6 +69,29 @@ export default async function QuickCreatePage({
       )[0]
     : null;
 
+  const researchObservationId = z.string().uuid().safeParse(query.researchPostObservationId);
+  const researchPost = researchObservationId.success
+    ? await querySocialPostObservation(db, ws.id, researchObservationId.data)
+    : null;
+  const researchTeardownId = z.string().uuid().safeParse(query.researchTeardownId);
+  const researchTeardownRow = researchTeardownId.success
+    ? (
+        await db
+          .select({ id: researchTeardowns.id, result: researchTeardowns.result })
+          .from(researchTeardowns)
+          .where(
+            and(
+              eq(researchTeardowns.id, researchTeardownId.data),
+              eq(researchTeardowns.workspaceId, ws.id),
+            ),
+          )
+          .limit(1)
+      )[0]
+    : null;
+  const researchTeardown = researchTeardownRow
+    ? ResearchTeardownSchema.safeParse(researchTeardownRow.result)
+    : null;
+
   return (
     <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-new">
       <PageHeader
@@ -80,6 +110,10 @@ export default async function QuickCreatePage({
         workspaceSlug={slug}
         workspaceTimezone={ws.timezone}
         {...(trendSignal ? { trendSignal } : {})}
+        {...(researchPost ? { researchPost } : {})}
+        {...(researchTeardown?.success
+          ? { researchTeardown: { id: researchTeardownRow!.id, ...researchTeardown.data } }
+          : {})}
       />
     </div>
   );

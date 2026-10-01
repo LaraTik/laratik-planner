@@ -56,6 +56,7 @@ import { ChannelPublishingCard } from "@/components/planning/channel-publishing-
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
+import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
 import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
@@ -72,12 +73,17 @@ import { db } from "@/lib/db";
 import {
   aiFeatureSettings,
   agencies,
+  contentResearchLinks,
+  contentResearchTeardownLinks,
+  researchTeardowns,
+  socialChannels,
+  socialPostObservations,
   trendBriefs,
   trendSignals,
   users,
   workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { PlatformPreviewSwitcher } from "@/components/planning/platform-preview-switcher";
@@ -152,6 +158,45 @@ export default async function ContentDetailPage({
     .from(trendBriefs)
     .innerJoin(trendSignals, eq(trendSignals.id, trendBriefs.signalId))
     .where(and(eq(trendBriefs.contentItemId, item.id), eq(trendBriefs.workspaceId, ws.id)))
+    .limit(1);
+  const researchLinks = await db
+    .select({
+      id: contentResearchLinks.id,
+      permalink: socialPostObservations.permalink,
+      mediaType: socialPostObservations.mediaType,
+      views: socialPostObservations.views,
+      likes: socialPostObservations.likes,
+      comments: socialPostObservations.comments,
+      accountName: socialChannels.accountName,
+      platform: socialChannels.platform,
+    })
+    .from(contentResearchLinks)
+    .innerJoin(
+      socialPostObservations,
+      eq(socialPostObservations.id, contentResearchLinks.socialPostObservationId),
+    )
+    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .where(
+      and(
+        eq(contentResearchLinks.contentItemId, item.id),
+        eq(contentResearchLinks.workspaceId, ws.id),
+      ),
+    )
+    .orderBy(desc(contentResearchLinks.createdAt));
+  const [linkedTeardown] = await db
+    .select({ teardownId: contentResearchTeardownLinks.researchTeardownId })
+    .from(contentResearchTeardownLinks)
+    .innerJoin(
+      researchTeardowns,
+      eq(researchTeardowns.id, contentResearchTeardownLinks.researchTeardownId),
+    )
+    .where(
+      and(
+        eq(contentResearchTeardownLinks.contentItemId, item.id),
+        eq(contentResearchTeardownLinks.workspaceId, ws.id),
+      ),
+    )
+    .orderBy(desc(contentResearchTeardownLinks.createdAt))
     .limit(1);
 
   const roles = await getWorkspaceRoles(actor, ws.id);
@@ -851,6 +896,48 @@ export default async function ContentDetailPage({
                   affordance + the platform label keep the preview
                   discoverable from the editing surface. */}
 
+                {researchLinks.length > 0 ? (
+                  <div
+                    className="border-primary/30 bg-primary-subtle/30 text-fg-primary rounded-[var(--radius-control)] border p-4"
+                    data-testid="content-research-reference"
+                  >
+                    <p className="text-body font-semibold">
+                      {t("contentDetail.researchReference.title")}
+                    </p>
+                    <p className="text-label text-fg-secondary mt-1">
+                      {t("contentDetail.researchReference.description")}
+                    </p>
+                    {researchLinks.map((reference) => (
+                      <div
+                        key={reference.id}
+                        className="border-border mt-3 flex flex-wrap items-center justify-between gap-3 border-t pt-3"
+                      >
+                        <div className="text-label text-fg-secondary">
+                          <p className="font-semibold">
+                            <bdi>{reference.accountName}</bdi> · <bdi>{reference.platform}</bdi>
+                          </p>
+                          <p className="text-fg-muted mt-1">
+                            {reference.mediaType} · {reference.views ?? 0}{" "}
+                            {t("contentDetail.researchReference.views")} · {reference.likes ?? 0}{" "}
+                            {t("contentDetail.researchReference.likes")} · {reference.comments ?? 0}{" "}
+                            {t("contentDetail.researchReference.comments")}
+                          </p>
+                        </div>
+                        {reference.permalink ? (
+                          <a
+                            href={reference.permalink}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-label text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
+                          >
+                            {t("contentDetail.researchReference.openSource")}
+                          </a>
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+
                 {item.channels.length > 0 ? (
                   <PlanningSection
                     id="creative"
@@ -858,6 +945,23 @@ export default async function ContentDetailPage({
                     description={t("contentDetail.sectionCreativeDescription")}
                   >
                     <div className="space-y-3">
+                      {linkedTeardown ? (
+                        <ResearchTeardownApply
+                          workspaceSlug={slug}
+                          contentItemId={item.id}
+                          researchTeardownId={linkedTeardown.teardownId}
+                          editable={canEdit}
+                          labels={{
+                            title: t("contentDetail.researchTeardownApply.title"),
+                            description: t("contentDetail.researchTeardownApply.description"),
+                            apply: t("contentDetail.researchTeardownApply.apply"),
+                            applying: t("contentDetail.researchTeardownApply.applying"),
+                            applied: t("contentDetail.researchTeardownApply.applied"),
+                            nothingToApply: t("contentDetail.researchTeardownApply.nothingToApply"),
+                            error: t("contentDetail.researchTeardownApply.error"),
+                          }}
+                        />
+                      ) : null}
                       <FormatAwareContentEditor
                         workspaceSlug={slug}
                         contentItemId={item.id}
@@ -925,6 +1029,23 @@ export default async function ContentDetailPage({
                     title={t("contentDetail.sectionCreativeTitle")}
                     description={t("contentDetail.sectionCreativeDescription")}
                   >
+                    {linkedTeardown ? (
+                      <ResearchTeardownApply
+                        workspaceSlug={slug}
+                        contentItemId={item.id}
+                        researchTeardownId={linkedTeardown.teardownId}
+                        editable={canEdit}
+                        labels={{
+                          title: t("contentDetail.researchTeardownApply.title"),
+                          description: t("contentDetail.researchTeardownApply.description"),
+                          apply: t("contentDetail.researchTeardownApply.apply"),
+                          applying: t("contentDetail.researchTeardownApply.applying"),
+                          applied: t("contentDetail.researchTeardownApply.applied"),
+                          nothingToApply: t("contentDetail.researchTeardownApply.nothingToApply"),
+                          error: t("contentDetail.researchTeardownApply.error"),
+                        }}
+                      />
+                    ) : null}
                     <FormatAwareContentEditor
                       workspaceSlug={slug}
                       contentItemId={item.id}
@@ -985,6 +1106,14 @@ export default async function ContentDetailPage({
                           currentBrief={item.brief ?? ""}
                           {...(linkedTrend
                             ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
+                            : {})}
+                          {...(researchLinks[0]
+                            ? {
+                                researchContext: {
+                                  accountName: researchLinks[0].accountName,
+                                  platform: researchLinks[0].platform,
+                                },
+                              }
                             : {})}
                         />
                       ) : null}

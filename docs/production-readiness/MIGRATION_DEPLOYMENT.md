@@ -1,5 +1,28 @@
 # Migration and deployment evidence
 
+## Migration 0066 — named research collections
+
+`0066_last_robin_chapel.sql` is additive. It creates the workspace-scoped
+`research_collection` table and adds nullable `collection_id` pointers to
+`research_bookmark` and `research_teardown`, with foreign keys that set the
+pointer to null when a collection is removed. The collection has a check for
+`me` / `workspace` visibility and a per-owner name uniqueness index.
+
+Compatibility: older application images ignore the new table and nullable
+columns. Normal rollback pins the previous image and leaves the additive
+schema in place; destructive removal requires a verified backup and an
+independently reviewed forward-fix or restore. No existing research rows are
+rewritten or backfilled. The application re-checks workspace access, role,
+collection visibility, and item workspace ownership before assignment.
+
+Forward evidence: run `NODE_ENV=test pnpm migration-drill` and record the
+from-zero, skipped-migration repair, in-place upgrade, backup/restore, and
+failed-migration abort results at the exact clean SHA. The focused UI/API
+collection tests are `tests/unit/research-collections.test.tsx`,
+`tests/unit/research-collections-route.test.ts`, and
+`tests/integration/research-collections.test.ts`; the journal and snapshot
+ancestry tests must also pass.
+
 ## Migration 0050 — agency tasks and global calendar support
 
 `0050_happy_praxagora.sql` is an additive migration that creates

@@ -48,6 +48,7 @@ export const users = pgTable(
     displayName: text("display_name").notNull(),
     avatarPath: text("avatar_path"),
     locale: text("locale").notNull().default("en"),
+    themePreference: text("theme_preference").notNull().default("system"),
     lastActiveAt: timestamp("last_active_at", { withTimezone: true, mode: "date" }),
     // Authorization
     role: text("role").notNull().default("user"), // app-level role
@@ -71,6 +72,7 @@ export const users = pgTable(
       "user_email_format",
       sql`${t.email} ~* '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'`,
     ),
+    check("user_theme_preference_valid", sql`${t.themePreference} IN ('system', 'light', 'dark')`),
   ],
 );
 

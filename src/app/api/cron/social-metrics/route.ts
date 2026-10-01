@@ -25,7 +25,8 @@ import { serverEnv } from "@/lib/validation/env";
  *   4. Returns a JSON shape that is safe to log:
  *        { "claimed": int, "succeeded": int, "failed": int,
  *          "needsReauth": int, "skipped": int,
- *          "retention": { "oauthStatesDeleted": int, "oldMetricsDeleted": int } }
+ *          "retention": { "oauthStatesDeleted": int, "oldMetricsDeleted": int,
+ *                          "oldPostObservationsDeleted": int } }
  *
  * History (Phase 1 of the social-cron-admin plan, M4.7):
  * every tick — success, soft deadline, flag-off, KEK missing,

@@ -73,6 +73,35 @@ If the dialog reports a permission or expired-token error, reconnect Meta from
 the channel settings, then return to the Planner item. If the connection is
 not configured for the agency, an agency admin must configure Meta first.
 
+## Post-level analytics readiness (separate from linking)
+
+Linking a publication stores identity and lifecycle metadata only. The normal
+read-only social sync separately stores a bounded observation for up to the 10
+most recent Instagram media objects, including views when available, basic
+likes/comments, and provider-supplied video duration. These rows power the
+Command Center's top-content, outlier, best-time, and duration-band cards;
+unsupported metrics remain nullable and are never treated as zero.
+
+The remaining provider work is intentionally separate from linking:
+
+- Instagram media insights use `/{ig-media-id}/insights` and require the
+  existing `instagram_manage_insights` path plus a valid Page-backed token in
+  the Facebook Login flow. Metric availability varies by media type; the
+  adapter must keep unsupported metrics nullable.
+- Facebook Page post insights use `/{post-id}/insights` and require the Page
+  token to have the Page's `ANALYZE` task and the applicable insight/read
+  permissions. Several legacy impression metrics are deprecated above Graph
+  API v25, so new code must prefer current media-view/video metrics and record
+  the pinned Graph version with every observation.
+- The repository defaults to Graph API `v25.0`. Do not change the default or
+  add OAuth scopes based on documentation alone. Reach, saves, shares,
+  Facebook post insights, and historical pagination still require controlled
+  read-only probes and additive follow-up work. Command Center observed posts
+  can already create a workspace-scoped draft with a durable research link;
+  this does not copy or publish provider content.
+
+References: [Instagram media insights](https://developers.facebook.com/docs/instagram-api/reference/ig-media/insights), [Graph API Page insights](https://developers.facebook.com/docs/graph-api/reference/insights), and the [Meta Graph API changelog](https://developers.facebook.com/docs/graph-api/changelog/).
+
 ## What linking does not do
 
 - It does not create Planner items from unmatched Meta posts.

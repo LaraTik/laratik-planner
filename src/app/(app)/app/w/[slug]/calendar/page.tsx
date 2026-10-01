@@ -189,11 +189,8 @@ export default async function EditorialCalendarPage({
                     <span className="text-label invisible">{day}</span>
                   )}
                   {isToday ? (
-                    // `text-white` (not `text-on-primary`) because the
-                    // project doesn't define an `on-primary` token and
-                    // the inherited `text-fg-primary` (#172033) on the
-                    // indigo `bg-primary` (#4f46e5) only reaches 2.58:1
-                    // — fails WCAG AA. White-on-indigo is 5.85:1.
+                    // The semantic foreground keeps this label readable in
+                    // both light and dark themes.
                     <span
                       aria-label={t("calendar.todayAriaLabel", {
                         date: formatDate(
@@ -210,7 +207,7 @@ export default async function EditorialCalendarPage({
                           },
                         ),
                       })}
-                      className="text-label bg-primary rounded-full px-1.5 font-semibold text-white"
+                      className="text-label bg-primary text-primary-foreground rounded-full px-1.5 font-semibold"
                     >
                       {t("calendar.today")}
                     </span>

@@ -44,7 +44,12 @@ home for the multi-tenant-hardening items (row 40) that follow.
 ### Risks the single env accepts
 
 - A bad release that passes the automated gates but breaks a flow the browser suite does not cover is caught only by the production handoff UAT. The blast radius is one production agency; the rollback path is [`runbook.md`](./runbook.md) § Rollback.
-- AI / SMTP / social provider OAuth credentials are the **same** in CI, dev, and production. The dev-only `/api/dev/*` routes are gated by `NODE_ENV !== "production"` (route handler + proxy allowlist), so a production build never accepts the dev seed. The `META_APP_SECRET` and `TIKTOK_CLIENT_SECRET` are real in every env; misuse is mitigated by the per-agency provider config (M4.6) which scopes them per-agency, and the per-agency DEK (M4.5) which seals the social connection credentials.
+- AI / SMTP credentials are environment-specific. Social provider app credentials
+  are agency-scoped rows configured through the admin UI and sealed with the
+  agency DEK; they are not copied into CI, dev, or production `.env` files.
+  The dev-only `/api/dev/*` routes remain gated by `NODE_ENV !== "production"`
+  (route handler + proxy allowlist), so a production build never accepts the
+  dev seed.
 - A failed migration leaves production down until the [`incident-response.md`](./incident-response.md) P0 procedure is run. The migration-drill script's "Failed-migration abort" (drill 4/4 PASS) is the test gate; a real production migration failure has not been observed since the 2026-08-24 incident was repaired.
 
 ## 2. Future state — three environments (Goal 14)

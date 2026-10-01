@@ -215,16 +215,15 @@ ssh laratik-vps 'cd /opt/laratik-planner && docker compose up -d app'
 
 ## Rotation
 
-| What                          | Where                            | How                                                                                                                                                                                                                                                                                             |
-| ----------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `AUTH_SECRET`                 | `.env` on VPS                    | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                                                                                                       |
-| `GOOGLE_CLIENT_SECRET`        | Google Cloud Console + `.env`    | Same as above.                                                                                                                                                                                                                                                                                  |
-| `SMTP_PASSWORD`               | Mailcow admin                    | Same as above.                                                                                                                                                                                                                                                                                  |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                    | Re-wrap every `agency_social_dek` row from the old KEK to the new KEK, then swap. The per-agency DEKs are unchanged; only the platform KEK is rotated. See the **Platform KEK rotation** section below for the exact script. The env var is **optional at boot** (M4.5 — per-agency DEK model). |
-| `META_APP_SECRET`             | Meta App Dashboard + `.env`      | Same pattern as `GOOGLE_CLIENT_SECRET`; the secret applies to long-lived token exchange. After rotation, the cron route will re-issue long-lived tokens for every active connection on the next refresh cycle.                                                                                  |
-| `TIKTOK_CLIENT_SECRET`        | TikTok Developer Portal + `.env` | Same as above. TikTok's 365-day refresh token is bound to the app secret at the time of grant issuance; a secret rotation invalidates existing refresh tokens, so all workspaces must reconnect.                                                                                                |
-| Image                         | GHCR                             | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                                                                                                    |
-| LE cert                       | Traefik (vps-ops)                | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                                                                                                   |
+| What                          | Where                         | How                                                                                                                                                                                                                                                                                             |
+| ----------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `AUTH_SECRET`                 | `.env` on VPS                 | `openssl rand -base64 32`, update, `docker compose up -d --no-deps app`. Active sessions are invalidated.                                                                                                                                                                                       |
+| `GOOGLE_CLIENT_SECRET`        | Google Cloud Console + `.env` | Same as above.                                                                                                                                                                                                                                                                                  |
+| `SMTP_PASSWORD`               | Mailcow admin                 | Same as above.                                                                                                                                                                                                                                                                                  |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | `.env` on VPS                 | Re-wrap every `agency_social_dek` row from the old KEK to the new KEK, then swap. The per-agency DEKs are unchanged; only the platform KEK is rotated. See the **Platform KEK rotation** section below for the exact script. The env var is **optional at boot** (M4.5 — per-agency DEK model). |
+| Meta/TikTok app secret        | Provider console + agency UI  | Rotate the secret in the provider console, then replace it at `/app/agency-settings/social/providers` and run **Test credentials**. Existing connection envelopes remain separate; reconnect only if the provider invalidates the grant.                                                        |
+| Image                         | GHCR                          | Automatic on `main` push. Old tags pruned via `docker image prune` (see disk hygiene below).                                                                                                                                                                                                    |
+| LE cert                       | Traefik (vps-ops)             | Auto-renewed by Traefik; check with `ssh laratik-vps 'sudo bash /root/gitops/scripts/ops/check-certs.sh 30'`.                                                                                                                                                                                   |
 
 ## Disk hygiene
 
@@ -437,6 +436,24 @@ export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/pl
 pnpm test:integration
 ```
 
+Verify that the URL reaches the intended server, not a native PostgreSQL
+installation already bound to the same loopback port:
+
+```bash
+psql "$TEST_DATABASE_URL" -tAc 'select current_database(), inet_server_addr(), inet_server_port()'
+```
+
+If Docker and native PostgreSQL both claim `5432`, use a disposable test
+container on a free host port and point `TEST_DATABASE_URL` at that port. Do
+not infer correctness from `docker exec … pg_isready`; that only proves the
+container is healthy, not that the host URL reaches it. This distinction is
+required before trusting isolated browser or migration results.
+
+When `PORT` is omitted, `scripts/run-e2e-tests.ts` allocates a free local port
+for the temporary Next server. Set `PORT` explicitly only when a stable port is
+needed; `PLAYWRIGHT_BASE_URL` remains available for an intentionally external
+server.
+
 The same `TEST_DATABASE_URL` is required by `pnpm migration-drill` and the
 isolated/visual Playwright commands. If the database is unavailable, check
 `docker compose -f docker-compose.dev.yml ps postgres` and
@@ -607,31 +624,30 @@ Read-only, provider-neutral social profile analytics for Meta and TikTok. This s
 
 ### Environment variables (server-only)
 
-| Name                          | Default | Purpose                                                                                                                                                |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`. |
-| `META_APP_ID`                 | empty   | Facebook App ID. Required for Meta connection to succeed.                                                                                              |
-| `META_APP_SECRET`             | empty   | Facebook App secret.                                                                                                                                   |
-| `META_LOGIN_CONFIG_ID`        | empty   | Facebook Login for Business configuration ID.                                                                                                          |
-| `META_GRAPH_API_VERSION`      | `v25.0` | Pinned Graph API version. Bumping it requires re-applying the migration and re-running App Review.                                                     |
-| `TIKTOK_CLIENT_KEY`           | empty   | TikTok app key.                                                                                                                                        |
-| `TIKTOK_CLIENT_SECRET`        | empty   | TikTok app secret.                                                                                                                                     |
-| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op.                                                                |
-| `SOCIAL_TIKTOK_ENABLED`       | `false` | Per-provider gate. When `false`, the TikTok provider and callback routes return 404 / disabled.                                                        |
+| Name                          | Default | Purpose                                                                                                                                                 |
+| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`.  |
+| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials are configured per agency in the admin UI. |
 
-None of these may be exposed as `NEXT_PUBLIC_*`. The application refuses to boot in production when `SOCIAL_SYNC_ENABLED=true` but the encryption key is missing or not exactly 32 bytes when decoded.
+None of these may be exposed as `NEXT_PUBLIC_*`. Meta/TikTok app credentials
+and the Graph API version are stored per agency at
+`/app/agency-settings/social/providers`, sealed at rest, and tested there before
+OAuth is enabled. The application refuses to boot in production when
+`SOCIAL_SYNC_ENABLED=true` but the encryption key is missing or not exactly 32
+bytes when decoded.
 
 ### Rollout (staged)
 
-The M4 release ships in five rollout states, each a real production configuration. Do not skip states. The transition between states is a one-line env change followed by a `docker compose up -d --no-deps app`; no migration is needed between states because every state uses the same schema.
+The M4 release ships in four rollout states, each a real production
+configuration. Provider credentials are staged in the agency UI; only the
+global sync switch is changed in the environment.
 
-| State | `SOCIAL_SYNC_ENABLED` | `SOCIAL_TIKTOK_ENABLED` | What is reachable                                                                                          |
-| ----- | --------------------- | ----------------------- | ---------------------------------------------------------------------------------------------------------- |
-| 0     | `false`               | `false`                 | Code is deployed, cron is a no-op. Picker hidden.                                                          |
-| 1     | `false`               | `false`                 | Same as 0; Meta App Review is submitted in parallel.                                                       |
-| 2     | `true`                | `false`                 | Cron runs every 15 min; only the internal LaraTik workspace has connected profiles.                        |
-| 3     | `true`                | `false`                 | Meta is enabled for all workspaces. Seven consecutive clean daily snapshots are observed before this flip. |
-| 4     | `true`                | `true`                  | TikTok is enabled after the TikTok provider approval + focused UAT pass.                                   |
+| State | `SOCIAL_SYNC_ENABLED` | Provider readiness  | What is reachable                                                                                 |
+| ----- | --------------------- | ------------------- | ------------------------------------------------------------------------------------------------- |
+| 0     | `false`               | not configured      | Code is deployed; cron is a no-op and no provider sync runs.                                      |
+| 1     | `false`               | configured/tested   | Credentials and callback are validated in the agency UI; no scheduled sync yet.                   |
+| 2     | `true`                | one internal agency | Cron runs every 15 minutes for explicitly connected internal profiles.                            |
+| 3     | `true`                | controlled UAT pass | Provider is opened to intended agencies after clean snapshots, freshness, and error-state review. |
 
 ### Cron verification
 
@@ -707,7 +723,11 @@ The provider HTTP client retries `429` and `5xx` up to twice with full-jitter de
 
 ### Revoked-app handling
 
-If Meta or TikTok revokes the application entirely (the `META_APP_ID` or `TIKTOK_CLIENT_KEY` is disabled), every call returns `4xx auth_expired`. The repository marks every attached connection `revoked` and every channel `disconnected`. Historical metrics are preserved. Recovery is a full re-authorization through the OAuth flow after the provider-side reactivation.
+If Meta or TikTok revokes the configured application entirely, every call
+returns `4xx auth_expired`. The repository marks every attached connection
+`revoked` and every channel `disconnected`. Historical metrics are preserved.
+Recovery is: reactivate the provider app, update/test the agency provider row,
+then re-authorize the affected connections through the normal OAuth flow.
 
 ### Meta publishing readiness and emergency stop
 

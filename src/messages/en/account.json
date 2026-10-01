@@ -10,6 +10,15 @@
   "fullNameHint": "Used in invitations and exports.",
   "avatarUrlLabel": "Avatar URL",
   "avatarUrlHint": "Paste a link to a hosted image (https://…). Leave blank to use your initials.",
+  "theme": "Appearance",
+  "themeBlurb": "Choose how LaraTik Planner looks on your devices.",
+  "themeLabel": "Color theme",
+  "themeHint": "System follows your device preference. Light and Dark override it for your account.",
+  "themeSystem": "Use system setting",
+  "themeLight": "Light",
+  "themeDark": "Dark",
+  "themeSaving": "Saving appearance…",
+  "themeSaved": "Appearance saved.",
   "languageLabel": "Language",
   "languageHint": "Choose the language for the app interface.",
   "saveProfile": "Save profile",
@@ -114,6 +123,7 @@
     "currentPasswordIncorrect": "That current password is incorrect.",
     "savePreferencesFailed": "We could not save your notification preferences. Try again.",
     "localeCookieSyncFailed": "Profile saved, but the language will apply after your next sign-in.",
+    "themeSaveFailed": "We could not save your appearance preference. Try again.",
     "invalidTokenRequest": "Enter a valid name and choose a supported expiry.",
     "tokenNotFound": "That MCP token no longer exists."
   }

@@ -19,6 +19,8 @@ import { serverEnv } from "@/lib/validation/env";
 import { getNotificationPreferencesForUser } from "@/lib/notifications/service";
 import { listMcpAccessTokens } from "@/lib/mcp/tokens";
 import { McpAccessTokensCard } from "./mcp-access-tokens-card";
+import { ThemePreferenceForm } from "./theme-preference-form";
+import type { ThemePreference } from "@/lib/theme/preferences";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
@@ -53,6 +55,7 @@ export default async function AccountPage() {
         displayName: users.displayName,
         image: users.image,
         locale: users.locale,
+        themePreference: users.themePreference,
       })
       .from(users)
       .where(eq(users.id, userId))
@@ -85,6 +88,10 @@ export default async function AccountPage() {
   if (!profile || hasPassword === null) {
     redirect("/signin?error=AccessDenied");
   }
+  const themePreference: ThemePreference =
+    profile.themePreference === "light" || profile.themePreference === "dark"
+      ? profile.themePreference
+      : "system";
   const { t } = await tForActive();
   const agency = agencyRows[0];
   const buildInfo = createBuildInfo({
@@ -121,6 +128,26 @@ export default async function AccountPage() {
             name: profile.name ?? "",
             image: profile.image ?? "",
             locale: profile.locale,
+          }}
+        />
+      </Card>
+
+      <Card aria-labelledby="theme-heading" data-testid="theme-card">
+        <CardTitle id="theme-heading" className="mb-1">
+          {t("account.theme")}
+        </CardTitle>
+        <p className="text-body text-fg-muted mb-5">{t("account.themeBlurb")}</p>
+        <ThemePreferenceForm
+          preference={themePreference}
+          labels={{
+            label: t("account.themeLabel"),
+            hint: t("account.themeHint"),
+            system: t("account.themeSystem"),
+            light: t("account.themeLight"),
+            dark: t("account.themeDark"),
+            saving: t("account.themeSaving"),
+            saved: t("account.themeSaved"),
+            failed: t("account.errors.themeSaveFailed"),
           }}
         />
       </Card>

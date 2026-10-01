@@ -37,6 +37,7 @@
   "aiAssistance": "مساعدة الذكاء الاصطناعي",
   "aiAssistancePanel": {
     "description": "أنشئ مسودات، وحسّن الموجز، وتحقق من اكتمال المحتوى.",
+    "researchContext": "يمكن لتحسين الموجز استخدام المرجع المرتبط من {platform} لدى {account} كدليل.",
     "closeAria": "إغلاق"
   },
   "aiAssistanceSurface": {
@@ -544,6 +545,23 @@
   },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
+  "researchReference": {
+    "title": "المرجع البحثي",
+    "description": "راجع المصدر الذي ألهم هذه المسودة قبل الإنتاج. المرجع لإثبات المصدر وليس لنسخ المحتوى الأصلي.",
+    "views": "مشاهدة",
+    "likes": "إعجاب",
+    "comments": "تعليق",
+    "openSource": "فتح المصدر"
+  },
+  "researchTeardownApply": {
+    "title": "حقول التفكيك البحثي",
+    "description": "املأ الحقول الإبداعية الفارغة فقط من التفكيك المرتبط. تبقى نسخة المخطط الحالية دون تغيير.",
+    "apply": "تطبيق الحقول المتاحة",
+    "applying": "جارٍ التطبيق…",
+    "applied": "تم تطبيق الحقول المتاحة.",
+    "nothingToApply": "لا توجد حقول فارغة للتعبئة.",
+    "error": "تعذّر تطبيق الحقول البحثية."
+  },
   "sectionAssetsTitle": "الأصول",
   "sectionAssetsDescription": "أضف إصدارات الوسائط المعتمدة عندما يصبح الموجز جاهزًا لمراجعة التصميم.",
   "previewShortcut": "معاينة على {platform} · {account}",

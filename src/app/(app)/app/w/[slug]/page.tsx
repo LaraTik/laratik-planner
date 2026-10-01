@@ -2,8 +2,16 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { and, asc, eq, gte, isNull, lt } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { contentItems, users, workspaceMemberships, workspaceSettings } from "@/lib/db/schema";
+import {
+  contentItems,
+  researchBookmarks,
+  researchWatchlistAccounts,
+  users,
+  workspaceMemberships,
+  workspaceSettings,
+} from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Clock, ListChecks, Plus } from "lucide-react";
 import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
@@ -16,10 +24,14 @@ import { NeedsAttentionList } from "@/components/workspace/needs-attention-list"
 import { RecentlyUpdatedList } from "@/components/workspace/recently-updated-list";
 import { AttentionBanner } from "@/components/workspace/attention-banner";
 import { OverviewKpiStrip, OVERVIEW_KPI_ICONS } from "@/components/workspace/overview-kpi-strip";
+import { CommandCenterPanel } from "@/components/workspace/command-center-panel";
 import { calculateOverviewDashboardMetrics } from "@/lib/dashboard/kpis";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
+import { querySocialAnalytics, querySocialPostObservations } from "@/lib/social/analytics-query";
+import { buildCommandCenterSummary } from "@/lib/social/command-center";
+import type { SocialSourceMetadata } from "@/lib/social/metrics";
 
 /**
  * Workspace Overview — refactored dashboard (ADR-0007).
@@ -70,7 +82,7 @@ export default async function WorkspaceOverviewPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ month?: string; socialWindow?: string }>;
 }) {
   const { t, code } = await tForActive();
   const { slug } = await params;
@@ -79,6 +91,11 @@ export default async function WorkspaceOverviewPage({
   if (!session?.user?.id) redirect("/signin");
   const ws = await getAccessibleWorkspace({ id: session.user.id }, slug);
   if (!ws) notFound();
+  const [canSaveResearch, canRefreshSocial] = await Promise.all([
+    hasWorkspaceRole({ id: session.user.id }, ws.id, ["workspace_manager", "content_planner"]),
+    hasWorkspaceRole({ id: session.user.id }, ws.id, ["workspace_manager"]),
+  ]);
+  const socialWindowDays: 30 | 90 = filters.socialWindow === "90" ? 90 : 30;
 
   // Month selection. The dashboard anchors every metric to a
   // single month (per master prompt §22 "Month consistency").
@@ -103,7 +120,16 @@ export default async function WorkspaceOverviewPage({
   // settings (for the monthly target). The list-safe rollup
   // operates on whatever rows the SQL returns — no N+1 readiness
   // call per item.
-  const [monthlyItems, settings, ownerRows, approvalRows] = await Promise.all([
+  const [
+    monthlyItems,
+    settings,
+    ownerRows,
+    approvalRows,
+    socialAnalytics,
+    socialPostObservations,
+    researchBookmarkRows,
+    watchlistRows,
+  ] = await Promise.all([
     db
       .select({
         id: contentItems.id,
@@ -148,6 +174,30 @@ export default async function WorkspaceOverviewPage({
         ),
       )
       .limit(50),
+    querySocialAnalytics(db, ws.id, ws.timezone, now, socialWindowDays),
+    querySocialPostObservations(db, ws.id, ws.timezone, now, socialWindowDays),
+    db
+      .select({ observationId: researchBookmarks.socialPostObservationId })
+      .from(researchBookmarks)
+      .where(eq(researchBookmarks.workspaceId, ws.id)),
+    db
+      .select({
+        id: researchWatchlistAccounts.id,
+        platform: researchWatchlistAccounts.platform,
+        handle: researchWatchlistAccounts.handle,
+        displayName: researchWatchlistAccounts.displayName,
+        sourceUrl: researchWatchlistAccounts.sourceUrl,
+        providerStatus: researchWatchlistAccounts.providerStatus,
+      })
+      .from(researchWatchlistAccounts)
+      .where(
+        and(
+          eq(researchWatchlistAccounts.workspaceId, ws.id),
+          isNull(researchWatchlistAccounts.archivedAt),
+        ),
+      )
+      .orderBy(asc(researchWatchlistAccounts.createdAt))
+      .limit(6),
   ]);
 
   const ownerById = new Map(ownerRows.map((o) => [o.id, o.displayName]));
@@ -180,6 +230,53 @@ export default async function WorkspaceOverviewPage({
     items: dashboardItems,
   });
 
+  const commandCenter = buildCommandCenterSummary(
+    socialAnalytics.map(({ channel, metrics }) => ({
+      id: channel.id,
+      platform: channel.platform as "facebook" | "instagram" | "tiktok",
+      accountName: channel.accountName,
+      lastSyncedAt: channel.lastSyncedAt,
+      lastSyncErrorCode: channel.lastSyncErrorCode,
+      latestProviderErrorCode:
+        (metrics[metrics.length - 1]?.sourceMetadata as SocialSourceMetadata | null)
+          ?.providerErrorCode ?? null,
+      series: metrics.map((row) => {
+        const metadata = row.sourceMetadata as SocialSourceMetadata | null;
+        return {
+          metricDate: row.metricDate,
+          followerCount: row.followerCount,
+          reach: row.reach,
+          views: row.views,
+          engagedAccounts: row.engagedAccounts,
+          interactions: row.interactions,
+          ...(metadata?.partial === true ? { partial: true } : {}),
+          ...(metadata?.metricStatuses ? { metricStatuses: metadata.metricStatuses } : {}),
+        };
+      }),
+    })),
+    now,
+    socialPostObservations.map(({ observation, channel }) => ({
+      id: observation.id,
+      channelId: channel.id,
+      platform: channel.platform as "facebook" | "instagram" | "tiktok",
+      accountName: channel.accountName,
+      permalink: observation.permalink,
+      publishedAt: observation.publishedAt,
+      mediaType: observation.mediaType as
+        "image" | "video" | "carousel" | "reel" | "story" | "unknown",
+      views: observation.views,
+      reach: observation.reach,
+      likes: observation.likes,
+      comments: observation.comments,
+      saved: observation.saved,
+      shares: observation.shares,
+      interactions: observation.interactions,
+      durationSeconds: observation.durationSeconds,
+    })),
+    ws.timezone,
+    socialWindowDays,
+  );
+
   // Drill-down URL builders. The planning list supports
   //   ?month=YYYY-MM  — month filter
   //   ?status=<s>     — single status filter
@@ -188,6 +285,8 @@ export default async function WorkspaceOverviewPage({
   // We compose against the same `month` the dashboard anchors to,
   // so drilling into the planning list shows the same period.
   const monthQuery = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const commandCenterWindowHref = (days: 30 | 90) =>
+    `/app/w/${slug}?month=${monthQuery}&socialWindow=${days}`;
   const buildPlanningHref = (overrides: Record<string, string | null>) => {
     const params = new URLSearchParams();
     params.set("month", monthQuery);
@@ -297,6 +396,7 @@ export default async function WorkspaceOverviewPage({
       />
       <PageHeader
         eyebrow={ws.name}
+        actionBreakpoint="lg"
         title={
           <span className="inline-flex items-center gap-3">
             {t("workspaceOverview.title")}
@@ -360,7 +460,168 @@ export default async function WorkspaceOverviewPage({
         }
       />
 
-      {/* Executive summary strip (master prompt §5) */}
+      {/* Social Command Center leads the dashboard: scope/freshness → signals → action. */}
+      <CommandCenterPanel
+        summary={commandCenter}
+        locale={code}
+        timezone={ws.timezone}
+        analyticsHref={`/app/w/${slug}/analytics/social`}
+        researchHref={`/app/w/${slug}/research`}
+        channelsHref={`/app/w/${slug}/channels`}
+        planningHref={`/app/w/${slug}/planning`}
+        workspaceSlug={slug}
+        canRefresh={canRefreshSocial}
+        savedResearchObservationIds={new Set(researchBookmarkRows.map((row) => row.observationId))}
+        canSaveResearch={canSaveResearch}
+        watchlist={watchlistRows.map((row) => ({
+          ...row,
+          platform: row.platform as "instagram" | "facebook" | "tiktok" | "youtube",
+          providerStatus: row.providerStatus as "manual" | "available" | "unsupported" | "error",
+        }))}
+        labels={{
+          eyebrow: t("workspaceOverviewDashboard.commandCenter.eyebrow"),
+          title: t("workspaceOverviewDashboard.commandCenter.title"),
+          description: t("workspaceOverviewDashboard.commandCenter.description", {
+            days: socialWindowDays,
+          }),
+          analysisWindow: t("workspaceOverviewDashboard.commandCenter.analysisWindow"),
+          last30Days: t("workspaceOverviewDashboard.commandCenter.last30Days"),
+          last90Days: t("workspaceOverviewDashboard.commandCenter.last90Days"),
+          refreshData: t("workspaceOverviewDashboard.commandCenter.refreshData"),
+          refreshingData: t("workspaceOverviewDashboard.commandCenter.refreshingData"),
+          refreshSuccess: t("workspaceOverviewDashboard.commandCenter.refreshSuccess"),
+          refreshPartial: t("workspaceOverviewDashboard.commandCenter.refreshPartial"),
+          refreshError: t("workspaceOverviewDashboard.commandCenter.refreshError"),
+          viewAnalytics: t("workspaceOverviewDashboard.commandCenter.viewAnalytics"),
+          viewResearch: t("workspaceOverviewDashboard.commandCenter.viewResearch"),
+          freshness: t("workspaceOverviewDashboard.commandCenter.freshness"),
+          noDataTitle: t("workspaceOverviewDashboard.commandCenter.noDataTitle"),
+          noDataDescription: t("workspaceOverviewDashboard.commandCenter.noDataDescription"),
+          connectChannels: t("workspaceOverviewDashboard.commandCenter.connectChannels"),
+          setupTitle: t("workspaceOverviewDashboard.commandCenter.setupTitle"),
+          setupDescription: t("workspaceOverviewDashboard.commandCenter.setupDescription"),
+          setupConnectAccount: t("workspaceOverviewDashboard.commandCenter.setupConnectAccount"),
+          setupCollectSignals: t("workspaceOverviewDashboard.commandCenter.setupCollectSignals"),
+          setupReviewAnalytics: t("workspaceOverviewDashboard.commandCenter.setupReviewAnalytics"),
+          setupOpenChannels: t("workspaceOverviewDashboard.commandCenter.setupOpenChannels"),
+          setupOpenAnalytics: t("workspaceOverviewDashboard.commandCenter.setupOpenAnalytics"),
+          setupComplete: t("workspaceOverviewDashboard.commandCenter.setupComplete"),
+          setupNext: t("workspaceOverviewDashboard.commandCenter.setupNext"),
+          partial: t("workspaceOverviewDashboard.commandCenter.partial"),
+          followers: t("workspaceOverviewDashboard.commandCenter.followers"),
+          followerChange: t("workspaceOverviewDashboard.commandCenter.followerChange", {
+            days: socialWindowDays,
+          }),
+          reach: t("workspaceOverviewDashboard.commandCenter.reach"),
+          views: t("workspaceOverviewDashboard.commandCenter.views"),
+          interactions: t("workspaceOverviewDashboard.commandCenter.interactions"),
+          engagementRate: t("workspaceOverviewDashboard.commandCenter.engagementRate"),
+          trendTitle: t("workspaceOverviewDashboard.commandCenter.trendTitle"),
+          trendDescription: t("workspaceOverviewDashboard.commandCenter.trendDescription", {
+            days: socialWindowDays,
+          }),
+          trendTable: t("workspaceOverviewDashboard.commandCenter.trendTable"),
+          date: t("workspaceOverviewDashboard.commandCenter.date"),
+          strongestAccounts: t("workspaceOverviewDashboard.commandCenter.strongestAccounts"),
+          strongestAccountsDescription: t(
+            "workspaceOverviewDashboard.commandCenter.strongestAccountsDescription",
+          ),
+          channelPerformance: t("workspaceOverviewDashboard.commandCenter.channelPerformance"),
+          channelPerformanceDescription: t(
+            "workspaceOverviewDashboard.commandCenter.channelPerformanceDescription",
+          ),
+          noPerformanceData: t("workspaceOverviewDashboard.commandCenter.noPerformanceData"),
+          topContent: t("workspaceOverviewDashboard.commandCenter.topContent"),
+          topContentDescription: t(
+            "workspaceOverviewDashboard.commandCenter.topContentDescription",
+          ),
+          contentInventory: {
+            title: t("workspaceOverviewDashboard.commandCenter.contentInventory.title"),
+            description: t("workspaceOverviewDashboard.commandCenter.contentInventory.description"),
+            recent: t("workspaceOverviewDashboard.commandCenter.contentInventory.recent"),
+            mostViewed: t("workspaceOverviewDashboard.commandCenter.contentInventory.mostViewed"),
+            outlier: t("workspaceOverviewDashboard.commandCenter.contentInventory.outlier"),
+            engagement: t("workspaceOverviewDashboard.commandCenter.contentInventory.engagement"),
+            total: t("workspaceOverviewDashboard.commandCenter.contentInventory.total"),
+            previous: t("workspaceOverviewDashboard.commandCenter.contentInventory.previous"),
+            next: t("workspaceOverviewDashboard.commandCenter.contentInventory.next"),
+            page: t("workspaceOverviewDashboard.commandCenter.contentInventory.page"),
+            noResults: t("workspaceOverviewDashboard.commandCenter.contentInventory.noResults"),
+            openSource: t("workspaceOverviewDashboard.commandCenter.openSource"),
+            createBrief: t("workspaceOverviewDashboard.commandCenter.createBriefFromPost"),
+            saveResearch: t("workspaceOverviewDashboard.commandCenter.saveResearch"),
+            savedResearch: t("workspaceOverviewDashboard.commandCenter.savedResearch"),
+            saveError: t("workspaceOverviewDashboard.commandCenter.researchSaveError"),
+            views: t("workspaceOverviewDashboard.commandCenter.views"),
+            interactions: t("workspaceOverviewDashboard.commandCenter.interactions"),
+            likes: t("workspaceOverviewDashboard.commandCenter.likes"),
+            comments: t("workspaceOverviewDashboard.commandCenter.comments"),
+          },
+          noContentData: t("workspaceOverviewDashboard.commandCenter.noContentData"),
+          outlier: t("workspaceOverviewDashboard.commandCenter.outlier"),
+          likes: t("workspaceOverviewDashboard.commandCenter.likes"),
+          comments: t("workspaceOverviewDashboard.commandCenter.comments"),
+          saved: t("workspaceOverviewDashboard.commandCenter.saved"),
+          shares: t("workspaceOverviewDashboard.commandCenter.shares"),
+          openSource: t("workspaceOverviewDashboard.commandCenter.openSource"),
+          createBriefFromPost: t("workspaceOverviewDashboard.commandCenter.createBriefFromPost"),
+          saveResearch: t("workspaceOverviewDashboard.commandCenter.saveResearch"),
+          savedResearch: t("workspaceOverviewDashboard.commandCenter.savedResearch"),
+          researchSaveError: t("workspaceOverviewDashboard.commandCenter.researchSaveError"),
+          bestTime: t("workspaceOverviewDashboard.commandCenter.bestTime"),
+          bestTimeDescription: t("workspaceOverviewDashboard.commandCenter.bestTimeDescription"),
+          noBestTimeData: t("workspaceOverviewDashboard.commandCenter.noBestTimeData"),
+          sampleSize: t("workspaceOverviewDashboard.commandCenter.sampleSize"),
+          averageViews: t("workspaceOverviewDashboard.commandCenter.averageViews"),
+          bestVideoLength: t("workspaceOverviewDashboard.commandCenter.bestVideoLength"),
+          bestVideoLengthDescription: t(
+            "workspaceOverviewDashboard.commandCenter.bestVideoLengthDescription",
+          ),
+          noLengthData: t("workspaceOverviewDashboard.commandCenter.noLengthData"),
+          medianViews: t("workspaceOverviewDashboard.commandCenter.medianViews"),
+          relativePerformance: t("workspaceOverviewDashboard.commandCenter.relativePerformance"),
+          under15Seconds: t("workspaceOverviewDashboard.commandCenter.under15Seconds"),
+          fifteenTo30Seconds: t("workspaceOverviewDashboard.commandCenter.fifteenTo30Seconds"),
+          thirtyTo60Seconds: t("workspaceOverviewDashboard.commandCenter.thirtyTo60Seconds"),
+          over60Seconds: t("workspaceOverviewDashboard.commandCenter.over60Seconds"),
+          noAccountData: t("workspaceOverviewDashboard.commandCenter.noAccountData"),
+          planningSignal: t("workspaceOverviewDashboard.commandCenter.planningSignal"),
+          planningSignalDescription: t(
+            "workspaceOverviewDashboard.commandCenter.planningSignalDescription",
+          ),
+          openPlanning: t("workspaceOverviewDashboard.commandCenter.openPlanning"),
+          sourceNote: t("workspaceOverviewDashboard.commandCenter.sourceNote"),
+          latestMetricDate: t("workspaceOverviewDashboard.commandCenter.latestMetricDate"),
+          coverage: t("workspaceOverviewDashboard.commandCenter.coverage"),
+          notEnoughData: t("workspaceOverviewDashboard.commandCenter.notEnoughData"),
+          dataHealth: t("workspaceOverviewDashboard.commandCenter.dataHealth"),
+          dataHealthDescription: t(
+            "workspaceOverviewDashboard.commandCenter.dataHealthDescription",
+          ),
+          healthy: t("workspaceOverviewDashboard.commandCenter.healthy"),
+          degraded: t("workspaceOverviewDashboard.commandCenter.degraded"),
+          stalled: t("workspaceOverviewDashboard.commandCenter.stalled"),
+          noSync: t("workspaceOverviewDashboard.commandCenter.noSync"),
+          reviewData: t("workspaceOverviewDashboard.commandCenter.reviewData"),
+          watchlistTitle: t("workspaceOverviewDashboard.commandCenter.watchlistTitle"),
+          watchlistDescription: t("workspaceOverviewDashboard.commandCenter.watchlistDescription"),
+          watchlistSourceOnly: t("workspaceOverviewDashboard.commandCenter.watchlistSourceOnly"),
+          watchlistProviderAvailable: t(
+            "workspaceOverviewDashboard.commandCenter.watchlistProviderAvailable",
+          ),
+          watchlistProviderUnsupported: t(
+            "workspaceOverviewDashboard.commandCenter.watchlistProviderUnsupported",
+          ),
+          watchlistProviderError: t(
+            "workspaceOverviewDashboard.commandCenter.watchlistProviderError",
+          ),
+        }}
+        windowDays={socialWindowDays}
+        window30Href={commandCenterWindowHref(30)}
+        window90Href={commandCenterWindowHref(90)}
+      />
+
+      {/* Planning execution summary follows the decision layer. */}
       <OverviewKpiStrip tiles={kpiTiles} t={t} />
 
       {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}

@@ -61,6 +61,32 @@ export type ProfileSnapshot = {
    */
   responseHash: string;
   sourceMetadata: SocialSourceMetadata;
+  /**
+   * Optional bounded post-level observations collected alongside a profile
+   * snapshot. Providers may return none when the capability is unavailable.
+   */
+  postObservations?: SocialPostObservation[];
+};
+
+export type SocialPostObservation = {
+  provider: "meta" | "tiktok";
+  externalPostId: string;
+  permalink: string | null;
+  publishedAt: Date | null;
+  mediaType: "image" | "video" | "carousel" | "reel" | "story" | "unknown";
+  mediaProductType: string | null;
+  durationSeconds: number | null;
+  views: number | null;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saved: number | null;
+  shares: number | null;
+  interactions: number | null;
+  observedAt: Date;
+  providerApiVersion: string;
+  providerRequestId: string | null;
+  sourceMetadata: SocialSourceMetadata;
 };
 
 export type ConnectedProfileRef = Pick<

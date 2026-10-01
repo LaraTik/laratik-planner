@@ -114,11 +114,12 @@ describe("diagnostics tool registration", () => {
     );
   });
 
-  it("does not change the count of pre-existing content tools", async () => {
+  it("keeps the content and diagnostics tools plus the research shelf", async () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
-    // 15 content/brand tools + 5 diagnostics.
-    expect(tools).toHaveLength(20);
+    // 15 content/brand tools + 5 diagnostics + 1 read-only research tool.
+    expect(tools).toHaveLength(21);
+    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
   });
 });
 

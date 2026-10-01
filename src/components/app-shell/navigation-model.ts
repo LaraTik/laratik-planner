@@ -1,6 +1,7 @@
 import {
   Activity,
   AlertOctagon,
+  Bookmark,
   BarChart3,
   FileText,
   BookOpen,
@@ -121,7 +122,7 @@ export type SidebarNestedItemSpec = {
  * data model. The grouping matches the §1.B guidance in the
  * StudioFlow /ui-ux-pro-max spec.
  *
- * Groups: Overview (top), Content, Performance, Brand, Manage.
+ * Groups: Overview (top), Plan, Understand, Produce, Manage.
  *
  * Routes and labels are preserved from the previous Sidebar. The
  * structure is reorganised; the destination URLs are unchanged so
@@ -154,9 +155,9 @@ export function buildWorkspaceNavigation(input: {
   const groups: SidebarGroupSpec[] = [
     {
       kind: "group",
-      key: "personal",
-      label: "Personal",
-      labelKey: "sidebar.personalGroup",
+      key: "plan",
+      label: "Plan",
+      labelKey: "sidebar.plan",
       heading: true,
       items: [
         {
@@ -168,15 +169,6 @@ export function buildWorkspaceNavigation(input: {
           icon: ClipboardList,
           exact: true,
         },
-      ],
-    },
-    {
-      kind: "group",
-      key: "content",
-      label: "Content",
-      labelKey: "sidebar.workspaceContent",
-      heading: true,
-      items: [
         {
           kind: "expandable",
           key: "planning",
@@ -222,18 +214,6 @@ export function buildWorkspaceNavigation(input: {
             },
           ],
         },
-        ...(canAccessTrendRadar
-          ? [
-              {
-                kind: "link" as const,
-                key: "trends",
-                href: `${wsBase}/trends`,
-                label: "Trend Radar",
-                labelKey: "sidebar.trends",
-                icon: Radar,
-              },
-            ]
-          : []),
         {
           kind: "link",
           key: "approvals",
@@ -252,6 +232,60 @@ export function buildWorkspaceNavigation(input: {
           icon: Palette,
           badge: badges.designQueue,
         },
+      ],
+    },
+    {
+      kind: "group",
+      key: "understand",
+      label: "Understand",
+      labelKey: "sidebar.understand",
+      heading: true,
+      items: [
+        ...(canAccessTrendRadar
+          ? [
+              {
+                kind: "link" as const,
+                key: "trends",
+                href: `${wsBase}/trends`,
+                label: "Trend Radar",
+                labelKey: "sidebar.trends",
+                icon: Radar,
+              },
+            ]
+          : []),
+        {
+          kind: "link",
+          key: "research",
+          href: `${wsBase}/research`,
+          label: "Research",
+          labelKey: "sidebar.research",
+          icon: Bookmark,
+        },
+        {
+          kind: "link",
+          key: "analytics",
+          href: `${wsBase}/analytics/social`,
+          label: "Analytics",
+          labelKey: "sidebar.analytics",
+          icon: BarChart3,
+        },
+        {
+          kind: "link",
+          key: "channels",
+          href: `${wsBase}/channels`,
+          label: "Channels",
+          labelKey: "sidebar.channels",
+          icon: Share2,
+        },
+      ],
+    },
+    {
+      kind: "group",
+      key: "produce",
+      label: "Produce",
+      labelKey: "sidebar.produce",
+      heading: true,
+      items: [
         {
           kind: "link",
           key: "library",
@@ -268,40 +302,6 @@ export function buildWorkspaceNavigation(input: {
           labelKey: "sidebar.media",
           icon: ImageIcon,
         },
-      ],
-    },
-    {
-      kind: "group",
-      key: "performance",
-      label: "Performance",
-      labelKey: "sidebar.performance",
-      heading: true,
-      items: [
-        {
-          kind: "link",
-          key: "channels",
-          href: `${wsBase}/channels`,
-          label: "Channels",
-          labelKey: "sidebar.channels",
-          icon: Share2,
-        },
-        {
-          kind: "link",
-          key: "analytics",
-          href: `${wsBase}/analytics/social`,
-          label: "Analytics",
-          labelKey: "sidebar.analytics",
-          icon: BarChart3,
-        },
-      ],
-    },
-    {
-      kind: "group",
-      key: "brand",
-      label: "Brand",
-      labelKey: "sidebar.brand",
-      heading: true,
-      items: [
         {
           kind: "expandable",
           key: "brand-kit",

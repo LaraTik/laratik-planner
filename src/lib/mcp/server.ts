@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { db } from "@/lib/db";
 import {
@@ -10,6 +10,12 @@ import {
   appErrorGroups,
   brandAssets,
   contentItems,
+  researchBookmarks,
+  researchCollections,
+  researchTeardowns,
+  researchWatchlistAccounts,
+  socialChannels,
+  socialPostObservations,
   users,
   workspaces,
   workspaceMembershipRoles,
@@ -748,6 +754,157 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
             ...(outcome.forcedApprovalMode
               ? { forced_approval_mode: outcome.forcedApprovalMode }
               : {}),
+          },
+          response_format,
+        );
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
+    "laratik_planner_list_research",
+    {
+      title: "List workspace research",
+      description:
+        "Read the workspace's Meedro-style research shelf: visible collections, saved observed posts, reviewed teardowns, and source-only watchlist accounts. Provider media and raw provider bodies are never returned.",
+      inputSchema: z.object({
+        workspace_id: workspaceId,
+        item_kind: z
+          .enum(["all", "collections", "bookmarks", "teardowns", "watchlist"])
+          .default("all")
+          .describe("Return one research kind or all four kinds. Default all."),
+        limit: z.number().int().min(1).max(100).default(50),
+        response_format: responseFormat,
+      }),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ workspace_id, item_kind, limit, response_format }) => {
+      try {
+        requireScope(context, "content:read");
+        const workspace = await requireWorkspace(context, workspace_id);
+        const include = (kind: Exclude<typeof item_kind, "all">) =>
+          item_kind === "all" || item_kind === kind;
+
+        const collections = include("collections")
+          ? await db
+              .select({
+                id: researchCollections.id,
+                name: researchCollections.name,
+                description: researchCollections.description,
+                share_scope: researchCollections.shareScope,
+                created_by: researchCollections.createdBy,
+                created_at: researchCollections.createdAt,
+              })
+              .from(researchCollections)
+              .where(
+                and(
+                  eq(researchCollections.workspaceId, workspace.id),
+                  or(
+                    eq(researchCollections.shareScope, "workspace"),
+                    eq(researchCollections.createdBy, context.actor.id),
+                  ),
+                ),
+              )
+              .orderBy(desc(researchCollections.createdAt))
+              .limit(limit)
+          : [];
+
+        const bookmarks = include("bookmarks")
+          ? await db
+              .select({
+                id: researchBookmarks.id,
+                observation_id: socialPostObservations.id,
+                account_name: socialChannels.accountName,
+                platform: socialChannels.platform,
+                media_type: socialPostObservations.mediaType,
+                permalink: socialPostObservations.permalink,
+                published_at: socialPostObservations.publishedAt,
+                views: socialPostObservations.views,
+                reach: socialPostObservations.reach,
+                likes: socialPostObservations.likes,
+                comments: socialPostObservations.comments,
+                saved: socialPostObservations.saved,
+                shares: socialPostObservations.shares,
+                interactions: socialPostObservations.interactions,
+                duration_seconds: socialPostObservations.durationSeconds,
+                saved_at: researchBookmarks.createdAt,
+              })
+              .from(researchBookmarks)
+              .innerJoin(
+                socialPostObservations,
+                eq(socialPostObservations.id, researchBookmarks.socialPostObservationId),
+              )
+              .innerJoin(
+                socialChannels,
+                eq(socialChannels.id, socialPostObservations.socialChannelId),
+              )
+              .where(
+                and(
+                  eq(researchBookmarks.workspaceId, workspace.id),
+                  eq(socialChannels.workspaceId, workspace.id),
+                ),
+              )
+              .orderBy(desc(researchBookmarks.createdAt))
+              .limit(limit)
+          : [];
+
+        const teardowns = include("teardowns")
+          ? await db
+              .select({
+                id: researchTeardowns.id,
+                collection_id: researchTeardowns.collectionId,
+                source_kind: researchTeardowns.sourceKind,
+                source_reference: researchTeardowns.sourceReference,
+                result: researchTeardowns.result,
+                created_by: researchTeardowns.createdBy,
+                created_at: researchTeardowns.createdAt,
+              })
+              .from(researchTeardowns)
+              .where(eq(researchTeardowns.workspaceId, workspace.id))
+              .orderBy(desc(researchTeardowns.createdAt))
+              .limit(limit)
+          : [];
+
+        const watchlist = include("watchlist")
+          ? await db
+              .select({
+                id: researchWatchlistAccounts.id,
+                platform: researchWatchlistAccounts.platform,
+                handle: researchWatchlistAccounts.handle,
+                display_name: researchWatchlistAccounts.displayName,
+                source_url: researchWatchlistAccounts.sourceUrl,
+                provider_status: researchWatchlistAccounts.providerStatus,
+                provider_error_code: researchWatchlistAccounts.providerErrorCode,
+                last_checked_at: researchWatchlistAccounts.lastCheckedAt,
+                created_at: researchWatchlistAccounts.createdAt,
+              })
+              .from(researchWatchlistAccounts)
+              .where(
+                and(
+                  eq(researchWatchlistAccounts.workspaceId, workspace.id),
+                  isNull(researchWatchlistAccounts.archivedAt),
+                ),
+              )
+              .orderBy(desc(researchWatchlistAccounts.createdAt))
+              .limit(limit)
+          : [];
+
+        return result(
+          {
+            workspace_id: workspace.id,
+            workspace: {
+              name: workspace.name,
+              slug: workspace.slug,
+              timezone: workspace.timezone,
+            },
+            item_kind,
+            collections,
+            bookmarks,
+            teardowns,
+            watchlist,
           },
           response_format,
         );

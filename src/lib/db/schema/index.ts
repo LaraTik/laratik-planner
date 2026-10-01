@@ -49,5 +49,6 @@ export * from "./media";
 // source opt-out. Imported after content (for `contentItems` FK on
 // `trend_brief`) and after identity (for the `users` FKs).
 export * from "./trends";
+export * from "./research";
 export * from "./mcp";
 export * from "./tasks";

@@ -51,7 +51,10 @@ vi.mock("@/lib/social/providers/meta", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: revalidatePathMock }));
 
 async function loadRoute() {
-  vi.resetModules();
+  // Keep one route module instance: resetting the module graph for every
+  // case reinitializes Next's request dependencies and can outlive Vitest's
+  // five-second test timeout. The mocked collaborators are reset in
+  // beforeEach, so module isolation is unnecessary here.
   return import("@/app/api/social/meta/callback/[agencySlug]/route");
 }
 

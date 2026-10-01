@@ -9,11 +9,14 @@ import {
   aiFeatureSettings,
   aiUsageEvents,
   contentItems,
+  contentResearchLinks,
+  socialChannels,
+  socialPostObservations,
   trendBriefs,
   trendSignals,
   workspaces,
 } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import {
   campaignIdeas,
   checkCompleteness,
@@ -26,6 +29,7 @@ import {
   splitVariants,
   type ChatResult,
   type FormatPayloadField,
+  type ResearchBriefContext,
 } from "@/lib/ai";
 import { loadAiContext, isContextMeaningful } from "@/lib/ai/context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
@@ -249,6 +253,38 @@ export async function POST(req: NextRequest) {
       { status: 404, headers: mutatingApiHeaders() },
     );
 
+  const [researchReference] = await db
+    .select({
+      accountName: socialChannels.accountName,
+      platform: socialChannels.platform,
+      mediaType: socialPostObservations.mediaType,
+      durationSeconds: socialPostObservations.durationSeconds,
+      views: socialPostObservations.views,
+      reach: socialPostObservations.reach,
+      likes: socialPostObservations.likes,
+      comments: socialPostObservations.comments,
+      saved: socialPostObservations.saved,
+      shares: socialPostObservations.shares,
+    })
+    .from(contentResearchLinks)
+    .innerJoin(
+      socialPostObservations,
+      eq(socialPostObservations.id, contentResearchLinks.socialPostObservationId),
+    )
+    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .where(
+      and(
+        eq(contentResearchLinks.contentItemId, item.id),
+        eq(contentResearchLinks.workspaceId, ws.id),
+        eq(socialChannels.workspaceId, ws.id),
+      ),
+    )
+    .orderBy(desc(contentResearchLinks.createdAt))
+    .limit(1);
+  const researchContext: ResearchBriefContext | undefined = researchReference
+    ? researchReference
+    : undefined;
+
   let trendContext: { label: string; platform: string; velocity: number } | undefined;
   if (parsed.data.trendSignalId) {
     const [linked] = await db
@@ -374,6 +410,7 @@ export async function POST(req: NextRequest) {
         providerUsage = usage;
       },
       ...(trendContext ? { trendContext } : {}),
+      ...(researchContext ? { researchContext } : {}),
     };
     let text: string | null = null;
     // `brief_improvement` returns THREE variants delimited by

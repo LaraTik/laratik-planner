@@ -10,6 +10,15 @@
   "fullNameHint": "يُستخدم في الدعوات والتصديرات.",
   "avatarUrlLabel": "رابط الصورة الشخصية",
   "avatarUrlHint": "ألصق رابطًا لصورة مستضافة (https://…). اتركه فارغًا لاستخدام الأحرف الأولى من اسمك.",
+  "theme": "المظهر",
+  "themeBlurb": "اختر طريقة ظهور LaraTik Planner على أجهزتك.",
+  "themeLabel": "السمة اللونية",
+  "themeHint": "يتبع إعداد النظام تفضيلات جهازك. يتجاوز الوضع الفاتح أو الداكن ذلك لحسابك.",
+  "themeSystem": "استخدام إعداد النظام",
+  "themeLight": "فاتح",
+  "themeDark": "داكن",
+  "themeSaving": "جارٍ حفظ المظهر…",
+  "themeSaved": "تم حفظ المظهر.",
   "languageLabel": "اللغة",
   "languageHint": "اختر لغة واجهة التطبيق.",
   "saveProfile": "حفظ الملف الشخصي",
@@ -114,6 +123,7 @@
     "currentPasswordIncorrect": "كلمة المرور الحالية غير صحيحة.",
     "savePreferencesFailed": "تعذر حفظ تفضيلات الإشعارات. حاول مرة أخرى.",
     "localeCookieSyncFailed": "تم حفظ الملف الشخصي، وستُطبّق اللغة بعد تسجيل الدخول التالي.",
+    "themeSaveFailed": "تعذر حفظ تفضيل المظهر. حاول مرة أخرى.",
     "invalidTokenRequest": "أدخل اسمًا صالحًا واختر مدة انتهاء مدعومة.",
     "tokenNotFound": "رمز MCP هذا غير موجود."
   }
