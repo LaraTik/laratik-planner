@@ -41,6 +41,8 @@ export class SocialProviderError extends Error {
       | "invalid_response",
     public readonly retryable: boolean,
     public readonly requestId: string | null,
+    /** A bounded, token-redacted provider message for operator diagnostics. */
+    public readonly providerMessage: string | null = null,
   ) {
     super(code);
     this.name = "SocialProviderError";
@@ -129,9 +131,18 @@ function classifyStatus(
 ): {
   code: SocialProviderError["code"];
   retryable: boolean;
+  providerMessage?: string;
 } {
+  const metaError = readMetaError(body);
+  const providerMessage = sanitizeProviderMessage(metaError?.message);
+  const result = (code: SocialProviderError["code"], retryable: boolean) => ({
+    code,
+    retryable,
+    ...(providerMessage ? { providerMessage } : {}),
+  });
+
   if (status === 401) {
-    return { code: "auth_expired", retryable: false };
+    return result("auth_expired", false);
   }
   if (status === 403) {
     // 403 is ambiguous on its own. Meta returns a `code` field in
@@ -143,53 +154,55 @@ function classifyStatus(
     // was a missing scope or pending App Review. Disambiguate
     // here so the snapshot's sourceMetadata.providerErrorCode
     // (and the analytics health banner) shows the actual reason.
-    if (body) {
-      try {
-        const parsed = JSON.parse(body) as {
-          error?: { code?: number; type?: string };
-        };
-        const providerCode = parsed.error?.code;
-        if (typeof providerCode === "number" && providerCode !== 190) {
-          return { code: "permission_denied", retryable: false };
-        }
-      } catch {
-        // Body wasn't JSON; fall through to the auth_expired
-        // default so the operator at least gets a valid code.
-      }
+    if (metaError && metaError.code !== 190) {
+      return result("permission_denied", false);
     }
-    return { code: "auth_expired", retryable: false };
+    return result("auth_expired", false);
   }
-  if (status === 404) return { code: "not_found", retryable: false };
-  if (status === 429) return { code: "rate_limited", retryable: true };
+  if (status === 404) return result("not_found", false);
+  if (status === 429) return result("rate_limited", true);
   if (status === 502 || status === 503 || status === 504) {
-    return { code: "provider_unavailable", retryable: true };
+    return result("provider_unavailable", true);
   }
-  if (status >= 500) return { code: "provider_unavailable", retryable: true };
-  // 2026-08-28: 400 with Meta `error.code: 100` and a "metric"-flavored
-  // message means the Meta app doesn't have that specific insight metric
-  // enabled (e.g. a Page metric is not in the App Review allowlist, or the
-  // app is in Development mode without a role for the user). This is a
-  // CONFIGURATION issue, not a transient failure — classify it
-  // distinctly from the catch-all `invalid_response` so the page
-  // branch can write a clean `partial: true` row with the metric
-  // marked `unsupported`, without surfacing a retryable channel
-  // error or the misleading "Meta returned an unrecognized
-  // response" message to the operator.
-  if (status === 400 && body) {
-    try {
-      const parsed = JSON.parse(body) as {
-        error?: { code?: number; message?: string };
-      };
-      const providerCode = parsed.error?.code;
-      const providerMessage = parsed.error?.message ?? "";
-      if (providerCode === 100 && /metric|insights/i.test(providerMessage)) {
-        return { code: "metric_unavailable", retryable: false };
-      }
-    } catch {
-      // Body wasn't JSON; fall through to the catch-all.
+  if (status >= 500) return result("provider_unavailable", true);
+  // Meta uses error.code 100 for both an unavailable metric and malformed
+  // request parameters. Only the explicit metric wording is a capability
+  // gap; every other 400 remains an invalid response with its safe message.
+  if (status === 400 && metaError?.code === 100) {
+    if (isMetricUnavailableMessage(metaError.message)) {
+      return result("metric_unavailable", false);
     }
   }
-  return { code: "invalid_response", retryable: false };
+  return result("invalid_response", false);
+}
+
+function readMetaError(body: string | undefined): { code?: number; message?: string } | null {
+  if (!body) return null;
+  try {
+    const parsed = JSON.parse(body) as { error?: { code?: number; message?: string } };
+    return parsed.error ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function isMetricUnavailableMessage(message: string | undefined): boolean {
+  return Boolean(
+    message &&
+    /(?:valid|invalid|unsupported|unknown|unavailable|deprecated|not\s+supported)[^\n]{0,60}(?:insights\s+)?metric|(?:insights\s+)?metric[^\n]{0,60}(?:valid|invalid|unsupported|unknown|unavailable|deprecated|not\s+supported)/i.test(
+      message,
+    ),
+  );
+}
+
+function sanitizeProviderMessage(message: unknown): string | null {
+  if (typeof message !== "string" || message.trim().length === 0) return null;
+  return truncate(
+    message
+      .replace(/(?:access_token|refresh_token|app_secret)=[^\s&]+/gi, "$1=[redacted]")
+      .replace(/Bearer\s+[^\s]+/gi, "Bearer [redacted]"),
+    240,
+  );
 }
 
 function truncate(s: string, max = 120): string {
@@ -271,6 +284,7 @@ export async function providerRequest(
           classification.code,
           classification.retryable,
           requestId,
+          classification.providerMessage ?? null,
         );
         if (classification.retryable && attempt < MAX_ATTEMPTS - 1) {
           lastError = error;

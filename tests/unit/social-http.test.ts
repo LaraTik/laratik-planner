@@ -85,6 +85,7 @@ describe("providerRequest", () => {
     await expect(providerRequest("https://example.com/x")).rejects.toMatchObject({
       code: "metric_unavailable",
       retryable: false,
+      providerMessage: "(#100) The value must be a valid insights metric",
     });
   });
 
@@ -105,6 +106,7 @@ describe("providerRequest", () => {
       Promise.resolve(new Response(metaBody, { status: 400 }))) as typeof fetch;
     await expect(providerRequest("https://example.com/x")).rejects.toMatchObject({
       code: "invalid_response",
+      providerMessage: "(#100) Missing required parameter: since",
     });
   });
 

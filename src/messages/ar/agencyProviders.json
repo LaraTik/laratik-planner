@@ -83,6 +83,8 @@
   "analyticsProbeRun": "تشغيل الفحص",
   "analyticsProbePending": "جارٍ التحقق…",
   "analyticsProbeFailed": "تعذر إكمال فحص التحليلات.",
+  "analyticsProbeStatusLegend": "يتم طلب المقاييس التي تدعمها المنصة المحددة فقط. يظهر المقياس المقيّد من جهة المزود كغير مدعوم مع تشخيص Meta، ولا يُعامل مطلقًا كصفر.",
+  "analyticsProbeDiagnostic": "لماذا؟",
   "analyticsProbeMediaHeading": "إمكانات تحليلات المنشور الأخير",
   "analyticsProbeMediaBody": "تم اختبار منشور مملوك حديثًا دون حفظ بيانات التحليلات أو تغييرها.",
   "analyticsProbeMediaNoMedia": "لم تُعد Meta أي وسائط مملوكة للاختبار.",

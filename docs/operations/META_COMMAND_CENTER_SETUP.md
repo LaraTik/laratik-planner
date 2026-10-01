@@ -188,6 +188,14 @@ Instagram is healthy at 358 followers (+8), while Facebook is 138 followers
 degraded, 0 stalled; the degraded result is the explicit provider error
 `metric_unavailable`, not a zero value.
 
+The read-only probe requests only metrics in the selected platform's
+capability registry: Facebook Pages do not receive an `accounts_engaged`
+request. If Meta rejects a requested metric, the probe keeps successful
+sibling values and shows the bounded Meta message in the metric's diagnostic
+disclosure. Explicit metric wording is classified as `metric_unavailable`;
+other 400 responses remain errors so request-shape and API-version problems
+are not mistaken for a capability gap.
+
 This is controlled read-only production evidence, not a claim that all Meta
 metrics are available. No OAuth flow, permission, credential, asset, or
 publishing setting was changed during the checkpoint. Use Food Game for the

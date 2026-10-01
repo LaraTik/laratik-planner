@@ -25,14 +25,6 @@ import {
 } from "./metrics";
 import type { SocialPlatform } from "./types";
 
-const PROBE_METRICS: SocialMetric[] = [
-  "followerCount",
-  "reach",
-  "views",
-  "interactions",
-  "engagedAccounts",
-];
-
 export type AnalyticsProbeProfile = {
   channelId: string;
   workspaceId: string;
@@ -143,7 +135,10 @@ export async function runAnalyticsProbe(
       credentials,
       config,
     );
-    for (const metric of PROBE_METRICS) {
+    // Only probe metrics in the platform capability registry. Facebook
+    // Pages do not expose Instagram's `engagedAccounts` metric, so it must
+    // not appear as if the probe requested it from Meta.
+    for (const metric of getSupportedSocialMetrics(profile.platform)) {
       statuses[metric] = resolveMetricStatus({
         platform: profile.platform,
         metric,

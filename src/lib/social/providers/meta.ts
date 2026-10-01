@@ -832,6 +832,7 @@ export type MetaMediaInsightMetricStatus = {
   value?: number;
   providerErrorCode?: string;
   providerRequestId?: string;
+  providerMessage?: string;
 };
 
 export type MetaMediaInsightProbe = {
@@ -905,6 +906,7 @@ async function fetchMetaInsightsMetric(args: {
   value: number | null;
   errorCode: SocialProviderError["code"] | null;
   requestId: string | null;
+  providerMessage: string | null;
   usage: MetaRateLimitUsage;
 }> {
   const url = new URL(args.baseUrl);
@@ -927,6 +929,7 @@ async function fetchMetaInsightsMetric(args: {
       value: readMetricValue(parsed.data[0]),
       errorCode: null,
       requestId,
+      providerMessage: null,
       usage,
     };
   } catch (err) {
@@ -935,6 +938,7 @@ async function fetchMetaInsightsMetric(args: {
         value: null,
         errorCode: err.code,
         requestId: err.requestId,
+        providerMessage: err.providerMessage,
         usage: { app: null, business: null },
       };
     }
@@ -945,6 +949,7 @@ async function fetchMetaInsightsMetric(args: {
       value: null,
       errorCode: "provider_unavailable",
       requestId: null,
+      providerMessage: null,
       usage: { app: null, business: null },
     };
   }
@@ -1008,14 +1013,20 @@ export async function probeMetaRecentInstagramMediaInsights(args: {
                 status: "available",
                 value: result.value,
                 ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
               }
             : result.errorCode === "metric_unavailable"
-              ? { status: "unsupported", providerErrorCode: result.errorCode }
+              ? {
+                  status: "unsupported",
+                  providerErrorCode: result.errorCode,
+                  ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
+                }
               : result.errorCode
                 ? {
                     status: "error",
                     providerErrorCode: result.errorCode,
                     ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                    ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
                   }
                 : { status: "no_data" };
         return [metricName, status] as const;
@@ -1112,14 +1123,20 @@ export async function probeMetaRecentFacebookPagePostInsights(args: {
                 status: "available",
                 value: result.value,
                 ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
               }
             : result.errorCode === "metric_unavailable"
-              ? { status: "unsupported", providerErrorCode: result.errorCode }
+              ? {
+                  status: "unsupported",
+                  providerErrorCode: result.errorCode,
+                  ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
+                }
               : result.errorCode
                 ? {
                     status: "error",
                     providerErrorCode: result.errorCode,
                     ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                    ...(result.providerMessage ? { providerMessage: result.providerMessage } : {}),
                   }
                 : { status: "no_data" };
         return [metricName, status] as const;
@@ -1397,6 +1414,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   };
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
+  let insightsErrorMessage: string | null = null;
   // 2026-08-28: capture the per-call rate-limit usage from the most
   // recent providerRequest. We surface it on the saved row so a DB
   // query (or the future rate-limit dashboard) can see which
@@ -1424,6 +1442,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     const code = isSocialProviderError(insightsErr) ? insightsErr.code : "unknown";
     insightsErrorCode = code;
     insightsErrorRequestId = isSocialProviderError(insightsErr) ? insightsErr.requestId : null;
+    insightsErrorMessage = isSocialProviderError(insightsErr) ? insightsErr.providerMessage : null;
     logError("social.meta.page_insights_failed", {
       pageId,
       accessTokenLast4: accessToken.slice(-4),
@@ -1447,6 +1466,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       metric: e.metric,
       errorCode: e.code,
       requestId: e.requestId,
+      ...(e.providerMessage ? { providerMessage: e.providerMessage } : {}),
     };
     if (e.code === "metric_unavailable") {
       logWarn("social.meta.page_insights_metric_unsupported", context);
@@ -1472,6 +1492,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     if (firstBlockingError) {
       insightsErrorCode = firstBlockingError.code;
       insightsErrorRequestId = firstBlockingError.requestId;
+      insightsErrorMessage = firstBlockingError.providerMessage;
     }
   }
   // The `partial` flag is set when ANY field the worker tried to
@@ -1522,6 +1543,9 @@ export async function fetchMetaFacebookPageSnapshot(args: {
       sourceMetadata.providerErrorCode = insightsErrorCode;
       if (insightsErrorRequestId) {
         sourceMetadata.providerRequestId = insightsErrorRequestId;
+      }
+      if (insightsErrorMessage) {
+        sourceMetadata.providerErrorMessage = insightsErrorMessage;
       }
     }
   }
@@ -1580,6 +1604,7 @@ export type MetaInsightsError = {
   metric: "reach" | "views" | "engagedAccounts" | "interactions";
   code: SocialProviderError["code"];
   requestId: string | null;
+  providerMessage: string | null;
 };
 
 export type MetaDailyInsights = {
@@ -1607,12 +1632,14 @@ function statusForInsight(
         status: "unsupported",
         providerErrorCode: error.code,
         ...(error.requestId ? { providerRequestId: error.requestId } : {}),
+        ...(error.providerMessage ? { providerMessage: error.providerMessage } : {}),
       };
     }
     return {
       status: "error",
       providerErrorCode: error.code,
       ...(error.requestId ? { providerRequestId: error.requestId } : {}),
+      ...(error.providerMessage ? { providerMessage: error.providerMessage } : {}),
     };
   }
   return { status: value === null ? "no_data" : "available" };
@@ -1665,7 +1692,12 @@ export async function fetchMetaPageDailyInsights(args: {
   for (const r of results) {
     insights[r.field] = r.value;
     if (r.errorCode) {
-      errors.push({ metric: r.field, code: r.errorCode, requestId: r.requestId });
+      errors.push({
+        metric: r.field,
+        code: r.errorCode,
+        requestId: r.requestId,
+        providerMessage: r.providerMessage,
+      });
     }
     if (r.usage.app || r.usage.business) {
       latestUsage = r.usage;
@@ -1714,6 +1746,7 @@ export async function fetchMetaInstagramSnapshot(args: {
   };
   let insightsErrorCode: string | null = null;
   let insightsErrorRequestId: string | null = null;
+  let insightsErrorMessage: string | null = null;
   // 2026-08-28: capture the per-call rate-limit usage; same logic
   // as the Page branch. The IG basic+insights pair runs at most
   // 2 calls per snapshot.
@@ -1776,6 +1809,7 @@ export async function fetchMetaInstagramSnapshot(args: {
     const first = insightsResultErrors[0]!;
     insightsErrorCode = first.code;
     insightsErrorRequestId = first.requestId;
+    insightsErrorMessage = first.providerMessage;
   }
   // Same partial-flag rule as the Page branch: ANY null field
   // makes the row partial, not just the follower. 2026-09-02:
@@ -1817,6 +1851,9 @@ export async function fetchMetaInstagramSnapshot(args: {
       sourceMetadata.providerErrorCode = insightsErrorCode;
       if (insightsErrorRequestId) {
         sourceMetadata.providerRequestId = insightsErrorRequestId;
+      }
+      if (insightsErrorMessage) {
+        sourceMetadata.providerErrorMessage = insightsErrorMessage;
       }
     }
   }
@@ -1932,7 +1969,12 @@ export async function fetchMetaIgAccountDailyInsights(args: {
   for (const r of results) {
     insights[r.field] = r.value;
     if (r.errorCode) {
-      errors.push({ metric: r.field, code: r.errorCode, requestId: r.requestId });
+      errors.push({
+        metric: r.field,
+        code: r.errorCode,
+        requestId: r.requestId,
+        providerMessage: r.providerMessage,
+      });
     }
     if (r.usage.app || r.usage.business) {
       latestUsage = r.usage;

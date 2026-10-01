@@ -9,8 +9,7 @@ import { AnalyticsProbeCard } from "@/app/(app)/app/agency-settings/social/provi
  * M4 follow-up (2026-09-05) — the probe card used to render every
  * non-`available` metric with the same warning-coloured `XCircle`
  * icon and no per-status context. Operators reading
- * `engagedAccounts: unsupported` on the Facebook Page branch
- * (the by-design row, see ADR 0005) or a provider-limited Page metric
+ * a provider-limited Page metric
  * were filing "this metric is broken" tickets because the row was
  * visually identical to a hard provider error.
  *
@@ -26,8 +25,8 @@ import { AnalyticsProbeCard } from "@/app/(app)/app/agency-settings/social/provi
  *
  * The Facebook + Instagram fixture here mirrors the real probe
  * result an operator sees for "Food Game" — `interactions` is
- * available on both, `engagedAccounts` is `unsupported` on the
- * Facebook Page branch and available on the Instagram branch.
+ * available on both, `engagedAccounts` is not requested on the
+ * Facebook Page branch and is available on the Instagram branch.
  */
 
 const profiles = [
@@ -55,10 +54,17 @@ const probeResponseForFacebook = {
   ],
   metrics: {
     followerCount: { status: "available" },
-    reach: { status: "unsupported", providerErrorCode: "metric_unavailable" },
-    views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+    reach: {
+      status: "unsupported",
+      providerErrorCode: "metric_unavailable",
+      providerMessage: "(#100) The value must be a valid insights metric",
+    },
+    views: {
+      status: "unsupported",
+      providerErrorCode: "metric_unavailable",
+      providerMessage: "(#100) The value must be a valid insights metric",
+    },
     interactions: { status: "available" },
-    engagedAccounts: { status: "unsupported" },
   },
   mediaInsights: {
     status: "available" as const,
@@ -143,7 +149,6 @@ describe("AnalyticsProbeCard status contract", () => {
     const reach = screen.getByTestId("analytics-probe-metric-reach");
     const views = screen.getByTestId("analytics-probe-metric-views");
     const interactions = screen.getByTestId("analytics-probe-metric-interactions");
-    const engagedAccounts = screen.getByTestId("analytics-probe-metric-engagedAccounts");
 
     expect(available.getAttribute("data-status")).toBe("available");
     expect(available.getAttribute("title")).toMatch(/supported and Meta returned a value/i);
@@ -154,19 +159,14 @@ describe("AnalyticsProbeCard status contract", () => {
 
     expect(views.getAttribute("data-status")).toBe("unsupported");
     expect(views.getAttribute("title")).toMatch(/error code 100/i);
+    expect(screen.getAllByText("(#100) The value must be a valid insights metric")).toHaveLength(2);
 
     expect(interactions.getAttribute("data-status")).toBe("available");
     expect(interactions.getAttribute("title")).toMatch(/supported and Meta returned a value/i);
 
-    // The by-design row. Pages have no accounts_engaged equivalent;
-    // the title must point at the platform contract (ADR 0005) and
-    // not the MCP triage doc — operators must NOT file a "fix this"
-    // ticket for this row.
-    expect(engagedAccounts.getAttribute("data-status")).toBe("unsupported");
-    expect(engagedAccounts.getAttribute("title")).toMatch(
-      /Facebook Pages do not expose an accounts_engaged/i,
-    );
-    expect(engagedAccounts.getAttribute("title")).toMatch(/ADR 0005/);
+    // Facebook Pages do not expose an accounts_engaged equivalent, so the
+    // probe does not request or render that metric at all.
+    expect(screen.queryByTestId("analytics-probe-metric-engagedAccounts")).toBeNull();
     expect(screen.getByTestId("analytics-probe-media-insights")).toBeInTheDocument();
     expect(screen.getByTestId("analytics-probe-media-metric-post_media_view")).toHaveAttribute(
       "data-status",
@@ -247,10 +247,7 @@ describe("AnalyticsProbeCard status contract", () => {
     // First run — defaults to the first profile (Facebook).
     await user.click(screen.getByTestId("analytics-probe-run"));
     await waitFor(() => {
-      expect(screen.getByTestId("analytics-probe-metric-engagedAccounts")).toHaveAttribute(
-        "data-status",
-        "unsupported",
-      );
+      expect(screen.queryByTestId("analytics-probe-metric-engagedAccounts")).toBeNull();
     });
 
     // Switch to the Instagram profile and re-run.

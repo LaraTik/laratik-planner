@@ -17,7 +17,7 @@ type ProbeProfile = {
 type ProbeResponse = {
   profile: ProbeProfile;
   permissions: Array<{ permission: string; status: string }>;
-  metrics: Record<string, { status: string; providerErrorCode?: string }>;
+  metrics: Record<string, { status: string; providerErrorCode?: string; providerMessage?: string }>;
   mediaInsights?: {
     status: "available" | "no_media" | "error";
     mediaId: string | null;
@@ -26,7 +26,10 @@ type ProbeResponse = {
     publishedAt: string | null;
     permalink: string | null;
     providerErrorCode?: string;
-    metrics: Record<string, { status: string; value?: number; providerErrorCode?: string }>;
+    metrics: Record<
+      string,
+      { status: string; value?: number; providerErrorCode?: string; providerMessage?: string }
+    >;
   };
   testedAt: string;
 };
@@ -83,6 +86,12 @@ export function AnalyticsProbeCard({ profiles }: { profiles: ProbeProfile[] }) {
         {tr(
           "agencyProviders.analyticsProbeBody",
           "Select a connected profile to verify the Meta scopes and current metric access without changing stored analytics data.",
+        )}
+      </p>
+      <p className="text-label text-fg-muted mt-2">
+        {tr(
+          "agencyProviders.analyticsProbeStatusLegend",
+          "Only metrics supported by the selected platform are requested. A provider-limited metric is shown as unsupported with Meta’s diagnostic; it is never treated as zero.",
         )}
       </p>
       {profiles.length === 0 ? (
@@ -178,17 +187,27 @@ export function AnalyticsProbeCard({ profiles }: { profiles: ProbeProfile[] }) {
                 tr,
               });
               return (
-                <p
+                <div
                   key={metric}
-                  className="text-label text-fg-secondary inline-flex items-center gap-1.5"
+                  className="text-label text-fg-secondary"
                   data-testid={`analytics-probe-metric-${metric}`}
                   data-status={status.status}
                   title={title}
                 >
-                  <StatusIcon className={`${iconClass} h-3.5 w-3.5`} aria-hidden="true" />
-                  {metric}: {status.status}
-                  {status.providerErrorCode ? ` · ${status.providerErrorCode}` : ""}
-                </p>
+                  <span className="inline-flex items-center gap-1.5">
+                    <StatusIcon className={`${iconClass} h-3.5 w-3.5`} aria-hidden="true" />
+                    {metric}: {status.status}
+                    {status.providerErrorCode ? ` · ${status.providerErrorCode}` : ""}
+                  </span>
+                  {status.providerMessage ? (
+                    <details className="text-fg-muted ms-5 mt-1">
+                      <summary className="cursor-pointer">
+                        {tr("agencyProviders.analyticsProbeDiagnostic", "Why?")}
+                      </summary>
+                      <p className="mt-1 max-w-prose">{status.providerMessage}</p>
+                    </details>
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -233,16 +252,26 @@ export function AnalyticsProbeCard({ profiles }: { profiles: ProbeProfile[] }) {
                   </p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2">
                     {Object.entries(result.mediaInsights.metrics).map(([metric, status]) => (
-                      <p
+                      <div
                         key={metric}
                         className="text-label text-fg-secondary"
                         data-testid={`analytics-probe-media-metric-${metric}`}
                         data-status={status.status}
                       >
-                        {metric}: {status.status}
-                        {typeof status.value === "number" ? ` · ${status.value}` : ""}
-                        {status.providerErrorCode ? ` · ${status.providerErrorCode}` : ""}
-                      </p>
+                        <span>
+                          {metric}: {status.status}
+                          {typeof status.value === "number" ? ` · ${status.value}` : ""}
+                          {status.providerErrorCode ? ` · ${status.providerErrorCode}` : ""}
+                        </span>
+                        {status.providerMessage ? (
+                          <details className="text-fg-muted ms-5 mt-1">
+                            <summary className="cursor-pointer">
+                              {tr("agencyProviders.analyticsProbeDiagnostic", "Why?")}
+                            </summary>
+                            <p className="mt-1 max-w-prose">{status.providerMessage}</p>
+                          </details>
+                        ) : null}
+                      </div>
                     ))}
                   </div>
                 </>

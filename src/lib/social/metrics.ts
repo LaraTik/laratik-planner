@@ -27,6 +27,7 @@ export type MetricStatus = {
   status: MetricAvailability;
   providerErrorCode?: string;
   providerRequestId?: string;
+  providerMessage?: string;
 };
 
 export type JsonValue =
@@ -40,6 +41,7 @@ export type SocialSourceMetadata = {
   metricStatuses?: Partial<Record<SocialMetric, MetricStatus>>;
   providerErrorCode?: string;
   providerRequestId?: string;
+  providerErrorMessage?: string;
   [key: string]: JsonValue | undefined;
 };
 

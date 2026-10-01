@@ -237,8 +237,11 @@ the answers are current and the URL is a citation the agent can hand back.
 When the `analytics-probe-card` reports `unsupported · metric_unavailable`
 for a Page-level metric (`reach` = `page_total_media_view_unique` or
 `views` = `page_views_total`) but `interactions`
-(`page_post_engagements`) is `available`, the pipeline is correct — Meta is
-the gate. Three MCP calls isolate the root cause in < 30 s:
+(`page_post_engagements`) is `available`, the request has been isolated to
+that metric. The probe shows Meta's bounded diagnostic under **Why?** and in
+`sourceMetadata.metricStatuses[metric].providerMessage`; it never exposes the
+response body or a token. Three MCP calls isolate the app-level root cause
+in < 30 s:
 
 ```text
 mcp__meta-devtools__get_app              ({ app_id: "1046395264942070" })
@@ -248,21 +251,28 @@ mcp__meta-devtools__get_app_rate_limits  ({ app_id: "1046395264942070" })
 
 Then match the evidence to the fix:
 
-| Evidence                                                                                                                                      | Root cause                                                                                                        | Fix                                                                                                                                             | Time to enable      |
-| --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
-| `get_app` says `Live` but `get_app_review_status` reports `page_total_media_view_unique` / `page_views_total` as `not_submitted` or `pending` | App Review Standard Access missing for the two current Page metrics                                               | Submit via App Review → Permissions and Features. Use the boilerplate from `docs/superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`. | 3–7 days (Meta SLA) |
-| `get_app` says `In Development` and the connecting user is not in App → Roles                                                                 | App is gated to role-holders only                                                                                 | Toggle to Live, then re-add the user as `Admin` (not just `Tester` — the dev-mode gate checks tier). Re-probe.                                  | ~2 min              |
-| `get_app_rate_limits` shows `0% remaining` on `/insights`                                                                                     | Throttling, not a config issue                                                                                    | Back off the cron worker (see `src/lib/social/sync.ts`); the probe will recover on the next tick.                                               | < 1 h               |
-| All three are `Live` / `approved` / non-zero headroom and the probe still fails                                                               | Per-tenant — the connector's Page access token is missing a task, OR the IG account is unlinked from the Business | Reconnect the channel; if that fails, the channel is permanently degraded.                                                                      | Open a follow-up    |
+| Evidence                                                                                                               | Root cause                                                                                                                                                         | Fix                                                                                                                                                                                                                    | Time to enable                            |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| The provider message says `valid insights metric`, `unsupported insights metric`, `deprecated`, or equivalent          | The metric is not valid for that Page/API version. This is a compatibility problem, not an empty value.                                                            | Verify the configured Graph version and compare the metric with Meta's [Page Insights reference](https://developers.facebook.com/docs/graph-api/reference/page/insights/). Do not replace it with an unrelated metric. | Depends on version/metric                 |
+| The message says permission, access, scope, or `(#200)`                                                                | The Page token/app is not authorized for the supported metric.                                                                                                     | Reconnect the channel, confirm Page task access, and check App Review / Live mode.                                                                                                                                     | ~2 min to re-test; review may take longer |
+| The message says `Unsupported get request`, object not found, or the Page token is rejected                            | The Page ID and token do not belong to the same Page, or the asset is unavailable to the connected user.                                                           | Reconnect the Page and confirm the selected Page is the owned asset.                                                                                                                                                   | ~2 min                                    |
+| The request returns a 400 that is not explicit metric wording                                                          | The query shape or API version is invalid. It remains `error · invalid_response`, with the provider message visible; it is not downgraded to `metric_unavailable`. | Fix the request/version contract first, then re-probe.                                                                                                                                                                 | Code/config change                        |
+| `get_app` says `Live` but `get_app_review_status` reports the required Page capability as `not_submitted` or `pending` | App Review Standard Access is still missing for the current Page capability.                                                                                       | Submit via App Review → Permissions and Features.                                                                                                                                                                      | 3–7 days (Meta SLA)                       |
+| `get_app_rate_limits` shows `0% remaining` on `/insights`                                                              | Throttling, not a metric capability issue.                                                                                                                         | Back off the cron worker; the probe will recover on the next tick.                                                                                                                                                     | < 1 h                                     |
 
 **The probe will reflect any of these fixes automatically.** The
 `metric_unavailable` row in `agency_social_metric_probes` is the correct
 partial state and will flip to `available` on the next probe tick after Meta
-serves the current metric. The adapter already uses Meta's documented
-replacement metrics instead of the deprecated `page_impressions_unique` and
-old `page_views` names; it does not substitute unrelated totals such as
-`page_fans`. Any remaining rejection is preserved as an unsupported metric,
-not masked or coerced to zero.
+serves the current metric. The adapter uses the current Page metric names
+`page_total_media_view_unique`, `page_views_total`, and
+`page_post_engagements`; it does not request Instagram's `accounts_engaged`
+for a Facebook Page and does not substitute unrelated totals such as
+`page_fans`. Meta error code `100` is only classified as
+`metric_unavailable` when the message explicitly describes an invalid,
+unsupported, unavailable, or deprecated metric. A different 400 remains an
+error with its diagnostic message, so a request-shape or version bug cannot
+hide behind the unsupported label. Every unavailable metric remains `null`
+and is rendered as `unsupported`, never as zero.
 
 If MCP access is unavailable (no OAuth grant yet), the same triage is
 reachable in ~ 5 min via the browser dashboard — see

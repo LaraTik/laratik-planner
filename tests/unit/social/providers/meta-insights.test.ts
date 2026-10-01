@@ -186,6 +186,7 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
         metric: "views",
         code: "provider_unavailable",
         requestId: "req-test-789",
+        providerMessage: null,
       },
     ]);
   });

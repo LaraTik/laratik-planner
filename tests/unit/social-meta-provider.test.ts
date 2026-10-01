@@ -151,6 +151,7 @@ describe("probeMetaRecentInstagramMediaInsights", () => {
     expect(result.metrics.saved).toEqual({
       status: "unsupported",
       providerErrorCode: "metric_unavailable",
+      providerMessage: "Unsupported insights metric",
     });
     expect(result.metrics.views).toEqual({ status: "no_data" });
     expect(calls).toHaveLength(6);
@@ -242,6 +243,7 @@ describe("probeMetaRecentFacebookPagePostInsights", () => {
     expect(result.metrics.post_media_view).toEqual({
       status: "unsupported",
       providerErrorCode: "metric_unavailable",
+      providerMessage: "Unsupported insights metric",
     });
   });
 });
@@ -1336,7 +1338,11 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(meta.providerErrorCode).toBeUndefined();
     expect(snapshot.sourceMetadata.metricStatuses).toMatchObject({
       reach: { status: "unsupported", providerErrorCode: "metric_unavailable" },
-      views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+      views: {
+        status: "unsupported",
+        providerErrorCode: "metric_unavailable",
+        providerMessage: "(#100) The value must be a valid insights metric",
+      },
       interactions: { status: "unsupported", providerErrorCode: "metric_unavailable" },
     });
   });
@@ -1388,7 +1394,11 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(snapshot.sourceMetadata.metricStatuses).toEqual({
       followerCount: { status: "available" },
       reach: { status: "available" },
-      views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+      views: {
+        status: "unsupported",
+        providerErrorCode: "metric_unavailable",
+        providerMessage: "(#100) The value must be a valid insights metric",
+      },
       interactions: { status: "available" },
       engagedAccounts: { status: "unsupported" },
     });

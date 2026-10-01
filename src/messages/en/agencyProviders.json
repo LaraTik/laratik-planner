@@ -83,6 +83,8 @@
   "analyticsProbeRun": "Run probe",
   "analyticsProbePending": "Checking…",
   "analyticsProbeFailed": "The analytics probe could not be completed.",
+  "analyticsProbeStatusLegend": "Only metrics supported by the selected platform are requested. A provider-limited metric is shown as unsupported with Meta’s diagnostic; it is never treated as zero.",
+  "analyticsProbeDiagnostic": "Why?",
   "analyticsProbeMediaHeading": "Recent post-level insight capability",
   "analyticsProbeMediaBody": "One recent owned post was tested without saving or changing analytics data.",
   "analyticsProbeMediaNoMedia": "Meta returned no owned media to test.",
