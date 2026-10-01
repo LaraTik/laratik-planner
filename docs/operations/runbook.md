@@ -688,6 +688,11 @@ The Meta app config is **per-agency**, not platform-wide. Each agency that wants
 6. **Wait for the first sync.** The next cron tick (within 15 minutes) claims the profile with a 5-minute lease, calls `fetchSnapshot`, and writes the first `social_profile_daily_metric` row. The first daily snapshot lands within 24 hours.
 7. **Check the analytics page.** Within 24 hours, `/app/w/<slug>/analytics/social` shows the new channel with at least one row in the 7-day window. After 7 days, the 7-day window has 7 data points per channel. The cron never backfills historical data — the system starts from "today" of first connect. Meta retains 90 days of IG insights and 2 years of FB page insights, so a separate backfill task is possible but is not implemented.
 
+The analytics table's `Partial data` label is metric-specific. A Facebook-only
+unsupported field such as Instagram's `engagedAccounts`, or a gap in another
+metric, must not mark the selected Followers, Reach, Views, or Interactions
+series as partial when that selected metric has provider-confirmed values.
+
 **Brand mapping cheatsheet (2026-08-27 reference):**
 
 The Meta app for this LaraTik instance connects to many brands. When onboarding, match the workspace to the right Facebook Page(s):

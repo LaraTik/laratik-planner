@@ -112,16 +112,20 @@ export function calculateGrowth(
   field: keyof MetricSeriesPoint = "followerCount",
 ): Growth {
   const values = series.map((p) => p[field]).filter((v): v is number => typeof v === "number");
+  const partial = series.some((point) => {
+    const status = point.metricStatuses?.[field as SocialMetric];
+    return status ? status.status !== "available" : point.partial === true;
+  });
 
   if (values.length < 2) {
-    return { absolute: null, percent: null, partial: series.some((p) => p.partial === true) };
+    return { absolute: null, percent: null, partial };
   }
 
   const earliest = values[0]!;
   const latest = values[values.length - 1]!;
   const absolute = latest - earliest;
   const percent = earliest === 0 ? null : (absolute / earliest) * 100;
-  return { absolute, percent, partial: series.some((p) => p.partial === true) };
+  return { absolute, percent, partial };
 }
 
 /**

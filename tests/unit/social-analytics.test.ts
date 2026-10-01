@@ -99,6 +99,30 @@ describe("calculateGrowth", () => {
     expect(calculateGrowth(s)).toEqual({ absolute: 5, percent: 5, partial: true });
   });
 
+  it("uses the selected metric status instead of another metric's partial flag", () => {
+    const s = series([100, 105]);
+    s[0]!.partial = true;
+    s[0]!.metricStatuses = {
+      followerCount: { status: "available" },
+      reach: { status: "unsupported" },
+    };
+    s[1]!.metricStatuses = {
+      followerCount: { status: "available" },
+      reach: { status: "unsupported" },
+    };
+
+    expect(calculateGrowth(s, "followerCount")).toEqual({
+      absolute: 5,
+      percent: 5,
+      partial: false,
+    });
+    expect(calculateGrowth(s, "reach")).toEqual({
+      absolute: null,
+      percent: null,
+      partial: true,
+    });
+  });
+
   it("handles a provider correction that lowers the observed total", () => {
     expect(calculateGrowth(series([100, 110, 90]))).toEqual({
       absolute: -10,
