@@ -113,6 +113,18 @@ describe("M4 — social profile analytics schema", () => {
     it("creates social_profile_daily_metric", async () => {
       expect(await tableExists("social_profile_daily_metric")).toBe(true);
     });
+    it("creates social_post_observation", async () => {
+      expect(await tableExists("social_post_observation")).toBe(true);
+    });
+    it("creates content_research_link", async () => {
+      expect(await tableExists("content_research_link")).toBe(true);
+    });
+    it("creates content_research_teardown_link", async () => {
+      expect(await tableExists("content_research_teardown_link")).toBe(true);
+    });
+    it("creates research_bookmark", async () => {
+      expect(await tableExists("research_bookmark")).toBe(true);
+    });
     it("creates agency_social_metric_probe", async () => {
       expect(await tableExists("agency_social_metric_probe")).toBe(true);
     });
@@ -145,6 +157,15 @@ describe("M4 — social profile analytics schema", () => {
     });
     it("social_connection_active_subject_unique exists", async () => {
       expect(await indexExists("social_connection_active_subject_unique")).toBe(true);
+    });
+    it("content_research_link_item_observation_unique exists", async () => {
+      expect(await indexExists("content_research_link_item_observation_unique")).toBe(true);
+    });
+    it("content_research_teardown_item_unique exists", async () => {
+      expect(await indexExists("content_research_teardown_item_unique")).toBe(true);
+    });
+    it("research_bookmark_workspace_observation_unique exists", async () => {
+      expect(await indexExists("research_bookmark_workspace_observation_unique")).toBe(true);
     });
     it("social_channel_external_account_unique exists", async () => {
       expect(await indexExists("social_channel_external_account_unique")).toBe(true);

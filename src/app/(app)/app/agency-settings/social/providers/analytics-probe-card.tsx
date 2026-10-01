@@ -18,6 +18,16 @@ type ProbeResponse = {
   profile: ProbeProfile;
   permissions: Array<{ permission: string; status: string }>;
   metrics: Record<string, { status: string; providerErrorCode?: string }>;
+  mediaInsights?: {
+    status: "available" | "no_media" | "error";
+    mediaId: string | null;
+    mediaType: string | null;
+    mediaProductType: string | null;
+    publishedAt: string | null;
+    permalink: string | null;
+    providerErrorCode?: string;
+    metrics: Record<string, { status: string; value?: number; providerErrorCode?: string }>;
+  };
   testedAt: string;
 };
 
@@ -182,6 +192,63 @@ export function AnalyticsProbeCard({ profiles }: { profiles: ProbeProfile[] }) {
               );
             })}
           </div>
+          {result.mediaInsights ? (
+            <div
+              className="border-border mt-4 rounded-md border bg-transparent p-3"
+              data-testid="analytics-probe-media-insights"
+            >
+              <p className="text-label text-fg-primary font-semibold">
+                {tr(
+                  "agencyProviders.analyticsProbeMediaHeading",
+                  "Recent post-level insight capability",
+                )}
+              </p>
+              <p className="text-label text-fg-secondary mt-1">
+                {result.mediaInsights.status === "no_media"
+                  ? tr(
+                      "agencyProviders.analyticsProbeMediaNoMedia",
+                      "Meta returned no owned media to test.",
+                    )
+                  : result.mediaInsights.status === "error"
+                    ? tr(
+                        "agencyProviders.analyticsProbeMediaUnavailable",
+                        `The post-level probe failed (${result.mediaInsights.providerErrorCode ?? "unknown"}).`,
+                      )
+                    : tr(
+                        "agencyProviders.analyticsProbeMediaBody",
+                        "One recent owned post was tested without saving or changing analytics data.",
+                      )}
+              </p>
+              {result.mediaInsights.status === "available" ? (
+                <>
+                  <p className="text-label text-fg-muted mt-2">
+                    {tr("agencyProviders.analyticsProbeMediaSample", "Sample")}:{" "}
+                    {result.mediaInsights.mediaType ?? "—"}
+                    {result.mediaInsights.mediaProductType
+                      ? ` · ${result.mediaInsights.mediaProductType}`
+                      : ""}
+                    {result.mediaInsights.publishedAt
+                      ? ` · ${new Date(result.mediaInsights.publishedAt).toLocaleString()}`
+                      : ""}
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                    {Object.entries(result.mediaInsights.metrics).map(([metric, status]) => (
+                      <p
+                        key={metric}
+                        className="text-label text-fg-secondary"
+                        data-testid={`analytics-probe-media-metric-${metric}`}
+                        data-status={status.status}
+                      >
+                        {metric}: {status.status}
+                        {typeof status.value === "number" ? ` · ${status.value}` : ""}
+                        {status.providerErrorCode ? ` · ${status.providerErrorCode}` : ""}
+                      </p>
+                    ))}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </Card>
@@ -219,6 +286,13 @@ function probeStatusTitle(args: {
     );
   }
 
+  if (providerErrorCode === "metric_unavailable") {
+    return tr(
+      "agencyProviders.analyticsProbeTooltipErrorMetricUnavailable",
+      "Meta does not serve this metric for the current Page, app version, or token. The dashboard keeps the metric partial instead of treating it as zero; see docs/operations/meta-devtools-mcp.md.",
+    );
+  }
+
   if (status === "unsupported") {
     if (metric === "engagedAccounts" && platform === "facebook") {
       return tr(
@@ -240,12 +314,6 @@ function probeStatusTitle(args: {
   }
 
   // status === "error"
-  if (providerErrorCode === "metric_unavailable") {
-    return tr(
-      "agencyProviders.analyticsProbeTooltipErrorMetricUnavailable",
-      "Meta returned error code 100 for this metric — usually app mode (In Development), missing Standard Access on App Review, or a Page access token missing a task. Triage: docs/operations/meta-devtools-mcp.md.",
-    );
-  }
   if (providerErrorCode === "permission_denied") {
     return tr(
       "agencyProviders.analyticsProbeTooltipErrorPermissionDenied",

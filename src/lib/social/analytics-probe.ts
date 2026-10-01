@@ -10,7 +10,13 @@ import { isSocialProviderError } from "./http";
 import { getAgencyProviderConfig } from "./provider-config";
 import { openConnectionCredentials } from "./repository";
 import { createDekCache, getDekForWorkspace } from "./key-management";
-import { metaAdapter, probeMetaPermissions } from "./providers/meta";
+import {
+  metaAdapter,
+  probeMetaPermissions,
+  probeMetaRecentFacebookPagePostInsights,
+  probeMetaRecentInstagramMediaInsights,
+  type MetaMediaInsightProbe,
+} from "./providers/meta";
 import {
   resolveMetricStatus,
   getSupportedSocialMetrics,
@@ -68,6 +74,7 @@ export type AnalyticsProbeResult = {
   profile: AnalyticsProbeProfile;
   permissions: Array<{ permission: string; status: string }>;
   metrics: Partial<Record<SocialMetric, MetricStatus>>;
+  mediaInsights?: MetaMediaInsightProbe;
   testedAt: string;
 };
 
@@ -117,7 +124,7 @@ export async function runAnalyticsProbe(
   try {
     const permissionResult = await probeMetaPermissions({
       accessToken: credentials.accessToken,
-      apiVersion: config.graphApiVersion,
+      apiVersion: config.graphApiVersion ?? "v25.0",
     });
     permissions = permissionResult.permissions;
   } catch {
@@ -156,8 +163,30 @@ export async function runAnalyticsProbe(
       };
     }
   }
+  let mediaInsights: MetaMediaInsightProbe | undefined;
+  if (profile.platform === "instagram" && row.channel.externalAccountId) {
+    mediaInsights = await probeMetaRecentInstagramMediaInsights({
+      accessToken:
+        credentials.profileAccessTokens?.[row.channel.externalAccountId] ?? credentials.accessToken,
+      igUserId: row.channel.externalAccountId,
+      apiVersion: config.graphApiVersion ?? "v25.0",
+    });
+  } else if (profile.platform === "facebook" && row.channel.externalAccountId) {
+    mediaInsights = await probeMetaRecentFacebookPagePostInsights({
+      accessToken:
+        credentials.profileAccessTokens?.[row.channel.externalAccountId] ?? credentials.accessToken,
+      pageId: row.channel.externalAccountId,
+      apiVersion: config.graphApiVersion ?? "v25.0",
+    });
+  }
   await persistProbe(agencyId, profile, statuses, testedAt);
-  return { profile, permissions, metrics: statuses, testedAt: testedAt.toISOString() };
+  return {
+    profile,
+    permissions,
+    metrics: statuses,
+    ...(mediaInsights ? { mediaInsights } : {}),
+    testedAt: testedAt.toISOString(),
+  };
 }
 
 async function persistProbe(

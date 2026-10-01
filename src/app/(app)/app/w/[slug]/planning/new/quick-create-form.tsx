@@ -26,18 +26,70 @@ export function QuickCreateForm({
   workspaceSlug,
   workspaceTimezone,
   trendSignal,
+  researchPost,
+  researchTeardown,
 }: {
   workspaceSlug: string;
   workspaceTimezone: string;
   trendSignal?: { id: string; label: string };
+  researchPost?: {
+    observation: {
+      id: string;
+      permalink: string | null;
+      mediaType: string;
+      views: number | null;
+      likes: number | null;
+      comments: number | null;
+      publishedAt: Date | null;
+    };
+    channel: { accountName: string; platform: string };
+  };
+  researchTeardown?: {
+    id: string;
+    hook: string;
+    promise: string;
+    format: string;
+    pacing: string;
+    callToAction: string;
+    beats: { label: string; description: string }[];
+  };
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
   const boundAction = quickCreateAction.bind(null, workspaceSlug);
   const [state, formAction] = useActionState(boundAction, initial);
   const formRef = React.useRef<HTMLFormElement | null>(null);
-  const [title, setTitle] = React.useState(trendSignal?.label ?? "");
-  const [brief, setBrief] = React.useState(trendSignal ? `Trend angle: ${trendSignal.label}` : "");
+  const researchAccount = researchPost?.channel.accountName ?? "";
+  const teardownBrief = researchTeardown
+    ? [
+        `Hook: ${researchTeardown.hook}`,
+        `Promise: ${researchTeardown.promise}`,
+        `Format: ${researchTeardown.format}`,
+        `Pacing: ${researchTeardown.pacing}`,
+        `CTA: ${researchTeardown.callToAction}`,
+        researchTeardown.beats.length > 0
+          ? `Beats:\n${researchTeardown.beats.map((beat) => `- ${beat.label}: ${beat.description}`).join("\n")}`
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n")
+        .slice(0, 1_900)
+    : "";
+  const [title, setTitle] = React.useState(
+    trendSignal?.label ??
+      (researchPost
+        ? t("quickCreate.research.referenceTitle", { account: researchAccount })
+        : researchTeardown
+          ? t("quickCreate.research.teardownTitle", { hook: researchTeardown.hook.slice(0, 140) })
+          : ""),
+  );
+  const [brief, setBrief] = React.useState(
+    trendSignal
+      ? `Trend angle: ${trendSignal.label}`
+      : researchPost
+        ? t("quickCreate.research.initialBrief", { account: researchAccount })
+        : teardownBrief,
+  );
 
   // Default the planned date to *workspace-local* tomorrow 9am.
   // The previous `toISOString().slice(0, 16)` translated the instant
@@ -83,6 +135,9 @@ export function QuickCreateForm({
       data-testid="quick-create-form"
     >
       {trendSignal ? <input type="hidden" name="trendSignalId" value={trendSignal.id} /> : null}
+      {researchPost ? (
+        <input type="hidden" name="researchPostObservationId" value={researchPost.observation.id} />
+      ) : null}
       {trendSignal ? (
         <aside className="border-accent/30 bg-accent/10 text-fg-primary rounded-[var(--radius-control)] border p-3">
           <p className="text-label font-semibold">
@@ -91,6 +146,46 @@ export function QuickCreateForm({
           <p className="text-body mt-1">
             <bdi>{trendSignal.label}</bdi>
           </p>
+        </aside>
+      ) : null}
+      {researchTeardown ? (
+        <aside
+          className="border-primary/30 bg-primary-subtle/30 text-fg-primary rounded-[var(--radius-control)] border p-3"
+          data-testid="quick-create-research-teardown"
+        >
+          <p className="text-label font-semibold">{t("quickCreate.research.teardownEyebrow")}</p>
+          <p className="text-body mt-1">{researchTeardown.hook}</p>
+          <p className="text-label text-fg-secondary mt-1">
+            {researchTeardown.format} · {t("quickCreate.research.teardownEditable")}
+          </p>
+          <input type="hidden" name="researchTeardownId" value={researchTeardown.id} />
+        </aside>
+      ) : null}
+      {researchPost ? (
+        <aside
+          className="border-primary/30 bg-primary-subtle/30 text-fg-primary rounded-[var(--radius-control)] border p-3"
+          data-testid="quick-create-research-reference"
+        >
+          <p className="text-label font-semibold">{t("quickCreate.research.eyebrow")}</p>
+          <p className="text-body mt-1">
+            <bdi>{researchAccount}</bdi> · <bdi>{researchPost.channel.platform}</bdi>
+          </p>
+          <p className="text-label text-fg-secondary mt-1">
+            {researchPost.observation.views ?? 0} {t("quickCreate.research.views")} ·{" "}
+            {researchPost.observation.likes ?? 0} {t("quickCreate.research.likes")} ·{" "}
+            {researchPost.observation.comments ?? 0} {t("quickCreate.research.comments")}
+          </p>
+          <p className="text-label text-fg-muted mt-1">{t("quickCreate.research.description")}</p>
+          {researchPost.observation.permalink ? (
+            <a
+              href={researchPost.observation.permalink}
+              target="_blank"
+              rel="noreferrer"
+              className="text-label text-primary focus-visible:ring-focus-ring mt-2 inline-flex rounded font-semibold focus:outline-none focus-visible:ring-2"
+            >
+              {t("quickCreate.research.openSource")}
+            </a>
+          ) : null}
         </aside>
       ) : null}
       <FormSummary
@@ -138,7 +233,11 @@ export function QuickCreateForm({
           <select
             name="format"
             required
-            defaultValue="static_post"
+            defaultValue={
+              researchPost && ["video", "reel"].includes(researchPost.observation.mediaType)
+                ? "short_form_video"
+                : "static_post"
+            }
             className="border-border bg-surface text-fg-primary text-body focus-visible:ring-focus-ring flex min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >
             <option value="static_post">{t("planningFilters.formatLabels.static_post")}</option>

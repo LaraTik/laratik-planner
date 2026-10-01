@@ -187,13 +187,8 @@ export default async function WorkspaceSettingsPage({
     },
   ];
 
-  // The page is laid out as two columns on `lg+` viewports:
-  //   ┌─ left rail (settings sidebar) ─┬─ right column ────────────────┐
-  //   │ scroll-spy TOC                 │ KPI grid + the 5 sections      │
-  //   └────────────────────────────────┴────────────────────────────────┘
-  // On small viewports the sidebar collapses into a horizontal chip
-  // strip below the PageHeader. The strip uses the same scroll-spy
-  // logic so the user still sees where they are.
+  // The global application sidebar remains the only persistent navigation
+  // rail. This page uses one compact in-page strip for its five anchors.
   const sectionNav = [
     {
       id: "lifecycle",
@@ -250,11 +245,7 @@ export default async function WorkspaceSettingsPage({
         }
       />
 
-      {/* Mobile / tablet: the section TOC collapses into a horizontal
-          chip strip below the header. On lg+ the dedicated left rail
-          takes over. `lg:hidden` on this strip + `lg:block` on the
-          rail prevents double-render on wide viewports. */}
-      <div className="lg:hidden" data-testid="settings-sidebar-mobile">
+      <div data-testid="settings-sidebar-nav">
         <SettingsSidebar items={sectionNav} ariaLabel={t("settings.sidebarAria")} />
       </div>
 
@@ -314,204 +305,194 @@ export default async function WorkspaceSettingsPage({
         />
       </ul>
 
-      {/* Desktop: left rail TOC (scroll-spy) + right column with the
-          five sections. The rail is `lg:sticky` so it stays visible
-          while the user scrolls. On viewports narrower than `lg`
-          this grid falls back to a single column (the mobile strip
-          at the top already provides navigation). */}
-      <div className="lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:items-start lg:gap-6">
-        <aside className="hidden lg:block" data-testid="settings-sidebar-desktop">
-          <SettingsSidebar items={sectionNav} ariaLabel={t("settings.sidebarAria")} />
-        </aside>
-        <div className="space-y-6">
-          <SettingsSection
-            id="lifecycle"
-            title={t("settings.lifecycle.title")}
-            description={t("settings.lifecycle.description")}
-          >
-            {/* The workspace display name lives on the `workspaces`
+      <div className="space-y-6">
+        <SettingsSection
+          id="lifecycle"
+          title={t("settings.lifecycle.title")}
+          description={t("settings.lifecycle.description")}
+        >
+          {/* The workspace display name lives on the `workspaces`
                 table alongside the timezone, so it belongs in this
                 section rather than in a route of its own (see the
                 "Settings architecture" rule in AGENTS.md: sections
                 share one page when the data is one row). */}
-            <WorkspaceNameForm
+          <WorkspaceNameForm
+            slug={slug}
+            name={workspace.name}
+            locale={locale}
+            canManage={canManage}
+            copy={{
+              title: t("settings.rename.title"),
+              description: t("settings.rename.description"),
+              nameLabel: t("settings.rename.nameLabel"),
+              nameHint: t("settings.rename.nameHint"),
+              urlLabel: t("settings.rename.urlLabel"),
+              urlHint: t("settings.rename.urlHint"),
+              submit: t("settings.rename.submit"),
+              saving: t("common.saving"),
+              saved: t("settings.rename.saved"),
+              unchanged: t("settings.rename.unchanged"),
+              errors: {
+                unauthorized: t("settings.rename.errors.unauthorized"),
+                not_found: t("settings.rename.errors.notFound"),
+                forbidden: t("settings.rename.errors.forbidden"),
+                invalid_name: t("settings.rename.errors.invalidName"),
+                save_failed: t("settings.rename.errors.saveFailed"),
+              },
+            }}
+          />
+          <SettingsHealth
+            slug={slug}
+            section="lifecycle"
+            metrics={{
+              hasTimezone: !!workspace.timezone,
+              hasMonthlyTarget: values.monthlyTarget !== null,
+              monthlyTarget: values.monthlyTarget,
+            }}
+            t={t}
+          />
+          {canManage ? (
+            <LifecycleForm
               slug={slug}
-              name={workspace.name}
-              locale={locale}
-              canManage={canManage}
+              timezone={workspace.timezone}
+              monthlyTarget={values.monthlyTarget}
+            />
+          ) : (
+            <ReadOnlySettings message={t("settings.lifecycle.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
+
+        <SettingsSection
+          id="lead-times"
+          title={t("settings.leadTimes.title")}
+          description={t("settings.leadTimes.description")}
+        >
+          <SettingsHealth
+            slug={slug}
+            section="lead-times"
+            metrics={{ total: leadTotal, ...leadTimeValues(values) }}
+            t={t}
+          />
+          <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
+            <p className="text-body text-fg-secondary mb-3 max-w-3xl">
+              {t("settings.leadTimes.contextBody")}
+            </p>
+            <LeadTimeDeadline
+              totalDays={leadTotal}
+              today={new Date()}
+              timezone={workspace.timezone}
+            />
+          </div>
+          {canManage ? (
+            <LeadTimesForm
+              slug={slug}
+              values={leadTimeValues(values)}
+              approvalMode={values.approvalMode as "simple" | "internal_then_client"}
+              timezone={workspace.timezone}
+            />
+          ) : (
+            <ReadOnlySettings message={t("settings.leadTimes.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
+
+        <SettingsSection
+          id="defaults"
+          title={t("settings.defaults.title")}
+          description={t("settings.defaults.description")}
+        >
+          <SettingsHealth
+            slug={slug}
+            section="defaults"
+            metrics={{
+              designer: !!values.defaultDesignerId,
+              contentReviewer: !!values.defaultContentReviewerId,
+              internalCreative: !!values.defaultInternalCreativeReviewerId,
+              clientReviewer: !!values.defaultClientReviewerId,
+            }}
+            t={t}
+          />
+          {canManage ? (
+            <DefaultsForm
+              slug={slug}
+              designers={peopleForRole(membershipRows, "designer")}
+              contentReviewers={peopleForRole(membershipRows, "content_reviewer")}
+              internalCreativeReviewers={peopleForRole(membershipRows, "creative_director")}
+              clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
+              values={{
+                defaultDesignerId: values.defaultDesignerId,
+                defaultContentReviewerId: values.defaultContentReviewerId,
+                defaultInternalCreativeReviewerId: values.defaultInternalCreativeReviewerId,
+                defaultClientReviewerId: values.defaultClientReviewerId,
+              }}
+            />
+          ) : (
+            <ReadOnlySettings message={t("settings.defaults.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
+
+        <SettingsSection
+          id="approvals"
+          title={t("settings.approvals.title")}
+          description={t("settings.approvals.description")}
+        >
+          <SettingsHealth
+            slug={slug}
+            section="approvals"
+            metrics={{ mode: values.approvalMode as "simple" | "internal_then_client" }}
+            t={t}
+          />
+          {canManage ? (
+            <ApprovalsForm
+              slug={slug}
+              currentMode={values.approvalMode as "simple" | "internal_then_client"}
+              leadTimes={leadTimeValues(values)}
+            />
+          ) : (
+            <ReadOnlySettings message={t("settings.approvals.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
+
+        <SettingsSection
+          id="meta-publishing"
+          title={t("settings.metaPublishing.title")}
+          description={t("settings.metaPublishing.description")}
+        >
+          {canManage ? (
+            <MetaPublishingForm
+              slug={slug}
+              enabled={values.metaPublishingEnabled}
               copy={{
-                title: t("settings.rename.title"),
-                description: t("settings.rename.description"),
-                nameLabel: t("settings.rename.nameLabel"),
-                nameHint: t("settings.rename.nameHint"),
-                urlLabel: t("settings.rename.urlLabel"),
-                urlHint: t("settings.rename.urlHint"),
-                submit: t("settings.rename.submit"),
-                saving: t("common.saving"),
-                saved: t("settings.rename.saved"),
-                unchanged: t("settings.rename.unchanged"),
+                fieldLabel: t("settings.metaPublishing.fieldLabel"),
+                fieldHint: t("settings.metaPublishing.fieldHint"),
+                disabledHint: t("settings.metaPublishing.disabledHint"),
+                enabledHint: t("settings.metaPublishing.enabledHint"),
+                submit: t("settings.metaPublishing.submit"),
+                saved: t("settings.metaPublishing.saved"),
                 errors: {
-                  unauthorized: t("settings.rename.errors.unauthorized"),
-                  not_found: t("settings.rename.errors.notFound"),
-                  forbidden: t("settings.rename.errors.forbidden"),
-                  invalid_name: t("settings.rename.errors.invalidName"),
-                  save_failed: t("settings.rename.errors.saveFailed"),
+                  unauthorized: t("settings.metaPublishing.errors.unauthorized"),
+                  not_found: t("settings.metaPublishing.errors.notFound"),
+                  forbidden: t("settings.metaPublishing.errors.forbidden"),
+                  save_failed: t("settings.metaPublishing.errors.saveFailed"),
                 },
               }}
             />
-            <SettingsHealth
-              slug={slug}
-              section="lifecycle"
-              metrics={{
-                hasTimezone: !!workspace.timezone,
-                hasMonthlyTarget: values.monthlyTarget !== null,
-                monthlyTarget: values.monthlyTarget,
-              }}
-              t={t}
-            />
-            {canManage ? (
-              <LifecycleForm
-                slug={slug}
-                timezone={workspace.timezone}
-                monthlyTarget={values.monthlyTarget}
-              />
-            ) : (
-              <ReadOnlySettings message={t("settings.lifecycle.readOnly")} />
-            )}
-            <LastSaved at={settings?.updatedAt ?? null} />
-          </SettingsSection>
+          ) : (
+            <ReadOnlySettings message={t("settings.metaPublishing.readOnly")} />
+          )}
+          <LastSaved at={settings?.updatedAt ?? null} />
+        </SettingsSection>
 
-          <SettingsSection
-            id="lead-times"
-            title={t("settings.leadTimes.title")}
-            description={t("settings.leadTimes.description")}
-          >
-            <SettingsHealth
-              slug={slug}
-              section="lead-times"
-              metrics={{ total: leadTotal, ...leadTimeValues(values) }}
-              t={t}
-            />
-            <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
-              <p className="text-body text-fg-secondary mb-3 max-w-3xl">
-                {t("settings.leadTimes.contextBody")}
-              </p>
-              <LeadTimeDeadline
-                totalDays={leadTotal}
-                today={new Date()}
-                timezone={workspace.timezone}
-              />
-            </div>
-            {canManage ? (
-              <LeadTimesForm
-                slug={slug}
-                values={leadTimeValues(values)}
-                approvalMode={values.approvalMode as "simple" | "internal_then_client"}
-                timezone={workspace.timezone}
-              />
-            ) : (
-              <ReadOnlySettings message={t("settings.leadTimes.readOnly")} />
-            )}
-            <LastSaved at={settings?.updatedAt ?? null} />
-          </SettingsSection>
-
-          <SettingsSection
-            id="defaults"
-            title={t("settings.defaults.title")}
-            description={t("settings.defaults.description")}
-          >
-            <SettingsHealth
-              slug={slug}
-              section="defaults"
-              metrics={{
-                designer: !!values.defaultDesignerId,
-                contentReviewer: !!values.defaultContentReviewerId,
-                internalCreative: !!values.defaultInternalCreativeReviewerId,
-                clientReviewer: !!values.defaultClientReviewerId,
-              }}
-              t={t}
-            />
-            {canManage ? (
-              <DefaultsForm
-                slug={slug}
-                designers={peopleForRole(membershipRows, "designer")}
-                contentReviewers={peopleForRole(membershipRows, "content_reviewer")}
-                internalCreativeReviewers={peopleForRole(membershipRows, "creative_director")}
-                clientReviewers={peopleForRole(membershipRows, "client_reviewer")}
-                values={{
-                  defaultDesignerId: values.defaultDesignerId,
-                  defaultContentReviewerId: values.defaultContentReviewerId,
-                  defaultInternalCreativeReviewerId: values.defaultInternalCreativeReviewerId,
-                  defaultClientReviewerId: values.defaultClientReviewerId,
-                }}
-              />
-            ) : (
-              <ReadOnlySettings message={t("settings.defaults.readOnly")} />
-            )}
-            <LastSaved at={settings?.updatedAt ?? null} />
-          </SettingsSection>
-
-          <SettingsSection
-            id="approvals"
-            title={t("settings.approvals.title")}
-            description={t("settings.approvals.description")}
-          >
-            <SettingsHealth
-              slug={slug}
-              section="approvals"
-              metrics={{ mode: values.approvalMode as "simple" | "internal_then_client" }}
-              t={t}
-            />
-            {canManage ? (
-              <ApprovalsForm
-                slug={slug}
-                currentMode={values.approvalMode as "simple" | "internal_then_client"}
-                leadTimes={leadTimeValues(values)}
-              />
-            ) : (
-              <ReadOnlySettings message={t("settings.approvals.readOnly")} />
-            )}
-            <LastSaved at={settings?.updatedAt ?? null} />
-          </SettingsSection>
-
-          <SettingsSection
-            id="meta-publishing"
-            title={t("settings.metaPublishing.title")}
-            description={t("settings.metaPublishing.description")}
-          >
-            {canManage ? (
-              <MetaPublishingForm
-                slug={slug}
-                enabled={values.metaPublishingEnabled}
-                copy={{
-                  fieldLabel: t("settings.metaPublishing.fieldLabel"),
-                  fieldHint: t("settings.metaPublishing.fieldHint"),
-                  disabledHint: t("settings.metaPublishing.disabledHint"),
-                  enabledHint: t("settings.metaPublishing.enabledHint"),
-                  submit: t("settings.metaPublishing.submit"),
-                  saved: t("settings.metaPublishing.saved"),
-                  errors: {
-                    unauthorized: t("settings.metaPublishing.errors.unauthorized"),
-                    not_found: t("settings.metaPublishing.errors.notFound"),
-                    forbidden: t("settings.metaPublishing.errors.forbidden"),
-                    save_failed: t("settings.metaPublishing.errors.saveFailed"),
-                  },
-                }}
-              />
-            ) : (
-              <ReadOnlySettings message={t("settings.metaPublishing.readOnly")} />
-            )}
-            <LastSaved at={settings?.updatedAt ?? null} />
-          </SettingsSection>
-
-          {canBulkReset ? (
-            <BulkResetSection
-              workspaceSlug={slug}
-              workspaceName={workspace.name}
-              counts={bulkCounts}
-            />
-          ) : null}
-        </div>
+        {canBulkReset ? (
+          <BulkResetSection
+            workspaceSlug={slug}
+            workspaceName={workspace.name}
+            counts={bulkCounts}
+          />
+        ) : null}
       </div>
     </div>
   );

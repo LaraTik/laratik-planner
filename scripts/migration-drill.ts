@@ -344,6 +344,16 @@ async function drillSkippedMigrationRepair(): Promise<void> {
       await c.query('ALTER TABLE "notification" DROP COLUMN IF EXISTS "message_params"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_key"');
       await c.query('ALTER TABLE "activity_event" DROP COLUMN IF EXISTS "message_params"');
+      // The historical rewind replays every later migration. Keep the
+      // disposable drill honest for additive table migrations as well as
+      // column migrations by removing the new table before replay.
+      await c.query('DROP TABLE IF EXISTS "research_collection" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "social_post_observation" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "content_research_link" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "content_research_teardown_link" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "research_bookmark" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "research_teardown" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "research_watchlist_account" CASCADE');
       await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [
         migrationTimestamp,
       ]);

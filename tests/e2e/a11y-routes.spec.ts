@@ -90,6 +90,17 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/account", page);
   });
 
+  test("@a11y /app/account dark theme has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/account");
+    await page.getByTestId("account-theme-input").selectOption("dark");
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+    await expect(page.getByTestId("theme-preference-form").getByRole("status")).toHaveText(
+      "Appearance saved.",
+    );
+    await expectClean("/app/account [dark]", page);
+  });
+
   test("@a11y /app/w/[slug] (workspace overview) has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/w/acme");
@@ -226,6 +237,12 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app/w/acme/analytics/social");
     await expectClean("/app/w/acme/analytics/social", page);
+  });
+
+  test("@a11y /app/w/[slug]/research has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/research");
+    await expectClean("/app/w/acme/research", page);
   });
 
   test("@a11y /app/w/[slug]/team has no critical violations", async ({ page }) => {

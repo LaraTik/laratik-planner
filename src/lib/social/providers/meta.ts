@@ -7,12 +7,13 @@ import {
   type MetaRateLimitUsage,
 } from "@/lib/social/http";
 import { captureError } from "@/lib/observability/sentry";
-import { logError } from "@/lib/observability/logger";
+import { logError, logWarn } from "@/lib/observability/logger";
 import type { SocialCredentials } from "@/lib/social/crypto";
 import type {
   ConnectedProfile,
   RefreshedCredentials,
   SocialProviderAdapter,
+  SocialPostObservation,
   SocialSourceMetadata,
 } from "@/lib/social/types";
 import type { MetricStatus, SocialMetric } from "@/lib/social/metrics";
@@ -59,8 +60,8 @@ import {
  *     access token.
  *   - Paging follows `cursors.after`; the loop terminates when the
  *     response has no `paging.next` or has produced 100 Pages.
- *   - The Graph API version is read from
- *     `META_GRAPH_API_VERSION` (default `v25.0`).
+ *   - The Graph API version is supplied by the agency provider configuration
+ *     and defaults to `v25.0` when that optional field is empty.
  */
 
 // Read-only scopes requested in the Facebook Login for Business
@@ -701,6 +702,7 @@ export type MetaPageSnapshot = {
   providerRequestId: string | null;
   responseHash: string;
   sourceMetadata: SocialSourceMetadata;
+  postObservations?: SocialPostObservation[];
 };
 
 import { createHash as _createHash } from "node:crypto";
@@ -778,20 +780,25 @@ type IgBusinessResponse = {
    * `media.limit(10){...}`. The IG profile exposes this as a
    * nested `data` array of posts. The first element is the
    * most recent post. Each post is intentionally narrow — we
-   * only need id + like/comment counts to seed a future
-   * per-post engagement feature. Deeper fields (caption,
+   * only need identity, basic engagement, and video duration for the
+   * bounded post-observation slice. Deeper fields (caption,
    * thumbnail, etc.) are fetched on demand from `/{media-id}`
    * or `/{media-id}/insights`.
    */
   media?: {
-    data: Array<{
-      id: string;
-      like_count?: number;
-      comments_count?: number;
-      permalink?: string;
-      timestamp?: string;
-    }>;
+    data: IgMediaSummary[];
   };
+};
+
+type IgMediaSummary = {
+  id: string;
+  like_count?: number;
+  comments_count?: number;
+  permalink?: string;
+  timestamp?: string;
+  media_type?: string;
+  media_product_type?: string;
+  video_duration?: number;
 };
 
 type PageInsightsResponse = {
@@ -818,6 +825,26 @@ type PageInsightsResponse = {
      */
     values?: Array<{ value: number; end_time?: string }>;
   }>;
+};
+
+export type MetaMediaInsightMetricStatus = {
+  status: "available" | "unsupported" | "no_data" | "error";
+  value?: number;
+  providerErrorCode?: string;
+  providerRequestId?: string;
+};
+
+export type MetaMediaInsightProbe = {
+  status: "available" | "no_media" | "error";
+  mediaId: string | null;
+  mediaType: string | null;
+  mediaProductType: string | null;
+  publishedAt: string | null;
+  permalink: string | null;
+  metrics: Record<string, MetaMediaInsightMetricStatus>;
+  providerApiVersion: string;
+  providerRequestId: string | null;
+  providerErrorCode?: string;
 };
 
 /**
@@ -866,13 +893,14 @@ function readMetricValue(entry: PageInsightsResponse["data"][number] | undefined
  * in a single URL, so a single bad metric name made Meta return
  * `error.code: 100` for the whole request and the outer code
  * nulled reach/views/interactions together. Per-metric calls
- * isolate the failure: a Page whose `page_views` is not in the
- * allowlist now still gets `reach` and `interactions` captured.
+ * isolate the failure: a Page whose current metric is not in the
+ * allowlist now still gets the other metrics captured.
  */
 async function fetchMetaInsightsMetric(args: {
   baseUrl: string;
   accessToken: string;
   metricName: string;
+  period?: "day" | "lifetime";
 }): Promise<{
   value: number | null;
   errorCode: SocialProviderError["code"] | null;
@@ -881,7 +909,7 @@ async function fetchMetaInsightsMetric(args: {
 }> {
   const url = new URL(args.baseUrl);
   url.searchParams.set("metric", args.metricName);
-  url.searchParams.set("period", "day");
+  url.searchParams.set("period", args.period ?? "day");
   url.searchParams.set("metric_type", "total_value");
   url.searchParams.set("access_token", args.accessToken);
   try {
@@ -920,6 +948,408 @@ async function fetchMetaInsightsMetric(args: {
       usage: { app: null, business: null },
     };
   }
+}
+
+const MEDIA_INSIGHTS_METRICS = ["views", "reach", "saved", "shares", "total_interactions"] as const;
+const FACEBOOK_POST_INSIGHTS_METRICS = ["post_media_view", "post_total_media_view_unique"] as const;
+
+/**
+ * Read-only setup probe for the first owned Instagram media item. This is
+ * deliberately not part of the normal sync path: it proves which post-level
+ * metrics this token/app/version can read before we add durable observations.
+ */
+export async function probeMetaRecentInstagramMediaInsights(args: {
+  accessToken: string;
+  igUserId: string;
+  apiVersion: string;
+}): Promise<MetaMediaInsightProbe> {
+  const apiVersion = resolveGraphVersion(args.apiVersion);
+  const mediaUrl = new URL(`${graphBaseUrl(apiVersion)}/${args.igUserId}/media`);
+  mediaUrl.searchParams.set("fields", "id,media_type,media_product_type,timestamp,permalink");
+  mediaUrl.searchParams.set("limit", "1");
+  mediaUrl.searchParams.set("access_token", args.accessToken);
+
+  try {
+    const { body, requestId } = await providerRequest(mediaUrl.toString());
+    const parsed = JSON.parse(body) as {
+      data?: Array<{
+        id?: unknown;
+        media_type?: unknown;
+        media_product_type?: unknown;
+        timestamp?: unknown;
+        permalink?: unknown;
+      }>;
+    };
+    const media = parsed.data?.[0];
+    if (!media || typeof media.id !== "string") {
+      return {
+        status: "no_media",
+        mediaId: null,
+        mediaType: null,
+        mediaProductType: null,
+        publishedAt: null,
+        permalink: null,
+        metrics: {},
+        providerApiVersion: apiVersion,
+        providerRequestId: requestId,
+      };
+    }
+
+    const metricResults = await Promise.all(
+      MEDIA_INSIGHTS_METRICS.map(async (metricName) => {
+        const result = await fetchMetaInsightsMetric({
+          baseUrl: `${graphBaseUrl(apiVersion)}/${media.id}/insights`,
+          accessToken: args.accessToken,
+          metricName,
+        });
+        const status: MetaMediaInsightMetricStatus =
+          typeof result.value === "number"
+            ? {
+                status: "available",
+                value: result.value,
+                ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+              }
+            : result.errorCode === "metric_unavailable"
+              ? { status: "unsupported", providerErrorCode: result.errorCode }
+              : result.errorCode
+                ? {
+                    status: "error",
+                    providerErrorCode: result.errorCode,
+                    ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                  }
+                : { status: "no_data" };
+        return [metricName, status] as const;
+      }),
+    );
+
+    return {
+      status: "available",
+      mediaId: media.id,
+      mediaType: typeof media.media_type === "string" ? media.media_type : null,
+      mediaProductType:
+        typeof media.media_product_type === "string" ? media.media_product_type : null,
+      publishedAt: typeof media.timestamp === "string" ? media.timestamp : null,
+      permalink:
+        typeof media.permalink === "string" && media.permalink.startsWith("https://")
+          ? media.permalink
+          : null,
+      metrics: Object.fromEntries(metricResults),
+      providerApiVersion: apiVersion,
+      providerRequestId: requestId,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      mediaId: null,
+      mediaType: null,
+      mediaProductType: null,
+      publishedAt: null,
+      permalink: null,
+      metrics: {},
+      providerApiVersion: apiVersion,
+      providerRequestId: isSocialProviderError(error) ? error.requestId : null,
+      providerErrorCode: isSocialProviderError(error) ? error.code : "provider_unavailable",
+    };
+  }
+}
+
+/**
+ * Read-only capability probe for one owned Facebook Page post. Meta retired
+ * the legacy post-impression metrics in Graph API v25; keep the replacement
+ * viewer metrics opt-in until a real Page proves the response and permissions.
+ */
+export async function probeMetaRecentFacebookPagePostInsights(args: {
+  accessToken: string;
+  pageId: string;
+  apiVersion: string;
+}): Promise<MetaMediaInsightProbe> {
+  const apiVersion = resolveGraphVersion(args.apiVersion);
+  const feedUrl = new URL(`${graphBaseUrl(apiVersion)}/${args.pageId}/feed`);
+  feedUrl.searchParams.set(
+    "fields",
+    "id,status_type,created_time,permalink_url,attachments{media_type}",
+  );
+  feedUrl.searchParams.set("limit", "1");
+  feedUrl.searchParams.set("access_token", args.accessToken);
+
+  try {
+    const { body, requestId } = await providerRequest(feedUrl.toString());
+    const parsed = JSON.parse(body) as {
+      data?: Array<{
+        id?: unknown;
+        status_type?: unknown;
+        created_time?: unknown;
+        permalink_url?: unknown;
+        attachments?: { data?: Array<{ media_type?: unknown }> };
+      }>;
+    };
+    const post = parsed.data?.[0];
+    if (!post || typeof post.id !== "string") {
+      return {
+        status: "no_media",
+        mediaId: null,
+        mediaType: null,
+        mediaProductType: null,
+        publishedAt: null,
+        permalink: null,
+        metrics: {},
+        providerApiVersion: apiVersion,
+        providerRequestId: requestId,
+      };
+    }
+
+    const metricResults = await Promise.all(
+      FACEBOOK_POST_INSIGHTS_METRICS.map(async (metricName) => {
+        const result = await fetchMetaInsightsMetric({
+          baseUrl: `${graphBaseUrl(apiVersion)}/${post.id}/insights`,
+          accessToken: args.accessToken,
+          metricName,
+          period: "lifetime",
+        });
+        const status: MetaMediaInsightMetricStatus =
+          typeof result.value === "number"
+            ? {
+                status: "available",
+                value: result.value,
+                ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+              }
+            : result.errorCode === "metric_unavailable"
+              ? { status: "unsupported", providerErrorCode: result.errorCode }
+              : result.errorCode
+                ? {
+                    status: "error",
+                    providerErrorCode: result.errorCode,
+                    ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+                  }
+                : { status: "no_data" };
+        return [metricName, status] as const;
+      }),
+    );
+
+    return {
+      status: "available",
+      mediaId: post.id,
+      mediaType:
+        typeof post.attachments?.data?.[0]?.media_type === "string"
+          ? post.attachments.data[0].media_type
+          : typeof post.status_type === "string"
+            ? post.status_type
+            : null,
+      mediaProductType: null,
+      publishedAt: typeof post.created_time === "string" ? post.created_time : null,
+      permalink:
+        typeof post.permalink_url === "string" && post.permalink_url.startsWith("https://")
+          ? post.permalink_url
+          : null,
+      metrics: Object.fromEntries(metricResults),
+      providerApiVersion: apiVersion,
+      providerRequestId: requestId,
+    };
+  } catch (error) {
+    return {
+      status: "error",
+      mediaId: null,
+      mediaType: null,
+      mediaProductType: null,
+      publishedAt: null,
+      permalink: null,
+      metrics: {},
+      providerApiVersion: apiVersion,
+      providerRequestId: isSocialProviderError(error) ? error.requestId : null,
+      providerErrorCode: isSocialProviderError(error) ? error.code : "provider_unavailable",
+    };
+  }
+}
+
+const POST_OBSERVATION_LIMIT = 10;
+
+function postMetricStatus(
+  result: Awaited<ReturnType<typeof fetchMetaInsightsMetric>>,
+): MetricStatus {
+  if (typeof result.value === "number") return { status: "available" };
+  if (result.errorCode === "metric_unavailable") {
+    return { status: "unsupported", providerErrorCode: result.errorCode };
+  }
+  if (result.errorCode) {
+    return {
+      status: "error",
+      providerErrorCode: result.errorCode,
+      ...(result.requestId ? { providerRequestId: result.requestId } : {}),
+    };
+  }
+  return { status: "no_data" };
+}
+
+/**
+ * Collect a bounded set of Instagram post observations from the media
+ * expansion already used by the account snapshot. The same read-only metrics
+ * proven by the setup probe are copied into the provider-neutral observation;
+ * unsupported metrics stay nullable and never fail the account snapshot.
+ */
+async function fetchMetaInstagramPostObservations(args: {
+  media: IgMediaSummary[];
+  accessToken: string;
+  apiVersion: string;
+  observedAt: Date;
+}): Promise<SocialPostObservation[]> {
+  const media = args.media.slice(0, POST_OBSERVATION_LIMIT);
+  const observations = await Promise.all(
+    media.map(async (item) => {
+      const candidate = normalizeMetaPublication("instagram", {
+        id: item.id,
+        permalink: item.permalink,
+        timestamp: item.timestamp,
+        media_type: item.media_type,
+        media_product_type: item.media_product_type,
+      });
+      const results = await Promise.all(
+        MEDIA_INSIGHTS_METRICS.map(async (metricName) => ({
+          metricName,
+          result: await fetchMetaInsightsMetric({
+            baseUrl: `${graphBaseUrl(args.apiVersion)}/${item.id}/insights`,
+            accessToken: args.accessToken,
+            metricName,
+          }),
+        })),
+      );
+      const resultFor = (metricName: (typeof MEDIA_INSIGHTS_METRICS)[number]) =>
+        results.find((entry) => entry.metricName === metricName)!.result;
+      const viewsResult = resultFor("views");
+      const reachResult = resultFor("reach");
+      const savedResult = resultFor("saved");
+      const sharesResult = resultFor("shares");
+      const interactionsResult = resultFor("total_interactions");
+      const likes = typeof item.like_count === "number" ? item.like_count : null;
+      const comments = typeof item.comments_count === "number" ? item.comments_count : null;
+      const fallbackInteractions =
+        likes !== null || comments !== null ? (likes ?? 0) + (comments ?? 0) : null;
+      const metricStatuses = {
+        views: postMetricStatus(viewsResult),
+        reach: postMetricStatus(reachResult),
+        interactions: postMetricStatus(interactionsResult),
+      } satisfies SocialSourceMetadata["metricStatuses"];
+      const sourceMetadata: SocialSourceMetadata = {
+        schemaVersion: 1,
+        metricStatuses,
+        ...(viewsResult.value === null ? { partial: true, reason: "post_views_unavailable" } : {}),
+      };
+      return {
+        provider: "meta",
+        externalPostId: item.id,
+        permalink: candidate.permalink,
+        publishedAt: candidate.publishedAt ?? candidate.createdAt,
+        mediaType: candidate.mediaType,
+        mediaProductType: item.media_product_type ?? null,
+        durationSeconds: typeof item.video_duration === "number" ? item.video_duration : null,
+        views: viewsResult.value,
+        reach: reachResult.value,
+        likes,
+        comments,
+        saved: savedResult.value,
+        shares: sharesResult.value,
+        interactions: interactionsResult.value ?? fallbackInteractions,
+        observedAt: args.observedAt,
+        providerApiVersion: args.apiVersion,
+        providerRequestId: viewsResult.requestId,
+        sourceMetadata,
+      } satisfies SocialPostObservation;
+    }),
+  );
+  return observations;
+}
+
+type FacebookFeedPostSummary = {
+  id?: unknown;
+  created_time?: unknown;
+  permalink_url?: unknown;
+  status_type?: unknown;
+  attachments?: { data?: Array<{ media_type?: unknown }> };
+  reactions?: { summary?: { total_count?: unknown } };
+  comments?: { summary?: { total_count?: unknown } };
+  shares?: { count?: unknown };
+};
+
+function countValue(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/**
+ * Collect a bounded, metadata-only Facebook Page feed. The content body is
+ * intentionally never persisted; only the source pointer, type, timestamp,
+ * and aggregate engagement counts enter the provider-neutral observation row.
+ */
+async function fetchMetaFacebookPostObservations(args: {
+  pageId: string;
+  accessToken: string;
+  apiVersion: string;
+  observedAt: Date;
+}): Promise<SocialPostObservation[]> {
+  const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/feed`);
+  url.searchParams.set(
+    "fields",
+    "id,created_time,permalink_url,status_type,attachments{media_type},reactions.limit(0).summary(true),comments.limit(0).summary(true),shares",
+  );
+  url.searchParams.set("limit", String(POST_OBSERVATION_LIMIT));
+  url.searchParams.set("access_token", args.accessToken);
+  const { body, requestId } = await providerRequest(url.toString());
+  let parsed: { data?: FacebookFeedPostSummary[] };
+  try {
+    parsed = JSON.parse(body) as { data?: FacebookFeedPostSummary[] };
+  } catch {
+    throw new SocialProviderError("invalid_response", false, requestId);
+  }
+  if (!Array.isArray(parsed.data)) {
+    throw new SocialProviderError("invalid_response", false, requestId);
+  }
+
+  return parsed.data.flatMap((item) => {
+    if (typeof item.id !== "string") return [];
+    let candidate;
+    try {
+      candidate = normalizeMetaPublication("facebook", {
+        id: item.id,
+        created_time: item.created_time,
+        permalink_url: item.permalink_url,
+        status_type: item.status_type,
+        attachments: item.attachments,
+      });
+    } catch {
+      return [];
+    }
+    const likes = countValue(item.reactions?.summary?.total_count);
+    const comments = countValue(item.comments?.summary?.total_count);
+    const shares = countValue(item.shares?.count);
+    const interactions =
+      likes !== null || comments !== null || shares !== null
+        ? (likes ?? 0) + (comments ?? 0) + (shares ?? 0)
+        : null;
+    return [
+      {
+        provider: "meta",
+        externalPostId: item.id,
+        permalink: candidate.permalink,
+        publishedAt: candidate.publishedAt ?? candidate.createdAt,
+        mediaType: candidate.mediaType,
+        mediaProductType: null,
+        durationSeconds: null,
+        views: null,
+        reach: null,
+        likes,
+        comments,
+        saved: null,
+        shares,
+        interactions,
+        observedAt: args.observedAt,
+        providerApiVersion: args.apiVersion,
+        providerRequestId: requestId,
+        sourceMetadata: {
+          schemaVersion: 1,
+          partial: true,
+          reason: "facebook_post_insights_not_requested",
+        },
+      } satisfies SocialPostObservation,
+    ];
+  });
 }
 
 export async function fetchMetaFacebookPageSnapshot(args: {
@@ -1008,37 +1438,41 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     });
     throw insightsErr;
   }
-  // Triply visible per-metric failures from the inner helper. Each
-  // failed metric is logged + Sentry'd so an operator can see which
-  // specific metric is missing for this Page.
+  // Blocking per-metric failures are logged + Sentry'd. The accepted
+  // capability gap is only a warning so it does not create error noise.
   for (const e of insightsResultErrors) {
-    logError("social.meta.page_insights_metric_failed", {
+    const context = {
       pageId,
       accessTokenLast4: accessToken.slice(-4),
       metric: e.metric,
       errorCode: e.code,
       requestId: e.requestId,
+    };
+    if (e.code === "metric_unavailable") {
+      logWarn("social.meta.page_insights_metric_unsupported", context);
+      continue;
+    }
+    logError("social.meta.page_insights_metric_failed", {
+      ...context,
     });
     captureError(
       "social.meta.page_insights_metric_failed",
       new Error(`Meta insights metric "${e.metric}" returned ${e.code}`),
-      {
-        pageId,
-        accessTokenLast4: accessToken.slice(-4),
-        metric: e.metric,
-        errorCode: e.code,
-        requestId: e.requestId,
-      },
+      context,
     );
   }
   if (insightsResultErrors.length > 0) {
-    // First failed metric wins for the row's `providerErrorCode` so
-    // the existing UI / DB-query diagnostic path keeps working. The
-    // full list of failed metrics is also surfaced as a comma-joined
-    // string for operators who want all of them at a glance.
-    const first = insightsResultErrors[0]!;
-    insightsErrorCode = first.code;
-    insightsErrorRequestId = first.requestId;
+    // `metric_unavailable` is a non-retryable capability gap, not a
+    // channel-level provider failure. Keep it on the metric status so
+    // the row remains visibly partial without making the channel look
+    // degraded or scheduling pointless retries.
+    const firstBlockingError = insightsResultErrors.find(
+      (error) => error.code !== "metric_unavailable",
+    );
+    if (firstBlockingError) {
+      insightsErrorCode = firstBlockingError.code;
+      insightsErrorRequestId = firstBlockingError.requestId;
+    }
   }
   // The `partial` flag is set when ANY field the worker tried to
   // capture is null. Pre-2026-08-28 the flag was set only when the
@@ -1074,14 +1508,17 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   } else if (insightsPartial) {
     sourceMetadata.reason = "page_insights_unavailable";
     if (insightsErrorCode) {
-      // 2026-08-28: surface the actual error code in the saved
-      // row so a DB query shows why the insights are null. For
-      // Sentry-less operators, this is the fastest diagnostic —
-      // see tests/unit/social-analytics.test.ts for the contract.
-      // 2026-09-02: the code is now the first failed metric's
+      // Surface blocking provider codes in the saved row so a DB
+      // query shows why the insights are null. For Sentry-less
+      // operators, this is the fastest diagnostic. A
+      // `metric_unavailable` capability gap is kept at metric level
+      // instead of being promoted to a channel error below.
+      // 2026-09-02: the code is the first blocking metric's
       // errorCode, NOT an aggregation of all per-metric failures.
-      // Operators who want the full list of failed metrics read
-      // `failedMetrics` below.
+      // `metric_unavailable` is intentionally omitted here because
+      // it is already represented as `unsupported` on that metric.
+      // Operators who want the full list of unavailable metrics read
+      // `failedMetrics` and `metricStatuses` below.
       sourceMetadata.providerErrorCode = insightsErrorCode;
       if (insightsErrorRequestId) {
         sourceMetadata.providerRequestId = insightsErrorRequestId;
@@ -1096,6 +1533,23 @@ export async function fetchMetaFacebookPageSnapshot(args: {
   // the basic-fields usage if insights never ran.
   writeRateLimitUsage(sourceMetadata, latestUsage, basicFieldsUsage);
   const observedAt = new Date();
+  let postObservations: SocialPostObservation[] = [];
+  try {
+    postObservations = await fetchMetaFacebookPostObservations({
+      pageId,
+      accessToken,
+      apiVersion,
+      observedAt,
+    });
+  } catch (postError) {
+    const code = isSocialProviderError(postError) ? postError.code : "provider_unavailable";
+    logError("social.meta.facebook_post_observations_failed", {
+      pageId,
+      accessTokenLast4: accessToken.slice(-4),
+      errorCode: code,
+      requestId: isSocialProviderError(postError) ? postError.requestId : null,
+    });
+  }
   const hash = hashSnapshot([
     apiVersion,
     requestIdHint,
@@ -1118,6 +1572,7 @@ export async function fetchMetaFacebookPageSnapshot(args: {
     providerRequestId: requestId,
     responseHash: hash,
     sourceMetadata,
+    ...(postObservations.length > 0 ? { postObservations } : {}),
   };
 }
 
@@ -1147,6 +1602,13 @@ function statusForInsight(
 ): MetricStatus {
   const error = errors.find((candidate) => candidate.metric === metric);
   if (error) {
+    if (error.code === "metric_unavailable") {
+      return {
+        status: "unsupported",
+        providerErrorCode: error.code,
+        ...(error.requestId ? { providerRequestId: error.requestId } : {}),
+      };
+    }
     return {
       status: "error",
       providerErrorCode: error.code,
@@ -1157,8 +1619,12 @@ function statusForInsight(
 }
 
 const PAGE_INSIGHTS_METRICS = [
-  { name: "page_impressions_unique", field: "reach" as const },
-  { name: "page_views", field: "views" as const },
+  // Meta deprecated `page_impressions_unique` above Graph API v25.
+  // `page_total_media_view_unique` is the current Page-level unique
+  // viewer replacement; `page_views_total` is the current profile
+  // view metric. Keep our normalized fields stable for the dashboard.
+  { name: "page_total_media_view_unique", field: "reach" as const },
+  { name: "page_views_total", field: "views" as const },
   { name: "page_post_engagements", field: "interactions" as const },
 ] as const;
 
@@ -1216,20 +1682,11 @@ export async function fetchMetaInstagramSnapshot(args: {
 }): Promise<MetaPageSnapshot> {
   const { accessToken, igUserId, apiVersion, requestIdHint } = args;
   const url = new URL(`${graphBaseUrl(apiVersion)}/${igUserId}`);
-  // 2026-08-28: field-expand `media.limit(10){...}` onto the basic
-  // call so the response carries the 10 most recent posts. This is
-  // a future-proofing change — per-post engagement is out of scope
-  // for M4, but when it lands the basic call will already return
-  // the post list and we will only need a per-post
-  // `/{media-id}/insights` call for posts first seen in the last
-  // 24h. The Meta doc's "fan-out for new posts only" strategy
-  // requires this expansion today to be a zero-cost upgrade later.
-  // The expansion adds 0 calls now (we already call this endpoint);
-  // it just widens the response shape. `media_count` is a
-  // top-level field unaffected by the expansion.
+  // Fetch the 10 most recent media objects as part of the account call;
+  // the bounded post-observation fan-out below uses this same response.
   url.searchParams.set(
     "fields",
-    "followers_count,media_count,follows_count,username,name,media.limit(10){id,like_count,comments_count,permalink,timestamp}",
+    "followers_count,media_count,follows_count,username,name,media.limit(10){id,like_count,comments_count,permalink,timestamp,media_type,media_product_type,video_duration}",
   );
   url.searchParams.set("access_token", accessToken);
   const { body, requestId, usage: basicFieldsUsage } = await providerRequest(url.toString());
@@ -1242,11 +1699,8 @@ export async function fetchMetaInstagramSnapshot(args: {
   const follower = typeof parsed.followers_count === "number" ? parsed.followers_count : null;
   const media = typeof parsed.media_count === "number" ? parsed.media_count : null;
   const following = typeof parsed.follows_count === "number" ? parsed.follows_count : null;
-  // 2026-08-28: the most recent post (if any) is now available
-  // because of the field expansion. We surface the id + like/comment
-  // counts on sourceMetadata so a future per-post job can read
-  // them without an extra call. The snapshot's return shape is
-  // unchanged — per-post engagement is still out of scope for M4.
+  // Keep the latest-post fields in source metadata for backwards-compatible
+  // diagnostics; durable post observations are stored separately below.
   const latestPost = parsed.media?.data?.[0] ?? null;
   // Account-level daily insights: views, reach, engaged accounts,
   // interactions. Empty datasets are `null`, never `0`.
@@ -1374,11 +1828,6 @@ export async function fetchMetaInstagramSnapshot(args: {
   // if insights never ran.
   writeRateLimitUsage(sourceMetadata, latestUsage, basicFieldsUsage);
   if (latestPost) {
-    // Future-proofing: per-post engagement is out of scope for M4
-    // (locked in grill-me round 1), but the field-expanded basic
-    // call returns the most recent post. Surface its id + counts
-    // on the row so a future per-post job can read them without
-    // re-calling the API. Ignored by the analytics page for now.
     sourceMetadata.latestPostId = latestPost.id;
     if (typeof latestPost.like_count === "number") {
       sourceMetadata.latestPostLikeCount = latestPost.like_count;
@@ -1388,6 +1837,27 @@ export async function fetchMetaInstagramSnapshot(args: {
     }
   }
   const observedAt = new Date();
+  let postObservations: SocialPostObservation[] = [];
+  if (parsed.media?.data?.length) {
+    // ponytail: bounded 10-post fan-out; move older media to a queued
+    // backfill job if rate-limit usage or account coverage requires it.
+    try {
+      postObservations = await fetchMetaInstagramPostObservations({
+        media: parsed.media.data,
+        accessToken,
+        apiVersion,
+        observedAt,
+      });
+    } catch (postError) {
+      const code = isSocialProviderError(postError) ? postError.code : "provider_unavailable";
+      logError("social.meta.post_observations_failed", {
+        igUserId,
+        accessTokenLast4: accessToken.slice(-4),
+        errorCode: code,
+        requestId: isSocialProviderError(postError) ? postError.requestId : null,
+      });
+    }
+  }
   const hash = hashSnapshot([
     apiVersion,
     requestIdHint,
@@ -1414,6 +1884,7 @@ export async function fetchMetaInstagramSnapshot(args: {
     providerRequestId: requestId,
     responseHash: hash,
     sourceMetadata,
+    ...(postObservations.length > 0 ? { postObservations } : {}),
   };
 }
 

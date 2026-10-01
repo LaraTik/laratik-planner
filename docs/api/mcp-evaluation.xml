@@ -33,4 +33,5 @@
   <case id="30">A platform:diagnostics:read token cannot invoke triage_app_error; that tool requires platform:diagnostics:write AND the platform.console.read permission.</case>
   <case id="31">Error messages, causes, and stacks returned by any diagnostics tool are scrubbed: credential shapes, Postgres DETAIL values, and email addresses never appear, while the constraint / route / class identifiers that make the error diagnosable do.</case>
   <case id="32">A hot error loop is bounded: the group's occurrenceCount keeps incrementing exactly while the number of persisted event rows stays within the per-minute burst cap, and app_health reports how many occurrences were capped.</case>
+  <case id="33">list_research is read-only, requires content:read plus internal workspace access, returns the stable collections/bookmarks/teardowns/watchlist envelope, hides private collections from other users, and never returns provider media, raw provider bodies, or raw planner notes.</case>
 </evaluation>

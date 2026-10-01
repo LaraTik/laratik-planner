@@ -172,3 +172,71 @@ export const socialProfileDailyMetrics = pgTable(
     index("social_profile_metric_channel_observed_idx").on(t.socialChannelId, t.observedAt),
   ],
 );
+
+// ─── social_post_observation ──────────────────────────────────────────────
+//
+// One normalized observation per provider post and workspace-local day. The
+// daily key keeps the table bounded while preserving repeated samples and
+// provider corrections for ranking and trend calculations.
+export const socialPostObservations = pgTable(
+  "social_post_observation",
+  {
+    id: idColumn(),
+    socialChannelId: uuid("social_channel_id")
+      .notNull()
+      .references(() => socialChannels.id, { onDelete: "cascade" }),
+    observationDate: date("observation_date").notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" }).notNull(),
+    externalProvider: text("external_provider").notNull(),
+    externalPostId: text("external_post_id").notNull(),
+    permalink: text("permalink"),
+    publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
+    mediaType: text("media_type").notNull(),
+    mediaProductType: text("media_product_type"),
+    durationSeconds: integer("duration_seconds"),
+    views: bigint("views", { mode: "number" }),
+    reach: bigint("reach", { mode: "number" }),
+    likes: bigint("likes", { mode: "number" }),
+    comments: bigint("comments", { mode: "number" }),
+    saved: bigint("saved", { mode: "number" }),
+    shares: bigint("shares", { mode: "number" }),
+    interactions: bigint("interactions", { mode: "number" }),
+    providerApiVersion: text("provider_api_version").notNull(),
+    providerRequestId: text("provider_request_id"),
+    sourceMetadata: jsonb("source_metadata").notNull().default({}),
+    ...timestamps,
+  },
+  (t) => [
+    check(
+      "social_post_observation_provider_valid",
+      sql`${t.externalProvider} IN ('meta', 'tiktok')`,
+    ),
+    check(
+      "social_post_observation_media_type_valid",
+      sql`${t.mediaType} IN ('image', 'video', 'carousel', 'reel', 'story', 'unknown')`,
+    ),
+    check(
+      "social_post_observation_counts_non_negative",
+      sql`(${t.durationSeconds} IS NULL OR ${t.durationSeconds} >= 0)
+        AND (${t.views} IS NULL OR ${t.views} >= 0)
+        AND (${t.reach} IS NULL OR ${t.reach} >= 0)
+        AND (${t.likes} IS NULL OR ${t.likes} >= 0)
+        AND (${t.comments} IS NULL OR ${t.comments} >= 0)
+        AND (${t.saved} IS NULL OR ${t.saved} >= 0)
+        AND (${t.shares} IS NULL OR ${t.shares} >= 0)
+        AND (${t.interactions} IS NULL OR ${t.interactions} >= 0)`,
+    ),
+    check(
+      "social_post_observation_permalink_https",
+      sql`${t.permalink} IS NULL OR ${t.permalink} ~* '^https://'`,
+    ),
+    uniqueIndex("social_post_observation_daily_unique").on(
+      t.socialChannelId,
+      t.externalProvider,
+      t.externalPostId,
+      t.observationDate,
+    ),
+    index("social_post_observation_channel_published_idx").on(t.socialChannelId, t.publishedAt),
+    index("social_post_observation_channel_observed_idx").on(t.socialChannelId, t.observedAt),
+  ],
+);

@@ -221,7 +221,7 @@ export function NotificationsBell({
             aria-live="polite"
             aria-atomic="true"
             data-testid={badgeTestId}
-            className="bg-danger text-label text-on-danger absolute -end-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-bold text-white"
+            className="bg-danger text-label text-on-danger absolute -end-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 font-bold"
           >
             {unread > 9 ? "9+" : unread}
           </span>

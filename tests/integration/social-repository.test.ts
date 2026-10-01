@@ -10,6 +10,7 @@ import {
   socialChannels,
   socialConnections,
   socialProfileDailyMetrics,
+  socialPostObservations,
   socialOauthStates,
 } from "@/lib/db/schema";
 import {
@@ -21,6 +22,7 @@ import {
   markSyncSuccess,
   openConnectionCredentials,
   saveSnapshot,
+  savePostObservations,
   updateConnectionCredentials,
   revokeConnectionAndDetach,
   type CreatePendingConnectionInput,
@@ -46,6 +48,7 @@ import { openCredentialsWithDek } from "@/lib/social/crypto";
  *   - saveSnapshot upserts on (channel, metric_date), silently
  *     replacing the prior value when a provider correction arrives
  *     later in the same day
+ *   - savePostObservations upserts on (channel, provider, post, date)
  *   - consumeOauthState is one-shot: the second call with the same
  *     digest returns null
  *   - disconnectProfile clears the connection but preserves the
@@ -338,6 +341,49 @@ describe("M4 — repository", () => {
         .where(sql`social_channel_id = ${ch.id}`);
       expect(rows).toHaveLength(1);
       expect(Number(rows[0]!.followerCount)).toBe(105);
+    });
+  });
+
+  describe("savePostObservations", () => {
+    it("upserts the same post observation for one channel-local day", async () => {
+      const connId = await seedConnection();
+      const ch = await seedConnectedChannel(connId, "a");
+      const observation = {
+        provider: "meta" as const,
+        externalPostId: "post-1",
+        permalink: "https://instagram.com/reel/post-1",
+        publishedAt: new Date("2026-08-20T12:00:00Z"),
+        mediaType: "reel" as const,
+        mediaProductType: "REELS",
+        durationSeconds: null,
+        views: 100,
+        reach: null,
+        likes: 10,
+        comments: 2,
+        saved: null,
+        shares: null,
+        interactions: null,
+        observedAt: new Date("2026-08-20T13:00:00Z"),
+        providerApiVersion: "v25.0",
+        providerRequestId: newRequestId(),
+        sourceMetadata: {},
+      };
+      await savePostObservations(db, {
+        socialChannelId: ch.id,
+        observationDate: "2026-08-20",
+        observations: [observation],
+      });
+      await savePostObservations(db, {
+        socialChannelId: ch.id,
+        observationDate: "2026-08-20",
+        observations: [{ ...observation, views: 125 }],
+      });
+      const rows = await db
+        .select()
+        .from(socialPostObservations)
+        .where(sql`social_channel_id = ${ch.id}`);
+      expect(rows).toHaveLength(1);
+      expect(Number(rows[0]!.views)).toBe(125);
     });
   });
 

@@ -52,6 +52,7 @@ export interface AiAssistancePanelProps {
   /** Label for the launcher button. */
   triggerLabel?: string;
   trendContext?: { id: string; label: string };
+  researchContext?: { accountName: string; platform: string };
 }
 
 export function AiAssistancePanel({
@@ -67,6 +68,7 @@ export function AiAssistancePanel({
   className,
   triggerLabel,
   trendContext,
+  researchContext,
 }: AiAssistancePanelProps) {
   const t = useLocaleT();
   const resolvedTriggerLabel = triggerLabel ?? t("contentDetail.aiAssistance");
@@ -97,6 +99,14 @@ export function AiAssistancePanel({
               </DialogTitle>
               <DialogDescription>
                 {t("contentDetail.aiAssistancePanel.description")}
+                {researchContext ? (
+                  <span className="text-fg-muted ms-1">
+                    {t("contentDetail.aiAssistancePanel.researchContext", {
+                      account: researchContext.accountName,
+                      platform: researchContext.platform,
+                    })}
+                  </span>
+                ) : null}
               </DialogDescription>
             </div>
             <button

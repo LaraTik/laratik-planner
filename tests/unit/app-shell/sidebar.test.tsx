@@ -586,13 +586,13 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.getByTestId("sidebar-collapse-toggle")).toBeInTheDocument();
   });
 
-  it("groups workspace navigation by Content / Performance / Brand / Manage", () => {
+  it("groups workspace navigation by Plan / Understand / Produce / Manage", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/team");
     render(<Sidebar {...baseProps} />);
     // Group headings render
-    expect(screen.getByText("Content")).toBeInTheDocument();
-    expect(screen.getByText("Performance")).toBeInTheDocument();
-    expect(screen.getByText("Brand")).toBeInTheDocument();
+    expect(screen.getByText("Plan")).toBeInTheDocument();
+    expect(screen.getByText("Understand")).toBeInTheDocument();
+    expect(screen.getByText("Produce")).toBeInTheDocument();
     expect(screen.getByText("Manage")).toBeInTheDocument();
   });
 
@@ -685,29 +685,29 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
         {...baseProps}
         labels={{
           tenantLabel: "المؤسسة",
-          personal: "شخصي",
+          plan: "التخطيط",
           global: "عام",
-          content: "المحتوى",
+          understand: "الفهم والتحليل",
         }}
       />,
     );
     // Regression guard for the round-4 threading bug: the group
     // heading reads `labels[group.key]` (the SPEC key, e.g.
-    // "personal" / "global"), NOT the catalog suffix
+    // "plan" / "global"), NOT the catalog suffix
     // ("globalGroup"). If the layout threads the wrong key the
     // heading silently falls back to the hardcoded English
     // `group.label` and Arabic users see untranslated chrome.
     expect(screen.getByTestId("sidebar-tenant-label")).toHaveTextContent("المؤسسة");
-    expect(screen.getByTestId("sidebar-group-label-personal")).toHaveTextContent("شخصي");
-    expect(screen.getByTestId("sidebar-group-label-content")).toHaveTextContent("المحتوى");
+    expect(screen.getByTestId("sidebar-group-label-plan")).toHaveTextContent("التخطيط");
+    expect(screen.getByTestId("sidebar-group-label-understand")).toHaveTextContent(
+      "الفهم والتحليل",
+    );
   });
 
   it("resolves the Global group heading through the labels map (bilingual)", () => {
     usePathnameMock.mockReturnValue("/app/tasks");
     render(<Sidebar {...baseProps} labels={{ global: "عام", agency: "الوكالة" }} />);
-    // `global` is the only genuinely new nav key in round 4 — the
-    // workspace `personal` group reuses the pre-existing account
-    // `personal` key. This pins the agency-side threading so the
+    // `global` is an agency-side nav key. This pins the
     // Global heading can't silently fall back to English.
     expect(screen.getByTestId("sidebar-group-label-global")).toHaveTextContent("عام");
   });
@@ -745,11 +745,11 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   it("renders group dividers between every pair of groups (after the first)", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
-    // The sidebar carries a Personal group heading and a Brand
+    // The sidebar carries a Plan group heading and a Produce
     // group heading; the divider between them is the `border-t
-    // border-border` class on the Brand group container.
-    const brandHeading = screen.getByTestId("sidebar-group-label-brand");
-    expect(brandHeading.parentElement?.className ?? "").toMatch(/border-t/);
+    // border-border` class on the Produce group container.
+    const produceHeading = screen.getByTestId("sidebar-group-label-produce");
+    expect(produceHeading.parentElement?.className ?? "").toMatch(/border-t/);
   });
 
   it("renders the Tenant header label on the context card", () => {

@@ -112,6 +112,7 @@ export function McpAccessTokensCard({ tokens }: { tokens: TokenRow[] }) {
         <code
           className="bg-surface text-body text-fg-primary block overflow-x-auto rounded border px-2 py-2"
           dir="ltr"
+          tabIndex={0}
         >
           {MCP_ENDPOINT}
         </code>

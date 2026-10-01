@@ -11,6 +11,7 @@ import {
   platformAdministrators,
   platformPlanTemplates,
   socialChannels,
+  socialPostObservations,
   socialProfileDailyMetrics,
   mediaAssets,
   storageObjects,
@@ -106,6 +107,8 @@ type SeedBody = {
   includeDeliveryMediaFixture?: boolean;
   /** Enable the gated Trend Radar surface for visual/onboarding fixtures. */
   enableTrendRadar?: boolean;
+  /** Keep visual planning fixtures in the committed visual-reference month. Test-only. */
+  visualFixture?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -171,6 +174,7 @@ export async function POST(req: NextRequest) {
     socialAnalyticsFixture: body.socialAnalyticsFixture ?? false,
     includeDeliveryMediaFixture: body.includeDeliveryMediaFixture ?? false,
     enableTrendRadar: body.enableTrendRadar ?? false,
+    visualFixture: body.visualFixture ?? false,
   };
 
   try {
@@ -209,6 +213,7 @@ async function seedInternal(f: {
   socialAnalyticsFixture: boolean;
   includeDeliveryMediaFixture: boolean;
   enableTrendRadar: boolean;
+  visualFixture: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -577,6 +582,39 @@ async function seedInternal(f: {
           })
           .onConflictDoNothing();
       }
+
+      // A small bounded post-observation fixture keeps the Command Center
+      // inventory and pagination journeys deterministic without pretending
+      // that provider media or thumbnails exist in the test database.
+      for (const postOffset of Array.from({ length: 12 }, (_, index) => index)) {
+        const observedAt = new Date(now.getTime() - postOffset * 24 * 60 * 60 * 1000);
+        const isOutlier = postOffset === 0;
+        await db
+          .insert(socialPostObservations)
+          .values({
+            socialChannelId: channelId,
+            observationDate: observedAt.toISOString().slice(0, 10),
+            observedAt,
+            externalProvider: fixture.platform === "tiktok" ? "tiktok" : "meta",
+            externalPostId: `e2e-${fixture.platform}-${postOffset}`,
+            permalink: `https://example.test/${fixture.platform}/post-${postOffset}`,
+            publishedAt: observedAt,
+            mediaType: postOffset % 3 === 0 ? "reel" : "video",
+            mediaProductType: "e2e_fixture",
+            durationSeconds: 8 + (postOffset % 4) * 8,
+            views: isOutlier ? 12_000 : 300 + postOffset * 20,
+            reach: isOutlier ? 9_000 : 200 + postOffset * 15,
+            likes: 10 + postOffset,
+            comments: postOffset % 3,
+            saved: postOffset % 2,
+            shares: postOffset % 4,
+            interactions: isOutlier ? 800 : 20 + postOffset,
+            providerApiVersion: "e2e-fixture",
+            providerRequestId: `e2e-post-${fixture.platform}-${postOffset}`,
+            sourceMetadata: { fixture: true },
+          })
+          .onConflictDoNothing();
+      }
     }
   }
 
@@ -596,8 +634,17 @@ async function seedInternal(f: {
     .limit(1);
 
   let contentItemId: string;
+  // ponytail: fixed month keeps committed screenshots stable across month boundaries;
+  // rotate this date and the visual harness month together when intentionally refreshing refs.
+  const visualPublishAt = new Date(Date.UTC(2026, 8, 15, 10, 54));
   if (existingContentItem[0]) {
     contentItemId = existingContentItem[0].id;
+    if (f.visualFixture) {
+      await db
+        .update(contentItems)
+        .set({ plannedPublishAt: visualPublishAt })
+        .where(eq(contentItems.id, contentItemId));
+    }
   } else {
     const [created] = await db
       .insert(contentItems)
@@ -609,7 +656,9 @@ async function seedInternal(f: {
         // The plan requires a stable schedule; default to 7 days in
         // the future, which is well within the bounded test window
         // but does not collide with the explicit quick-create test.
-        plannedPublishAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        plannedPublishAt: f.visualFixture
+          ? visualPublishAt
+          : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         contentOwnerId: userId,
         createdBy: userId,
       })

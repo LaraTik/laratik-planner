@@ -2,6 +2,7 @@ import "server-only";
 import { serverEnv } from "@/lib/validation/env";
 import { loadManagedAiSecret, hasManagedAiSecret } from "./provider-secret";
 import type { AiContext } from "./context";
+import type { ResearchTeardownSource } from "@/lib/research/teardown";
 export type { AiContext, AiContextSelection } from "./context";
 
 // Re-export the M3.3 governance surface so callers can import
@@ -202,6 +203,68 @@ function buildImproveBriefSystemPrompt(format: string): string {
   return `${base} ${formatSpecific}`;
 }
 
+export type ResearchBriefContext = {
+  accountName: string;
+  platform: string;
+  mediaType: string;
+  durationSeconds: number | null;
+  views: number | null;
+  reach: number | null;
+  likes: number | null;
+  comments: number | null;
+  saved: number | null;
+  shares: number | null;
+};
+
+/**
+ * Generate a structured, preview-only teardown from explicitly supplied
+ * planner evidence. The caller must validate and parse the JSON result before
+ * showing it; this function never writes to a content item or research row.
+ */
+export async function generateResearchTeardown(input: {
+  source: ResearchTeardownSource;
+  title?: string | undefined;
+  apiKey?: string | undefined;
+  maxTokens?: number | undefined;
+  onUsage?: (result: ChatResult) => void;
+}): Promise<string | null> {
+  if (!input.apiKey) return null;
+  const sourceText =
+    input.source.kind === "planner_notes"
+      ? input.source.notes
+      : input.source.kind === "provider_media"
+        ? input.source.transcript
+        : (input.source.transcript ?? "");
+  const result = await chat({
+    temperature: 0.3,
+    maxTokens: input.maxTokens ?? 900,
+    apiKey: input.apiKey,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are a social video strategist. Return ONLY valid JSON matching this exact shape: " +
+          '{"schemaVersion":1,"hook":"...","promise":"...","format":"...","beats":[{"label":"...","description":"...","startSecond":0,"endSecond":3}],"pacing":"...","callToAction":"...","evidence":[{"field":"hook","observation":"...","source":"..."}],"uncertainty":["..."]}. ' +
+          "Use only the supplied transcript or planner notes. Do not invent scenes, claims, metrics, or timestamps; put missing information in uncertainty. " +
+          "This is a preview for human review, not a final script.",
+      },
+      {
+        role: "user",
+        content: [
+          input.title ? `Working title: ${input.title}` : null,
+          `Evidence kind: ${input.source.kind}`,
+          "Evidence:",
+          sourceText,
+        ]
+          .filter(Boolean)
+          .join("\n"),
+      },
+    ],
+  });
+  if (result) input.onUsage?.(result);
+  return result?.content ?? null;
+}
+
 export type ChatMessage = { role: "system" | "user" | "assistant"; content: string };
 
 export interface ChatOptions {
@@ -368,6 +431,7 @@ export async function improveBrief(input: {
   maxTokens?: number | undefined;
   context?: AiContext | null | undefined;
   trendContext?: { label: string; platform: string; velocity: number } | undefined;
+  researchContext?: ResearchBriefContext | undefined;
 }): Promise<string | null> {
   if (!input.apiKey) return null;
   const contextBlock = buildContextBlock(input.context);
@@ -389,6 +453,14 @@ export async function improveBrief(input: {
           `Brief: ${input.brief || "(empty)"}`,
           input.trendContext
             ? `Trend signal to turn into an angle: ${input.trendContext.label} (${input.trendContext.platform}, velocity ${input.trendContext.velocity})`
+            : null,
+          input.researchContext
+            ? [
+                "Research reference (use as evidence and inspiration only; do not copy source wording or claim metrics beyond those listed):",
+                `Source account: ${input.researchContext.accountName} (${input.researchContext.platform})`,
+                `Media: ${input.researchContext.mediaType}${input.researchContext.durationSeconds === null ? "" : `, ${input.researchContext.durationSeconds}s`}`,
+                `Observed metrics: views=${input.researchContext.views ?? "unknown"}, reach=${input.researchContext.reach ?? "unknown"}, likes=${input.researchContext.likes ?? "unknown"}, comments=${input.researchContext.comments ?? "unknown"}, saved=${input.researchContext.saved ?? "unknown"}, shares=${input.researchContext.shares ?? "unknown"}`,
+              ].join("\n")
             : null,
           contextBlock,
         ]

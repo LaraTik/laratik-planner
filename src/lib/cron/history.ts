@@ -45,7 +45,11 @@ export type CronTickInput = {
   needsReauth: number;
   skipped: number;
   kekStatus: CronKekStatus | null;
-  retention: { oauthStatesDeleted?: number; oldMetricsDeleted?: number };
+  retention: {
+    oauthStatesDeleted?: number;
+    oldMetricsDeleted?: number;
+    oldPostObservationsDeleted?: number;
+  };
   errorText: string | null;
   triggeredBy: string;
 };

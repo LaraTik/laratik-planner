@@ -6,6 +6,8 @@ import { auth } from "@/lib/auth/config";
 import { resolveActiveLocale } from "@/lib/i18n/resolve-active-locale";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PublicLocaleSwitcher } from "@/app/(landing)/public-locale-switcher";
+import { explicitThemeAttribute } from "@/lib/theme/preferences";
+import { getThemePreference } from "@/lib/theme/server";
 import "./globals.css";
 
 const inter = Inter({
@@ -44,6 +46,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// The document theme is resolved from the signed-in user on every request.
+export const dynamic = "force-dynamic";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // Resolve the session server-side so the client `SessionProvider`
   // has the initial value without a client-side fetch on mount.
@@ -62,10 +67,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Unknown / missing values fall back to English / LTR — never
   // throws.
   const activeLocale = await resolveActiveLocale();
+  const themePreference = session?.user?.id ? await getThemePreference(session.user.id) : "system";
   return (
     <html
       lang={activeLocale.code}
       dir={activeLocale.dir}
+      {...(explicitThemeAttribute(themePreference)
+        ? { "data-theme": explicitThemeAttribute(themePreference) }
+        : {})}
       className={`${inter.variable} ${notoArabic.variable} h-full`}
     >
       <body className="bg-canvas text-fg-primary min-h-full">

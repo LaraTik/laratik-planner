@@ -15,8 +15,10 @@ import {
   markSyncSuccess,
   openConnectionCredentials,
   saveSnapshot,
+  savePostObservations,
   cleanupOauthStates,
   cleanupOldMetrics,
+  cleanupOldPostObservations,
   type ClaimedProfile,
 } from "./repository";
 import { isSocialProviderError, newRequestId, SocialProviderError } from "./http";
@@ -68,7 +70,8 @@ type SocialConnection = typeof socialConnections.$inferSelect;
  *      - refresh the access token if it expires in the next 5 min
  *      - call `fetchSnapshot` with the appropriate provider adapter
  *      - UPSERT into `social_profile_daily_metric` on
- *        `(social_channel_id, metric_date)`
+ *        `(social_channel_id, metric_date)` and bounded post observations
+ *        when the provider returns them
  *      - on success: bump `last_synced_at`, clear the lease, set
  *        `next_sync_at` to 03:15 workspace-tz next day
  *      - on retryable failure: bump `sync_failure_count`, back off
@@ -89,7 +92,11 @@ export type SyncTickResult = {
   failed: number;
   needsReauth: number;
   skipped: number;
-  retention: { oauthStatesDeleted: number; oldMetricsDeleted: number };
+  retention: {
+    oauthStatesDeleted: number;
+    oldMetricsDeleted: number;
+    oldPostObservationsDeleted: number;
+  };
   /**
    * Set to 'kek_missing' when the platform KEK is unavailable AND
    * `SOCIAL_SYNC_ENABLED=true`. The tick is a soft no-op (no claims
@@ -119,7 +126,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
     failed: 0,
     needsReauth: 0,
     skipped: 0,
-    retention: { oauthStatesDeleted: 0, oldMetricsDeleted: 0 },
+    retention: { oauthStatesDeleted: 0, oldMetricsDeleted: 0, oldPostObservationsDeleted: 0 },
     kekStatus,
   });
   if (!serverEnv.SOCIAL_SYNC_ENABLED) {
@@ -179,14 +186,14 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
   }
 
   // Retention. Runs on every tick so 24h oauth states and 25-month
-  // metrics never accumulate. The delete is a single statement each;
-  // the cost is bounded by the partial index on `expires_at` and the
-  // `metric_date` index.
+  // metrics/post observations never accumulate. The delete is a single
+  // statement each; the cost is bounded by the partial date indexes.
   const oauthCutoff = new Date(now.getTime() - RETENTION_OAUTH_HOURS * 60 * 60_000);
   const metricCutoff = new Date(now);
   metricCutoff.setMonth(metricCutoff.getMonth() - RETENTION_METRIC_MONTHS);
   const oauthStatesDeleted = await cleanupOauthStates(db, oauthCutoff);
   const oldMetricsDeleted = await cleanupOldMetrics(db, metricCutoff);
+  const oldPostObservationsDeleted = await cleanupOldPostObservations(db, metricCutoff);
   // Reconcile only links that are still externally scheduled. Published
   // links remain immutable unless a user explicitly refreshes them, which
   // keeps the background worker bounded and avoids needless Meta reads.
@@ -203,7 +210,7 @@ export async function runSyncTick(now: Date = new Date()): Promise<SyncTickResul
     failed,
     needsReauth,
     skipped,
-    retention: { oauthStatesDeleted, oldMetricsDeleted },
+    retention: { oauthStatesDeleted, oldMetricsDeleted, oldPostObservationsDeleted },
     kekStatus: "ok",
   };
 }
@@ -346,6 +353,13 @@ async function runChannelSyncCore(
       metricDate,
       snapshot,
     });
+    if (snapshot.postObservations?.length) {
+      await savePostObservations(db, {
+        socialChannelId: channel.id,
+        observationDate: metricDate,
+        observations: snapshot.postObservations,
+      });
+    }
 
     const next = nextSyncAt(now, workspaceTimezone);
     await markSyncSuccess(db, channel.id, next);

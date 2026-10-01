@@ -6,11 +6,12 @@ import {
   socialConnections,
   socialOauthStates,
   socialProfileDailyMetrics,
+  socialPostObservations,
 } from "@/lib/db/schema";
 import { openCredentialsWithDek, sealCredentialsWithDek, type SocialCredentials } from "./crypto";
 import { createDekCache, type DekCache, getDekForWorkspace } from "./key-management";
 import { LimitExceededError, reserveCapacity } from "@/lib/entitlements";
-import type { ConnectedProfile, ProfileSnapshot } from "./types";
+import type { ConnectedProfile, ProfileSnapshot, SocialPostObservation } from "./types";
 
 type SocialChannel = typeof socialChannels.$inferSelect;
 type SocialConnection = typeof socialConnections.$inferSelect;
@@ -775,6 +776,84 @@ export async function cleanupOldMetrics(db: Db, olderThan: Date): Promise<number
     .delete(socialProfileDailyMetrics)
     .where(
       lte(socialProfileDailyMetrics.metricDate, sql`${olderThan.toISOString().slice(0, 10)}::date`),
+    );
+  return result.rowCount ?? 0;
+}
+
+export async function savePostObservations(
+  db: Db,
+  input: {
+    socialChannelId: string;
+    observationDate: string;
+    observations: SocialPostObservation[];
+  },
+): Promise<number> {
+  if (input.observations.length === 0) return 0;
+  const now = new Date();
+  await db
+    .insert(socialPostObservations)
+    .values(
+      input.observations.map((observation) => ({
+        socialChannelId: input.socialChannelId,
+        observationDate: input.observationDate,
+        observedAt: observation.observedAt,
+        externalProvider: observation.provider,
+        externalPostId: observation.externalPostId,
+        permalink: observation.permalink,
+        publishedAt: observation.publishedAt,
+        mediaType: observation.mediaType,
+        mediaProductType: observation.mediaProductType,
+        durationSeconds: observation.durationSeconds,
+        views: observation.views,
+        reach: observation.reach,
+        likes: observation.likes,
+        comments: observation.comments,
+        saved: observation.saved,
+        shares: observation.shares,
+        interactions: observation.interactions,
+        providerApiVersion: observation.providerApiVersion,
+        providerRequestId: observation.providerRequestId,
+        sourceMetadata: observation.sourceMetadata,
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [
+        socialPostObservations.socialChannelId,
+        socialPostObservations.externalProvider,
+        socialPostObservations.externalPostId,
+        socialPostObservations.observationDate,
+      ],
+      set: {
+        observedAt: sql`excluded.observed_at`,
+        permalink: sql`excluded.permalink`,
+        publishedAt: sql`excluded.published_at`,
+        mediaType: sql`excluded.media_type`,
+        mediaProductType: sql`excluded.media_product_type`,
+        durationSeconds: sql`excluded.duration_seconds`,
+        views: sql`excluded.views`,
+        reach: sql`excluded.reach`,
+        likes: sql`excluded.likes`,
+        comments: sql`excluded.comments`,
+        saved: sql`excluded.saved`,
+        shares: sql`excluded.shares`,
+        interactions: sql`excluded.interactions`,
+        providerApiVersion: sql`excluded.provider_api_version`,
+        providerRequestId: sql`excluded.provider_request_id`,
+        sourceMetadata: sql`excluded.source_metadata`,
+        updatedAt: now,
+      },
+    });
+  return input.observations.length;
+}
+
+export async function cleanupOldPostObservations(db: Db, olderThan: Date): Promise<number> {
+  const result = await db
+    .delete(socialPostObservations)
+    .where(
+      lte(
+        socialPostObservations.observationDate,
+        sql`${olderThan.toISOString().slice(0, 10)}::date`,
+      ),
     );
   return result.rowCount ?? 0;
 }

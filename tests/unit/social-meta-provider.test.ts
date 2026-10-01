@@ -12,6 +12,8 @@ import {
   META_SCOPES,
   metaAdapter,
   probeMetaPermissions,
+  probeMetaRecentFacebookPagePostInsights,
+  probeMetaRecentInstagramMediaInsights,
   type MetaTokenResponse,
 } from "@/lib/social/providers/meta";
 import { SocialProviderError, formatProviderError, isSocialProviderError } from "@/lib/social/http";
@@ -102,6 +104,145 @@ describe("META_SCOPES", () => {
     ]) {
       expect(META_SCOPES).not.toContain(forbidden);
     }
+  });
+});
+
+describe("probeMetaRecentInstagramMediaInsights", () => {
+  it("tests one recent media item and classifies metric capability", async () => {
+    const calls: URL[] = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      calls.push(url);
+      if (url.pathname.endsWith("/media")) {
+        return jsonResponse(200, {
+          data: [
+            {
+              id: "media-1",
+              media_type: "VIDEO",
+              media_product_type: "REELS",
+              timestamp: "2026-09-29T12:00:00Z",
+              permalink: "https://instagram.com/reel/media-1",
+            },
+          ],
+        });
+      }
+      const metric = url.searchParams.get("metric");
+      if (metric === "reach") {
+        return jsonResponse(200, { data: [{ total_value: { value: 1200 } }] });
+      }
+      if (metric === "saved") {
+        return jsonResponse(400, {
+          error: { code: 100, message: "Unsupported insights metric" },
+        });
+      }
+      return jsonResponse(200, { data: [] });
+    }) as typeof fetch;
+
+    const result = await probeMetaRecentInstagramMediaInsights({
+      accessToken: "ig-token",
+      igUserId: "ig-1",
+      apiVersion: "v25.0",
+    });
+
+    expect(result.status).toBe("available");
+    expect(result.mediaId).toBe("media-1");
+    expect(result.mediaProductType).toBe("REELS");
+    expect(result.metrics.reach).toEqual({ status: "available", value: 1200 });
+    expect(result.metrics.saved).toEqual({
+      status: "unsupported",
+      providerErrorCode: "metric_unavailable",
+    });
+    expect(result.metrics.views).toEqual({ status: "no_data" });
+    expect(calls).toHaveLength(6);
+    expect(
+      calls.slice(1).every((url) => url.searchParams.get("metric_type") === "total_value"),
+    ).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("ig-token");
+  });
+
+  it("returns a safe no-media result without insight calls", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(200, { data: [] }));
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const result = await probeMetaRecentInstagramMediaInsights({
+      accessToken: "ig-token",
+      igUserId: "ig-1",
+      apiVersion: "v25.0",
+    });
+
+    expect(result).toMatchObject({ status: "no_media", mediaId: null, metrics: {} });
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+});
+
+describe("probeMetaRecentFacebookPagePostInsights", () => {
+  it("tests one Page post with the current v25 viewer metrics", async () => {
+    const calls: URL[] = [];
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      calls.push(url);
+      if (url.pathname.endsWith("/feed")) {
+        return jsonResponse(200, {
+          data: [
+            {
+              id: "page-post-1",
+              status_type: "added_video",
+              created_time: "2026-09-29T12:00:00Z",
+              permalink_url: "https://facebook.com/page/posts/page-post-1",
+              attachments: { data: [{ media_type: "video" }] },
+            },
+          ],
+        });
+      }
+      const metric = url.searchParams.get("metric");
+      if (metric === "post_media_view") {
+        return jsonResponse(200, { data: [{ total_value: { value: 500 } }] });
+      }
+      return jsonResponse(200, { data: [{ total_value: { value: 320 } }] });
+    }) as typeof fetch;
+
+    const result = await probeMetaRecentFacebookPagePostInsights({
+      accessToken: "page-token",
+      pageId: "page-1",
+      apiVersion: "v25.0",
+    });
+
+    expect(result).toMatchObject({
+      status: "available",
+      mediaId: "page-post-1",
+      mediaType: "video",
+      mediaProductType: null,
+    });
+    expect(result.metrics.post_media_view).toEqual({ status: "available", value: 500 });
+    expect(result.metrics.post_total_media_view_unique).toEqual({
+      status: "available",
+      value: 320,
+    });
+    expect(calls).toHaveLength(3);
+    expect(calls.slice(1).every((url) => url.searchParams.get("period") === "lifetime")).toBe(true);
+    expect(JSON.stringify(result)).not.toContain("page-token");
+  });
+
+  it("classifies an unavailable replacement metric without failing the probe", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith("/feed")) {
+        return jsonResponse(200, { data: [{ id: "page-post-1" }] });
+      }
+      return jsonResponse(400, { error: { code: 100, message: "Unsupported insights metric" } });
+    }) as typeof fetch;
+
+    const result = await probeMetaRecentFacebookPagePostInsights({
+      accessToken: "page-token",
+      pageId: "page-1",
+      apiVersion: "v25.0",
+    });
+
+    expect(result.status).toBe("available");
+    expect(result.metrics.post_media_view).toEqual({
+      status: "unsupported",
+      providerErrorCode: "metric_unavailable",
+    });
   });
 });
 
@@ -882,7 +1023,7 @@ describe("fetchMetaInstagramSnapshot — IG insights response shape (cumulative 
 
 describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial flag", () => {
   // Regression guard for the 2026-08-28 finding: the Page insights
-  // endpoint silently returned all-null values for `page_views` and
+  // endpoint silently returned all-null values for Page metrics when the URL was missing
   // `page_post_engagements` when the URL was missing
   // `metric_type=total_value`. The IG fix (3dc7fa2) added this
   // parameter for the IG path; the Page path was missed. The
@@ -914,8 +1055,8 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
         // `undefined` for every metric, failing the assertions below.
         const metric = url.searchParams.get("metric") ?? "";
         const value: Record<string, number> = {
-          page_impressions_unique: 2401,
-          page_views: 91,
+          page_total_media_view_unique: 2401,
+          page_views_total: 91,
           page_post_engagements: 28,
         } as Record<string, number>;
         if (!(metric in value)) throw new Error(`unexpected metric: ${metric}`);
@@ -930,6 +1071,9 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
             },
           ],
         });
+      }
+      if (url.pathname.endsWith(`/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
       }
       if (url.pathname.endsWith(`/${pageId}`)) {
         return jsonResponse(200, {
@@ -954,7 +1098,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       const params = new URL(captured).searchParams;
       // The bug regression: EVERY per-metric URL MUST include
       // `metric_type=total_value`. If a future refactor drops this
-      // parameter, the test fails and `page_views` +
+      // parameter, the test fails and the Page metrics +
       // `page_post_engagements` silently go to null.
       expect(params.get("metric_type")).toBe("total_value");
       expect(params.get("period")).toBe("day");
@@ -962,7 +1106,11 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       // from the pre-fix code is gone.
       const metric = params.get("metric") ?? "";
       expect(metric).not.toContain(",");
-      expect(["page_impressions_unique", "page_views", "page_post_engagements"]).toContain(metric);
+      expect([
+        "page_total_media_view_unique",
+        "page_views_total",
+        "page_post_engagements",
+      ]).toContain(metric);
     }
     // And the snapshot actually populated the values from the
     // cumulative shape (the real Meta wire format).
@@ -974,6 +1122,54 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect((snapshot.sourceMetadata as { partial?: boolean }).partial).toBe(false);
   });
 
+  it("stores bounded Facebook feed observations without persisting post content", async () => {
+    globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${pageId}/feed`)) {
+        return jsonResponse(200, {
+          data: [
+            {
+              id: "post-1",
+              created_time: "2026-09-29T12:00:00Z",
+              permalink_url: "https://facebook.com/post-1",
+              message: "must not be persisted",
+              attachments: { data: [{ media_type: "video" }] },
+              reactions: { summary: { total_count: 10 } },
+              comments: { summary: { total_count: 3 } },
+              shares: { count: 2 },
+            },
+          ],
+        });
+      }
+      if (url.pathname.endsWith(`/${pageId}/insights`)) {
+        return jsonResponse(200, { data: [] });
+      }
+      if (url.pathname.endsWith(`/${pageId}`)) {
+        return jsonResponse(200, { id: pageId, fan_count: 69 });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaFacebookPageSnapshot({
+      accessToken,
+      pageId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    expect(snapshot.postObservations).toHaveLength(1);
+    expect(snapshot.postObservations?.[0]).toMatchObject({
+      externalPostId: "post-1",
+      mediaType: "video",
+      likes: 10,
+      comments: 3,
+      shares: 2,
+      interactions: 15,
+      views: null,
+    });
+    expect(JSON.stringify(snapshot)).not.toContain("must not be persisted");
+  });
+
   it("marks the snapshot as partial when the follower is captured but insights are null", async () => {
     // Simulates the 2026-08-28 bug surface: the basic fields call
     // succeeds (fan_count=69) but the insights call returns 200 with
@@ -983,6 +1179,9 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     // and the operator can see that the row is incomplete.
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         return jsonResponse(200, { data: [] });
       }
@@ -1030,6 +1229,9 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     // had no way to know it was a permission issue.
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         return jsonResponse(403, {
           error: {
@@ -1079,22 +1281,16 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     });
   });
 
-  it("silently writes partial row when insights returns 400 'metric not available'", async () => {
-    // 2026-08-28 round 3: when the Meta app doesn't have a specific
-    // insight metric in its allowlist (App Review pending, or
-    // Development mode without a role for the user), Meta returns
-    // 400 with `error.code: 100, "The value must be a valid
-    // insights metric"`. The pre-fix `classifyStatus` mapped this
-    // to `invalid_response` and the page branch's catch threw it,
-    // which surfaced as the "Meta returned an unrecognized
-    // response" error. The fix: `classifyStatus` now returns
-    // `not_configured` for the metric-not-available pattern, and
-    // the page branch's catch silently sets `insights = null`
-    // (same as `permission_denied`), so the row is `partial: true`
-    // with `providerErrorCode: "not_configured"` and the Re-test
-    // returns success.
+  it("formally accepts unavailable Page metrics as unsupported partial data", async () => {
+    // Meta returns 400 with `error.code: 100` when the app cannot
+    // serve a specific insight metric. This is a non-retryable
+    // capability gap: keep the row partial and mark the metric
+    // unsupported, but do not degrade the whole channel.
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         return jsonResponse(400, {
           error: {
@@ -1125,8 +1321,8 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     });
     // Basic call succeeded → followerCount populated.
     expect(snapshot.followerCount).toBe(70);
-    // Insights call returned not_configured → insights are null,
-    // partial: true, with a clear reason and providerErrorCode.
+    // Insights are null, partial: true, with the capability gap
+    // retained at metric level rather than as a channel error.
     expect(snapshot.reach).toBeNull();
     expect(snapshot.views).toBeNull();
     expect(snapshot.interactions).toBeNull();
@@ -1137,15 +1333,23 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     };
     expect(meta.partial).toBe(true);
     expect(meta.reason).toBe("page_insights_unavailable");
-    expect(meta.providerErrorCode).toBe("metric_unavailable");
+    expect(meta.providerErrorCode).toBeUndefined();
+    expect(snapshot.sourceMetadata.metricStatuses).toMatchObject({
+      reach: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+      views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+      interactions: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+    });
   });
 
   it("marks only the failed Page metric as an error while preserving successful metric statuses", async () => {
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
+      if (url.pathname.endsWith(`/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.pathname.endsWith(`/${pageId}/insights`)) {
         const metric = url.searchParams.get("metric");
-        if (metric === "page_views") {
+        if (metric === "page_views_total") {
           return jsonResponse(400, {
             error: {
               code: 100,
@@ -1154,7 +1358,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
           });
         }
         const values: Record<string, number> = {
-          page_impressions_unique: 2401,
+          page_total_media_view_unique: 2401,
           page_post_engagements: 28,
         };
         const value = metric ? values[metric] : undefined;
@@ -1184,7 +1388,7 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect(snapshot.sourceMetadata.metricStatuses).toEqual({
       followerCount: { status: "available" },
       reach: { status: "available" },
-      views: { status: "error", providerErrorCode: "metric_unavailable" },
+      views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
       interactions: { status: "available" },
       engagedAccounts: { status: "unsupported" },
     });
@@ -1219,6 +1423,9 @@ describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => 
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       seenUrls.push(url);
+      if (url.startsWith(`${baseGraph}/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       // Step 2: page insights — must use the PAGE token, not the user
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         const used = new URL(url).searchParams.get("access_token");
@@ -1227,8 +1434,8 @@ describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => 
         // one entry per request, matching the `metric=` URL param.
         const metric = new URL(url).searchParams.get("metric") ?? "";
         const value: Record<string, number> = {
-          page_impressions_unique: 2401,
-          page_views: 91,
+          page_total_media_view_unique: 2401,
+          page_views_total: 91,
           page_post_engagements: 28,
         } as Record<string, number>;
         if (!(metric in value)) throw new Error(`unexpected metric: ${metric}`);
@@ -1290,6 +1497,9 @@ describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => 
     let tokenAcquisitionCalled = false;
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
+      if (url.startsWith(`${baseGraph}/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       // If the token acquisition endpoint is called, FAIL the test
       // (we should be using the stored token, not acquiring one)
       if (url.startsWith(`${baseGraph}/${pageId}?`) && !url.includes("fields=id")) {
@@ -1299,8 +1509,8 @@ describe("metaAdapter.fetchSnapshot — Facebook Page token acquisition", () => 
       if (url.startsWith(`${baseGraph}/${pageId}/insights`)) {
         return jsonResponse(200, {
           data: [
-            { name: "page_impressions_unique", period: "day", total_value: { value: 100 } },
-            { name: "page_views", period: "day", total_value: { value: 50 } },
+            { name: "page_total_media_view_unique", period: "day", total_value: { value: 100 } },
+            { name: "page_views_total", period: "day", total_value: { value: 50 } },
             { name: "page_post_engagements", period: "day", total_value: { value: 10 } },
           ],
         });
@@ -1378,6 +1588,9 @@ describe("fetchMetaFacebookPageSnapshot — rate-limit usage on sourceMetadata",
     const pageId = "12345";
     const app = { call_count: 42, total_cputime: 10, total_time: 15 };
     globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.includes(`/${pageId}?`)) {
         return jsonResponse(
           200,
@@ -1413,6 +1626,9 @@ describe("fetchMetaFacebookPageSnapshot — rate-limit usage on sourceMetadata",
       "2": [{ type: "instagram", call_count: 88, total_cputime: 9, total_time: 12 }],
     };
     globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.includes(`/${pageId}?`)) {
         return jsonResponse(200, { id: pageId, fan_count: 100 }, {});
       }
@@ -1440,6 +1656,9 @@ describe("fetchMetaFacebookPageSnapshot — rate-limit usage on sourceMetadata",
     const accessToken = "page-access-token";
     const pageId = "12345";
     globalThis.fetch = (async (url: string) => {
+      if (url.includes(`/${pageId}/feed`)) {
+        return jsonResponse(200, { data: [] });
+      }
       if (url.includes(`/${pageId}?`)) {
         return jsonResponse(200, { id: pageId, fan_count: 100 });
       }
@@ -1463,7 +1682,7 @@ describe("fetchMetaFacebookPageSnapshot — rate-limit usage on sourceMetadata",
 });
 
 describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", () => {
-  it("requests media.limit(10){id,like_count,comments_count,permalink,timestamp} on the basic call", async () => {
+  it("requests the bounded media fields on the basic call", async () => {
     const accessToken = "ig-access-token";
     const igUserId = "17841234567890123";
     let basicFieldsParam = "";
@@ -1484,6 +1703,9 @@ describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", ()
       if (url.includes(`/${igUserId}/insights`)) {
         return jsonResponse(200, { data: [] });
       }
+      if (url.includes("/ig-post-") && url.includes("/insights")) {
+        return jsonResponse(200, { data: [] });
+      }
       throw new Error(`unexpected url: ${url}`);
     }) as typeof fetch;
 
@@ -1493,14 +1715,76 @@ describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", ()
       apiVersion: "v25.0",
       requestIdHint: "test-req",
     });
-    // The field-expansion is purely future-proofing for per-post
-    // engagement; the basic call already ran. We just verify the
-    // fields= string contains the expected expansion.
+    // The basic snapshot now hydrates the bounded recent-observation slice;
+    // verify its field expansion stays aligned with that contract.
     expect(basicFieldsParam).toContain("media.limit(10)");
     expect(basicFieldsParam).toContain("like_count");
     expect(basicFieldsParam).toContain("comments_count");
     expect(basicFieldsParam).toContain("permalink");
     expect(basicFieldsParam).toContain("timestamp");
+    expect(basicFieldsParam).toContain("media_type");
+    expect(basicFieldsParam).toContain("media_product_type");
+    expect(basicFieldsParam).toContain("video_duration");
+  });
+
+  it("stores a bounded Instagram post observation with available post insights", async () => {
+    const igUserId = "17841234567890123";
+    globalThis.fetch = (async (url: string) => {
+      const parsedUrl = new URL(url);
+      if (parsedUrl.pathname === `/v25.0/${igUserId}`) {
+        return jsonResponse(200, {
+          id: igUserId,
+          followers_count: 248,
+          media_count: 46,
+          follows_count: 12,
+          media: {
+            data: [
+              {
+                id: "ig-post-1",
+                like_count: 21,
+                comments_count: 7,
+                permalink: "https://instagram.com/reel/1",
+                timestamp: "2026-08-27T12:00:00+0000",
+                media_type: "VIDEO",
+                media_product_type: "REELS",
+                video_duration: 24,
+              },
+            ],
+          },
+        });
+      }
+      if (parsedUrl.pathname === `/v25.0/${igUserId}/insights`) {
+        return jsonResponse(200, { data: [] });
+      }
+      if (parsedUrl.pathname === "/v25.0/ig-post-1/insights") {
+        return jsonResponse(200, { data: [{ total_value: { value: 1234 } }] });
+      }
+      throw new Error(`unexpected url: ${url}`);
+    }) as typeof fetch;
+
+    const snapshot = await fetchMetaInstagramSnapshot({
+      accessToken: "ig-access-token",
+      igUserId,
+      apiVersion: "v25.0",
+      requestIdHint: "test-req",
+    });
+
+    expect(snapshot.postObservations).toMatchObject([
+      {
+        provider: "meta",
+        externalPostId: "ig-post-1",
+        mediaType: "reel",
+        mediaProductType: "REELS",
+        views: 1234,
+        reach: 1234,
+        durationSeconds: 24,
+        likes: 21,
+        comments: 7,
+        saved: 1234,
+        shares: 1234,
+        interactions: 1234,
+      },
+    ]);
   });
 
   it("writes latestPostId + like/comment counts on sourceMetadata when the basic call returns media", async () => {
@@ -1532,6 +1816,9 @@ describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", ()
       if (url.includes(`/${igUserId}/insights`)) {
         return jsonResponse(200, { data: [] });
       }
+      if (url.includes("/ig-post-") && url.includes("/insights")) {
+        return jsonResponse(200, { data: [] });
+      }
       throw new Error(`unexpected url: ${url}`);
     }) as typeof fetch;
 
@@ -1542,9 +1829,8 @@ describe("fetchMetaInstagramSnapshot — rate-limit usage + field-expansion", ()
       requestIdHint: "test-req",
     });
     const meta = snapshot.sourceMetadata as Record<string, number | boolean | string | null>;
-    // Future-proofing: per-post engagement is out of scope for M4
-    // but the most recent post's id + counts land on the row so a
-    // future per-post job can read them without an extra call.
+    // Keep the compatibility metadata while the durable observation row
+    // carries the richer post-level values.
     expect(meta.latestPostId).toBe("ig-post-1");
     expect(meta.latestPostLikeCount).toBe(21);
     expect(meta.latestPostCommentCount).toBe(7);

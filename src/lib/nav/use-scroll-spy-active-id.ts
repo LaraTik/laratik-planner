@@ -34,7 +34,9 @@ import * as React from "react";
  * class the round-3 audit caught).
  */
 export function useScrollSpyActiveId(items: { id: string }[]): string | null {
-  const [activeId, setActiveId] = React.useState<string | null>(() => initialActiveId(items));
+  // Keep the first render identical on the server and client. Apply the hash
+  // after mount so deep links do not create a hydration mismatch.
+  const [activeId, setActiveId] = React.useState<string | null>(items[0]?.id ?? null);
 
   // Stash the latest setter in a ref so the scroll + observer
   // effect can read it without depending on it.
@@ -50,6 +52,7 @@ export function useScrollSpyActiveId(items: { id: string }[]): string | null {
         setActiveIdRef.current(next);
       }
     }
+    onHashChange();
     window.addEventListener("hashchange", onHashChange);
     return () => window.removeEventListener("hashchange", onHashChange);
   }, [items]);
@@ -123,11 +126,4 @@ export function useScrollSpyActiveId(items: { id: string }[]): string | null {
   }, [items]);
 
   return activeId;
-}
-
-function initialActiveId(items: { id: string }[]): string | null {
-  if (typeof window === "undefined") return items[0]?.id ?? null;
-  const hash = window.location.hash.replace(/^#/, "");
-  if (hash && items.some((t) => t.id === hash)) return hash;
-  return items[0]?.id ?? null;
 }

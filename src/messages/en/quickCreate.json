@@ -5,6 +5,19 @@
   "deniedDescription": "Only workspace managers and content planners can create ideas.",
   "backToPlanning": "← Back to Planning",
   "metaTitle": "Quick Create · {slug}",
+  "research": {
+    "eyebrow": "Research reference",
+    "referenceTitle": "Remix idea from {account}",
+    "initialBrief": "Use a recent post from {account} as a creative reference. Review the source, then define an original angle for this draft.",
+    "teardownTitle": "Draft from teardown: {hook}",
+    "teardownEyebrow": "Research teardown",
+    "teardownEditable": "Review and rewrite before creating the draft.",
+    "description": "The source stays linked to this draft so the team can review the reference before production.",
+    "views": "views",
+    "likes": "likes",
+    "comments": "comments",
+    "openSource": "Open source"
+  },
   "form": {
     "title": "Title",
     "titleHint": "Use a short name your team can recognize later.",

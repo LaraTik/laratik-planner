@@ -18,6 +18,7 @@ vi.mock("@/lib/observability/sentry", () => ({
 
 vi.mock("@/lib/observability/logger", () => ({
   logError: vi.fn(),
+  logWarn: vi.fn(),
 }));
 
 const { SocialProviderError } = await import("@/lib/social/http");
@@ -83,8 +84,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("captures all three Page metrics when every request succeeds", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: JSON.stringify(successResponse(100)) },
-      page_views: { body: JSON.stringify(successResponse(42)) },
+      page_total_media_view_unique: { body: JSON.stringify(successResponse(100)) },
+      page_views_total: { body: JSON.stringify(successResponse(42)) },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
     const result = await fetchMetaPageDailyInsights({
@@ -103,8 +104,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("returns null only for the failing metric when one Page request is not_configured", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: JSON.stringify(successResponse(100)) },
-      page_views: { body: notConfiguredError() },
+      page_total_media_view_unique: { body: JSON.stringify(successResponse(100)) },
+      page_views_total: { body: notConfiguredError() },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
     const result = await fetchMetaPageDailyInsights({
@@ -112,7 +113,7 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
       pageId: "123",
       apiVersion: "v25.0",
     });
-    // The bug we're fixing: previously a not_configured on `page_views`
+    // The bug we're fixing: a not_configured on one Page metric
     // would set ALL three fields (reach, views, interactions) to null.
     // The fix isolates the failure to just the bad metric.
     expect(result.insights.reach).toBe(100);
@@ -127,8 +128,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("returns null only for the failing metric when one Page request is permission_denied", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: JSON.stringify(successResponse(100)) },
-      page_views: { body: permissionDeniedError() },
+      page_total_media_view_unique: { body: JSON.stringify(successResponse(100)) },
+      page_views_total: { body: permissionDeniedError() },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
     const result = await fetchMetaPageDailyInsights({
@@ -145,8 +146,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("returns null for all three when every Page request is not_configured", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: notConfiguredError() },
-      page_views: { body: notConfiguredError() },
+      page_total_media_view_unique: { body: notConfiguredError() },
+      page_views_total: { body: notConfiguredError() },
       page_post_engagements: { body: notConfiguredError() },
     });
     const result = await fetchMetaPageDailyInsights({
@@ -165,8 +166,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("propagates non-silent errors (e.g. provider_unavailable) instead of swallowing them", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: JSON.stringify(successResponse(100)) },
-      page_views: { body: transientError() },
+      page_total_media_view_unique: { body: JSON.stringify(successResponse(100)) },
+      page_views_total: { body: transientError() },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
     const result = await fetchMetaPageDailyInsights({
@@ -191,8 +192,8 @@ describe("fetchMetaPageDailyInsights — per-metric isolation (Rice n Spices fix
 
   it("isolates an invalid metric response without discarding successful siblings", async () => {
     setupMockByMetricName({
-      page_impressions_unique: { body: JSON.stringify({}) },
-      page_views: { body: JSON.stringify(successResponse(42)) },
+      page_total_media_view_unique: { body: JSON.stringify({}) },
+      page_views_total: { body: JSON.stringify(successResponse(42)) },
       page_post_engagements: { body: JSON.stringify(successResponse(7)) },
     });
     const result = await fetchMetaPageDailyInsights({

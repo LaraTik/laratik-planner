@@ -39,7 +39,16 @@
   --primary: #4f46e5;
   --primary-hover: #4338ca;
   --primary-subtle: #eef2ff;
+  --primary-foreground: #ffffff;
   --focus-ring: #6366f1;
+
+  /* Accessible chart series for light and dark surfaces. */
+  --chart-series-1: #4338ca;
+  --chart-series-2: #c2410c;
+  --chart-series-3: #047857;
+  --chart-series-4: #9333ea;
+  --chart-series-5: #0369a1;
+  --chart-series-6: #a16207;
 
   /* Status */
   --success: #15803d;
@@ -48,6 +57,7 @@
   --warning-subtle: #fff7e6;
   --danger: #b91c1c;
   --danger-subtle: #fef2f2;
+  --danger-foreground: #ffffff;
   --info: #0369a1;
   --info-subtle: #f0f9ff;
 
@@ -61,6 +71,76 @@
   --control-touch: 44px;
 }
 
+/* Dark mode is token-based so existing components inherit the theme without
+ * adding page-local `dark:` colour branches. System preference is the default;
+ * an explicit `data-theme` value wins when the user chooses Light or Dark. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --canvas: #0b1020;
+    --surface: #121a2b;
+    --surface-subtle: #182338;
+    --border: #293752;
+    --fg-primary: #f3f6fb;
+    --fg-secondary: #b6c1d4;
+    --fg-muted: #8d9ab1;
+    --primary: #818cf8;
+    --primary-hover: #a5b4fc;
+    --primary-subtle: #20264d;
+    --primary-foreground: #0b1020;
+    --focus-ring: #a5b4fc;
+    --chart-series-1: #a5b4fc;
+    --chart-series-2: #fb923c;
+    --chart-series-3: #34d399;
+    --chart-series-4: #d8b4fe;
+    --chart-series-5: #7dd3fc;
+    --chart-series-6: #fcd34d;
+    --success: #4ade80;
+    --success-subtle: #123321;
+    --warning: #fbbf24;
+    --warning-subtle: #3a2b0b;
+    --danger: #f87171;
+    --danger-subtle: #3a171c;
+    --danger-foreground: #0b1020;
+    --info: #38bdf8;
+    --info-subtle: #102c42;
+  }
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #0b1020;
+  --surface: #121a2b;
+  --surface-subtle: #182338;
+  --border: #293752;
+  --fg-primary: #f3f6fb;
+  --fg-secondary: #b6c1d4;
+  --fg-muted: #8d9ab1;
+  --primary: #818cf8;
+  --primary-hover: #a5b4fc;
+  --primary-subtle: #20264d;
+  --primary-foreground: #0b1020;
+  --focus-ring: #a5b4fc;
+  --chart-series-1: #a5b4fc;
+  --chart-series-2: #fb923c;
+  --chart-series-3: #34d399;
+  --chart-series-4: #d8b4fe;
+  --chart-series-5: #7dd3fc;
+  --chart-series-6: #fcd34d;
+  --success: #4ade80;
+  --success-subtle: #123321;
+  --warning: #fbbf24;
+  --warning-subtle: #3a2b0b;
+  --danger: #f87171;
+  --danger-subtle: #3a171c;
+  --danger-foreground: #0b1020;
+  --info: #38bdf8;
+  --info-subtle: #102c42;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+}
+
 @theme inline {
   --color-canvas: var(--canvas);
   --color-surface: var(--surface);
@@ -72,13 +152,11 @@
   --color-primary: var(--primary);
   --color-primary-hover: var(--primary-hover);
   --color-primary-subtle: var(--primary-subtle);
-  /* Foreground for elements rendered on `bg-primary` (buttons, the
-   * workflow stepper's current-step pill). White gives ~7:1 contrast
-   * against `--primary` (#4f46e5). The class `text-primary-foreground`
-   * was previously undefined and fell back to `--fg-primary` (a dark
-   * blue), which failed axe-core's color-contrast check (2.58:1 vs
-   * the 4.5:1 minimum). Added 2026-08-30 by the M5 a11y sweep. */
-  --color-primary-foreground: #ffffff;
+  /* Filled semantic controls use a theme-aware foreground. */
+  --color-primary-foreground: var(--primary-foreground);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-on-primary: var(--primary-foreground);
+  --color-on-danger: var(--danger-foreground);
   --color-focus-ring: var(--focus-ring);
   --color-success: var(--success);
   --color-success-subtle: var(--success-subtle);
@@ -117,6 +195,13 @@
   --text-button: 14px;
   --text-button--line-height: 20px;
   --text-button--font-weight: 600;
+}
+
+/* Legacy filled links and shell controls still carry `text-white` in a few
+ * shared compositions. Keep their foreground tied to the theme token so the
+ * dark palette remains readable without changing every caller at once. */
+.bg-primary.text-white {
+  color: var(--primary-foreground);
 }
 
 /* ─── Base layer ──────────────────────────────────────────────────────── */

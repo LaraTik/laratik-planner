@@ -216,6 +216,58 @@ laratik-planner/
 - ✅ Disk hygiene before deploy: ensure VPS `/` is < 70% (use the vps-ops `disk-cleanup.sh apply` if needed)
 - ✅ Log rotation per container, not just daemon default (already in compose: 10m × 5)
 
+## Meedro-informed shell and Command Center contract
+
+Use `design-system.md` and `docs/implementation/MEEDRO_REFACTOR_PLAN.md` before
+changing shared UI. Meedro is a reference for information hierarchy, not a
+branding or implementation source.
+
+- The persistent left sidebar owns agency/workspace context, location, grouped
+  destinations, and attention badges. Workspace groups stay job-oriented:
+  `Plan`, `Understand`, `Produce`, and `Manage`.
+- The top bar owns global utilities such as notifications, account, help, and
+  safe global actions. Do not duplicate sidebar destinations in the top bar.
+- A page header owns title, scope/freshness, and one dominant next action. A
+  page-local rail is allowed only for in-page anchors, never as a second app
+  navigation system.
+- Workspace Settings uses the compact `SettingsSidebar` anchor strip at every
+  breakpoint; do not restore a sticky desktop rail or render the strip twice.
+- The workspace root is the Command Center. Keep its order as scope/freshness,
+  social KPI and growth signals, performance/outliers, timing/format signals,
+  then planning handoff; planning execution KPIs follow the social decision
+  layer.
+- Extend the existing authorized social analytics read model. Do not create a
+  second analytics store, scrape competitor data, infer missing provider
+  metrics, or add publishing behavior while implementing research features.
+- Keep provider post observations bounded (currently ten recent objects per
+  connected-account sync). Instagram post metrics come only from the approved
+  read-only insights response; unsupported fields stay nullable. The agency
+  probe may test one Facebook Page post with the v25 viewer metrics
+  `post_media_view` and `post_total_media_view_unique`, but normal Facebook
+  observations remain metadata/engagement-only until controlled Page UAT proves
+  the token, permissions, and viewer semantics.
+- Command Center refresh is a workspace-manager action that reuses
+  `runChannelTest` sequentially for connected channels. Do not add a second
+  provider-sync path or expose refresh controls to planners/reviewers.
+- Every signal must retain visible period, source account, freshness, sample
+  size, partial-data state, and a route to a useful action such as Research,
+  Create brief, or Planning. Preserve role gates, EN/AR catalogs, RTL layout,
+  keyboard access, and accessible table/empty/error fallbacks.
+- Social provider setup is per-agency, not global: app ID, app secret, Login
+  for Business configuration ID, and optional Graph version belong in
+  `agency_social_provider_config` through
+  `/app/agency-settings/social/providers`. Never reintroduce these secrets in
+  `.env`, client code, logs, screenshots, or fixtures.
+- Keep the provider rollout staged and explicit: configured callback → tested
+  credentials → connected profiles → read-only analytics probe → controlled
+  sync/UAT. A configured app or connected profile alone is not Command Center
+  evidence. Meta remains read-only until the external-service UAT is signed;
+  publishing stays disabled by default.
+- Use [`docs/operations/META_COMMAND_CENTER_SETUP.md`](docs/operations/META_COMMAND_CENTER_SETUP.md)
+  for the current canonical-app decision, read-only scope list, callback
+  pattern, sanitized evidence checklist, and rollout stop gates. Refresh that
+  worksheet after any Meta app or Graph-version change.
+
 ## Settings architecture
 
 Settings is a **nested group in the main sidebar**, not an inline nav inside a settings page. The Stitch design (`2f6acd26`) has 8+ sections; the inline 200px rail we shipped first was a stopgap that made the page feel nested twice. The rules:
@@ -435,7 +487,7 @@ See `docs/implementation/progress.md` for the live per-task checklist.
 
 > **2026-09-09 navigation follow-up** — Trend Radar v1 is now discoverable
 > through the capability-aware desktop and mobile shell: Trend Radar in
-> workspace Content, Trend settings for workspace managers, and Trend sources
+> workspace Understand, Trend settings for workspace managers, and Trend sources
 > for agency admins. These links remain gated by the agency database master
 > switch and the `trend_radar` capability, while provider configuration remains
 > deployment-scoped.
@@ -1196,6 +1248,37 @@ Some users reported issues while updating an idea's publish data or time. Two re
 
 - **fix(deliveries): link-imported assets now appear in the picker without a hard refresh.** `DeliverySection` used `useState(mediaAssets)` for `availableAssets`, so the picker stayed empty after the "From link" importer's `router.refresh()` handed the new asset down through props. Added a `useEffect` that merges any newly-arrived `mediaAssets` ids into `availableAssets` and `selectedAssetIds`. The effect preserves search results and explicit selections — only _new_ ids are appended. Regression test in `tests/unit/planning/delivery-section.test.tsx` (`syncs mediaAssets prop changes into the picker without remounting`).
 - **fix(content): "Reset idea" now succeeds for posts with prior activity.** `resetIdeaAction` did the `DELETE FROM content_items` BEFORE the `INSERT INTO activity_events` inside the same transaction, but `activity_event.content_item_id` is a FK to `content_items.id` with `ON DELETE SET NULL` (`src/lib/db/schema/notifications.ts:152-154`). The FK check rejected the activity insert (the parent row was already gone), the whole transaction rolled back, and the operator saw `The idea could not be deleted. Try again or contact platform support.` — even though the content_item row was already half-deleted. Pre-existing activity_events on the post had already been SET-NULL'd in the same doomed transaction, leaving orphans with `content_item_id = NULL` visible to the activity timeline. Surfaces reliably once a post has any activity history (the `ae2aa8fe-…` post on `just-halal` had 6 activity rows — that's the "Activity events (orphaned, link cleared) 6" line in the dialog). Fixed by reordering: insert the activity row FIRST (still pointing at the live content_item), then delete the content_item. The `ON DELETE SET NULL` cascade then nulls `content_item_id` on the inserted row once the delete commits. Regression test in `tests/unit/reset-idea-action.test.ts` (`inserts the activity_event row BEFORE deleting content_item (FK ordering)`) — records operation order inside the transaction and pins `insert.indexOf < delete.indexOf`. Red-pinned on the unfixed code.
+
+## UI refactor contract — Meedro-informed, LaraTik-owned
+
+Before changing shared UI, the app shell, themes, analytics, or navigation,
+read [`design-system.md`](design-system.md) and
+[`docs/implementation/MEEDRO_REFACTOR_PLAN.md`](docs/implementation/MEEDRO_REFACTOR_PLAN.md).
+
+The current Google Stitch project remains the visual parity source of truth;
+Meedro is a reference for information hierarchy and product patterns, not a
+replacement brand or route source. Keep the existing workspace-aware sidebar,
+global top bar, mobile navigation, English/Arabic contract, and permission
+boundaries. Do not introduce a second navigation tree, analytics store, or
+page-specific colour system.
+
+For UI work, use the installed UI/UX Pro Max guidance plus the project-local
+`ui-design` skill when available. Resolve the visual direction before coding,
+reuse the existing primitives and semantic tokens, and verify loading, empty,
+error, stale, keyboard, RTL, reduced-motion, and light/dark states at the
+required responsive widths. Command Center work must extend the existing social
+analytics read model and expose a planning handoff for every useful signal.
+Observed-post handoffs must re-resolve the source inside the workspace and
+store provenance in `content_research_link`; never trust a client-supplied
+permalink or copy provider content directly into a draft without review. A
+research bookmark stores only a workspace-scoped pointer to the authorized
+observation (never a provider-content copy), and the saved item must retain a
+reviewable path to Quick Create. Research collections are the Meedro-style
+`Save to Project` layer: only workspace managers/content planners create or
+assign them, visibility is explicitly `me` or `workspace`, and collection
+membership points to the bookmark/validated teardown rather than copying source
+media or notes. v1 permits one active collection per item; do not introduce a
+second generic project taxonomy unless multi-collection reuse is evidenced.
 
 ## Cross-references
 

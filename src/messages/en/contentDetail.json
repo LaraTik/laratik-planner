@@ -37,6 +37,7 @@
   "aiAssistance": "AI assistance",
   "aiAssistancePanel": {
     "description": "Generate drafts, improve the brief, and check completeness.",
+    "researchContext": "Improve brief can use the linked {platform} reference from {account} as evidence.",
     "closeAria": "Close"
   },
   "aiAssistanceSurface": {
@@ -544,6 +545,23 @@
   },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
+  "researchReference": {
+    "title": "Research reference",
+    "description": "Review the source that informed this draft before production. The reference is provenance, not a copy of the original content.",
+    "views": "views",
+    "likes": "likes",
+    "comments": "comments",
+    "openSource": "Open source"
+  },
+  "researchTeardownApply": {
+    "title": "Research teardown fields",
+    "description": "Fill only blank creative fields from the linked teardown. Existing planner copy stays unchanged.",
+    "apply": "Apply available fields",
+    "applying": "Applying…",
+    "applied": "Available fields applied.",
+    "nothingToApply": "No blank fields were available to fill.",
+    "error": "The research fields could not be applied."
+  },
   "sectionAssetsTitle": "Assets",
   "sectionAssetsDescription": "Add approved media versions when the brief is ready for design review.",
   "previewShortcut": "Previewing on {platform} · {account}",

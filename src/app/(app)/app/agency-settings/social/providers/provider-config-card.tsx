@@ -1,7 +1,18 @@
 "use client";
 
 import { useState, useSyncExternalStore, useTransition } from "react";
-import { Check, ChevronDown, Copy, Eye, EyeOff, Link2, PlugZap, Save, Trash2 } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Copy,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Link2,
+  PlugZap,
+  Save,
+  Trash2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,6 +65,7 @@ const EN_FALLBACK: Translator = (key, params) => {
     "agencyProviders.callbackPasteTiktok":
       'Paste this URL into the "Redirect URL" field in your TikTok app. Each agency has their own URL — the state token keeps every flow isolated.',
     "agencyProviders.callbackHowtoSummary": "How to register this URL",
+    "agencyProviders.openDeveloperConsole": "Open developer console",
     "agencyProviders.appSecretKeepCurrent": "(leave blank to keep current)",
     "agencyProviders.appSecretRequiredError": "App id and app secret are required.",
     "agencyProviders.enabledLabel": "Enabled",
@@ -112,6 +124,7 @@ const PROVIDER_META = {
     loginConfigIdPlaceholder: "1234567890",
     graphApiVersionLabel: "Graph API version (optional)",
     graphApiVersionPlaceholder: "v25.0",
+    developerConsoleUrl: "https://developers.facebook.com/apps/",
   },
   tiktok: {
     label: "TikTok (Display API)",
@@ -123,6 +136,7 @@ const PROVIDER_META = {
     loginConfigIdPlaceholder: "",
     graphApiVersionLabel: "Display API version (optional)",
     graphApiVersionPlaceholder: "",
+    developerConsoleUrl: "https://developers.tiktok.com/apps/",
   },
 } as const;
 
@@ -344,6 +358,15 @@ export function ProviderConfigCard({
               {tr("agencyProviders.callbackHowtoSummary")}
             </summary>
             <div className="border-border mt-2 space-y-3 border-t pt-3">
+              <a
+                href={meta.developerConsoleUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary focus-visible:ring-focus-ring inline-flex min-h-[var(--control-touch)] items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+              >
+                {tr("agencyProviders.openDeveloperConsole")}
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden={true} />
+              </a>
               {provider === "meta" ? (
                 <ol className="list-decimal space-y-1.5 ps-5">
                   <li>

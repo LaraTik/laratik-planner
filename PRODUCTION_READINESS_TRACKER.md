@@ -1,5 +1,490 @@
 # StudioFlow Production-Readiness Tracker
 
+## Planned next product arc — Meedro-informed Command Center and theme refactor
+
+The staged plan is recorded in
+[`docs/implementation/MEEDRO_REFACTOR_PLAN.md`](docs/implementation/MEEDRO_REFACTOR_PLAN.md).
+It is planning evidence only; no production-readiness item is marked complete by
+the plan. The first implementation slice must preserve the current Stitch
+source, extend the existing authorized social analytics read model, and add
+light/dark verification before the Command Center surface is called ready.
+
+> **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
+> suite passes 24/24 after regenerating only the three references affected by
+> the fixed visual fixture: workspace overview desktop/mobile
+> and Planning mobile. The new renders preserve the current shell hierarchy
+> and Meedro-informed spacing/content structure; the broader responsive matrix
+> is still open and no blanket snapshot refresh was performed.
+
+> **2026-10-01 responsive fixture checkpoint** — Visual fixtures now use the
+> committed September 2026 reference month, while normal E2E fixtures retain
+> their relative date behavior. The reviewed responsive slices pass: Planning
+> 4/4 widths; Settings, overview, analytics, Agency AI, and Board 3/3 each.
+> Only those affected baseline groups were refreshed; the broader matrix
+> remains open and no blanket snapshot update was performed.
+
+> **2026-10-01 hydration checkpoint** — The shared hash/scroll-spy hook now
+> keeps its first render deterministic and applies deep-link hashes after
+> mount. The full settings responsive slice passes 23/23 with no React
+> hydration-mismatch output; the focused sidebar/settings unit slice passes
+> 62/62.
+
+> **2026-10-01 shell ownership checkpoint** — Workspace Settings now renders
+> one compact in-page anchor strip at every viewport. The global sidebar is
+> the only persistent navigation rail; the settings route no longer creates a
+> second desktop rail. Routes, anchors, permissions, and forms are unchanged.
+
+> **2026-10-01 Command Center theme/RTL checkpoint** — Analytics comparison
+> series now use semantic light/dark chart tokens instead of fixed hex colors.
+> The Command Center best-time heatmap keeps its RTL table inside a local
+> horizontal scroller; the full Chromium analytics/Command Center E2E slice
+> passes 14/14, including the 375px Arabic/RTL journey.
+
+> **2026-10-01 accessibility checkpoint** — The annotated a11y suite now passes
+> 215/215 when run one browser project at a time: Chromium, Firefox, WebKit,
+> mobile-Chrome, and mobile-Safari each pass 43/43. This includes the corrected
+> Arabic/RTL shell contract, dark-theme Account coverage, Command Center, and
+> the mobile route checks. The earlier combined-run failures were caused by a
+> stale Board assertion and long-lived dev-server resource pressure; neither
+> reproduces in the isolated evidence runs.
+
+> **2026-10-01 MCP research checkpoint** — The remote Planner MCP now exposes
+> `laratik_planner_list_research` under the existing `content:read` scope. It
+> reuses internal workspace access, applies private/workspace collection
+> visibility, and returns only normalized research records: no provider media,
+> raw provider bodies, OAuth tokens, or planner-entered raw notes. Focused MCP
+> contract coverage passes 4/4; `docs/api/mcp.md`, `docs/api/README.md`, and
+> `docs/api/mcp-evaluation.xml` are synchronized. This is local `Tested`
+> evidence; remote deployment and independent review remain open.
+
+> **2026-10-01 Command Center provenance checkpoint** — The KPI strip now
+> exposes the latest metric date, authorized read-model source, and the
+> contributing-channel coverage beside aggregate values. This prevents the
+> overall sync timestamp from being mistaken for an atomic snapshot of every
+> KPI. English/Arabic catalog parity and focused Command Center contracts pass;
+> broader browser evidence remains part of the release queue.
+
+> **2026-10-01 provenance browser checkpoint** — The focused Chromium
+> Command Center journey passes 3/3: light theme axe, dark theme axe, and the
+> Meedro-style observed-content filters/pagination. The KPI evidence strip is
+> visible in both themes. This is tested local evidence; the full release
+> matrix and independent review remain open.
+
+> **2026-10-01 channel-health checkpoint** — Command Center data health now
+> shows each connected account's platform, healthy/degraded/stalled status,
+> and last-sync time while keeping provider error payloads out of the UI. The
+> updated focused Chromium slice passes 3/3 with light/dark axe coverage and
+> Meedro-style inventory interaction. Full release evidence remains open.
+
+> **2026-10-01 Command Center watchlist checkpoint** — The workspace overview
+> now surfaces the source-only research watchlist with a direct Research
+> handoff. Manual entries remain explicitly labeled; provider-backed competitor
+> snapshots stay gated on controlled capability evidence. Focused unit/catalog
+> checks pass 20/20 and the Chromium Command Center journey passes 3/3.
+
+> **2026-10-01 watchlist visual checkpoint** — The changed workspace overview
+> passes the exact Stitch reference and mobile-s/tablet/wide responsive cases
+> 4/4 without refreshing snapshots.
+
+> **2026-10-01 overview visual checkpoint** — The changed workspace overview
+> passes its exact Stitch reference 1/1 and responsive matrix 3/3 at mobile-s,
+> tablet, and wide without refreshing a baseline. The broader visual matrix
+> remains a deliberate review queue.
+
+> **2026-09-30 M1 implementation checkpoint** — Per-user System/Light/Dark
+> preference is implemented through Account and migration `0057_eminent_stryfe`.
+> The disposable migration drill passes 5/5, and `pnpm verify` passes with
+> 450 unit files / 4,304 tests plus the production build. This is tested local
+> evidence only; authenticated theme visual/a11y evidence and the Command Center
+> release gates remain open.
+
+> **2026-09-30 theme browser checkpoint** — The authenticated Account journey
+> passes 1/1 in Chromium: a user can switch Light, Dark, and System; the root
+> `data-theme` state updates immediately; and the selected value persists after
+> reload. The dark-theme Account axe check also passes 1/1 after adding
+> theme-aware foreground tokens for filled primary/danger controls. Responsive,
+> RTL, and cross-role evidence remain open.
+
+> **2026-09-30 focused browser matrix checkpoint** — The disposable Chromium
+> run passes 15/15 across the theme and Command Center journeys. It covers
+> Light/Dark/System persistence, empty and connected Command Center states,
+> the section rail, Arabic/RTL at 375px, analytics comparison and filtering,
+> workspace switching, client-reviewer denial, and agency-admin access. This
+> upgrades the implementation evidence to `Tested` for those journeys only;
+> the five-width visual matrix, axe coverage beyond the existing checks,
+> provider UAT, and independent review remain open.
+
+> **2026-09-30 connected Command Center axe checkpoint** — The real
+> metric-backed overview now passes the serious/critical axe scan in both light
+> and dark themes (2/2). The scan caught and the shared token layer repaired
+> a dark-theme contrast regression where legacy `text-white` filled controls
+> bypassed the theme-aware primary foreground. Full route/width coverage,
+> provider UAT, and independent review remain open.
+
+> **2026-09-30 teardown boundary checkpoint** — The next research milestone is
+> now explicitly gated on authorized source evidence (provider media payload,
+> planner-owned upload, or user-entered transcript/notes). Metrics and source
+> provenance will remain separate from creative interpretation, and teardown
+> output will be preview-only. No AI teardown is being claimed from a permalink
+> or performance metrics alone.
+
+> **2026-09-30 teardown contract checkpoint** — The shared research module now
+> validates those source types and parses a versioned teardown result with
+> hook, promise, format, beats, pacing, CTA, evidence, and uncertainty. Four
+> focused unit tests pass. This is contract groundwork only; no teardown button
+> or provider-media claim is enabled yet.
+
+> **2026-09-30 latest verification checkpoint** — After the teardown contract
+> addition, `pnpm verify` passes with 450 unit files / 4,302 tests and the
+> production build. This remains local `Tested` evidence; browser visual
+> coverage, controlled Meta UAT, and independent review remain open.
+
+> **2026-09-30 teardown preview checkpoint** — Research now exposes a
+> notes/transcript-only structured teardown preview for workspace managers and
+> planners. It reuses the existing `brief_improvement` AI entitlement and
+> budget gate, validates the versioned result, and never saves raw notes,
+> provider bodies, a draft, workflow status, or publish action. A separate,
+> role-gated save route now persists only the validated result as a research
+> artifact (`0064_plain_crusher_hogan`). Parser/catalog tests pass 13/13, the
+> all-browser blank-input journey passes 5/5, the migration drill passes 5/5,
+> and the Research responsive visual set passes 3/3. Provider media,
+> owned-asset ingestion, broader bilingual/theme/axe evidence, and independent
+> review remain open.
+
+> **2026-09-30 research visual checkpoint** — The new Research shelf now has
+> responsive visual captures at 360px, 768px, and 1440px (3/3). The capture
+> covers the job-grouped sidebar, source-only watchlist, structured teardown
+> preview, and honest empty saved-research state. The two previously stale
+> Stitch mobile references for workspace overview and planning were refreshed
+> from the current Command Center/empty-seeded-data contract and pass 2/2.
+> The remaining broader responsive matrix is still open.
+
+> **2026-09-30 overview visual checkpoint** — The workspace root now passes
+> the visual responsive matrix at mobile-s (360px), tablet (768px), and wide
+> (1440px), 3/3, after the header action group was kept below the title until
+> the large breakpoint. The three Command Center-aware baselines were reviewed
+> and refreshed. Theme persistence and serious/critical Command Center axe
+> checks also pass 3/3 in the same isolated run; full route/width evidence and
+> independent review remain open.
+
+> **2026-09-30 staged setup checkpoint** — The no-data Command Center state now
+> gives managers a three-step path: connect a social account, collect the first
+> metric snapshot, then review analytics and plan the next move. The empty state
+> remains honest and links only to existing Channels and Analytics routes. The
+> responsive overview captures pass 3/3 at 360px, 768px, and 1440px; the exact
+> Stitch overview references pass 2/2 (desktop and mobile), and the connected
+> Command Center axe matrix passes 10/10 across the configured browsers. Full
+> bilingual/role evidence, provider UAT, and independent review remain open.
+
+> **2026-09-30 research-to-draft checkpoint** — A saved, validated research
+> teardown can now seed an editable planner draft through an explicit
+> `Create draft` handoff. The draft stores a separate provenance link to the
+> teardown artifact (`0065_fat_kulan_gath`); the structured result is not
+> silently written into `formatPayload`, and the planner can rewrite the seeded
+> title/brief before creation. Migration drill passes 5/5, the social schema
+> integration slice passes 28/28, focused unit/catalog checks pass 64/64, and
+> the all-browser handoff journey passes 10/10. Provider media ingestion,
+> wider bilingual/role evidence, and independent review remain open. A later
+> checkpoint records the verified blank-field apply slice.
+
+> **2026-09-30 teardown apply checkpoint** — A linked saved teardown can now
+> explicitly fill blank structured fields from the content detail Brief tab.
+> Existing planner values win; the helper supports common hook/message/CTA/
+> notes fields plus scenes or slide outlines when the item format allows them.
+> Focused unit/catalog checks pass 65/65 and the full five-project browser
+> journey passes 10/10, including mobile section selection. Provider media
+> ingestion, broader bilingual/role evidence, and independent review remain
+> open.
+
+> **2026-09-30 Command Center reference checkpoint** — The canonical Stitch
+> workspace-overview reference now also passes 1/1 with the Command Center
+> empty state and reviewed header layout. The complete visual suite was started
+> but remains open: it exposed additional stale exact references on planning,
+> content detail, settings, and agency AI surfaces, which were not refreshed
+> because they are outside this focused Command Center change.
+
+> **2026-09-30 focused exact-reference checkpoint** — The canonical Stitch
+> reference set now passes exact Chromium assertions 20/20. The planning list,
+> planning content detail, workspace settings, agency AI, Media, Account,
+> Board, and Publish references were reviewed and refreshed where the shipped
+> UI had intentionally moved. The settings pass exposed a serious contrast
+> issue in the active settings-sidebar description; changing the selected
+> state from `text-primary/80` to the semantic `text-primary` token cleared
+> the axe gate. Media also exposed an invalid `role="note"` inside a
+> `role="tree"`; removing that role cleared its critical axe gate. The full
+> responsive visual matrix remains open and has not been called green.
+
+> **2026-09-30 shell responsive checkpoint** — The focused responsive matrix
+> passes Account 3/3, Social Analytics 3/3, Trend Radar 3/3, and Channels 3/3
+> (12/12). Account’s mobile axe scan exposed a horizontally scrollable MCP
+> endpoint without keyboard access; adding a focusable scroll target cleared
+> it. The remaining full responsive matrix, bilingual/role coverage, provider
+> UAT, and independent review remain open.
+
+> **2026-09-30 production tenant checkpoint** — A fresh authenticated read-only
+> check of `planner.laratik.com/app` found no active agency/workspace, and the
+> previously inspected `dr-reem-reda` URL still renders `Workspace unavailable`.
+> This does not change local implementation evidence; it makes the remaining
+> controlled Meta UAT prerequisite explicit: select or provision an active
+> LaraTik tenant before connecting an owned test Page/Instagram profile.
+
+> **2026-09-30 Meedro section re-check checkpoint** — The authenticated
+> reference pass revisited Viral Finder, Viral Library, Content Ideas+, Viral
+> Vault, My Projects, Viral Scripts, MCP Connection, Workflows, and B-Roll
+> Assets. The feature audit now records their current empty/loading/locked
+> states and maps each to a LaraTik priority; no Meedro generation, download,
+> connector setup, upgrade, or persistent mutation was performed.
+
+> **2026-09-30 M2 Command Center checkpoint** — The workspace root now includes
+> a Meedro-informed Command Center layer over the existing authorized social
+> analytics read model. It has explicit empty/no-data and metric-backed states,
+> 30-day follower trend with table fallback, strongest-account signals, freshness
+> context, normalized channel comparison, connected-account health badges, and a
+> planning handoff. Focused unit tests pass and the Chromium route checks pass
+> 3/3, including a 375px Arabic/RTL route check. This remains `Tested` evidence
+> only; theme, role, accessibility, visual, and Meta provider gates remain open.
+
+> **2026-09-30 Command Center structure checkpoint** — The connected-data
+> surface now exposes a Meedro-style keyboard-accessible section rail for data
+> health, follower growth, channel performance, and planning handoff, plus a
+> compact last-sync line in the header. The focused Command Center unit test
+> passes 3/3 and the touched component/spec pass ESLint; the isolated browser
+> runner was not used as release evidence because its local disposable run
+> stalled before the test server started.
+
+> **2026-09-30 Command Center chart polish checkpoint** — The follower trend
+> now uses a restrained semantic area fill and point markers while preserving
+> the accessible table as the exact-value fallback. Focused Command Center tests
+> pass 10/10; formatting, ESLint, strict typecheck, and diff checks pass. This
+> remains `Tested` local evidence only; responsive, role, visual, and production
+> gates remain open.
+
+> **2026-09-30 research-to-brief checkpoint** — Content drafts with a linked
+> observed post now pass normalized source evidence (account, platform, media
+> type, duration, and available metrics) into the existing Improve brief flow.
+> The UI makes that context visible, and the prompt requires an original angle
+> without copying source wording or inventing metrics. Focused AI and catalog
+> tests pass 36/36; no auto-write or publishing behavior was added.
+
+> **2026-09-30 verification checkpoint** — `pnpm verify` passes at the current
+> working tree: formatting, lint, strict typecheck, 449 unit files / 4,298
+> tests, and the production build. This is local `Tested` evidence only and
+> does not close the required browser, provider-UAT, or independent-review gates.
+
+> **2026-09-30 Command Center heatmap checkpoint** — The best-time surface now
+> renders an accessible weekday/hour heatmap from the existing timezone-aware
+> post observations. Cells expose average views and sample size; only slots with
+> at least three observations remain recommendation-eligible. Focused Command
+> Center tests pass 10/10, with formatting and strict typecheck green.
+
+> **2026-09-30 Meta capability checkpoint** — The existing agency-admin
+> analytics probe now performs a read-only Instagram media inventory check and
+> tests one recent media item against `views`, `reach`, `saved`, `shares`, and
+> `total_interactions`. The result is sanitized and classified per metric;
+> focused Meta/provider and probe-card tests pass. No OAuth scopes, tokens,
+> durable post-observation tables, or publishing behavior were changed by the
+> probe itself. Facebook Page post probing and controlled production evidence
+> remain open.
+
+> **2026-09-30 post-observation checkpoint** — The first bounded observation
+> slice is implemented behind the existing read-only Meta sync: migration
+> `0058_workable_prodigy` adds provider-neutral `social_post_observation` rows,
+> `0059_wet_boomer` adds provenance links from observed posts to drafts, and
+> `0060_parallel_wallop` adds workspace-scoped research bookmarks;
+> Instagram stores available read-only `views`, `reach`, `saved`, `shares`, and
+> `total_interactions` plus likes/comments and provider-supplied video duration
+> for at most 10 recent media objects; unsupported metrics remain nullable; and the Command Center
+> exposes top-content/outlier, best-time, and duration-band cards with
+> sample-size context. Focused provider/Command Center tests pass. Migration
+> drill passes 5/5, full verification passes with 447 unit files / 4,292
+> tests plus production build, and the full integration suite is green.
+> Browser evidence, Facebook post-level insights, historical pagination, and
+> independent review remain open.
+
+> **2026-09-30 research watchlist checkpoint** — Migrations `0061_blue_hammerhead`
+> and `0062_zippy_karma` add a workspace-scoped, role-gated account registry to
+> the Research surface. It stores normalized platform/handle/profile references
+> and explicit provider status (`manual`, `available`, `unsupported`, `error`),
+> but performs no scraping and infers no competitor metrics. Focused watchlist,
+> bookmark, and catalog tests pass 13/13; the five-part migration drill passes
+> 5/5 with 103 tables and 64/64 migration entries. Provider-backed snapshots,
+> freshness, and independent browser evidence remain open.
+
+> **2026-09-30 local authenticated render checkpoint** — A disposable local
+> workspace now renders the grouped shell and the Command Center as the first
+> substantive overview block. Chromium inspection confirmed the light and dark
+> themes, the empty connected-account state, its `Open channels` handoff, and
+> the Account theme selector with persistence after navigation. This is local
+> browser evidence only; it does not replace the required bilingual,
+> responsive, accessibility, visual, role, or production-session gates.
+
+> **2026-09-30 Command Center refresh checkpoint** — Workspace managers can
+> now refresh all connected channels from the Command Center through the
+> existing sequential `runChannelTest` pipeline. The action revalidates the
+> overview, analytics, and channels surfaces and reports complete or partial
+> results. Focused refresh, Command Center, and catalog tests pass 17/17; this
+> does not replace controlled Meta provider UAT or production release gates.
+
+> **2026-10-01 Command Center inventory checkpoint** — The authenticated
+> Meedro re-check identified the next useful interaction and LaraTik now has
+> an `Observed content` inventory driven by the existing authorized post
+> observations. Recent / Most viewed / Outlier / Engagement filters,
+> pagination, source links, research bookmarking, and Create brief preserve
+> workspace scope and do not copy provider media. Typecheck, lint, formatting,
+> and the Command Center calculation suite pass; browser visual and broader
+> bilingual/role evidence remain open.
+
+> **2026-10-01 inventory browser checkpoint** — The isolated Command Center
+> journey passes 15/15 across Chromium, Firefox, WebKit, mobile Chrome, and
+> mobile Safari, covering light/dark serious/critical axe scans and inventory
+> filtering/pagination. The newly exercised heatmap exposed a scrollable table
+> wrapper without keyboard focus; adding a focus target cleared the violation.
+> The exact current-worktree repository gate also passes: 450 unit files /
+> 4,304 tests, formatting, lint, strict typecheck, and production build. This
+> is still local `Tested` evidence; provider UAT, wider role/locale coverage,
+> and independent review remain open.
+
+> **2026-10-01 research collections checkpoint** — Migration
+> `0066_last_robin_chapel` adds named Research collections with explicit
+> `me`/`workspace` visibility. Managers/planners can create a collection and
+> assign an existing bookmark or validated teardown; reviewers can see shared
+> collections but cannot mutate them. The one-collection-per-item v1 ceiling
+> avoids a second generic project taxonomy. Focused collection unit tests pass
+> 11/11 assertions and the integration test passes 1/1; the migration drill is
+> 5/5. Responsive bilingual evidence and independent review remain open.
+
+> **2026-10-01 visual-matrix investigation** — The isolated `pnpm test:visual`
+> run was started against `planner_test` and reached 115/244 cases before
+> stopping for review. Command Center, analytics, planning, settings, and the
+> shell cases exercised so far passed. The first mismatches are concentrated in
+> Media, Users, and Reviews: current renders have intentionally changed route
+> state/content compared with their older references (workspace selection,
+> member-management density, and empty-state action treatment). No snapshots
+> were updated. Re-capture those reviewed references only after the current
+> layouts are signed off; the full visual gate remains open. The four reviewed
+> surfaces were then recaptured intentionally, and the targeted assertion
+> passes 12/12 across mobile-s, tablet, and wide. The new Research collections
+> section was reviewed separately, its three references were recaptured, and
+> the complete priority group now passes 34/34. The next production-workflow
+> group covered Channels, Library, Planning, and the Brand Kit routes. Its
+> first run reached 45/48; Brand Kit Activity was the only mismatch because
+> its reference still showed the retired short "Recent updates" card. After
+> reviewing that current full activity/filter surface, its three references
+> were recaptured and the targeted group now passes 48/48. The full visual
+> matrix then completed at 226/244 on the broad pass; the remaining 19 cases
+> were the reviewed Media, provider-readiness, platform access/admin/errors,
+> and planning-edit references. Those targeted assertions pass 19/19, so the
+> current five-width visual inventory is 244/244. Theme/locale variants,
+> broader role evidence, provider UAT, and independent review remain open.
+
+> **2026-09-30 Facebook post capability checkpoint** — The agency-admin Meta
+> probe now tests one owned Facebook Page post with the current v25 replacement
+> metrics `post_media_view` and `post_total_media_view_unique` using lifetime
+> semantics, and renders each result with explicit capability status. Focused
+> provider and probe-card tests pass. This does not promote those metrics into
+> durable sync: controlled Page UAT is still required to verify the connected
+> token, permissions, and viewer semantics before the Command Center labels or
+> ranks Facebook posts by them.
+
+> **2026-10-01 Meta account recheck** — The logged-in Business Suite session
+> opens a Just Halal-branded asset with Facebook and Instagram entities; no
+> separate LaraTik-owned test Page/profile was visible, and no settings,
+> permissions, credentials, or connections were changed. The LaraTik-associated
+> Ads Manager app is still unpublished/in development. Facebook Login for
+> Business and testing requirements are present, while business/access
+> verification and App Review remain incomplete. The Meta portfolio selector
+> confirms LaraTik GmbH with one development app, but that does not prove a
+> Page or Instagram asset is ready. Provider UAT stays staged behind a
+> disposable LaraTik-owned Page plus linked Instagram profile.
+
+> **2026-10-01 Food Game pilot checkpoint** — Read-only Meta Business Suite
+> inspection confirmed the `LaraTik GmbH`-owned Food Game Facebook Page and
+> linked Instagram professional account `@__foodgame`. Production Planner
+> already shows both profiles connected and synced about four hours earlier;
+> publishing remains disabled. Social Analytics reports 496 combined current
+> followers (+11, +2.3% over seven days), Instagram healthy at 358 (+8), and
+> Facebook at 138 (+3) with explicit `metric_unavailable` / provider-limited
+> status. This provides controlled pilot evidence for freshness, KPI, and
+> partial-data handling. It does not close the broader Meta UAT, bilingual,
+> role, release, or independent-review gates, and Just Halal remains excluded.
+
+> **2026-09-30 signal-confidence checkpoint** — Command Center timing and
+> duration recommendations now require three observations per bucket. Smaller
+> groups remain visible with sample size but are explicitly marked as
+> insufficient for a reliable signal. Focused calculation and catalog tests
+> pass; the responsive, bilingual, role, visual, and provider UAT gates remain
+> open.
+
+> **2026-09-30 verification checkpoint** — The full `pnpm verify` gate now
+> passes at 448 unit files / 4,296 tests, including the per-agency Meta callback
+> routing suite, followed by the production build for all 46 routes. The test
+> stabilization removes an unnecessary per-case module-graph reset; it does not
+> weaken the cross-tenant assertion or change runtime callback behavior.
+
+> **2026-09-30 migration-drift repair checkpoint** — Creating that disposable
+> workspace exposed a pre-existing local database where the usage-threshold
+> table existed but its schema-required deduplication index did not. Migration
+> `0063_repair_usage_threshold_dedupe` adds the idempotent unique index repair;
+> the five-part migration drill passes 5/5 with 103 from-zero tables and
+> `64/64` ledger entries. No production database was touched.
+
+> **2026-09-30 provider-readiness checkpoint** — The agency Meta provider page
+> now shows a bilingual four-step readiness path: app configuration,
+> credential test, connected profiles, and the explicit read-only analytics
+> probe. It reuses existing provider/profile data and does not claim probe
+> success before the operator runs it. Catalog parity passes 9/9 and typecheck
+> is green; responsive, role-based, visual, and controlled provider UAT gates
+> remain open.
+
+> **2026-09-30 browser-evidence environment checkpoint** — A focused isolated
+> Chromium attempt was not counted as evidence after inspection found two local
+> environment collisions: native PostgreSQL and Docker both exposed `5432`, and
+> a stale Next dev process owned the default E2E port. The disposable database
+> migration itself completed; the runbook now requires validating the host DB
+> endpoint and using a free browser port. No application or production state
+> was changed.
+
+> **2026-09-30 shell-order checkpoint** — `AGENTS.md` now records the durable
+> Meedro-informed ownership contract for sidebar, top bar, page header, and
+> Command Center signals. The workspace root presents the social Command Center
+> before planning execution KPIs. Formatting and typecheck pass; the focused
+> Command Center/navigation/research suite passes 21/21. Authenticated browser
+> visual evidence remains open because the inspected production tab currently
+> resolves to `Workspace unavailable`.
+
+> **2026-09-30 setup documentation checkpoint** — The operator runbook,
+> environment reference, provider-extension guide, and `.env.example` now
+> describe the M4.6 per-agency provider configuration truth: only the platform
+> KEK and global sync switch are environment values; app credentials and Graph
+> version are entered and tested in the agency provider UI. The isolated E2E
+> runner now chooses a free port when no `PORT` is supplied and preserves
+> explicit overrides. Typecheck, formatting, and diff checks pass. A read-only
+> Meta Developer inspection found the live Social Tracker app belongs to Just
+> Halal and LaraTik has two in-development Ads Manager apps, both without a
+> Login for Business configuration; no settings or permissions were changed.
+> The LaraTik GmbH-associated candidate is the preferred owner choice.
+> Canonical-app selection and controlled provider UAT remain open.
+
+> **2026-09-30 Command Center rail checkpoint** — The internal section rail
+> now reuses the shared scroll-spy hook and marks the active section with
+> `aria-current="location"`, preserving hash deep links and keyboard navigation.
+> The focused section-nav test passes 1/1; touched-file ESLint, typecheck, and
+> diff checks pass. Full responsive, bilingual, role, visual, and production
+> evidence remain open.
+
+> **2026-09-30 provider setup UX checkpoint** — The agency provider card now
+> includes localized direct links to the relevant Meta/TikTok developer console
+> beside callback registration instructions. This is navigation only; no app,
+> permission, or credential mutation was performed. Catalog parity is 9/9,
+> focused checks are 14/14, and typecheck/format/diff checks pass.
+
+> **2026-09-30 Meta setup worksheet checkpoint** — The inspected Meta app
+> decision, five read-only scopes, agency callback pattern, sanitized evidence
+> checklist, and staged stop gates are now consolidated in
+> `docs/operations/META_COMMAND_CENTER_SETUP.md`. It explicitly excludes the
+> Just Halal live app and keeps publishing disabled. This is preparation only;
+> canonical-app selection and controlled OAuth/probe/sync UAT remain open.
+
 > **2026-09-15 Planning workspace UX/IA refactor** — Exact clean implementation
 > commit `f992fb30` passes `pnpm verify` (377 unit files / 3,447 passing tests,
 > 4 tracked todos, production build). The focused §23 lifecycle browser path

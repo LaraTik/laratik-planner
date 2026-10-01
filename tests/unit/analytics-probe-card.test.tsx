@@ -10,9 +10,9 @@ import { AnalyticsProbeCard } from "@/app/(app)/app/agency-settings/social/provi
  * non-`available` metric with the same warning-coloured `XCircle`
  * icon and no per-status context. Operators reading
  * `engagedAccounts: unsupported` on the Facebook Page branch
- * (the by-design row, see ADR 0005) were filing "this metric is
- * broken" tickets because the row was visually identical to
- * `reach: error · metric_unavailable`.
+ * (the by-design row, see ADR 0005) or a provider-limited Page metric
+ * were filing "this metric is broken" tickets because the row was
+ * visually identical to a hard provider error.
  *
  * These tests pin the new contract:
  *
@@ -21,9 +21,8 @@ import { AnalyticsProbeCard } from "@/app/(app)/app/agency-settings/social/provi
  *   - Every row carries a `data-status` attribute so an operator or
  *     a follow-up test can assert on the four-status shape.
  *   - The hover `title` distinguishes the four statuses with a
- *     status-specific reason. The by-design row (engagedAccounts on
- *     a Facebook Page) points at the platform contract that
- *     justifies the row.
+ *     status-specific reason. A provider-limited metric keeps its
+ *     `metric_unavailable` code while rendering as `unsupported`.
  *
  * The Facebook + Instagram fixture here mirrors the real probe
  * result an operator sees for "Food Game" — `interactions` is
@@ -56,10 +55,22 @@ const probeResponseForFacebook = {
   ],
   metrics: {
     followerCount: { status: "available" },
-    reach: { status: "error", providerErrorCode: "metric_unavailable" },
-    views: { status: "error", providerErrorCode: "metric_unavailable" },
+    reach: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+    views: { status: "unsupported", providerErrorCode: "metric_unavailable" },
     interactions: { status: "available" },
     engagedAccounts: { status: "unsupported" },
+  },
+  mediaInsights: {
+    status: "available" as const,
+    mediaId: "page-post-1",
+    mediaType: "video",
+    mediaProductType: null,
+    publishedAt: "2026-09-05T12:00:00.000Z",
+    permalink: "https://facebook.com/page/posts/page-post-1",
+    metrics: {
+      post_media_view: { status: "available", value: 500 },
+      post_total_media_view_unique: { status: "available", value: 320 },
+    },
   },
   testedAt: "2026-09-05T12:00:00.000Z",
 };
@@ -76,6 +87,18 @@ const probeResponseForInstagram = {
     views: { status: "available" },
     interactions: { status: "available" },
     engagedAccounts: { status: "available" },
+  },
+  mediaInsights: {
+    status: "available" as const,
+    mediaId: "media-1",
+    mediaType: "VIDEO",
+    mediaProductType: "REELS",
+    publishedAt: "2026-09-05T12:00:00.000Z",
+    permalink: "https://instagram.com/reel/media-1",
+    metrics: {
+      views: { status: "available", value: 1200 },
+      reach: { status: "unsupported", providerErrorCode: "metric_unavailable" },
+    },
   },
   testedAt: "2026-09-05T12:00:00.000Z",
 };
@@ -125,11 +148,11 @@ describe("AnalyticsProbeCard status contract", () => {
     expect(available.getAttribute("data-status")).toBe("available");
     expect(available.getAttribute("title")).toMatch(/supported and Meta returned a value/i);
 
-    expect(reach.getAttribute("data-status")).toBe("error");
+    expect(reach.getAttribute("data-status")).toBe("unsupported");
     expect(reach.getAttribute("title")).toMatch(/error code 100/i);
     expect(reach.getAttribute("title")).toMatch(/docs\/operations\/meta-devtools-mcp\.md/);
 
-    expect(views.getAttribute("data-status")).toBe("error");
+    expect(views.getAttribute("data-status")).toBe("unsupported");
     expect(views.getAttribute("title")).toMatch(/error code 100/i);
 
     expect(interactions.getAttribute("data-status")).toBe("available");
@@ -144,6 +167,11 @@ describe("AnalyticsProbeCard status contract", () => {
       /Facebook Pages do not expose an accounts_engaged/i,
     );
     expect(engagedAccounts.getAttribute("title")).toMatch(/ADR 0005/);
+    expect(screen.getByTestId("analytics-probe-media-insights")).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-probe-media-metric-post_media_view")).toHaveAttribute(
+      "data-status",
+      "available",
+    );
   });
 
   it("renders all metrics as available on the Instagram branch (engagedAccounts is supported)", async () => {
@@ -172,6 +200,15 @@ describe("AnalyticsProbeCard status contract", () => {
       const row = screen.getByTestId(`analytics-probe-metric-${metric}`);
       expect(row.getAttribute("data-status")).toBe("available");
     }
+    expect(screen.getByTestId("analytics-probe-media-insights")).toBeInTheDocument();
+    expect(screen.getByTestId("analytics-probe-media-metric-views")).toHaveAttribute(
+      "data-status",
+      "available",
+    );
+    expect(screen.getByTestId("analytics-probe-media-metric-reach")).toHaveAttribute(
+      "data-status",
+      "unsupported",
+    );
   });
 
   it("switches the profile selector and re-runs against a different channel", async () => {

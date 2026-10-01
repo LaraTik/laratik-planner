@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
-import { socialChannels, socialProfileDailyMetrics } from "@/lib/db/schema";
+import { socialChannels, socialPostObservations, socialProfileDailyMetrics } from "@/lib/db/schema";
 import { metricDateInTimeZone } from "./timezone";
 
 type Db = typeof appDb;
@@ -10,6 +10,11 @@ export const SOCIAL_ANALYTICS_LOOKBACK_DAYS = 90;
 export type SocialAnalyticsQueryChannel = {
   channel: typeof socialChannels.$inferSelect;
   metrics: (typeof socialProfileDailyMetrics.$inferSelect)[];
+};
+
+export type SocialPostObservationQueryRow = {
+  observation: typeof socialPostObservations.$inferSelect;
+  channel: typeof socialChannels.$inferSelect;
 };
 
 /**
@@ -22,6 +27,7 @@ export async function querySocialAnalytics(
   workspaceId: string,
   workspaceTimezone: string,
   now: Date = new Date(),
+  lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
 ): Promise<SocialAnalyticsQueryChannel[]> {
   const channels = await database
     .select()
@@ -36,7 +42,7 @@ export async function querySocialAnalytics(
     .orderBy(desc(socialChannels.lastSyncedAt), asc(socialChannels.accountName));
   if (channels.length === 0) return [];
 
-  const cutoff = new Date(now.getTime() - SOCIAL_ANALYTICS_LOOKBACK_DAYS * 86_400_000);
+  const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
   const metricRows = await database
     .select()
     .from(socialProfileDailyMetrics)
@@ -57,4 +63,57 @@ export async function querySocialAnalytics(
     byChannel.set(row.socialChannelId, existing);
   }
   return channels.map((channel) => ({ channel, metrics: byChannel.get(channel.id) ?? [] }));
+}
+
+/**
+ * Workspace-scoped post observations for the Command Center. The provider
+ * sync owns collection; this query owns authorization scope and lookback.
+ */
+export async function querySocialPostObservations(
+  database: Db,
+  workspaceId: string,
+  workspaceTimezone: string,
+  now: Date = new Date(),
+  lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+): Promise<SocialPostObservationQueryRow[]> {
+  const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
+  return database
+    .select({ observation: socialPostObservations, channel: socialChannels })
+    .from(socialPostObservations)
+    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .where(
+      and(
+        eq(socialChannels.workspaceId, workspaceId),
+        eq(socialChannels.connectionStatus, "connected"),
+        isNull(socialChannels.archivedAt),
+        gte(
+          socialPostObservations.observationDate,
+          metricDateInTimeZone(cutoff, workspaceTimezone),
+        ),
+      ),
+    )
+    .orderBy(desc(socialPostObservations.publishedAt), desc(socialPostObservations.observedAt))
+    .limit(200);
+}
+
+/** Resolve one post observation for a workspace-scoped research handoff. */
+export async function querySocialPostObservation(
+  database: Db,
+  workspaceId: string,
+  observationId: string,
+): Promise<SocialPostObservationQueryRow | null> {
+  const row = await database
+    .select({ observation: socialPostObservations, channel: socialChannels })
+    .from(socialPostObservations)
+    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .where(
+      and(
+        eq(socialPostObservations.id, observationId),
+        eq(socialChannels.workspaceId, workspaceId),
+        eq(socialChannels.connectionStatus, "connected"),
+        isNull(socialChannels.archivedAt),
+      ),
+    )
+    .limit(1);
+  return row[0] ?? null;
 }

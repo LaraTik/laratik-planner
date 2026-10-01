@@ -16,6 +16,55 @@ import { bootstrapRoleSession, devSeed } from "./_helpers";
  */
 
 test.describe("M4 — social analytics dashboard", () => {
+  test("surfaces the Command Center on the workspace overview", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "command-center-overview");
+    await page.goto("/app/w/command-center-overview");
+
+    await expect(page.getByTestId("workspace-overview")).toBeVisible();
+    await expect(page.getByTestId("command-center-panel")).toBeVisible();
+    await expect(page.getByTestId("command-center-empty")).toBeVisible();
+    await expect(
+      page.getByTestId("command-center-panel").getByRole("link", { name: "Open channels" }),
+    ).toBeVisible();
+  });
+
+  test("shows connected-account Command Center signals without duplicating analytics", async ({
+    page,
+  }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "command-center-data", {
+      socialAnalyticsFixture: true,
+    });
+    await page.goto("/app/w/command-center-data");
+
+    await expect(page.getByTestId("command-center-panel")).toBeVisible();
+    await expect(page.getByTestId("command-center-sections")).toBeVisible();
+    await expect(
+      page.getByTestId("command-center-sections").getByRole("link", { name: "Follower trend" }),
+    ).toHaveAttribute("href", "#command-center-trend");
+    await expect(page.getByTestId("command-center-trend")).toBeVisible();
+    await expect(page.getByTestId("command-center-health")).toBeVisible();
+    await expect(page.getByTestId("command-center-leaders")).toBeVisible();
+    await expect(page.getByTestId("command-center-performance")).toBeVisible();
+    await expect(page.getByTestId("command-center-planning-signal")).toBeVisible();
+    await expect(page.getByTestId("command-center-empty")).toHaveCount(0);
+  });
+
+  test("keeps the Command Center usable in Arabic RTL on a narrow viewport", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "command-center-arabic", {
+      socialAnalyticsFixture: true,
+      locale: "ar",
+    });
+    await page.goto("/app/w/command-center-arabic");
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    await expect(page.getByTestId("command-center-panel")).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .toBe(true);
+  });
+
   test("renders the shared comparison dashboard and channel ranking", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "analytics-platform-aware", {
       socialAnalyticsFixture: true,

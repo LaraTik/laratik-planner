@@ -12,6 +12,10 @@ import {
   contentPillars,
   outboxEvents,
   socialChannels,
+  socialPostObservations,
+  contentResearchLinks,
+  contentResearchTeardownLinks,
+  researchTeardowns,
   workspaceMembershipRoles,
   workspaceMemberships,
   workspaceSettings,
@@ -59,6 +63,7 @@ import {
   enqueueReviewRequestNotification,
 } from "@/lib/notifications/service";
 import { reconcileContentItemMediaFolders } from "@/lib/media/service";
+import { applyResearchTeardownToPayload, ResearchTeardownSchema } from "@/lib/research/teardown";
 
 /**
  * Content service — the heart of the app.
@@ -92,6 +97,10 @@ export const QuickCreateSchema = z.object({
   contentPillarId: z.string().uuid().optional(),
   designerId: z.string().uuid().optional(),
   trendSignalId: z.string().uuid().optional(),
+  /** Optional workspace-scoped research source used to preserve provenance. */
+  researchPostObservationId: z.string().uuid().optional(),
+  /** Optional reviewed teardown used to seed a planner draft. */
+  researchTeardownId: z.string().uuid().optional(),
   /** Optional structured creative payload, validated against the selected format. */
   formatPayload: z.record(z.string(), z.unknown()).optional(),
 });
@@ -153,6 +162,43 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
     : null;
   if (input.trendSignalId && !trendSignal)
     throw new Error("Trend signal not found in this workspace");
+
+  const researchObservation = input.researchPostObservationId
+    ? (
+        await db
+          .select({ id: socialPostObservations.id })
+          .from(socialPostObservations)
+          .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+          .where(
+            and(
+              eq(socialPostObservations.id, input.researchPostObservationId),
+              eq(socialChannels.workspaceId, input.workspaceId),
+              eq(socialChannels.connectionStatus, "connected"),
+              isNull(socialChannels.archivedAt),
+            ),
+          )
+          .limit(1)
+      )[0]
+    : null;
+  if (input.researchPostObservationId && !researchObservation)
+    throw new Error("Research post not found in this workspace");
+
+  const researchTeardown = input.researchTeardownId
+    ? (
+        await db
+          .select({ id: researchTeardowns.id })
+          .from(researchTeardowns)
+          .where(
+            and(
+              eq(researchTeardowns.id, input.researchTeardownId),
+              eq(researchTeardowns.workspaceId, input.workspaceId),
+            ),
+          )
+          .limit(1)
+      )[0]
+    : null;
+  if (input.researchTeardownId && !researchTeardown)
+    throw new Error("Research teardown not found in this workspace");
 
   const storedFormatPayload =
     input.formatPayload === undefined
@@ -219,6 +265,24 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
         signalId: trendSignal.id,
         workspaceId: input.workspaceId,
         velocityAtSchedule: trendSignal.velocity,
+      });
+    }
+
+    if (researchObservation) {
+      await tx.insert(contentResearchLinks).values({
+        workspaceId: input.workspaceId,
+        contentItemId: created!.id,
+        socialPostObservationId: researchObservation.id,
+        createdBy: actor.id,
+      });
+    }
+
+    if (researchTeardown) {
+      await tx.insert(contentResearchTeardownLinks).values({
+        workspaceId: input.workspaceId,
+        contentItemId: created!.id,
+        researchTeardownId: researchTeardown.id,
+        createdBy: actor.id,
       });
     }
 
@@ -496,6 +560,63 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
 
   revalidatePath(`/app/w/`);
   revalidatePath(`/app/w/`, "layout");
+}
+
+export const ApplyResearchTeardownSchema = z.object({
+  workspaceId: z.string().uuid(),
+  contentItemId: z.string().uuid(),
+  researchTeardownId: z.string().uuid(),
+});
+export type ApplyResearchTeardownInput = z.infer<typeof ApplyResearchTeardownSchema>;
+
+/**
+ * Apply only blank, schema-supported creative fields from a linked teardown.
+ * Existing planner values win; the normal format-payload service remains the
+ * single write path for editability, validation, and activity history.
+ */
+export async function applyResearchTeardownToFormatPayload(
+  actor: Actor,
+  input: ApplyResearchTeardownInput,
+) {
+  const parsed = ApplyResearchTeardownSchema.parse(input);
+  const [source] = await db
+    .select({
+      contentItemId: contentItems.id,
+      format: contentItems.format,
+      formatPayload: contentItems.formatPayload,
+      result: researchTeardowns.result,
+    })
+    .from(contentResearchTeardownLinks)
+    .innerJoin(contentItems, eq(contentItems.id, contentResearchTeardownLinks.contentItemId))
+    .innerJoin(
+      researchTeardowns,
+      eq(researchTeardowns.id, contentResearchTeardownLinks.researchTeardownId),
+    )
+    .where(
+      and(
+        eq(contentResearchTeardownLinks.workspaceId, parsed.workspaceId),
+        eq(contentResearchTeardownLinks.contentItemId, parsed.contentItemId),
+        eq(contentResearchTeardownLinks.researchTeardownId, parsed.researchTeardownId),
+      ),
+    )
+    .limit(1);
+  if (!source) throw new Error("Research teardown is not linked to this content item");
+
+  const teardown = ResearchTeardownSchema.safeParse(source.result);
+  if (!teardown.success) throw new Error("Saved research teardown is invalid");
+  const applied = applyResearchTeardownToPayload({
+    format: source.format as ContentFormat,
+    current: source.formatPayload,
+    teardown: teardown.data,
+  });
+  if (applied.fields.length === 0) return applied.fields;
+
+  await updateFormatPayload(actor, {
+    contentItemId: source.contentItemId,
+    format: source.format as ContentFormat,
+    formatPayload: applied.payload,
+  });
+  return applied.fields;
 }
 
 /** Canonical audience copy update. Copy is material even when the item is

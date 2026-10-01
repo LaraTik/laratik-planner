@@ -167,13 +167,14 @@ function classifyStatus(
   if (status >= 500) return { code: "provider_unavailable", retryable: true };
   // 2026-08-28: 400 with Meta `error.code: 100` and a "metric"-flavored
   // message means the Meta app doesn't have that specific insight metric
-  // enabled (e.g. `page_views` not in the App Review allowlist, or the
+  // enabled (e.g. a Page metric is not in the App Review allowlist, or the
   // app is in Development mode without a role for the user). This is a
   // CONFIGURATION issue, not a transient failure — classify it
   // distinctly from the catch-all `invalid_response` so the page
-  // branch can write a clean `partial: true` row with a clear
-  // `providerErrorCode: "metric_unavailable"` and not surface as a
-  // "Meta returned an unrecognized response" error to the operator.
+  // branch can write a clean `partial: true` row with the metric
+  // marked `unsupported`, without surfacing a retryable channel
+  // error or the misleading "Meta returned an unrecognized
+  // response" message to the operator.
   if (status === 400 && body) {
     try {
       const parsed = JSON.parse(body) as {

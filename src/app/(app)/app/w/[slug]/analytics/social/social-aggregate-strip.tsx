@@ -27,7 +27,7 @@ type Translator = (key: string, params?: Record<string, string | number>) => str
  *      the user wants it (would change the sort key only).
  *
  *   3. **Portfolio reach.** Sum of `views` (which is the
- *      `profile_views` metric for IG, `page_views` for FB) over
+ *      `profile_views` metric for IG, `page_views_total` for FB) over
  *      the currently selected window across all channels. If the
  *      selected window is empty for all channels, the value is
  *      `—`.
