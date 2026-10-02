@@ -1,6 +1,8 @@
 import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
+import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
 import type { BuildInfo } from "@/lib/build-info";
+import type { ThemePreference } from "@/lib/theme/preferences";
 
 /**
  * Compact utility bar — notifications + user menu. Search was removed
@@ -19,6 +21,7 @@ export function Topbar({
   notifications,
   unreadCount,
   activeAgency,
+  themePreference,
   chrome,
 }: {
   user: {
@@ -41,11 +44,13 @@ export function Topbar({
   }[];
   unreadCount: number;
   activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
-  chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy };
+  themePreference: ThemePreference;
+  chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
 }) {
   return (
     <div className="flex h-full items-center justify-end px-3 sm:px-6">
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+        <ThemeToggle preference={themePreference} copy={chrome.theme} />
         <NotificationsBell
           initial={notifications}
           initialUnread={unreadCount}

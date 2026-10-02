@@ -152,7 +152,7 @@ describe("MobileNav", () => {
     const user = userEvent.setup();
     render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
-    expect(screen.getByRole("link", { name: "Overview" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Command Center" })).toHaveAttribute(
       "href",
       "/app/w/northstar",
     );

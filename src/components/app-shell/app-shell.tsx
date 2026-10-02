@@ -5,10 +5,12 @@ import { NotificationsBell, type NotificationsCopy } from "./notifications-bell"
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
+import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
+import type { ThemePreference } from "@/lib/theme/preferences";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,6 +32,7 @@ import { cn } from "@/lib/utils";
 export type AppShellChrome = {
   userMenu: UserMenuCopy;
   notifications: NotificationsCopy;
+  theme: ThemeToggleCopy;
   sidebar: Record<string, string>;
 };
 
@@ -67,6 +70,7 @@ export function AppShell({
   canCreateWorkspace,
   notifications,
   unreadCount,
+  themePreference,
   platformAccess,
   canAccessTrendRadar = false,
   supportGrants = [],
@@ -100,6 +104,7 @@ export function AppShell({
     createdAt: string;
   }[];
   unreadCount: number;
+  themePreference: ThemePreference;
   platformAccess: PlatformNavigationAccess;
   canAccessTrendRadar?: boolean;
   supportGrants?: Array<{
@@ -174,6 +179,7 @@ export function AppShell({
           buildInfo={buildInfo}
           notifications={notifications}
           unreadCount={unreadCount}
+          themePreference={themePreference}
           activeAgency={agencySwitcher.active}
           chrome={chrome}
         />
@@ -183,6 +189,7 @@ export function AppShell({
       <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b px-3 md:hidden">
         <MobileContextHeader workspaces={workspaces} />
         <div className="flex items-center gap-1">
+          <ThemeToggle preference={themePreference} copy={chrome.theme} />
           <NotificationsBell
             initial={notifications}
             initialUnread={unreadCount}

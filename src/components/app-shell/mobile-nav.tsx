@@ -113,7 +113,7 @@ export function MobileNav({
           mobileLink("/app", labelFor("my-work", "My Work"), <Home />, pathname, true),
           mobileLink(
             wsBase,
-            labelFor("workspace-overview", "Overview"),
+            labelFor("workspace-overview", "Command Center"),
             <LayoutDashboard />,
             pathname,
             true,

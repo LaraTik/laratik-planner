@@ -147,7 +147,7 @@ export function buildWorkspaceNavigation(input: {
       kind: "link",
       key: "overview",
       href: wsBase,
-      label: "Overview",
+      label: "Command Center",
       labelKey: "sidebar.workspaceOverview",
       icon: LayoutDashboard,
     },

@@ -25,7 +25,7 @@ describe("MobileContextHeader", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByRole("link", { name: "نظرة عامة على Acme" })).toBeVisible();
+    expect(screen.getByRole("link", { name: "مركز القيادة في Acme" })).toBeVisible();
     expect(screen.getByText("مساحة العمل")).toBeVisible();
   });
 

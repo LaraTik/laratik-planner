@@ -30,6 +30,7 @@ import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { AppShellChrome } from "@/components/app-shell/app-shell";
+import { getThemePreference } from "@/lib/theme/server";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -110,11 +111,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   // exactly this user's bell — not the entire `/app` tree the
   // previous `revalidatePath` invalidated. The list + count share
   // the same tag so a single bust clears both.
-  const [notifications, unreadCount, switcher, agencyOptions] = await Promise.all([
+  const [notifications, unreadCount, switcher, agencyOptions, themePreference] = await Promise.all([
     getCachedNotificationsForUser(actor, 10),
     getCachedUnreadCount(actor),
     listSwitcherWorkspaces(actor),
     listActorAgencies(actor),
+    getThemePreference(actor.id),
   ]);
   const workspaceAccess = Object.fromEntries(
     await Promise.all(
@@ -247,6 +249,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       empty: t("auth.chrome.notifications.empty"),
       today: t("auth.chrome.notifications.today"),
       yesterday: t("auth.chrome.notifications.yesterday"),
+    },
+    theme: {
+      label: t("account.themeLabel"),
+      system: t("account.themeSystem"),
+      light: t("account.themeLight"),
+      dark: t("account.themeDark"),
     },
     // Sidebar labels: flat key→string map indexed by the
     // navigation-model spec `key`. The sidebar component
@@ -422,6 +430,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         };
       })}
       unreadCount={unreadCount}
+      themePreference={themePreference}
       platformAccess={platformAccess}
       canAccessTrendRadar={canAccessTrendRadar}
       supportGrants={supportGrants}

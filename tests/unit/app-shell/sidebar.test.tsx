@@ -199,7 +199,7 @@ describe("Sidebar (workspace-aware)", () => {
     const user = userEvent.setup();
     render(<Sidebar {...baseProps} canAccessTrendRadar />);
     // Workspace tabs are rendered, pointing to the current workspace
-    const overview = screen.getByRole("link", { name: "Overview" });
+    const overview = screen.getByRole("link", { name: "Command Center" });
     expect(overview).toHaveAttribute("href", "/app/w/northstar");
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");

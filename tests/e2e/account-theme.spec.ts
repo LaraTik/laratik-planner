@@ -2,6 +2,18 @@ import { test, expect } from "@playwright/test";
 import { bootstrapRoleSession } from "./_helpers";
 
 test.describe("account theme preference", () => {
+  test("is available beside notifications in the app shell", async ({ page }, testInfo) => {
+    await bootstrapRoleSession(page, "workspace_manager", "shell-theme", {
+      email: `e2e-shell-theme-${testInfo.project.name}@laratik.local`,
+    });
+    await page.goto("/app/w/acme");
+
+    await page.getByRole("button", { name: "Color theme" }).first().click();
+    await expect(page.getByRole("menuitemradio", { name: "Dark" })).toBeVisible();
+    await page.getByRole("menuitemradio", { name: "Dark" }).click();
+    await expect(page.locator("html")).toHaveAttribute("data-theme", "dark");
+  });
+
   test("persists Light, Dark, and System per user", async ({ page }, testInfo) => {
     await bootstrapRoleSession(page, "workspace_manager", "account-theme", {
       email: `e2e-theme-${testInfo.project.name}@laratik.local`,
