@@ -178,6 +178,7 @@ export function AttentionBanner({
           href={reviewHref}
           className={cn(
             "text-label inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
+            "focus-visible:ring-focus-ring cursor-pointer focus:outline-none focus-visible:ring-2",
             severity === "critical"
               ? "border-danger/40 text-danger hover:bg-danger/10"
               : severity === "warning"
@@ -193,7 +194,7 @@ export function AttentionBanner({
           <Link
             href={approvalsHref}
             className={cn(
-              "text-label inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold",
+              "text-label focus-visible:ring-focus-ring inline-flex min-h-11 cursor-pointer items-center gap-1 rounded-[var(--radius-control)] border px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
               severity === "critical"
                 ? "border-danger/40 text-danger hover:bg-danger/10"
                 : severity === "warning"

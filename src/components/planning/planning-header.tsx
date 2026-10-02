@@ -72,7 +72,7 @@ export function PlanningHeader({
         <div className="min-w-0 flex-1">
           <Link
             href={`/app/w/${workspaceSlug}/planning`}
-            className="text-label text-fg-muted hover:text-fg-secondary inline-flex items-center gap-1"
+            className="text-label text-fg-muted hover:text-fg-secondary focus-visible:ring-focus-ring inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-[var(--radius-control)] px-1 focus:outline-none focus-visible:ring-2"
             data-testid="planning-header-breadcrumb"
           >
             <DirAwareArrowLeft className="h-3.5 w-3.5" />

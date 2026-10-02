@@ -76,7 +76,7 @@ export function OverviewKpiStrip({ tiles, className, t }: OverviewKpiStripProps)
             href={t.href}
             data-testid={t.testId ?? `overview-kpi-${t.label.toLowerCase().replace(/\s+/g, "-")}`}
             className={cn(
-              "border-border bg-surface hover:border-primary focus-visible:ring-focus-ring flex flex-col gap-1.5 rounded-[var(--radius-card)] border border-s-4 p-3.5 transition-colors focus:outline-none focus-visible:ring-2",
+              "border-border bg-surface hover:border-primary focus-visible:ring-focus-ring flex cursor-pointer flex-col gap-1.5 rounded-[var(--radius-card)] border border-s-4 p-3.5 transition-colors focus:outline-none focus-visible:ring-2",
               TONE_BORDER[t.tone],
             )}
             aria-label={`${t.label}: ${t.value}. ${t.description ?? ""}`.trim()}

@@ -159,10 +159,9 @@ export default async function WorkspaceOverviewPage({
       .innerJoin(workspaceMemberships, eq(workspaceMemberships.userId, users.id))
       .where(eq(workspaceMemberships.workspaceId, ws.id))
       .orderBy(asc(users.displayName)),
-    // Approvals count for the attention banner. A real approval
-    // row is one where the actor is the current user and the row
-    // is still pending. We surface the count; the banner links
-    // to the dedicated /reviews surface.
+    // Content-review approvals waiting for the current reviewer. The
+    // status guard keeps resolved items out of the attention banner;
+    // the banner links to the dedicated /reviews surface.
     db
       .select({ id: contentItems.id })
       .from(contentItems)
@@ -170,6 +169,7 @@ export default async function WorkspaceOverviewPage({
         and(
           eq(contentItems.workspaceId, ws.id),
           isNull(contentItems.archivedAt),
+          eq(contentItems.status, "content_review"),
           eq(contentItems.contentReviewerId, session.user.id),
         ),
       )
@@ -385,15 +385,6 @@ export default async function WorkspaceOverviewPage({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-overview">
-      <AttentionBanner
-        atRiskCount={dashboard.atRisk}
-        blockedCount={dashboard.blocked}
-        approachingCount={approachingCount}
-        approvalsCount={approvalRows.length}
-        reviewHref={buildPlanningHref({ risk: "at_risk" })}
-        approvalsHref={`/app/w/${slug}/reviews`}
-        t={t}
-      />
       <PageHeader
         eyebrow={ws.name}
         actionBreakpoint="lg"
@@ -458,6 +449,16 @@ export default async function WorkspaceOverviewPage({
             </Button>
           </div>
         }
+      />
+
+      <AttentionBanner
+        atRiskCount={dashboard.atRisk}
+        blockedCount={dashboard.blocked}
+        approachingCount={approachingCount}
+        approvalsCount={approvalRows.length}
+        reviewHref={buildPlanningHref({ risk: "at_risk" })}
+        approvalsHref={`/app/w/${slug}/reviews`}
+        t={t}
       />
 
       {/* Social Command Center leads the dashboard: scope/freshness → signals → action. */}
