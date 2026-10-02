@@ -353,6 +353,8 @@ async function drillSkippedMigrationRepair(): Promise<void> {
       await c.query('DROP TABLE IF EXISTS "content_research_teardown_link" CASCADE');
       await c.query('DROP TABLE IF EXISTS "research_bookmark" CASCADE');
       await c.query('DROP TABLE IF EXISTS "research_teardown" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "research_watchlist_member" CASCADE');
+      await c.query('DROP TABLE IF EXISTS "research_watchlist" CASCADE');
       await c.query('DROP TABLE IF EXISTS "research_watchlist_account" CASCADE');
       await c.query("DELETE FROM drizzle.__drizzle_migrations WHERE created_at >= $1", [
         migrationTimestamp,

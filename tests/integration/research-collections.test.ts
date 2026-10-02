@@ -7,6 +7,9 @@ import {
   agencies,
   researchCollections,
   researchTeardowns,
+  researchWatchlistAccounts,
+  researchWatchlistMembers,
+  researchWatchlists,
   users,
   workspaces,
 } from "@/lib/db/schema";
@@ -20,7 +23,7 @@ const db = drizzle(pool);
 let workspaceId: string;
 let userId: string;
 
-describe("M4 — research collections", () => {
+describe("M4 — research collections and watchlists", () => {
   beforeAll(async () => {
     await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
   });
@@ -92,5 +95,39 @@ describe("M4 — research collections", () => {
       .from(researchTeardowns)
       .where(eq(researchTeardowns.id, teardown!.id));
     expect(cleared?.collectionId).toBeNull();
+  });
+
+  it("keeps named account membership unique and cascades it with the watchlist", async () => {
+    const [watchlist] = await db
+      .insert(researchWatchlists)
+      .values({ workspaceId, createdBy: userId, name: "Halal grocery competitors" })
+      .returning();
+    const [account] = await db
+      .insert(researchWatchlistAccounts)
+      .values({
+        workspaceId,
+        createdBy: userId,
+        platform: "instagram",
+        handle: "competitor",
+        sourceUrl: "https://instagram.com/competitor",
+      })
+      .returning();
+
+    await db
+      .insert(researchWatchlistMembers)
+      .values({ watchlistId: watchlist!.id, accountId: account!.id });
+
+    await expect(
+      db
+        .insert(researchWatchlistMembers)
+        .values({ watchlistId: watchlist!.id, accountId: account!.id }),
+    ).rejects.toThrow();
+
+    await db.delete(researchWatchlists).where(eq(researchWatchlists.id, watchlist!.id));
+    const members = await db
+      .select()
+      .from(researchWatchlistMembers)
+      .where(eq(researchWatchlistMembers.accountId, account!.id));
+    expect(members).toHaveLength(0);
   });
 });

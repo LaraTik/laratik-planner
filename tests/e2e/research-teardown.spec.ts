@@ -3,6 +3,35 @@ import AxeBuilder from "@axe-core/playwright";
 import { bootstrapRoleSession } from "./_helpers";
 
 test.describe("research teardown preview", () => {
+  test("creates a named watchlist and assigns a source account", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "research-watchlists");
+    await page.goto("/app/w/research-watchlists/research");
+
+    await expect(page.getByRole("heading", { name: "Account watchlists" })).toBeVisible();
+    await page.getByLabel("Watchlist name").fill("Halal grocery competitors");
+    await page.getByRole("button", { name: "Create watchlist" }).click();
+    await expect(page.getByRole("heading", { name: "Halal grocery competitors" })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    await page.getByLabel("Handle").fill("@competitor");
+    await page.getByLabel("Profile URL").fill("https://instagram.com/competitor");
+    await page.getByRole("button", { name: "Add to watchlist" }).click();
+    await expect(page.getByText("Source reference only", { exact: true })).toBeVisible();
+
+    const membership = page.getByRole("checkbox", { name: "Halal grocery competitors" });
+    await membership.check();
+    await expect(membership).toBeChecked();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    const violations = results.violations.filter((violation) =>
+      ["critical", "serious"].includes(violation.impact ?? ""),
+    );
+    expect(violations, JSON.stringify(violations, null, 2)).toEqual([]);
+  });
+
   test("renders the notes-only preview contract without writing a draft", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager", "research-teardown");
     await page.goto("/app/w/research-teardown/research");

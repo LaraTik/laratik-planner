@@ -23,6 +23,9 @@ const labels = {
   error: "Could not update the watchlist.",
   invalid: "Enter valid values.",
   duplicate: "Already on the watchlist.",
+  membership: "Named watchlists",
+  membershipDescription: "Keep different research questions separate.",
+  membershipError: "Could not update this account's watchlist membership.",
 };
 
 describe("ResearchWatchlist", () => {
@@ -55,7 +58,13 @@ describe("ResearchWatchlist", () => {
   it("adds a source-only account and keeps its provider status visible", async () => {
     const user = userEvent.setup();
     render(
-      <ResearchWatchlist workspaceSlug="acme" initialAccounts={[]} canManage labels={labels} />,
+      <ResearchWatchlist
+        workspaceSlug="acme"
+        initialAccounts={[]}
+        watchlists={[]}
+        canManage
+        labels={labels}
+      />,
     );
 
     await user.type(screen.getByRole("textbox", { name: /Handle/ }), "@competitor");
@@ -87,6 +96,7 @@ describe("ResearchWatchlist", () => {
             providerStatus: "unsupported",
           },
         ]}
+        watchlists={[]}
         canManage={false}
         labels={labels}
       />,
@@ -95,5 +105,45 @@ describe("ResearchWatchlist", () => {
     expect(screen.getByText("Brand")).toBeInTheDocument();
     expect(screen.getByText("Provider metrics unavailable")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Add to watchlist" })).not.toBeInTheDocument();
+  });
+
+  it("lets managers assign an account to a named watchlist with an accessible checkbox", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResearchWatchlist
+        workspaceSlug="acme"
+        initialAccounts={[
+          {
+            id: "33333333-3333-4333-8333-333333333333",
+            platform: "instagram",
+            handle: "competitor",
+            displayName: "Competitor",
+            sourceUrl: "https://instagram.com/competitor",
+            providerStatus: "manual",
+          },
+        ]}
+        watchlists={[
+          {
+            id: "44444444-4444-4444-8444-444444444444",
+            name: "Halal grocery competitors",
+            description: null,
+            shareScope: "workspace",
+            accountIds: [],
+          },
+        ]}
+        canManage
+        labels={labels}
+      />,
+    );
+
+    const checkbox = screen.getByRole("checkbox", { name: "Halal grocery competitors" });
+    await user.click(checkbox);
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        "/api/research/watchlists/44444444-4444-4444-8444-444444444444/members",
+        expect.objectContaining({ method: "POST" }),
+      ),
+    );
   });
 });

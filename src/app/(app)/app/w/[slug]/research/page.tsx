@@ -11,6 +11,8 @@ import {
   researchCollections,
   researchTeardowns,
   researchWatchlistAccounts,
+  researchWatchlistMembers,
+  researchWatchlists,
   socialChannels,
   socialPostObservations,
 } from "@/lib/db/schema";
@@ -23,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ResearchWatchlist } from "@/components/workspace/research-watchlist";
+import { ResearchWatchlists } from "@/components/workspace/research-watchlists";
 import { ResearchTeardownPanel } from "@/components/workspace/research-teardown-panel";
 import { ResearchCollectionPicker } from "@/components/workspace/research-collection-picker";
 import { ResearchCollections } from "@/components/workspace/research-collections";
@@ -107,6 +110,45 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
     )
     .orderBy(desc(researchWatchlistAccounts.createdAt))
     .limit(50);
+  const namedWatchlistRows = await db
+    .select({
+      id: researchWatchlists.id,
+      name: researchWatchlists.name,
+      description: researchWatchlists.description,
+      shareScope: researchWatchlists.shareScope,
+    })
+    .from(researchWatchlists)
+    .where(
+      and(
+        eq(researchWatchlists.workspaceId, workspace.id),
+        isNull(researchWatchlists.archivedAt),
+        or(
+          eq(researchWatchlists.shareScope, "workspace"),
+          eq(researchWatchlists.createdBy, actor.id),
+        ),
+      ),
+    )
+    .orderBy(researchWatchlists.name);
+  const namedWatchlistMembers = namedWatchlistRows.length
+    ? await db
+        .select({
+          watchlistId: researchWatchlistMembers.watchlistId,
+          accountId: researchWatchlistMembers.accountId,
+        })
+        .from(researchWatchlistMembers)
+        .innerJoin(
+          researchWatchlists,
+          eq(researchWatchlists.id, researchWatchlistMembers.watchlistId),
+        )
+        .where(eq(researchWatchlists.workspaceId, workspace.id))
+    : [];
+  const namedWatchlists = namedWatchlistRows.map((watchlist) => ({
+    ...watchlist,
+    shareScope: watchlist.shareScope as "me" | "workspace",
+    accountIds: namedWatchlistMembers
+      .filter((member) => member.watchlistId === watchlist.id)
+      .map((member) => member.accountId),
+  }));
   const teardownRows = await db
     .select()
     .from(researchTeardowns)
@@ -170,9 +212,31 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         }}
       />
 
+      <ResearchWatchlists
+        workspaceSlug={slug}
+        canManage={canManage}
+        initialWatchlists={namedWatchlists}
+        labels={{
+          title: t("research.watchlistsTitle"),
+          description: t("research.watchlistsDescription"),
+          addTitle: t("research.watchlistsAddTitle"),
+          name: t("research.watchlistsName"),
+          namePlaceholder: t("research.watchlistsNamePlaceholder"),
+          shareScope: t("research.watchlistsShareScope"),
+          privateScope: t("research.watchlistsPrivate"),
+          workspaceScope: t("research.watchlistsWorkspace"),
+          create: t("research.watchlistsCreate"),
+          creating: t("research.watchlistsCreating"),
+          duplicate: t("research.watchlistsDuplicate"),
+          error: t("research.watchlistsError"),
+          accountCount: t("research.watchlistsAccountCount"),
+        }}
+      />
+
       <ResearchWatchlist
         workspaceSlug={slug}
         canManage={canManage}
+        watchlists={namedWatchlists}
         initialAccounts={watchlistRows.map((row) => ({
           ...row,
           platform: row.platform as "instagram" | "facebook" | "tiktok" | "youtube",
@@ -195,6 +259,9 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           error: t("research.watchlistError"),
           invalid: t("research.watchlistInvalid"),
           duplicate: t("research.watchlistDuplicate"),
+          membership: t("research.watchlistMembership"),
+          membershipDescription: t("research.watchlistMembershipDescription"),
+          membershipError: t("research.watchlistMembershipError"),
         }}
       />
 

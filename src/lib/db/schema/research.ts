@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  integer,
   index,
   jsonb,
   pgTable,
@@ -191,6 +192,55 @@ export const researchWatchlistAccounts = pgTable(
 );
 
 /**
+ * Named account groups for the research workflow. Collections remain the
+ * home for saved evidence; watchlists group source accounts before any post
+ * is saved or analyzed.
+ */
+export const researchWatchlists = pgTable(
+  "research_watchlist",
+  {
+    id: idColumn(),
+    workspaceId: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    createdBy: uuid("created_by")
+      .notNull()
+      .references(() => users.id, { onDelete: "restrict" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    shareScope: text("share_scope").notNull().default("me"),
+    archivedAt: archivedAt(),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("research_watchlist_workspace_owner_name_unique")
+      .on(t.workspaceId, t.createdBy, t.name)
+      .where(sql`${t.archivedAt} IS NULL`),
+    index("research_named_watchlist_workspace_created_idx").on(t.workspaceId, t.createdAt),
+    check("research_watchlist_share_scope_valid", sql`${t.shareScope} IN ('me', 'workspace')`),
+  ],
+);
+
+export const researchWatchlistMembers = pgTable(
+  "research_watchlist_member",
+  {
+    watchlistId: uuid("watchlist_id")
+      .notNull()
+      .references(() => researchWatchlists.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => researchWatchlistAccounts.id, { onDelete: "cascade" }),
+    position: integer("position").notNull().default(0),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("research_watchlist_member_unique").on(t.watchlistId, t.accountId),
+    index("research_watchlist_member_account_idx").on(t.accountId),
+    check("research_watchlist_member_position_nonnegative", sql`${t.position} >= 0`),
+  ],
+);
+
+/**
  * A reviewed, structured teardown. Raw planner notes and provider bodies are
  * intentionally excluded; this is the durable research artifact only.
  */
@@ -234,5 +284,9 @@ export type ResearchBookmark = typeof researchBookmarks.$inferSelect;
 export type NewResearchBookmark = typeof researchBookmarks.$inferInsert;
 export type ResearchWatchlistAccount = typeof researchWatchlistAccounts.$inferSelect;
 export type NewResearchWatchlistAccount = typeof researchWatchlistAccounts.$inferInsert;
+export type ResearchWatchlist = typeof researchWatchlists.$inferSelect;
+export type NewResearchWatchlist = typeof researchWatchlists.$inferInsert;
+export type ResearchWatchlistMember = typeof researchWatchlistMembers.$inferSelect;
+export type NewResearchWatchlistMember = typeof researchWatchlistMembers.$inferInsert;
 export type ResearchTeardown = typeof researchTeardowns.$inferSelect;
 export type NewResearchTeardown = typeof researchTeardowns.$inferInsert;

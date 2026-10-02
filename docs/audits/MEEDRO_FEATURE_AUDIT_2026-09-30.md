@@ -256,6 +256,8 @@ Observed capabilities:
 
 This is the strongest Meedro feature for LaraTik. It creates a durable research habit and has a direct handoff to a planned content item.
 
+The complete live capture, account/watchlist investigation, extracted field model, and implementation roadmap are in [MEEDRO_VIRAL_FINDER_2026-10-02.md](MEEDRO_VIRAL_FINDER_2026-10-02.md).
+
 Planner gap: LaraTik has Trend Radar source/board concepts and normalized social analytics, but no competitor watchlist, competitor-video snapshot, or source freshness model exposed to planners.
 
 Recommended minimum slice:
@@ -399,6 +401,10 @@ Planner crosswalk: LaraTik already has a production MCP endpoint, scoped persona
 
 Recommendation: copy the permission-first onboarding and prompt-card UX, not Meedro’s token model. Add research read tools only with the smallest scope, keep write actions behind existing role/workflow checks, and update `docs/api/README.md`, `docs/api/mcp.md`, MCP evaluation, Account UI, and bilingual copy together.
 
+The complete live MCP Connection capture, including Claude, ChatGPT, Claude Code,
+API-key behavior, connection limits, and the proposed Claude/ChatGPT/MiniMax
+Planner design, is in [MEEDRO_MCP_CONNECTION_2026-10-02.md](MEEDRO_MCP_CONNECTION_2026-10-02.md).
+
 Priority: P1 after the research read model exists.
 
 ### 11. Workflows
@@ -415,6 +421,8 @@ Observed capabilities:
 - Workflow detail modal explains the tool chain, numbered steps, copyable prompt, and Use in Claude/Use in ChatGPT actions.
 
 This is a strong UX pattern for LaraTik’s MCP and AI surfaces. The recipe should show purpose, required input, tool chain, data access, output, and whether the result creates a draft or only returns research.
+
+The complete live catalog capture, including the exact visible titles, descriptions, hints, tool chains, prompts, and Planner preparation mapping for all 12 recipes, is in [Meedro workflow catalog → LaraTik Planner preparation](MEEDRO_WORKFLOW_CATALOG_2026-10-02.md).
 
 Recommendation: add a small set of LaraTik recipes after the underlying tools exist: “Turn saved trend into brief,” “Teardown into format payload,” “Review planning risks,” and “Summarize workspace performance.” Keep actions explicit and reversible.
 

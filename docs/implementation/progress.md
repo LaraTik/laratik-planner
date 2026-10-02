@@ -11,6 +11,25 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-02 — Named research watchlists, M1 source-only slice
+
+The first implementation slice from the Meedro integration plan is now in the
+worktree. Migration `0067_aberrant_bishop` adds workspace-scoped named
+watchlists and account membership without changing the existing source-only
+account registry. The Research route adds bilingual list creation and
+role-gated account assignment using accessible Radix checkboxes. New routes
+cover list read/create and membership add/remove; no provider calls, scraping,
+media copying, publishing, or new AI usage path was introduced.
+
+Focused research unit tests pass 8/8, focused integration tests pass 2/2,
+typecheck and lint pass, the migration journal parses, and the migration drill
+passes 5/5 including skipped-migration repair and backup/restore. The full
+verification pass passes 456 unit files / 4311 tests and the production build.
+The focused Chromium flow passes 1/1 with serious/critical axe checks. The
+broader Research browser file still has a stale pre-existing expectation for a
+removed planning "Brief" tab; multi-viewport/RTL visual evidence and
+independent review remain open. Independent verification is not claimed.
+
 ## 2026-09-30 — Meedro-informed theme foundation
 
 The shared agent contract now documents the Meedro-informed shell ownership:

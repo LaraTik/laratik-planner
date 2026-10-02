@@ -9,6 +9,18 @@ the plan. The first implementation slice must preserve the current Stitch
 source, extend the existing authorized social analytics read model, and add
 light/dark verification before the Command Center surface is called ready.
 
+> **2026-10-02 named research watchlist implementation checkpoint** — M1 source-only
+> implementation is complete from the full Meedro integration plan. Migration
+> `0067_aberrant_bishop` adds named workspace watchlists and account membership
+> while preserving the source-only account registry. The Research route now
+> supports bilingual list creation and role-gated account assignment through
+> accessible checkbox controls. Focused unit tests pass 8/8, focused integration
+> tests pass 2/2, typecheck and lint pass, the migration drill passes 5/5, and
+> the focused Chromium Research flow passes 1/1 with serious/critical axe checks.
+> The broader Research browser file still has a stale pre-existing expectation
+> for a removed planning "Brief" tab; multi-viewport/RTL visual and independent
+> review evidence remain open. This checkpoint is not a `Verified` claim.
+
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
 > suite passes 24/24 after regenerating only the three references affected by
 > the fixed visual fixture: workspace overview desktop/mobile

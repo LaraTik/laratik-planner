@@ -138,13 +138,10 @@ export async function POST(request: NextRequest) {
       ...(parsed.data.displayName ? { displayName: parsed.data.displayName } : {}),
       sourceUrl: parsed.data.sourceUrl,
     })
-    .onConflictDoNothing({
-      target: [
-        researchWatchlistAccounts.workspaceId,
-        researchWatchlistAccounts.platform,
-        researchWatchlistAccounts.handle,
-      ],
-    })
+    // The active-account uniqueness rule is a partial index. Let Postgres
+    // infer any matching unique constraint instead of naming columns that
+    // cannot represent the archived_at predicate.
+    .onConflictDoNothing()
     .returning();
   if (!account) {
     return NextResponse.json(
