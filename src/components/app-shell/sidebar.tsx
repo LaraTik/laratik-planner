@@ -8,7 +8,6 @@ import { isActivePath, cn } from "@/lib/utils";
 import { clampBadge } from "@/lib/nav/badge-format";
 import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
 import { WorkspaceSwitcher } from "./workspace-switcher";
-import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
 import {
   buildAgencyNavigation,
@@ -30,7 +29,7 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  * The shape changes based on the current pathname:
  *
  *  - Inside /app/w/[slug]/* (workspace context):
- *      - Brand: logo + unified agency/workspace context switchers (at the top)
+ *      - Brand: logo + workspace context (tenant context lives in the topbar)
  *      - Workspace tabs (vertical): Overview, Content group, Performance,
  *        Brand group, Manage group (when admin)
  *      - Persistent bottom area: Create content + user menu
@@ -41,8 +40,7 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  *      - Workspaces
  *      - (admin only) User Management, Agency Settings
  *      - (platform admin only) Platform console
- *      - The same context switchers stay at the top so tenant selection is
- *        predictable on both global and workspace routes.
+ *      - Workspace context stays available on both global and workspace routes.
  *
  *  - Inside a client-reviewer workspace:
  *      - Minimal: Client review + Calendar
@@ -64,7 +62,6 @@ export function Sidebar({
   workspaceAccess = {},
   workspaceCanCreateContent = {},
   workspaceSwitcherOptions,
-  agencySwitcher,
   canCreateWorkspace,
   platformAccess,
   canAccessTrendRadar = false,
@@ -79,7 +76,6 @@ export function Sidebar({
   workspaceAccess?: Record<string, "internal" | "client" | "none">;
   workspaceCanCreateContent?: Record<string, boolean>;
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
-  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
   canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
   canAccessTrendRadar?: boolean;
@@ -167,8 +163,6 @@ export function Sidebar({
         currentWorkspace={currentWorkspace}
         workspaceSwitcherOptions={workspaceSwitcherOptions}
         canCreateWorkspace={canCreateWorkspace}
-        agencySwitcher={agencySwitcher}
-        platformAccess={platformAccess}
         onCollapsedChange={onCollapsedChange}
         labels={labels}
       />
@@ -191,8 +185,6 @@ export function Sidebar({
             top={agencyNav.top}
             groups={agencyNav.groups}
             pathname={pathname}
-            agencySwitcher={agencySwitcher}
-            platformAccess={platformAccess}
             collapsed={collapsed}
             onCollapsedChange={onCollapsedChange}
             labels={labels}
@@ -218,8 +210,6 @@ function SidebarHeader({
   currentWorkspace,
   workspaceSwitcherOptions,
   canCreateWorkspace,
-  agencySwitcher,
-  platformAccess,
   onCollapsedChange,
   labels = {},
 }: {
@@ -227,8 +217,6 @@ function SidebarHeader({
   currentWorkspace: { id: string; name: string; slug: string } | null;
   workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
   canCreateWorkspace: boolean;
-  agencySwitcher?: { active: AgencyRow | null; options: AgencyRow[] };
-  platformAccess: PlatformNavigationAccess;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
   labels?: Record<string, string>;
 }) {
@@ -270,75 +258,9 @@ function SidebarHeader({
         <div
           className="border-border bg-surface-subtle mt-2 flex flex-col gap-0.5 rounded-[var(--radius-card)] border p-1"
           role="group"
-          aria-label={labels["contextLabel"] ?? "Agency and workspace context"}
-          // Round-4b: announce an agency / workspace switch to
-          // screen readers without stealing focus. The switcher
-          // updates this subtree in place (the cookie POST
-          // refreshes the RSC layout), so the new context is read
-          // out politely.
-          aria-live="polite"
-          data-testid="sidebar-context-switchers"
+          aria-label={labels["workspaceSection"] ?? "Workspace context"}
+          data-testid="sidebar-workspace-context"
         >
-          {/* Round-4b: "Tenant" header label so the user reads the
-              two stacked switchers as a single context card. */}
-          {!collapsed ? (
-            <div
-              className="text-label text-fg-muted px-2 pt-1 pb-0.5 font-semibold tracking-wide uppercase"
-              data-testid="sidebar-tenant-label"
-            >
-              {labels["tenantLabel"] ?? "Tenant"}
-            </div>
-          ) : null}
-          {agencySwitcher && (agencySwitcher.options.length > 0 || platformAccess.canEnter) ? (
-            <AgencySwitcher
-              active={agencySwitcher.active}
-              options={agencySwitcher.options}
-              isPlatformAdmin={platformAccess.canEnter}
-              compact
-              // Round-4b: single-agency users skip the popover and
-              // land on agency settings directly. Saves a tap and
-              // removes the dead affordance of "switch" when there
-              // is only one choice.
-              asSettingsLink={Boolean(agencySwitcher.active) && agencySwitcher.options.length <= 1}
-              copy={{
-                activeAria:
-                  labels["agencySwitcherActiveAria"] ?? "Active agency: {name}. Click to switch.",
-                selectAria:
-                  labels["agencySwitcherSelectAria"] ?? "Select an agency. Click to open.",
-                selectAgency: labels["agencySwitcherSelect"] ?? "Select agency",
-                noAgenciesAria: labels["agencySwitcherNoAgenciesAria"] ?? "No agencies",
-                noAgency: labels["agencySwitcherNoAgency"] ?? "No agency",
-                switchTitle: labels["agencySwitcherSwitchTitle"] ?? "Switch agency",
-                listAria: labels["agencySwitcherListAria"] ?? "Agencies",
-                noAgenciesYet: labels["agencySwitcherNoAgenciesYet"] ?? "No agencies yet.",
-                createNew: labels["agencySwitcherCreateNew"] ?? "Create new agency",
-                adminLabel: labels["agencySwitcherAdminLabel"] ?? "Agency admin",
-                switchNotMember:
-                  labels["agencySwitcherSwitchNotMember"] ??
-                  "You're no longer a member of that agency.",
-                sessionExpired:
-                  labels["agencySwitcherSessionExpired"] ??
-                  "Your session expired. Please sign in again.",
-                switchFailed:
-                  labels["agencySwitcherSwitchFailed"] ??
-                  "Couldn't switch agencies. Please try again or contact support.",
-                switchFailedShort:
-                  labels["agencySwitcherSwitchFailedShort"] ??
-                  "Couldn't switch agencies. Please try again.",
-              }}
-              testId="sidebar-agency-switcher-trigger"
-            />
-          ) : null}
-          {/* Round-4b: 1px logical divider between agency and
-              workspace rows so each switcher reads as its own
-              entity sharing the card. */}
-          {!collapsed ? (
-            <div
-              className="border-border mx-1 my-0.5 border-t"
-              aria-hidden="true"
-              data-testid="sidebar-tenant-divider"
-            />
-          ) : null}
           <WorkspaceSwitcher
             active={currentWorkspace}
             options={workspaceSwitcherOptions}
@@ -483,8 +405,6 @@ function AgencyNavTree({
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
   pathname: string;
-  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
-  platformAccess: PlatformNavigationAccess;
   collapsed: boolean;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
   labels?: Record<string, string>;

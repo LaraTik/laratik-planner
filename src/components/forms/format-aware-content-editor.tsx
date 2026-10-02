@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { CheckCircle2, Compass, Loader2, Palette } from "lucide-react";
+import { CheckCircle2, ChevronDown, Compass, Loader2, Palette } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
@@ -58,6 +58,16 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  */
 
 const initial: { error?: string; ok?: boolean } = {};
+
+// These workbook columns duplicate the canonical planning metadata or the
+// delivery surface. Keep legacy values in the payload, but remove their
+// editing controls from Create so the brief stays focused.
+const REDUNDANT_CREATE_FIELDS = [
+  "weekday",
+  "platforms",
+  "publicationStatus",
+  "designReadyLink",
+] as const;
 
 function isFilled(value: unknown): boolean {
   if (value === null || value === undefined) return false;
@@ -333,7 +343,12 @@ export function FormatAwareContentEditor({
   }, [dirty, pending, editable, currentJson]);
 
   const fields = React.useMemo(
-    () => fieldsFor(format).filter((field) => !excludeFields.includes(field.key)),
+    () =>
+      fieldsFor(format).filter(
+        (field) =>
+          !excludeFields.includes(field.key) &&
+          !REDUNDANT_CREATE_FIELDS.includes(field.key as (typeof REDUNDANT_CREATE_FIELDS)[number]),
+      ),
     [format, excludeFields],
   );
   const sections = SECTIONS_BY_FORMAT[format] ?? SECTIONS_BY_FORMAT.static_post!;
@@ -561,15 +576,24 @@ export function FormatAwareContentEditor({
               );
             });
           return (
-            <section
+            <details
               key={section.id}
-              className="border-border bg-surface rounded-[var(--radius-control)] border p-4"
+              open
+              className="border-border bg-surface group scroll-mt-24 rounded-[var(--radius-control)] border p-4"
               data-testid={`format-section-${section.id}`}
             >
-              <header className="mb-3 flex items-baseline gap-2">
-                <Icon className="text-fg-muted h-4 w-4" aria-hidden="true" />
-                <h3 className="text-body text-fg-primary font-semibold">{t(section.titleKey)}</h3>
-              </header>
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 focus-visible:ring-2 focus-visible:ring-[var(--color-focus-ring)] focus-visible:outline-none [&::-webkit-details-marker]:hidden">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Icon className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+                  <span className="text-body text-fg-primary font-semibold">
+                    {t(section.titleKey)}
+                  </span>
+                </span>
+                <ChevronDown
+                  className="text-fg-muted h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+                  aria-hidden="true"
+                />
+              </summary>
               <p className="text-label text-fg-muted mb-3">{resolveDescription(section)}</p>
               <div className="space-y-4">
                 {coreFields.length > 0 || (hasObjectiveAudience && !objectiveAudienceOptional) ? (
@@ -637,7 +661,7 @@ export function FormatAwareContentEditor({
                   </p>
                 ) : null}
               </div>
-            </section>
+            </details>
           );
         })}
       </div>

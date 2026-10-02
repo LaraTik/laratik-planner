@@ -7,6 +7,10 @@ import { Building2, Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { agencySwitcherCopy, type AgencySwitcherCopy } from "./agency-switcher-copy";
+
+export { agencySwitcherCopy } from "./agency-switcher-copy";
+export type { AgencySwitcherCopy } from "./agency-switcher-copy";
 
 /**
  * Row shape consumed by the agency switcher. Mirrors
@@ -15,39 +19,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
  */
 export type AgencyRow = { id: string; name: string; slug: string; isAdmin: boolean };
 
-export type AgencySwitcherCopy = {
-  activeAria: string;
-  selectAria: string;
-  selectAgency: string;
-  noAgenciesAria: string;
-  noAgency: string;
-  switchTitle: string;
-  listAria: string;
-  noAgenciesYet: string;
-  createNew: string;
-  adminLabel: string;
-  switchNotMember: string;
-  sessionExpired: string;
-  switchFailed: string;
-  switchFailedShort: string;
-};
-
-const DEFAULT_COPY: AgencySwitcherCopy = {
-  activeAria: "Active agency: {name}. Click to switch.",
-  selectAria: "Select an agency. Click to open.",
-  selectAgency: "Select agency",
-  noAgenciesAria: "No agencies",
-  noAgency: "No agency",
-  switchTitle: "Switch agency",
-  listAria: "Agencies",
-  noAgenciesYet: "No agencies yet.",
-  createNew: "Create new agency",
-  adminLabel: "Agency admin",
-  switchNotMember: "You're no longer a member of that agency.",
-  sessionExpired: "Your session expired. Please sign in again.",
-  switchFailed: "Couldn't switch agencies. Please try again or contact support.",
-  switchFailedShort: "Couldn't switch agencies. Please try again.",
-};
+const DEFAULT_COPY: AgencySwitcherCopy = agencySwitcherCopy({});
 
 function withName(template: string, name: string) {
   return template.replace("{name}", name);
@@ -67,7 +39,7 @@ function withName(template: string, name: string) {
  *
  * Visual pattern: mirrors `WorkspaceSwitcher` (Radix Popover +
  * keyboard-friendly listbox with `aria-activedescendant`). The
- * agency switcher is the outermost switcher in the sidebar
+ * agency switcher is the outermost tenant switcher in the shell
  * (above the workspace switcher) — the active agency scopes the
  * workspace list the user can pick from.
  */
@@ -85,6 +57,7 @@ export function AgencySwitcher({
    * one agency, click to manage it". Set by the caller.
    */
   asSettingsLink = false,
+  variant = "sidebar",
   copy = DEFAULT_COPY,
 }: {
   active: AgencyRow | null;
@@ -93,6 +66,7 @@ export function AgencySwitcher({
   isPlatformAdmin?: boolean;
   compact?: boolean;
   asSettingsLink?: boolean;
+  variant?: "sidebar" | "header";
   copy?: AgencySwitcherCopy;
 }) {
   const [open, setOpen] = React.useState(false);
@@ -222,7 +196,10 @@ export function AgencySwitcher({
         title={active.name}
         data-testid={testId}
         className={cn(
-          "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+          "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+          variant === "header"
+            ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
+            : "w-full",
           compact ? "justify-center xl:justify-start" : "justify-start",
         )}
       >
@@ -252,7 +229,10 @@ export function AgencySwitcher({
           data-testid={testId}
           disabled={pending}
           className={cn(
-            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50",
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-primary-subtle inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2 disabled:opacity-50",
+            variant === "header"
+              ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
+              : "w-full",
             compact ? "justify-center xl:justify-start" : "justify-start",
           )}
         >
@@ -279,7 +259,7 @@ export function AgencySwitcher({
         align="start"
         sideOffset={6}
         onOpenAutoFocus={onOpenAutoFocus}
-        className="p-0"
+        className="w-72 max-w-[calc(100vw-2rem)] p-0"
       >
         <div
           className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)]"
@@ -313,8 +293,9 @@ export function AgencySwitcher({
                     aria-selected={isActive}
                     onMouseEnter={() => setActiveIndex(i)}
                     className={cn(
-                      "text-body flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors",
-                      isHighlighted && "bg-surface-subtle",
+                      "text-body mx-1 my-0.5 flex min-h-11 cursor-pointer items-center gap-2 rounded-[var(--radius-control)] px-3 py-2 transition-colors",
+                      isHighlighted && "bg-primary-subtle text-primary",
+                      !isHighlighted && "hover:bg-surface-subtle",
                     )}
                     onClick={() => void choose(a)}
                   >

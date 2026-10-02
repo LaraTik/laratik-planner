@@ -43,7 +43,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { WorkspaceSwitcher } from "./workspace-switcher";
-import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
+import { AgencySwitcher, agencySwitcherCopy, type AgencyRow } from "./agency-switcher";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 type Workspace = { id: string; name: string; slug: string };
@@ -631,30 +631,6 @@ function MobileMenuLink({
       </Link>
     </DialogClose>
   );
-}
-
-function agencySwitcherCopy(labels: Record<string, string>) {
-  return {
-    activeAria: labels["agencySwitcherActiveAria"] ?? "Active agency: {name}. Click to switch.",
-    selectAria: labels["agencySwitcherSelectAria"] ?? "Select an agency. Click to open.",
-    selectAgency: labels["agencySwitcherSelect"] ?? "Select agency",
-    noAgenciesAria: labels["agencySwitcherNoAgenciesAria"] ?? "No agencies",
-    noAgency: labels["agencySwitcherNoAgency"] ?? "No agency",
-    switchTitle: labels["agencySwitcherSwitchTitle"] ?? "Switch agency",
-    listAria: labels["agencySwitcherListAria"] ?? "Agencies",
-    noAgenciesYet: labels["agencySwitcherNoAgenciesYet"] ?? "No agencies yet.",
-    createNew: labels["agencySwitcherCreateNew"] ?? "Create new agency",
-    adminLabel: labels["agencySwitcherAdminLabel"] ?? "Agency admin",
-    switchNotMember:
-      labels["agencySwitcherSwitchNotMember"] ?? "You're no longer a member of that agency.",
-    sessionExpired:
-      labels["agencySwitcherSessionExpired"] ?? "Your session expired. Please sign in again.",
-    switchFailed:
-      labels["agencySwitcherSwitchFailed"] ??
-      "Couldn't switch agencies. Please try again or contact support.",
-    switchFailedShort:
-      labels["agencySwitcherSwitchFailedShort"] ?? "Couldn't switch agencies. Please try again.",
-  };
 }
 
 function workspaceSwitcherCopy(labels: Record<string, string>) {

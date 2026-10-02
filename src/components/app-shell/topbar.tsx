@@ -1,13 +1,16 @@
 import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
 import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
+import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
+import { agencySwitcherCopy } from "./agency-switcher-copy";
 import type { BuildInfo } from "@/lib/build-info";
 import type { ThemePreference } from "@/lib/theme/preferences";
+import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 
 /**
- * Compact utility bar — notifications + user menu. Search was removed
- * until a real cross-workspace search contract exists; a non-functional
- * input created a misleading dead end on every authenticated screen.
+ * Compact shell bar — tenant context, notifications, theme, and user menu.
+ * Search was removed until a real cross-workspace search contract exists;
+ * a non-functional input created a misleading dead end on every screen.
  *
  * The topbar is a thin pass-through: the (app) layout resolves the
  * translator and supplies the localized `chrome` copy. The
@@ -20,6 +23,9 @@ export function Topbar({
   buildInfo,
   notifications,
   unreadCount,
+  agencySwitcher,
+  platformAccess,
+  labels,
   activeAgency,
   themePreference,
   chrome,
@@ -43,12 +49,28 @@ export function Topbar({
     createdAt: string;
   }[];
   unreadCount: number;
+  agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
+  platformAccess: PlatformNavigationAccess;
+  labels: Record<string, string>;
   activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
   themePreference: ThemePreference;
   chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
 }) {
   return (
-    <div className="flex h-full items-center justify-end px-3 sm:px-6">
+    <div className="flex h-full items-center justify-between gap-4 px-3 sm:px-6">
+      <div className="flex min-w-0 items-center gap-2" data-testid="topbar-tenant-switcher">
+        <span className="text-label text-fg-muted hidden font-semibold tracking-wide uppercase lg:inline">
+          {labels["tenantLabel"] ?? "Tenant"}
+        </span>
+        <AgencySwitcher
+          active={agencySwitcher.active}
+          options={agencySwitcher.options}
+          isPlatformAdmin={platformAccess.canEnter}
+          variant="header"
+          copy={agencySwitcherCopy(labels)}
+          testId="topbar-agency-switcher-trigger"
+        />
+      </div>
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <ThemeToggle preference={themePreference} copy={chrome.theme} />
         <NotificationsBell

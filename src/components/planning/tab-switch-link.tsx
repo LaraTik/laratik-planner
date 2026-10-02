@@ -51,6 +51,8 @@ export type TabSwitchLinkProps = Omit<LinkProps, "children" | "className"> & {
   children?: React.ReactNode;
   /** Standard anchor className — forwarded through to the rendered <a>. */
   className?: string;
+  /** Native tooltip text for icon-only links. */
+  title?: string;
 };
 
 /**

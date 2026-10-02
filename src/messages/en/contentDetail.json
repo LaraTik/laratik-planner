@@ -554,6 +554,9 @@
     "approvedBeforeLaterEdits": "Approved before later edits. Approval remains valid according to workspace policy.",
     "backToPlanning": "Back to planning"
   },
+  "createNavigator": {
+    "label": "Create sections"
+  },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
   "researchReference": {

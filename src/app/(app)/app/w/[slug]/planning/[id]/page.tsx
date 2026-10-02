@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Eye, Sparkles } from "lucide-react";
+import { Clock, Copy as CopyIcon, Eye, Sparkles } from "lucide-react";
 import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -42,6 +42,7 @@ import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
+import { CreateSectionNavigator } from "@/components/planning/create-section-navigator";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { PlanningOverviewSummary } from "@/components/planning/planning-overview-summary";
@@ -841,13 +842,22 @@ export default async function ContentDetailPage({
             "create-basics": canEditAll ? (
               <section
                 id="create-basics"
-                className="mt-6 scroll-mt-24"
+                className="mt-6 scroll-mt-24 space-y-4"
                 data-testid="workspace-create-basics"
               >
+                <CreateSectionNavigator
+                  label={t("contentDetail.createNavigator.label")}
+                  sections={[
+                    { id: "create-plan", label: t("contentDetail.overview.details") },
+                    { id: "creative", label: t("contentDetail.sectionCreativeTitle") },
+                    { id: "assets-versions", label: t("contentDetail.sectionAssetsTitle") },
+                  ]}
+                />
                 <PlanningSection
                   id="create-plan"
                   title={t("contentDetail.overview.details")}
                   description={t("contentDetail.overview.editDrawerDescription")}
+                  collapsible
                 >
                   <EditIdeaForm
                     workspaceSlug={slug}
@@ -933,6 +943,31 @@ export default async function ContentDetailPage({
                     id="creative"
                     title={t("contentDetail.sectionCreativeTitle")}
                     description={t("contentDetail.sectionCreativeDescription")}
+                    collapsible
+                    actions={
+                      <div className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" asChild>
+                          <TabSwitchLink
+                            href="#copy"
+                            data-testid="content-open-copy"
+                            aria-label={t("contentDetail.copy.openCopy")}
+                            title={t("contentDetail.copy.openCopy")}
+                          >
+                            <CopyIcon className="h-4 w-4" aria-hidden="true" />
+                          </TabSwitchLink>
+                        </Button>
+                        <Button variant="ghost" size="icon" asChild>
+                          <TabSwitchLink
+                            href="#preview"
+                            data-testid="content-open-preview"
+                            aria-label={t("contentDetail.openPreview")}
+                            title={t("contentDetail.openPreview")}
+                          >
+                            <Eye className="h-4 w-4" aria-hidden="true" />
+                          </TabSwitchLink>
+                        </Button>
+                      </div>
+                    }
                   >
                     <div className="space-y-3">
                       {linkedTeardown ? (
@@ -972,46 +1007,6 @@ export default async function ContentDetailPage({
                         locale={activeLocale}
                         aiEnabled={aiLive && captionDraftsEnabled}
                       />
-                      <div
-                        className="border-border bg-surface-subtle text-fg-secondary flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
-                        data-testid="content-audience-copy-summary"
-                      >
-                        <div>
-                          <p className="text-body text-fg-primary font-semibold">
-                            {t("contentDetail.copy.title")}
-                          </p>
-                          <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
-                        </div>
-                        <Button variant="outline" size="sm" asChild>
-                          <TabSwitchLink href="#copy" data-testid="content-open-copy">
-                            {t("contentDetail.copy.openCopy")}
-                          </TabSwitchLink>
-                        </Button>
-                      </div>
-                      <div
-                        className="border-border bg-surface-subtle text-label text-fg-secondary flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border px-3 py-2"
-                        data-testid="content-preview-shortcut"
-                      >
-                        <span className="font-medium">
-                          {t("contentDetail.previewShortcut", {
-                            platform: humanPlatform(item.channels[0]?.platform, t),
-                            account:
-                              item.channels[0]?.accountName ??
-                              t("contentDetail.previewShortcutNoAccount"),
-                          })}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          asChild
-                          data-testid="content-open-preview"
-                        >
-                          <TabSwitchLink href="#preview">
-                            <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                            {t("contentDetail.openPreview")}
-                          </TabSwitchLink>
-                        </Button>
-                      </div>
                     </div>
                   </PlanningSection>
                 ) : (
@@ -1019,6 +1014,19 @@ export default async function ContentDetailPage({
                     id="creative"
                     title={t("contentDetail.sectionCreativeTitle")}
                     description={t("contentDetail.sectionCreativeDescription")}
+                    collapsible
+                    actions={
+                      <Button variant="ghost" size="icon" asChild>
+                        <TabSwitchLink
+                          href="#copy"
+                          data-testid="content-open-copy"
+                          aria-label={t("contentDetail.copy.openCopy")}
+                          title={t("contentDetail.copy.openCopy")}
+                        >
+                          <CopyIcon className="h-4 w-4" aria-hidden="true" />
+                        </TabSwitchLink>
+                      </Button>
+                    }
                   >
                     {linkedTeardown ? (
                       <ResearchTeardownApply
@@ -1057,22 +1065,6 @@ export default async function ContentDetailPage({
                       locale={activeLocale}
                       aiEnabled={aiLive && captionDraftsEnabled}
                     />
-                    <div
-                      className="border-border bg-surface-subtle text-fg-secondary flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
-                      data-testid="content-audience-copy-summary"
-                    >
-                      <div>
-                        <p className="text-body text-fg-primary font-semibold">
-                          {t("contentDetail.copy.title")}
-                        </p>
-                        <p className="text-label">{t("contentDetail.copy.fixCopyHint")}</p>
-                      </div>
-                      <Button variant="outline" size="sm" asChild>
-                        <TabSwitchLink href="#copy" data-testid="content-open-copy-no-channels">
-                          {t("contentDetail.copy.openCopy")}
-                        </TabSwitchLink>
-                      </Button>
-                    </div>
                   </PlanningSection>
                 )}
 
@@ -1132,6 +1124,7 @@ export default async function ContentDetailPage({
                   id="assets-versions"
                   title={t("contentDetail.sectionAssetsTitle")}
                   description={t("contentDetail.sectionAssetsDescription")}
+                  collapsible
                 >
                   <DeliverySection
                     workspaceId={ws.id}

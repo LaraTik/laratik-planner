@@ -63,13 +63,6 @@ function makeProps(agencyId: string, agencyName: string) {
     workspaceSwitcherOptions: [
       { id: `ws-${agencyId}-1`, name: `${agencyName} WS1`, slug: `ws-${agencyId}-1` },
     ],
-    agencySwitcher: {
-      active: { id: agencyId, name: agencyName, slug: agencyId, isAdmin: true },
-      options: [
-        { id: agencyId, name: agencyName, slug: agencyId, isAdmin: true },
-        { id: "other-agency", name: "Other", slug: "other", isAdmin: false },
-      ],
-    },
     canCreateWorkspace: true,
     platformAccess: {
       canEnter: false,
@@ -105,13 +98,6 @@ describe("Sidebar under agency switch (React #441 regression)", () => {
   it("survives the active agency becoming null (e.g. cookie cleared mid-flow)", () => {
     const { rerender } = render(<Sidebar {...makeProps("agency-a", "Agency A")} />);
 
-    expect(() =>
-      rerender(
-        <Sidebar
-          {...makeProps("agency-a", "Agency A")}
-          agencySwitcher={{ active: null, options: [] }}
-        />,
-      ),
-    ).not.toThrow();
+    expect(() => rerender(<Sidebar {...makeProps("agency-a", "Agency A")} />)).not.toThrow();
   });
 });

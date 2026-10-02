@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Sidebar } from "@/components/app-shell/sidebar";
 
@@ -31,9 +31,6 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const fetchMock = vi.hoisted(() => vi.fn());
-vi.stubGlobal("fetch", fetchMock);
-
 const baseProps = {
   user: { name: "Lara", isAdmin: false },
   workspaces: [
@@ -45,10 +42,6 @@ const baseProps = {
     { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
   ],
   workspaceCanCreateContent: { "ws-1": true, "ws-2": true },
-  agencySwitcher: {
-    active: { id: "agency-1", name: "Test Agency", slug: "test-agency", isAdmin: true },
-    options: [{ id: "agency-1", name: "Test Agency", slug: "test-agency", isAdmin: true }],
-  },
   canCreateWorkspace: false,
   platformAccess: {
     canEnter: false,
@@ -87,9 +80,9 @@ describe("Sidebar (workspace-aware)", () => {
     usePathnameMock.mockReturnValue("/app/workspaces");
     render(<Sidebar {...baseProps} />);
 
-    const context = screen.getByTestId("sidebar-context-switchers");
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
     const workspace = screen.getByTestId("sidebar-workspace-switcher-trigger");
-    expect(context).toContainElement(screen.getByTestId("sidebar-agency-switcher-trigger"));
+    expect(screen.queryByTestId("topbar-agency-switcher-trigger")).toBeNull();
     expect(workspace).toHaveAttribute("aria-label", "Select a workspace. Click to open.");
     expect(workspace).toHaveTextContent("Select workspace");
   });
@@ -356,175 +349,6 @@ describe("Sidebar (workspace-aware)", () => {
   });
 });
 
-describe("Sidebar (agency switcher wiring — M1.5)", () => {
-  beforeEach(() => {
-    usePathnameMock.mockReset();
-    usePathnameMock.mockReturnValue("/app");
-    pushMock.mockReset();
-    refreshMock.mockReset();
-    fetchMock.mockReset();
-    fetchMock.mockResolvedValue({
-      ok: true,
-      json: async () => ({ redirectTo: "/app" }),
-    });
-  });
-
-  it("renders the agency switcher trigger with the active agency name", () => {
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          ...baseProps.agencySwitcher,
-          options: [
-            ...baseProps.agencySwitcher.options,
-            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
-          ],
-        }}
-      />,
-    );
-    const trigger = screen.getByTestId("sidebar-agency-switcher-trigger");
-    expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveAttribute("aria-label", "Active agency: Test Agency. Click to switch.");
-  });
-
-  it("places the agency switcher above the workspace switcher in the DOM order", () => {
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          ...baseProps.agencySwitcher,
-          options: [
-            ...baseProps.agencySwitcher.options,
-            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
-          ],
-        }}
-      />,
-    );
-    const agency = screen.getByTestId("sidebar-agency-switcher-trigger");
-    const workspace = screen.getByTestId("sidebar-workspace-switcher-trigger");
-    // document order: agency appears before workspace
-    expect(
-      agency.compareDocumentPosition(workspace) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-  });
-
-  it("renders a disabled 'No agency' trigger when the user has zero memberships", () => {
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{ active: null, options: [] }}
-        platformAccess={ownerAccess}
-      />,
-    );
-    const trigger = screen.getByRole("button", { name: "No agencies" });
-    expect(trigger).toBeDisabled();
-  });
-
-  it("keeps the active agency context visible even when only one agency is available", () => {
-    render(<Sidebar {...baseProps} />);
-    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
-  });
-
-  it("lands on the new agency's first workspace after switching agencies (no-workspace fallback to /app)", async () => {
-    const user = userEvent.setup();
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          active: baseProps.agencySwitcher.active,
-          options: [
-            baseProps.agencySwitcher.active,
-            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
-          ],
-        }}
-      />,
-    );
-
-    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
-    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/agency/switch",
-        expect.objectContaining({
-          method: "POST",
-          body: JSON.stringify({ agencyId: "agency-2" }),
-        }),
-      );
-      expect(pushMock).toHaveBeenCalledWith("/app");
-    });
-  });
-
-  it("navigates to the new agency's first workspace slug when one is returned", async () => {
-    const user = userEvent.setup();
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      json: async () => ({ redirectTo: "/app/w/second-ws" }),
-    });
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          active: baseProps.agencySwitcher.active,
-          options: [
-            baseProps.agencySwitcher.active,
-            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
-          ],
-        }}
-      />,
-    );
-
-    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
-    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/agency/switch",
-        expect.objectContaining({ body: JSON.stringify({ agencyId: "agency-2" }) }),
-      );
-      // The response destination is navigated after the cookie has been
-      // committed by the POST endpoint.
-      expect(pushMock).toHaveBeenCalledWith("/app/w/second-ws");
-      expect(refreshMock).toHaveBeenCalled();
-    });
-  });
-
-  it("keeps the user on the current page when the switch is refused", async () => {
-    const user = userEvent.setup();
-    fetchMock.mockResolvedValueOnce({
-      ok: false,
-      json: async () => ({ error: "not-a-member" }),
-    });
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          active: baseProps.agencySwitcher.active,
-          options: [
-            baseProps.agencySwitcher.active,
-            { id: "agency-2", name: "Second Agency", slug: "second", isAdmin: false },
-          ],
-        }}
-      />,
-    );
-
-    await user.click(screen.getByTestId("sidebar-agency-switcher-trigger"));
-    await user.click(screen.getByRole("option", { name: /Second Agency/ }));
-
-    await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledWith(
-        "/api/agency/switch",
-        expect.objectContaining({ body: JSON.stringify({ agencyId: "agency-2" }) }),
-      );
-    });
-    // The router MUST NOT push anywhere when the switch is refused
-    // (membership check failed or session expired). A forced
-    // navigation would mask the failure.
-    expect(pushMock).not.toHaveBeenCalled();
-  });
-});
-
 describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
@@ -562,17 +386,16 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByTestId("sidebar-badge-design-queue")).toBeNull();
   });
 
-  it("collapses to icon-rail when collapsed=true while preserving context switchers", () => {
+  it("collapses to icon-rail while preserving workspace context", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} collapsed={true} />);
     // Brand block: the logo (icon) is still discoverable via the link's
     // accessible name; the text label is hidden in icon-rail mode.
     expect(screen.getByLabelText("StudioFlow home")).toBeInTheDocument();
-    // Context switching remains available in the icon rail; labels are
-    // visually hidden but both controls keep their accessible names.
-    expect(screen.getByTestId("sidebar-context-switchers")).toBeInTheDocument();
+    // Workspace context remains available in the icon rail.
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
     expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-agency-switcher-trigger")).toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar-agency-switcher-trigger")).toBeNull();
     // Create content CTA still rendered (per spec §18)
     expect(screen.getByTestId("sidebar-create-content")).toBeInTheDocument();
     // Footer collapse toggle is visible so the user can expand again
@@ -690,7 +513,6 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     // ("globalGroup"). If the layout threads the wrong key the
     // heading silently falls back to the hardcoded English
     // `group.label` and Arabic users see untranslated chrome.
-    expect(screen.getByTestId("sidebar-tenant-label")).toHaveTextContent("المؤسسة");
     expect(screen.getByTestId("sidebar-group-label-plan")).toHaveTextContent("التخطيط");
     expect(screen.getByTestId("sidebar-group-label-understand")).toHaveTextContent(
       "الفهم والتحليل",
@@ -705,13 +527,11 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     expect(screen.getByTestId("sidebar-group-label-global")).toHaveTextContent("عام");
   });
 
-  it("announces tenant context changes politely without stealing focus", () => {
+  it("keeps workspace context separate from the tenant switcher", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
-    // An agency switch replaces this subtree in place after the
-    // cookie POST; `aria-live="polite"` makes the new context
-    // audible without yanking the caret.
-    expect(screen.getByTestId("sidebar-context-switchers")).toHaveAttribute("aria-live", "polite");
+    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar-agency-switcher-trigger")).toBeNull();
   });
 
   it("renders the Global group (All tasks + Global calendar) on global routes", () => {
@@ -745,39 +565,11 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     expect(produceHeading.parentElement?.className ?? "").toMatch(/border-t/);
   });
 
-  it("renders the Tenant header label on the context card", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(<Sidebar {...baseProps} />);
-    expect(screen.getByTestId("sidebar-tenant-label")).toHaveTextContent("Tenant");
-  });
-
-  it("renders a divider between the agency and workspace switchers", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(<Sidebar {...baseProps} />);
-    expect(screen.getByTestId("sidebar-tenant-divider")).toBeInTheDocument();
-  });
-
   it("renders the workspace switcher tab indicator (border-b-primary) when active", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     const wsTrigger = screen.getByTestId("sidebar-workspace-switcher-trigger");
     expect(wsTrigger.className).toMatch(/border-b-primary/);
-  });
-
-  it("uses a single-agency shortcut link to /app/agency-settings", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(
-      <Sidebar
-        {...baseProps}
-        agencySwitcher={{
-          active: { id: "agency-1", name: "Northstar Studio", slug: "northstar", isAdmin: true },
-          options: [{ id: "agency-1", name: "Northstar Studio", slug: "northstar", isAdmin: true }],
-        }}
-      />,
-    );
-    const agencyLink = screen.getByTestId("sidebar-agency-switcher-trigger");
-    expect(agencyLink.tagName).toBe("A");
-    expect(agencyLink).toHaveAttribute("href", "/app/agency-settings");
   });
 });
 

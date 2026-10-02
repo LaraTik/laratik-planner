@@ -554,6 +554,9 @@
     "approvedBeforeLaterEdits": "تمت الموافقة قبل تعديلات لاحقة. تظل الموافقة سارية وفقًا لسياسة مساحة العمل.",
     "backToPlanning": "العودة إلى التخطيط"
   },
+  "createNavigator": {
+    "label": "أقسام الإنشاء"
+  },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
   "researchReference": {
