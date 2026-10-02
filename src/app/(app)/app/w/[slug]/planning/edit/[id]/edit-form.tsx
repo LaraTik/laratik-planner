@@ -45,12 +45,14 @@ export function EditIdeaForm({
   workspaceTimezone,
   channels,
   initial: initialValues,
+  mode = "all",
 }: {
   workspaceSlug: string;
   contentItemId: string;
   workspaceTimezone: string;
   channels: { id: string; accountName: string; platform: string }[];
   initial: EditIdeaFormInitial;
+  mode?: "create" | "publish" | "all";
 }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
@@ -72,6 +74,8 @@ export function EditIdeaForm({
     initialValues.plannedPublishAtIso,
     workspaceTimezone,
   );
+  const showCreateFields = mode === "create" || mode === "all";
+  const showPublishFields = mode === "publish" || mode === "all";
 
   // Focus the first invalid field on submit failure.
   React.useEffect(() => {
@@ -107,98 +111,120 @@ export function EditIdeaForm({
         }}
       />
 
-      <FormField
-        id="title"
-        label={t("planning.editForm.title")}
-        hint={t("planning.editForm.titleHint")}
-        required
-        {...(state?.fieldErrors?.title ? { error: state.fieldErrors.title } : {})}
-      >
-        <DirAwareInput
-          type="text"
-          name="title"
-          required
-          minLength={2}
-          maxLength={200}
-          autoComplete="off"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          locale={locale}
-          className="min-h-11"
-        />
-      </FormField>
+      {!showCreateFields ? (
+        <>
+          <input type="hidden" name="title" value={initialValues.title} />
+          <input type="hidden" name="format" value={initialValues.format} />
+          <input type="hidden" name="brief" value={initialValues.brief} />
+        </>
+      ) : null}
+
+      {!showPublishFields ? (
+        <>
+          <input type="hidden" name="plannedPublishAt" value={initialValues.plannedPublishAtIso} />
+          {initialValues.channelIds.map((channelId) => (
+            <input key={channelId} type="hidden" name="channelIds" value={channelId} />
+          ))}
+        </>
+      ) : null}
+
+      {showCreateFields ? (
+        <>
+          <FormField
+            id="title"
+            label={t("planning.editForm.title")}
+            hint={t("planning.editForm.titleHint")}
+            required
+            {...(state?.fieldErrors?.title ? { error: state.fieldErrors.title } : {})}
+          >
+            <DirAwareInput
+              type="text"
+              name="title"
+              required
+              minLength={2}
+              maxLength={200}
+              autoComplete="off"
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              locale={locale}
+              className="min-h-11"
+            />
+          </FormField>
+        </>
+      ) : null}
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <FormField
-          id="format"
-          label={t("planning.editForm.format")}
-          required
-          {...(state?.fieldErrors?.format ? { error: state.fieldErrors.format } : {})}
-        >
-          <select
-            name="format"
+        {showCreateFields ? (
+          <FormField
+            id="format"
+            label={t("planning.editForm.format")}
             required
-            defaultValue={initialValues.format}
-            className="border-border bg-surface text-fg-primary text-body focus-visible:ring-focus-ring flex min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+            {...(state?.fieldErrors?.format ? { error: state.fieldErrors.format } : {})}
           >
-            <option value="static_post">{t("planningFilters.formatLabels.static_post")}</option>
-            <option value="carousel">{t("planningFilters.formatLabels.carousel")}</option>
-            <option value="story">{t("planningFilters.formatLabels.story")}</option>
-            <option value="short_form_video">
-              {t("planningFilters.formatLabels.short_form_video")}
-            </option>
-            <option value="long_form_video">
-              {t("planningFilters.formatLabels.long_form_video")}
-            </option>
-            <option value="live_content">{t("planningFilters.formatLabels.live_content")}</option>
-            <option value="article">{t("planningFilters.formatLabels.article")}</option>
-            <option value="other">{t("planningFilters.formatLabels.other")}</option>
-          </select>
-        </FormField>
-        <FormField
-          id="plannedPublishAt"
-          label={t("planning.editForm.plannedPublish")}
-          // Surface the workspace IANA timezone so the planner
-          // always knows "9 AM" here means "9 AM in Berlin" —
-          // not their browser clock. The previous form left
-          // this implicit and was the root cause of the
-          // timezone mismatch reports (commit memo).
-          hint={t("planning.editForm.plannedPublishTimezone", {
-            timezone: workspaceTimezone,
-          })}
-          required
-          {...(state?.fieldErrors?.plannedPublishAt
-            ? { error: state.fieldErrors.plannedPublishAt }
-            : {})}
-        >
-          <Input
-            type="datetime-local"
-            name="plannedPublishAt"
+            <select
+              name="format"
+              required
+              defaultValue={initialValues.format}
+              className="border-border bg-surface text-fg-primary text-body focus-visible:ring-focus-ring flex min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
+            >
+              <option value="static_post">{t("planningFilters.formatLabels.static_post")}</option>
+              <option value="carousel">{t("planningFilters.formatLabels.carousel")}</option>
+              <option value="story">{t("planningFilters.formatLabels.story")}</option>
+              <option value="short_form_video">
+                {t("planningFilters.formatLabels.short_form_video")}
+              </option>
+              <option value="long_form_video">
+                {t("planningFilters.formatLabels.long_form_video")}
+              </option>
+              <option value="live_content">{t("planningFilters.formatLabels.live_content")}</option>
+              <option value="article">{t("planningFilters.formatLabels.article")}</option>
+              <option value="other">{t("planningFilters.formatLabels.other")}</option>
+            </select>
+          </FormField>
+        ) : null}
+        {showPublishFields ? (
+          <FormField
+            id="plannedPublishAt"
+            label={t("planning.editForm.plannedPublish")}
+            hint={t("planning.editForm.plannedPublishTimezone", {
+              timezone: workspaceTimezone,
+            })}
             required
-            defaultValue={defaultPlanned}
-          />
-        </FormField>
+            {...(state?.fieldErrors?.plannedPublishAt
+              ? { error: state.fieldErrors.plannedPublishAt }
+              : {})}
+          >
+            <Input
+              type="datetime-local"
+              name="plannedPublishAt"
+              required
+              defaultValue={defaultPlanned}
+            />
+          </FormField>
+        ) : null}
       </div>
 
-      <FormField
-        id="brief"
-        label={t("planning.editForm.briefOptional")}
-        hint={t("planning.editForm.briefHint")}
-        {...(state?.fieldErrors?.brief ? { error: state.fieldErrors.brief } : {})}
-      >
-        <DirAwareTextarea
-          name="brief"
-          rows={4}
-          maxLength={2000}
-          autoComplete="off"
-          value={brief}
-          onChange={(event) => setBrief(event.target.value)}
-          placeholder={t("planning.editForm.briefPlaceholder")}
-          locale={locale}
-        />
-      </FormField>
+      {showCreateFields ? (
+        <FormField
+          id="brief"
+          label={t("planning.editForm.briefOptional")}
+          hint={t("planning.editForm.briefHint")}
+          {...(state?.fieldErrors?.brief ? { error: state.fieldErrors.brief } : {})}
+        >
+          <DirAwareTextarea
+            name="brief"
+            rows={4}
+            maxLength={2000}
+            autoComplete="off"
+            value={brief}
+            onChange={(event) => setBrief(event.target.value)}
+            placeholder={t("planning.editForm.briefPlaceholder")}
+            locale={locale}
+          />
+        </FormField>
+      ) : null}
 
-      {channels.length > 0 ? (
+      {showPublishFields && channels.length > 0 ? (
         <fieldset
           className="space-y-2"
           {...(state?.fieldErrors?.channelIds

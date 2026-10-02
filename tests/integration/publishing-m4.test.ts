@@ -232,7 +232,7 @@ describe("M4.6 — publish package lifecycle (integration)", () => {
     expect((after?.revision ?? -1) > (before?.revision ?? 0)).toBe(true);
   });
 
-  it("keeps final-copy approval server-owned and resets it after a material edit", async () => {
+  it("keeps final-copy approval server-owned and preserves it after a material edit", async () => {
     const { workspaceId, contentItemId, managerId } = await seedWorkspaceAndContentItem();
     const { channelId } = await seedSocialChannel(workspaceId);
     await attachChannel(contentItemId, channelId);
@@ -300,7 +300,8 @@ describe("M4.6 — publish package lifecycle (integration)", () => {
       contentItemId,
       socialChannelId: channelId,
     });
-    expect(revised?.approval.finalCopyApproved).toBe(false);
+    expect(revised?.approval.finalCopyApproved).toBe(true);
+    expect(revised?.approval.approvedByUserId).toBe(managerId);
   });
 
   it("rejects final-copy approval from a non-admin workspace planner", async () => {

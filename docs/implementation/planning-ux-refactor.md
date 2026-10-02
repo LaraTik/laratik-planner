@@ -1,7 +1,7 @@
 # Planning UX Refactor
 
 This document is the implementation contract for the Planning UX refactor. It
-keeps the existing routes, hashes, five production tabs, server actions,
+keeps the existing routes, compatibility hashes, four production workspaces, server actions,
 permissions, database schema, publishing behavior, and bilingual foundation.
 
 ## Canonical workflow vocabulary
@@ -27,10 +27,10 @@ List filters and direct links.
 
 ## Responsibility boundaries
 
-Overview summarizes state and routes users. Workflow controls lifecycle state.
-Assets explains the current creative handoff and keeps version history below
-the current delivery state. Publish works one channel at a time and consumes
-the server readiness result.
+Overview summarizes state and routes users. Create owns the brief, creative
+fields, production, and delivery. Publish owns copy, destinations, schedule,
+preview, channel readiness, and publishing. Workflow controls lifecycle state.
+Activity owns the complete audit timeline.
 
 The planning presentation model is a projection layer. It may classify,
 explain, group, and route authoritative data, but it must not duplicate
@@ -52,9 +52,10 @@ Audience Copy and are not duplicated in Creative Brief.
 ## Save and approval rules
 
 Copy and Publish material changes remain explicit-save operations. Unsaved
-navigation protection remains enabled. A save that may invalidate an approval
-must explain the consequence before committing where technically possible, but
-the server response remains authoritative for revision and approval state.
+navigation protection remains enabled. Role-owned edits after review or
+approval increment the revision and create an audit event, but do not cancel
+or recreate approval requests. The Publish surface identifies an approval that
+predates later edits; readiness still evaluates the current package.
 
 No database migration or public API expansion is part of this refactor. A
 stale-write check may be added only through additive internal metadata that
@@ -67,8 +68,12 @@ does not widen a public contract. Otherwise it is a separately scoped follow-up.
 - M1 shared projection: implemented and covered by `tests/unit/planning/presentation.test.ts`.
 - M2 cross-surface vocabulary: implemented for Board, List stage pills, stage
   filters, and blocked grouping; existing URL aliases remain accepted.
-- M3 detail shell: existing five-tab/secondary-utility shell retained; the
-  workflow rail now consumes the shared stage mapping and condition semantics.
+- M3 detail shell: the detail page now exposes Overview, Create, Publish, and
+  Activity. Legacy Content/Copy/Delivery/Preview/Publishing hashes resolve to
+  Create or Publish without changing the underlying services.
+- M4 edit policy: manager/planner and assigned-designer field ownership is
+  preserved while workflow-status locks are removed for non-cancelled items.
+  Approval state remains valid after ordinary edits.
 - M11 guidance: the durable Planning UX contract is also recorded in
   `AGENTS.md` so future agents preserve the vocabulary and projection-only
   boundary.

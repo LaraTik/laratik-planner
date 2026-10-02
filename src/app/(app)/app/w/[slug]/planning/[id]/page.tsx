@@ -17,18 +17,8 @@ function humanPlatform(
   return value === key ? platformLabel(platform) : value;
 }
 import { auth } from "@/lib/auth/config";
-import {
-  DESIGNER_EDITABLE_STATUSES,
-  getContentItem,
-  listWorkspaceDesigners,
-  UPDATEABLE_STATUSES,
-} from "@/lib/content/service";
-import { INLINE_EDITABLE_STATUSES } from "@/lib/content/inline-update-actions";
-import {
-  listApprovalsForItem,
-  listDeliveryVersionsForItem,
-  MEDIA_REQUIRED_STATUSES as MEDIA_REQUIRED_EDITABLE_STATUSES,
-} from "@/lib/deliveries/service";
+import { getContentItem, listWorkspaceDesigners } from "@/lib/content/service";
+import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 
 import {
   listPublicationsForItem,
@@ -54,7 +44,7 @@ import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
-import { OverviewNavigator } from "@/components/planning/overview-navigator";
+import { PlanningOverviewSummary } from "@/components/planning/planning-overview-summary";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
 import { MessagesPanel } from "@/components/planning/messages-panel";
@@ -83,16 +73,17 @@ import {
   users,
   workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { getActiveApiKey } from "@/lib/ai";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { PlatformPreviewSwitcher } from "@/components/planning/platform-preview-switcher";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
-import { acknowledgeOverdueScheduleAction } from "./publish/actions";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
+import { AUDIENCE_COPY_KEYS } from "@/lib/content/audience-copy";
+import { EditIdeaForm } from "../edit/[id]/edit-form";
 import {
   ensurePlanningMediaFolderPathPublic,
   listMediaAssetsForContentItem,
@@ -153,6 +144,34 @@ export default async function ContentDetailPage({
 
   const item = await getContentItem(actor, id);
   if (!item || item.workspaceId !== ws.id) notFound();
+  const activeWorkspaceChannels = await db
+    .select({
+      id: socialChannels.id,
+      accountName: socialChannels.accountName,
+      platform: socialChannels.platform,
+    })
+    .from(socialChannels)
+    .where(
+      and(
+        eq(socialChannels.workspaceId, ws.id),
+        eq(socialChannels.isActive, true),
+        isNull(socialChannels.archivedAt),
+      ),
+    );
+  const selectedChannelIds = new Set(item.channels.map((channel) => channel.socialChannelId));
+  const planningChannels = [
+    ...activeWorkspaceChannels,
+    ...item.channels
+      .filter(
+        (channel) =>
+          !activeWorkspaceChannels.some((candidate) => candidate.id === channel.socialChannelId),
+      )
+      .map((channel) => ({
+        id: channel.socialChannelId,
+        accountName: channel.accountName,
+        platform: channel.platform,
+      })),
+  ];
   const [linkedTrend] = await db
     .select({ id: trendSignals.id, label: trendSignals.label })
     .from(trendBriefs)
@@ -290,23 +309,6 @@ export default async function ContentDetailPage({
   }).catch(() => null);
 
   const agencyId = ws.agencyId;
-  const { references, productionNotes } = (() => {
-    try {
-      const payload = parseFormatPayload(
-        item.format,
-        (item as { formatPayload?: unknown }).formatPayload,
-      ) as Record<string, unknown>;
-      const values = payload.references;
-      return {
-        references: Array.isArray(values)
-          ? values.filter((value): value is string => typeof value === "string")
-          : [],
-        productionNotes: typeof payload.additionalNotes === "string" ? payload.additionalNotes : "",
-      };
-    } catch {
-      return { references: [], productionNotes: "" };
-    }
-  })();
   const [feature, activeApiKey] = await Promise.all([
     db
       .select()
@@ -415,29 +417,13 @@ export default async function ContentDetailPage({
     })),
   });
 
-  const canEditAll =
-    (actorRoles.isManager || actorRoles.isPlanner) &&
-    UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number]);
-  // The overview's inline title/date/brief editors intentionally support
-  // The overview's inline title/date/brief editors intentionally support
-  // later workflow stages than the full draft editor. Keep that surface
-  // available wherever the inline server actions accept an update, without
-  // widening `canEdit` and accidentally reopening the full editor.
-  // The allow-list is the canonical `INLINE_EDITABLE_STATUSES` exported by
-  // `lib/content/inline-update.ts` — the server-side gate uses the same
-  // symbol, so the two cannot drift if a future status is added.
-  const canEditOverview =
-    (actorRoles.isManager || actorRoles.isPlanner) &&
-    (INLINE_EDITABLE_STATUSES as readonly string[]).includes(item.status);
+  const canEditAll = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
   const canEditProduction =
-    actorRoles.isDesigner &&
-    item.designerId === actor.id &&
-    DESIGNER_EDITABLE_STATUSES.includes(item.status as (typeof DESIGNER_EDITABLE_STATUSES)[number]);
+    actorRoles.isDesigner && item.designerId === actor.id && item.status !== "cancelled";
   const canEdit = canEditAll || canEditProduction;
   const editableFields =
     canEditProduction && !canEditAll ? designerEditableFieldsFor(item.format) : undefined;
-  // Canonical Copy remains editable by managers and planners after
-  // approval, because the materiality path resets affected approvals.
+  // Canonical copy remains editable by managers and planners after approval.
   const canEditCopy = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
   const canPostInternal =
     actorRoles.isManager ||
@@ -467,6 +453,22 @@ export default async function ContentDetailPage({
       accountName: ch.accountName,
       configured,
     };
+  });
+  const approvedBeforeLaterEdits = item.channels.some((channel) => {
+    const payload = (channelPayloads as Record<string, unknown>)[channel.socialChannelId];
+    const approval =
+      payload && typeof payload === "object" && "approval" in payload
+        ? (payload as { approval?: { finalCopyApproved?: boolean } }).approval
+        : undefined;
+    const sourceRevision = (
+      channelPayloadStates as Record<string, { copySourceRevision: number | null }>
+    )[channel.socialChannelId]?.copySourceRevision;
+    return (
+      approval?.finalCopyApproved === true &&
+      sourceRevision !== null &&
+      sourceRevision !== undefined &&
+      sourceRevision < item.revision
+    );
   });
 
   const publicationByChannel = new Map<string, (typeof publications)[number]>();
@@ -645,15 +647,6 @@ export default async function ContentDetailPage({
   // glance, regardless of category.
   const recentActivity = activityEvents.slice(0, 5);
 
-  const primaryActionLabel = t(
-    planningPresentation.nextAction.descriptionKey ?? planningPresentation.nextAction.headlineKey,
-  );
-  // Phase 3 of the planning-detail refactor (2026-08-30): the
-  // "Creative" section merged into the Content tab as "Assets
-  // & versions". The Next-Action CTA on Overview now scrolls
-  // to the new anchor.
-  const reviewChangesHref = `#assets-versions`;
-
   // The compact header is intentionally identity-only. Editing is
   // discoverable from the Overview details surface so it does not
   // compete with lifecycle ownership in the workflow rail.
@@ -676,20 +669,13 @@ export default async function ContentDetailPage({
   // pass (master prompt §7 + AGENTS.md §B + §C).
   const tabs: WorkspaceTab[] = [
     { id: "overview", label: t("contentDetail.tabs.overview") },
-    { id: "content", label: t("contentDetail.tabs.content") },
-    { id: "copy", label: t("contentDetail.tabs.copy") },
-    { id: "delivery", label: t("contentDetail.tabs.delivery") },
-    { id: "preview", label: t("contentDetail.tabs.preview") },
+    { id: "create", label: t("contentDetail.tabs.create") },
     {
-      id: "publishing",
-      label: t("contentDetail.tabs.publishing"),
+      id: "publish",
+      label: t("contentDetail.tabs.publish"),
       ...(readiness.blockers > 0 ? { count: readiness.blockers } : {}),
     },
-    {
-      id: "activity",
-      label: t("contentDetail.tabs.activity"),
-      count: activityEvents.length,
-    },
+    { id: "activity", label: t("contentDetail.tabs.activity"), count: activityEvents.length },
   ];
 
   return (
@@ -774,8 +760,8 @@ export default async function ContentDetailPage({
                 timeZone: ws.timezone,
               })}
               plannedPublishAtIso={item.plannedPublishAt.toISOString()}
-              canEdit={canEdit}
-              canTrash={canEdit && item.status !== "cancelled" && item.status !== "published"}
+              canEdit={false}
+              canTrash={false}
               editHref={editHref}
             />
           </>
@@ -804,7 +790,7 @@ export default async function ContentDetailPage({
           contentItemId: item.id,
           ideaTitle: item.title,
           editHref,
-          canEdit,
+          canEdit: false,
           comments: discussionComments.map((c) => ({
             ...c,
             createdAt: c.createdAt.toISOString(),
@@ -823,59 +809,63 @@ export default async function ContentDetailPage({
                 className="scroll-mt-24"
                 data-testid="workspace-tab-panel-overview"
               >
-                <OverviewNavigator
-                  workspaceSlug={slug}
-                  contentItemId={item.id}
-                  contentStatus={item.status}
-                  title={item.title}
-                  brief={item.brief ?? ""}
-                  format={item.format}
+                <PlanningOverviewSummary
+                  statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
+                  formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
                   plannedPublishAt={formatDate(item.plannedPublishAt, code, {
                     dateStyle: "medium",
                     timeStyle: "short",
                     timeZone: ws.timezone,
                   })}
-                  plannedPublishAtIso={item.plannedPublishAt.toISOString()}
-                  workspaceTimezone={ws.timezone}
-                  channels={item.channels.map((ch) => {
-                    const cfg = channelConfigs.find((c) => c.id === ch.id);
-                    return {
-                      id: ch.id,
-                      platform: ch.platform,
-                      accountName: ch.accountName,
-                      configured: cfg?.configured ?? false,
-                    };
-                  })}
+                  channelsSummary={
+                    item.channels.length === 0
+                      ? t("contentDetail.overview.noChannels")
+                      : t("contentDetail.overview.channelsCount", { count: item.channels.length })
+                  }
                   ownerName={owner?.displayName ?? null}
+                  updatedAt={formatDate(item.updatedAt, code, {
+                    dateStyle: "medium",
+                    timeStyle: "short",
+                    timeZone: ws.timezone,
+                  })}
                   readinessBlockers={overviewBlockers}
                   readinessCanPublish={readiness.canPublish}
                   readiness={overviewReadinessLines}
                   attention={planningPresentation.attention}
-                  deliveryCount={deliveryCount}
-                  finalApprovedCount={finalApprovedCount}
-                  references={references}
-                  productionNotes={productionNotes}
                   recentActivity={recentActivity}
                   totalActivityCount={activityEvents.length}
-                  canEdit={canEdit}
-                  canEditOverview={canEditOverview}
-                  editHref={editHref}
-                  onAcknowledgeOverdue={acknowledgeOverdueScheduleAction}
-                  primaryActionLabel={primaryActionLabel}
-                  workflowStageLabel={t(planningPresentation.workflow.labelKey)}
-                  nextActionHeadline={t(planningPresentation.nextAction.headlineKey)}
-                  nextActionDescription={t(
-                    planningPresentation.nextAction.descriptionKey ??
-                      planningPresentation.workflow.descriptionKey,
-                  )}
-                  {...(planningPresentation.nextAction.destinationTab
-                    ? { nextActionDestinationTab: planningPresentation.nextAction.destinationTab }
-                    : {})}
-                  nextActionExecutable={planningPresentation.nextAction.executable}
-                  reviewChangesHref={reviewChangesHref}
+                  t={t}
                 />
               </section>
             ),
+            "create-basics": canEditAll ? (
+              <section
+                id="create-basics"
+                className="mt-6 scroll-mt-24"
+                data-testid="workspace-create-basics"
+              >
+                <PlanningSection
+                  id="create-plan"
+                  title={t("contentDetail.overview.details")}
+                  description={t("contentDetail.overview.editDrawerDescription")}
+                >
+                  <EditIdeaForm
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    workspaceTimezone={ws.timezone}
+                    channels={planningChannels}
+                    mode="create"
+                    initial={{
+                      title: item.title,
+                      format: item.format,
+                      brief: item.brief ?? "",
+                      plannedPublishAtIso: item.plannedPublishAt.toISOString(),
+                      channelIds: [...selectedChannelIds],
+                    }}
+                  />
+                </PlanningSection>
+              </section>
+            ) : null,
             content: (
               <section
                 id="content"
@@ -977,6 +967,7 @@ export default async function ContentDetailPage({
                           }
                         })()}
                         editable={canEdit}
+                        excludeFields={AUDIENCE_COPY_KEYS}
                         {...(editableFields ? { editableFields } : {})}
                         locale={activeLocale}
                         aiEnabled={aiLive && captionDraftsEnabled}
@@ -1061,6 +1052,7 @@ export default async function ContentDetailPage({
                         }
                       })()}
                       editable={canEdit}
+                      excludeFields={AUDIENCE_COPY_KEYS}
                       {...(editableFields ? { editableFields } : {})}
                       locale={activeLocale}
                       aiEnabled={aiLive && captionDraftsEnabled}
@@ -1171,10 +1163,7 @@ export default async function ContentDetailPage({
                     approvalGates={visiblePendingApprovalGates}
                     mediaRequired={item.mediaRequired}
                     canSetMediaRequired={
-                      (actorRoles.isManager || actorRoles.isPlanner) &&
-                      MEDIA_REQUIRED_EDITABLE_STATUSES.includes(
-                        item.status as (typeof MEDIA_REQUIRED_EDITABLE_STATUSES)[number],
-                      )
+                      (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled"
                     }
                     deliveries={deliveries.map((d) => ({
                       id: d.id,
@@ -1190,6 +1179,34 @@ export default async function ContentDetailPage({
                 </PlanningSection>
               </section>
             ),
+            "publish-settings": canEditAll ? (
+              <section
+                id="publish-settings"
+                className="mt-6 scroll-mt-24"
+                data-testid="workspace-publish-settings"
+              >
+                <PlanningSection
+                  id="publish-schedule"
+                  title={t("contentDetail.overview.plannedPublish")}
+                  description={t("contentDetail.copy.publishHandoff")}
+                >
+                  <EditIdeaForm
+                    workspaceSlug={slug}
+                    contentItemId={item.id}
+                    workspaceTimezone={ws.timezone}
+                    channels={planningChannels}
+                    mode="publish"
+                    initial={{
+                      title: item.title,
+                      format: item.format,
+                      brief: item.brief ?? "",
+                      plannedPublishAtIso: item.plannedPublishAt.toISOString(),
+                      channelIds: [...selectedChannelIds],
+                    }}
+                  />
+                </PlanningSection>
+              </section>
+            ) : null,
             copy: (
               <section
                 id="copy"
@@ -1373,6 +1390,17 @@ export default async function ContentDetailPage({
                 className="mt-6 scroll-mt-24 space-y-4"
                 data-testid="workspace-tab-panel-publishing"
               >
+                {approvedBeforeLaterEdits ? (
+                  <div
+                    className="border-primary/30 bg-primary-subtle/30 text-fg-primary rounded-[var(--radius-card)] border p-4"
+                    role="status"
+                    data-testid="publish-approved-before-later-edits"
+                  >
+                    <p className="text-body font-semibold">
+                      {t("contentDetail.copy.approvedBeforeLaterEdits")}
+                    </p>
+                  </div>
+                ) : null}
                 {/*
                 Phase 7 of the planning-detail refactor (2026-08-30)
                 absorbed the standalone `/publish` route into the
@@ -1497,7 +1525,7 @@ export default async function ContentDetailPage({
                         isFinalApproved: d.isFinalApproved,
                       }))}
                       readiness={readiness}
-                      canEdit={canEdit}
+                      canEdit={canEditAll}
                       canApproveFinalCopy={canApproveFinalCopy}
                       canConfirmReadiness={canConfirmReadiness}
                       canExcludeChannel={

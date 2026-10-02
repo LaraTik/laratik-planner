@@ -302,12 +302,9 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
 /**
  * Update an editable content idea.
  *
- * Editability is intentionally narrow (master prompt §10): once a planner
- * has submitted an item for review, the title/format/schedule are frozen
- * so downstream reviewers can rely on a stable contract. Items past
- * `draft | changes_requested` therefore reject updates with a friendly
- * `notEditable` error. Service throws; the calling action surfaces the
- * message to the form.
+ * Role-owned fields remain editable throughout the workflow. The item is
+ * only immutable after cancellation; approval history and immutable delivery
+ * versions provide the audit boundary instead of a status lock.
  */
 export const UPDATEABLE_STATUSES = ["draft", "changes_requested"] as const;
 export const DESIGNER_EDITABLE_STATUSES = ["in_design", "changes_requested"] as const;
@@ -344,7 +341,7 @@ export async function updateContentItem(
     "update_content",
   );
 
-  if (!UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])) {
+  if (item.status === "cancelled") {
     throw new Error(
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
@@ -402,6 +399,19 @@ export async function updateContentItem(
           : {}),
       },
     });
+  });
+
+  await recordMaterialityEvent({
+    actor,
+    contentItemId: input.contentItemId,
+    resource: drift ? "schedule" : "audience_copy",
+    beforeValue: null,
+    afterValue: {
+      title: input.title,
+      format: input.format,
+      plannedPublishAt: input.plannedPublishAt.toISOString(),
+    },
+    reasonCode: drift ? "schedule.update" : "audience_copy.update",
   });
 
   // FEAT-MEDIA-LIBRARY-2026-09-16 — silent folder reconcile when
@@ -501,18 +511,7 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
     item.designerId === actor.id && (await hasWorkspaceRole(actor, item.workspaceId, ["designer"]));
   await requirePolicy(Promise.resolve(isManagerOrPlanner || isAssignedDesigner), "update_content");
 
-  if (
-    isManagerOrPlanner &&
-    !UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])
-  ) {
-    throw new Error(
-      `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
-    );
-  }
-  if (
-    isAssignedDesigner &&
-    !DESIGNER_EDITABLE_STATUSES.includes(item.status as (typeof DESIGNER_EDITABLE_STATUSES)[number])
-  ) {
+  if (item.status === "cancelled") {
     throw new Error(
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
@@ -704,7 +703,7 @@ export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopy
 /**
  * Legacy compatibility wrapper. New Copy saves use
  * `updateAudienceCopy`, and therefore follow the normal material
- * edit path (revision, approval reset, activity, notifications).
+ * edit path (revision, approval-preserving activity, notifications).
  *
  * Compared to `updateFormatPayload`:
  *  - Bypasses `UPDATEABLE_STATUSES`. Available in

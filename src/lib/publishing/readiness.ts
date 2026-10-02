@@ -448,8 +448,7 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
     .innerJoin(socialChannels, eq(socialChannels.id, contentItemChannels.socialChannelId))
     .where(eq(contentItemChannels.contentItemId, input.contentItemId));
 
-  // Pull the most recent pending approval request so the
-  // "approval reset" banner can show a count.
+  // Pull pending approval requests for an informational status line.
   const openApprovals = await db
     .select({ id: approvalRequests.id })
     .from(approvalRequests)
@@ -600,16 +599,14 @@ export async function evaluateReadiness(input: ReadinessInput): Promise<Readines
     }
   }
 
-  // Open-approval banner is informational. Doesn't affect
-  // `canPublish` because approvals are reset on every material
-  // edit (M4.3); the readiness question is "are blockers
-  // gone", not "is there an approval to cancel".
+  // Open-approval status is informational and does not affect
+  // `canPublish`; readiness still evaluates the current package.
   if (openApprovals.length > 0) {
     allIssues.push({
       path: "approvals.openCount",
       code: "approvals_open",
       severity: "recommendation",
-      message: `${openApprovals.length} approval request(s) were auto-cancelled by a material edit; re-review required.`,
+      message: `${openApprovals.length} approval request(s) remain active; later edits do not invalidate approval history.`,
     });
     totalRecommendations += 1;
   }

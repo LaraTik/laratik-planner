@@ -231,7 +231,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // writable by planners/managers only. Save a package for each seeded
       // channel while the planner still owns the editable draft; the later
       // publisher role records outcomes against those configured channels.
-      await plannerPage.getByTestId("workspace-tab-publishing").click();
+      await plannerPage.getByTestId("workspace-tab-publish").click();
       const plannerPackageForm = plannerPage.getByTestId("publish-package-form");
       const plannerPackageTabs = plannerPackageForm.getByRole("tab");
       const plannerPackageTabCount = await plannerPackageTabs.count();
@@ -327,7 +327,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // supported deep link and wait for the stateful tab shell to activate
       // it before interacting with the submission form.
       await designerPage.goto(`${detailUrl}#delivery`);
-      await expect(designerPage.getByTestId("workspace-tab-delivery")).toHaveAttribute(
+      await expect(designerPage.getByTestId("workspace-tab-create")).toHaveAttribute(
         "data-active",
         "true",
         { timeout: 10_000 },
@@ -347,10 +347,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       const mediaSearch = deliveryForm.getByPlaceholder(/Search by title or file name/i);
       await mediaSearch.fill("Seeded creative delivery");
       await mediaSearch.press("Enter");
-      await expect(deliveryForm.getByRole("checkbox").first()).toBeVisible({
+      const mediaCheckbox = deliveryForm.locator("#delivery-media-first");
+      await expect(mediaCheckbox).toBeVisible({
         timeout: 10_000,
       });
-      await deliveryForm.getByRole("checkbox").first().check();
+      await mediaCheckbox.check();
       await deliveryForm.getByRole("button", { name: /Submit for creative review/i }).click();
       // The status should advance to creative_review.
       await expect(workflowStage(designerPage, "creative_approval")).toBeVisible({
@@ -407,10 +408,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       // ─── 7. Publisher: record publications for each of the 3 channels → published ───
       await bootstrapRoleSession(publisherPage, "publisher");
       await publisherPage.goto(detailUrl);
-      await expect(publisherPage.getByTestId("workspace-tab-publishing")).toBeVisible({
+      await expect(publisherPage.getByTestId("workspace-tab-publish")).toBeVisible({
         timeout: 10_000,
       });
-      await publisherPage.getByTestId("workspace-tab-publishing").click();
+      await publisherPage.getByTestId("workspace-tab-publish").click();
       // The publishing section shows a "Record" button per channel.
       // We click each one, fill the published URL, and save.
       const cards = publisherPage.getByTestId("channel-publishing-card");
@@ -430,10 +431,10 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         await publisherPage.goto(`${detailUrl}?channel=${channelId}#publishing`, {
           waitUntil: "commit",
         });
-        await expect(publisherPage.getByTestId("workspace-tab-publishing")).toBeVisible({
+        await expect(publisherPage.getByTestId("workspace-tab-publish")).toBeVisible({
           timeout: 10_000,
         });
-        await publisherPage.getByTestId("workspace-tab-publishing").click();
+        await publisherPage.getByTestId("workspace-tab-publish").click();
         const card = publisherPage.locator(
           `[data-testid="channel-publishing-card"][data-channel-id="${channelId}"]`,
         );
@@ -488,8 +489,8 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     });
 
     // The "Channels" section should list at least 3 channels
-    await expect(page.getByText(/3 channels/i).first()).toBeVisible();
-    await page.getByTestId("workspace-tab-publishing").click();
+    await expect(page.getByText(/Channels:\s*3/i).first()).toBeVisible();
+    await page.getByTestId("workspace-tab-publish").click();
     const publishingCards = page.getByTestId("publishing-cards");
     await expect(publishingCards).toBeVisible();
     // Channel cards display the platform badge + account name.

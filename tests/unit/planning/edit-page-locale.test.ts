@@ -25,8 +25,9 @@ describe("planning edit page localization", () => {
     expect(source).not.toContain("Back to idea");
   });
 
-  it("localizes frozen status values instead of exposing the enum", () => {
-    expect(source).toContain("t(`planningFilters.statusLabels.${item.status}`)");
+  it("keeps the compatibility route on the full editor without status-lock copy", () => {
+    expect(source).toContain('mode="all"');
+    expect(source).not.toContain("UPDATEABLE_STATUSES");
     expect(source).not.toContain("humanStatus(item.status)");
   });
 });

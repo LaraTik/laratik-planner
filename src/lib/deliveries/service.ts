@@ -526,7 +526,7 @@ export async function listApprovalsForItem(actor: Actor, contentItemId: string) 
     "list_approvals",
   );
 
-  return db
+  const requests = await db
     .select({
       id: approvalRequests.id,
       gate: approvalRequests.gate,
@@ -538,6 +538,36 @@ export async function listApprovalsForItem(actor: Actor, contentItemId: string) 
     .from(approvalRequests)
     .where(eq(approvalRequests.contentItemId, contentItemId))
     .orderBy(sql`${approvalRequests.requestedAt} DESC`);
+  const decisionRows = requests.length
+    ? await db
+        .select({
+          approvalRequestId: approvalDecisions.approvalRequestId,
+          decision: approvalDecisions.decision,
+          decidedAt: approvalDecisions.decidedAt,
+        })
+        .from(approvalDecisions)
+        .where(
+          inArray(
+            approvalDecisions.approvalRequestId,
+            requests.map((request) => request.id),
+          ),
+        )
+        .orderBy(sql`${approvalDecisions.decidedAt} DESC`)
+    : [];
+  const latestDecision = new Map<string, (typeof decisionRows)[number]>();
+  for (const decision of decisionRows) {
+    if (!latestDecision.has(decision.approvalRequestId))
+      latestDecision.set(decision.approvalRequestId, decision);
+  }
+  return requests.map((request) => {
+    const decision = latestDecision.get(request.id);
+    return {
+      ...request,
+      ...(decision
+        ? { decision: decision.decision, decidedAt: decision.decidedAt }
+        : { decision: null, decidedAt: null }),
+    };
+  });
 }
 
 /**
@@ -912,11 +942,7 @@ export async function setMediaRequired(actor: Actor, input: SetMediaRequiredInpu
     "set_media_required",
   );
 
-  if (
-    !MEDIA_REQUIRED_EDITABLE_STATUSES.includes(
-      item.status as (typeof MEDIA_REQUIRED_EDITABLE_STATUSES)[number],
-    )
-  ) {
+  if (item.status === "cancelled") {
     throw new Error(`Cannot change the media requirement while content is ${item.status}`);
   }
 

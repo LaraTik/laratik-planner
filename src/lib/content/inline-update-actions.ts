@@ -12,9 +12,8 @@
  * `UPDATEABLE_STATUSES` (which gates the full edit form) so a
  * planner can fix a typo / a date / a brief on an item that's
  * already in review or even ready to publish without bouncing
- * to `/planning/edit/[id]`. The materiality service then
- * invalidates affected approvals so the workflow stays
- * consistent (master prompt §4).
+ * to `/planning/edit/[id]`. The materiality service records the
+ * revision and activity event while preserving approval history.
  */
 export const INLINE_EDITABLE_STATUSES = [
   "draft",

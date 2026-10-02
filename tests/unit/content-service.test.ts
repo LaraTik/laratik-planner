@@ -85,6 +85,7 @@ function makeDrizzleMock(state: DrizzleState) {
     lastSet = undefined;
     return Promise.resolve();
   });
+  updateChain.returning = vi.fn(() => Promise.resolve([{ revision: 1 }]));
   const update = vi.fn(() => updateChain);
 
   const deleteChain: Record<string, unknown> = {};
@@ -126,6 +127,14 @@ const dbMock = vi.hoisted(() => {
 });
 
 vi.mock("@/lib/db", () => ({ db: dbMock }));
+
+vi.mock("@/lib/publishing/materiality", () => ({
+  recordMaterialityEvent: vi.fn(async () => ({
+    revision: 1,
+    cancelledApprovalCount: 0,
+    notifiedReviewerCount: 0,
+  })),
+}));
 
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
@@ -361,8 +370,8 @@ describe("updateContentItem", () => {
     ).rejects.toThrow(/not found/i);
   });
 
-  it("rejects edits to items past the updateable statuses", async () => {
-    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId, status: "content_review" }]);
+  it("keeps cancelled items immutable", async () => {
+    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId, status: "cancelled" }]);
     await expect(
       updateContentItem(actor, {
         contentItemId,
@@ -377,6 +386,7 @@ describe("updateContentItem", () => {
 
   it("updates the item and replaces the channel set when channelIds is provided", async () => {
     dbMock.state.selectResults.push([{ id: contentItemId, workspaceId, status: "draft" }]);
+    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId }]);
     await updateContentItem(actor, {
       contentItemId,
       title: "Updated",

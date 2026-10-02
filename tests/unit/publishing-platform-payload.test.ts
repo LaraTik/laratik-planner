@@ -285,11 +285,7 @@ describe("savePlatformPayload", () => {
     expect((upsert?.set as Record<string, unknown>).platformPayload).toEqual(
       expect.objectContaining({
         ...draftFields,
-        approval: {
-          finalCopyApproved: false,
-          approvedByUserId: null,
-          approvedAt: null,
-        },
+        approval: { finalCopyApproved: false, approvedByUserId: null, approvedAt: null },
       }),
     );
     expect(result.approval).toEqual({

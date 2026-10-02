@@ -189,11 +189,11 @@ describe("setMediaRequired guards", () => {
     expect(dbMock.db.update).not.toHaveBeenCalled();
   });
 
-  it("refuses to change the flag past the creative boundary", async () => {
-    primeItem({ status: "in_creative_review", current: true });
+  it("refuses to change the flag on cancelled items", async () => {
+    primeItem({ status: "cancelled", current: true });
     await expect(
       setMediaRequired(ACTOR, { contentItemId: ITEM_ID, mediaRequired: false }),
-    ).rejects.toThrow("Cannot change the media requirement while content is in_creative_review");
+    ).rejects.toThrow("Cannot change the media requirement while content is cancelled");
     expect(dbMock.db.update).not.toHaveBeenCalled();
   });
 

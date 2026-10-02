@@ -409,6 +409,8 @@ function WorkflowRailBody({
     });
     if (result?.error) {
       setActionError(result.error);
+    } else {
+      router.refresh();
     }
   };
 

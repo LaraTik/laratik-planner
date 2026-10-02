@@ -94,8 +94,8 @@ async function ensureContentItemChannelInWorkspace(
  *      workspace.
  *   3. UPSERT the row's `platform_payload` column.
  *   4. Route through the materiality service: increment the
- *      content item's `revision`, reset affected approvals, and
- *      record an immutable `materiality_event` row.
+ *      content item's `revision`, preserve approval state, and
+ *      record an immutable audit row.
  */
 export async function savePlatformPayload(
   actor: Actor,
@@ -126,16 +126,27 @@ export async function savePlatformPayload(
 
   // The schema is the source of truth. The discriminated union
   // narrows the payload type at the call site.
-  // Approval metadata is server-owned. A material draft save always
-  // invalidates the previous approval and must never trust values sent
-  // by the browser.
+  // Approval metadata is server-owned. Editing the package must not revoke
+  // an existing approval; only the explicit approval action may change it.
+  const [existingRow] = await db
+    .select({ platformPayload: contentItemChannels.platformPayload })
+    .from(contentItemChannels)
+    .where(
+      and(
+        eq(contentItemChannels.contentItemId, input.contentItemId),
+        eq(contentItemChannels.socialChannelId, input.socialChannelId),
+      ),
+    )
+    .limit(1);
+  const existingPayload = existingRow?.platformPayload
+    ? PlatformPayloadSchema.safeParse(existingRow.platformPayload)
+    : null;
+  const serverApproval = existingPayload?.success
+    ? existingPayload.data.approval
+    : { finalCopyApproved: false, approvedByUserId: null, approvedAt: null };
   const payload = PlatformPayloadSchema.parse({
     ...input.payload,
-    approval: {
-      finalCopyApproved: false,
-      approvedByUserId: null,
-      approvedAt: null,
-    },
+    approval: serverApproval,
   });
 
   await db
@@ -438,10 +449,8 @@ export async function readAllChannelPayloadStates(input: {
 
 /**
  * Reset a single channel's payload back to the empty shape.
- * Used by the materiality service when a content-item-level
- * approval reset cascades to the channel. (The channel row
- * itself is never deleted — the linkage stays so the publish
- * UI knows the channel is still selected.)
+ * The channel row itself is never deleted — the linkage stays
+ * so the publish UI knows the channel is still selected.
  */
 export async function clearChannelPayload(input: {
   actor: Actor;

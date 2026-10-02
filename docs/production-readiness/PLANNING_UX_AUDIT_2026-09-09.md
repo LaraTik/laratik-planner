@@ -1,16 +1,31 @@
 # Planning UX Audit — 2026-09-09
 
-Status: Variant 1 approved and promoted in Stitch on 2026-09-10; final implementation follow-up is merged and pushed to `main` at `4dfff396`.
+Status: Historical Variant 1 was approved and promoted in Stitch on 2026-09-10. The current four-workspace implementation is the active contract; exact clean-commit evidence is recorded when this worktree is committed and verified.
+
+## 2026-10-02 implementation checkpoint
+
+The original five-tab Variant 1 decision is superseded for the planning detail
+workspace by the four-workspace contract: Overview, Create, Publish, and
+Activity. Existing panel services remain grouped behind those workspaces and
+legacy hashes continue to resolve. Overview is read-only; Create owns creative
+and delivery; Publish owns copy, destinations, schedule, preview, readiness,
+and publishing.
+
+Role-owned fields remain editable after review and approval for every
+non-cancelled status. Revisions and activity events continue to record edits,
+but approval requests are not reset or recreated. This is an explicit product
+decision and is recorded in `PORT_NOTES.md`; immutable delivery versions and
+current readiness evaluation remain the review and publish boundaries.
 
 This is a decision-ready audit of the planning journey from list and creation through editing, review, delivery, copy, and publishing. The supplied screenshots are treated as current-state evidence. They are not implementation instructions. Product behavior is reconciled against the repository, the StudioFlow master prompt, the i18n contract, and the captured/live Stitch screens.
 
 ## Executive decision
 
-Keep the existing planning data model, workflow state machine, authorization rules, format-payload storage, and publish contracts. Improve the experience around them with a task-oriented five-tab workspace, a single contextual workflow action, actionable readiness links, explicit save states for material editing, and guarded administrative actions.
+Keep the existing planning data model, workflow state machine, authorization rules, format-payload storage, and publish contracts. Improve the experience around them with four task-oriented workspaces, a single contextual workflow action, actionable readiness links, explicit save states for material editing, and guarded administrative actions.
 
 The highest-value changes are:
 
-1. Make `Overview`, `Creative brief`, `Audience copy`, `Assets`, and `Publish` the five primary task destinations. Keep `Preview` and `Activity` in `More sections`; keep Discussion as a drawer utility.
+1. Make `Overview`, `Create`, `Publish`, and `Activity` the four primary workspaces. Group creative brief, production fields, references, assets, and delivery under Create; group copy, destinations, schedule, previews, readiness, and publishing under Publish. Keep Discussion as a drawer utility.
 2. Keep exactly one dominant workflow action visible for the current role/state. Move `Cancel` and `Block` into a labeled `More actions` disclosure; the existing reason dialogs remain the confirmation boundary.
 3. Show the contextual next action in the Overview card and keep blocker rows linked to the section that resolves them.
 4. Preserve explicit Save for creative brief, audience copy, and publishing packages; preserve immediate feedback for low-risk inline metadata edits. Keep dirty-state and navigation protection.
@@ -35,7 +50,7 @@ The highest-value changes are:
 
 | Surface           | Supplied evidence                                                                                               | Current repository behavior                                                                                                                                                                       | Canonical/Stitch interpretation                                                                | Decision                                                                                                                    |
 | ----------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Detail navigation | Five useful work areas are visible, but Preview and Activity compete with the production flow.                  | `WorkspaceShell` already splits Preview and Activity into a secondary menu, while keeping stable internal ids (`content`, `copy`, `delivery`, `publishing`). `#messages` maps to `copy`.          | Stitch prioritizes task work, review, and publish preparation; utilities are secondary.        | Keep the split explicit and test it as a compatibility contract.                                                            |
+| Detail navigation | The historical design exposed five production areas plus secondary utilities.                                   | `WorkspaceShell` now exposes exactly four canonical workspaces; existing panel ids remain grouped behind them and legacy hashes normalize to `overview`, `create`, or `publish`.                  | The current implementation favors clear ownership over one-tab-per-subsystem.                  | Keep four workspaces canonical and test every legacy alias as a compatibility contract.                                     |
 | Workflow actions  | The right rail is dense; Cancel is visually prominent beside normal progression.                                | Role/state authorization is server-enforced. Cancel and Block already use reason dialogs, but both render in the main action stack.                                                               | Stitch variants consistently show one primary CTA and guarded administrative actions.          | Keep server actions and dialogs; place destructive actions behind `More actions`.                                           |
 | Overview          | Readiness rows have chevrons and destinations, but the page can feel like a status report instead of a handoff. | Readiness navigation changes the hash, switches the mounted tab, scrolls, and restores focus. The page computes a localized `primaryActionLabel`, but the card did not show it.                   | Stitch emphasizes direct “fix here” links and a compact next-action summary.                   | Surface the contextual next action and preserve direct readiness navigation.                                                |
 | Creative brief    | The screenshot places many format-specific fields in one long form.                                             | `FormatAwareContentEditor` uses format schemas, progressive disclosures, explicit Save, dirty guards, and excludes audience copy.                                                                 | Stitch separates strategic brief, creative direction, and production details.                  | Preserve the JSONB editor contract; continue progressive disclosure and avoid duplicate copy fields.                        |
@@ -110,12 +125,12 @@ Each finding includes the requested severity, affected role/state, evidence, imp
 ### P1 — Primary workspace hierarchy
 
 - Affected role/state: planners, reviewers, designers, publishers; all detail states.
-- Evidence: A2; screenshots show task tabs and utilities at the same visual level. Stitch review variants use five task tabs.
+- Evidence: A2; screenshots show task tabs and utilities at the same visual level. The historical Stitch review variants used five task tabs; the implementation checkpoint above supersedes that split.
 - Usability impact: users scan across too many destinations before choosing their next task.
-- Recommended wording: `Overview`, `Creative brief`, `Audience copy`, `Assets`, `Publish`; secondary `Preview`, `Activity`.
-- Proposed interaction: desktop shows five primary tabs; utilities open from `More sections`; mobile keeps the same order in the select.
+- Recommended wording: `Overview`, `Create`, `Publish`, `Activity`.
+- Proposed interaction: desktop and mobile expose the same four canonical workspaces; creative, delivery, preview, and readiness surfaces stay grouped under their owning workspace.
 - Affected code surface: `workspace-tabs.tsx`, `workspace-shell.tsx`, `page.tsx`, existing tab tests.
-- Acceptance criteria: five primary ids render in order; Preview/Activity are secondary; `#content`, `#copy`, `#delivery`, `#publishing`, `#preview`, `#activity`, and legacy `#messages` remain functional.
+- Acceptance criteria: four primary ids render in order; `#content` and `#assets-versions` resolve to Create; `#copy`, `#delivery`, `#preview`, `#publishing`, and `#messages` resolve to Publish; `#workflow` resolves to Overview; `#activity` remains canonical.
 
 ### P1 — Workflow action hierarchy
 
@@ -196,10 +211,9 @@ Planning list / board
           ↓
 Content detail
   ├─ Overview: state, next action, readiness links, details, recent activity
-  ├─ Creative brief: strategy + format-specific creative contract
-  ├─ Audience copy: one shared source + translations + explicit Save
-  ├─ Assets: delivery versions + review/approval ownership
-  └─ Publish: channel packages + readiness + explicit Save/confirm
+  ├─ Create: brief + format-specific creative contract + production + delivery
+  ├─ Publish: shared copy + channel packages + readiness + explicit Save/confirm
+  └─ Activity: complete audit timeline and filters
           ↓
 Workflow rail / mobile sheet
   ├─ compact lifecycle stepper
@@ -208,7 +222,7 @@ Workflow rail / mobile sheet
   └─ More actions → confirm + reason → server transition
 ```
 
-Preview and Activity remain secondary sections. Discussion remains a contextual drawer utility, not a production-stage tab.
+Preview is grouped under Publish, while Activity is a canonical workspace for the complete audit timeline. Discussion remains a contextual drawer utility, not a second navigation system.
 
 ## Stitch review variants and approval
 
@@ -217,7 +231,7 @@ The live Stitch project was used for a read-only comparison and then for review-
 Generation session: `3509913119376141661`.
 
 - Variant 1 — `StudioFlow — Content Detail Review (Variant 1: Guided Readiness & Stepper)`, screen `d0883669262743ceb4a89ac0c7dc7d1d`.
-  - Best direction for the first implementation pass: five task tabs, actionable readiness banner, one dominant workflow CTA, and destructive actions in a disclosure.
+  - Historical direction for the first implementation pass: five task tabs, actionable readiness banner, one dominant workflow CTA, and destructive actions in a disclosure. The current implementation groups those surfaces into four workspaces.
 - Variant 2 — `StudioFlow — Content Detail Review (Variant 2: Split Review & Contextual Drawer)`, screen `54da181882c04ab5ac9860d2e7f6edfe`.
   - Useful for the later Assets/Discussion pass: version switching, contextual drawer, and accessibility/alt-text resolution.
 - Variant 3 — `StudioFlow — Content Detail Review (Variant 3: Readiness Checklist & Publish Prep)`.
@@ -227,7 +241,7 @@ Decision: Variant 1 is approved and promoted as the accepted Content Detail dire
 
 ## Implementation status in this pass
 
-- Implemented explicit primary/secondary tab sets without changing tab ids or hash aliases.
+- Implemented four canonical workspaces with legacy hash aliases and grouped panels without introducing a second navigation system.
 - Implemented `More actions` disclosure for manager-only Cancel/Block controls while preserving existing confirmation dialogs and server actions.
 - Surfaced the already-computed contextual next-action label in the Overview and added a direct requested-changes handoff link.
 - Preserved the active planning filter context when KPI tiles switch status/risk views.
@@ -235,7 +249,7 @@ Decision: Variant 1 is approved and promoted as the accepted Content Detail dire
 - Added `Fix` links for publish blockers, mapping delivery issues to Assets & versions, approval issues to Workflow, and package issues to Publishing.
 - Added an explicit publishing dirty state, browser/back navigation protection, and a save-before-ready guard.
 - Added English/Arabic catalog keys for the new wording.
-- Added a unit contract for the five primary tabs and two secondary utilities.
+- Added unit coverage for the four canonical tabs, every legacy hash alias, grouped panels, and initial-hash routing.
 - Restored legacy `#assets-versions`, `#workflow`, and `#messages` compatibility aliases and made primary-tab navigation close the secondary menu.
 - Restored Quick Create’s visible four-field contract by removing the optional channel selector from the entry surface; the compatible server action remains unchanged.
 - Added a batch-success `View drafts` handoff that preserves the current month context.
@@ -244,27 +258,28 @@ Decision: Variant 1 is approved and promoted as the accepted Content Detail dire
 - Replaced generic publish blocker labels with contextual destinations: `Resolve in Assets`, `Open workflow`, and `Resolve in Publish`.
 - No database schema or external API changes.
 
-The implementation follow-up is complete. Existing visual reference snapshots were not rewritten automatically: the targeted planning visual run intentionally reports the current implementation/reference deltas for review instead of hiding them by updating baselines.
+The implementation follow-up is complete. The three affected planning visual
+references (planning list, planning detail, and planning publish) were reviewed
+from the rendered output and promoted with the refactor. Unrelated visual
+references were left unchanged.
 
 ## Verification matrix
 
-| Area                | Required evidence                                                     | Current pass                                                                                                                      |
-| ------------------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| Tab compatibility   | Unit tests for primary/secondary sets and legacy hashes               | Passed; focused and full unit suites green                                                                                        |
-| Destructive actions | Role/state render checks; confirmation and reason dialog              | Passed; disclosure test added, existing reason dialog retained                                                                    |
-| Readiness handoff   | Hash switch, mounted panel, scroll, focus                             | Passed; existing navigator tests green                                                                                            |
-| Save guards         | Unit/E2E for dirty state and navigation protection                    | Publishing guard added; publish E2E 2/2 green                                                                                     |
-| Catalog parity      | EN/AR key shape                                                       | Passed in full unit suite                                                                                                         |
-| Accessibility       | Keyboard, focus, 44px targets, dialogs, axe                           | Targeted planning visual assertions completed without a11y violations; prior full run 197/200 with 3 server-availability failures |
-| Responsive          | 375, 768, 1024, 1280, 1440                                            | Targeted planning visual run: 24/24 reference deltas; no snapshots rewritten                                                      |
-| Role journey        | Planner, reviewer, designer, publisher, client reviewer, unauthorized | Planning E2E and role-denial coverage passed                                                                                      |
-| Exact clean commit  | Verify after final diff/commit                                        | `pnpm verify` passed on implementation commit `6548e296`; merge commit `4dfff396` contains the same verified tree                 |
+| Area                | Required evidence                                                     | Current pass                                                                                                                               |
+| ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tab compatibility   | Unit tests for four workspaces, grouped panels, and every legacy hash | Passed; 10 workspace-tab tests and 13 format-editor tests pass                                                                             |
+| Destructive actions | Role/state render checks; confirmation and reason dialog              | Passed; disclosure test added, existing reason dialog retained                                                                             |
+| Readiness handoff   | Hash switch, mounted panel, scroll, focus                             | Passed; existing navigator tests green                                                                                                     |
+| Save guards         | Unit/E2E for dirty state and navigation protection                    | Publishing guard added; publish E2E 2/2 green                                                                                              |
+| Catalog parity      | EN/AR key shape                                                       | Passed in full unit suite                                                                                                                  |
+| Accessibility       | Keyboard, focus, 44px targets, dialogs, axe                           | Focused planning publishing a11y and §23 content-flow checks pass; broad parallel critical run is noisy from unrelated seed/setup failures |
+| Responsive          | 375, 768, 1024, 1280, 1440                                            | The three affected planning reference routes pass after deliberate baseline promotion; unrelated references remain unchanged               |
+| Role journey        | Planner, reviewer, designer, publisher, client reviewer, unauthorized | Planning E2E and role-denial coverage passed                                                                                               |
+| Exact clean commit  | Verify after final diff/commit                                        | Pending: this working tree is intentionally dirty; record the exact SHA after commit and rerun affected gates                              |
 
 ### Verification notes
 
-- `pnpm verify` passed on the final implementation tree: formatting, lint, typecheck, production build, and 3,342 unit tests (4 todo). The verified implementation commit is `6548e296`; merge commit `4dfff396` is the pushed `main` result.
-- Focused follow-up tests passed: 24/24 tests covering tab aliases, delivery review handoff, and catalog parity. The full unit suite passed 3,342 tests with 4 todo across 359 files.
-- Guarded Chromium planning/content browser flows passed: content-flow 6/6 and publish-package 2/2 after the publishing dirty-state guard was corrected to avoid an input-capture re-render.
-- The 200-case accessibility run completed with 197 passes. The three failures were infrastructure failures: one mobile-Chrome `ECONNRESET` while seeding the workspace overview and two mobile-Safari server disconnects after the test server reported a memory-threshold restart. They were not axe violations; the touched planning list, detail, publishing, quick-create, batch, monthly, RTL, and destructive-dialog checks passed.
-- The targeted planning visual run covered 24 exact/reference and responsive cases. All 24 reported deliberate reference deltas, primarily because the implementation now has different content height and handoff structure than the older baselines; no snapshot was rewritten automatically. The broader pre-existing run was 57/112 with 55 reference deltas. The approved/promoted Stitch screen remains the accepted design direction, and baseline promotion should be a separate visual-review decision.
-- The repository pre-push integration gate passed all disposable-Postgres integration suites. The broad 217-test Chromium gate was stopped after unrelated pre-existing `agency-edit` and `agency-switcher` failures; planning-specific browser flows passed 22/22, and the planning a11y routes passed in Chromium. `SKIP_E2E=1` was used only for the final push because the repository documents the critical E2E gate as advisory.
+- Static verification passed after the documentation/test updates: `format:check`, lint, typecheck, and production build all pass. The full unit run completed 4,315/4,316 tests; the sole failure was a 30-second `rotate-social-kek --help` child-process timeout under full-suite load, and the isolated 8-test file passes.
+- Focused follow-up tests passed: 23/23 workspace-tab and format-editor tests, the approval/materiality/publishing unit coverage, the disposable-Postgres integration suite, the focused planning publishing a11y route, and the §23 content-flow path.
+- The targeted planning visual run covered the affected list, detail, and publish reference routes. Their rendered outputs were reviewed and the three corresponding references were deliberately promoted; unrelated visual references were not changed.
+- The broad five-browser/visual release commands were not claimed as green: the first attempt timed out on health readiness before tests, and parallel reruns exposed unrelated shared-seed/Brand Kit setup failures. Exact clean-commit release evidence remains required after the final commit.

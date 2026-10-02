@@ -335,7 +335,9 @@ export function PlatformPreview({
               )}
             >
               <span>{t(DIMENSION_LABEL_KEYS[targetDimension])}</span>
-              <span className="opacity-75">{spec.label.split(" ").at(-1)}</span>
+              <span className={isActive ? "" : "text-fg-primary"}>
+                {spec.label.split(" ").at(-1)}
+              </span>
             </button>
           );
         })}

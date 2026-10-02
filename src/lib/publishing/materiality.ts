@@ -15,10 +15,9 @@ import { buildActionUrlForContentItem } from "@/lib/notifications/service";
 import { randomUUID } from "node:crypto";
 
 /**
- * STUDIOFLOW_MASTER_PROMPT.md §4 (Milestone 4) — Material edits
- * and approvals.
+ * Material edits and approval history.
  *
- * Per the master prompt:
+ * Workspace policy:
  *
  *   "Changes to caption, description, CTA, hashtags, channel,
  *    destination profile, schedule, media version, crop, cover,
@@ -26,7 +25,7 @@ import { randomUUID } from "node:crypto";
  *
  *      1. Use the central materiality service.
  *      2. Increment the appropriate revision.
- *      3. Reset affected approval decisions.
+ *      3. Preserve affected approval decisions.
  *      4. Record an immutable event.
  *      5. Notify affected reviewers."
  *
@@ -35,10 +34,9 @@ import { randomUUID } from "node:crypto";
  * commit their own column write. The service:
  *
  *   1. Increments `content_items.revision` (atomic SQL UPDATE).
- *   2. Resets every open `approval_request` whose
- *      `affected_by_revision = true` on the content item to
- *      status `cancelled` (cascades from the existing M2
- *      trigger on `approval_request`).
+ *   2. Leaves pending and approved approval requests intact. Approval is
+ *      scoped to the requested delivery version and remains valid after
+ *      later role-owned edits.
  *   3. Records one row in `activity_event` with kind
  *      `material_edit` and the before/after JSONB.
  *   4. Inserts an in-app notification for every active
@@ -203,57 +201,7 @@ export async function recordMaterialityEvent(
       .returning({ revision: contentItems.revision });
     const newRevision = bumped?.revision ?? 0;
 
-    // 2. Reset affected approval requests. The existing
-    //    approval_request.status enum is the M2 vocabulary
-    //    (`pending` | `approved` | `changes_requested` |
-    //    `cancelled`). The materiality service moves every
-    //    open request to `cancelled` and records
-    //    `invalidation_reason` so the audit trail explains why.
-    const openRequests = await tx
-      .select({
-        contentItemId: approvalRequests.contentItemId,
-        gate: approvalRequests.gate,
-        deliveryVersionId: approvalRequests.deliveryVersionId,
-        requestedBy: approvalRequests.requestedBy,
-        sequence: approvalRequests.sequence,
-      })
-      .from(approvalRequests)
-      .where(
-        and(
-          eq(approvalRequests.contentItemId, input.contentItemId),
-          eq(approvalRequests.status, "pending"),
-        ),
-      );
-    let cancelledCount = 0;
-    if (openRequests.length > 0) {
-      const cancelled = await tx
-        .update(approvalRequests)
-        .set({
-          status: "cancelled",
-          invalidatedAt: new Date(),
-          invalidationReason: `Auto-cancelled by material edit on resource '${input.resource}' (revision ${newRevision}).`,
-        })
-        .where(
-          and(
-            eq(approvalRequests.contentItemId, input.contentItemId),
-            eq(approvalRequests.status, "pending"),
-          ),
-        )
-        .returning({ id: approvalRequests.id });
-      cancelledCount = cancelled.length;
-
-      for (const request of openRequests) {
-        await tx.insert(approvalRequests).values({
-          contentItemId: request.contentItemId,
-          gate: request.gate,
-          deliveryVersionId: request.deliveryVersionId,
-          requestedBy: request.requestedBy,
-          sequence: request.sequence + 1,
-        });
-      }
-    }
-
-    // 3. Audit. The `activity_event` table is the same writer
+    // 2. Audit. The `activity_event` table is the same writer
     //    other services use; `kind: material_edit` is a new
     //    addition to the activity_kind enum (see migration
     //    0013). Until 0013 lands, we fall back to the closest
@@ -278,16 +226,12 @@ export async function recordMaterialityEvent(
         revision: newRevision,
         before: input.beforeValue,
         after: input.afterValue,
-        cancelledApprovalCount: cancelledCount,
+        cancelledApprovalCount: 0,
       },
     });
 
-    // 4. Notify. We pull the current reviewer set from the
-    //    approval_request rows that we just cancelled, plus
-    //    the content item's designer + internal_reviewer. The
-    //    `requestedBy` column on approval_request names the
-    //    user who created the request — for v1 we treat that
-    //    user as the "reviewer" we notify.
+    // 3. Notify current request owners. This is informational and never
+    //    changes approval state.
     const reviewerIds = new Set<string>();
     for (const row of await tx
       .select({ requestedBy: approvalRequests.requestedBy })
@@ -317,7 +261,7 @@ export async function recordMaterialityEvent(
         contentItemId: input.contentItemId,
         kind: "system",
         title: `Material edit on content item`,
-        body: `Resource '${input.resource}' changed. Approvals were reset; please re-review (revision ${newRevision}).`,
+        body: `Resource '${input.resource}' changed after approval or request (revision ${newRevision}).`,
         messageKey: "notifications.events.material_edit",
         messageParams: { resource: input.resource, revision: newRevision },
         actionUrl: `${actionUrl}/publish`,
@@ -327,7 +271,7 @@ export async function recordMaterialityEvent(
 
     return {
       revision: newRevision,
-      cancelledApprovalCount: cancelledCount,
+      cancelledApprovalCount: 0,
       notifiedReviewerCount: notified,
     };
   });
@@ -336,10 +280,10 @@ export async function recordMaterialityEvent(
 /**
  * Record an administrative (non-material) change. The audit
  * row is written but no revision is bumped, no approvals are
- * reset, and no notifications are sent. Used for internal
+ * change, and no notifications are sent. Used for internal
  * notes, brief rewrites, and similar content-shape changes
  * that the master prompt's "Administrative changes such as
- * internal notes must not reset approvals" sentence covers.
+ * internal notes must not change approvals" sentence covers.
  */
 export const RecordNonMaterialityEventInputSchema = z.object({
   actor: z.object({ id: z.string().uuid() }),

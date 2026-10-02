@@ -8,7 +8,6 @@ import { eq } from "drizzle-orm";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { currentActor } from "@/lib/auth/current-actor";
-import { INLINE_EDITABLE_STATUSES } from "./inline-update-actions";
 import { auth } from "@/lib/auth/config";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
@@ -22,20 +21,14 @@ import { parseFormatPayload } from "@/lib/format-payload/schemas";
  * mutations that:
  *  - Don't redirect (the user stays on the page)
  *  - Don't require the full set of required fields
- *  - Trigger the same audit / activity events + materiality
- *    invalidation as the full edit
- *  - Re-check the broader inline-editability guard (see
- *    `INLINE_EDITABLE_STATUSES` below) so a planner can fix a
- *    last-minute title / date / brief on an item that's
- *    already in design or ready_to_publish without round-
- *    tripping through the full edit form.
+ *  - Trigger the same audit / activity events + materiality record
+ *    as the full edit
+ *  - Allow role-owned fields at every non-cancelled workflow stage
  *
  * Materiality contract (master prompt §4): any change to the
- * brief, the schedule, or the title invalidates the existing
- * approval set. Each inline mutation funnels through
- * `recordMaterialityEvent` so the revision bumps, approvals
- * reset, and reviewers get notified — same guarantees as the
- * full `updateContentItem`.
+ * brief, the schedule, or the title records a material edit. Each inline
+ * mutation funnels through `recordMaterialityEvent` so the revision bumps
+ * and reviewers are notified while existing approvals remain valid.
  *
  * Each action returns `{ error?: string }` on failure and
  * `{ ok: true }` on success — the inline-edit component
@@ -64,12 +57,8 @@ const ProductionNotesUpdateSchema = z.object({
  * item) or a `{ error }` discriminant. Centralised so the
  * three actions below apply the same gate identically.
  *
- * Editability rule: an actor is allowed to inline-update iff
- * they hold the `workspace_manager` or `content_planner` role
- * AND the item status is in `INLINE_EDITABLE_STATUSES`. This
- * is intentionally broader than `UPDATEABLE_STATUSES` (which
- * gates the full edit form); see the module docstring for
- * the rationale and the materiality contract that follows.
+ * Editability rule: an actor is allowed to inline-update iff they hold the
+ * `workspace_manager` or `content_planner` role and the item is not cancelled.
  */
 async function getEditableItem(workspaceSlug: string, contentItemId: string) {
   const session = await auth();
@@ -97,7 +86,7 @@ async function getEditableItem(workspaceSlug: string, contentItemId: string) {
   if (!editable) {
     return { error: "You don't have permission to edit this item." } as const;
   }
-  if (!(INLINE_EDITABLE_STATUSES as readonly string[]).includes(item.status)) {
+  if (item.status === "cancelled") {
     return {
       error: `This item is in ${item.status.replace(/_/g, " ")} — only editable items can be changed here.`,
     } as const;
@@ -194,8 +183,8 @@ export async function inlineUpdateBriefAction(
     return {
       error:
         e instanceof Error
-          ? `${e.message} Brief was saved but approvals were not reset.`
-          : "Brief saved but approvals were not reset.",
+          ? `${e.message} Brief was saved and approval history remains unchanged.`
+          : "Brief saved and approval history remains unchanged.",
     };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
@@ -247,8 +236,8 @@ export async function inlineUpdateTitleAction(
   // Title is a co-equal creative-direction change (master prompt
   // §4: "any material change to the brief or creative direction
   // forces a fresh review"). Funnel through the materiality
-  // service so the same invalidation + notification contract
-  // runs as for a brief change.
+  // service so the same revision, audit, and notification
+  // contract runs as for a brief change.
   try {
     await recordMaterialityEvent({
       actor: ctx.actor,
@@ -262,8 +251,8 @@ export async function inlineUpdateTitleAction(
     return {
       error:
         e instanceof Error
-          ? `${e.message} Title was saved but approvals were not reset.`
-          : "Title saved but approvals were not reset.",
+          ? `${e.message} Title was saved and approval history remains unchanged.`
+          : "Title saved and approval history remains unchanged.",
     };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
@@ -320,8 +309,8 @@ export async function inlineUpdateDateAction(
   }
   // Schedule is the canonical `MATERIAL_RESOURCES` member that
   // maps to a date change. Funnel through the materiality service
-  // so the revision increments, the open approval_requests
-  // cancel, and the reviewers get notified.
+  // so the revision increments, approval history remains valid,
+  // and the reviewers get notified.
   try {
     await recordMaterialityEvent({
       actor: ctx.actor,
@@ -335,8 +324,8 @@ export async function inlineUpdateDateAction(
     return {
       error:
         e instanceof Error
-          ? `${e.message} Date was saved but approvals were not reset.`
-          : "Date saved but approvals were not reset.",
+          ? `${e.message} Date was saved and approval history remains unchanged.`
+          : "Date saved and approval history remains unchanged.",
     };
   }
   revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);

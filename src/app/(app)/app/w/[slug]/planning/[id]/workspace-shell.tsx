@@ -21,6 +21,7 @@ import {
   PRIMARY_WORKSPACE_TAB_IDS,
   SECONDARY_WORKSPACE_TAB_IDS,
   type WorkspaceTab,
+  type WorkspacePanelId,
   type WorkspaceTabId,
   normalizeWorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
@@ -88,7 +89,7 @@ export interface WorkspaceShellProps {
   tabs: WorkspaceTab[];
   /** Panel bodies, keyed by tab id. The shell renders only the
    *  active panel. Missing keys render nothing. */
-  panels: Partial<Record<WorkspaceTabId, React.ReactNode>>;
+  panels: Partial<Record<WorkspacePanelId, React.ReactNode>>;
   /** Operator-only reset action. */
   canResetIdea: boolean;
   resetCounts: ResetIdeaCounts;
@@ -159,49 +160,30 @@ export function WorkspaceShell({
   );
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionPending, setActionPending] = React.useState(false);
-  const initialHashAdoptedRef = React.useRef(false);
+  const initialHashHandledRef = React.useRef(false);
   const primaryTabs = tabs.filter((tab) => PRIMARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id));
   const secondaryTabs = tabs.filter((tab) =>
     SECONDARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id),
   );
 
-  // Adopt a deep-link hash after hydration. This is deliberately
-  // separate from the URL-sync effect below: React Strict Mode may
-  // replay effects before the state transition commits, and combining
-  // the two effects can overwrite a valid `#publishing` hash with the
-  // hydration fallback `#overview`.
+  // Adopt a deep-link hash after hydration and then keep the canonical hash
+  // in sync. Handling both steps in one effect avoids a Strict Mode race.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    // This is a one-time hydration handoff. Running it again after
-    // a user clicks a tab would read the old hash before the sync
-    // effect below has written the new one, causing the active tab
-    // and URL to oscillate (especially visible in mobile WebKit).
-    if (initialHashAdoptedRef.current) return;
-    initialHashAdoptedRef.current = true;
     const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
-    if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
-      React.startTransition(() => setActiveId(hash));
+    if (!initialHashHandledRef.current) {
+      if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
+        React.startTransition(() => setActiveId(hash));
+        return;
+      }
+      initialHashHandledRef.current = true;
     }
   }, [activeId, tabs]);
 
   // Sync the active tab to the URL hash so deep links and the
-  // back/forward buttons keep working. During the initial hydration
-  // handoff, leave a valid incoming hash untouched until the state
-  // transition above has committed.
-  const initialHashPendingRef = React.useRef(true);
+  // back/forward buttons keep working.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const incomingHash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
-    if (initialHashPendingRef.current) {
-      if (
-        incomingHash &&
-        tabs.some((tab) => tab.id === incomingHash) &&
-        incomingHash !== activeId
-      ) {
-        return;
-      }
-      initialHashPendingRef.current = false;
-    }
     const target = `#${activeId}`;
     if (window.location.hash !== target) {
       window.history.pushState(null, "", target);

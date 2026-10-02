@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
-import { getContentItem, UPDATEABLE_STATUSES } from "@/lib/content/service";
+import { getContentItem } from "@/lib/content/service";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -59,25 +59,6 @@ export default async function EditIdeaPage({
           description={t("planning.editAccessDeniedDescription")}
         />
         <Button asChild variant="ghost">
-          <Link href={`/app/w/${slug}/planning/${id}`}>
-            <DirAwareArrowLeft className="h-3.5 w-3.5" />
-            {t("contentDetail.copy.backToPlanning")}
-          </Link>
-        </Button>
-      </div>
-    );
-  }
-
-  if (!UPDATEABLE_STATUSES.includes(item.status as (typeof UPDATEABLE_STATUSES)[number])) {
-    return (
-      <div className="space-y-4">
-        <PageHeader
-          title={t("planning.frozenStatusTitle")}
-          description={t("planning.frozenStatusDescription", {
-            status: t(`planningFilters.statusLabels.${item.status}`),
-          })}
-        />
-        <Button asChild variant="secondary">
           <Link href={`/app/w/${slug}/planning/${id}`}>
             <DirAwareArrowLeft className="h-3.5 w-3.5" />
             {t("contentDetail.copy.backToPlanning")}
@@ -148,6 +129,7 @@ export default async function EditIdeaPage({
         }
       />
       <EditIdeaForm
+        mode="all"
         workspaceSlug={slug}
         contentItemId={item.id}
         workspaceTimezone={ws.timezone}

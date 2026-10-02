@@ -3,7 +3,7 @@
 import * as React from "react";
 import { WorkflowRail, type WorkflowRailBodyProps } from "./workflow-rail";
 import { WorkspaceShell } from "@/app/(app)/app/w/[slug]/planning/[id]/workspace-shell";
-import type { WorkspaceTab, WorkspaceTabId } from "./workspace-tabs";
+import type { WorkspacePanelId, WorkspaceTab } from "./workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
@@ -29,7 +29,7 @@ export interface PlanningDetailShellWorkspaceProps {
   canPostInternal: boolean;
   canPostClientVisible: boolean;
   tabs: WorkspaceTab[];
-  panels: Partial<Record<WorkspaceTabId, React.ReactNode>>;
+  panels: Partial<Record<WorkspacePanelId, React.ReactNode>>;
   canResetIdea: boolean;
   resetCounts: ResetIdeaCounts;
   activityCount: number;

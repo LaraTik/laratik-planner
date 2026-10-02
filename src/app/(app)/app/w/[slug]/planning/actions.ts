@@ -232,7 +232,7 @@ const ApplyAiDraftSchema = z.object({
  * `updateContentItem` service so the editability guard and the
  * `content_updated` activity event fire once, identically to the manual
  * edit form. Returns the new brief text on success; an error object on
- * failure (e.g. the item is past `draft | changes_requested`).
+ * failure (for example, when the item is cancelled).
  */
 export async function applyAiDraftAction(input: {
   workspaceSlug: string;

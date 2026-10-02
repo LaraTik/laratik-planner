@@ -80,7 +80,7 @@ const NonMaterialNoteSchema = z.object({
 
 /**
  * Record an internal note (administrative change). Does NOT
- * trigger revision increment, approval reset, or notifications.
+ * trigger revision increment, approval-history preservation, or notifications.
  * The master prompt's "Administrative changes such as internal
  * notes must not reset approvals" rule.
  */

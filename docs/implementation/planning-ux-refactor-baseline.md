@@ -3,6 +3,10 @@
 Baseline captured before the Planning UX refactor on the clean commit
 `c34c7e84` in the isolated worktree.
 
+This file is historical evidence only. The active contract is documented in
+`docs/implementation/planning-ux-refactor.md` and the 2026-10-02 checkpoint in
+`docs/production-readiness/PLANNING_UX_AUDIT_2026-09-09.md`.
+
 ## Current production surfaces
 
 - Planning list: `/app/w/[slug]/planning`

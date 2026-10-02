@@ -79,6 +79,8 @@ export interface FormatAwareContentEditorProps {
   editable: boolean;
   /** When set, only these production fields are editable (designer mode). */
   editableFields?: ReadonlyArray<string>;
+  /** Fields owned by another workspace, such as canonical publish copy. */
+  excludeFields?: ReadonlyArray<string>;
   locale: string;
   aiEnabled: boolean;
 }
@@ -260,6 +262,7 @@ export function FormatAwareContentEditor({
   initial: initialPayload,
   editable,
   editableFields,
+  excludeFields = [],
   locale,
   aiEnabled,
 }: FormatAwareContentEditorProps) {
@@ -329,7 +332,10 @@ export function FormatAwareContentEditor({
     return () => window.clearTimeout(timer);
   }, [dirty, pending, editable, currentJson]);
 
-  const fields = React.useMemo(() => fieldsFor(format), [format]);
+  const fields = React.useMemo(
+    () => fieldsFor(format).filter((field) => !excludeFields.includes(field.key)),
+    [format, excludeFields],
+  );
   const sections = SECTIONS_BY_FORMAT[format] ?? SECTIONS_BY_FORMAT.static_post!;
 
   function setField(key: string, value: unknown) {
@@ -455,7 +461,9 @@ export function FormatAwareContentEditor({
               // the render and skip the other.
               !isObjectiveAudienceKey(f.key),
           );
-          const hasObjectiveAudience = section.keys.some((k) => isObjectiveAudienceKey(k));
+          const hasObjectiveAudience = section.keys.some(
+            (k) => isObjectiveAudienceKey(k) && !excludeFields.includes(k),
+          );
           const coreFields = sectionFields.filter((field) => field.group === "essential");
           const optionalFields = sectionFields.filter((field) => field.group === "advanced");
           const objectiveAudienceOptional = fields.some(

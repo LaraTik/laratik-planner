@@ -39,11 +39,9 @@ vi.mock("next/navigation", () => ({
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. The contract:
- *  - Activity remains a deep-linkable panel but is opened from the overflow
- *    menu. The visible strip keeps overview / content / copy / delivery /
- *    preview / publishing. The Preview tab is the dedicated
- *    home for the platform simulator (master prompt §7 +
- *    AGENTS.md §B + §C).
+ *  - The visible strip exposes exactly four canonical workspaces:
+ *    Overview / Create / Publish / Activity. Legacy panel ids remain grouped
+ *    behind those owners, and the Preview surface remains inside Publish.
  *  - Every tab id maps to a Lucide icon — a regression that
  *    adds a tab without an icon fails the contract.
  *  - Only the active panel is rendered (off-tab content
@@ -55,11 +53,8 @@ vi.mock("next/navigation", () => ({
 
 const tabs: WorkspaceTab[] = [
   { id: "overview", label: "Overview" },
-  { id: "content", label: "Content" },
-  { id: "copy", label: "Copy" },
-  { id: "delivery", label: "Delivery" },
-  { id: "preview", label: "Preview" },
-  { id: "publishing", label: "Publishing" },
+  { id: "create", label: "Create" },
+  { id: "publish", label: "Publish" },
   { id: "activity", label: "Activity" },
 ];
 
@@ -89,26 +84,17 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
   );
 }
 
-describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
-  it("keeps production tabs primary and moves Activity to the overflow menu", () => {
-    expect(PRIMARY_WORKSPACE_TAB_IDS).toEqual([
-      "overview",
-      "content",
-      "copy",
-      "delivery",
-      "publishing",
-    ]);
-    expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual(["preview"]);
+describe("WorkspaceTabs — four-workspace contract", () => {
+  it("keeps the four workspaces primary", () => {
+    expect(PRIMARY_WORKSPACE_TAB_IDS).toEqual(["overview", "create", "publish", "activity"]);
+    expect(SECONDARY_WORKSPACE_TAB_IDS).toEqual([]);
   });
 
-  it("renders all seven tabs in the canonical order", () => {
+  it("renders the four canonical workspaces in order", () => {
     render(<TabsHost />);
     expect(screen.getByTestId("workspace-tab-overview")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-content")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-copy")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-delivery")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-preview")).toBeInTheDocument();
-    expect(screen.getByTestId("workspace-tab-publishing")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-tab-create")).toBeInTheDocument();
+    expect(screen.getByTestId("workspace-tab-publish")).toBeInTheDocument();
     expect(screen.getByTestId("workspace-tab-activity")).toBeInTheDocument();
   });
 
@@ -119,35 +105,45 @@ describe("WorkspaceTabs — Preview tab (/ui-ux-pro-max)", () => {
   });
 
   it("renders ONLY the active panel — off-tab content unmounts", () => {
-    render(<TabsHost initial="content" />);
+    render(<TabsHost initial="create" />);
     expect(screen.getByTestId("panel-content")).toBeInTheDocument();
-    expect(screen.queryByTestId("panel-preview")).toBeNull();
-    expect(screen.queryByTestId("panel-publishing")).toBeNull();
+    expect(screen.getByTestId("panel-preview").parentElement).toHaveAttribute("hidden");
+    expect(screen.getByTestId("panel-publishing").parentElement).toHaveAttribute("hidden");
     expect(screen.queryByTestId("panel-activity")).toBeNull();
   });
 
-  it("switches to the Preview panel when the Preview tab is clicked", async () => {
+  it("switches to the Publish panel when the Publish tab is clicked", async () => {
     const user = userEvent.setup();
-    render(<TabsHost initial="content" />);
-    await user.click(screen.getByTestId("workspace-tab-preview"));
-    expect(screen.getByTestId("panel-preview")).toBeInTheDocument();
-    expect(screen.getByTestId("panel-content")).toBeInTheDocument();
+    render(<TabsHost initial="create" />);
+    await user.click(screen.getByTestId("workspace-tab-publish"));
+    expect(screen.getByTestId("panel-copy")).toBeInTheDocument();
     // Active tab is reflected in aria-current.
-    expect(screen.getByTestId("workspace-tab-preview")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("workspace-tab-publish")).toHaveAttribute("aria-current", "true");
   });
 
   it("reads the initial active tab from the URL hash on mount", () => {
-    window.location.hash = "#preview";
-    expect(initialActiveTabFromHash(tabs)).toBe("preview");
+    window.location.hash = "#publish";
+    expect(initialActiveTabFromHash(tabs)).toBe("publish");
     window.location.hash = "";
   });
 
   it("keeps legacy readiness and workflow hashes backward-compatible", () => {
-    window.location.hash = "#messages";
-    expect(normalizeWorkspaceTabId("messages")).toBe("copy");
-    expect(initialActiveTabFromHash([...tabs, { id: "copy", label: "Copy" }])).toBe("copy");
-    expect(normalizeWorkspaceTabId("assets-versions")).toBe("delivery");
-    expect(normalizeWorkspaceTabId("workflow")).toBe("overview");
+    const aliases = {
+      content: "create",
+      "assets-versions": "create",
+      delivery: "create",
+      copy: "publish",
+      preview: "publish",
+      publishing: "publish",
+      messages: "publish",
+      workflow: "overview",
+    } as const;
+
+    for (const [alias, canonical] of Object.entries(aliases)) {
+      expect(normalizeWorkspaceTabId(alias)).toBe(canonical);
+      window.location.hash = `#${alias}`;
+      expect(initialActiveTabFromHash(tabs)).toBe(canonical);
+    }
     window.location.hash = "";
   });
 
@@ -246,10 +242,10 @@ describe("WorkspaceShell — initial hash handoff", () => {
       />,
     );
 
-    await user.click(screen.getByTestId("workspace-tab-publishing"));
+    await user.click(screen.getByTestId("workspace-tab-publish"));
 
     expect(screen.getByTestId("shell-panel-publishing")).toBeInTheDocument();
     expect(screen.queryByTestId("shell-panel-overview")).toBeNull();
-    expect(window.location.hash).toBe("#publishing");
+    expect(window.location.hash).toBe("#publish");
   });
 });

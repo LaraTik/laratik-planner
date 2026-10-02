@@ -2,12 +2,9 @@
 
 import * as React from "react";
 import {
-  Eye,
   History,
   LayoutDashboard,
   MessageCircle,
-  MessageSquare,
-  Package,
   Pencil,
   Send,
   type LucideIcon,
@@ -18,18 +15,11 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
 /**
  * WorkspaceTabs — the in-page tab strip for the content detail
  * page. Reduces vertical page length by grouping the body into
- * seven task-oriented views:
+ * four task-oriented views:
  *
  *   Overview   — at-a-glance: brief, schedule, channels, readiness
- *   Content    — strategy, creative brief, format fields, AI
- *   Copy       — canonical audience-facing copy and channel readiness
- *   Delivery   — upload, select, submit, and review delivery versions
- *   Preview    — full-width platform simulator (Feed / Reel / Story /
- *                Carousel). The old "sticky 360px right rail" was
- *                the row's biggest UX smell per AGENTS.md §B;
- *                moving it to a dedicated tab gives the Content
- *                tab its editing width back.
- *   Publishing — per-channel setup, readiness, approval
+ *   Create     — brief, creative fields, production, and delivery
+ *   Publish    — copy, destinations, previews, readiness, and publishing
  *   Activity   — lifecycle events + delivery history
  *
  * Phase 1 of the planning-detail refactor (2026-08-30) converted
@@ -47,39 +37,42 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  *   - Touch targets are 44px on small viewports.
  */
 
-export type WorkspaceTabId =
-  "overview" | "content" | "copy" | "delivery" | "preview" | "publishing" | "activity";
-export type WorkspaceTabHash = WorkspaceTabId | "messages";
+export type WorkspaceTabId = "overview" | "create" | "publish" | "activity";
+export type LegacyWorkspacePanelId =
+  | "overview"
+  | "content"
+  | "copy"
+  | "delivery"
+  | "preview"
+  | "publishing"
+  | "activity"
+  | "create-basics"
+  | "publish-settings";
+export type WorkspacePanelId = WorkspaceTabId | LegacyWorkspacePanelId;
+export type WorkspaceTabHash =
+  WorkspaceTabId | LegacyWorkspacePanelId | "messages" | "assets-versions" | "workflow";
 
 /**
- * The task workspace has six primary destinations. Preview remains available
- * as a direct secondary action without competing with the production flow.
- *
- * Keep the internal ids unchanged: deep links and saved browser history use
- * `content`, `copy`, `delivery`, and `publishing` even though the visible
- * labels are more task-oriented.
+ * The task workspace has four destinations. Legacy panel ids remain internal
+ * so existing deep links and saved browser history continue to resolve.
  */
 export const PRIMARY_WORKSPACE_TAB_IDS = [
   "overview",
-  "content",
-  "copy",
-  "delivery",
-  "publishing",
+  "create",
+  "publish",
+  "activity",
 ] as const satisfies readonly WorkspaceTabId[];
 
-export const SECONDARY_WORKSPACE_TAB_IDS = ["preview"] as const satisfies readonly WorkspaceTabId[];
+export const SECONDARY_WORKSPACE_TAB_IDS = [] as const satisfies readonly WorkspaceTabId[];
 
 /** `#messages` was public in shared links; keep it as a read-compatible alias. */
 export function normalizeWorkspaceTabId(value: string): WorkspaceTabId | null {
-  // These aliases are kept for old bookmarks, readiness links, and
-  // shared review URLs. The visible workspace still uses the six
-  // task-oriented tabs; aliases only resolve to their owning task.
-  if (value === "messages") return "copy";
-  if (value === "assets-versions") return "delivery";
+  // These aliases are kept for old bookmarks, readiness links, and shared
+  // review URLs. They resolve to the new canonical workspace owner.
+  if (["content", "delivery", "assets-versions"].includes(value)) return "create";
+  if (["copy", "preview", "publishing", "messages"].includes(value)) return "publish";
   if (value === "workflow") return "overview";
-  return ["overview", "content", "copy", "delivery", "preview", "publishing", "activity"].includes(
-    value,
-  )
+  return ["overview", "create", "publish", "activity"].includes(value)
     ? (value as WorkspaceTabId)
     : null;
 }
@@ -99,11 +92,8 @@ export interface WorkspaceTab {
 
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
   overview: LayoutDashboard,
-  content: Pencil,
-  copy: MessageSquare,
-  delivery: Package,
-  preview: Eye,
-  publishing: Send,
+  create: Pencil,
+  publish: Send,
   activity: History,
 };
 
@@ -258,21 +248,37 @@ export function WorkspaceTabs({
 export interface WorkspacePanelsProps {
   /** Map of tab id → panel body. Missing keys render nothing
    *  (defensive against server-side render races). */
-  panels: Partial<Record<WorkspaceTabId, React.ReactNode>>;
+  panels: Partial<Record<WorkspacePanelId, React.ReactNode>>;
   /** Active tab id; the matching panel is the only one rendered. */
   value: WorkspaceTabId;
 }
 
 export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
-  const persistent = new Set<WorkspaceTabId>(["content", "copy"]);
+  const panelGroups: Record<WorkspaceTabId, readonly WorkspacePanelId[]> = {
+    overview: ["overview"],
+    create: ["create-basics", "content", "delivery"],
+    publish: ["publish-settings", "copy", "preview", "publishing"],
+    activity: ["activity"],
+  };
+  const visiblePanels = new Set(panelGroups[value]);
+  const persistent = new Set<WorkspacePanelId>([
+    "create-basics",
+    "content",
+    "delivery",
+    "publish-settings",
+    "copy",
+    "preview",
+    "publishing",
+  ]);
   return (
     <>
       {Object.entries(panels).map(([id, panel]) => {
         if (!panel) return null;
-        const tabId = id as WorkspaceTabId;
-        if (tabId !== value && !persistent.has(tabId)) return null;
+        const panelId = id as WorkspacePanelId;
+        const visible = visiblePanels.has(panelId);
+        if (!visible && !persistent.has(panelId)) return null;
         return (
-          <div key={tabId} hidden={tabId !== value} aria-hidden={tabId !== value}>
+          <div key={panelId} hidden={!visible} aria-hidden={!visible}>
             {panel}
           </div>
         );

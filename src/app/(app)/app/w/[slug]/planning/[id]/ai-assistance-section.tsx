@@ -204,7 +204,7 @@ export function AiAssistanceSection({
   React.useEffect(() => () => requestController.current?.abort(), []);
 
   const canUse = isManager || isPlanner;
-  const canEditBrief = contentStatus === "draft" || contentStatus === "changes_requested";
+  const canEditBrief = canUse && contentStatus !== "cancelled";
 
   // Wrap the variant-selection setter so the diff confirm is
   // reset on every pick. This avoids a useEffect (React 19

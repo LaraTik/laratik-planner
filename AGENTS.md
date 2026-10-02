@@ -569,9 +569,14 @@ Every agent modifying user-facing UI in this repository — pages, components, l
 
 ### Planning UX contract
 
-Planning keeps five production tabs: Overview, Creative brief, Audience copy,
-Assets, and Publish. Preview and Activity remain secondary utilities. The
-compatibility hashes are part of the public UI contract and must not be removed.
+Planning keeps four production workspaces: Overview, Create, Publish, and
+Activity. Create owns the brief, format-specific creative fields, production
+notes, references, assets, and delivery versions. Publish owns canonical copy,
+translations, channel overrides, destinations, schedule, previews, readiness,
+approvals, and publishing. The compatibility hashes are part of the public UI
+contract and must not be removed; `content`, `assets-versions`, and `delivery`
+resolve to Create; `copy`, `preview`, `publishing`, and `messages` resolve to
+Publish; and `workflow` resolves to Overview.
 
 - Use the six active workflow stages everywhere: Planning, Content review,
   Creative production, Creative approval, Publishing setup, and Published.

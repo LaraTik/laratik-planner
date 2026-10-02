@@ -12,8 +12,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
 }));
 
 /**
- * Phase 2 of the planning-workspace-v2 refactor (2026-08-30):
- * the Content tab now renders the workbook-shaped production
+ * The Create workspace renders the workbook-shaped production
  * fields without inferred Strategy / Hook / Scenes groups.
  *
  * Phase 5b (2026-09-01): the editor now resolves its
@@ -110,6 +109,31 @@ describe("FormatAwareContentEditor", () => {
   it("renders the Save button in editable mode", () => {
     render(<FormatAwareContentEditor {...baseProps} format="static_post" />);
     expect(screen.getByTestId("format-aware-save-now")).toBeInTheDocument();
+  });
+
+  it("keeps publication copy out of the Create workspace", () => {
+    render(
+      <FormatAwareContentEditor
+        {...baseProps}
+        format="static_post"
+        excludeFields={[
+          "caption",
+          "hashtags",
+          "firstComment",
+          "callToAction",
+          "description",
+          "location",
+        ]}
+      />,
+    );
+
+    expect(screen.queryByTestId("field-caption-caption")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-hashtags-hashtags")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-firstComment-firstComment")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-callToAction-callToAction")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-description-description")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("field-location-location")).not.toBeInTheDocument();
+    expect(screen.getByTestId("field-onImageText")).toBeInTheDocument();
   });
 
   it("lets a designer edit production fields while keeping strategy read-only", () => {

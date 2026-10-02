@@ -8,11 +8,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
  * master prompt's "Material edits and approvals" section.
  *
  *   - `recordMaterialityEvent` increments the content item's
- *     revision, cancels every pending approval request, records
- *     an immutable activity_event row, and notifies every
- *     active reviewer.
+ *     revision, preserves approval requests, records an immutable
+ *     activity_event row, and notifies active reviewers.
  *   - `recordNonMaterialityEvent` writes a `material: false`
- *     activity row with no revision bump, no approval cancel,
+ *     activity row with no revision bump, no approval change,
  *     and no notifications.
  *   - `listMaterialEdits` returns the recent material-edit history
  *     for a content item, filtered to `metadata.material = true`.
@@ -310,30 +309,10 @@ describe("recordMaterialityEvent", () => {
     ).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("increments revision, cancels approvals, and notifies reviewers", async () => {
+  it("increments revision, preserves approvals, and notifies reviewers", async () => {
     // 1. content-item lookup (select.limit(1) → lastSelectRowCount=1)
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
-    // 2. inside tx: openRequests (2 pending approvals → lastSelectRowCount=2)
-    dbState.selectResults.push([
-      {
-        id: "approval-1",
-        contentItemId,
-        gate: "creative_internal",
-        deliveryVersionId: "delivery-1",
-        requestedBy: "user-2",
-        sequence: 1,
-      },
-      {
-        id: "approval-2",
-        contentItemId,
-        gate: "creative_client",
-        deliveryVersionId: "delivery-1",
-        requestedBy: "user-3",
-        sequence: 2,
-      },
-    ]);
-    // 3. reviewers query (after the cancel, the SUT re-selects
-    //    approval_requests for the notification set).
+    // 2. current request owners for the informational notification.
     dbState.selectResults.push([{ requestedBy: userId }, { requestedBy: "user-2" }]);
 
     const result = await recordMaterialityEvent({
@@ -347,36 +326,14 @@ describe("recordMaterialityEvent", () => {
 
     expect(result).toEqual({
       revision: 1, // the mock's first update returns 1 row (1 = lastSelectRowCount from the limit(1) select)
-      cancelledApprovalCount: 2, // 2 pending approvals cancelled
+      cancelledApprovalCount: 0,
       notifiedReviewerCount: 1, // actor is dropped from the notify set
     });
-    expect(dbState.updateCalls.length).toBeGreaterThanOrEqual(2); // revision + cancel
+    expect(dbState.updateCalls.length).toBeGreaterThanOrEqual(1); // revision bump
     expect(dbState.insertCalls.length).toBeGreaterThanOrEqual(2); // activity + notification
-    expect(
-      dbState.insertCalls.filter((c) => {
-        const values = c.values as Record<string, unknown>;
-        return values.gate === "creative_internal" || values.gate === "creative_client";
-      }),
-    ).toEqual([
-      {
-        values: {
-          contentItemId,
-          gate: "creative_internal",
-          deliveryVersionId: "delivery-1",
-          requestedBy: "user-2",
-          sequence: 2,
-        },
-      },
-      {
-        values: {
-          contentItemId,
-          gate: "creative_client",
-          deliveryVersionId: "delivery-1",
-          requestedBy: "user-3",
-          sequence: 3,
-        },
-      },
-    ]);
+    expect(dbState.insertCalls.some((c) => "gate" in (c.values as Record<string, unknown>))).toBe(
+      false,
+    );
     const activityInsert = dbState.insertCalls.find((c) =>
       (c.values as Record<string, unknown>).summary?.toString().includes("Material edit"),
     );
@@ -385,7 +342,6 @@ describe("recordMaterialityEvent", () => {
 
   it("returns 0 notifiedReviewerCount when the only reviewer is the actor", async () => {
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
-    dbState.selectResults.push([]); // no open approval requests
     dbState.selectResults.push([{ requestedBy: userId }]); // reviewers = actor only
     const result = await recordMaterialityEvent({
       actor,
@@ -401,7 +357,6 @@ describe("recordMaterialityEvent", () => {
 
   it("writes an activity row that captures the resource, reason code, and revision", async () => {
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
-    dbState.selectResults.push([]);
     dbState.selectResults.push([]);
     await recordMaterialityEvent({
       actor,
@@ -429,7 +384,6 @@ describe("recordMaterialityEvent", () => {
 
   it("treats canonical audience copy as a material edit", async () => {
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
-    dbState.selectResults.push([{ id: "approval-1" }]);
     dbState.selectResults.push([{ requestedBy: "user-2" }]);
 
     const result = await recordMaterialityEvent({
@@ -442,7 +396,7 @@ describe("recordMaterialityEvent", () => {
     });
 
     expect(result.revision).toBe(1);
-    expect(result.cancelledApprovalCount).toBe(1);
+    expect(result.cancelledApprovalCount).toBe(0);
     expect(result.notifiedReviewerCount).toBe(1);
     const activityInsert = dbState.insertCalls.find((c) =>
       (c.values as Record<string, unknown>).summary?.toString().includes("audience_copy"),
@@ -626,7 +580,6 @@ describe("recordMaterialityEvent — persists objects, not scalars (2026-09-27 r
     resource: "schedule" | "platform_payload" | "audience_copy";
   }) {
     dbState.selectResults.push([{ id: contentItemId, workspaceId }]);
-    dbState.selectResults.push([]);
     dbState.selectResults.push([]);
     await recordMaterialityEvent({
       actor,

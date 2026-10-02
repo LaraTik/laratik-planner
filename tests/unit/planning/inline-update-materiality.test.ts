@@ -10,7 +10,7 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
  * actions never did. A planner could change the title / date /
  * brief on a `ready_to_publish` item without:
  *   - bumping the revision
- *   - cancelling the open approval_requests
+ *   - preserving the approval history without a new request
  *   - notifying the reviewers
  * which broke the master-prompt §4 materiality contract.
  *

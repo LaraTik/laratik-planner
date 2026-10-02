@@ -185,12 +185,10 @@ describe("inline-update gate", () => {
     ]);
   });
 
-  it("names the blocking status when the item is past the inline window", async () => {
-    primeGate("awaiting_approval");
+  it("keeps cancelled items immutable", async () => {
+    primeGate("cancelled");
     const result = await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief");
-    expect(result.error).toContain("awaiting approval");
-    // An underscore status is rendered with spaces, not snake_case.
-    expect(result.error).not.toContain("_");
+    expect(result.error).toContain("cancelled");
   });
 
   it("allows every documented inline-editable status", async () => {
@@ -259,18 +257,20 @@ describe("inlineUpdateBriefAction", () => {
     });
   });
 
-  it("says the brief saved when only the materiality reset failed", async () => {
+  it("says the brief saved when only the materiality record failed", async () => {
     materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("no reviewer found"));
     const result = await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief");
     // The row IS saved. Telling the planner it failed would make them
-    // re-save, and the approvals would still be stale.
-    expect(result.error).toBe("no reviewer found Brief was saved but approvals were not reset.");
+    // re-save, and approval history remains intentionally valid.
+    expect(result.error).toBe(
+      "no reviewer found Brief was saved and approval history remains unchanged.",
+    );
   });
 
   it("uses the generic wording when a non-Error materiality failure is thrown", async () => {
     materialityMock.recordMaterialityEvent.mockRejectedValue({ weird: true });
     expect(await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief")).toEqual({
-      error: "Brief saved but approvals were not reset.",
+      error: "Brief saved and approval history remains unchanged.",
     });
   });
 
@@ -332,12 +332,12 @@ describe("inlineUpdateTitleAction", () => {
     primeTransaction({ title: "Old" });
     materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("x"));
     expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({
-      error: "x Title was saved but approvals were not reset.",
+      error: "x Title was saved and approval history remains unchanged.",
     });
 
     materialityMock.recordMaterialityEvent.mockRejectedValue({});
     expect(await inlineUpdateTitleAction(SLUG, ITEM_ID, "New title")).toEqual({
-      error: "Title saved but approvals were not reset.",
+      error: "Title saved and approval history remains unchanged.",
     });
   });
 });
@@ -403,12 +403,12 @@ describe("inlineUpdateDateAction", () => {
     primeTransaction({ plannedPublishAt: new Date("2026-03-01T00:00:00.000Z") });
     materialityMock.recordMaterialityEvent.mockRejectedValue(new Error("x"));
     expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({
-      error: "x Date was saved but approvals were not reset.",
+      error: "x Date was saved and approval history remains unchanged.",
     });
 
     materialityMock.recordMaterialityEvent.mockRejectedValue({});
     expect(await inlineUpdateDateAction(SLUG, ITEM_ID, NEW_DATE)).toEqual({
-      error: "Date saved but approvals were not reset.",
+      error: "Date saved and approval history remains unchanged.",
     });
   });
 });
