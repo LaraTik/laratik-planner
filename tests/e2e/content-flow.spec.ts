@@ -516,7 +516,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await expect(page.getByTestId("planning-channel-filter")).toHaveValue(seeded.channelIds[0]!);
     await expect(page.getByTestId("planning-owner-filter")).toHaveValue(seeded.userId);
 
-    const boardLink = page.getByTestId("planning-switch-to-board");
+    const boardLink = page.getByTestId("planning-view-board");
     const boardHref = await boardLink.getAttribute("href");
     expect(boardHref).toBeTruthy();
     const boardUrl = new URL(boardHref!, "http://planner.test");
