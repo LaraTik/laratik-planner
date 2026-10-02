@@ -117,6 +117,29 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/analytics/social`);
   });
 
+  it("uses one Planning destination for list, board, and calendar views", () => {
+    const nav = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: true,
+      canManage: true,
+      canAccessTrendRadar: false,
+    });
+    const planning = nav.groups
+      .find((group) => group.key === "plan")
+      ?.items.find((item) => item.key === "planning");
+
+    expect(planning?.kind).toBe("link");
+    if (planning?.kind === "link") {
+      expect(planning.href).toBe(`${wsBase}/planning`);
+      expect(planning.activePrefixes).toEqual([
+        `${wsBase}/planning`,
+        `${wsBase}/board`,
+        `${wsBase}/calendar`,
+      ]);
+    }
+  });
+
   it("adds Trend Radar to understand and settings only when enabled", () => {
     const nav = buildWorkspaceNavigation({
       wsBase,

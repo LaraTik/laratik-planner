@@ -203,7 +203,7 @@ describe("Sidebar (workspace-aware)", () => {
     expect(overview).toHaveAttribute("href", "/app/w/northstar");
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");
-    expect(screen.getByRole("link", { name: "Calendar" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
     expect(screen.getByRole("link", { name: "Trend Radar" })).toHaveAttribute(
       "href",
       "/app/w/northstar/trends",
@@ -287,28 +287,20 @@ describe("Sidebar (workspace-aware)", () => {
   it("highlights the active workspace tab based on the pathname", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/calendar");
     render(<Sidebar {...baseProps} />);
-    const calendar = screen.getByRole("link", { name: "Calendar" });
-    expect(calendar).toHaveAttribute("aria-current", "page");
-    // Calendar is nested under the active Planning route family, so
-    // both the family parent and exact child communicate context.
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
   });
 
-  it("does not mark the planning list as active on monthly or batch routes", () => {
+  it("keeps Planning active across its deep-link routes", () => {
     for (const pathname of [
       "/app/w/northstar/planning/monthly",
       "/app/w/northstar/planning/batch",
+      "/app/w/northstar/board",
     ]) {
       usePathnameMock.mockReturnValue(pathname);
       const { unmount } = render(<Sidebar {...baseProps} />);
-      const monthly = screen.getByRole("link", { name: "Monthly planning" });
-      if (pathname.endsWith("/monthly")) {
-        expect(monthly).toHaveAttribute("aria-current", "page");
-      } else {
-        expect(monthly).not.toHaveAttribute("aria-current", "page");
-      }
-      expect(screen.getByRole("link", { name: "List" })).not.toHaveAttribute(
+      expect(screen.getByRole("link", { name: "Planning" })).toHaveAttribute(
         "aria-current",
         "page",
       );
@@ -339,13 +331,14 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByRole("link", { name: "Overview" })).toBeNull();
   });
 
-  it("exposes board, design queue, and library in workspace navigation", () => {
+  it("exposes the canonical Planning route, design queue, and library in workspace navigation", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/board");
     render(<Sidebar {...baseProps} />);
-    expect(screen.getByRole("link", { name: /Board/i })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "Planning" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/board",
+      "/app/w/northstar/planning",
     );
+    expect(screen.queryByRole("link", { name: /Board/i })).toBeNull();
     expect(screen.getByRole("link", { name: "Design queue" })).toHaveAttribute(
       "href",
       "/app/w/northstar/design-queue",

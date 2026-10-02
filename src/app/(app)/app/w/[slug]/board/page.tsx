@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { asc, eq } from "drizzle-orm";
-import { Clock, LayoutGrid, List } from "lucide-react";
+import { Clock, LayoutGrid } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -15,6 +15,7 @@ import {
   type BoardMemberEntry,
 } from "@/components/board/workflow-board";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
+import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
@@ -236,29 +237,15 @@ export default async function WorkflowBoardPage({
         }
         action={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              asChild
-              data-testid="board-switch-to-list"
-              title={t("board.listViewTitle")}
-            >
-              <Link href={listHref}>
-                <List className="h-4 w-4" aria-hidden="true" />
-                {t("board.listView")}
-              </Link>
-            </Button>
-            <Button
-              variant="outline"
-              asChild
-              disabled
-              data-testid="board-switch-to-board"
-              aria-current="page"
-            >
-              <span>
-                <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-                {t("board.boardView")}
-              </span>
-            </Button>
+            <PlanningViewSwitcher
+              active="board"
+              links={{
+                list: listHref,
+                board: `/app/w/${slug}/board`,
+                calendar: `/app/w/${slug}/calendar`,
+              }}
+              t={t}
+            />
           </div>
         }
       />

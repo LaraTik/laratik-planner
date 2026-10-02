@@ -72,9 +72,11 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
     await expect(page.getByTestId("mobile-primary-create")).toHaveCount(0);
     await page.getByTestId("mobile-navigation-more").click();
     await expect(page.getByRole("dialog", { name: "Navigate" })).toBeVisible();
-    for (const label of ["Board", "Calendar", "Design queue", "Library", "Brand kit", "Settings"]) {
+    for (const label of ["Design queue", "Library", "Brand kit", "Settings"]) {
       await expect(page.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
+    await expect(page.getByRole("link", { name: "Board", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "Calendar", exact: true })).toHaveCount(0);
     const a11y = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
       .analyze();

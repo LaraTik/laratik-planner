@@ -592,6 +592,7 @@ function renderItem(
       const childHash = hashIndex >= 0 ? item.href.slice(hashIndex + 1) : null;
       const isActive =
         (spiedActiveId !== null && childHash === spiedActiveId) ||
+        (item.activePrefixes?.some((prefix) => isActivePath(prefix, pathname)) ?? false) ||
         isActivePath(item.href, pathname, item.exact === undefined ? {} : { exact: item.exact });
       return (
         <SidebarLinkRow

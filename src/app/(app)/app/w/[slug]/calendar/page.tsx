@@ -10,6 +10,7 @@ import { listWorkspaceContent } from "@/lib/content/service";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
+import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";
 import { cn } from "@/lib/utils";
 import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -92,12 +93,23 @@ export default async function EditorialCalendarPage({
           </>
         }
         action={
-          <MonthNav
-            month={reference}
-            buildHref={(offset) => `?month=${monthParam(offset)}`}
-            locale={code as LocaleCode}
-            t={t}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <PlanningViewSwitcher
+              active="calendar"
+              links={{
+                list: `/app/w/${slug}/planning?month=${monthParam(0)}`,
+                board: `/app/w/${slug}/board`,
+                calendar: `/app/w/${slug}/calendar?month=${monthParam(0)}`,
+              }}
+              t={t}
+            />
+            <MonthNav
+              month={reference}
+              buildHref={(offset) => `?month=${monthParam(offset)}`}
+              locale={code as LocaleCode}
+              t={t}
+            />
+          </div>
         }
       />
 

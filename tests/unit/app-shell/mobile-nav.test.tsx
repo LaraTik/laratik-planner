@@ -147,7 +147,7 @@ describe("MobileNav", () => {
     expect(screen.getByRole("link", { name: "All tasks" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("uses content creation inside a workspace and exposes every secondary route in More", async () => {
+  it("uses content creation inside a workspace and exposes secondary routes in More", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     const user = userEvent.setup();
     render(<MobileNav {...baseProps} canAccessTrendRadar />);
@@ -163,8 +163,6 @@ describe("MobileNav", () => {
     await user.click(screen.getByTestId("mobile-navigation-more"));
     expect(screen.getByRole("dialog", { name: "Navigate" })).toBeInTheDocument();
     for (const label of [
-      "Board",
-      "Calendar",
       "Design queue",
       "Library",
       "Media",
@@ -178,6 +176,8 @@ describe("MobileNav", () => {
     ]) {
       expect(screen.getByRole("link", { name: label })).toBeInTheDocument();
     }
+    expect(screen.queryByRole("link", { name: "Board" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
   });
 
   it("marks the current secondary workspace route active in More", async () => {
@@ -192,7 +192,7 @@ describe("MobileNav", () => {
       "aria-current",
       "page",
     );
-    expect(screen.getByRole("link", { name: "Board" })).not.toHaveAttribute("aria-current");
+    expect(screen.queryByRole("link", { name: "Board" })).toBeNull();
   });
 
   it("marks the current platform route active in More", async () => {

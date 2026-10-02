@@ -14,7 +14,6 @@ import {
   Gauge,
   HelpCircle,
   Home,
-  Kanban,
   LayoutDashboard,
   Library,
   Image as ImageIcon,
@@ -338,18 +337,6 @@ export function MobileNav({
 
             {currentWorkspace && !clientOnly ? (
               <MenuSection label={labelFor("workspaceSection", "Workspace")}>
-                <MobileMenuLink
-                  href={`${wsBase}/board`}
-                  icon={<Kanban />}
-                  label={labelFor("planning-board", "Board")}
-                  active={isActivePath(`${wsBase}/board`, pathname)}
-                />
-                <MobileMenuLink
-                  href={`${wsBase}/calendar`}
-                  icon={<CalendarDays />}
-                  label={labelFor("planning-calendar", "Calendar")}
-                  active={isActivePath(`${wsBase}/calendar`, pathname)}
-                />
                 <MobileMenuLink
                   href={`${wsBase}/design-queue`}
                   icon={<Palette />}

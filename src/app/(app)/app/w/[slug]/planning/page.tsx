@@ -7,16 +7,7 @@ import { listWorkspaceContent } from "@/lib/content/service";
 import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";
-import {
-  Clock,
-  Files,
-  Plus,
-  FileText,
-  Download,
-  AlertTriangle,
-  LayoutGrid,
-  CheckCircle2,
-} from "lucide-react";
+import { Clock, Files, Plus, FileText, Download, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
 import type { PlanningOwnerOption } from "@/components/workspace/change-owner-dialog";
@@ -24,6 +15,7 @@ import { PlanningListGrouped } from "@/components/workspace/planning-list-groupe
 import { PlanningFiltersBar } from "@/components/workspace/planning-filters-bar";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
+import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";
 import { Pagination } from "@/components/workspace/pagination";
 import { describeActiveFilter } from "./filter-describe";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -328,6 +320,23 @@ export default async function PlanningPage({
     if (density === "compact") params.set("density", "compact");
     return `?${params.toString()}`;
   };
+  const planningViewLinks = {
+    list: `/app/w/${slug}/planning${buildPageHref(1)}`,
+    board: (() => {
+      const params = new URLSearchParams();
+      if (selectedStatus) params.set("status", selectedStatus);
+      if (selectedStage) params.set("stage", selectedStage);
+      if (selectedFormat) params.set("format", selectedFormat);
+      if (ownerFilter) params.set("owner", ownerFilter);
+      if (channelFilter) params.set("channel", channelFilter);
+      if (healthFilter.length > 0) params.set("health", healthFilter.join(","));
+      if (parsedFilters.risk) params.set("risk", parsedFilters.risk);
+      if (searchTerm) params.set("search", searchTerm);
+      const query = params.toString();
+      return query ? `/app/w/${slug}/board?${query}` : `/app/w/${slug}/board`;
+    })(),
+    calendar: `/app/w/${slug}/calendar?month=${monthParam(0)}`,
+  } as const;
 
   return (
     <div className="mx-auto w-full max-w-[1440px] space-y-6" data-testid="workspace-planning">
@@ -395,37 +404,7 @@ export default async function PlanningPage({
                 </Button>
               </>
             ) : null}
-            {/* Switch to the board view with the same filters applied.
-                Filters are re-serialised (the board has no month scope,
-                so we drop the `month` key on the way across). The board
-                has no density concept, so we also drop `density` and
-                `page`. The destination re-renders the filter row from
-                the URL. */}
-            <Button
-              variant="outline"
-              asChild
-              data-testid="planning-switch-to-board"
-              title={t("planning.boardViewTitle")}
-            >
-              <Link
-                href={(() => {
-                  const params = new URLSearchParams();
-                  if (selectedStatus) params.set("status", selectedStatus);
-                  if (selectedStage) params.set("stage", selectedStage);
-                  if (selectedFormat) params.set("format", selectedFormat);
-                  if (ownerFilter) params.set("owner", ownerFilter);
-                  if (channelFilter) params.set("channel", channelFilter);
-                  if (healthFilter.length > 0) params.set("health", healthFilter.join(","));
-                  if (parsedFilters.risk) params.set("risk", parsedFilters.risk);
-                  if (searchTerm) params.set("search", searchTerm);
-                  const qs = params.toString();
-                  return qs ? `/app/w/${slug}/board?${qs}` : `/app/w/${slug}/board`;
-                })()}
-              >
-                <LayoutGrid className="h-4 w-4" aria-hidden="true" />
-                {t("planning.boardView")}
-              </Link>
-            </Button>
+            <PlanningViewSwitcher active="list" links={planningViewLinks} t={t} />
             {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — CSV export
                 of the current month's content. The link carries
                 the active month so the download matches what's

@@ -14,7 +14,6 @@ import {
   History,
   Home,
   Image as ImageIcon,
-  Kanban,
   LayoutDashboard,
   Library,
   Link as LinkIcon,
@@ -77,6 +76,8 @@ export type SidebarLinkSpec = {
   badge?: number | undefined;
   /** Use an exact pathname match when a sibling route shares a prefix. */
   exact?: boolean | undefined;
+  /** Treat sibling planning views as one navigation destination. */
+  activePrefixes?: string[] | undefined;
   /** Test id — auto-derived from key when omitted. */
   testId?: string | undefined;
 };
@@ -170,7 +171,7 @@ export function buildWorkspaceNavigation(input: {
           exact: true,
         },
         {
-          kind: "expandable",
+          kind: "link",
           key: "planning",
           label: "Planning",
           labelKey: "sidebar.planning",
@@ -178,41 +179,6 @@ export function buildWorkspaceNavigation(input: {
           icon: ClipboardList,
           activePrefixes: [`${wsBase}/planning`, `${wsBase}/board`, `${wsBase}/calendar`],
           testId: "sidebar-planning",
-          children: [
-            {
-              kind: "link",
-              key: "planning-list",
-              href: `${wsBase}/planning`,
-              label: "List",
-              labelKey: "sidebar.planningList",
-              icon: ClipboardList,
-              exact: true,
-            },
-            {
-              kind: "link",
-              key: "planning-board",
-              href: `${wsBase}/board`,
-              label: "Board",
-              labelKey: "sidebar.planningBoard",
-              icon: Kanban,
-            },
-            {
-              kind: "link",
-              key: "planning-calendar",
-              href: `${wsBase}/calendar`,
-              label: "Calendar",
-              labelKey: "sidebar.planningCalendar",
-              icon: CalendarDays,
-            },
-            {
-              kind: "link",
-              key: "planning-monthly",
-              href: `${wsBase}/planning/monthly`,
-              label: "Monthly planning",
-              labelKey: "sidebar.planningMonthly",
-              icon: Sparkles,
-            },
-          ],
         },
         {
           kind: "link",
