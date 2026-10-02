@@ -557,6 +557,19 @@
   "createNavigator": {
     "label": "أقسام الإنشاء"
   },
+  "publishNavigator": {
+    "label": "أقسام النشر",
+    "schedule": "الجدولة والوجهات",
+    "copy": "نسخة الجمهور",
+    "preview": "المعاينة",
+    "outcomes": "نتائج النشر"
+  },
+  "publishWorkspace": {
+    "scheduleDescription": "حدّد التاريخ المخطط والوجهات المختارة قبل تجهيز كل قناة.",
+    "outcomesDescription": "سجّل ما حدث في كل وجهة بعد النشر.",
+    "packageTitle": "حزمة النشر",
+    "packageDescription": "جهّز نسخة القنوات والإفصاحات والموافقات والجاهزية النهائية من مكان واحد."
+  },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
   "researchReference": {

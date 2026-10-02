@@ -159,7 +159,7 @@ test.describe("M4 — social analytics dashboard", () => {
     });
 
     await page.goto(`/app/w/${source.workspaceSlug}/analytics/social`);
-    await page.getByTestId("sidebar-workspace-switcher-trigger").click();
+    await page.getByTestId("topbar-workspace-switcher-trigger").click();
     await page
       .getByRole("listbox", { name: "Workspaces" })
       .getByRole("option", { name: "Analytics Switch Target" })

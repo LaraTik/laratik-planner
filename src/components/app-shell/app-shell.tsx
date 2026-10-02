@@ -155,8 +155,6 @@ export function AppShell({
           workspaces={workspaces}
           workspaceAccess={workspaceAccess}
           workspaceCanCreateContent={workspaceCanCreateContent}
-          workspaceSwitcherOptions={workspaces}
-          canCreateWorkspace={canCreateWorkspace}
           platformAccess={platformAccess}
           canAccessTrendRadar={canAccessTrendRadar}
           workspaceBadgesByWorkspaceId={workspaceBadges ?? {}}
@@ -180,6 +178,8 @@ export function AppShell({
           unreadCount={unreadCount}
           themePreference={themePreference}
           agencySwitcher={agencySwitcher}
+          workspaces={workspaces}
+          canCreateWorkspace={canCreateWorkspace}
           platformAccess={platformAccess}
           labels={chrome.sidebar}
           activeAgency={agencySwitcher.active}

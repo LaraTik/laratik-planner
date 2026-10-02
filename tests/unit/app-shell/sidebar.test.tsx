@@ -2,12 +2,13 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Sidebar } from "@/components/app-shell/sidebar";
+import { WorkspaceSwitcher } from "@/components/app-shell/workspace-switcher";
 
 // next/navigation's usePathname + useRouter are client hooks. We stub
 // usePathname per-test via vi.mock so the same suite can exercise
 // both the global-mode and workspace-mode branches of the
-// workspace-aware sidebar. useRouter is also stubbed because the
-// embedded WorkspaceSwitcher uses it for the popover's selection.
+// workspace-aware sidebar. useRouter is also stubbed for the
+// standalone workspace switcher contract tests below.
 const usePathnameMock = vi.fn<() => string>(() => "/app");
 const pushMock = vi.fn<(href: string) => void>(() => {});
 const refreshMock = vi.fn<() => void>(() => {});
@@ -37,12 +38,7 @@ const baseProps = {
     { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
     { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
   ],
-  workspaceSwitcherOptions: [
-    { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
-    { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
-  ],
   workspaceCanCreateContent: { "ws-1": true, "ws-2": true },
-  canCreateWorkspace: false,
   platformAccess: {
     canEnter: false,
     canReadAgencies: false,
@@ -76,15 +72,12 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
   });
 
-  it("keeps global context neutral instead of marking the first workspace active", () => {
+  it("keeps workspace context out of the sidebar", () => {
     usePathnameMock.mockReturnValue("/app/workspaces");
     render(<Sidebar {...baseProps} />);
 
-    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
-    const workspace = screen.getByTestId("sidebar-workspace-switcher-trigger");
-    expect(screen.queryByTestId("topbar-agency-switcher-trigger")).toBeNull();
-    expect(workspace).toHaveAttribute("aria-label", "Select a workspace. Click to open.");
-    expect(workspace).toHaveTextContent("Select workspace");
+    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
+    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
   });
 
   it("keeps the tablet rail visually icon-only even when desktop sidebar is expanded", () => {
@@ -217,7 +210,7 @@ describe("Sidebar (workspace-aware)", () => {
     expect(cta).toHaveAttribute("href", "/app/w/northstar/planning/new");
   });
 
-  it("keeps product branding compact and leaves workspace identity to the switcher", () => {
+  it("keeps product branding compact and leaves workspace identity to the topbar", () => {
     usePathnameMock.mockReturnValue("/app/w/autumn");
     render(<Sidebar {...baseProps} />);
     // Brand block: the parent <div class="min-w-0"> holds both the
@@ -226,10 +219,7 @@ describe("Sidebar (workspace-aware)", () => {
     const brandRow = productName.parentElement as HTMLElement | null;
     expect(brandRow).not.toBeNull();
     expect(brandRow!.textContent).toBe("StudioFlow");
-    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toHaveAttribute(
-      "aria-label",
-      "Active workspace: Autumn Blend. Click to switch.",
-    );
+    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
   });
 
   it("shows client reviewers only the client review navigation", () => {
@@ -268,9 +258,7 @@ describe("Sidebar (workspace-aware)", () => {
     usePathnameMock.mockReturnValue("/app");
     render(<Sidebar {...baseProps} />);
     // Brand block: the parent <div class="min-w-0"> only holds the
-    // product name. The workspace switcher in the sidebar bottom DOES
-    // still render the active workspace name even in global mode (per
-    // the Stitch design), so the assertion targets the brand row only.
+    // product name; workspace identity is owned by the topbar.
     const productName = screen.getByText("StudioFlow");
     const brandRow = productName.parentElement as HTMLElement | null;
     expect(brandRow).not.toBeNull();
@@ -386,16 +374,13 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByTestId("sidebar-badge-design-queue")).toBeNull();
   });
 
-  it("collapses to icon-rail while preserving workspace context", () => {
+  it("collapses to icon-rail without duplicating workspace context", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} collapsed={true} />);
     // Brand block: the logo (icon) is still discoverable via the link's
     // accessible name; the text label is hidden in icon-rail mode.
     expect(screen.getByLabelText("StudioFlow home")).toBeInTheDocument();
-    // Workspace context remains available in the icon rail.
-    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-workspace-switcher-trigger")).toBeInTheDocument();
-    expect(screen.queryByTestId("sidebar-agency-switcher-trigger")).toBeNull();
+    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
     // Create content CTA still rendered (per spec §18)
     expect(screen.getByTestId("sidebar-create-content")).toBeInTheDocument();
     // Footer collapse toggle is visible so the user can expand again
@@ -424,15 +409,12 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.queryByText("Manage")).toBeNull();
   });
 
-  it("renders the workspace switcher at the top of the sidebar in workspace mode", () => {
+  it("does not render a duplicate workspace switcher in workspace mode", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
-    // The switcher is rendered; the desktop layout mounts it inside
-    // a parent <aside data-testid="app-sidebar">. Standalone, the
-    // switcher is simply in the document at the top of the Sidebar.
-    const switcher = screen.getByTestId("sidebar-workspace-switcher-trigger");
     const nav = screen.getByRole("navigation", { name: "Primary" });
-    expect(nav).toContainElement(switcher);
+    expect(nav).not.toContainElement(screen.queryByTestId("topbar-workspace-switcher-trigger"));
+    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
   });
 
   it("renames Reviews → Approvals and Social Channels → Channels per spec §5/§6", () => {
@@ -527,11 +509,11 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     expect(screen.getByTestId("sidebar-group-label-global")).toHaveTextContent("عام");
   });
 
-  it("keeps workspace context separate from the tenant switcher", () => {
+  it("keeps workspace context out of the sidebar", () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
-    expect(screen.getByTestId("sidebar-workspace-context")).toBeInTheDocument();
-    expect(screen.queryByTestId("sidebar-agency-switcher-trigger")).toBeNull();
+    expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
+    expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
   });
 
   it("renders the Global group (All tasks + Global calendar) on global routes", () => {
@@ -564,13 +546,6 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
     const produceHeading = screen.getByTestId("sidebar-group-label-produce");
     expect(produceHeading.parentElement?.className ?? "").toMatch(/border-t/);
   });
-
-  it("renders the workspace switcher tab indicator (border-b-primary) when active", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(<Sidebar {...baseProps} />);
-    const wsTrigger = screen.getByTestId("sidebar-workspace-switcher-trigger");
-    expect(wsTrigger.className).toMatch(/border-b-primary/);
-  });
 });
 
 /**
@@ -594,6 +569,17 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
  * sub-action routes are kept, and the section index is
  * preserved.
  */
+function renderWorkspaceSwitcher() {
+  render(
+    <WorkspaceSwitcher
+      active={baseProps.workspaces[0]!}
+      options={baseProps.workspaces}
+      canCreate={false}
+      testId="workspace-switcher-trigger"
+    />,
+  );
+}
+
 describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
@@ -601,7 +587,7 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
   });
 
   async function chooseOtherWorkspace() {
-    const trigger = screen.getByTestId("sidebar-workspace-switcher-trigger");
+    const trigger = screen.getByTestId("workspace-switcher-trigger");
     const user = userEvent.setup();
     await user.click(trigger);
     const autumn = await screen.findByRole("option", { name: /Autumn Blend/ });
@@ -610,35 +596,35 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
 
   it("strips a detail id from /app/w/<old>/planning/<id> to the section index in the new workspace", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
   });
 
   it("strips a nested detail sub-path /app/w/<old>/planning/<id>/edit to the section index", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid/edit");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
   });
 
   it("keeps a known sub-action /app/w/<old>/planning/batch across the slug swap", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/batch");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/batch");
   });
 
   it("keeps /app/w/<old>/planning/new across the slug swap", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/new");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/new");
   });
 
   it("strips the id from the edit detail route /app/w/<old>/planning/edit/<id> → /app/w/<new>/planning", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning/edit/abc-123-uuid");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
   });
@@ -649,14 +635,14 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
     // leak a stale id. The new switcher treats any non-sub-action
     // segment as a detail id and strips it.
     usePathnameMock.mockReturnValue("/app/w/northstar/reviews/abc-123-uuid");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/reviews");
   });
 
   it("keeps a same-section path that has no detail id (/app/w/<old>/planning)", async () => {
     usePathnameMock.mockReturnValue("/app/w/northstar/planning");
-    render(<Sidebar {...baseProps} />);
+    renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
   });

@@ -40,4 +40,27 @@ describe("CreateSectionNavigator", () => {
     });
     window.removeEventListener("hashchange", hashListener);
   });
+
+  it("supports the Publish workspace without duplicating the navigator", async () => {
+    render(
+      <div>
+        <CreateSectionNavigator
+          label="Publish sections"
+          workspaceHash="#publish"
+          testId="publish-section-navigator"
+          sections={[{ id: "publish-outcomes", label: "Outcomes" }]}
+        />
+        <section id="publish-outcomes" tabIndex={-1}>
+          <p>Outcomes</p>
+        </section>
+      </div>,
+    );
+
+    fireEvent.click(screen.getByTestId("create-section-nav-publish-outcomes"));
+
+    expect(window.location.hash).toBe("#publish");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(document.getElementById("publish-outcomes")),
+    );
+  });
 });

@@ -57,6 +57,7 @@ export function WorkspaceSwitcher({
   options,
   canCreate,
   compact = false,
+  variant = "sidebar",
   testId,
   copy = DEFAULT_COPY,
 }: {
@@ -64,6 +65,7 @@ export function WorkspaceSwitcher({
   options: Workspace[];
   canCreate: boolean;
   compact?: boolean;
+  variant?: "sidebar" | "header";
   testId?: string;
   copy?: WorkspaceSwitcherCopy;
 }) {
@@ -149,8 +151,11 @@ export function WorkspaceSwitcher({
             // "you're currently inside this workspace" without
             // claiming new vertical space. The border is logical
             // so it mirrors automatically under `dir="rtl"`.
-            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 w-full min-w-11 items-center gap-2 rounded-s-none rounded-e-[var(--radius-control)] border-b-2 px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
-            active ? "border-b-primary" : "border-b-transparent",
+            "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring data-[state=open]:bg-surface-subtle inline-flex min-h-11 min-w-11 items-center gap-2 px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+            variant === "header"
+              ? "border-border bg-surface-subtle w-auto max-w-[18rem] rounded-[var(--radius-control)] border shadow-sm"
+              : "w-full rounded-s-none rounded-e-[var(--radius-control)] border-b-2",
+            variant === "sidebar" && (active ? "border-b-primary" : "border-b-transparent"),
             compact ? "justify-center xl:justify-start" : "justify-start",
           )}
         >

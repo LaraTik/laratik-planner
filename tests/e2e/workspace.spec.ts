@@ -86,7 +86,7 @@ test.describe("Workspace non-member experience", () => {
   });
 });
 
-test.describe("Workspace switcher keyboard (sidebar)", () => {
+test.describe("Workspace switcher keyboard (topbar)", () => {
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,
   }) => {
@@ -97,10 +97,8 @@ test.describe("Workspace switcher keyboard (sidebar)", () => {
     });
     await page.goto("/app");
 
-    // The switcher lives in the shared sidebar context block,
-    // not the topbar. The desktop sidebar is hidden < 768px so we
-    // assert the trigger is visible at the default Playwright viewport.
-    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
+    // The shared tenant/workspace scope cluster lives in the desktop topbar.
+    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
     await expect(trigger).toBeVisible();
     await trigger.focus();
     await expect(trigger).toBeFocused();
@@ -127,7 +125,7 @@ test.describe("Workspace switcher keyboard (sidebar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
+    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 
@@ -140,7 +138,7 @@ test.describe("Workspace switcher keyboard (sidebar)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app");
 
-    const trigger = page.locator('[data-testid="sidebar-workspace-switcher-trigger"]');
+    const trigger = page.locator('[data-testid="topbar-workspace-switcher-trigger"]');
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Workspaces" })).toBeVisible();
 

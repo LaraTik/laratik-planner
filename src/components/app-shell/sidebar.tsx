@@ -7,7 +7,6 @@ import { ChevronDown, Plus } from "lucide-react";
 import { isActivePath, cn } from "@/lib/utils";
 import { clampBadge } from "@/lib/nav/badge-format";
 import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
-import { WorkspaceSwitcher } from "./workspace-switcher";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
 import {
   buildAgencyNavigation,
@@ -29,7 +28,7 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  * The shape changes based on the current pathname:
  *
  *  - Inside /app/w/[slug]/* (workspace context):
- *      - Brand: logo + workspace context (tenant context lives in the topbar)
+ *      - Brand: logo only (tenant and workspace context live in the topbar)
  *      - Workspace tabs (vertical): Overview, Content group, Performance,
  *        Brand group, Manage group (when admin)
  *      - Persistent bottom area: Create content + user menu
@@ -40,7 +39,7 @@ import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-ac
  *      - Workspaces
  *      - (admin only) User Management, Agency Settings
  *      - (platform admin only) Platform console
- *      - Workspace context stays available on both global and workspace routes.
+ *      - Workspace context stays available in the topbar and mobile More sheet.
  *
  *  - Inside a client-reviewer workspace:
  *      - Minimal: Client review + Calendar
@@ -61,8 +60,6 @@ export function Sidebar({
   workspaces,
   workspaceAccess = {},
   workspaceCanCreateContent = {},
-  workspaceSwitcherOptions,
-  canCreateWorkspace,
   platformAccess,
   canAccessTrendRadar = false,
   workspaceBadgesByWorkspaceId = {},
@@ -75,8 +72,6 @@ export function Sidebar({
   workspaces: { id: string; slug: string; name: string }[];
   workspaceAccess?: Record<string, "internal" | "client" | "none">;
   workspaceCanCreateContent?: Record<string, boolean>;
-  workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
-  canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
   canAccessTrendRadar?: boolean;
   workspaceBadgesByWorkspaceId?: Record<string, { approvals: number; designQueue: number }>;
@@ -157,15 +152,8 @@ export function Sidebar({
       className="flex h-full min-w-0 flex-col overflow-x-hidden"
       aria-label={labelFor("sidebarAriaLabel", "Primary")}
     >
-      {/* Brand + unified agency/workspace context (top) */}
-      <SidebarHeader
-        collapsed={collapsed}
-        currentWorkspace={currentWorkspace}
-        workspaceSwitcherOptions={workspaceSwitcherOptions}
-        canCreateWorkspace={canCreateWorkspace}
-        onCollapsedChange={onCollapsedChange}
-        labels={labels}
-      />
+      {/* Brand only; tenant and workspace context live in the topbar. */}
+      <SidebarHeader collapsed={collapsed} onCollapsedChange={onCollapsedChange} labels={labels} />
 
       {/* Top section: workspace tabs OR global items */}
       <div className="flex-1 space-y-1 overflow-y-auto px-2 xl:px-3">
@@ -207,16 +195,10 @@ export function Sidebar({
 
 function SidebarHeader({
   collapsed,
-  currentWorkspace,
-  workspaceSwitcherOptions,
-  canCreateWorkspace,
   onCollapsedChange,
   labels = {},
 }: {
   collapsed: boolean;
-  currentWorkspace: { id: string; name: string; slug: string } | null;
-  workspaceSwitcherOptions: { id: string; name: string; slug: string }[];
-  canCreateWorkspace: boolean;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
   labels?: Record<string, string>;
 }) {
@@ -254,36 +236,6 @@ function SidebarHeader({
           <SidebarCollapseToggle collapsed={collapsed} variant="header" labels={labels} />
         ) : null}
       </div>
-      {!collapsed || currentWorkspace || workspaceSwitcherOptions.length > 0 ? (
-        <div
-          className="border-border bg-surface-subtle mt-2 flex flex-col gap-0.5 rounded-[var(--radius-card)] border p-1"
-          role="group"
-          aria-label={labels["workspaceSection"] ?? "Workspace context"}
-          data-testid="sidebar-workspace-context"
-        >
-          <WorkspaceSwitcher
-            active={currentWorkspace}
-            options={workspaceSwitcherOptions}
-            canCreate={canCreateWorkspace}
-            compact
-            copy={{
-              activeAria:
-                labels["workspaceSwitcherActiveAria"] ??
-                "Active workspace: {name}. Click to switch.",
-              selectAria:
-                labels["workspaceSwitcherSelectAria"] ?? "Select a workspace. Click to open.",
-              selectWorkspace: labels["workspaceSwitcherSelect"] ?? "Select workspace",
-              noWorkspacesAria: labels["workspaceSwitcherNoWorkspacesAria"] ?? "No workspaces",
-              createFirst: labels["workspaceSwitcherCreateFirst"] ?? "Create your first workspace",
-              switchTitle: labels["workspaceSwitcherSwitchTitle"] ?? "Switch workspace",
-              listAria: labels["workspaceSwitcherListAria"] ?? "Workspaces",
-              noWorkspacesYet: labels["workspaceSwitcherNoWorkspacesYet"] ?? "No workspaces yet.",
-              newWorkspace: labels["workspaceSwitcherNew"] ?? "New workspace",
-            }}
-            testId="sidebar-workspace-switcher-trigger"
-          />
-        </div>
-      ) : null}
     </div>
   );
 }

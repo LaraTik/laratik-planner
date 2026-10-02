@@ -946,7 +946,7 @@ export default async function ContentDetailPage({
                     collapsible
                     actions={
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" asChild>
+                        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" asChild>
                           <TabSwitchLink
                             href="#copy"
                             data-testid="content-open-copy"
@@ -956,7 +956,7 @@ export default async function ContentDetailPage({
                             <CopyIcon className="h-4 w-4" aria-hidden="true" />
                           </TabSwitchLink>
                         </Button>
-                        <Button variant="ghost" size="icon" asChild>
+                        <Button variant="ghost" size="icon" className="min-h-11 min-w-11" asChild>
                           <TabSwitchLink
                             href="#preview"
                             data-testid="content-open-preview"
@@ -1016,7 +1016,7 @@ export default async function ContentDetailPage({
                     description={t("contentDetail.sectionCreativeDescription")}
                     collapsible
                     actions={
-                      <Button variant="ghost" size="icon" asChild>
+                      <Button variant="ghost" size="icon" className="min-h-11 min-w-11" asChild>
                         <TabSwitchLink
                           href="#copy"
                           data-testid="content-open-copy"
@@ -1172,34 +1172,48 @@ export default async function ContentDetailPage({
                 </PlanningSection>
               </section>
             ),
-            "publish-settings": canEditAll ? (
+            "publish-settings": (
               <section
                 id="publish-settings"
                 className="mt-6 scroll-mt-24"
                 data-testid="workspace-publish-settings"
               >
-                <PlanningSection
-                  id="publish-schedule"
-                  title={t("contentDetail.overview.plannedPublish")}
-                  description={t("contentDetail.copy.publishHandoff")}
-                >
-                  <EditIdeaForm
-                    workspaceSlug={slug}
-                    contentItemId={item.id}
-                    workspaceTimezone={ws.timezone}
-                    channels={planningChannels}
-                    mode="publish"
-                    initial={{
-                      title: item.title,
-                      format: item.format,
-                      brief: item.brief ?? "",
-                      plannedPublishAtIso: item.plannedPublishAt.toISOString(),
-                      channelIds: [...selectedChannelIds],
-                    }}
-                  />
-                </PlanningSection>
+                <CreateSectionNavigator
+                  label={t("contentDetail.publishNavigator.label")}
+                  workspaceHash="#publish"
+                  testId="publish-section-navigator"
+                  sections={[
+                    { id: "publish-schedule", label: t("contentDetail.publishNavigator.schedule") },
+                    { id: "copy", label: t("contentDetail.publishNavigator.copy") },
+                    { id: "preview", label: t("contentDetail.publishNavigator.preview") },
+                    { id: "publish-outcomes", label: t("contentDetail.publishNavigator.outcomes") },
+                  ]}
+                />
+                {canEditAll ? (
+                  <PlanningSection
+                    id="publish-schedule"
+                    title={t("contentDetail.overview.plannedPublish")}
+                    description={t("contentDetail.publishWorkspace.scheduleDescription")}
+                    className="mt-4"
+                  >
+                    <EditIdeaForm
+                      workspaceSlug={slug}
+                      contentItemId={item.id}
+                      workspaceTimezone={ws.timezone}
+                      channels={planningChannels}
+                      mode="publish"
+                      initial={{
+                        title: item.title,
+                        format: item.format,
+                        brief: item.brief ?? "",
+                        plannedPublishAtIso: item.plannedPublishAt.toISOString(),
+                        channelIds: [...selectedChannelIds],
+                      }}
+                    />
+                  </PlanningSection>
+                ) : null}
               </section>
-            ) : null,
+            ),
             copy: (
               <section
                 id="copy"
@@ -1243,11 +1257,7 @@ export default async function ContentDetailPage({
               </section>
             ),
             preview: (
-              <section
-                id="preview"
-                className="mt-6 scroll-mt-24"
-                data-testid="workspace-tab-panel-preview"
-              >
+              <section className="mt-6 scroll-mt-24" data-testid="workspace-tab-panel-preview">
                 {/* Preview tab — the platform simulator lives here,
                     full-width. Previously a sticky 360px right rail
                     inside the Content tab; moved here by the
@@ -1258,41 +1268,36 @@ export default async function ContentDetailPage({
                     surface here; the current `PlatformPreview`
                     is the minimal first pass. */}
                 {item.channels.length === 0 ? (
-                  <div
-                    className="border-border bg-surface-subtle text-fg-secondary rounded-[var(--radius-card)] border p-6"
-                    data-testid="preview-empty"
-                  >
-                    <h3 className="text-title-card text-fg-primary mb-1 font-semibold">
-                      {t("contentDetail.preview.noChannelsTitle")}
-                    </h3>
-                    <p className="text-body">
-                      {canEditAll
+                  <PlanningSection
+                    id="preview"
+                    title={t("contentDetail.preview.noChannelsTitle")}
+                    description={
+                      canEditAll
                         ? t("contentDetail.copy.noChannelsDescription")
-                        : t("contentDetail.copy.noChannelsOwner")}
-                    </p>
+                        : t("contentDetail.copy.noChannelsOwner")
+                    }
+                    testId="preview-empty"
+                  >
                     {canEditAll ? (
-                      <Button asChild size="sm" variant="outline" className="mt-3">
+                      <Button asChild size="sm" variant="outline">
                         <TabSwitchLink href="#overview">
                           {t("contentDetail.copy.openDetails")}
                         </TabSwitchLink>
                       </Button>
                     ) : null}
-                  </div>
+                  </PlanningSection>
                 ) : (
-                  <div className="space-y-4">
-                    <header className="flex flex-wrap items-baseline justify-between gap-2">
-                      <div>
-                        <h2 className="text-section-title text-fg-primary font-semibold">
-                          {t("contentDetail.preview.title")}
-                        </h2>
-                        <p className="text-body text-fg-secondary">
-                          {t("contentDetail.preview.description", {
-                            platform: humanPlatform(item.channels[0]?.platform, t),
-                            account:
-                              item.channels[0]?.accountName ?? t("contentDetail.preview.noChannel"),
-                          })}
-                        </p>
-                      </div>
+                  <PlanningSection
+                    id="preview"
+                    title={t("contentDetail.preview.title")}
+                    description={t("contentDetail.preview.description", {
+                      platform: humanPlatform(item.channels[0]?.platform, t),
+                      account:
+                        item.channels[0]?.accountName ?? t("contentDetail.preview.noChannel"),
+                    })}
+                    collapsible
+                  >
+                    <div className="space-y-4">
                       {item.channels.length > 1 ? (
                         <p className="text-label text-fg-muted">
                           {t("contentDetail.preview.allChannels", {
@@ -1300,80 +1305,80 @@ export default async function ContentDetailPage({
                           })}
                         </p>
                       ) : null}
-                    </header>
-                    {item.channels[0]
-                      ? (() => {
-                          // P3 (2026-09-03, /ui-ux-pro-max): prefer the
-                          // per-channel `platformPayload.caption` /
-                          // `hashtags` when present (these reflect the
-                          // publisher's per-channel override from the
-                          // Publishing tab), then fall back to
-                          // `formatPayload.caption` (the planner's
-                          // single source of truth), then to the brief.
-                          // The Preview tab used to read only
-                          // `formatPayload` so per-channel edits
-                          // silently did not show up here.
-                          const copyView = buildAudienceCopyViewModel({
-                            format: item.format,
-                            formatPayload: (item as { formatPayload?: unknown }).formatPayload,
-                          });
-                          const plannerCaption = copyView.resolved.caption;
-                          const plannerHashtags = copyView.resolved.hashtags;
-                          const switcherChannels = item.channels.map((ch) => ({
-                            id: ch.id,
-                            socialChannelId: ch.socialChannelId,
-                            platform: ch.platform,
-                            accountName: ch.accountName,
-                            contentFormat: item.format,
-                            payload: (channelPayloads as Record<string, unknown>)[
-                              ch.socialChannelId
-                            ] as { caption?: string; hashtags?: string[] } | null,
-                          }));
-                          // P5 (2026-09-04, /ui-ux-pro-max round 5):
-                          // pick the first image-kind asset linked to
-                          // this content item so the preview actually
-                          // renders the creative (was: always empty).
-                          // `PlatformPreview.useImageDimensions` loads
-                          // the bytes and feeds the aspect-ratio
-                          // diagnostic — so the planner sees both the
-                          // image AND a "fits / will be cropped"
-                          // verdict against the platform's safe ratio.
-                          // The signed R2 URL was computed at the top
-                          // of the page render (see firstImageSignedPreviewUrl
-                          // below). Falls back to `/preview` (PR 2) and
-                          // finally to the full URL when no signed URL
-                          // was issued (legacy asset / no preview yet).
-                          const firstAssetHasPreview =
-                            !!firstImageAsset?.object.previewStorageObjectId;
-                          const thumbnailUrl = firstImageAsset
-                            ? (firstImageSignedPreviewUrl ??
-                              (firstAssetHasPreview
-                                ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
-                                : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`))
-                            : null;
-                          // Forward the stored intrinsic dimensions so
-                          // `PlatformPreview` does not need a second
-                          // client-side probe of the same image. Sourced
-                          // from `storage_objects.width/height` via
-                          // `listMediaAssetsForContentItem`. Null on
-                          // legacy assets where extraction failed; the
-                          // probe fallback inside PlatformPreview handles
-                          // those.
-                          const thumbnailWidth = firstImageAsset?.object.width ?? null;
-                          const thumbnailHeight = firstImageAsset?.object.height ?? null;
-                          return (
-                            <PlatformPreviewSwitcher
-                              channels={switcherChannels}
-                              sharedCaption={plannerCaption ?? item.brief ?? ""}
-                              {...(plannerHashtags ? { sharedHashtags: plannerHashtags } : {})}
-                              {...(thumbnailUrl ? { thumbnailUrl } : {})}
-                              {...(thumbnailWidth !== null ? { thumbnailWidth } : {})}
-                              {...(thumbnailHeight !== null ? { thumbnailHeight } : {})}
-                            />
-                          );
-                        })()
-                      : null}
-                  </div>
+                      {item.channels[0]
+                        ? (() => {
+                            // P3 (2026-09-03, /ui-ux-pro-max): prefer the
+                            // per-channel `platformPayload.caption` /
+                            // `hashtags` when present (these reflect the
+                            // publisher's per-channel override from the
+                            // Publishing tab), then fall back to
+                            // `formatPayload.caption` (the planner's
+                            // single source of truth), then to the brief.
+                            // The Preview tab used to read only
+                            // `formatPayload` so per-channel edits
+                            // silently did not show up here.
+                            const copyView = buildAudienceCopyViewModel({
+                              format: item.format,
+                              formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+                            });
+                            const plannerCaption = copyView.resolved.caption;
+                            const plannerHashtags = copyView.resolved.hashtags;
+                            const switcherChannels = item.channels.map((ch) => ({
+                              id: ch.id,
+                              socialChannelId: ch.socialChannelId,
+                              platform: ch.platform,
+                              accountName: ch.accountName,
+                              contentFormat: item.format,
+                              payload: (channelPayloads as Record<string, unknown>)[
+                                ch.socialChannelId
+                              ] as { caption?: string; hashtags?: string[] } | null,
+                            }));
+                            // P5 (2026-09-04, /ui-ux-pro-max round 5):
+                            // pick the first image-kind asset linked to
+                            // this content item so the preview actually
+                            // renders the creative (was: always empty).
+                            // `PlatformPreview.useImageDimensions` loads
+                            // the bytes and feeds the aspect-ratio
+                            // diagnostic — so the planner sees both the
+                            // image AND a "fits / will be cropped"
+                            // verdict against the platform's safe ratio.
+                            // The signed R2 URL was computed at the top
+                            // of the page render (see firstImageSignedPreviewUrl
+                            // below). Falls back to `/preview` (PR 2) and
+                            // finally to the full URL when no signed URL
+                            // was issued (legacy asset / no preview yet).
+                            const firstAssetHasPreview =
+                              !!firstImageAsset?.object.previewStorageObjectId;
+                            const thumbnailUrl = firstImageAsset
+                              ? (firstImageSignedPreviewUrl ??
+                                (firstAssetHasPreview
+                                  ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
+                                  : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`))
+                              : null;
+                            // Forward the stored intrinsic dimensions so
+                            // `PlatformPreview` does not need a second
+                            // client-side probe of the same image. Sourced
+                            // from `storage_objects.width/height` via
+                            // `listMediaAssetsForContentItem`. Null on
+                            // legacy assets where extraction failed; the
+                            // probe fallback inside PlatformPreview handles
+                            // those.
+                            const thumbnailWidth = firstImageAsset?.object.width ?? null;
+                            const thumbnailHeight = firstImageAsset?.object.height ?? null;
+                            return (
+                              <PlatformPreviewSwitcher
+                                channels={switcherChannels}
+                                sharedCaption={plannerCaption ?? item.brief ?? ""}
+                                {...(plannerHashtags ? { sharedHashtags: plannerHashtags } : {})}
+                                {...(thumbnailUrl ? { thumbnailUrl } : {})}
+                                {...(thumbnailWidth !== null ? { thumbnailWidth } : {})}
+                                {...(thumbnailHeight !== null ? { thumbnailHeight } : {})}
+                              />
+                            );
+                          })()
+                        : null}
+                    </div>
+                  </PlanningSection>
                 )}
               </section>
             ),
@@ -1429,108 +1434,125 @@ export default async function ContentDetailPage({
                     ) : null}
                   </div>
                 ) : (
-                  <div className="space-y-3" data-testid="publishing-cards">
-                    {item.channels.map((ch) => {
-                      const cfg = channelConfigs.find((c) => c.id === ch.id);
-                      const pub = publicationByChannel.get(ch.id);
-                      return (
-                        <ChannelPublishingCard
-                          key={ch.id}
-                          workspaceSlug={slug}
-                          channel={{
-                            id: ch.id,
-                            platform: ch.platform,
-                            accountName: ch.accountName,
-                            configured: cfg?.configured ?? false,
-                            connectionStatus: ch.connectionStatus,
-                            externalAccountId: ch.externalAccountId,
-                            targetDate:
-                              ch.plannedPublishAtOverride?.toISOString() ??
-                              item.plannedPublishAt?.toISOString() ??
-                              null,
-                            searchText: [item.title, item.brief].filter(Boolean).join(" "),
-                            timeZone: ws.timezone,
-                          }}
-                          publication={
-                            pub
-                              ? {
-                                  ...pub.publication_record,
-                                  externalLastSyncedAt:
-                                    pub.publication_record.externalLastSyncedAt?.toISOString() ??
-                                    null,
-                                  expiresAt:
-                                    pub.publication_record.expiresAt?.toISOString() ?? null,
-                                }
-                              : null
-                          }
-                          isPublisher={actorRoles.isPublisher || actorRoles.isManager}
-                        />
-                      );
-                    })}
-                  </div>
+                  <PlanningSection
+                    id="publish-outcomes"
+                    title={t("contentDetail.publishNavigator.outcomes")}
+                    description={t("contentDetail.publishWorkspace.outcomesDescription")}
+                    collapsible
+                    defaultOpen={false}
+                  >
+                    <div className="space-y-3" data-testid="publishing-cards">
+                      {item.channels.map((ch) => {
+                        const cfg = channelConfigs.find((c) => c.id === ch.id);
+                        const pub = publicationByChannel.get(ch.id);
+                        return (
+                          <ChannelPublishingCard
+                            key={ch.id}
+                            workspaceSlug={slug}
+                            channel={{
+                              id: ch.id,
+                              platform: ch.platform,
+                              accountName: ch.accountName,
+                              configured: cfg?.configured ?? false,
+                              connectionStatus: ch.connectionStatus,
+                              externalAccountId: ch.externalAccountId,
+                              targetDate:
+                                ch.plannedPublishAtOverride?.toISOString() ??
+                                item.plannedPublishAt?.toISOString() ??
+                                null,
+                              searchText: [item.title, item.brief].filter(Boolean).join(" "),
+                              timeZone: ws.timezone,
+                            }}
+                            publication={
+                              pub
+                                ? {
+                                    ...pub.publication_record,
+                                    externalLastSyncedAt:
+                                      pub.publication_record.externalLastSyncedAt?.toISOString() ??
+                                      null,
+                                    expiresAt:
+                                      pub.publication_record.expiresAt?.toISOString() ?? null,
+                                  }
+                                : null
+                            }
+                            isPublisher={actorRoles.isPublisher || actorRoles.isManager}
+                          />
+                        );
+                      })}
+                    </div>
+                  </PlanningSection>
                 )}
 
                 {item.channels.length > 0 ? (
-                  <div className="mt-4" data-testid="publish-package-form-mount">
-                    <PublishPackageForm
-                      workspaceId={ws.id}
-                      workspaceSlug={slug}
-                      workspaceTimezone={ws.timezone}
-                      contentItemId={item.id}
-                      itemTitle={item.title}
-                      itemFormat={item.format}
-                      contentLocale={contentLocale}
-                      audienceCopy={buildAudienceCopyViewModel({
-                        format: item.format,
-                        formatPayload: (item as { formatPayload?: unknown }).formatPayload,
-                      })}
-                      channels={item.channels.map((c) => ({
-                        id: c.id,
-                        socialChannelId: c.socialChannelId,
-                        platform: c.platform,
-                        accountName: c.accountName,
-                        // The strict `PlatformPayload` discriminated
-                        // union comes from the publish-package form.
-                        // The lookup is widened through
-                        // `Record<string, unknown>` because the
-                        // `readAllChannelPayloads` return type
-                        // tracks the per-platform schema; the form
-                        // itself handles the validation on save.
-                        payload: ((channelPayloads as Record<string, unknown>)[c.socialChannelId] ??
-                          null) as never,
-                        copySourceRevision:
-                          (
-                            channelPayloadStates as Record<
-                              string,
-                              { copySourceRevision: number | null }
-                            >
-                          )[c.socialChannelId]?.copySourceRevision ?? null,
-                        ...(publicationByChannel.get(c.id)?.publication_record?.status
-                          ? {
-                              publicationStatus: publicationByChannel.get(c.id)!.publication_record
-                                .status,
-                            }
-                          : {}),
-                      }))}
-                      deliveryVersions={deliveries.map((d) => ({
-                        id: d.id,
-                        versionNumber: d.versionNumber,
-                        isFinalApproved: d.isFinalApproved,
-                      }))}
-                      readiness={readiness}
-                      canEdit={canEditAll}
-                      canApproveFinalCopy={canApproveFinalCopy}
-                      canConfirmReadiness={canConfirmReadiness}
-                      canExcludeChannel={
-                        (actorRoles.isPublisher || actorRoles.isManager) &&
-                        (item.status === "ready_to_publish" ||
-                          item.status === "partially_published")
-                      }
-                      publishingSetupReady={publishingSetupReady}
-                      metaPublishingReadiness={metaPublishingReadiness}
-                      metaPublishingCopy={metaPublishingCopy}
-                    />
-                  </div>
+                  <PlanningSection
+                    id="publish-package"
+                    title={t("contentDetail.publishWorkspace.packageTitle")}
+                    description={t("contentDetail.publishWorkspace.packageDescription")}
+                    className="mt-4"
+                    testId="publish-package-form-section"
+                  >
+                    <div data-testid="publish-package-form-mount">
+                      <PublishPackageForm
+                        workspaceId={ws.id}
+                        workspaceSlug={slug}
+                        workspaceTimezone={ws.timezone}
+                        contentItemId={item.id}
+                        itemTitle={item.title}
+                        itemFormat={item.format}
+                        contentLocale={contentLocale}
+                        audienceCopy={buildAudienceCopyViewModel({
+                          format: item.format,
+                          formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+                        })}
+                        channels={item.channels.map((c) => ({
+                          id: c.id,
+                          socialChannelId: c.socialChannelId,
+                          platform: c.platform,
+                          accountName: c.accountName,
+                          // The strict `PlatformPayload` discriminated
+                          // union comes from the publish-package form.
+                          // The lookup is widened through
+                          // `Record<string, unknown>` because the
+                          // `readAllChannelPayloads` return type
+                          // tracks the per-platform schema; the form
+                          // itself handles the validation on save.
+                          payload: ((channelPayloads as Record<string, unknown>)[
+                            c.socialChannelId
+                          ] ?? null) as never,
+                          copySourceRevision:
+                            (
+                              channelPayloadStates as Record<
+                                string,
+                                { copySourceRevision: number | null }
+                              >
+                            )[c.socialChannelId]?.copySourceRevision ?? null,
+                          ...(publicationByChannel.get(c.id)?.publication_record?.status
+                            ? {
+                                publicationStatus: publicationByChannel.get(c.id)!
+                                  .publication_record.status,
+                              }
+                            : {}),
+                        }))}
+                        deliveryVersions={deliveries.map((d) => ({
+                          id: d.id,
+                          versionNumber: d.versionNumber,
+                          isFinalApproved: d.isFinalApproved,
+                        }))}
+                        readiness={readiness}
+                        canEdit={canEditAll}
+                        canApproveFinalCopy={canApproveFinalCopy}
+                        canConfirmReadiness={canConfirmReadiness}
+                        canExcludeChannel={
+                          (actorRoles.isPublisher || actorRoles.isManager) &&
+                          (item.status === "ready_to_publish" ||
+                            item.status === "partially_published")
+                        }
+                        publishingSetupReady={publishingSetupReady}
+                        metaPublishingReadiness={metaPublishingReadiness}
+                        metaPublishingCopy={metaPublishingCopy}
+                      />
+                    </div>
+                  </PlanningSection>
                 ) : null}
               </section>
             ),

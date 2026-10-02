@@ -557,6 +557,19 @@
   "createNavigator": {
     "label": "Create sections"
   },
+  "publishNavigator": {
+    "label": "Publish sections",
+    "schedule": "Schedule & destinations",
+    "copy": "Audience copy",
+    "preview": "Preview",
+    "outcomes": "Publication outcomes"
+  },
+  "publishWorkspace": {
+    "scheduleDescription": "Set the planned date and selected destinations before preparing each channel.",
+    "outcomesDescription": "Record what happened on each destination after publishing.",
+    "packageTitle": "Publish package",
+    "packageDescription": "Prepare channel copy, disclosures, approvals, and final readiness in one place."
+  },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
   "researchReference": {

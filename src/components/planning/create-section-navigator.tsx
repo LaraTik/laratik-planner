@@ -7,37 +7,48 @@ import { cn } from "@/lib/utils";
 export interface CreateSectionNavigatorProps {
   label: string;
   sections: ReadonlyArray<{ id: string; label: string }>;
+  workspaceHash?: "#create" | "#publish";
+  testId?: string;
 }
 
 /**
- * Compact in-page navigation for the Create workspace. The Create panel is
- * one task surface, so these links switch to Create when needed and then
- * scroll to the requested section after it becomes visible.
+ * Compact in-page navigation for the Create and Publish workspaces. Each
+ * panel is one task surface, so these links switch to its workspace when
+ * needed and then scroll to the requested section after it becomes visible.
  */
-export function CreateSectionNavigator({ label, sections }: CreateSectionNavigatorProps) {
-  const navigate = React.useCallback((id: string) => {
-    if (typeof window === "undefined") return;
-    const targetHash = "#create";
-    if (window.location.hash !== targetHash) {
-      window.history.pushState(null, "", targetHash);
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
-    }
+export function CreateSectionNavigator({
+  label,
+  sections,
+  workspaceHash = "#create",
+  testId = "create-section-navigator",
+}: CreateSectionNavigatorProps) {
+  const navigate = React.useCallback(
+    (id: string) => {
+      if (typeof window === "undefined") return;
+      const targetHash = workspaceHash;
+      if (window.location.hash !== targetHash) {
+        window.history.pushState(null, "", targetHash);
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      }
 
-    const scrollToSection = () => {
-      const section = document.getElementById(id);
-      if (!section || section.closest("[hidden]") !== null) return;
-      const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-      section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-      section.focus({ preventScroll: true });
-    };
+      const scrollToSection = () => {
+        const section = document.getElementById(id);
+        if (!section || section.closest("[hidden]") !== null) return;
+        const reduceMotion =
+          window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+        section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+        section.focus({ preventScroll: true });
+      };
 
-    window.requestAnimationFrame(() => window.setTimeout(scrollToSection, 50));
-  }, []);
+      window.requestAnimationFrame(() => window.setTimeout(scrollToSection, 50));
+    },
+    [workspaceHash],
+  );
 
   return (
     <nav
       aria-label={label}
-      data-testid="create-section-navigator"
+      data-testid={testId}
       className="border-border bg-surface/95 sticky top-16 z-10 flex flex-wrap items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 shadow-sm backdrop-blur-sm"
     >
       <span className="text-label text-fg-secondary inline-flex items-center gap-1.5 font-semibold">
