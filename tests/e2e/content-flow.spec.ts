@@ -50,7 +50,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.getByRole("button", { name: /Create draft/i }).click();
 
     // Server action redirects to the content detail page
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?$/, {
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
       timeout: 20_000,
       waitUntil: "load",
     });
@@ -83,7 +83,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
     await page.getByLabel("العنوان").first().fill("فكرة عربية جديدة");
     await page.getByRole("button", { name: /إنشاء مسودة/ }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+\?created=1$/, {
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+\?created=1(?:#overview)?$/, {
       timeout: 20_000,
       waitUntil: "load",
     });
@@ -106,7 +106,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `List test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?$/, {
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
       timeout: 20_000,
       waitUntil: "load",
     });
@@ -138,7 +138,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `E2E full path ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?$/, {
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
       timeout: 20_000,
       waitUntil: "commit",
     });
@@ -219,10 +219,13 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       const title = `E2E §23 full ${Date.now()}`;
       await plannerPage.getByLabel(/Title/i).first().fill(title);
       await plannerPage.getByRole("button", { name: /Create draft/i }).click();
-      await plannerPage.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?$/, {
-        timeout: 20_000,
-        waitUntil: "commit",
-      });
+      await plannerPage.waitForURL(
+        /\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+        {
+          timeout: 20_000,
+          waitUntil: "commit",
+        },
+      );
       const createdUrl = new URL(plannerPage.url());
       const detailUrl = `${createdUrl.origin}${createdUrl.pathname}`;
       await expect(plannerPage.getByRole("heading", { name: title })).toBeVisible();
@@ -412,6 +415,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         timeout: 10_000,
       });
       await publisherPage.getByTestId("workspace-tab-publish").click();
+      const publishingOutcomes = publisherPage.locator("details#publish-outcomes");
+      await expect(publishingOutcomes).toBeVisible({ timeout: 10_000 });
+      if ((await publishingOutcomes.getAttribute("open")) === null) {
+        await publishingOutcomes.locator("summary").click();
+      }
       // The publishing section shows a "Record" button per channel.
       // We click each one, fill the published URL, and save.
       const cards = publisherPage.getByTestId("channel-publishing-card");
@@ -438,7 +446,13 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         const card = publisherPage.locator(
           `[data-testid="channel-publishing-card"][data-channel-id="${channelId}"]`,
         );
-        await card.getByTestId("channel-card-record-outcome").click();
+        const recordOutcome = card.getByTestId("channel-card-record-outcome");
+        if ((await recordOutcome.count()) > 0) {
+          await recordOutcome.click();
+        }
+        await expect(card.getByTestId("channel-card-outcome-select")).toBeVisible({
+          timeout: 10_000,
+        });
         // The form is in the same card; fill the URL and save.
         const publishedUrl = card.locator('input[name="publishedUrl"]');
         await publishedUrl.fill(`https://example.com/post-${i}`);
@@ -483,7 +497,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const title = `Channels test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?$/, {
+    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
       timeout: 20_000,
       waitUntil: "commit",
     });
@@ -491,6 +505,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     // The "Channels" section should list at least 3 channels
     await expect(page.getByText(/Channels:\s*3/i).first()).toBeVisible();
     await page.getByTestId("workspace-tab-publish").click();
+    const publishingOutcomes = page.locator("details#publish-outcomes");
+    await expect(publishingOutcomes).toBeVisible();
+    if ((await publishingOutcomes.getAttribute("open")) === null) {
+      await publishingOutcomes.locator("summary").click();
+    }
     const publishingCards = page.getByTestId("publishing-cards");
     await expect(publishingCards).toBeVisible();
     // Channel cards display the platform badge + account name.

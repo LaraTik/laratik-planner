@@ -14,7 +14,7 @@ async function createDraftAndOpen(page: import("@playwright/test").Page, title: 
   await page.goto("/app/w/acme/planning/new");
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+$/, {
+  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
     timeout: 20_000,
     waitUntil: "commit",
   });
@@ -162,7 +162,7 @@ test.describe("Discussions (Goal 8)", () => {
     await page.getByPlaceholder(/Add a comment/i).fill(body);
     await page.getByRole("button", { name: /^Comment$/i }).click();
     await expect(page.getByText(body)).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("internal").first()).toBeVisible();
+    await expect(page.getByText("Internal", { exact: true })).toBeVisible();
   });
 });
 

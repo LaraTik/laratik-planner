@@ -32,13 +32,23 @@ test.describe("Publish package", () => {
     await page.getByTestId("publish-caption").fill(caption);
     await expect(page.getByTestId("publish-caption")).toHaveValue(caption);
     await page.getByTestId("publish-save-draft").click();
-    await expect(page.getByRole("status")).toContainText("Draft saved");
+    await expect(
+      page
+        .getByTestId("publish-package-form")
+        .getByRole("status")
+        .filter({ hasText: "Draft saved" }),
+    ).toBeVisible();
 
     await page.reload();
     await expect(page.getByTestId("publish-package-form")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("publish-caption")).toHaveValue(caption);
     await page.getByTestId("publish-final-copy-approved").click();
-    await expect(page.getByRole("status")).toContainText("Final copy approved");
+    await expect(
+      page
+        .getByTestId("publish-package-form")
+        .getByRole("status")
+        .filter({ hasText: "Final copy approved" }),
+    ).toBeVisible();
     await expect(page.getByTestId("publish-final-copy-approved")).toHaveText("Revoke approval");
   });
 
