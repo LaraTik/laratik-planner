@@ -116,9 +116,9 @@ test.describe("research teardown preview", () => {
     if ((page.viewportSize()?.width ?? 1024) < 1024) {
       await page
         .getByRole("combobox", { name: "Planning workspace sections" })
-        .selectOption({ label: "Brief" });
+        .selectOption({ label: "Create" });
     } else {
-      await page.getByRole("button", { name: "Brief", exact: true }).click();
+      await page.getByRole("button", { name: "Create", exact: true }).click();
     }
     await expect(page.getByTestId("research-teardown-apply")).toBeVisible();
     await page.getByRole("button", { name: "Apply available fields", exact: true }).click();

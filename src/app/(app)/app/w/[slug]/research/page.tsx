@@ -69,7 +69,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         ${researchWatchlistAccounts.displayName},
         ${researchWatchlistAccounts.handle}
       )`,
-      platform: sql<string>`coalesce(${socialChannels.platform}, ${researchWatchlistAccounts.platform})`,
+      platform: sql<string>`coalesce(${socialChannels.platform}::text, ${researchWatchlistAccounts.platform})`,
       mediaType: socialPostObservations.mediaType,
       permalink: socialPostObservations.permalink,
       publishedAt: socialPostObservations.publishedAt,

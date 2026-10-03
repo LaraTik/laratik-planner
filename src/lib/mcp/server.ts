@@ -826,7 +826,7 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
                   ${researchWatchlistAccounts.displayName},
                   ${researchWatchlistAccounts.handle}
                 )`,
-                platform: sql<string>`coalesce(${socialChannels.platform}, ${researchWatchlistAccounts.platform})`,
+                platform: sql<string>`coalesce(${socialChannels.platform}::text, ${researchWatchlistAccounts.platform})`,
                 media_type: socialPostObservations.mediaType,
                 permalink: socialPostObservations.permalink,
                 published_at: socialPostObservations.publishedAt,

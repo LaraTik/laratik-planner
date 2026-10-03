@@ -21,6 +21,15 @@ light/dark verification before the Command Center surface is called ready.
 > for a removed planning "Brief" tab; multi-viewport/RTL visual and independent
 > review evidence remain open. This checkpoint is not a `Verified` claim.
 
+> **2026-10-03 research browser contract checkpoint** — The source-neutral
+> Research page and MCP projection now cast the connected-channel platform
+> enum before coalescing it with the manual research-account text value, fixing
+> the PostgreSQL render failure for mixed source types. The focused Chromium
+> Research flow passes 3/3 with serious/critical axe checks: watchlist
+> management, notes-only teardown preview, and teardown-to-draft handoff. The
+> implementation remains `Tested`, not `Verified`; multi-viewport/RTL visual
+> evidence, provider UAT, entitled AI, and independent review remain open.
+
 > **2026-10-03 research evidence UX checkpoint** — The source-only Research
 > surface now has a responsive evidence grid with keyboard-accessible search,
 > platform filtering, transparent metric sorting, localized result counts,

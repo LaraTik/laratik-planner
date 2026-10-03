@@ -11,6 +11,15 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-03 — Research browser contract and query safety
+
+The source-neutral Research query now casts the connected-channel platform enum
+before coalescing it with the manual research-account text value. This keeps
+both connected and source-only bookmarks renderable in PostgreSQL. The MCP
+research projection uses the same safe cast, and the current Chromium Research
+journey passes 3/3 with serious/critical axe checks: watchlist management,
+notes-only teardown preview, and teardown-to-draft handoff.
+
 ## 2026-10-03 — Versioned research ranking metrics
 
 Saved research evidence now exposes deterministic Planner-derived engagement
