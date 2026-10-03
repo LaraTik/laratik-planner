@@ -1297,6 +1297,18 @@ Postgres (Drizzle ORM)               ▼
 | M8.4 | Implemented                 | Background reconciliation for linked scheduled objects plus activity events.                                                                                                                          | Only scheduled links are reconciled; missing objects become unavailable without erasing provider identity/history.                                                                                                   | `src/lib/social/sync.ts`, `src/lib/social/meta-publication-service.ts`                                                                                   |
 | M8.5 | Pending                     | Release evidence and Meta UAT.                                                                                                                                                                        | Migration drill, integration/browser/a11y/visual checks, App Review, Page/Instagram professional test accounts, pagination, scheduled visibility, and reauthorization evidence are recorded at the exact clean SHA.  | `docs/production-readiness/MIGRATION_DEPLOYMENT.md`, `docs/production-readiness/EXTERNAL_SERVICES_UAT.md`                                                |
 
+## 2026-10-03 — Full visual matrix checkpoint
+
+The complete Chromium visual run executed all **247 assertions**. Before the
+baseline refresh, **231 passed** and **16 failed** only on screenshot references
+for the intentionally shipped Command Center/planning/Publish/admin layout
+changes; no route/runtime or serious/critical axe failure was reported. The
+affected references were reviewed from actual and diff captures, refreshed
+selectively, and the affected assertion set now passes **17/17** (the extra
+capture is a stable media-wide regeneration). The full matrix remains `Tested`,
+not `Verified`: independent visual/a11y review, external-service UAT, provider
+UAT, and authenticated MCP smoke evidence remain release gates.
+
 ## Milestone 9 — Agency tasks and global calendar
 
 | ID   | Status      | Required implementation                                                                                                                                                                                                                                                                          | Acceptance                                                                                                                                                                          | Evidence                                                                                                        |

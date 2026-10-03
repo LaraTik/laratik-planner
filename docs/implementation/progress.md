@@ -278,6 +278,15 @@ The current working tree passes the full `pnpm verify` baseline after this
 addition: formatting, lint, strict typecheck, 450 unit files / 4,302 tests,
 and the production build. This is local `Tested` evidence only.
 
+The complete Chromium visual matrix then ran all 247 assertions. The first
+run passed 231/247; the 16 visual failures were reviewed actual/diff captures
+for intentional current-layout changes across the Command Center, planning
+detail, Publish, media, agency-plan, and platform-agencies surfaces. Those
+references were refreshed selectively, and the affected set now passes 17/17
+(including one stable media-wide regeneration). This is visual `Tested`
+evidence only; independent review, provider/external-service UAT, and the
+authenticated MCP smoke gate remain open.
+
 The workspace overview responsive matrix now passes 3/3 at 360px, 768px, and
 1440px after the dense header actions were moved below the title until the
 large breakpoint. The reviewed visual baselines now include the Command Center
