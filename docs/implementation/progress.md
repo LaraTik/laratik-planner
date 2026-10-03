@@ -43,6 +43,15 @@ and the Settings anchor surfaces at mobile, tablet, laptop, and wide widths.
 The wider route/theme/role matrix, provider UAT, authenticated MCP smoke, and
 independent review remain open.
 
+## 2026-10-03 — Public MCP boundary evidence
+
+Against deployed `ef0c275`, `/api/health` reports the database, schema,
+storage, R2 storage, and rate-limit checks healthy. The unauthenticated MCP
+POST returns HTTP 401 with a Bearer challenge, and GET returns HTTP 405 with
+`Allow: POST`. The authenticated initialize/tools/list/list_research smoke
+and immediate temporary-token revocation remain pending explicit approval to
+create the token through the Account page.
+
 ## 2026-10-03 — Research browser contract and query safety
 
 The source-neutral Research query now casts the connected-channel platform enum

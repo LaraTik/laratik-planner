@@ -115,6 +115,14 @@ light/dark verification before the Command Center surface is called ready.
 > provider UAT, authenticated MCP smoke, and independent review remain open.
 > This evidence remains `Tested`, not `Verified`.
 
+> **2026-10-03 public MCP boundary checkpoint** — Against the deployed
+> `ef0c275`, `/api/health` reports `db: "up"`, `schema: "ready"`, storage,
+> R2 storage, and rate limiting healthy. An unauthenticated MCP POST returns
+> HTTP 401 with `WWW-Authenticate: Bearer`, and GET returns HTTP 405 with
+> `Allow: POST`. This confirms the public transport boundary only; the
+> authenticated `initialize` → `tools/list` → `list_research` smoke and
+> immediate token revocation remain pending explicit temporary-token approval.
+
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post
 > observation read model with an explicit `source_kind`, a nullable research
