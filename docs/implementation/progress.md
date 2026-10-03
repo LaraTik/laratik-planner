@@ -31,6 +31,18 @@ search/filter controls, and current planning-card layouts. Detail, publish,
 settings, Arabic/RTL, provider UAT, authenticated MCP smoke, and independent
 review remain open.
 
+## 2026-10-03 — Planning detail, Publish, and Settings visual evidence
+
+The reviewed responsive slice passed 29/29 with serious/critical axe checks:
+planning detail 4/4, Publish 4/4, workspace Settings 3/3, and approvals,
+defaults, lead times, lifecycle, templates, and trends 18/18. The eight
+detail/Publish baselines were refreshed only after reviewing the current
+rendered captures; no UI code changed in this checkpoint. The evidence now
+records the shipped detail header/navigation, full Publish preparation flow,
+and the Settings anchor surfaces at mobile, tablet, laptop, and wide widths.
+The wider route/theme/role matrix, provider UAT, authenticated MCP smoke, and
+independent review remain open.
+
 ## 2026-10-03 — Research browser contract and query safety
 
 The source-neutral Research query now casts the connected-channel platform enum

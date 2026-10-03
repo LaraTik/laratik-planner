@@ -102,6 +102,19 @@ light/dark verification before the Command Center surface is called ready.
 > independent review remain open. This evidence remains `Tested`, not
 > `Verified`.
 
+> **2026-10-03 planning detail/publish/settings visual checkpoint** — The
+> reviewed responsive slice passed 29/29 with serious/critical axe checks:
+> planning detail 4/4, Publish 4/4, workspace Settings 3/3, and the six
+> settings subsections (approvals, defaults, lead times, lifecycle, templates,
+> and trends) 18/18 at the configured mobile, tablet, laptop, and wide
+> viewports. The eight detail/Publish baselines were refreshed only after
+> inspecting the rendered captures: the detail route records the current
+> workspace header/navigation and the Publish route records the current
+> channel setup, audience, preview, readiness, and structured payload flow.
+> No UI code changed in this checkpoint. The wider route/theme/role matrix,
+> provider UAT, authenticated MCP smoke, and independent review remain open.
+> This evidence remains `Tested`, not `Verified`.
+
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post
 > observation read model with an explicit `source_kind`, a nullable research
