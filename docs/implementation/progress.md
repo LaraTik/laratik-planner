@@ -20,11 +20,12 @@ partial fallback. Outlier score is post views divided by the median of the
 bounded peer sample; fewer than two valid peer observations remain unavailable.
 The formula is labeled `v1`, null and negative provider values stay
 unavailable, and the Research grid can sort by engagement or outlier score in
-English and Arabic.
+English and Arabic. Planners can select up to three observations and compare
+the same transparent metrics without copying provider media.
 
-Focused metric and evidence-grid tests pass 9/9. Provider refresh UAT, a full
-comparison surface, entitled AI insight, complete visual/RTL evidence, and
-independent review remain open.
+Focused metric and evidence-grid tests pass 10/10. Provider refresh UAT,
+entitled AI insight, complete visual/RTL evidence, and independent review
+remain open.
 
 ## 2026-10-03 — Research evidence UX hardening
 

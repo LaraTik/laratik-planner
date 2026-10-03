@@ -64,8 +64,9 @@ light/dark verification before the Command Center surface is called ready.
 > of at least two valid peer view values, with explicit performance bands and
 > no coercion of missing or negative provider values. The bilingual evidence
 > grid exposes engagement/outlier sorting and labels the results as
-> Planner-derived. Focused metric/evidence tests pass 9/9. The slice is
-> `Tested`, not `Verified`; provider UAT, full comparison UX, entitled AI,
+> Planner-derived. It also supports selecting up to three observations for a
+> responsive comparison using the same metrics. Focused metric/evidence tests
+> pass 10/10. The slice is `Tested`, not `Verified`; provider UAT, entitled AI,
 > responsive/RTL evidence, and independent review remain open.
 
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
