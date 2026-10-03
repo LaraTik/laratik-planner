@@ -73,6 +73,30 @@ describe("TabSwitchLink", () => {
     expect(onNavigated).toHaveBeenCalledTimes(1);
   });
 
+  it("scrolls the canonical workspace section into view after switching tabs", () => {
+    vi.useFakeTimers();
+    const scrollIntoView = vi.fn();
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+    render(
+      <>
+        <div id="create-basics" />
+        <TabSwitchLink href="#create">Open create</TabSwitchLink>
+      </>,
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByText("Open create"));
+      vi.advanceTimersByTime(60);
+    });
+
+    expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it("does NOT fire hashchange when clicking a hash-only href that is already active", () => {
     window.location.hash = "#copy";
     const listener = vi.fn();

@@ -146,7 +146,7 @@ export function ActivityWithFilters({
               data-testid={`activity-filter-${f.id}`}
               data-count={count}
               className={cn(
-                "text-label inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1 font-semibold",
+                "text-label inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1 font-semibold",
                 "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
                 isActive
                   ? "border-primary bg-primary-subtle text-primary"

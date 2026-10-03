@@ -10,7 +10,9 @@
     "delivery": "Assets",
     "preview": "Preview",
     "publishing": "Publish",
-    "activity": "Activity"
+    "activity": "Activity",
+    "publishCount": "{count} blockers",
+    "activityCount": "{count} activity events"
   },
   "navigation": {
     "workspaceSections": "Planning workspace sections",

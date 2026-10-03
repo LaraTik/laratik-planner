@@ -10,7 +10,9 @@
     "delivery": "الأصول",
     "preview": "المعاينة",
     "publishing": "النشر",
-    "activity": "النشاط"
+    "activity": "النشاط",
+    "publishCount": "{count} عوائق",
+    "activityCount": "{count} من أحداث النشاط"
   },
   "navigation": {
     "workspaceSections": "أقسام مساحة التخطيط",

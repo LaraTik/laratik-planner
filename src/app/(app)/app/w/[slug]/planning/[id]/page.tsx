@@ -678,9 +678,19 @@ export default async function ContentDetailPage({
     {
       id: "publish",
       label: t("contentDetail.tabs.publish"),
-      ...(readiness.blockers > 0 ? { count: readiness.blockers } : {}),
+      ...(readiness.blockers > 0
+        ? {
+            count: readiness.blockers,
+            countLabel: t("contentDetail.tabs.publishCount", { count: readiness.blockers }),
+          }
+        : {}),
     },
-    { id: "activity", label: t("contentDetail.tabs.activity"), count: activityEvents.length },
+    {
+      id: "activity",
+      label: t("contentDetail.tabs.activity"),
+      count: activityEvents.length,
+      countLabel: t("contentDetail.tabs.activityCount", { count: activityEvents.length }),
+    },
   ];
 
   return (

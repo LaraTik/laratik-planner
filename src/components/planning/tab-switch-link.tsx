@@ -73,6 +73,24 @@ function isHashOnlyLink(href: LinkProps["href"], currentPath: string): { hash: s
   return { hash };
 }
 
+const TAB_SECTION_IDS: Record<string, string> = {
+  overview: "overview",
+  create: "create-basics",
+  publish: "publish-settings",
+  activity: "activity",
+};
+
+function scrollToTabSection(hash: string) {
+  if (typeof window === "undefined") return;
+  const targetId = TAB_SECTION_IDS[hash] ?? hash;
+  window.setTimeout(() => {
+    const section = document.getElementById(targetId);
+    if (!section || section.closest("[hidden]") !== null) return;
+    const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    section.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  }, 50);
+}
+
 export const TabSwitchLink = React.forwardRef<HTMLAnchorElement, TabSwitchLinkProps>(
   function TabSwitchLink({ href, onClick, onNavigated, className, ...rest }, ref) {
     return (
@@ -103,6 +121,7 @@ export const TabSwitchLink = React.forwardRef<HTMLAnchorElement, TabSwitchLinkPr
             // Already on the right tab — nothing to do, but the
             // caller may still want its callback fired so any
             // optimistic UI (e.g. closing a drawer) settles.
+            scrollToTabSection(target.hash);
             onNavigated?.();
             return;
           }
@@ -113,6 +132,7 @@ export const TabSwitchLink = React.forwardRef<HTMLAnchorElement, TabSwitchLinkPr
               newURL: `${window.location.pathname}${window.location.search}${nextHash}`,
             }),
           );
+          scrollToTabSection(target.hash);
           onNavigated?.();
         }}
       />

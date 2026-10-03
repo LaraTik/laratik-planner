@@ -88,6 +88,8 @@ export interface WorkspaceTab {
   id: WorkspaceTabId;
   label: string;
   count?: number;
+  /** Localized explanation for a numeric badge, announced with the tab label. */
+  countLabel?: string;
 }
 
 export const WORKSPACE_TAB_ICONS: Record<WorkspaceTabId, LucideIcon> = {
@@ -141,7 +143,11 @@ export function WorkspaceTabs({
         {tabs.map((tab) => (
           <option key={tab.id} value={tab.id}>
             {tab.label}
-            {typeof tab.count === "number" ? ` (${tab.count})` : ""}
+            {tab.countLabel
+              ? ` — ${tab.countLabel}`
+              : typeof tab.count === "number"
+                ? ` (${tab.count})`
+                : ""}
           </option>
         ))}
       </select>
@@ -161,6 +167,7 @@ export function WorkspaceTabs({
                 <button
                   type="button"
                   aria-current={isActive ? "true" : undefined}
+                  aria-label={tab.countLabel ?? tab.label}
                   data-testid={`workspace-tab-${tab.id}`}
                   data-active={isActive || undefined}
                   onClick={() => onValueChange(tab.id)}
@@ -199,7 +206,7 @@ export function WorkspaceTabs({
               key={tab.id}
               type="button"
               aria-current={isActive ? "true" : undefined}
-              aria-label={tab.label}
+              aria-label={tab.countLabel ?? tab.label}
               data-testid={`workspace-secondary-tab-${tab.id}`}
               onClick={() => onValueChange(tab.id)}
               className={cn(
