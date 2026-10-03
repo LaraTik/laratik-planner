@@ -70,6 +70,32 @@ const WATCHLIST = [
   },
 ];
 
+const BOOKMARKS = [
+  {
+    id: "00000000-0000-0000-0000-0000000000ee",
+    observation_id: "00000000-0000-0000-0000-0000000000ef",
+    source_kind: "research_account",
+    source_channel_id: null,
+    source_account_id: "00000000-0000-0000-0000-0000000000dd",
+    account_name: "Example Brand",
+    platform: "instagram",
+    media_type: "reel",
+    permalink: "https://instagram.com/p/example",
+    published_at: new Date("2026-09-29T10:00:00Z"),
+    views: 12_000,
+    reach: null,
+    likes: 480,
+    comments: 32,
+    saved: 90,
+    shares: 14,
+    interactions: 616,
+    metrics_version: "v1",
+    duration_seconds: 28,
+    saved_at: new Date("2026-09-30T10:00:00Z"),
+  },
+];
+const BOOKMARK = BOOKMARKS[0]!;
+
 beforeEach(() => {
   vi.clearAllMocks();
   policyMock.canAccessInternalWorkspace.mockResolvedValue(true);
@@ -102,6 +128,33 @@ describe("laratik_planner_list_research", () => {
       expect.objectContaining({ handle: "example_brand", provider_status: "manual" }),
     ]);
     expect(payload.collections).toEqual([]);
+  });
+
+  it("returns normalized bookmark provenance and versioned metrics without raw context", async () => {
+    dbMock.db.select.mockReset();
+    dbMock.db.select.mockReturnValueOnce(chain([WORKSPACE])).mockReturnValueOnce(chain(BOOKMARKS));
+
+    const client = await connect(["content:read"]);
+    const response = await call(client, { workspace_id: WORKSPACE_ID, item_kind: "bookmarks" });
+    expect(response.isError).not.toBe(true);
+    const payload = response.structuredContent?.result as {
+      bookmarks: Array<Record<string, unknown>>;
+      teardowns: unknown[];
+      watchlist: unknown[];
+    };
+    expect(payload.bookmarks).toEqual([
+      expect.objectContaining({
+        source_kind: "research_account",
+        source_account_id: BOOKMARK.source_account_id,
+        source_channel_id: null,
+        metrics_version: "v1",
+        interactions: 616,
+      }),
+    ]);
+    expect(payload.teardowns).toEqual([]);
+    expect(payload.watchlist).toEqual([]);
+    expect(payload.bookmarks[0]).not.toHaveProperty("notes");
+    expect(payload.bookmarks[0]).not.toHaveProperty("raw_provider_body");
   });
 
   it("requires content read access before reading the workspace", async () => {
