@@ -86,6 +86,8 @@ export interface ChannelPublishingCardProps {
     externalErrorCode?: string | null;
   } | null;
   isPublisher: boolean;
+  /** Open the first outstanding outcome automatically after setup is confirmed. */
+  defaultOpen?: boolean;
   /** Optional link to the publish-package form, shown in the
    *  card's footer when the channel is in setup. */
   publishPackageHref?: string;
@@ -131,11 +133,12 @@ export function ChannelPublishingCard({
   channel,
   publication,
   isPublisher,
+  defaultOpen = false,
   publishPackageHref,
 }: ChannelPublishingCardProps) {
   const t = useLocaleT();
   const locale = useLocaleCode();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(defaultOpen);
   const [pending, start] = React.useTransition();
   const [error, setError] = React.useState<string | null>(null);
   const [metaOpen, setMetaOpen] = React.useState(false);

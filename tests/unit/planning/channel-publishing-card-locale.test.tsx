@@ -116,6 +116,23 @@ describe("ChannelPublishingCard localization", () => {
     // transition is exercised.
     expect(screen.getByTestId("channel-card-record-outcome")).toHaveTextContent("Record outcome");
   });
+
+  it("opens the first outstanding outcome when setup has been confirmed", () => {
+    render(
+      <LocaleProvider locale="en">
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={null}
+          isPublisher={true}
+          defaultOpen
+        />
+      </LocaleProvider>,
+    );
+
+    expect(screen.getByTestId("channel-card-outcome-select")).toBeInTheDocument();
+    expect(screen.queryByTestId("channel-card-record-outcome")).not.toBeInTheDocument();
+  });
 });
 
 describe("ChannelPublishingCard ephemeral publications", () => {

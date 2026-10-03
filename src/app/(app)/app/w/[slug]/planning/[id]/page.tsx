@@ -479,6 +479,13 @@ export default async function ContentDetailPage({
       publicationByChannel.set(p.publication_record.contentItemChannelId, p);
     }
   }
+  // Once the publish package is confirmed, take the user directly to the
+  // first channel that still needs an outcome. This removes a redundant
+  // "open outcomes → choose a channel → open the form" sequence while
+  // keeping the remaining channels available below it.
+  const firstPendingOutcomeChannelId = publishingSetupReady
+    ? (item.channels.find((channel) => !publicationByChannel.has(channel.id))?.id ?? null)
+    : null;
 
   // ── Comment-counts for the discussion trigger
   const openCommentsCount = discussionComments.filter((c) => !c.resolvedAt).length;
@@ -1555,6 +1562,7 @@ export default async function ContentDetailPage({
                     description={t("contentDetail.publishWorkspace.outcomesDescription")}
                     collapsible
                     defaultOpen={
+                      publishingSetupReady ||
                       publicationByChannel.size > 0 ||
                       item.status === "partially_published" ||
                       item.status === "published"
@@ -1595,6 +1603,7 @@ export default async function ContentDetailPage({
                                 : null
                             }
                             isPublisher={actorRoles.isPublisher || actorRoles.isManager}
+                            defaultOpen={ch.id === firstPendingOutcomeChannelId}
                           />
                         );
                       })}

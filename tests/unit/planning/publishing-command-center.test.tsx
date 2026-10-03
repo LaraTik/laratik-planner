@@ -4,7 +4,7 @@ import { PublishingCommandCenter } from "@/components/planning/publishing-comman
 import { tFor } from "@/messages";
 
 describe("PublishingCommandCenter", () => {
-  it("summarizes blockers and links each step to the right surface", () => {
+  it("shows only the next action when blockers remain", () => {
     render(
       <PublishingCommandCenter
         channelCount={2}
@@ -20,17 +20,13 @@ describe("PublishingCommandCenter", () => {
     expect(screen.getByTestId("publishing-command-center-status")).toHaveTextContent(
       "Resolve the blockers shown below",
     );
-    expect(screen.getByRole("link", { name: /Open channel setup/ })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: /Review blockers/ })).toHaveAttribute(
       "href",
       "#publish-package",
     );
-    expect(screen.getByRole("link", { name: /Open outcomes/ })).toHaveAttribute(
-      "href",
-      "#publish-outcomes",
-    );
   });
 
-  it("renders the confirmed state in Arabic", () => {
+  it("takes the user directly to outcomes after setup is confirmed", () => {
     render(
       <PublishingCommandCenter
         channelCount={2}
@@ -38,13 +34,37 @@ describe("PublishingCommandCenter", () => {
         blockerCount={0}
         publishingSetupReady
         outcomesRecorded={1}
+        t={tFor("en")}
+      />,
+    );
+
+    expect(screen.getByTestId("publishing-command-center")).toHaveTextContent("Ready to record");
+    expect(screen.getByTestId("publishing-command-center-status")).toHaveTextContent(
+      "Setup is confirmed",
+    );
+    expect(screen.getByTestId("publishing-command-center-action")).toHaveAttribute(
+      "href",
+      "#publish-outcomes",
+    );
+  });
+
+  it("renders the completed state in Arabic", () => {
+    render(
+      <PublishingCommandCenter
+        channelCount={2}
+        readyChannelCount={2}
+        blockerCount={0}
+        publishingSetupReady
+        outcomesRecorded={2}
         t={tFor("ar")}
       />,
     );
 
-    expect(screen.getByTestId("publishing-command-center")).toHaveTextContent("تم تأكيد الإعداد");
+    expect(screen.getByTestId("publishing-command-center")).toHaveTextContent(
+      "تم تسجيل كل النتائج",
+    );
     expect(screen.getByTestId("publishing-command-center-status")).toHaveTextContent(
-      "تم تأكيد إعداد النشر",
+      "تم تسجيل نتيجة النشر لكل قناة مختارة.",
     );
   });
 });
