@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { ResearchEvidenceGrid } from "@/components/workspace/research-evidence-grid";
 import { auth } from "@/lib/auth/config";
@@ -141,7 +141,29 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
       ),
     )
     .orderBy(researchWatchlists.name);
-  const namedWatchlistMembers = namedWatchlistRows.length
+  const archivedNamedWatchlistRows = canManage
+    ? await db
+        .select({
+          id: researchWatchlists.id,
+          name: researchWatchlists.name,
+          description: researchWatchlists.description,
+          shareScope: researchWatchlists.shareScope,
+        })
+        .from(researchWatchlists)
+        .where(
+          and(
+            eq(researchWatchlists.workspaceId, workspace.id),
+            isNotNull(researchWatchlists.archivedAt),
+            or(
+              eq(researchWatchlists.shareScope, "workspace"),
+              eq(researchWatchlists.createdBy, actor.id),
+            ),
+          ),
+        )
+        .orderBy(researchWatchlists.name)
+    : [];
+  const allNamedWatchlistRows = [...namedWatchlistRows, ...archivedNamedWatchlistRows];
+  const namedWatchlistMembers = allNamedWatchlistRows.length
     ? await db
         .select({
           watchlistId: researchWatchlistMembers.watchlistId,
@@ -155,7 +177,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         )
         .where(eq(researchWatchlists.workspaceId, workspace.id))
     : [];
-  const namedWatchlists = namedWatchlistRows.map((watchlist) => ({
+  const toNamedWatchlist = (watchlist: (typeof namedWatchlistRows)[number]) => ({
     ...watchlist,
     shareScope: watchlist.shareScope as "me" | "workspace",
     accountIds: namedWatchlistMembers
@@ -167,7 +189,9 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         .filter((member) => member.watchlistId === watchlist.id)
         .map((member) => [member.accountId, member.position]),
     ),
-  }));
+  });
+  const namedWatchlists = namedWatchlistRows.map(toNamedWatchlist);
+  const archivedNamedWatchlists = archivedNamedWatchlistRows.map(toNamedWatchlist);
   const teardownRows = await db
     .select()
     .from(researchTeardowns)
@@ -235,6 +259,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         workspaceSlug={slug}
         canManage={canManage}
         initialWatchlists={namedWatchlists}
+        initialArchivedWatchlists={archivedNamedWatchlists}
         accounts={watchlistRows.map((row) => ({
           id: row.id,
           label: row.displayName || `@${row.handle}`,
@@ -262,6 +287,10 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           move: t("research.watchlistsMove"),
           archive: t("research.watchlistsArchive"),
           archiving: t("research.watchlistsArchiving"),
+          archivedTitle: t("research.watchlistsArchivedTitle"),
+          archivedDescription: t("research.watchlistsArchivedDescription"),
+          restore: t("research.watchlistsRestore"),
+          restoring: t("research.watchlistsRestoring"),
         }}
       />
 

@@ -28,6 +28,10 @@ const labels = {
   move: "Move",
   archive: "Archive watchlist",
   archiving: "Archiving…",
+  archivedTitle: "Archived watchlists",
+  archivedDescription: "Restore a list when it becomes useful again.",
+  restore: "Restore watchlist",
+  restoring: "Restoring…",
 };
 
 describe("ResearchWatchlists", () => {
@@ -116,11 +120,46 @@ describe("ResearchWatchlists", () => {
 
     await user.click(screen.getAllByRole("button", { name: "Archive watchlist" })[0]!);
     await waitFor(() =>
-      expect(screen.queryByText("Halal grocery competitors")).not.toBeInTheDocument(),
+      expect(screen.getByRole("heading", { name: "Archived watchlists" })).toBeInTheDocument(),
     );
+    expect(screen.getByRole("button", { name: "Restore watchlist" })).toBeInTheDocument();
     expect(globalThis.fetch).toHaveBeenCalledWith(
       "/api/research/watchlists/44444444-4444-4444-8444-444444444444",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  it("restores an archived watchlist and preserves its members", async () => {
+    const user = userEvent.setup();
+    const archived = {
+      id: "66666666-6666-4666-8666-666666666666",
+      name: "Archived delivery references",
+      description: null,
+      shareScope: "workspace" as const,
+      accountIds: ["11111111-1111-4111-8111-111111111111"],
+      memberPositions: { "11111111-1111-4111-8111-111111111111": 0 },
+    };
+    render(
+      <ResearchWatchlists
+        workspaceSlug="acme"
+        canManage
+        initialWatchlists={[]}
+        initialArchivedWatchlists={[archived]}
+        labels={labels}
+      />,
+    );
+
+    expect(screen.getByText("Archived delivery references")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Restore watchlist" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Archived watchlists" }),
+      ).not.toBeInTheDocument(),
+    );
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      "/api/research/watchlists/66666666-6666-4666-8666-666666666666",
+      expect.objectContaining({ method: "PATCH" }),
+    );
+    expect(screen.getByText("Archived delivery references")).toBeInTheDocument();
   });
 });

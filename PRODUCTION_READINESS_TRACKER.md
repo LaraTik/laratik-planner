@@ -56,10 +56,19 @@ light/dark verification before the Command Center surface is called ready.
 > Server routes validate workspace scope and reject incomplete reorder sets;
 > the UI rolls back optimistic state on network failure. Focused watchlist
 > route/component tests pass 11/11, and the Chromium create → reload → copy →
-> archive flow passes 1/1 with the Research axe check. M2 remains `Tested`, not
-> `Verified`; archived-list restore UI, full responsive/RTL evidence, the
-> observation-source seam, provider UAT, ranking, entitled AI, and final MCP
-> release evidence remain open.
+> archive → restore flow passes 1/1 with the Research axe check. M2 remains
+> `Tested`, not `Verified`; full responsive/RTL evidence, the observation-source
+> seam, provider UAT, ranking, entitled AI, and final MCP release evidence
+> remain open.
+
+> **2026-10-03 archived watchlist UI checkpoint** — The Research page now
+> loads visible archived watchlists for managers/planners, presents a bilingual
+> recoverable archive section, and restores the original member set and order
+> through the existing role-gated PATCH route. Focused archived-list component
+> tests pass 3/3, and the Chromium archive → restore journey is included in the
+> 3/3 Research flow with serious/critical axe checks. The implementation
+> remains `Tested`, not `Verified`; full responsive/RTL visual evidence and
+> independent review remain open.
 
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post

@@ -44,22 +44,29 @@ type Labels = {
   move: string;
   archive: string;
   archiving: string;
+  archivedTitle: string;
+  archivedDescription: string;
+  restore: string;
+  restoring: string;
 };
 
 export function ResearchWatchlists({
   workspaceSlug,
   canManage,
   initialWatchlists,
+  initialArchivedWatchlists = [],
   accounts = [],
   labels,
 }: {
   workspaceSlug: string;
   canManage: boolean;
   initialWatchlists: ResearchWatchlistOption[];
+  initialArchivedWatchlists?: ResearchWatchlistOption[];
   accounts?: ResearchWatchlistAccountOption[];
   labels: Labels;
 }) {
   const [watchlists, setWatchlists] = React.useState(initialWatchlists);
+  const [archivedWatchlists, setArchivedWatchlists] = React.useState(initialArchivedWatchlists);
   const [name, setName] = React.useState("");
   const [shareScope, setShareScope] = React.useState<"me" | "workspace">("me");
   const [pending, setPending] = React.useState(false);
@@ -122,7 +129,43 @@ export function ResearchWatchlists({
         setError(labels.error);
         return;
       }
+      const archived = watchlists.find((watchlist) => watchlist.id === watchlistId);
+      if (archived) {
+        setArchivedWatchlists((currentArchived) =>
+          [...currentArchived, archived].sort((a, b) => a.name.localeCompare(b.name)),
+        );
+      }
       setWatchlists((current) => current.filter((watchlist) => watchlist.id !== watchlistId));
+    } catch {
+      setError(labels.error);
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  async function restoreWatchlist(watchlistId: string) {
+    const key = `restore:${watchlistId}`;
+    setBusyAction(key);
+    setError(null);
+    try {
+      const response = await fetch(`/api/research/watchlists/${watchlistId}`, {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceSlug }),
+      });
+      if (!response.ok) {
+        setError(labels.error);
+        return;
+      }
+      const restored = archivedWatchlists.find((watchlist) => watchlist.id === watchlistId);
+      if (restored) {
+        setWatchlists((currentWatchlists) =>
+          [...currentWatchlists, restored].sort((a, b) => a.name.localeCompare(b.name)),
+        );
+      }
+      setArchivedWatchlists((current) =>
+        current.filter((watchlist) => watchlist.id !== watchlistId),
+      );
     } catch {
       setError(labels.error);
     } finally {
@@ -422,6 +465,52 @@ export function ResearchWatchlists({
           <p className="text-body text-fg-secondary">{labels.addTitle}</p>
         </Card>
       )}
+
+      {canManage && archivedWatchlists.length > 0 ? (
+        <section
+          className="border-border border-t pt-5"
+          aria-labelledby="research-archived-watchlists-title"
+        >
+          <div>
+            <h3
+              id="research-archived-watchlists-title"
+              className="text-title-card text-fg-primary font-semibold"
+            >
+              {labels.archivedTitle}
+            </h3>
+            <p className="text-body text-fg-secondary mt-1">{labels.archivedDescription}</p>
+          </div>
+          <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {archivedWatchlists.map((watchlist) => (
+              <Card
+                key={watchlist.id}
+                padding="md"
+                className="flex items-center justify-between gap-3"
+              >
+                <div className="min-w-0">
+                  <h4 className="text-body text-fg-primary truncate font-semibold">
+                    {watchlist.name}
+                  </h4>
+                  <p className="text-label text-fg-secondary mt-1">
+                    {watchlist.description ||
+                      labels.accountCount.replace("{count}", String(watchlist.accountIds.length))}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={busyAction === `restore:${watchlist.id}`}
+                  onClick={() => void restoreWatchlist(watchlist.id)}
+                >
+                  <Archive className="h-4 w-4" aria-hidden="true" />
+                  {busyAction === `restore:${watchlist.id}` ? labels.restoring : labels.restore}
+                </Button>
+              </Card>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </section>
   );
 }

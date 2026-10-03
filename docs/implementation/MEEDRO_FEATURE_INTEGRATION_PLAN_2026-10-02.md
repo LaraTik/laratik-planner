@@ -34,7 +34,7 @@ The first vertical slices are now present in the current worktree:
   fallback is visibly partial, and fewer than two valid peer observations do
   not receive an outlier score.
 
-Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, metric/evidence tests 10/10, research repository/source-seam integration 13/13, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (460 files, 4331 tests), and a focused Chromium Research flow 3/3 including serious/critical axe checks. The full critical suite still has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, provider UAT, entitled AI, and independent review remain open.
+Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11 plus archived-list UI tests 3/3, metric/evidence tests 10/10, research repository/source-seam integration 13/13, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (461 files, 4335 tests), and a focused Chromium Research flow 3/3 including archive → restore and serious/critical axe checks. The full critical suite still has unrelated advisory failures. The multi-viewport/RTL visual matrix, provider UAT, entitled AI, and independent review remain open.
 
 ## 1. Executive decision
 

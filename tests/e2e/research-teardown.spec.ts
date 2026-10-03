@@ -43,7 +43,13 @@ test.describe("research teardown preview", () => {
       .getByRole("heading", { name: "Delivery app references" })
       .locator("xpath=../../..");
     await deliveryCard.getByRole("button", { name: "Archive watchlist" }).click();
-    await expect(page.getByRole("heading", { name: "Delivery app references" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Archived watchlists" })).toBeVisible();
+    const archivedDeliveryCard = page
+      .getByRole("heading", { name: "Delivery app references" })
+      .locator("xpath=../../..");
+    await archivedDeliveryCard.getByRole("button", { name: "Restore watchlist" }).click();
+    await expect(page.getByRole("heading", { name: "Delivery app references" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Archived watchlists" })).toHaveCount(0);
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
