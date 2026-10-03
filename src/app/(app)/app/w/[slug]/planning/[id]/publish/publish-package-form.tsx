@@ -346,6 +346,7 @@ export function PublishPackageForm({
   const currentReadiness = current
     ? readiness.channels.find((channel) => channel.socialChannelId === current.socialChannelId)
     : undefined;
+  const currentBlockerCount = currentReadiness?.blockerCount ?? readiness.blockers;
   const canExcludeCurrentChannel =
     canExcludeChannel &&
     (!current?.publicationStatus ||
@@ -685,13 +686,13 @@ export function PublishPackageForm({
         <div
           id={`publish-channel-panel-${current.id}`}
           role="tabpanel"
-          className="grid grid-cols-1 gap-4 lg:grid-cols-3"
+          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
           {metaPublishingReadiness &&
           metaPublishingCopy &&
           (current.platform === "instagram" || current.platform === "facebook") ? (
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <MetaPublishingReadinessCard
                 readiness={metaPublishingReadiness}
                 copy={metaPublishingCopy}
@@ -702,284 +703,286 @@ export function PublishPackageForm({
           {currentReadiness ? (
             <PublishReadinessChecklist currentReadiness={currentReadiness} t={t} />
           ) : null}
-          {/* Left column — destination + caption/discovery */}
-          <Card padding="lg" className="space-y-3">
-            <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
-            <div
-              className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
-              role="note"
-              data-testid="publish-shared-copy-hint"
-            >
-              <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
-            </div>
-            <Field
-              label={t("contentDetail.publishForm.channel")}
-              value={current.accountName}
-              readOnly
-              testId="publish-channel-name"
-            />
-            {canExcludeCurrentChannel ? (
+          <div className="min-w-0 space-y-4">
+            {/* Editor column — destination + caption/discovery, then disclosures */}
+            <Card padding="lg" className="min-w-0 space-y-3">
+              <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
               <div
-                className="border-warning/30 bg-warning-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
-                data-testid="publish-exclude-channel"
+                className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
+                role="note"
+                data-testid="publish-shared-copy-hint"
               >
-                <p className="text-label text-fg-secondary">
-                  {t("contentDetail.publish.excludeChannelDescription")}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="min-h-11"
-                  onClick={handleExcludeChannel}
-                  disabled={pending}
-                  data-testid="publish-exclude-channel-button"
-                >
-                  <X className="me-1 h-4 w-4" aria-hidden="true" />
-                  {t("contentDetail.publish.excludeChannel")}
-                </Button>
+                <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
               </div>
-            ) : null}
-            <Field
-              label={t("contentDetail.publishForm.itemTitle")}
-              value={itemTitle}
-              readOnly
-              testId="publish-item-title"
-            />
-            <Field
-              label={t("contentDetail.publishForm.format")}
-              value={localizedFormatLabel(itemFormat)}
-              readOnly
-              testId="publish-item-format"
-            />
-            <div>
-              <label
-                htmlFor="publish-content-language"
-                className="text-body text-fg-primary mb-1 block font-semibold"
-              >
-                {t("contentDetail.publishForm.publishLanguage")}
-              </label>
-              <select
-                id="publish-content-language"
-                value={
-                  (currentDraft as { contentLanguage?: string }).contentLanguage ??
-                  contentLocale ??
-                  locale
-                }
-                onChange={(e) => applySharedCopy(current.id, e.target.value)}
-                className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
-                data-testid="publish-content-language"
-              >
-                <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
-                <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
-              </select>
-              <p className="text-label text-fg-muted mt-1">
-                {t("contentDetail.publishForm.publishLanguageHint")}
-              </p>
-            </div>
-            <div>
-              <CaptionField
-                id="publish-caption"
-                name="caption"
-                label={t("contentDetail.publishForm.caption")}
-                value={(currentDraft as { caption?: string }).caption ?? ""}
-                onChange={(next) => updateDraft(current.id, { caption: next })}
-                hint={t("contentDetail.publishForm.captionHint")}
-                testId="publish-caption"
+              <Field
+                label={t("contentDetail.publishForm.channel")}
+                value={current.accountName}
+                readOnly
+                testId="publish-channel-name"
               />
-            </div>
-            <div>
-              <HashtagEditor
-                id="publish-hashtags"
-                name="hashtags"
-                label={t("contentDetail.publishForm.hashtags")}
-                value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
-                onChange={(next) => updateDraft(current.id, { hashtags: next })}
-                hint={t("contentDetail.publishForm.hashtagsHint")}
-                locale={locale}
-                t={t}
-                testId="publish-hashtags"
-              />
-            </div>
-            {sharedCopy && sharedCopyDiffers ? (
-              <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
-                <p className="text-label text-fg-secondary">
-                  {current.copySourceRevision != null &&
-                  current.copySourceRevision < readiness.revision
-                    ? t("contentDetail.copy.staleOverride")
-                    : t("contentDetail.publishForm.sharedCopyChanged")}
-                </p>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="min-h-11"
-                  onClick={() => applySharedCopy(current.id, selectedLanguage)}
-                  data-testid="publish-use-shared-copy"
+              {canExcludeCurrentChannel ? (
+                <div
+                  className="border-warning/30 bg-warning-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                  data-testid="publish-exclude-channel"
                 >
-                  {t("contentDetail.publishForm.useSharedCopy")}
-                </Button>
+                  <p className="text-label text-fg-secondary">
+                    {t("contentDetail.publish.excludeChannelDescription")}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={handleExcludeChannel}
+                    disabled={pending}
+                    data-testid="publish-exclude-channel-button"
+                  >
+                    <X className="me-1 h-4 w-4" aria-hidden="true" />
+                    {t("contentDetail.publish.excludeChannel")}
+                  </Button>
+                </div>
+              ) : null}
+              <Field
+                label={t("contentDetail.publishForm.itemTitle")}
+                value={itemTitle}
+                readOnly
+                testId="publish-item-title"
+              />
+              <Field
+                label={t("contentDetail.publishForm.format")}
+                value={localizedFormatLabel(itemFormat)}
+                readOnly
+                testId="publish-item-format"
+              />
+              <div>
+                <label
+                  htmlFor="publish-content-language"
+                  className="text-body text-fg-primary mb-1 block font-semibold"
+                >
+                  {t("contentDetail.publishForm.publishLanguage")}
+                </label>
+                <select
+                  id="publish-content-language"
+                  value={
+                    (currentDraft as { contentLanguage?: string }).contentLanguage ??
+                    contentLocale ??
+                    locale
+                  }
+                  onChange={(e) => applySharedCopy(current.id, e.target.value)}
+                  className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+                  data-testid="publish-content-language"
+                >
+                  <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
+                  <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
+                </select>
+                <p className="text-label text-fg-muted mt-1">
+                  {t("contentDetail.publishForm.publishLanguageHint")}
+                </p>
               </div>
-            ) : null}
-            <Field
-              label={t("contentDetail.publishForm.firstComment")}
-              value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
-              onChange={(v) => updateDraft(current.id, { firstComment: v })}
-              multiline
-              testId="publish-first-comment"
-            />
-            <Field
-              label={t("contentDetail.publishForm.destinationUrl")}
-              value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
-              onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
-              placeholder="https://"
-              testId="publish-destination-url"
-            />
-          </Card>
+              <div>
+                <CaptionField
+                  id="publish-caption"
+                  name="caption"
+                  label={t("contentDetail.publishForm.caption")}
+                  value={(currentDraft as { caption?: string }).caption ?? ""}
+                  onChange={(next) => updateDraft(current.id, { caption: next })}
+                  hint={t("contentDetail.publishForm.captionHint")}
+                  testId="publish-caption"
+                />
+              </div>
+              <div>
+                <HashtagEditor
+                  id="publish-hashtags"
+                  name="hashtags"
+                  label={t("contentDetail.publishForm.hashtags")}
+                  value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
+                  onChange={(next) => updateDraft(current.id, { hashtags: next })}
+                  hint={t("contentDetail.publishForm.hashtagsHint")}
+                  locale={locale}
+                  t={t}
+                  testId="publish-hashtags"
+                />
+              </div>
+              {sharedCopy && sharedCopyDiffers ? (
+                <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
+                  <p className="text-label text-fg-secondary">
+                    {current.copySourceRevision != null &&
+                    current.copySourceRevision < readiness.revision
+                      ? t("contentDetail.copy.staleOverride")
+                      : t("contentDetail.publishForm.sharedCopyChanged")}
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-11"
+                    onClick={() => applySharedCopy(current.id, selectedLanguage)}
+                    data-testid="publish-use-shared-copy"
+                  >
+                    {t("contentDetail.publishForm.useSharedCopy")}
+                  </Button>
+                </div>
+              ) : null}
+              <Field
+                label={t("contentDetail.publishForm.firstComment")}
+                value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
+                onChange={(v) => updateDraft(current.id, { firstComment: v })}
+                multiline
+                testId="publish-first-comment"
+              />
+              <Field
+                label={t("contentDetail.publishForm.destinationUrl")}
+                value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
+                onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
+                placeholder="https://"
+                testId="publish-destination-url"
+              />
+            </Card>
 
-          {/* Center column — media, disclosures */}
-          <Card padding="lg" className="space-y-3">
-            <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
-            <div>
-              <label
-                htmlFor="publish-alt-text"
-                className="text-body text-fg-primary mb-1 block font-semibold"
-              >
-                {t("contentDetail.publishForm.altText")}
-              </label>
-              <DirAwareTextarea
-                id="publish-alt-text"
-                locale={locale}
-                rows={3}
-                value={(currentDraft as { altText?: string }).altText ?? ""}
-                onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
-                data-testid="publish-alt-text"
-              />
-            </div>
-            <details
-              className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-              data-testid="publish-advanced-disclosures"
-            >
-              <summary className="text-body text-fg-primary cursor-pointer font-semibold">
-                {t("contentDetail.publishForm.advancedDisclosures")}
-                <span className="text-label text-fg-muted ms-2 font-normal">
-                  {t("contentDetail.publishForm.advancedDisclosuresSummary")}
-                </span>
-              </summary>
-              <div className="mt-3 space-y-3">
-                <Checkbox
-                  label={t("contentDetail.publishForm.rightsConfirmed")}
-                  checked={Boolean(
-                    (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
-                      ?.rightsConfirmed,
-                  )}
-                  onChange={(v) =>
-                    updateDraft(current.id, {
-                      disclosures: {
-                        paidPartnership: Boolean(
-                          (currentDraft as { disclosures?: { paidPartnership?: boolean } })
-                            .disclosures?.paidPartnership,
-                        ),
-                        aiGenerated: Boolean(
-                          (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                            ?.aiGenerated,
-                        ),
-                        syntheticMedia: Boolean(
-                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                            .disclosures?.syntheticMedia,
-                        ),
-                        rightsConfirmed: v,
-                      },
-                    })
-                  }
-                  testId="publish-rights-confirmed"
-                />
-                <Checkbox
-                  label={t("contentDetail.publishForm.aiGenerated")}
-                  checked={Boolean(
-                    (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                      ?.aiGenerated,
-                  )}
-                  onChange={(v) =>
-                    updateDraft(current.id, {
-                      disclosures: {
-                        paidPartnership: Boolean(
-                          (currentDraft as { disclosures?: { paidPartnership?: boolean } })
-                            .disclosures?.paidPartnership,
-                        ),
-                        aiGenerated: v,
-                        syntheticMedia: Boolean(
-                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                            .disclosures?.syntheticMedia,
-                        ),
-                        rightsConfirmed: Boolean(
-                          (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
-                            .disclosures?.rightsConfirmed,
-                        ),
-                      },
-                    })
-                  }
-                  testId="publish-ai-generated"
-                />
-                <Checkbox
-                  label={t("contentDetail.publishForm.paidPartnership")}
-                  checked={Boolean(
-                    (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
-                      ?.paidPartnership,
-                  )}
-                  onChange={(v) =>
-                    updateDraft(current.id, {
-                      disclosures: {
-                        paidPartnership: v,
-                        aiGenerated: Boolean(
-                          (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                            ?.aiGenerated,
-                        ),
-                        syntheticMedia: Boolean(
-                          (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                            .disclosures?.syntheticMedia,
-                        ),
-                        rightsConfirmed: Boolean(
-                          (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
-                            .disclosures?.rightsConfirmed,
-                        ),
-                      },
-                    })
-                  }
-                  testId="publish-paid-partnership"
+            <Card padding="lg" className="min-w-0 space-y-3">
+              <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
+              <div>
+                <label
+                  htmlFor="publish-alt-text"
+                  className="text-body text-fg-primary mb-1 block font-semibold"
+                >
+                  {t("contentDetail.publishForm.altText")}
+                </label>
+                <DirAwareTextarea
+                  id="publish-alt-text"
+                  locale={locale}
+                  rows={3}
+                  value={(currentDraft as { altText?: string }).altText ?? ""}
+                  onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
+                  data-testid="publish-alt-text"
                 />
               </div>
-            </details>
-            <div>
-              {/* Phase 8 (2026-08-30): user-facing label renamed from
+              <details
+                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                data-testid="publish-advanced-disclosures"
+              >
+                <summary className="text-body text-fg-primary cursor-pointer font-semibold">
+                  {t("contentDetail.publishForm.advancedDisclosures")}
+                  <span className="text-label text-fg-muted ms-2 font-normal">
+                    {t("contentDetail.publishForm.advancedDisclosuresSummary")}
+                  </span>
+                </summary>
+                <div className="mt-3 space-y-3">
+                  <Checkbox
+                    label={t("contentDetail.publishForm.rightsConfirmed")}
+                    checked={Boolean(
+                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
+                        ?.rightsConfirmed,
+                    )}
+                    onChange={(v) =>
+                      updateDraft(current.id, {
+                        disclosures: {
+                          paidPartnership: Boolean(
+                            (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                              .disclosures?.paidPartnership,
+                          ),
+                          aiGenerated: Boolean(
+                            (currentDraft as { disclosures?: { aiGenerated?: boolean } })
+                              .disclosures?.aiGenerated,
+                          ),
+                          syntheticMedia: Boolean(
+                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                              .disclosures?.syntheticMedia,
+                          ),
+                          rightsConfirmed: v,
+                        },
+                      })
+                    }
+                    testId="publish-rights-confirmed"
+                  />
+                  <Checkbox
+                    label={t("contentDetail.publishForm.aiGenerated")}
+                    checked={Boolean(
+                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                        ?.aiGenerated,
+                    )}
+                    onChange={(v) =>
+                      updateDraft(current.id, {
+                        disclosures: {
+                          paidPartnership: Boolean(
+                            (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                              .disclosures?.paidPartnership,
+                          ),
+                          aiGenerated: v,
+                          syntheticMedia: Boolean(
+                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                              .disclosures?.syntheticMedia,
+                          ),
+                          rightsConfirmed: Boolean(
+                            (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                              .disclosures?.rightsConfirmed,
+                          ),
+                        },
+                      })
+                    }
+                    testId="publish-ai-generated"
+                  />
+                  <Checkbox
+                    label={t("contentDetail.publishForm.paidPartnership")}
+                    checked={Boolean(
+                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
+                        ?.paidPartnership,
+                    )}
+                    onChange={(v) =>
+                      updateDraft(current.id, {
+                        disclosures: {
+                          paidPartnership: v,
+                          aiGenerated: Boolean(
+                            (currentDraft as { disclosures?: { aiGenerated?: boolean } })
+                              .disclosures?.aiGenerated,
+                          ),
+                          syntheticMedia: Boolean(
+                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                              .disclosures?.syntheticMedia,
+                          ),
+                          rightsConfirmed: Boolean(
+                            (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                              .disclosures?.rightsConfirmed,
+                          ),
+                        },
+                      })
+                    }
+                    testId="publish-paid-partnership"
+                  />
+                </div>
+              </details>
+              <div>
+                {/* Phase 8 (2026-08-30): user-facing label renamed from
                   "Approved delivery version" → "Approved version"
                   per the terminology sweep in the planning-detail
                   refactor (spec §10 / §16 — the DB column
                   `delivery_versions` is unchanged). */}
-              <CardTitle className="text-title-card">
-                {t("contentDetail.publishForm.approvedVersion")}
-              </CardTitle>
-              {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
-                <p
-                  className="text-label text-warning mt-1"
-                  data-testid="publish-no-approved-delivery"
-                >
-                  {t("contentDetail.publish.noApprovedDelivery")}
-                </p>
-              ) : (
-                <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">
-                  {deliveryVersions
-                    .filter((d) => d.isFinalApproved)
-                    .map((d) => (
-                      <li key={d.id}>v{d.versionNumber}</li>
-                    ))}
-                </ul>
-              )}
-            </div>
-          </Card>
+                <CardTitle className="text-title-card">
+                  {t("contentDetail.publishForm.approvedVersion")}
+                </CardTitle>
+                {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
+                  <p
+                    className="text-label text-warning mt-1"
+                    data-testid="publish-no-approved-delivery"
+                  >
+                    {t("contentDetail.publish.noApprovedDelivery")}
+                  </p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">
+                    {deliveryVersions
+                      .filter((d) => d.isFinalApproved)
+                      .map((d) => (
+                        <li key={d.id}>v{d.versionNumber}</li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            </Card>
+          </div>
 
-          {/* Right column — preview + approval */}
-          <Card padding="lg" className="space-y-3">
+          {/* Preview stays visible beside the editor on large screens and
+              remains first-class content on mobile, below the inputs. */}
+          <Card padding="lg" className="min-w-0 space-y-3 self-start lg:sticky lg:top-24">
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
             <PreviewPane payload={currentDraft} platform={current.platform} />
             <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">
@@ -1082,7 +1085,7 @@ export function PublishPackageForm({
             <Save className="me-1 h-4 w-4" aria-hidden="true" />
             {t("contentDetail.publish.saveDraft")}
           </Button>
-          {channels.length > 1 ? (
+          {channels.length > 1 && dirtyCount > 0 ? (
             <Button
               type="button"
               variant="outline"
@@ -1095,6 +1098,20 @@ export function PublishPackageForm({
               {t("contentDetail.publish.saveAll", { count: dirtyCount })}
             </Button>
           ) : null}
+          {!readiness.canPublish ? (
+            <span
+              id="publish-ready-hint"
+              className="text-label text-warning max-w-56"
+              data-testid="publish-ready-hint"
+            >
+              {t(
+                currentBlockerCount === 1
+                  ? "contentDetail.publish.blockersRemainingOne"
+                  : "contentDetail.publish.blockersRemainingMany",
+                { count: currentBlockerCount },
+              )}
+            </span>
+          ) : null}
           <Button
             type="button"
             onClick={handleConfirmReadiness}
@@ -1106,6 +1123,7 @@ export function PublishPackageForm({
               !canConfirmReadiness
             }
             className="min-h-11"
+            {...(!readiness.canPublish ? { "aria-describedby": "publish-ready-hint" } : {})}
             data-testid="publish-ready"
           >
             <Send className="me-1 h-4 w-4" aria-hidden="true" />
@@ -1219,7 +1237,7 @@ function PublishReadinessChecklist({
       : "border-success bg-success-container";
   return (
     <section
-      className={`${tone} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-3`}
+      className={`${tone} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-2`}
       aria-labelledby="publish-readiness-title"
       data-testid="publish-readiness-checklist"
       data-blockers={currentReadiness.blockerCount}

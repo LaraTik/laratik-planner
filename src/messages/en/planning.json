@@ -51,6 +51,8 @@
     "briefSummary": "Brief",
     "briefOptional": "Brief (optional)",
     "briefHint": "Goal, audience, key points.",
+    "briefBeforeReview": "Brief",
+    "briefBeforeReviewHint": "You can save an incomplete draft. Add the brief before sending it for content review.",
     "briefPlaceholder": "What's the message? Who's it for?",
     "channels": "Channels",
     "saveChanges": "Save changes",

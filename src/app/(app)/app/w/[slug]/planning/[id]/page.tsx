@@ -45,7 +45,7 @@ import { PlanningSection } from "@/components/planning/planning-section";
 import { CreateSectionNavigator } from "@/components/planning/create-section-navigator";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
-import { PlanningOverviewSummary } from "@/components/planning/planning-overview-summary";
+import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
 import { MessagesPanel } from "@/components/planning/messages-panel";
@@ -646,7 +646,11 @@ export default async function ContentDetailPage({
   // rendered under the Activity tab. We don't filter by kind
   // here — the user wants to see what just happened at a
   // glance, regardless of category.
-  const recentActivity = activityEvents.slice(0, 5);
+  const activityWithTarget = activityEvents.map((event) => ({
+    ...event,
+    targetLabel: item.title,
+  }));
+  const recentActivity = activityWithTarget.slice(0, 5);
 
   // The compact header is intentionally identity-only. Editing is
   // discoverable from the Overview details surface so it does not
@@ -810,32 +814,50 @@ export default async function ContentDetailPage({
                 className="scroll-mt-24"
                 data-testid="workspace-tab-panel-overview"
               >
-                <PlanningOverviewSummary
-                  statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
-                  formatLabel={t(`planningFilters.formatLabels.${item.format}`)}
+                <OverviewNavigator
+                  workspaceSlug={slug}
+                  contentItemId={item.id}
+                  contentStatus={item.status}
+                  title={item.title}
+                  brief={item.brief ?? ""}
+                  format={item.format}
                   plannedPublishAt={formatDate(item.plannedPublishAt, code, {
                     dateStyle: "medium",
                     timeStyle: "short",
                     timeZone: ws.timezone,
                   })}
-                  channelsSummary={
-                    item.channels.length === 0
-                      ? t("contentDetail.overview.noChannels")
-                      : t("contentDetail.overview.channelsCount", { count: item.channels.length })
-                  }
+                  plannedPublishAtIso={item.plannedPublishAt.toISOString()}
+                  workspaceTimezone={ws.timezone}
+                  channels={channelConfigs}
                   ownerName={owner?.displayName ?? null}
-                  updatedAt={formatDate(item.updatedAt, code, {
-                    dateStyle: "medium",
-                    timeStyle: "short",
-                    timeZone: ws.timezone,
-                  })}
                   readinessBlockers={overviewBlockers}
                   readinessCanPublish={readiness.canPublish}
                   readiness={overviewReadinessLines}
                   attention={planningPresentation.attention}
+                  deliveryCount={deliveryCount}
+                  finalApprovedCount={finalApprovedCount}
+                  references={researchLinks.flatMap((reference) =>
+                    reference.permalink ? [reference.permalink] : [],
+                  )}
                   recentActivity={recentActivity}
-                  totalActivityCount={activityEvents.length}
-                  t={t}
+                  totalActivityCount={activityWithTarget.length}
+                  canEdit={canEditAll}
+                  canEditOverview={canEditAll}
+                  editHref={editHref}
+                  {...(planningPresentation.nextAction.ctaKey
+                    ? { primaryActionLabel: t(planningPresentation.nextAction.ctaKey) }
+                    : {})}
+                  workflowStageLabel={t(planningPresentation.workflow.labelKey)}
+                  nextActionHeadline={t(planningPresentation.nextAction.headlineKey)}
+                  {...(planningPresentation.nextAction.descriptionKey
+                    ? {
+                        nextActionDescription: t(planningPresentation.nextAction.descriptionKey),
+                      }
+                    : {})}
+                  {...(planningPresentation.nextAction.destinationTab
+                    ? { nextActionDestinationTab: planningPresentation.nextAction.destinationTab }
+                    : {})}
+                  nextActionExecutable={planningPresentation.nextAction.executable}
                 />
               </section>
             ),
@@ -856,7 +878,7 @@ export default async function ContentDetailPage({
                 <PlanningSection
                   id="create-plan"
                   title={t("contentDetail.overview.details")}
-                  description={t("contentDetail.overview.editDrawerDescription")}
+                  description={t("contentDetail.create.detailsDescription")}
                   collapsible
                 >
                   <EditIdeaForm
@@ -1569,7 +1591,7 @@ export default async function ContentDetailPage({
                   useful content area rather than stretching to
                   fill the entire viewport. */}
                 {activityEvents.length > 0 ? (
-                  <ActivityWithFilters events={activityEvents} />
+                  <ActivityWithFilters events={activityWithTarget} />
                 ) : (
                   <div
                     className="border-border bg-surface-subtle mx-auto flex max-w-md flex-col items-center gap-3 rounded-[var(--radius-card)] border border-dashed px-6 py-10 text-center"

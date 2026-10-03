@@ -51,6 +51,8 @@
     "briefSummary": "الوصف المختصر",
     "briefOptional": "الوصف المختصر (اختياري)",
     "briefHint": "الهدف والجمهور والنقاط الرئيسية.",
+    "briefBeforeReview": "الوصف المختصر",
+    "briefBeforeReviewHint": "يمكنك حفظ مسودة غير مكتملة. أضف الوصف المختصر قبل إرسالها لمراجعة المحتوى.",
     "briefPlaceholder": "ما الرسالة؟ ولمن هي؟",
     "channels": "القنوات",
     "saveChanges": "حفظ التغييرات",

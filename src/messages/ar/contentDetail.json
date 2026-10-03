@@ -182,6 +182,8 @@
     "lastSaved": "آخر حفظ {time}",
     "saveDraft": "حفظ المسودة",
     "saveAll": "حفظ كل التغييرات ({count})",
+    "blockersRemainingOne": "عالج عائقًا واحدًا ({count}) قبل تحديد الإعداد كجاهز.",
+    "blockersRemainingMany": "عالج {count} عوائق قبل تحديد الإعداد كجاهز.",
     "readyForPublishing": "جاهز للنشر",
     "markPublishingSetupReady": "تحديد إعداد النشر كجاهز",
     "markPublishingSetupReadyDescription": "تحقق من حزمة النشر الكاملة واجعل قنواتها جاهزة للنشر. لا يؤدي هذا إلى الجدولة أو النشر.",
@@ -556,6 +558,9 @@
   },
   "createNavigator": {
     "label": "أقسام الإنشاء"
+  },
+  "create": {
+    "detailsDescription": "حدّد العنوان والتنسيق والوصف المختصر. تُضبط الجدولة والوجهات في إعدادات النشر."
   },
   "publishNavigator": {
     "label": "أقسام النشر",

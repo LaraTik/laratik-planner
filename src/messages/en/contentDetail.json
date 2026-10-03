@@ -182,6 +182,8 @@
     "lastSaved": "Last saved {time}",
     "saveDraft": "Save draft",
     "saveAll": "Save all changes ({count})",
+    "blockersRemainingOne": "Resolve {count} blocker before marking ready.",
+    "blockersRemainingMany": "Resolve {count} blockers before marking ready.",
     "readyForPublishing": "Ready for publishing",
     "markPublishingSetupReady": "Mark publishing setup ready",
     "markPublishingSetupReadyDescription": "Validate the complete publication package and make its channels ready to publish. This does not schedule or publish anything.",
@@ -556,6 +558,9 @@
   },
   "createNavigator": {
     "label": "Create sections"
+  },
+  "create": {
+    "detailsDescription": "Set the title, format, and brief. Schedule and destinations are configured in Publishing setup."
   },
   "publishNavigator": {
     "label": "Publish sections",

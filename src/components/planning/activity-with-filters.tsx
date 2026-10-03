@@ -6,10 +6,11 @@ import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
- * ActivityWithFilters — the Activity tab body, with the
- * five filters the user can switch between (All / Comments /
- * Workflow / Publishing / System) per the planning content
- * spec §13.
+ * ActivityWithFilters — the Activity tab body, with filters for
+ * the categories that actually exist on this item. Empty category
+ * filters stay hidden so the toolbar remains useful instead of
+ * advertising a permanent "Comments 0" state when discussion is
+ * intentionally handled by the separate discussion drawer.
  *
  * The filter state is local. We keep the full events array in
  * memory and derive the visible list on each render — the
@@ -120,6 +121,9 @@ export function ActivityWithFilters({
   const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0]!;
   const visible = events.filter((e) => active.match(e.kind));
   const activeLabel = t(FILTER_LABEL_KEYS[active.id]);
+  const visibleFilters = FILTERS.filter(
+    (f) => f.id === "all" || f.id === filter || counts[f.id] > 0,
+  );
 
   return (
     <div className="space-y-3" data-testid="activity-with-filters" data-filter={filter}>
@@ -129,7 +133,7 @@ export function ActivityWithFilters({
         className="flex flex-wrap items-center gap-1.5"
         data-testid="activity-filter-chips"
       >
-        {FILTERS.map((f) => {
+        {visibleFilters.map((f) => {
           const isActive = f.id === filter;
           const count = counts[f.id];
           const label = t(FILTER_LABEL_KEYS[f.id]);

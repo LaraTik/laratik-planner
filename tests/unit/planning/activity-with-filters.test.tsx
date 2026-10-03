@@ -92,11 +92,10 @@ describe("ActivityWithFilters", () => {
   });
 
   it("renders the empty-filtered state when a bucket has no events", async () => {
-    const user = userEvent.setup();
     const commentsOnly: ActivityEventView[] = [makeEvent("comment", "c-1")];
-    render(<ActivityWithFilters events={commentsOnly} t={t} />);
-    // Comments has 1, Workflow has 0 — switch to Workflow.
-    await user.click(screen.getByTestId("activity-filter-workflow"));
+    render(<ActivityWithFilters events={commentsOnly} defaultFilter="workflow" t={t} />);
+    // Empty categories are hidden by default, but remain available when
+    // explicitly requested as the default filter.
     const empty = screen.getByTestId("activity-filter-empty");
     expect(empty).toBeInTheDocument();
     expect(empty).toHaveTextContent(/No workflow activity yet/);

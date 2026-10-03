@@ -363,7 +363,11 @@ function NeedsAttention({
       </header>
       <ul className="border-border bg-surface divide-y divide-[color:var(--border)] overflow-hidden rounded-[var(--radius-control)] border">
         {visibleItems.map((item) => {
-          const destination = item.destinationTab ? `#${item.destinationTab}` : undefined;
+          const destination = item.destinationAnchor
+            ? `#${item.destinationAnchor}`
+            : item.destinationTab
+              ? `#${item.destinationTab}`
+              : undefined;
           const isOverdue = item.code === "schedule_overdue";
           const message = item.messageKey ? t(item.messageKey) : item.message;
           const content = (

@@ -207,8 +207,16 @@ export function EditIdeaForm({
       {showCreateFields ? (
         <FormField
           id="brief"
-          label={t("planning.editForm.briefOptional")}
-          hint={t("planning.editForm.briefHint")}
+          label={t(
+            mode === "create"
+              ? "planning.editForm.briefBeforeReview"
+              : "planning.editForm.briefOptional",
+          )}
+          hint={t(
+            mode === "create"
+              ? "planning.editForm.briefBeforeReviewHint"
+              : "planning.editForm.briefHint",
+          )}
           {...(state?.fieldErrors?.brief ? { error: state.fieldErrors.brief } : {})}
         >
           <DirAwareTextarea
