@@ -91,6 +91,17 @@ light/dark verification before the Command Center surface is called ready.
 > provider UAT, authenticated MCP smoke, and the remaining clean planning
 > visual pass are still open.
 
+> **2026-10-03 planning visual baseline checkpoint** — After the related
+> planning UI changes were committed, the reviewed English responsive planning
+> list matrix passed 4/4 at 375, 768, 1024, and 1440px with serious/critical
+> axe checks and no horizontal-overflow failure. The four corresponding
+> baselines were refreshed in `ef0c2754`; the current layout intentionally
+> records the shipped List/Board/Calendar switcher, search/filter controls,
+> and responsive planning-card layouts. The broader detail, publish, settings,
+> Arabic/RTL, full route matrix, provider UAT, authenticated MCP smoke, and
+> independent review remain open. This evidence remains `Tested`, not
+> `Verified`.
+
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post
 > observation read model with an explicit `source_kind`, a nullable research

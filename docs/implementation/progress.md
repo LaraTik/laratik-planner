@@ -21,6 +21,16 @@ baseline change. Planning/detail, publish, and workspace-settings visual
 failures remain explicitly pending because they overlap separate uncommitted
 user edits; those snapshots were not refreshed or committed.
 
+## 2026-10-03 — Planning responsive baselines refreshed
+
+The clean planning-list responsive slice passed 4/4 at 375, 768, 1024, and
+1440px after the current UI was reviewed for responsive structure, overflow,
+and serious/critical accessibility violations. The four baselines were
+refreshed in `ef0c2754`, recording the shipped List/Board/Calendar switcher,
+search/filter controls, and current planning-card layouts. Detail, publish,
+settings, Arabic/RTL, provider UAT, authenticated MCP smoke, and independent
+review remain open.
+
 ## 2026-10-03 — Research browser contract and query safety
 
 The source-neutral Research query now casts the connected-channel platform enum

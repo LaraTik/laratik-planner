@@ -44,6 +44,25 @@ This proves the automated gate and candidate-file portability. It does not
 replace the reviewer comparison against the Stitch PNG/HTML or the manual
 keyboard/screen-reader sign-off below.
 
+### Planning responsive baseline evidence (2026-10-03; `ef0c2754`)
+
+After the planning UI changes were committed, the reviewed planning-list
+responsive slice passed **4/4** in assert mode on Chromium at 375, 768, 1024,
+and 1440px:
+
+```text
+TEST_DATABASE_URL=...planner_test pnpm exec tsx scripts/run-e2e-tests.ts \
+  tests/e2e/visual-regression.spec.ts --project=visual-chromium \
+  --grep='responsive /app/w/acme/planning @'
+```
+
+The four refreshed candidate baselines are the mobile-s, tablet, laptop, and
+wide planning-list screenshots. Review confirmed the current List/Board/
+Calendar switcher, search/filter controls, responsive card layout, no visible
+clipping, and zero serious/critical axe violations. This is automated
+`Tested` evidence; Stitch comparison, Arabic/RTL coverage, and independent
+review remain required before `Verified`.
+
 For every active `STITCH_CASES` entry:
 
 1. Compare the live candidate against the PNG and HTML under
