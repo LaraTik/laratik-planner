@@ -11,6 +11,21 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-03 — Versioned research ranking metrics
+
+Saved research evidence now exposes deterministic Planner-derived engagement
+and outlier metrics. Engagement uses the normalized interaction total (or the
+available likes/comments fallback) against views, with reach as an explicitly
+partial fallback. Outlier score is post views divided by the median of the
+bounded peer sample; fewer than two valid peer observations remain unavailable.
+The formula is labeled `v1`, null and negative provider values stay
+unavailable, and the Research grid can sort by engagement or outlier score in
+English and Arabic.
+
+Focused metric and evidence-grid tests pass 9/9. Provider refresh UAT, a full
+comparison surface, entitled AI insight, complete visual/RTL evidence, and
+independent review remain open.
+
 ## 2026-10-03 — Research evidence UX hardening
 
 The source-only Research surface now includes a responsive evidence grid with
@@ -23,8 +38,7 @@ failures by restoring optimistic state and exposing an announced error.
 Focused research unit tests pass 12/12, and the named-watchlist Chromium flow
 passes 1/1 with serious/critical axe checks. This does not close the broader
 release work: multi-viewport/RTL visual evidence, the full Research browser
-file, provider UAT, the competitor observation-source seam, ranking, entitled
-AI insight, and independent review remain open.
+file, provider UAT, entitled AI insight, and independent review remain open.
 
 ## 2026-10-03 — Named watchlist management
 

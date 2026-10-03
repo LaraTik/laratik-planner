@@ -33,6 +33,7 @@ import {
   type AppErrorDetail,
 } from "@/lib/observability/app-errors";
 import { matchErrorHint } from "@/lib/observability/error-hints";
+import { RESEARCH_METRICS_VERSION } from "@/lib/research/metrics";
 import {
   archiveContentItem,
   assignContentOwner,
@@ -817,6 +818,9 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
               .select({
                 id: researchBookmarks.id,
                 observation_id: socialPostObservations.id,
+                source_kind: socialPostObservations.sourceKind,
+                source_channel_id: socialPostObservations.socialChannelId,
+                source_account_id: socialPostObservations.researchWatchlistAccountId,
                 account_name: sql<string | null>`coalesce(
                   ${socialChannels.accountName},
                   ${researchWatchlistAccounts.displayName},
@@ -833,6 +837,7 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
                 saved: socialPostObservations.saved,
                 shares: socialPostObservations.shares,
                 interactions: socialPostObservations.interactions,
+                metrics_version: sql<string>`${RESEARCH_METRICS_VERSION}`,
                 duration_seconds: socialPostObservations.durationSeconds,
                 saved_at: researchBookmarks.createdAt,
               })

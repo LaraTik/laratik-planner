@@ -7,6 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ResearchCollectionPicker } from "@/components/workspace/research-collection-picker";
+import {
+  calculateResearchMetrics,
+  formatResearchPercent,
+  RESEARCH_METRICS_VERSION,
+  type ResearchMetricInput,
+} from "@/lib/research/metrics";
 
 export type ResearchEvidenceRow = {
   bookmarkId: string;
@@ -20,8 +26,12 @@ export type ResearchEvidenceRow = {
   publishedLabel: string | null;
   savedLabel: string;
   views: number | null;
+  reach?: number | null;
   likes: number | null;
   comments: number | null;
+  saved?: number | null;
+  shares?: number | null;
+  interactions?: number | null;
   viewsLabel: string;
   likesLabel: string;
   commentsLabel: string;
@@ -63,9 +73,15 @@ type Labels = {
   views: string;
   likes: string;
   comments: string;
+  sortEngagement: string;
+  sortOutlier: string;
+  engagementRate: string;
+  outlierScore: string;
+  derivedMetric: string;
+  peerSample: string;
 };
 
-type SortKey = "newest" | "published" | "views" | "likes" | "comments";
+type SortKey = "newest" | "published" | "views" | "likes" | "comments" | "engagement" | "outlier";
 
 function matchesSearch(row: ResearchEvidenceRow, query: string) {
   if (!query.trim()) return true;
@@ -76,10 +92,38 @@ function matchesSearch(row: ResearchEvidenceRow, query: string) {
   return haystack.includes(query.trim().toLocaleLowerCase());
 }
 
-function sortRows(rows: ResearchEvidenceRow[], sort: SortKey) {
+function asMetricInput(row: ResearchEvidenceRow): ResearchMetricInput {
+  return {
+    views: row.views,
+    reach: row.reach,
+    likes: row.likes,
+    comments: row.comments,
+    saved: row.saved,
+    shares: row.shares,
+    interactions: row.interactions,
+  };
+}
+
+function sortRows(
+  rows: ResearchEvidenceRow[],
+  sort: SortKey,
+  metrics: Map<string, ReturnType<typeof calculateResearchMetrics>>,
+) {
   return [...rows].sort((a, b) => {
     if (sort === "views" || sort === "likes" || sort === "comments") {
       return (b[sort] ?? -1) - (a[sort] ?? -1);
+    }
+    if (sort === "engagement") {
+      return (
+        (metrics.get(b.observationId)?.engagementRatePercent ?? -1) -
+        (metrics.get(a.observationId)?.engagementRatePercent ?? -1)
+      );
+    }
+    if (sort === "outlier") {
+      return (
+        (metrics.get(b.observationId)?.outlierScore ?? -1) -
+        (metrics.get(a.observationId)?.outlierScore ?? -1)
+      );
     }
     const aDate = sort === "published" ? a.publishedAt : a.savedAt;
     const bDate = sort === "published" ? b.publishedAt : b.savedAt;
@@ -105,6 +149,15 @@ export function ResearchEvidenceGrid({
   const [query, setQuery] = React.useState("");
   const [platform, setPlatform] = React.useState("all");
   const [sort, setSort] = React.useState<SortKey>("newest");
+  const metrics = React.useMemo(() => {
+    const peerInputs = rows.map(asMetricInput);
+    return new Map(
+      rows.map((row) => [
+        row.observationId,
+        calculateResearchMetrics(asMetricInput(row), peerInputs),
+      ]),
+    );
+  }, [rows]);
   const platforms = React.useMemo(
     () => Array.from(new Set(rows.map((row) => row.platform))).sort(),
     [rows],
@@ -116,8 +169,9 @@ export function ResearchEvidenceGrid({
           (row) => (platform === "all" || row.platform === platform) && matchesSearch(row, query),
         ),
         sort,
+        metrics,
       ),
-    [platform, query, rows, sort],
+    [metrics, platform, query, rows, sort],
   );
 
   return (
@@ -175,6 +229,8 @@ export function ResearchEvidenceGrid({
                 <option value="views">{labels.mostViews}</option>
                 <option value="likes">{labels.mostLikes}</option>
                 <option value="comments">{labels.mostComments}</option>
+                <option value="engagement">{labels.sortEngagement}</option>
+                <option value="outlier">{labels.sortOutlier}</option>
               </select>
             </label>
           </div>
@@ -200,71 +256,101 @@ export function ResearchEvidenceGrid({
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {visibleRows.map((row) => (
-            <Card key={row.observationId} padding="md" className="flex flex-col gap-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <h3 className="text-body text-fg-primary truncate font-semibold">
-                    <bdi>{row.accountName || labels.emptyTitle}</bdi>
-                  </h3>
-                  <p className="text-label text-fg-muted mt-1 capitalize">
-                    {row.platform} · {row.mediaType || "—"}
-                    {row.publishedLabel ? ` · ${row.publishedLabel}` : ""}
+          {visibleRows.map((row) => {
+            const derived = metrics.get(row.observationId);
+            const engagement = formatResearchPercent(derived?.engagementRatePercent ?? null);
+            return (
+              <Card key={row.observationId} padding="md" className="flex flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-body text-fg-primary truncate font-semibold">
+                      <bdi>{row.accountName || labels.emptyTitle}</bdi>
+                    </h3>
+                    <p className="text-label text-fg-muted mt-1 capitalize">
+                      {row.platform} · {row.mediaType || "—"}
+                      {row.publishedLabel ? ` · ${row.publishedLabel}` : ""}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap justify-end gap-2">
+                    {derived?.outlierScore !== null && derived?.outlierScore !== undefined ? (
+                      <Badge variant="success">
+                        {labels.outlierScore} {derived.outlierScore.toFixed(1)}x
+                      </Badge>
+                    ) : null}
+                    <Badge variant="outline">
+                      {labels.savedAt.replace("{date}", row.savedLabel)}
+                    </Badge>
+                  </div>
+                </div>
+                <dl className="text-label text-fg-secondary grid grid-cols-3 gap-2">
+                  <div>
+                    <dt>{labels.views}</dt>
+                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                      {row.viewsLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{labels.likes}</dt>
+                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                      {row.likesLabel}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>{labels.comments}</dt>
+                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                      {row.commentsLabel}
+                    </dd>
+                  </div>
+                </dl>
+                {engagement ||
+                (derived?.outlierScore !== null && derived?.outlierScore !== undefined) ? (
+                  <p className="text-label text-fg-muted flex flex-wrap gap-x-2 gap-y-1">
+                    <span>
+                      {labels.engagementRate}: {engagement ?? "—"}
+                      {derived?.engagementPartial ? "*" : ""}
+                    </span>
+                    <span aria-label={`${labels.derivedMetric} ${RESEARCH_METRICS_VERSION}`}>
+                      {labels.derivedMetric} {RESEARCH_METRICS_VERSION}
+                    </span>
+                    {derived && derived.peerSampleSize > 0 ? (
+                      <span>
+                        {labels.peerSample.replace("{count}", String(derived.peerSampleSize))}
+                      </span>
+                    ) : null}
                   </p>
-                </div>
-                <Badge variant="outline">{labels.savedAt.replace("{date}", row.savedLabel)}</Badge>
-              </div>
-              <dl className="text-label text-fg-secondary grid grid-cols-3 gap-2">
-                <div>
-                  <dt>{labels.views}</dt>
-                  <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                    {row.viewsLabel}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{labels.likes}</dt>
-                  <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                    {row.likesLabel}
-                  </dd>
-                </div>
-                <div>
-                  <dt>{labels.comments}</dt>
-                  <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                    {row.commentsLabel}
-                  </dd>
-                </div>
-              </dl>
-              <div className="mt-auto flex flex-wrap items-center gap-2">
-                {row.permalink ? (
-                  <Button variant="ghost" size="sm" asChild>
-                    <a href={row.permalink} target="_blank" rel="noreferrer">
-                      {labels.openSource}
-                      <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                ) : null}
+                <div className="mt-auto flex flex-wrap items-center gap-2">
+                  {row.permalink ? (
+                    <Button variant="ghost" size="sm" asChild>
+                      <a href={row.permalink} target="_blank" rel="noreferrer">
+                        {labels.openSource}
+                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+                      </a>
+                    </Button>
+                  ) : null}
+                  <Button size="sm" asChild>
+                    <a
+                      href={`/app/w/${encodeURIComponent(slug)}/planning/new?researchPostObservationId=${encodeURIComponent(row.observationId)}`}
+                    >
+                      {labels.createBrief}
                     </a>
                   </Button>
-                ) : null}
-                <Button size="sm" asChild>
-                  <a
-                    href={`/app/w/${encodeURIComponent(slug)}/planning/new?researchPostObservationId=${encodeURIComponent(row.observationId)}`}
-                  >
-                    {labels.createBrief}
-                  </a>
-                </Button>
-                {canManage ? (
-                  <ResearchCollectionPicker
-                    workspaceSlug={workspaceSlug}
-                    itemKind="bookmark"
-                    itemId={row.bookmarkId}
-                    initialCollectionId={row.collectionId}
-                    collections={collections}
-                    label={labels.collectionLabel}
-                    noCollection={labels.collectionNone}
-                    errorLabel={labels.collectionError}
-                  />
-                ) : null}
-              </div>
-            </Card>
-          ))}
+                  {canManage ? (
+                    <ResearchCollectionPicker
+                      workspaceSlug={workspaceSlug}
+                      itemKind="bookmark"
+                      itemId={row.bookmarkId}
+                      initialCollectionId={row.collectionId}
+                      collections={collections}
+                      label={labels.collectionLabel}
+                      noCollection={labels.collectionNone}
+                      errorLabel={labels.collectionError}
+                    />
+                  ) : null}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
     </section>

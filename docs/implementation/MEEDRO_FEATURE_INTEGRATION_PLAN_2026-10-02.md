@@ -1,7 +1,7 @@
 # Meedro-informed Planner integration — full implementation plan
 
 **Date:** 2026-10-02  
-**Status:** M1 source-only UX, M2 named-watchlist management, and the M3 source-neutral observation seam tested; release evidence remains open
+**Status:** M1 source-only UX, M2 named-watchlist management, M3 source-neutral observation seam, and the first M5 ranking slice tested; release evidence remains open
 **Owner:** LaraTik Planner product/engineering  
 **Source audits:** [Meedro feature audit](../audits/MEEDRO_FEATURE_AUDIT_2026-09-30.md), [workflow catalog](../audits/MEEDRO_WORKFLOW_CATALOG_2026-10-02.md), [MCP connection audit](../audits/MEEDRO_MCP_CONNECTION_2026-10-02.md), [Viral Finder audit](../audits/MEEDRO_VIRAL_FINDER_2026-10-02.md)  
 **Current implementation context:** [Meedro refactor plan](MEEDRO_REFACTOR_PLAN.md)
@@ -29,8 +29,12 @@ The first vertical slices are now present in the current worktree:
   uniqueness, repository upserts, and workspace-scoped reads for connected or
   active research sources. Bookmark, MCP, and create-brief paths now preserve
   that source distinction.
+- Added versioned, null-safe Planner-derived engagement and median-peer outlier
+  metrics to the saved evidence grid. The formula is labeled `v1`, reach
+  fallback is visibly partial, and fewer than two valid peer observations do
+  not receive an outlier score.
 
-Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, research repository/source-seam integration 13/13, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (459 files, 4322 tests), and a focused Chromium named-watchlist management flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, provider UAT, ranking, entitled AI, and independent review remain open.
+Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, metric/evidence tests 9/9, research repository/source-seam integration 13/13, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (459 files, 4322 tests), and a focused Chromium named-watchlist management flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, provider UAT, complete comparison UX, entitled AI, and independent review remain open.
 
 ## 1. Executive decision
 

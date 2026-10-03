@@ -57,6 +57,17 @@ light/dark verification before the Command Center surface is called ready.
 > refresh, ranking, AI insight, visual/RTL evidence, and independent review
 > remain open.
 
+> **2026-10-03 versioned ranking checkpoint** — Research evidence now uses a
+> pure `research/metrics` service with formula version `v1`. Engagement is
+> calculated only from normalized interactions and a known views/reach
+> denominator; reach fallback is marked partial. Outlier score uses the median
+> of at least two valid peer view values, with explicit performance bands and
+> no coercion of missing or negative provider values. The bilingual evidence
+> grid exposes engagement/outlier sorting and labels the results as
+> Planner-derived. Focused metric/evidence tests pass 9/9. The slice is
+> `Tested`, not `Verified`; provider UAT, full comparison UX, entitled AI,
+> responsive/RTL evidence, and independent review remain open.
+
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
 > suite passes 24/24 after regenerating only the three references affected by
 > the fixed visual fixture: workspace overview desktop/mobile

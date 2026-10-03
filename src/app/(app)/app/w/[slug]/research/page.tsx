@@ -74,8 +74,12 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
       permalink: socialPostObservations.permalink,
       publishedAt: socialPostObservations.publishedAt,
       views: socialPostObservations.views,
+      reach: socialPostObservations.reach,
       likes: socialPostObservations.likes,
       comments: socialPostObservations.comments,
+      saved: socialPostObservations.saved,
+      shares: socialPostObservations.shares,
+      interactions: socialPostObservations.interactions,
       collectionId: researchBookmarks.collectionId,
       savedAt: researchBookmarks.createdAt,
     })
@@ -385,6 +389,8 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           mostViews: t("research.evidenceSortViews"),
           mostLikes: t("research.evidenceSortLikes"),
           mostComments: t("research.evidenceSortComments"),
+          sortEngagement: t("research.evidenceSortEngagement"),
+          sortOutlier: t("research.evidenceSortOutlier"),
           results: t("research.evidenceResults"),
           filteredEmptyTitle: t("research.evidenceFilteredEmptyTitle"),
           filteredEmptyDescription: t("research.evidenceFilteredEmptyDescription"),
@@ -397,6 +403,10 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           views: t("research.views"),
           likes: t("research.likes"),
           comments: t("research.comments"),
+          engagementRate: t("research.evidenceEngagementRate"),
+          outlierScore: t("research.evidenceOutlierScore"),
+          derivedMetric: t("research.evidenceDerivedMetric"),
+          peerSample: t("research.evidencePeerSample"),
         }}
       />
     </div>
