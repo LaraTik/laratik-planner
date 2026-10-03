@@ -30,6 +30,11 @@ const labels = {
   outlierScore: "Outlier",
   derivedMetric: "Planner-derived",
   peerSample: "{count} peer observations",
+  compare: "Compare",
+  compareSelected: "{count}/3 selected for comparison",
+  compareTitle: "Selected comparison",
+  compareDescription: "Compare the selected observations using the same transparent metrics.",
+  clearComparison: "Clear comparison",
   results: "{count} saved items",
   filteredEmptyTitle: "No evidence matches these filters",
   filteredEmptyDescription: "Try a different search term.",
@@ -129,5 +134,31 @@ describe("ResearchEvidenceGrid", () => {
 
     await user.type(screen.getByRole("searchbox", { name: "Search evidence" }), "missing");
     expect(screen.getByText("No evidence matches these filters")).toBeInTheDocument();
+  });
+
+  it("compares up to three selected observations and clears the comparison", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResearchEvidenceGrid
+        workspaceSlug="acme"
+        slug="acme"
+        rows={rows}
+        canManage={false}
+        collections={[]}
+        labels={labels}
+      />,
+    );
+
+    await user.click(screen.getByRole("checkbox", { name: "Compare: Halal Market" }));
+    await user.click(screen.getByRole("checkbox", { name: "Compare: Reem Psychology" }));
+
+    expect(screen.getByRole("heading", { name: "Selected comparison" })).toBeInTheDocument();
+    expect(screen.getByText("2/3 selected for comparison")).toBeInTheDocument();
+    expect(
+      screen.getByText("Compare the selected observations using the same transparent metrics."),
+    ).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Clear comparison" }));
+    expect(screen.queryByRole("heading", { name: "Selected comparison" })).not.toBeInTheDocument();
   });
 });

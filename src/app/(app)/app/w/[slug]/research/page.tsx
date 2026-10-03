@@ -407,6 +407,11 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           outlierScore: t("research.evidenceOutlierScore"),
           derivedMetric: t("research.evidenceDerivedMetric"),
           peerSample: t("research.evidencePeerSample"),
+          compare: t("research.evidenceCompare"),
+          compareSelected: t("research.evidenceCompareSelected", { count: "{count}" }),
+          compareTitle: t("research.evidenceCompareTitle"),
+          compareDescription: t("research.evidenceCompareDescription"),
+          clearComparison: t("research.evidenceClearComparison"),
         }}
       />
     </div>

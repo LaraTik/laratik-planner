@@ -5,6 +5,7 @@ import { ArrowUpRight, Bookmark } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { ResearchCollectionPicker } from "@/components/workspace/research-collection-picker";
 import {
@@ -79,6 +80,11 @@ type Labels = {
   outlierScore: string;
   derivedMetric: string;
   peerSample: string;
+  compare: string;
+  compareSelected: string;
+  compareTitle: string;
+  compareDescription: string;
+  clearComparison: string;
 };
 
 type SortKey = "newest" | "published" | "views" | "likes" | "comments" | "engagement" | "outlier";
@@ -149,6 +155,7 @@ export function ResearchEvidenceGrid({
   const [query, setQuery] = React.useState("");
   const [platform, setPlatform] = React.useState("all");
   const [sort, setSort] = React.useState<SortKey>("newest");
+  const [selectedObservationIds, setSelectedObservationIds] = React.useState<string[]>([]);
   const metrics = React.useMemo(() => {
     const peerInputs = rows.map(asMetricInput);
     return new Map(
@@ -173,6 +180,20 @@ export function ResearchEvidenceGrid({
       ),
     [metrics, platform, query, rows, sort],
   );
+  const selectedRows = React.useMemo(
+    () => rows.filter((row) => selectedObservationIds.includes(row.observationId)),
+    [rows, selectedObservationIds],
+  );
+  const toggleComparison = (observationId: string, checked: boolean) => {
+    setSelectedObservationIds((current) => {
+      if (checked) {
+        return current.includes(observationId) || current.length >= 3
+          ? current
+          : [...current, observationId];
+      }
+      return current.filter((id) => id !== observationId);
+    });
+  };
 
   return (
     <section className="space-y-4" aria-labelledby="research-evidence-title">
@@ -237,6 +258,71 @@ export function ResearchEvidenceGrid({
           <p className="text-label text-fg-muted mt-3" aria-live="polite">
             {labels.results.replace("{count}", String(visibleRows.length))}
           </p>
+          <p className="text-label text-fg-muted mt-1" aria-live="polite">
+            {labels.compareSelected.replace("{count}", String(selectedRows.length))}
+          </p>
+        </Card>
+      ) : null}
+
+      {selectedRows.length > 0 ? (
+        <Card padding="md" className="border-primary/30 bg-primary/5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-title-card text-fg-primary font-semibold">
+                {labels.compareTitle}
+              </h3>
+              <p className="text-body text-fg-secondary mt-1">{labels.compareDescription}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setSelectedObservationIds([])}>
+              {labels.clearComparison}
+            </Button>
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {selectedRows.map((row) => {
+              const derived = metrics.get(row.observationId);
+              return (
+                <div
+                  key={row.observationId}
+                  className="border-border bg-surface rounded-[var(--radius-card)] border p-3"
+                >
+                  <p className="text-body text-fg-primary truncate font-semibold">
+                    <bdi>{row.accountName || labels.emptyTitle}</bdi>
+                  </p>
+                  <p className="text-label text-fg-muted mt-1 capitalize">
+                    {row.platform} · {row.mediaType || "—"}
+                  </p>
+                  <dl className="text-label text-fg-secondary mt-3 grid grid-cols-2 gap-2">
+                    <div>
+                      <dt>{labels.views}</dt>
+                      <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                        {row.viewsLabel}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{labels.likes}</dt>
+                      <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                        {row.likesLabel}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{labels.engagementRate}</dt>
+                      <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                        {formatResearchPercent(derived?.engagementRatePercent ?? null) ?? "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>{labels.outlierScore}</dt>
+                      <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
+                        {derived?.outlierScore !== null && derived?.outlierScore !== undefined
+                          ? `${derived.outlierScore.toFixed(1)}x`
+                          : "—"}
+                      </dd>
+                    </div>
+                  </dl>
+                </div>
+              );
+            })}
+          </div>
         </Card>
       ) : null}
 
@@ -271,7 +357,21 @@ export function ResearchEvidenceGrid({
                       {row.publishedLabel ? ` · ${row.publishedLabel}` : ""}
                     </p>
                   </div>
-                  <div className="flex flex-wrap justify-end gap-2">
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+                    <label className="text-label text-fg-secondary flex min-h-11 items-center gap-2">
+                      <Checkbox
+                        checked={selectedObservationIds.includes(row.observationId)}
+                        disabled={
+                          !selectedObservationIds.includes(row.observationId) &&
+                          selectedObservationIds.length >= 3
+                        }
+                        onCheckedChange={(checked) =>
+                          toggleComparison(row.observationId, checked === true)
+                        }
+                        aria-label={`${labels.compare}: ${row.accountName || labels.emptyTitle}`}
+                      />
+                      <span className="sr-only">{labels.compare}</span>
+                    </label>
                     {derived?.outlierScore !== null && derived?.outlierScore !== undefined ? (
                       <Badge variant="success">
                         {labels.outlierScore} {derived.outlierScore.toFixed(1)}x
