@@ -36,8 +36,8 @@ import { setupTrendsLiveState } from "./stitch-state-helpers";
  *      selected by `viewportsForSurface()`: non-planning surfaces use
  *      360 / 768 / 1440, Research uses 375 / 768 / 1024 / 1280 / 1440,
  *      while planning surfaces use 375 / 768 / 1024 / 1440.
- *      The current matrix covers 20 canonical and 50 app-only surfaces
- *      (219 English responsive baselines, plus five Research Arabic/RTL
+ *      The current matrix covers 20 canonical and 51 app-only surfaces
+ *      (222 English responsive baselines, plus five Research Arabic/RTL
  *      baselines). The
  *      `operational-states` evidence group is not a route and is
  *      reviewed directly against the captured PNG/HTML. App-only surfaces

@@ -79,6 +79,18 @@ light/dark verification before the Command Center surface is called ready.
 > provider UAT, authenticated MCP smoke, and independent review remain open.
 > The implementation remains `Tested`, not `Verified`.
 
+> **2026-10-03 targeted visual baseline checkpoint** — The full strict visual
+> matrix was run against the current workspace (219 passed, 28 failures).
+> Review isolated intentional shipped-layout drift in the shell/overview, board
+> mobile, and social-provider settings surfaces; six corresponding PNGs were
+> refreshed in commit `c4e64632`. The committed follow-up passes 9/9, and the
+> media route passes a separate strict 4/4 rerun without a snapshot change.
+> Planning/detail, publish, and workspace-settings failures overlap separate
+> uncommitted user edits, so their baselines were deliberately not refreshed.
+> The implementation remains `Tested`, not `Verified`; independent review,
+> provider UAT, authenticated MCP smoke, and the remaining clean planning
+> visual pass are still open.
+
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post
 > observation read model with an explicit `source_kind`, a nullable research

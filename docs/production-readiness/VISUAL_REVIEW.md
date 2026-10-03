@@ -28,6 +28,18 @@ The branch advanced after this candidate snapshot, so the final release
 candidate must rerun the visual suite at its exact HEAD before this evidence
 is treated as current.
 
+### Targeted baseline refresh evidence (2026-10-03; `c4e64632`)
+
+The full strict matrix was rerun against the current workspace. It produced
+219 passing assertions and 28 failures. The failures were reviewed rather than
+blanket-refreshed: the shipped shell/overview, board mobile, and social-provider
+settings drift was intentional and was refreshed in `c4e64632`; the media
+failures reproduced as transient and pass on a strict 4/4 rerun. The committed
+follow-up groups pass 9/9, and the media group passes 4/4. Planning/detail,
+publish, and workspace-settings failures overlap the user's separate
+uncommitted planning edits and remain pending a clean, separately reviewable
+visual pass.
+
 This proves the automated gate and candidate-file portability. It does not
 replace the reviewer comparison against the Stitch PNG/HTML or the manual
 keyboard/screen-reader sign-off below.
@@ -40,9 +52,9 @@ For every active `STITCH_CASES` entry:
    overflow, responsive behavior, and interactive state.
 3. For the responsive matrix (`tests/e2e/visual-regression.spec.ts`
    → `visual regression (responsive matrix)`), repeat the comparison at
-   every viewport selected by `viewportsForSurface()`: 18 non-Research,
+   every viewport selected by `viewportsForSurface()`: 63 non-Research,
    non-planning surfaces at 360 / 768 / 1440; Research at 375 / 768 / 1024 /
-   1280 / 1440; and four planning surfaces at 375 / 768 / 1024 / 1440 (75
+   1280 / 1440; and seven planning surfaces at 375 / 768 / 1024 / 1440 (222
    English responsive baselines total). The dedicated Research Arabic/RTL
    block adds five same-width baselines and asserts no horizontal overflow.
 4. Mark each row with a result and a link to the diff / follow-up
@@ -65,7 +77,7 @@ For every historical/superseded entry:
 | --------- | -------------- | ------------- | -------- | -------- | ---- | ------ | ------------------- |
 | _pending_ |                |               |          |          |      |        |                     |
 
-## Reference table (responsive matrix: 23 surfaces, 73 scoped baselines)
+## Reference table (responsive matrix: 71 surfaces, 222 English baselines + 5 Research Arabic/RTL baselines)
 
 | Surface   | Viewport | Reviewer | Date | Result | Issue / commit link |
 | --------- | -------- | -------- | ---- | ------ | ------------------- |
@@ -91,8 +103,8 @@ A baseline row may be marked **Approved** only when:
 - [ ] Imagery matches (alt text, aspect ratio, treatment).
 - [ ] Overflow handling matches (no clipping, no unexpected scroll,
       no broken reflow).
-- [ ] Responsive behavior matches across the six regression
-      viewports.
+- [ ] Responsive behavior matches across every viewport selected by the
+      current surface matrix.
 - [ ] Interactive state matches (hover, focus, active, disabled,
       error, loading).
 - [ ] Inline axe-core assertions (`tests/e2e/visual-regression.spec.ts`
@@ -114,8 +126,9 @@ Baselines are stored under
 `tests/e2e/visual-regression.spec.ts-snapshots/reference/` (one
 capture per active Stitch case) and
 `tests/e2e/visual-regression.spec.ts-snapshots/responsive/`
-(73 baselines: 19 non-planning surfaces × 3 viewports plus four planning
-surfaces × 4 viewports). The CI pipeline uploads visual diffs on failure
+(222 English baselines: 63 non-planning/non-Research surfaces × 3 viewports,
+seven planning surfaces × 4 viewports, and one Research surface × 5 viewports;
+the dedicated Arabic/RTL block adds five baselines). The CI pipeline uploads visual diffs on failure
 (artifact `visual-diffs`).
 
 ## How to add a new Stitch case

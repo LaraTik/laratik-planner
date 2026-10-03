@@ -11,6 +11,16 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-03 — Targeted visual baseline refresh
+
+The strict visual matrix was rerun at the current workspace state. The
+non-planning shipped shell/overview, board mobile, and social-provider settings
+drift was reviewed and refreshed in commit `c4e64632`; its focused follow-up
+passes 9/9. The media route passes a separate strict 4/4 rerun without a
+baseline change. Planning/detail, publish, and workspace-settings visual
+failures remain explicitly pending because they overlap separate uncommitted
+user edits; those snapshots were not refreshed or committed.
+
 ## 2026-10-03 — Research browser contract and query safety
 
 The source-neutral Research query now casts the connected-channel platform enum
