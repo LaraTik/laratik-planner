@@ -81,8 +81,16 @@ export function PublishPhaseStepper({
   }
   // The "current" phase is the EARLIEST one still open. After that,
   // the rest are "next" / grey.
-  const currentPhaseIdx = phases.findIndex((p) => !isComplete(p.id));
+  const firstIncompletePhaseIdx = phases.findIndex((p) => !isComplete(p.id));
+  const allPhasesComplete = firstIncompletePhaseIdx === -1;
+  const currentPhaseIdx = allPhasesComplete ? phases.length - 1 : firstIncompletePhaseIdx;
   const totalBlockingCopyStep = blockingChannels > 0 || currentReadinessBlockerCount > 0;
+  const phaseHref: Record<Phase["id"], string> = {
+    channels: "#publish-channel-workspace",
+    copy: "#publish-destination",
+    compliance: "#publish-compliance",
+    review: "#publish-review",
+  };
   return (
     <div
       className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-2"
@@ -93,7 +101,7 @@ export function PublishPhaseStepper({
       <ol className="flex flex-wrap items-center gap-1">
         {phases.map((phase, idx) => {
           const complete = isComplete(phase.id);
-          const isCurrent = idx === currentPhaseIdx && totalBlockingCopyStep;
+          const isCurrent = idx === currentPhaseIdx && (totalBlockingCopyStep || allPhasesComplete);
           const isNext = idx > currentPhaseIdx;
           return (
             <li
@@ -101,43 +109,48 @@ export function PublishPhaseStepper({
               className="flex flex-1 items-center gap-2"
               aria-current={isCurrent ? "step" : undefined}
             >
-              <div
-                className={cn(
-                  "border-border text-body flex h-7 min-w-7 items-center justify-center rounded-full border px-2 font-semibold",
-                  complete && "border-success bg-success-subtle text-success",
-                  isCurrent && "border-warning bg-warning-subtle text-warning",
-                  isNext && "border-border bg-surface text-fg-muted",
-                )}
-                data-testid={`publish-phase-${phase.id}-icon`}
-                data-state={complete ? "done" : isCurrent ? "current" : "todo"}
+              <a
+                href={phaseHref[phase.id]}
+                className="focus-visible:ring-focus-ring hover:bg-surface flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] p-1 outline-none focus-visible:ring-2"
               >
-                {complete ? (
-                  <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                ) : (
-                  <span aria-label={`Step ${idx + 1}`}>{idx + 1}</span>
-                )}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p
+                <div
                   className={cn(
-                    "text-body font-semibold",
-                    isNext ? "text-fg-muted" : "text-fg-primary",
+                    "border-border text-body flex h-7 min-w-7 items-center justify-center rounded-full border px-2 font-semibold",
+                    complete && "border-success bg-success-subtle text-success",
+                    isCurrent && "border-warning bg-warning-subtle text-warning",
+                    isNext && "border-border bg-surface text-fg-muted",
                   )}
+                  data-testid={`publish-phase-${phase.id}-icon`}
+                  data-state={complete ? "done" : isCurrent ? "current" : "todo"}
                 >
-                  {t(phase.labelKey)}
-                </p>
-                {isCurrent && phase.id === "copy" ? (
-                  <p className="text-label text-warning" data-testid="publish-phase-current-hint">
-                    {currentReadinessBlockerCount > 0
-                      ? t("contentDetail.publishForm.phaseActiveBlockers", {
-                          count: currentReadinessBlockerCount,
-                        })
-                      : t("contentDetail.publishForm.phaseActiveNetworks", {
-                          count: blockingChannels,
-                        })}
+                  {complete ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <span aria-label={`Step ${idx + 1}`}>{idx + 1}</span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p
+                    className={cn(
+                      "text-body font-semibold",
+                      isNext ? "text-fg-muted" : "text-fg-primary",
+                    )}
+                  >
+                    {t(phase.labelKey)}
                   </p>
-                ) : null}
-              </div>
+                  {isCurrent && phase.id === "copy" ? (
+                    <p className="text-label text-warning" data-testid="publish-phase-current-hint">
+                      {currentReadinessBlockerCount > 0
+                        ? t("contentDetail.publishForm.phaseActiveBlockers", {
+                            count: currentReadinessBlockerCount,
+                          })
+                        : t("contentDetail.publishForm.phaseActiveNetworks", {
+                            count: blockingChannels,
+                          })}
+                    </p>
+                  ) : null}
+                </div>
+              </a>
               {idx < phases.length - 1 ? (
                 <span
                   aria-hidden="true"

@@ -577,6 +577,33 @@
     "packageTitle": "Publish package",
     "packageDescription": "Prepare channel copy, disclosures, approvals, and final readiness in one place."
   },
+  "publishCommandCenter": {
+    "eyebrow": "Publishing plan",
+    "title": "Prepare, confirm, then record",
+    "description": "Finish the channel package before the post goes live. Record the result only after publication.",
+    "blockersOne": "{count} blocker",
+    "blockersMany": "{count} blockers",
+    "readyToConfirm": "Ready to confirm",
+    "confirmed": "Setup confirmed",
+    "inProgress": "In progress",
+    "upcoming": "Up next",
+    "complete": "Complete",
+    "statusBlocked": "Resolve the blockers shown below before confirming this publishing setup.",
+    "statusReady": "All channel requirements are complete. Review the package and confirm publishing setup when ready.",
+    "statusConfirmed": "Publishing setup is confirmed. After the post goes live, record the result for each channel.",
+    "openStep": " step",
+    "steps": {
+      "packageTitle": "1. Prepare channels",
+      "packageDescription": "Set copy, accessibility, rights, and destinations for {count} channel(s).",
+      "packageAction": "Open channel setup",
+      "reviewTitle": "2. Confirm readiness",
+      "reviewDescription": "{ready} of {total} channel(s) currently have no blockers.",
+      "reviewAction": "Review package",
+      "outcomesTitle": "3. Record outcome",
+      "outcomesDescription": "After publishing, record Published, Skipped, or Failed for each channel.",
+      "outcomesAction": "Open outcomes"
+    }
+  },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
   "researchReference": {
@@ -1024,6 +1051,9 @@
     "applyLanguageToAll": "Set language for all channels",
     "applyLanguageToAllHint": "Updates each channel locally; save all changes to persist the selection.",
     "applyLanguageToAllButton": "Apply to all",
+    "channelWorkspaceTitle": "Channel setup",
+    "channelWorkspaceHint": "Work through each channel separately. Start with the channel that has blockers.",
+    "channelReady": "Ready",
     "phaseNavLabel": "Publish phase progress",
     "phase": {
       "channels": "Channels",

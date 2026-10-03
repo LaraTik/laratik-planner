@@ -577,6 +577,33 @@
     "packageTitle": "حزمة النشر",
     "packageDescription": "جهّز نسخة القنوات والإفصاحات والموافقات والجاهزية النهائية من مكان واحد."
   },
+  "publishCommandCenter": {
+    "eyebrow": "خطة النشر",
+    "title": "جهّز ثم أكّد ثم سجّل النتيجة",
+    "description": "أكمل حزمة كل قناة قبل نشر المنشور. سجّل النتيجة فقط بعد حدوث النشر.",
+    "blockersOne": "مانع واحد ({count})",
+    "blockersMany": "{count} موانع",
+    "readyToConfirm": "جاهز للتأكيد",
+    "confirmed": "تم تأكيد الإعداد",
+    "inProgress": "قيد التنفيذ",
+    "upcoming": "التالي",
+    "complete": "مكتمل",
+    "statusBlocked": "عالج الموانع الظاهرة أدناه قبل تأكيد إعداد النشر.",
+    "statusReady": "اكتملت متطلبات القنوات. راجع الحزمة وأكّد إعداد النشر عندما تكون جاهزًا.",
+    "statusConfirmed": "تم تأكيد إعداد النشر. بعد نشر المنشور، سجّل النتيجة لكل قناة.",
+    "openStep": " خطوة",
+    "steps": {
+      "packageTitle": "1. جهّز القنوات",
+      "packageDescription": "حدّد النص وإمكانية الوصول والحقوق والوجهات لعدد {count} من القنوات.",
+      "packageAction": "فتح إعداد القنوات",
+      "reviewTitle": "2. أكّد الجاهزية",
+      "reviewDescription": "{ready} من أصل {total} قناة لا تحتوي حاليًا على موانع.",
+      "reviewAction": "مراجعة الحزمة",
+      "outcomesTitle": "3. سجّل النتيجة",
+      "outcomesDescription": "بعد النشر، سجّل لكل قناة: تم النشر أو تم التخطي أو فشل النشر.",
+      "outcomesAction": "فتح النتائج"
+    }
+  },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
   "researchReference": {
@@ -1024,6 +1051,9 @@
     "applyLanguageToAll": "تعيين اللغة لكل القنوات",
     "applyLanguageToAllHint": "يحدّث كل قناة محليًا؛ احفظ كل التغييرات لحفظ الاختيار.",
     "applyLanguageToAllButton": "تطبيق على الكل",
+    "channelWorkspaceTitle": "إعداد القنوات",
+    "channelWorkspaceHint": "اعمل على كل قناة بشكل منفصل. ابدأ بالقناة التي تحتوي على موانع.",
+    "channelReady": "جاهزة",
     "phaseNavLabel": "تقدم مراحل النشر",
     "phase": {
       "channels": "القنوات",

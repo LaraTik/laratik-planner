@@ -562,40 +562,68 @@ export function PublishPackageForm({
       data-workspace-id={workspaceId}
       onSubmit={(event) => event.preventDefault()}
     >
-      {/* Channel selector (top, also visible on mobile) */}
-      <div className="flex flex-wrap gap-2" data-testid="publish-channel-tabs" role="tablist">
-        {channels.map((ch) => {
-          const chReadiness = readiness.channels.find(
-            (c) => c.socialChannelId === ch.socialChannelId,
-          );
-          const blockers = chReadiness?.blockerCount ?? 0;
-          return (
-            <button
-              key={ch.id}
-              type="button"
-              role="tab"
-              aria-selected={ch.id === activeChannel}
-              aria-controls={`publish-channel-panel-${ch.id}`}
-              onClick={() => setActiveChannel(ch.id)}
-              className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
-                ch.id === activeChannel
-                  ? "border-primary bg-primary-subtle text-primary"
-                  : "border-border bg-surface text-fg-primary"
-              } min-h-11 min-w-11`}
-              data-testid={`publish-channel-tab-${ch.socialChannelId}`}
-            >
-              <span>{ch.accountName}</span>
-              <span className="text-label text-fg-muted ms-2">
-                {localizedPlatformLabel(ch.platform)}
-              </span>
-              {blockers > 0 ? (
-                <Badge variant="danger" className="ms-2">
-                  {blockers}
-                </Badge>
-              ) : null}
-            </button>
-          );
-        })}
+      {metaPublishingReadiness &&
+      metaPublishingCopy &&
+      channels.some(
+        (channel) => channel.platform === "instagram" || channel.platform === "facebook",
+      ) ? (
+        <MetaPublishingReadinessCard
+          readiness={metaPublishingReadiness}
+          copy={metaPublishingCopy}
+          testId="publish-meta-readiness-card"
+        />
+      ) : null}
+
+      <div
+        className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+        data-testid="publish-channel-workspace"
+      >
+        <div className="mb-3">
+          <p className="text-body text-fg-primary font-semibold">
+            {t("contentDetail.publishForm.channelWorkspaceTitle")}
+          </p>
+          <p className="text-label text-fg-secondary mt-1">
+            {t("contentDetail.publishForm.channelWorkspaceHint")}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2" data-testid="publish-channel-tabs" role="tablist">
+          {channels.map((ch) => {
+            const chReadiness = readiness.channels.find(
+              (c) => c.socialChannelId === ch.socialChannelId,
+            );
+            const blockers = chReadiness?.blockerCount ?? 0;
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                role="tab"
+                aria-selected={ch.id === activeChannel}
+                aria-controls={`publish-channel-panel-${ch.id}`}
+                onClick={() => setActiveChannel(ch.id)}
+                className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
+                  ch.id === activeChannel
+                    ? "border-primary bg-primary-subtle text-primary"
+                    : "border-border bg-surface text-fg-primary"
+                } min-h-11 min-w-11`}
+                data-testid={`publish-channel-tab-${ch.socialChannelId}`}
+              >
+                <span>{ch.accountName}</span>
+                <span className="text-label text-fg-muted ms-2">
+                  {localizedPlatformLabel(ch.platform)}
+                </span>
+                {blockers > 0 ? (
+                  <Badge variant="danger" className="ms-2">
+                    {blockers}
+                  </Badge>
+                ) : chReadiness ? (
+                  <Badge variant="success" className="ms-2">
+                    {t("contentDetail.publishForm.channelReady")}
+                  </Badge>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {channels.length > 0 ? (
@@ -689,23 +717,12 @@ export function PublishPackageForm({
           className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
-          {metaPublishingReadiness &&
-          metaPublishingCopy &&
-          (current.platform === "instagram" || current.platform === "facebook") ? (
-            <div className="lg:col-span-2">
-              <MetaPublishingReadinessCard
-                readiness={metaPublishingReadiness}
-                copy={metaPublishingCopy}
-                testId="publish-meta-readiness-card"
-              />
-            </div>
-          ) : null}
           {currentReadiness ? (
             <PublishReadinessChecklist currentReadiness={currentReadiness} t={t} />
           ) : null}
           <div className="min-w-0 space-y-4">
             {/* Editor column — destination + caption/discovery, then disclosures */}
-            <Card padding="lg" className="min-w-0 space-y-3">
+            <Card id="publish-destination" padding="lg" className="min-w-0 scroll-mt-24 space-y-3">
               <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
               <div
                 className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
@@ -839,7 +856,7 @@ export function PublishPackageForm({
               />
             </Card>
 
-            <Card padding="lg" className="min-w-0 space-y-3">
+            <Card id="publish-compliance" padding="lg" className="min-w-0 scroll-mt-24 space-y-3">
               <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
               <div>
                 <label
@@ -982,7 +999,11 @@ export function PublishPackageForm({
 
           {/* Preview stays visible beside the editor on large screens and
               remains first-class content on mobile, below the inputs. */}
-          <Card padding="lg" className="min-w-0 space-y-3 self-start lg:sticky lg:top-24">
+          <Card
+            id="publish-review"
+            padding="lg"
+            className="min-w-0 scroll-mt-24 space-y-3 self-start lg:sticky lg:top-24"
+          >
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
             <PreviewPane payload={currentDraft} platform={current.platform} />
             <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">

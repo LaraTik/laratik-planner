@@ -44,6 +44,7 @@ import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { CreateSectionNavigator } from "@/components/planning/create-section-navigator";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
+import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
@@ -1420,6 +1421,16 @@ export default async function ContentDetailPage({
                 className="mt-6 scroll-mt-24 space-y-4"
                 data-testid="workspace-tab-panel-publishing"
               >
+                <PublishingCommandCenter
+                  channelCount={item.channels.length}
+                  readyChannelCount={
+                    readiness.channels.filter((channel) => channel.blockerCount === 0).length
+                  }
+                  blockerCount={readiness.blockers}
+                  publishingSetupReady={publishingSetupReady}
+                  outcomesRecorded={publicationByChannel.size}
+                  t={t}
+                />
                 {approvedBeforeLaterEdits ? (
                   <div
                     className="border-primary/30 bg-primary-subtle/30 text-fg-primary rounded-[var(--radius-card)] border p-4"
@@ -1434,87 +1445,18 @@ export default async function ContentDetailPage({
                 {/*
                 Phase 7 of the planning-detail refactor (2026-08-30)
                 absorbed the standalone `/publish` route into the
-                Publishing tab. The `ChannelPublishingCard` list
-                stays for the per-channel "Record outcome" affordance
-                (still useful for managers / publishers who just
-                want to record a published URL without opening the
-                full form). The full `PublishPackageForm` is mounted
-                below it for users who want to edit the package.
+                Publishing tab. The full `PublishPackageForm` is
+                intentionally first: it is the setup work users must
+                complete before recording a publication outcome. The
+                `ChannelPublishingCard` list follows it and keeps the
+                per-channel outcome action visible for publishers and
+                managers.
 
                 The previous "Open publishing setup" deep-link is
                 gone — the form is in front of the user. The
                 `/publish` route still exists as a server-side
                 redirect (see `publish/page.tsx`).
               */}
-                {item.channels.length === 0 ? (
-                  <div
-                    className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-4"
-                    role="status"
-                    data-testid="publishing-empty-no-channels"
-                  >
-                    <p className="text-body text-fg-secondary">
-                      {canEditAll
-                        ? t("contentDetail.copy.noChannelsDescription")
-                        : t("contentDetail.copy.noChannelsOwner")}
-                    </p>
-                    {canEditAll ? (
-                      <Button asChild size="sm" variant="outline" className="mt-3">
-                        <TabSwitchLink href="#overview">
-                          {t("contentDetail.copy.openDetails")}
-                        </TabSwitchLink>
-                      </Button>
-                    ) : null}
-                  </div>
-                ) : (
-                  <PlanningSection
-                    id="publish-outcomes"
-                    title={t("contentDetail.publishNavigator.outcomes")}
-                    description={t("contentDetail.publishWorkspace.outcomesDescription")}
-                    collapsible
-                    defaultOpen={false}
-                  >
-                    <div className="space-y-3" data-testid="publishing-cards">
-                      {item.channels.map((ch) => {
-                        const cfg = channelConfigs.find((c) => c.id === ch.id);
-                        const pub = publicationByChannel.get(ch.id);
-                        return (
-                          <ChannelPublishingCard
-                            key={ch.id}
-                            workspaceSlug={slug}
-                            channel={{
-                              id: ch.id,
-                              platform: ch.platform,
-                              accountName: ch.accountName,
-                              configured: cfg?.configured ?? false,
-                              connectionStatus: ch.connectionStatus,
-                              externalAccountId: ch.externalAccountId,
-                              targetDate:
-                                ch.plannedPublishAtOverride?.toISOString() ??
-                                item.plannedPublishAt?.toISOString() ??
-                                null,
-                              searchText: [item.title, item.brief].filter(Boolean).join(" "),
-                              timeZone: ws.timezone,
-                            }}
-                            publication={
-                              pub
-                                ? {
-                                    ...pub.publication_record,
-                                    externalLastSyncedAt:
-                                      pub.publication_record.externalLastSyncedAt?.toISOString() ??
-                                      null,
-                                    expiresAt:
-                                      pub.publication_record.expiresAt?.toISOString() ?? null,
-                                  }
-                                : null
-                            }
-                            isPublisher={actorRoles.isPublisher || actorRoles.isManager}
-                          />
-                        );
-                      })}
-                    </div>
-                  </PlanningSection>
-                )}
-
                 {item.channels.length > 0 ? (
                   <PlanningSection
                     id="publish-package"
@@ -1586,6 +1528,79 @@ export default async function ContentDetailPage({
                     </div>
                   </PlanningSection>
                 ) : null}
+
+                {item.channels.length === 0 ? (
+                  <div
+                    className="border-border bg-surface-subtle rounded-[var(--radius-card)] border p-4"
+                    role="status"
+                    data-testid="publishing-empty-no-channels"
+                  >
+                    <p className="text-body text-fg-secondary">
+                      {canEditAll
+                        ? t("contentDetail.copy.noChannelsDescription")
+                        : t("contentDetail.copy.noChannelsOwner")}
+                    </p>
+                    {canEditAll ? (
+                      <Button asChild size="sm" variant="outline" className="mt-3">
+                        <TabSwitchLink href="#overview">
+                          {t("contentDetail.copy.openDetails")}
+                        </TabSwitchLink>
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : (
+                  <PlanningSection
+                    id="publish-outcomes"
+                    title={t("contentDetail.publishNavigator.outcomes")}
+                    description={t("contentDetail.publishWorkspace.outcomesDescription")}
+                    collapsible
+                    defaultOpen={
+                      publicationByChannel.size > 0 ||
+                      item.status === "partially_published" ||
+                      item.status === "published"
+                    }
+                  >
+                    <div className="space-y-3" data-testid="publishing-cards">
+                      {item.channels.map((ch) => {
+                        const cfg = channelConfigs.find((c) => c.id === ch.id);
+                        const pub = publicationByChannel.get(ch.id);
+                        return (
+                          <ChannelPublishingCard
+                            key={ch.id}
+                            workspaceSlug={slug}
+                            channel={{
+                              id: ch.id,
+                              platform: ch.platform,
+                              accountName: ch.accountName,
+                              configured: cfg?.configured ?? false,
+                              connectionStatus: ch.connectionStatus,
+                              externalAccountId: ch.externalAccountId,
+                              targetDate:
+                                ch.plannedPublishAtOverride?.toISOString() ??
+                                item.plannedPublishAt?.toISOString() ??
+                                null,
+                              searchText: [item.title, item.brief].filter(Boolean).join(" "),
+                              timeZone: ws.timezone,
+                            }}
+                            publication={
+                              pub
+                                ? {
+                                    ...pub.publication_record,
+                                    externalLastSyncedAt:
+                                      pub.publication_record.externalLastSyncedAt?.toISOString() ??
+                                      null,
+                                    expiresAt:
+                                      pub.publication_record.expiresAt?.toISOString() ?? null,
+                                  }
+                                : null
+                            }
+                            isPublisher={actorRoles.isPublisher || actorRoles.isManager}
+                          />
+                        );
+                      })}
+                    </div>
+                  </PlanningSection>
+                )}
               </section>
             ),
             activity: (

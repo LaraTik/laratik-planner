@@ -143,8 +143,12 @@ export function ChannelPublishingCard({
   const [metaError, setMetaError] = React.useState<string | null>(null);
   // Drives the progressive-disclosure expiry field: an ephemeral outcome
   // only needs a link when one actually exists.
-  const [outcomeStatus, setOutcomeStatus] = React.useState<OutcomeStatus>("published");
-  const [outcomeUrl, setOutcomeUrl] = React.useState("");
+  const [outcomeStatus, setOutcomeStatus] = React.useState<OutcomeStatus>(
+    publication?.status === "skipped" || publication?.status === "failed"
+      ? publication.status
+      : "published",
+  );
+  const [outcomeUrl, setOutcomeUrl] = React.useState(publication?.publishedUrl ?? "");
   const status = publication
     ? publication.status === "failed" || publication.status === "skipped"
       ? "needs_attention"
@@ -444,24 +448,26 @@ export function ChannelPublishingCard({
                   <option value="failed">{t("contentDetail.publishingCard.outcomeFailed")}</option>
                 </select>
               </div>
-              <div className="md:col-span-3">
-                <label
-                  htmlFor={`published-url-${channel.id}`}
-                  className="text-label mb-1 block font-medium"
-                >
-                  {t("contentDetail.publishingCard.publishedUrlLabel")}
-                </label>
-                <input
-                  id={`published-url-${channel.id}`}
-                  type="url"
-                  name="publishedUrl"
-                  value={outcomeUrl}
-                  onChange={(event) => setOutcomeUrl(event.target.value)}
-                  placeholder="https://…"
-                  className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
-                  data-testid="channel-card-published-url-input"
-                />
-              </div>
+              {outcomeStatus === "published" ? (
+                <div className="md:col-span-3">
+                  <label
+                    htmlFor={`published-url-${channel.id}`}
+                    className="text-label mb-1 block font-medium"
+                  >
+                    {t("contentDetail.publishingCard.publishedUrlLabel")}
+                  </label>
+                  <input
+                    id={`published-url-${channel.id}`}
+                    type="url"
+                    name="publishedUrl"
+                    value={outcomeUrl}
+                    onChange={(event) => setOutcomeUrl(event.target.value)}
+                    placeholder="https://…"
+                    className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                    data-testid="channel-card-published-url-input"
+                  />
+                </div>
+              ) : null}
             </div>
             {/* Progressive disclosure: ephemeral content (a Story) has no
                 permanent link, so the expiry field only appears once the
@@ -506,20 +512,22 @@ export function ChannelPublishingCard({
                   className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
                 />
               </div>
-              <div>
-                <label
-                  htmlFor={`publication-failure-${channel.id}`}
-                  className="text-label mb-1 block font-medium"
-                >
-                  {t("contentDetail.publishingCard.failureReasonLabel")}
-                </label>
-                <input
-                  id={`publication-failure-${channel.id}`}
-                  type="text"
-                  name="failureReason"
-                  className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
-                />
-              </div>
+              {outcomeStatus === "failed" ? (
+                <div>
+                  <label
+                    htmlFor={`publication-failure-${channel.id}`}
+                    className="text-label mb-1 block font-medium"
+                  >
+                    {t("contentDetail.publishingCard.failureReasonLabel")}
+                  </label>
+                  <input
+                    id={`publication-failure-${channel.id}`}
+                    type="text"
+                    name="failureReason"
+                    className="border-border bg-surface text-body min-h-9 w-full rounded-[var(--radius-control)] border px-2 py-1"
+                  />
+                </div>
+              ) : null}
             </div>
             {error ? (
               <p role="alert" className="text-label text-danger">
