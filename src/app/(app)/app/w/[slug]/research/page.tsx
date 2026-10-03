@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, isNull, or } from "drizzle-orm";
+import { and, desc, eq, isNull, or, sql } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { ResearchEvidenceGrid } from "@/components/workspace/research-evidence-grid";
 import { auth } from "@/lib/auth/config";
@@ -64,8 +64,12 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
     .select({
       bookmarkId: researchBookmarks.id,
       observationId: socialPostObservations.id,
-      accountName: socialChannels.accountName,
-      platform: socialChannels.platform,
+      accountName: sql<string | null>`coalesce(
+        ${socialChannels.accountName},
+        ${researchWatchlistAccounts.displayName},
+        ${researchWatchlistAccounts.handle}
+      )`,
+      platform: sql<string>`coalesce(${socialChannels.platform}, ${researchWatchlistAccounts.platform})`,
       mediaType: socialPostObservations.mediaType,
       permalink: socialPostObservations.permalink,
       publishedAt: socialPostObservations.publishedAt,
@@ -80,11 +84,18 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
       socialPostObservations,
       eq(socialPostObservations.id, researchBookmarks.socialPostObservationId),
     )
-    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .leftJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .leftJoin(
+      researchWatchlistAccounts,
+      eq(researchWatchlistAccounts.id, socialPostObservations.researchWatchlistAccountId),
+    )
     .where(
       and(
         eq(researchBookmarks.workspaceId, workspace.id),
-        eq(socialChannels.workspaceId, workspace.id),
+        or(
+          eq(socialChannels.workspaceId, workspace.id),
+          eq(researchWatchlistAccounts.workspaceId, workspace.id),
+        ),
       ),
     )
     .orderBy(desc(researchBookmarks.createdAt))

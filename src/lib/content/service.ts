@@ -12,7 +12,6 @@ import {
   contentPillars,
   outboxEvents,
   socialChannels,
-  socialPostObservations,
   contentResearchLinks,
   contentResearchTeardownLinks,
   researchTeardowns,
@@ -39,6 +38,7 @@ import {
 import { humanStatus as humanizeForSummary } from "@/lib/content/status";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
 import {
   parseFormatPayload,
@@ -164,21 +164,7 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
     throw new Error("Trend signal not found in this workspace");
 
   const researchObservation = input.researchPostObservationId
-    ? (
-        await db
-          .select({ id: socialPostObservations.id })
-          .from(socialPostObservations)
-          .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
-          .where(
-            and(
-              eq(socialPostObservations.id, input.researchPostObservationId),
-              eq(socialChannels.workspaceId, input.workspaceId),
-              eq(socialChannels.connectionStatus, "connected"),
-              isNull(socialChannels.archivedAt),
-            ),
-          )
-          .limit(1)
-      )[0]
+    ? await queryResearchPostObservation(db, input.workspaceId, input.researchPostObservationId)
     : null;
   if (input.researchPostObservationId && !researchObservation)
     throw new Error("Research post not found in this workspace");
@@ -272,7 +258,7 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
       await tx.insert(contentResearchLinks).values({
         workspaceId: input.workspaceId,
         contentItemId: created!.id,
-        socialPostObservationId: researchObservation.id,
+        socialPostObservationId: researchObservation.observation.id,
         createdBy: actor.id,
       });
     }

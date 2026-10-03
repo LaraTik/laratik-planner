@@ -1,13 +1,14 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { researchBookmarks, socialChannels, socialPostObservations } from "@/lib/db/schema";
+import { researchBookmarks } from "@/lib/db/schema";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { mutatingApiHeaders } from "@/lib/security/headers";
+import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 
 const bodySchema = z.object({
   workspaceSlug: z.string().min(1),
@@ -29,20 +30,8 @@ async function getContext(workspaceSlug: string) {
 }
 
 async function findObservation(workspaceId: string, observationId: string) {
-  const [row] = await db
-    .select({ id: socialPostObservations.id })
-    .from(socialPostObservations)
-    .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
-    .where(
-      and(
-        eq(socialPostObservations.id, observationId),
-        eq(socialChannels.workspaceId, workspaceId),
-        eq(socialChannels.connectionStatus, "connected"),
-        isNull(socialChannels.archivedAt),
-      ),
-    )
-    .limit(1);
-  return row;
+  const row = await queryResearchPostObservation(db, workspaceId, observationId);
+  return row?.observation;
 }
 
 export async function POST(req: NextRequest) {

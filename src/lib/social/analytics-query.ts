@@ -1,6 +1,11 @@
-import { and, asc, desc, eq, gte, inArray, isNull } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
-import { socialChannels, socialPostObservations, socialProfileDailyMetrics } from "@/lib/db/schema";
+import {
+  researchWatchlistAccounts,
+  socialChannels,
+  socialPostObservations,
+  socialProfileDailyMetrics,
+} from "@/lib/db/schema";
 import { metricDateInTimeZone } from "./timezone";
 
 type Db = typeof appDb;
@@ -15,6 +20,12 @@ export type SocialAnalyticsQueryChannel = {
 export type SocialPostObservationQueryRow = {
   observation: typeof socialPostObservations.$inferSelect;
   channel: typeof socialChannels.$inferSelect;
+};
+
+export type ResearchPostObservationQueryRow = {
+  observation: typeof socialPostObservations.$inferSelect;
+  channel: typeof socialChannels.$inferSelect | null;
+  researchAccount: typeof researchWatchlistAccounts.$inferSelect | null;
 };
 
 /**
@@ -112,6 +123,97 @@ export async function querySocialPostObservation(
         eq(socialChannels.workspaceId, workspaceId),
         eq(socialChannels.connectionStatus, "connected"),
         isNull(socialChannels.archivedAt),
+      ),
+    )
+    .limit(1);
+  return row[0] ?? null;
+}
+
+/**
+ * Workspace-scoped research observations from either a connected channel or
+ * an explicitly registered research account. The source discriminator is
+ * part of the database contract; the joins remain left-sided so a research
+ * observation can never be mistaken for a connected publishing channel.
+ */
+export async function queryResearchPostObservations(
+  database: Db,
+  workspaceId: string,
+  workspaceTimezone: string,
+  now: Date = new Date(),
+  lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+): Promise<ResearchPostObservationQueryRow[]> {
+  const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
+  return database
+    .select({
+      observation: socialPostObservations,
+      channel: socialChannels,
+      researchAccount: researchWatchlistAccounts,
+    })
+    .from(socialPostObservations)
+    .leftJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .leftJoin(
+      researchWatchlistAccounts,
+      eq(researchWatchlistAccounts.id, socialPostObservations.researchWatchlistAccountId),
+    )
+    .where(
+      and(
+        gte(
+          socialPostObservations.observationDate,
+          metricDateInTimeZone(cutoff, workspaceTimezone),
+        ),
+        or(
+          and(
+            eq(socialPostObservations.sourceKind, "connected_channel"),
+            eq(socialChannels.workspaceId, workspaceId),
+            eq(socialChannels.connectionStatus, "connected"),
+            isNull(socialChannels.archivedAt),
+          ),
+          and(
+            eq(socialPostObservations.sourceKind, "research_account"),
+            eq(researchWatchlistAccounts.workspaceId, workspaceId),
+            isNull(researchWatchlistAccounts.archivedAt),
+          ),
+        ),
+      ),
+    )
+    .orderBy(desc(socialPostObservations.publishedAt), desc(socialPostObservations.observedAt))
+    .limit(200);
+}
+
+/** Resolve one research observation without assuming a connected channel. */
+export async function queryResearchPostObservation(
+  database: Db,
+  workspaceId: string,
+  observationId: string,
+): Promise<ResearchPostObservationQueryRow | null> {
+  const row = await database
+    .select({
+      observation: socialPostObservations,
+      channel: socialChannels,
+      researchAccount: researchWatchlistAccounts,
+    })
+    .from(socialPostObservations)
+    .leftJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
+    .leftJoin(
+      researchWatchlistAccounts,
+      eq(researchWatchlistAccounts.id, socialPostObservations.researchWatchlistAccountId),
+    )
+    .where(
+      and(
+        eq(socialPostObservations.id, observationId),
+        or(
+          and(
+            eq(socialPostObservations.sourceKind, "connected_channel"),
+            eq(socialChannels.workspaceId, workspaceId),
+            eq(socialChannels.connectionStatus, "connected"),
+            isNull(socialChannels.archivedAt),
+          ),
+          and(
+            eq(socialPostObservations.sourceKind, "research_account"),
+            eq(researchWatchlistAccounts.workspaceId, workspaceId),
+            isNull(researchWatchlistAccounts.archivedAt),
+          ),
+        ),
       ),
     )
     .limit(1);

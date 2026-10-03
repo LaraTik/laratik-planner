@@ -817,8 +817,12 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
               .select({
                 id: researchBookmarks.id,
                 observation_id: socialPostObservations.id,
-                account_name: socialChannels.accountName,
-                platform: socialChannels.platform,
+                account_name: sql<string | null>`coalesce(
+                  ${socialChannels.accountName},
+                  ${researchWatchlistAccounts.displayName},
+                  ${researchWatchlistAccounts.handle}
+                )`,
+                platform: sql<string>`coalesce(${socialChannels.platform}, ${researchWatchlistAccounts.platform})`,
                 media_type: socialPostObservations.mediaType,
                 permalink: socialPostObservations.permalink,
                 published_at: socialPostObservations.publishedAt,
@@ -837,14 +841,21 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
                 socialPostObservations,
                 eq(socialPostObservations.id, researchBookmarks.socialPostObservationId),
               )
-              .innerJoin(
+              .leftJoin(
                 socialChannels,
                 eq(socialChannels.id, socialPostObservations.socialChannelId),
+              )
+              .leftJoin(
+                researchWatchlistAccounts,
+                eq(researchWatchlistAccounts.id, socialPostObservations.researchWatchlistAccountId),
               )
               .where(
                 and(
                   eq(researchBookmarks.workspaceId, workspace.id),
-                  eq(socialChannels.workspaceId, workspace.id),
+                  or(
+                    eq(socialChannels.workspaceId, workspace.id),
+                    eq(researchWatchlistAccounts.workspaceId, workspace.id),
+                  ),
                 ),
               )
               .orderBy(desc(researchBookmarks.createdAt))

@@ -16,6 +16,7 @@ import { idColumn, timestamps } from "./_helpers";
 import { users } from "./identity";
 import { workspaces } from "./workspaces";
 import { socialChannels } from "./channels";
+import { researchWatchlistAccounts } from "./research";
 
 /**
  * M4 — social profile analytics.
@@ -182,9 +183,14 @@ export const socialPostObservations = pgTable(
   "social_post_observation",
   {
     id: idColumn(),
-    socialChannelId: uuid("social_channel_id")
-      .notNull()
-      .references(() => socialChannels.id, { onDelete: "cascade" }),
+    socialChannelId: uuid("social_channel_id").references(() => socialChannels.id, {
+      onDelete: "cascade",
+    }),
+    researchWatchlistAccountId: uuid("research_watchlist_account_id").references(
+      () => researchWatchlistAccounts.id,
+      { onDelete: "cascade" },
+    ),
+    sourceKind: text("source_kind").notNull().default("connected_channel"),
     observationDate: date("observation_date").notNull(),
     observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" }).notNull(),
     externalProvider: text("external_provider").notNull(),
@@ -212,6 +218,18 @@ export const socialPostObservations = pgTable(
       sql`${t.externalProvider} IN ('meta', 'tiktok')`,
     ),
     check(
+      "social_post_observation_source_valid",
+      sql`(
+        ${t.sourceKind} = 'connected_channel'
+        AND ${t.socialChannelId} IS NOT NULL
+        AND ${t.researchWatchlistAccountId} IS NULL
+      ) OR (
+        ${t.sourceKind} = 'research_account'
+        AND ${t.socialChannelId} IS NULL
+        AND ${t.researchWatchlistAccountId} IS NOT NULL
+      )`,
+    ),
+    check(
       "social_post_observation_media_type_valid",
       sql`${t.mediaType} IN ('image', 'video', 'carousel', 'reel', 'story', 'unknown')`,
     ),
@@ -230,13 +248,27 @@ export const socialPostObservations = pgTable(
       "social_post_observation_permalink_https",
       sql`${t.permalink} IS NULL OR ${t.permalink} ~* '^https://'`,
     ),
-    uniqueIndex("social_post_observation_daily_unique").on(
+    uniqueIndex("social_post_observation_channel_daily_unique").on(
       t.socialChannelId,
+      t.externalProvider,
+      t.externalPostId,
+      t.observationDate,
+    ),
+    uniqueIndex("social_post_observation_research_account_daily_unique").on(
+      t.researchWatchlistAccountId,
       t.externalProvider,
       t.externalPostId,
       t.observationDate,
     ),
     index("social_post_observation_channel_published_idx").on(t.socialChannelId, t.publishedAt),
     index("social_post_observation_channel_observed_idx").on(t.socialChannelId, t.observedAt),
+    index("social_post_observation_research_account_published_idx").on(
+      t.researchWatchlistAccountId,
+      t.publishedAt,
+    ),
+    index("social_post_observation_research_account_observed_idx").on(
+      t.researchWatchlistAccountId,
+      t.observedAt,
+    ),
   ],
 );

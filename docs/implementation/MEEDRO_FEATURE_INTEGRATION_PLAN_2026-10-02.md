@@ -1,7 +1,7 @@
 # Meedro-informed Planner integration — full implementation plan
 
 **Date:** 2026-10-02  
-**Status:** M1 source-only UX and M2 named-watchlist management tested; release evidence remains open
+**Status:** M1 source-only UX, M2 named-watchlist management, and the M3 source-neutral observation seam tested; release evidence remains open
 **Owner:** LaraTik Planner product/engineering  
 **Source audits:** [Meedro feature audit](../audits/MEEDRO_FEATURE_AUDIT_2026-09-30.md), [workflow catalog](../audits/MEEDRO_WORKFLOW_CATALOG_2026-10-02.md), [MCP connection audit](../audits/MEEDRO_MCP_CONNECTION_2026-10-02.md), [Viral Finder audit](../audits/MEEDRO_VIRAL_FINDER_2026-10-02.md)  
 **Current implementation context:** [Meedro refactor plan](MEEDRO_REFACTOR_PLAN.md)
@@ -24,8 +24,13 @@ The first vertical slices are now present in the current worktree:
 - Added recoverable watchlist archive/restore, ordered member positions,
   keyboard up/down reordering, and explicit copy/move operations between active
   lists. Reorder requests must contain the complete current membership set.
+- Extended the existing normalized post-observation table with a typed source
+  discriminator, nullable research-account relationship, source-aware daily
+  uniqueness, repository upserts, and workspace-scoped reads for connected or
+  active research sources. Bookmark, MCP, and create-brief paths now preserve
+  that source distinction.
 
-Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, focused integration tests 2/2, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (456 files, 4311 tests), and a focused Chromium named-watchlist management flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, observation-source seam, provider UAT, and independent review remain open.
+Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, research repository/source-seam integration 13/13, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (459 files, 4322 tests), and a focused Chromium named-watchlist management flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, provider UAT, ranking, entitled AI, and independent review remain open.
 
 ## 1. Executive decision
 
@@ -286,19 +291,23 @@ Rules:
 
 ### 8.5 Competitor post observations: resolve the schema seam first
 
-Current `social_post_observation.social_channel_id` is required and represents connected social channels. A competitor account in the research registry is not necessarily a connected channel.
+The implementation now keeps `social_post_observation` as the single normalized
+read model while allowing either a connected channel or a registered research
+account as its source. A typed `source_kind` and database check prevent a row
+from having zero or two sources. A competitor account in the research registry
+is never treated as a connected publishing channel.
 
 Recommended approach:
 
-1. Audit every caller of `socialPostObservations` and every foreign key/query that assumes `socialChannelId` is non-null.
-2. Add a nullable `research_watchlist_account_id`.
-3. Add a source check requiring exactly one of `social_channel_id` or `research_watchlist_account_id`.
-4. Keep the same normalized metric columns and provider constraints.
+1. Audit every caller of `socialPostObservations` and every foreign key/query that assumes `socialChannelId` is non-null. **Done for the current caller set.**
+2. Add a nullable `research_watchlist_account_id`. **Implemented in migration `0068_source_neutral_post_observations`.**
+3. Add a source check requiring exactly one of `social_channel_id` or `research_watchlist_account_id`. **Implemented with `source_kind`.**
+4. Keep the same normalized metric columns and provider constraints. **Preserved.**
 5. Replace the current broad unique key with source-aware uniqueness:
    - connected source: `(social_channel_id, provider, external_post_id, observation_date)`;
    - research source: `(research_watchlist_account_id, provider, external_post_id, observation_date)`.
-6. Preserve existing connected-channel behavior and indexes.
-7. Update all service reads to use a typed source discriminator.
+6. Preserve existing connected-channel behavior and indexes. **Connected sync upserts remain unchanged.**
+7. Update all service reads to use a typed source discriminator. **Bookmark, MCP, and create-brief reads are source-aware.**
 
 This is the key migration risk. Do not create a parallel `competitor_post` analytics table unless this audit proves that the existing model cannot be safely extended and the product owner explicitly approves a deviation from the current architecture rule.
 

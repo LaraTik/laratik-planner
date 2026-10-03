@@ -44,6 +44,19 @@ light/dark verification before the Command Center surface is called ready.
 > observation-source seam, provider UAT, ranking, entitled AI, and final MCP
 > release evidence remain open.
 
+> **2026-10-03 source-neutral observation checkpoint** — Migration
+> `0068_source_neutral_post_observations` extends the existing normalized post
+> observation read model with an explicit `source_kind`, a nullable research
+> account relationship, source-aware daily uniqueness, and a database check
+> requiring exactly one source. Connected-channel sync remains unchanged;
+> research-account persistence and workspace-scoped reads now use the same
+> table without treating a research account as a publishing channel. Bookmark
+> and create-brief authorization accept either connected or active research
+> sources. Repository integration coverage and the full schema/integration
+> gates remain required before this M3 slice can move beyond `Tested`; provider
+> refresh, ranking, AI insight, visual/RTL evidence, and independent review
+> remain open.
+
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
 > suite passes 24/24 after regenerating only the three references affected by
 > the fixed visual fixture: workspace overview desktop/mobile

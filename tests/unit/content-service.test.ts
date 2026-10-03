@@ -35,6 +35,7 @@ function makeDrizzleMock(state: DrizzleState) {
     const chain: Record<string, unknown> = {};
     chain.from = vi.fn(() => chain);
     chain.innerJoin = vi.fn(() => chain);
+    chain.leftJoin = vi.fn(() => chain);
     chain.where = vi.fn(() => thenableProxy(chain));
     chain.orderBy = vi.fn(() => thenableProxy(chain));
     chain.limit = vi.fn(() => {
@@ -310,7 +311,13 @@ describe("quickCreateContentItem", () => {
 
   it("preserves a workspace-scoped research post when creating a draft", async () => {
     dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
-    dbMock.state.selectResults.push([{ id: "research-post-1" }]);
+    dbMock.state.selectResults.push([
+      {
+        observation: { id: "research-post-1" },
+        channel: null,
+        researchAccount: null,
+      },
+    ]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, {

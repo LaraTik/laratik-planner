@@ -156,6 +156,20 @@ endpoint is now focusable and the full Account responsive set passes. The
 broader responsive matrix, bilingual/role coverage, provider UAT, and
 independent review remain open.
 
+## 2026-10-03 — Source-neutral observation seam
+
+Migration `0068_source_neutral_post_observations` extends the existing
+`social_post_observation` table with a typed `source_kind` and nullable
+`research_watchlist_account_id`. A database check enforces exactly one source,
+and separate daily uniqueness keys preserve connected-channel upserts while
+allowing research-account observations. The repository, workspace-scoped
+research queries, bookmark route, MCP research read, and create-brief
+authorization now accept either connected observations or active registered
+research accounts without copying provider media or exposing raw responses.
+
+The provider adapter, controlled refresh UAT, derived ranking, entitled AI
+insight, full visual/RTL evidence, and independent review remain open.
+
 The research teardown contract is now represented by a versioned, pure parser:
 it accepts only provider media, planner-owned asset, or planner-entered notes
 as source evidence and requires structured hook/promise/format/beats/pacing/

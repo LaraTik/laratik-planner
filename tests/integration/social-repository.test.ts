@@ -12,6 +12,7 @@ import {
   socialProfileDailyMetrics,
   socialPostObservations,
   socialOauthStates,
+  researchWatchlistAccounts,
 } from "@/lib/db/schema";
 import {
   claimDueProfiles,
@@ -23,6 +24,7 @@ import {
   openConnectionCredentials,
   saveSnapshot,
   savePostObservations,
+  saveResearchPostObservations,
   updateConnectionCredentials,
   revokeConnectionAndDetach,
   type CreatePendingConnectionInput,
@@ -35,6 +37,10 @@ import {
   getDekForWorkspace,
 } from "@/lib/social/key-management";
 import { openCredentialsWithDek } from "@/lib/social/crypto";
+import {
+  queryResearchPostObservation,
+  queryResearchPostObservations,
+} from "@/lib/social/analytics-query";
 
 /**
  * M4 — repository integration test.
@@ -384,6 +390,69 @@ describe("M4 — repository", () => {
         .where(sql`social_channel_id = ${ch.id}`);
       expect(rows).toHaveLength(1);
       expect(Number(rows[0]!.views)).toBe(125);
+    });
+
+    it("stores research-account observations in the same normalized table", async () => {
+      const [account] = await db
+        .insert(researchWatchlistAccounts)
+        .values({
+          workspaceId,
+          createdBy: userId,
+          platform: "instagram",
+          handle: "competitor",
+          sourceUrl: "https://instagram.com/competitor",
+        })
+        .returning();
+      const observation = {
+        provider: "meta" as const,
+        externalPostId: "research-post-1",
+        permalink: "https://instagram.com/reel/research-post-1",
+        publishedAt: new Date("2026-08-20T12:00:00Z"),
+        mediaType: "reel" as const,
+        mediaProductType: "REELS",
+        durationSeconds: null,
+        views: 100,
+        reach: null,
+        likes: 10,
+        comments: 2,
+        saved: null,
+        shares: null,
+        interactions: null,
+        observedAt: new Date("2026-08-20T13:00:00Z"),
+        providerApiVersion: "v25.0",
+        providerRequestId: newRequestId(),
+        sourceMetadata: { source: "controlled-test" },
+      };
+      await saveResearchPostObservations(db, {
+        researchWatchlistAccountId: account!.id,
+        observationDate: "2026-08-20",
+        observations: [observation],
+      });
+      await saveResearchPostObservations(db, {
+        researchWatchlistAccountId: account!.id,
+        observationDate: "2026-08-20",
+        observations: [{ ...observation, views: 125 }],
+      });
+      const rows = await db
+        .select()
+        .from(socialPostObservations)
+        .where(sql`research_watchlist_account_id = ${account!.id}`);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]!.socialChannelId).toBeNull();
+      expect(rows[0]!.sourceKind).toBe("research_account");
+      expect(Number(rows[0]!.views)).toBe(125);
+      const researchRows = await queryResearchPostObservations(
+        db,
+        workspaceId,
+        "UTC",
+        new Date("2026-08-21T00:00:00Z"),
+        90,
+      );
+      expect(researchRows).toHaveLength(1);
+      expect(researchRows[0]!.channel).toBeNull();
+      expect(researchRows[0]!.researchAccount?.id).toBe(account!.id);
+      const resolved = await queryResearchPostObservation(db, workspaceId, rows[0]!.id);
+      expect(resolved?.observation.id).toBe(rows[0]!.id);
     });
   });
 
