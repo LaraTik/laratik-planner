@@ -20,6 +20,14 @@ research projection uses the same safe cast, and the current Chromium Research
 journey passes 3/3 with serious/critical axe checks: watchlist management,
 notes-only teardown preview, and teardown-to-draft handoff.
 
+## 2026-10-03 — Research AI governance contract
+
+The existing notes-only teardown route now has route-level coverage for the
+agency capability gate, plan entitlement gate, successful preview accounting,
+redacted context-manifest logging, and provider-failure reservation refunds.
+The preview remains server-only and explicit save is still a separate action;
+no automatic draft or content write occurs. Focused governance tests pass 4/4.
+
 ## 2026-10-03 — Versioned research ranking metrics
 
 Saved research evidence now exposes deterministic Planner-derived engagement

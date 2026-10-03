@@ -30,6 +30,14 @@ light/dark verification before the Command Center surface is called ready.
 > implementation remains `Tested`, not `Verified`; multi-viewport/RTL visual
 > evidence, provider UAT, entitled AI, and independent review remain open.
 
+> **2026-10-03 research AI governance checkpoint** — The existing notes-only
+> teardown route now has route-level tests for capability-off, plan-off,
+> successful preview reservation/reconciliation with a redacted context
+> manifest, and provider-failure refunds plus failed usage events. Focused
+> governance tests pass 4/4. The preview/save separation remains explicit;
+> the implementation is `Tested`, not `Verified`, and broader entitled-AI
+> product evidence and independent review remain open.
+
 > **2026-10-03 research evidence UX checkpoint** — The source-only Research
 > surface now has a responsive evidence grid with keyboard-accessible search,
 > platform filtering, transparent metric sorting, localized result counts,
