@@ -152,6 +152,13 @@ describe("FormatAwareContentEditor", () => {
     expect(screen.getByTestId("chapters-add-empty")).toBeInTheDocument();
   });
 
+  it("shows visual direction and on-image text for long-form video", () => {
+    render(<FormatAwareContentEditor {...baseProps} format="long_form_video" />);
+
+    expect(screen.getByTestId("field-visualDirection")).toBeInTheDocument();
+    expect(screen.getByTestId("field-onImageText")).toBeInTheDocument();
+  });
+
   it("uses the locale-resolved format name in the editor title", () => {
     render(<FormatAwareContentEditor {...baseProps} format="short_form_video" />);
     // The English catalog label is "Short-form video".

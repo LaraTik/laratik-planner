@@ -153,6 +153,8 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
     { key: "hook", labelKey: "formatEditor.fields.hook", group: "essential" },
     { key: "chapters", labelKey: "formatEditor.fields.chapters", group: "essential" },
     { key: "caption", labelKey: "formatEditor.fields.caption", group: "essential" },
+    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "essential" },
+    { key: "onImageText", labelKey: "formatEditor.fields.onImageText", group: "essential" },
     { key: "hashtags", labelKey: "formatEditor.fields.hashtags", group: "essential" },
     { key: "callToAction", labelKey: "formatEditor.fields.callToAction", group: "essential" },
     // Objective + Audience are STRATEGY fields, not advanced.
@@ -166,7 +168,6 @@ export const FIELDS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<FieldDef>> = 
       labelKey: "formatEditor.fields.thumbnailDirection",
       group: "advanced",
     },
-    { key: "visualDirection", labelKey: "formatEditor.fields.visualDirection", group: "advanced" },
     { key: "references", labelKey: "formatEditor.fields.references", group: "advanced" },
     { key: "additionalNotes", labelKey: "formatEditor.fields.additionalNotes", group: "advanced" },
   ],

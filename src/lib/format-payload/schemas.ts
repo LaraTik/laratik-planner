@@ -232,6 +232,8 @@ export const LongFormVideoPayloadSchema = z.object({
   mainMessage: ShortText.optional(),
   callToAction: ShortText.optional(),
   caption: z.string().trim().max(10_000).optional(),
+  /** Text planned to appear inside video frames or thumbnail artwork. */
+  onImageText: z.string().trim().max(10_000).optional(),
   description: z.string().trim().max(10_000).optional(),
   chapters: z
     .array(
@@ -411,6 +413,7 @@ export function translatableFieldKeys(format: ContentFormat): ReadonlyArray<stri
     "firstComment",
     "description",
     "visualDirection",
+    "onImageText",
     "coverDirection",
     "onScreenText",
     "voiceOverNotes",

@@ -244,13 +244,16 @@ export async function TaskListPage({
               >
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h2 className="text-body text-fg-primary font-semibold wrap-break-word">
+                    <h2
+                      dir="auto"
+                      className="text-body text-fg-primary font-semibold wrap-break-word"
+                    >
                       {task.title}
                     </h2>
                     <p className="text-label text-fg-secondary mt-1">
-                      {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                      <bdi dir="auto">{task.workspaceName ?? t("calendar.globalNoWorkspace")}</bdi>
                       <span aria-hidden="true"> · </span>
-                      {task.assigneeName ?? t("tasks.noAssignee")}
+                      <bdi dir="auto">{task.assigneeName ?? t("tasks.noAssignee")}</bdi>
                     </p>
                   </div>
                   <TaskStatusBadge

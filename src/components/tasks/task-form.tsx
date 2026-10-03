@@ -1,6 +1,8 @@
 import { createTaskAction } from "@/app/(app)/app/tasks/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { FormField } from "@/components/forms/form-field";
 import { TASK_PRIORITIES } from "@/lib/tasks/service";
 
@@ -21,21 +23,14 @@ export function TaskCreateForm({
         <CardDescription>{label("newDescription")}</CardDescription>
         <div className="mt-6 space-y-5">
           <FormField id="task-title" label={label("titleLabel")} required>
-            <input
-              name="title"
-              required
-              maxLength={200}
-              placeholder={label("titlePlaceholder")}
-              className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
-            />
+            <Input name="title" required maxLength={200} placeholder={label("titlePlaceholder")} />
           </FormField>
           <FormField id="task-description" label={label("descriptionLabel")}>
-            <textarea
+            <Textarea
               name="description"
               rows={5}
               maxLength={10000}
               placeholder={label("descriptionPlaceholder")}
-              className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block w-full rounded-[var(--radius-control)] border px-3 py-2 font-normal focus-visible:ring-2"
             />
           </FormField>
           <div className="grid gap-5 sm:grid-cols-2">

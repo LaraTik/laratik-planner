@@ -89,6 +89,19 @@ describe("format-payload/schemas", () => {
       });
       expect(result.success).toBe(true);
     });
+
+    it("keeps long-form visual direction and on-image text", () => {
+      const result = FormatPayloadByFormat.long_form_video.safeParse({
+        schemaVersion: 1,
+        visualDirection: "Warm, documentary framing with close-ups.",
+        onImageText: "Three steps to get started",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.visualDirection).toContain("documentary");
+        expect(result.data.onImageText).toBe("Three steps to get started");
+      }
+    });
   });
 
   describe("translatableFieldKeys", () => {
@@ -103,6 +116,7 @@ describe("format-payload/schemas", () => {
       expect(translatableFieldKeys("carousel")).toContain("slideOutline");
       expect(translatableFieldKeys("short_form_video")).toContain("scenes");
       expect(translatableFieldKeys("long_form_video")).toContain("chapters");
+      expect(translatableFieldKeys("long_form_video")).toContain("onImageText");
       expect(translatableFieldKeys("article")).toContain("outline");
     });
 
@@ -162,6 +176,7 @@ describe("format-payload/schemas", () => {
         "mainMessage",
         "callToAction",
         "visualDirection",
+        "onImageText",
         "additionalNotes",
         "onScreenText",
         "voiceOverNotes",

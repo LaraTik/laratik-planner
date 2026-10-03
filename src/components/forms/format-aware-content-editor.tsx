@@ -209,6 +209,7 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
         "scriptOutline",
         "chapters",
         "visualDirection",
+        "onImageText",
         "references",
         "additionalNotes",
       ],

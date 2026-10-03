@@ -119,6 +119,27 @@ describe("FormatPayloadEditor", () => {
     expect(within(essentialTier).getByTestId("essential-field-onImageText")).toBeInTheDocument();
   });
 
+  it("renders visual direction and on-image text for long_form_video", async () => {
+    render(
+      <FormatPayloadEditor
+        t={t}
+        workspaceSlug="acme"
+        contentItemId="ci-1"
+        format="long_form_video"
+        initial={{ schemaVersion: 1 }}
+        editable
+        locale="en"
+        aiEnabled={false}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("format-payload-toggle"));
+    const essentialTier = screen.getByTestId("essential-tier");
+    expect(
+      within(essentialTier).getByTestId("essential-field-visualDirection"),
+    ).toBeInTheDocument();
+    expect(within(essentialTier).getByTestId("essential-field-onImageText")).toBeInTheDocument();
+  });
+
   it("renders carousel workbook essentials without an inferred slide outline", async () => {
     render(
       <FormatPayloadEditor

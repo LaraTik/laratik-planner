@@ -151,8 +151,11 @@ columns on `content_item`:
   "hook": "…",
   "mainMessage": "…",
   "callToAction": "…",
+  "caption": "…",
+  "visualDirection": "Describe the look, framing, and visual treatment.",
+  "onImageText": "Text to place inside video frames or thumbnail artwork.",
+  "description": "…",
   "chapters": [{ "position": 1, "title": "string", "startsAtSeconds": 0 }],
-  "captionsEnabled": true,
   "references": [],
 }
 ```

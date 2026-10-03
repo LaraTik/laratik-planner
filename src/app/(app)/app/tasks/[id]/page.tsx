@@ -26,6 +26,8 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { FormField } from "@/components/forms/form-field";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge";
 import { TaskAttachmentUpload } from "@/components/tasks/task-attachment-upload";
 import { TaskArchiveButton } from "@/components/tasks/task-archive-button";
@@ -91,9 +93,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                   label={t(`tasks.status.${task.status}`)}
                 />
                 <p className="text-label text-fg-secondary mt-3">
-                  {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                  <bdi dir="auto">{task.workspaceName ?? t("calendar.globalNoWorkspace")}</bdi>
                   <span aria-hidden="true"> · </span>
-                  {task.assigneeName ?? t("tasks.noAssignee")}
+                  <bdi dir="auto">{task.assigneeName ?? t("tasks.noAssignee")}</bdi>
                 </p>
               </div>
               <span className="text-label border-border text-fg-secondary rounded-full border px-2.5 py-1">
@@ -103,21 +105,14 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
             {task.canManage ? (
               <form action={updateTaskAction.bind(null, task.id)} className="mt-6 space-y-5">
                 <FormField id="detail-title" label={t("tasks.titleLabel")} required>
-                  <input
-                    name="title"
-                    defaultValue={task.title}
-                    maxLength={200}
-                    required
-                    className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block min-h-11 w-full rounded-[var(--radius-control)] border px-3 font-normal focus-visible:ring-2"
-                  />
+                  <Input name="title" defaultValue={task.title} maxLength={200} required />
                 </FormField>
                 <FormField id="detail-description" label={t("tasks.descriptionLabel")}>
-                  <textarea
+                  <Textarea
                     name="description"
                     defaultValue={task.description}
                     rows={6}
                     maxLength={10000}
-                    className="border-border bg-surface text-fg-primary focus-visible:ring-focus-ring mt-1 block w-full rounded-[var(--radius-control)] border px-3 py-2 font-normal focus-visible:ring-2"
                   />
                 </FormField>
                 <div className="grid gap-5 sm:grid-cols-2">
@@ -190,7 +185,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                 </div>
               </form>
             ) : (
-              <p className="text-body text-fg-secondary mt-6 whitespace-pre-wrap">
+              <p dir="auto" className="text-body text-fg-secondary mt-6 whitespace-pre-wrap">
                 {task.description || t("tasks.emptyDescription")}
               </p>
             )}
@@ -248,7 +243,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                     >
                       <span className="text-body inline-flex min-w-0 items-center gap-2">
                         <Paperclip className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
-                        <span className="wrap-break-word">{attachment.originalName}</span>
+                        <bdi dir="auto" className="wrap-break-word">
+                          {attachment.originalName}
+                        </bdi>
                       </span>
                       <a
                         href={attachment.url}
@@ -276,7 +273,9 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                     className="bg-primary absolute -start-[1.4rem] top-1 h-2.5 w-2.5 rounded-full"
                     aria-hidden="true"
                   />
-                  <p className="text-body text-fg-primary font-semibold">{event.summary}</p>
+                  <p dir="auto" className="text-body text-fg-primary font-semibold">
+                    {event.summary}
+                  </p>
                   <p className="text-label text-fg-muted mt-1">
                     {event.actorName ?? t("tasks.unknownActor")} ·{" "}
                     {formatDate(event.createdAt, code, { dateStyle: "medium", timeStyle: "short" })}
@@ -299,7 +298,7 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
             </p>
             <p className="text-label text-fg-muted mt-3 inline-flex items-center gap-2">
               <UserRound className="h-3.5 w-3.5" aria-hidden="true" />
-              {task.assigneeName ?? t("tasks.noAssignee")}
+              <bdi dir="auto">{task.assigneeName ?? t("tasks.noAssignee")}</bdi>
             </p>
           </Card>
           <Card padding="md">

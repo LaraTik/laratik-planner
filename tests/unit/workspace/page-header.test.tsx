@@ -20,4 +20,11 @@ describe("PageHeader", () => {
     expect(header).not.toHaveClass("sm:flex-row");
     expect(action).toHaveClass("w-full", "lg:w-auto");
   });
+
+  it("lets titles and descriptions follow the content direction", () => {
+    render(<PageHeader title="عنوان عربي" description="وصف عربي" />);
+
+    expect(screen.getByRole("heading", { name: "عنوان عربي" })).toHaveAttribute("dir", "auto");
+    expect(screen.getByText("وصف عربي")).toHaveAttribute("dir", "auto");
+  });
 });
