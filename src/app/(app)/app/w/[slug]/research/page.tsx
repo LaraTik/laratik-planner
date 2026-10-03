@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { ArrowUpRight, Bookmark } from "lucide-react";
+import { ResearchEvidenceGrid } from "@/components/workspace/research-evidence-grid";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -20,14 +20,11 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { ResearchTeardownSchema } from "@/lib/research/teardown";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ResearchWatchlist } from "@/components/workspace/research-watchlist";
 import { ResearchWatchlists } from "@/components/workspace/research-watchlists";
 import { ResearchTeardownPanel } from "@/components/workspace/research-teardown-panel";
-import { ResearchCollectionPicker } from "@/components/workspace/research-collection-picker";
 import { ResearchCollections } from "@/components/workspace/research-collections";
 
 function formatNumber(value: number | null, locale: string) {
@@ -320,98 +317,57 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         }}
       />
 
-      {rows.length === 0 ? (
-        <Card variant="dashed" padding="lg">
-          <div className="flex items-start gap-3">
-            <Bookmark className="text-primary mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-            <div>
-              <h2 className="text-title-card text-fg-primary font-semibold">
-                {t("research.emptyTitle")}
-              </h2>
-              <p className="text-body text-fg-secondary mt-1 max-w-2xl">
-                {t("research.emptyDescription")}
-              </p>
-            </div>
-          </div>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map((row) => {
-            const published = row.publishedAt
-              ? formatDate(row.publishedAt, code, { dateStyle: "medium" })
-              : null;
-            const saved = formatDate(row.savedAt, code, { dateStyle: "medium" });
-            return (
-              <Card key={row.observationId} padding="md" className="flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-body text-fg-primary truncate font-semibold">
-                      <bdi>{row.accountName}</bdi>
-                    </p>
-                    <p className="text-label text-fg-muted mt-1 capitalize">
-                      {row.platform} · {row.mediaType}
-                      {published ? ` · ${published}` : ""}
-                    </p>
-                  </div>
-                  <Badge variant="outline">{t("research.savedAt", { date: saved })}</Badge>
-                </div>
-                <dl className="text-label text-fg-secondary grid grid-cols-3 gap-2">
-                  <div>
-                    <dt>{t("research.views")}</dt>
-                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                      {formatNumber(row.views, code)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t("research.likes")}</dt>
-                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                      {formatNumber(row.likes, code)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt>{t("research.comments")}</dt>
-                    <dd className="text-fg-primary mt-0.5 font-semibold tabular-nums">
-                      {formatNumber(row.comments, code)}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="mt-auto flex flex-wrap items-center gap-2">
-                  {row.permalink ? (
-                    <Button variant="ghost" size="sm" asChild>
-                      <a href={row.permalink} target="_blank" rel="noreferrer">
-                        {t("research.openSource")}
-                        <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                      </a>
-                    </Button>
-                  ) : null}
-                  <Button size="sm" asChild>
-                    <Link
-                      href={`/app/w/${encodeURIComponent(slug)}/planning/new?researchPostObservationId=${encodeURIComponent(row.observationId)}`}
-                    >
-                      {t("research.createBrief")}
-                    </Link>
-                  </Button>
-                  {canManage ? (
-                    <ResearchCollectionPicker
-                      workspaceSlug={slug}
-                      itemKind="bookmark"
-                      itemId={row.bookmarkId}
-                      initialCollectionId={row.collectionId}
-                      collections={collectionRows.map((collection) => ({
-                        ...collection,
-                        shareScope: collection.shareScope as "me" | "workspace",
-                      }))}
-                      label={t("research.collectionLabel")}
-                      noCollection={t("research.collectionNone")}
-                      errorLabel={t("research.collectionError")}
-                    />
-                  ) : null}
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
+      <ResearchEvidenceGrid
+        workspaceSlug={slug}
+        slug={slug}
+        canManage={canManage}
+        rows={rows.map((row) => ({
+          ...row,
+          accountName: row.accountName,
+          mediaType: row.mediaType,
+          publishedAt: row.publishedAt?.toISOString() ?? null,
+          savedAt: row.savedAt.toISOString(),
+          publishedLabel: row.publishedAt
+            ? formatDate(row.publishedAt, code, { dateStyle: "medium" })
+            : null,
+          savedLabel: formatDate(row.savedAt, code, { dateStyle: "medium" }),
+          viewsLabel: formatNumber(row.views, code),
+          likesLabel: formatNumber(row.likes, code),
+          commentsLabel: formatNumber(row.comments, code),
+        }))}
+        collections={collectionRows.map((collection) => ({
+          ...collection,
+          shareScope: collection.shareScope as "me" | "workspace",
+        }))}
+        labels={{
+          title: t("research.evidenceTitle"),
+          description: t("research.evidenceDescription"),
+          emptyTitle: t("research.emptyTitle"),
+          emptyDescription: t("research.emptyDescription"),
+          search: t("research.evidenceSearch"),
+          searchPlaceholder: t("research.evidenceSearchPlaceholder"),
+          platform: t("research.evidencePlatform"),
+          allPlatforms: t("research.evidenceAllPlatforms"),
+          sort: t("research.evidenceSort"),
+          newest: t("research.evidenceSortNewest"),
+          recentlyPublished: t("research.evidenceSortPublished"),
+          mostViews: t("research.evidenceSortViews"),
+          mostLikes: t("research.evidenceSortLikes"),
+          mostComments: t("research.evidenceSortComments"),
+          results: t("research.evidenceResults"),
+          filteredEmptyTitle: t("research.evidenceFilteredEmptyTitle"),
+          filteredEmptyDescription: t("research.evidenceFilteredEmptyDescription"),
+          openSource: t("research.openSource"),
+          createBrief: t("research.createBrief"),
+          savedAt: t("research.savedAt", { date: "{date}" }),
+          collectionLabel: t("research.collectionLabel"),
+          collectionNone: t("research.collectionNone"),
+          collectionError: t("research.collectionError"),
+          views: t("research.views"),
+          likes: t("research.likes"),
+          comments: t("research.comments"),
+        }}
+      />
     </div>
   );
 }

@@ -82,11 +82,19 @@ export function ResearchWatchlist({
     setMembershipPending(key);
     setError(null);
     setMemberships((current) => ({ ...current, [watchlistId]: next }));
-    const response = await fetch(`/api/research/watchlists/${watchlistId}/members`, {
-      method: checked ? "POST" : "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ workspaceSlug, accountId }),
-    });
+    let response: Response;
+    try {
+      response = await fetch(`/api/research/watchlists/${watchlistId}/members`, {
+        method: checked ? "POST" : "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceSlug, accountId }),
+      });
+    } catch {
+      setError(labels.membershipError);
+      setMemberships((current) => ({ ...current, [watchlistId]: previous }));
+      setMembershipPending(null);
+      return;
+    }
     if (!response.ok) {
       setError(labels.membershipError);
       setMemberships((current) => ({ ...current, [watchlistId]: previous }));
@@ -100,17 +108,24 @@ export function ResearchWatchlist({
     event.preventDefault();
     setPending(true);
     setError(null);
-    const response = await fetch("/api/research/watchlist", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        workspaceSlug,
-        platform,
-        handle,
-        displayName: displayName || undefined,
-        sourceUrl,
-      }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/research/watchlist", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceSlug,
+          platform,
+          handle,
+          displayName: displayName || undefined,
+          sourceUrl,
+        }),
+      });
+    } catch {
+      setError(labels.error);
+      setPending(false);
+      return;
+    }
     const body = (await response.json().catch(() => ({}))) as {
       account?: WatchlistAccount;
       error?: string;
@@ -129,11 +144,17 @@ export function ResearchWatchlist({
 
   async function removeAccount(id: string) {
     setError(null);
-    const response = await fetch("/api/research/watchlist", {
-      method: "DELETE",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ workspaceSlug, id }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/research/watchlist", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceSlug, id }),
+      });
+    } catch {
+      setError(labels.error);
+      return;
+    }
     if (!response.ok) {
       setError(labels.error);
       return;

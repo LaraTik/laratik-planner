@@ -21,6 +21,18 @@ light/dark verification before the Command Center surface is called ready.
 > for a removed planning "Brief" tab; multi-viewport/RTL visual and independent
 > review evidence remain open. This checkpoint is not a `Verified` claim.
 
+> **2026-10-03 research evidence UX checkpoint** — The source-only Research
+> surface now has a responsive evidence grid with keyboard-accessible search,
+> platform filtering, transparent metric sorting, localized result counts,
+> unavailable metric semantics, source links, and brief handoff actions. The
+> client boundary passes serializable localized strings only; network failures
+> in account and membership mutations now restore optimistic state and announce
+> a localized error. Focused research unit tests pass 12/12 and the named
+> watchlist Chromium flow passes 1/1 with serious/critical axe checks. The
+> implementation remains `Tested`, not `Verified`; full responsive/RTL visual
+> evidence, the complete Research browser file, provider UAT, observation-source
+> migration, ranking, entitled AI, and final MCP/release evidence remain open.
+
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
 > suite passes 24/24 after regenerating only the three references affected by
 > the fixed visual fixture: workspace overview desktop/mobile

@@ -11,6 +11,21 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-03 — Research evidence UX hardening
+
+The source-only Research surface now includes a responsive evidence grid with
+search, platform filtering, transparent sorting by saved date, publish date,
+views, likes, or comments, explicit unavailable values, source links, and
+brief handoff actions. The client component receives serializable localized
+labels only. Account and watchlist membership mutations now handle network
+failures by restoring optimistic state and exposing an announced error.
+
+Focused research unit tests pass 12/12, and the named-watchlist Chromium flow
+passes 1/1 with serious/critical axe checks. This does not close the broader
+release work: multi-viewport/RTL visual evidence, the full Research browser
+file, provider UAT, the competitor observation-source seam, ranking, entitled
+AI insight, and independent review remain open.
+
 ## 2026-10-02 — Named research watchlists, M1 source-only slice
 
 The first implementation slice from the Meedro integration plan is now in the

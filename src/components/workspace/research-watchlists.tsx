@@ -53,11 +53,18 @@ export function ResearchWatchlists({
     if (!name.trim() || pending) return;
     setPending(true);
     setError(null);
-    const response = await fetch("/api/research/watchlists", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ workspaceSlug, name, shareScope }),
-    });
+    let response: Response;
+    try {
+      response = await fetch("/api/research/watchlists", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ workspaceSlug, name, shareScope }),
+      });
+    } catch {
+      setError(labels.error);
+      setPending(false);
+      return;
+    }
     const body = (await response.json().catch(() => ({}))) as {
       watchlist?: ResearchWatchlistOption;
       error?: string;
