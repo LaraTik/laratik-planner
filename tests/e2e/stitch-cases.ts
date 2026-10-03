@@ -130,11 +130,25 @@ export const PLANNING_DETAIL_VIEWPORTS = [
   { name: "wide", width: 1440, height: 900 },
 ] as const;
 
+/**
+ * Research is reviewed at the full product-content matrix because its
+ * source cards, watchlist controls, and teardown panel are the most likely
+ * places for long handles, URLs, and Arabic labels to create overflow.
+ */
+export const RESEARCH_VIEWPORTS = [
+  { name: "mobile-s", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "laptop", width: 1024, height: 768 },
+  { name: "desktop", width: 1280, height: 800 },
+  { name: "wide", width: 1440, height: 900 },
+] as const;
+
 export function viewportsForSurface(surface: string): readonly {
   name: string;
   width: number;
   height: number;
 }[] {
+  if (surface === "/app/w/acme/research") return RESEARCH_VIEWPORTS;
   if (surface.startsWith("/app/w/acme/planning")) return PLANNING_DETAIL_VIEWPORTS;
   return REGRESSION_VIEWPORTS;
 }

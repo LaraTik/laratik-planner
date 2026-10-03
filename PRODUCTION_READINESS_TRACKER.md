@@ -70,6 +70,15 @@ light/dark verification before the Command Center surface is called ready.
 > remains `Tested`, not `Verified`; full responsive/RTL visual evidence and
 > independent review remain open.
 
+> **2026-10-03 Research visual evidence checkpoint** — The Research surface now
+> has a strict five-width English responsive matrix at 375, 768, 1024, 1280,
+> and 1440px, plus five committed Arabic/RTL screenshots covering the same
+> widths. The focused visual run passed 6/6 tests, including serious/critical
+> axe checks and no horizontal overflow at any width. This closes the
+> Research-specific responsive/RTL evidence gap; the wider route/theme matrix,
+> provider UAT, authenticated MCP smoke, and independent review remain open.
+> The implementation remains `Tested`, not `Verified`.
+
 > **2026-10-03 source-neutral observation checkpoint** — Migration
 > `0068_source_neutral_post_observations` extends the existing normalized post
 > observation read model with an explicit `source_kind`, a nullable research

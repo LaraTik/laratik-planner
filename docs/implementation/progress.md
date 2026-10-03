@@ -190,6 +190,16 @@ independent review remain open.
 
 ## 2026-10-03 — Source-neutral observation seam
 
+## 2026-10-03 — Research responsive and Arabic/RTL evidence
+
+The Research shelf now uses a dedicated five-width visual matrix at 375px,
+768px, 1024px, 1280px, and 1440px. The same focused visual run captures and
+asserts the Arabic/RTL surface at all five widths, including serious/critical
+axe checks and a no-horizontal-overflow assertion. The focused run passes 6/6
+tests and commits ten Research screenshots. The remaining visual work is the
+wider route/theme/role matrix and independent review; provider UAT and the
+authenticated MCP smoke gate also remain external release gates.
+
 Migration `0068_source_neutral_post_observations` extends the existing
 `social_post_observation` table with a typed `source_kind` and nullable
 `research_watchlist_account_id`. A database check enforces exactly one source,

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   CANONICAL_SURFACES,
   PLANNING_DETAIL_VIEWPORTS,
+  RESEARCH_VIEWPORTS,
   REGRESSION_VIEWPORTS,
   SETUP_FUNCTIONS,
   STITCH_CASES,
@@ -121,7 +122,11 @@ describe("visual regression harness contract (Task 7)", () => {
     expect(widths).toEqual([375, 768, 1024, 1440]);
   });
 
-  it("routes every /planning surface to the 4-viewport M5 matrix and other surfaces to the 3-viewport legacy", () => {
+  it("routes Research to its 5-viewport bilingual matrix, planning to M5, and other surfaces to the 3-viewport legacy", () => {
+    const researchViewports = viewportsForSurface("/app/w/acme/research");
+    expect(researchViewports).toBe(RESEARCH_VIEWPORTS);
+    expect(researchViewports.map((v) => v.width)).toEqual([375, 768, 1024, 1280, 1440]);
+
     // Every /planning surface (prefix match) uses the M5 4-viewport
     // matrix, including list / detail / batch / new.
     for (const surface of [

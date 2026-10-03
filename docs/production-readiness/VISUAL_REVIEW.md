@@ -40,9 +40,11 @@ For every active `STITCH_CASES` entry:
    overflow, responsive behavior, and interactive state.
 3. For the responsive matrix (`tests/e2e/visual-regression.spec.ts`
    → `visual regression (responsive matrix)`), repeat the comparison at
-   every viewport selected by `viewportsForSurface()`: 19 non-planning
-   surfaces at 360 / 768 / 1440, and four planning surfaces at 375 / 768 /
-   1024 / 1440 (73 baselines total).
+   every viewport selected by `viewportsForSurface()`: 18 non-Research,
+   non-planning surfaces at 360 / 768 / 1440; Research at 375 / 768 / 1024 /
+   1280 / 1440; and four planning surfaces at 375 / 768 / 1024 / 1440 (75
+   English responsive baselines total). The dedicated Research Arabic/RTL
+   block adds five same-width baselines and asserts no horizontal overflow.
 4. Mark each row with a result and a link to the diff / follow-up
    issue / approved-deviation commit.
 5. A baseline may be approved only after every dimension above

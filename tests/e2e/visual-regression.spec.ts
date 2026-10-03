@@ -11,6 +11,7 @@ import {
   STITCH_CASES,
   responsiveScreenshotName,
   resolveStitchRoute,
+  RESEARCH_VIEWPORTS,
   screenshotNameFor,
   type StitchCase,
   type RegressionViewport,
@@ -33,9 +34,11 @@ import { setupTrendsLiveState } from "./stitch-state-helpers";
  *   2. **Responsive matrix** — one screenshot per canonical and app-only
  *      surface at the viewports
  *      selected by `viewportsForSurface()`: non-planning surfaces use
- *      360 / 768 / 1440, while planning surfaces use 375 / 768 / 1024 / 1440.
+ *      360 / 768 / 1440, Research uses 375 / 768 / 1024 / 1280 / 1440,
+ *      while planning surfaces use 375 / 768 / 1024 / 1440.
  *      The current matrix covers 20 canonical and 50 app-only surfaces
- *      (217 responsive baselines). The
+ *      (219 English responsive baselines, plus five Research Arabic/RTL
+ *      baselines). The
  *      `operational-states` evidence group is not a route and is
  *      reviewed directly against the captured PNG/HTML. App-only surfaces
  *      are regression references for the shipped UI, not Stitch targets.
@@ -608,4 +611,38 @@ test.describe("visual regression (responsive matrix)", () => {
       }
     });
   }
+});
+
+// Research is the source-heavy surface: handles, URLs, long Arabic labels,
+// and the teardown controls all need a strict RTL review in addition to the
+// English responsive matrix above. Keeping this in the visual-only project
+// avoids multiplying the screenshot contract across functional browsers.
+test.describe("visual regression (Research Arabic RTL)", () => {
+  test("Research renders Arabic RTL without overflow across the full matrix", async ({ page }) => {
+    test.setTimeout(120_000);
+    const seedLike = await bootstrapTestSession(page, { locale: "ar", visualFixture: true });
+
+    for (const viewport of RESEARCH_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const resolved = resolveStitchRoute("/app/w/acme/research", seedLike);
+      await page.goto(resolved);
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/w/acme/research", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(page.getByRole("heading", { name: "رفّ الأبحاث", level: 1 })).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Research Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Research Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(["arabic", `research-${viewport.name}.png`], {
+        fullPage: true,
+        maxDiffPixelRatio: 0.01,
+      });
+    }
+  });
 });

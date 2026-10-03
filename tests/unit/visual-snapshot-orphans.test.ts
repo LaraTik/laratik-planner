@@ -8,15 +8,15 @@ import { describe, expect, it } from "vitest";
  * The P1 sweep (commit 7b1ae8a → f406fbc) cleaned up ~122 darwin-
  * path orphans in this directory. To keep the cleanup from
  * silently regressing, this file scans the snapshot directory and
- * asserts that the only top-level entries are `reference/` and
- * `responsive/` — the two subdirectories that the visual-regression
- * spec actually writes to.
+ * asserts that the only top-level entries are `arabic/`, `reference/`, and
+ * `responsive/` — the three subdirectories that the visual-regression spec
+ * actually writes to.
  *
  * If a future capture run writes a stray file (e.g. the
  * `snapshotPathTemplate` regresses and a `-darwin.png` orphan
  * appears), this test fails loud. The `.gitignore` rule that
  * ignores `tests/e2e/visual-regression.spec.ts-snapshots/*` and
- * re-allows `reference/` and `responsive/` keeps orphans out of
+ * re-allows the three capture directories keeps orphans out of
  * the repo even if the test is ever disabled; this test is the
  * contract, the gitignore is the safety net.
  */
@@ -28,9 +28,9 @@ describe("visual-regression snapshot directory has no orphans (TEST-20)", () => 
     expect(stat.isDirectory()).toBe(true);
   });
 
-  it("only contains `reference/` and `responsive/` at the top level", () => {
+  it("only contains the three visual capture directories at the top level", () => {
     const entries = readdirSync(SNAPSHOT_DIR).sort();
-    expect(entries).toEqual(["reference", "responsive"]);
+    expect(entries).toEqual(["arabic", "reference", "responsive"]);
   });
 
   it("no top-level orphan files (e.g. `-darwin.png`, `-Users-...-spec.png`)", () => {
