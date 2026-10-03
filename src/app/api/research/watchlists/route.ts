@@ -62,6 +62,7 @@ export async function GET(request: NextRequest) {
         .select({
           watchlistId: researchWatchlistMembers.watchlistId,
           accountId: researchWatchlistMembers.accountId,
+          position: researchWatchlistMembers.position,
         })
         .from(researchWatchlistMembers)
         .where(or(...lists.map((list) => eq(researchWatchlistMembers.watchlistId, list.id))))
@@ -73,7 +74,13 @@ export async function GET(request: NextRequest) {
         ...list,
         accountIds: members
           .filter((member) => member.watchlistId === list.id)
+          .sort((a, b) => a.position - b.position)
           .map((member) => member.accountId),
+        memberPositions: Object.fromEntries(
+          members
+            .filter((member) => member.watchlistId === list.id)
+            .map((member) => [member.accountId, member.position]),
+        ),
       })),
     },
     { headers: mutatingApiHeaders() },
@@ -106,7 +113,7 @@ export async function POST(request: NextRequest) {
   if (!watchlist) return errorResponse("duplicate", 409);
 
   return NextResponse.json(
-    { watchlist: { ...watchlist, accountIds: [] } },
+    { watchlist: { ...watchlist, accountIds: [], memberPositions: {} } },
     { status: 201, headers: mutatingApiHeaders() },
   );
 }

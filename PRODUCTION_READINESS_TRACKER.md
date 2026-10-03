@@ -33,6 +33,17 @@ light/dark verification before the Command Center surface is called ready.
 > evidence, the complete Research browser file, provider UAT, observation-source
 > migration, ranking, entitled AI, and final MCP/release evidence remain open.
 
+> **2026-10-03 named watchlist management checkpoint** — Named watchlists now
+> support recoverable soft archive/restore, ordered member positions, keyboard
+> up/down reordering, and explicit copy/move actions between active lists.
+> Server routes validate workspace scope and reject incomplete reorder sets;
+> the UI rolls back optimistic state on network failure. Focused watchlist
+> route/component tests pass 11/11, and the Chromium create → reload → copy →
+> archive flow passes 1/1 with the Research axe check. M2 remains `Tested`, not
+> `Verified`; archived-list restore UI, full responsive/RTL evidence, the
+> observation-source seam, provider UAT, ranking, entitled AI, and final MCP
+> release evidence remain open.
+
 > **2026-10-01 visual reference checkpoint** — The reviewed exact-reference
 > suite passes 24/24 after regenerating only the three references affected by
 > the fixed visual fixture: workspace overview desktop/mobile

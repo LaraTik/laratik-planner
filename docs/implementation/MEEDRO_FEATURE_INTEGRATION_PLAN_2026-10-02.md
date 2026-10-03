@@ -1,7 +1,7 @@
 # Meedro-informed Planner integration — full implementation plan
 
 **Date:** 2026-10-02  
-**Status:** M1 source-only UX and M2 named-watchlist foundation tested; release evidence remains open
+**Status:** M1 source-only UX and M2 named-watchlist management tested; release evidence remains open
 **Owner:** LaraTik Planner product/engineering  
 **Source audits:** [Meedro feature audit](../audits/MEEDRO_FEATURE_AUDIT_2026-09-30.md), [workflow catalog](../audits/MEEDRO_WORKFLOW_CATALOG_2026-10-02.md), [MCP connection audit](../audits/MEEDRO_MCP_CONNECTION_2026-10-02.md), [Viral Finder audit](../audits/MEEDRO_VIRAL_FINDER_2026-10-02.md)  
 **Current implementation context:** [Meedro refactor plan](MEEDRO_REFACTOR_PLAN.md)
@@ -21,8 +21,11 @@ The first vertical slices are now present in the current worktree:
   metric semantics, source links, collection assignment, and brief handoff.
 - Added resilient client mutation handling for account and membership changes;
   optimistic membership state is restored when a network request fails.
+- Added recoverable watchlist archive/restore, ordered member positions,
+  keyboard up/down reordering, and explicit copy/move operations between active
+  lists. Reorder requests must contain the complete current membership set.
 
-Evidence captured so far: focused research unit tests 12/12, focused integration tests 2/2, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (456 files, 4311 tests), and a focused Chromium named-watchlist flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, observation-source seam, provider UAT, and independent review remain open.
+Evidence captured so far: focused research unit tests 12/12, focused watchlist route/component tests 11/11, focused integration tests 2/2, strict typecheck, lint, migration-journal validation, migration drill 5/5, full unit/build verification (456 files, 4311 tests), and a focused Chromium named-watchlist management flow 1/1 including serious/critical axe checks. The broader Research browser file still contains a stale pre-existing expectation for a removed planning "Brief" tab; the full critical suite also has unrelated advisory failures. The multi-viewport/RTL visual matrix, archived-list restore UI, observation-source seam, provider UAT, and independent review remain open.
 
 ## 1. Executive decision
 

@@ -26,6 +26,20 @@ release work: multi-viewport/RTL visual evidence, the full Research browser
 file, provider UAT, the competitor observation-source seam, ranking, entitled
 AI insight, and independent review remain open.
 
+## 2026-10-03 — Named watchlist management
+
+Named watchlists now support recoverable soft archive/restore, ordered member
+positions, keyboard up/down reordering, and explicit copy/move actions between
+active lists. The member route validates that a reorder request contains the
+complete current membership set and all mutations remain workspace-scoped.
+Optimistic UI state is restored when a management request fails.
+
+Focused watchlist route/component tests pass 11/11, and the Chromium
+create → reload → copy → archive flow passes 1/1 with the Research axe check.
+Archived-list restore UI, full responsive/RTL visual evidence, the
+competitor-observation source seam, provider UAT, ranking, entitled AI insight,
+and independent review remain open.
+
 ## 2026-10-02 — Named research watchlists, M1 source-only slice
 
 The first implementation slice from the Meedro integration plan is now in the

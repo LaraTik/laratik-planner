@@ -131,6 +131,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         .select({
           watchlistId: researchWatchlistMembers.watchlistId,
           accountId: researchWatchlistMembers.accountId,
+          position: researchWatchlistMembers.position,
         })
         .from(researchWatchlistMembers)
         .innerJoin(
@@ -144,7 +145,13 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
     shareScope: watchlist.shareScope as "me" | "workspace",
     accountIds: namedWatchlistMembers
       .filter((member) => member.watchlistId === watchlist.id)
+      .sort((a, b) => a.position - b.position)
       .map((member) => member.accountId),
+    memberPositions: Object.fromEntries(
+      namedWatchlistMembers
+        .filter((member) => member.watchlistId === watchlist.id)
+        .map((member) => [member.accountId, member.position]),
+    ),
   }));
   const teardownRows = await db
     .select()
@@ -213,6 +220,11 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
         workspaceSlug={slug}
         canManage={canManage}
         initialWatchlists={namedWatchlists}
+        accounts={watchlistRows.map((row) => ({
+          id: row.id,
+          label: row.displayName || `@${row.handle}`,
+          handle: `@${row.handle}`,
+        }))}
         labels={{
           title: t("research.watchlistsTitle"),
           description: t("research.watchlistsDescription"),
@@ -227,6 +239,14 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           duplicate: t("research.watchlistsDuplicate"),
           error: t("research.watchlistsError"),
           accountCount: t("research.watchlistsAccountCount"),
+          members: t("research.watchlistsMembers"),
+          target: t("research.watchlistsTarget"),
+          moveUp: t("research.watchlistsMoveUp"),
+          moveDown: t("research.watchlistsMoveDown"),
+          copy: t("research.watchlistsCopy"),
+          move: t("research.watchlistsMove"),
+          archive: t("research.watchlistsArchive"),
+          archiving: t("research.watchlistsArchiving"),
         }}
       />
 

@@ -20,8 +20,30 @@ test.describe("research teardown preview", () => {
     await expect(page.getByText("Source reference only", { exact: true })).toBeVisible();
 
     const membership = page.getByRole("checkbox", { name: "Halal grocery competitors" });
+    const membershipResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/research/watchlists/") &&
+        response.url().endsWith("/members") &&
+        response.request().method() === "POST",
+    );
     await membership.check();
     await expect(membership).toBeChecked();
+    await expect((await membershipResponse).ok()).toBeTruthy();
+
+    await page.getByLabel("Watchlist name").fill("Delivery app references");
+    await page.getByRole("button", { name: "Create watchlist" }).click();
+    await expect(page.getByRole("heading", { name: "Delivery app references" })).toBeVisible({
+      timeout: 30_000,
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Delivery app references" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Copy" }).first()).toBeVisible();
+    await page.getByRole("button", { name: "Copy" }).first().click();
+    const deliveryCard = page
+      .getByRole("heading", { name: "Delivery app references" })
+      .locator("xpath=../../..");
+    await deliveryCard.getByRole("button", { name: "Archive watchlist" }).click();
+    await expect(page.getByRole("heading", { name: "Delivery app references" })).toHaveCount(0);
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag22aa"])

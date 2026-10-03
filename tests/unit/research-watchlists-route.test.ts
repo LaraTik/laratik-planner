@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   insert: vi.fn(),
   select: vi.fn(),
   delete: vi.fn(),
+  update: vi.fn(),
   hasWorkspaceRole: vi.fn(async () => true),
 }));
 
@@ -18,7 +19,12 @@ vi.mock("@/lib/workspaces/context", () => ({
   getAccessibleWorkspace: vi.fn(async () => ({ id: "workspace-1", slug: "acme" })),
 }));
 vi.mock("@/lib/db", () => ({
-  db: { insert: mocks.insert, select: mocks.select, delete: mocks.delete },
+  db: {
+    insert: mocks.insert,
+    select: mocks.select,
+    delete: mocks.delete,
+    update: mocks.update,
+  },
 }));
 
 import { POST as createWatchlist } from "@/app/api/research/watchlists/route";
@@ -26,6 +32,10 @@ import {
   DELETE as removeMember,
   POST as addMember,
 } from "@/app/api/research/watchlists/[id]/members/route";
+import {
+  DELETE as archiveWatchlist,
+  PATCH as restoreWatchlist,
+} from "@/app/api/research/watchlists/[id]/route";
 
 function request(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/research/watchlists", {
@@ -33,6 +43,17 @@ function request(body: Record<string, unknown>) {
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),
   });
+}
+
+function routeRequest(body: Record<string, unknown>, method: "DELETE" | "PATCH") {
+  return new NextRequest(
+    "http://localhost/api/research/watchlists/33333333-3333-4333-8333-333333333333",
+    {
+      method,
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+  );
 }
 
 describe("research watchlist routes", () => {
@@ -122,5 +143,30 @@ describe("research watchlist routes", () => {
     expect(removeResponse.status).toBe(200);
     expect(mocks.insert).toHaveBeenCalledOnce();
     expect(mocks.delete).toHaveBeenCalledOnce();
+  });
+
+  it("archives and restores a watchlist without deleting its members", async () => {
+    const returning = vi.fn().mockResolvedValue([{ id: "33333333-3333-4333-8333-333333333333" }]);
+    mocks.update.mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({ returning }),
+      }),
+    });
+    const routeContext = {
+      params: Promise.resolve({ id: "33333333-3333-4333-8333-333333333333" }),
+    };
+
+    const archiveResponse = await archiveWatchlist(
+      routeRequest({ workspaceSlug: "acme" }, "DELETE"),
+      routeContext,
+    );
+    const restoreResponse = await restoreWatchlist(
+      routeRequest({ workspaceSlug: "acme" }, "PATCH"),
+      routeContext,
+    );
+
+    expect(archiveResponse.status).toBe(200);
+    expect(restoreResponse.status).toBe(200);
+    expect(mocks.update).toHaveBeenCalledTimes(2);
   });
 });
