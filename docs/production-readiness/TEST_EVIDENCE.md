@@ -3,53 +3,56 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
-## Publish-surface work — 2026-10-04, PRs 1–4 committed to `main` (`5419aa4d`, `3a8b4c99`, `845f640b`, `ca0e1db3`)
+## Publish-surface work — 2026-10-04, PRs 1–6 on `main` (`5419aa4d` … `4bb71fcb`)
 
-**The pre-merge browser checklist could NOT be run in this environment.** Two
-independent blockers, both environment setup rather than code work:
+**The browser gate is now runnable and has been run.** It was previously blocked: no
+`TEST_DATABASE_URL` and only `chromium-*` in the Playwright cache. Both are resolved —
+`planner_test` is the disposable target (the working `planner` database is untouched), and
+Firefox + WebKit are installed.
 
-| Blocker                          | Evidence                                                                                                                                                                                                                                                                                                           |
-| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| No disposable test database      | `scripts/run-e2e-tests.ts` exits with `TEST_DATABASE_URL is required and must point to a disposable PostgreSQL database.` The only configured database is the working `planner` DB in `.env`; the harness deliberately refuses to run against a non-disposable target, and pointing it there would risk real data. |
-| Firefox and WebKit not installed | `~/Library/Caches/ms-playwright/` contains only `chromium-*`. The five-project matrix in `playwright.config.ts` is `chromium, firefox, webkit, mobile-chrome, mobile-safari, visual-chromium`, so three of six projects cannot start.                                                                              |
+### What the gate found
 
-The committed PostgreSQL server itself is healthy (`pg_isready` → accepting
-connections), so the first blocker is configuration, not infrastructure.
+| Finding                                                                                                                                                              | Class                                | Disposition                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| A single edited channel could not be saved on a multi-channel item: the bar showed "Save all changes (1)" and per-channel Save vanished                              | **functional regression** (PR4)      | Fixed in `4bb71fcb`. No unit test could have caught it — every form test fixtures one channel, so `channels.length > 1` is never true. |
+| The per-channel Save could target a channel with no loaded draft → silent no-op, no request, no status, no error                                                     | **functional** (PR4)                 | Fixed in `4bb71fcb`; the active channel is preferred and the handler is guarded.                                                       |
+| Sticky action bar changed height when its status line appeared, moving buttons under the pointer                                                                     | **layout**                           | Fixed in `4bb71fcb` (`sm:min-h-[4.5rem]`).                                                                                             |
+| **Hydration mismatch in WebKit only** — `server rendered text didn't match the client`; the Next dev overlay replaces the page, failing `publish-package.spec.ts:15` | **pre-existing, NOT from this work** | Reproduced identically on `845f640b` (PR3, before any of PR4–PR6). Open.                                                               |
 
-### What was verified at the exact HEAD of each commit
+### Verified at `4bb71fcb` (the current HEAD)
 
-| Check                                                           | Result                                                      |
-| --------------------------------------------------------------- | ----------------------------------------------------------- |
-| `pnpm format:check`                                             | Pass, every PR                                              |
-| `pnpm lint` (`--max-warnings=0`)                                | Pass, every PR                                              |
-| `pnpm typecheck`                                                | Pass, every PR                                              |
-| `pnpm build`                                                    | Pass, every PR                                              |
-| `pnpm test:unit`                                                | Pass — 470 files / 4,400 tests, no test skipped or weakened |
-| Pre-commit hook (lint-staged + typecheck + affected→full suite) | Pass, every PR                                              |
+| Check                                                                                | Result                                                     |
+| ------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| `pnpm format:check` / `pnpm lint --max-warnings=0` / `pnpm typecheck` / `pnpm build` | Pass                                                       |
+| `pnpm test:unit`                                                                     | Pass — 470 files / 4,400 tests                             |
+| `publish-package.spec.ts` on **chromium**                                            | **2/2 pass**, and 2/2 on two consecutive clean runs        |
+| `publish-package.spec.ts` on **firefox**                                             | **2/2 pass**                                               |
+| `publish-package.spec.ts` on **webkit**                                              | 1/2 — blocked by the pre-existing hydration mismatch above |
 
-### What is therefore NOT yet evidenced
+### Harness caveat worth recording
 
-Per `AGENTS.md` and `docs/i18n/CONTRACT.md`, the bilingual gate needs evidence
-at the exact clean HEAD. For the Publishing tab these are **outstanding**:
+`scripts/run-e2e-tests.ts` boots `next dev`, so **editing a source file while a run is in
+flight** triggers a Fast Refresh rebuild that can drop a server-action request mid-flight
+and leave the client's promise pending forever. The symptom is an enabled-looking Save
+button with a permanent spinner — indistinguishable from an app bug. Two consecutive clean
+runs on an unchanged tree confirmed this. Do not edit `src/` during an e2e run; re-run
+before believing a single failure.
 
-1. EN/AR rendering, RTL layout, and LTR-shell-with-RTL-content behaviour on the
-   changed surfaces (the unit tests cover Arabic _copy_ and the RTL `dir`
-   attributes, not rendered Arabic layout).
-2. Keyboard traversal across the new one-action sticky bar, the command
-   center's collapsible blocker body, and the `publish-copy-source` /
-   `publish-copy-reset` affordances.
-3. The 375 / 768 / 1024 / 1280 / 1440 responsive matrix, and the information
-   density target (status + next action + schedule + channel selector + start of
-   the copy editor visible without scrolling at 1280×800).
-4. `axe` on the Publishing tab.
-5. Visual parity for the four Stitch captures touched by PR3 (the collapsed
-   preview empty state and the compressed Meta readiness card change rendered
-   output on the Copy tab too, since both are shared components).
+### Still outstanding — the gate is NOT closed
 
-**To close this out:** provision a disposable test database, set
-`TEST_DATABASE_URL`, run `npx playwright install firefox webkit`, then run
-`pnpm test:e2e:isolated` and `pnpm test:visual`. Until then, treat the four
-commits as unit-verified only, and do not record the bilingual gate as passed.
+1. **WebKit hydration mismatch** (pre-existing). Needs its own diagnosis; the message does
+   not name the mismatching node.
+2. **Visual parity not re-captured.** `PlatformPreview`'s empty state and
+   `MetaPublishingReadinessCard` are shared with the Copy tab, so PR3 changed rendered
+   output the Copy-tab baselines capture. `docs/visual-parity/CURRENT_SYNC.md` marks those
+   baselines stale. `pnpm test:visual` has not been re-run at `4bb71fcb`.
+3. **Full suite breadth.** Only `publish-package.spec.ts` was run, on three browsers. The
+   remaining specs — including `content-flow.spec.ts`, `a11y-routes.spec.ts`, and the
+   375/768/1024/1280/1440 matrix — have not been run against these four commits.
+4. **Arabic / RTL rendered evidence.** The unit tests cover Arabic copy and the `dir`
+   attributes, not rendered Arabic layout or LTR-shell-with-RTL-content behaviour.
+5. **The real platform preview is still deferred**, and `publish-ia.test.tsx` asserts that
+   gap deliberately so it cannot be forgotten.
 
 ## Release checkpoint — 2026-10-04, exact clean SHA @ `5f310cd2`
 
