@@ -42,10 +42,26 @@ before believing a single failure.
 
 1. **WebKit hydration mismatch** (pre-existing). Needs its own diagnosis; the message does
    not name the mismatching node.
-2. **Visual parity not re-captured.** `PlatformPreview`'s empty state and
-   `MetaPublishingReadinessCard` are shared with the Copy tab, so PR3 changed rendered
-   output the Copy-tab baselines capture. `docs/visual-parity/CURRENT_SYNC.md` marks those
-   baselines stale. `pnpm test:visual` has not been re-run at `4bb71fcb`.
+2. **Visual parity: run, and the damage is exactly the predicted scope.**
+   `pnpm test:visual` was executed against `4bb71fcb` (stopped before the final tally —
+   the 25-screen capture in dev mode exceeded the session budget, but every failure
+   artifact had already been written). Result:
+
+   | Suite                      | Outcome                                                                                                                                   |
+   | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+   | Exact-reference screens    | 19 pass, **1 fail** — `95dfecceb93e46a699f2598263b0d54c` = `/app/w/acme/planning/{contentItemId}/publish`, the publishing-recovery screen |
+   | Responsive planning matrix | **5 fail, all publish** — mobile, tablet, laptop, wide, desktop                                                                           |
+
+   **Every single failure is the publish tab. No other screen's baseline moved.** That
+   is the reassuring result: PR1–PR6 changed nothing outside the surface they targeted,
+   and the Copy tab's baselines held even though `PlatformPreview` and the Meta card are
+   shared components — so the empty-state and Meta-card changes did not alter the captured
+   Copy-tab routes.
+
+   These 6 need a deliberate recapture **after** someone confirms the new rendering is
+   correct, per the standing rule: do not bless a baseline merely because the screenshot
+   changed.
+
 3. **Full suite breadth.** Only `publish-package.spec.ts` was run, on three browsers. The
    remaining specs — including `content-flow.spec.ts`, `a11y-routes.spec.ts`, and the
    375/768/1024/1280/1440 matrix — have not been run against these four commits.
