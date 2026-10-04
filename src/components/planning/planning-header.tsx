@@ -72,7 +72,7 @@ export function PlanningHeader({
   return (
     <Card
       padding="md"
-      className="overflow-hidden shadow-sm"
+      className="rounded-b-none border-b-0 shadow-none"
       data-testid="planning-header"
       data-content-item-id={contentItemId}
     >

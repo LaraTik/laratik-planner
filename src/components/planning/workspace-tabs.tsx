@@ -125,7 +125,7 @@ export function WorkspaceTabs({
       aria-label={ariaLabel}
       data-testid="workspace-tabs"
       className={cn(
-        "border-border bg-surface sticky top-0 z-10 max-w-full min-w-0 rounded-t-[var(--radius-card)] border backdrop-blur-sm",
+        "border-border bg-surface sticky top-14 z-10 max-w-full min-w-0 rounded-t-[var(--radius-card)] border backdrop-blur-sm",
         className,
       )}
     >
@@ -264,7 +264,9 @@ export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
   const panelGroups: Record<WorkspaceTabId, readonly WorkspacePanelId[]> = {
     overview: ["overview"],
     create: ["create-basics", "content", "delivery"],
-    publish: ["publish-settings", "copy", "preview", "publishing"],
+    // Keep the publishing composer next to its preview. The preview panel
+    // itself is supplied as a slot by the publishing surface below.
+    publish: ["publish-settings", "publishing", "copy"],
     activity: ["activity"],
   };
   const visiblePanels = new Set(panelGroups[value]);
@@ -274,6 +276,8 @@ export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
     "delivery",
     "publish-settings",
     "copy",
+    // Keep the preview mounted for the cross-tab continuity contract. The
+    // active Publish surface receives the same preview through its slot.
     "preview",
     "publishing",
   ]);

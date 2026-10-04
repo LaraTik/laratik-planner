@@ -205,7 +205,7 @@ export function WorkspaceShell({
 
   return (
     <>
-      <div className="border-border bg-surface sticky top-0 z-20 mb-3 flex flex-col gap-2 rounded-[var(--radius-card)] border px-2 py-1.5 shadow-sm backdrop-blur-sm md:flex-row md:items-center md:justify-between md:px-3">
+      <div className="border-border bg-surface sticky top-14 z-20 flex flex-col gap-1 rounded-b-[var(--radius-card)] border border-t-0 px-3 py-1 shadow-sm backdrop-blur-sm md:flex-row md:items-center md:justify-between md:px-4">
         <div className="min-w-0 md:flex-1">
           <WorkspaceTabs
             tabs={primaryTabs}
@@ -213,7 +213,7 @@ export function WorkspaceShell({
             ariaLabel={t("contentDetail.navigation.workspaceSections")}
             value={activeId}
             onValueChange={setActiveId}
-            className="static w-full border-b-0"
+            className="static w-full rounded-none border-0 bg-transparent"
           />
         </div>
         <div

@@ -99,12 +99,12 @@ export function PlanningDetailShell({
           visible beside the content identity, matching the reference
           workspace composition. */}
       <div
-        className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_304px]"
         data-testid="planning-detail-grid"
       >
         {/* Center column — tabs + active panel. */}
         <section
-          className="min-w-0 space-y-4"
+          className="min-w-0 space-y-0"
           data-testid="planning-detail-center"
           aria-label={t("common.contentWorkspace")}
         >

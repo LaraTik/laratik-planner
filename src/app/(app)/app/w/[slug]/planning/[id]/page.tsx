@@ -722,6 +722,68 @@ export default async function ContentDetailPage({
     },
   ];
 
+  // The publishing workspace keeps the simulator beside the channel
+  // composer. The legacy preview panel remains mounted for saved links, so
+  // this embedded instance uses its own id to avoid duplicate DOM anchors.
+  const previewSurface = (
+    <PlanningSection
+      id="publish-preview"
+      title={t("contentDetail.preview.title")}
+      description={t("contentDetail.preview.description", {
+        platform: humanPlatform(item.channels[0]?.platform, t),
+        account: item.channels[0]?.accountName ?? t("contentDetail.preview.noChannel"),
+      })}
+      collapsible
+    >
+      <div className="space-y-4">
+        {item.channels.length > 1 ? (
+          <p className="text-label text-fg-muted">
+            {t("contentDetail.preview.allChannels", { count: item.channels.length })}
+          </p>
+        ) : null}
+        {item.channels[0]
+          ? (() => {
+              const copyView = buildAudienceCopyViewModel({
+                format: item.format,
+                formatPayload: (item as { formatPayload?: unknown }).formatPayload,
+              });
+              const thumbnailUrl = firstImageAsset
+                ? (firstImageSignedPreviewUrl ??
+                  (firstImageAsset.object.previewStorageObjectId
+                    ? `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}/preview`
+                    : `/api/media/assets/${encodeURIComponent(firstImageAsset.asset.id)}`))
+                : null;
+              return (
+                <PlatformPreviewSwitcher
+                  channels={item.channels.map((channel) => ({
+                    id: channel.id,
+                    socialChannelId: channel.socialChannelId,
+                    platform: channel.platform,
+                    accountName: channel.accountName,
+                    contentFormat: item.format,
+                    payload: (channelPayloads as Record<string, unknown>)[
+                      channel.socialChannelId
+                    ] as { caption?: string; hashtags?: string[] } | null,
+                  }))}
+                  sharedCaption={copyView.resolved.caption ?? item.brief ?? ""}
+                  {...(copyView.resolved.hashtags
+                    ? { sharedHashtags: copyView.resolved.hashtags }
+                    : {})}
+                  {...(thumbnailUrl ? { thumbnailUrl } : {})}
+                  {...(firstImageAsset?.object.width != null
+                    ? { thumbnailWidth: firstImageAsset.object.width }
+                    : {})}
+                  {...(firstImageAsset?.object.height != null
+                    ? { thumbnailHeight: firstImageAsset.object.height }
+                    : {})}
+                />
+              );
+            })()
+          : null}
+      </div>
+    </PlanningSection>
+  );
+
   return (
     <div data-testid="workspace-content-detail">
       {justCreated ? (
@@ -1570,6 +1632,7 @@ export default async function ContentDetailPage({
                         publishingSetupReady={publishingSetupReady}
                         metaPublishingReadiness={metaPublishingReadiness}
                         metaPublishingCopy={metaPublishingCopy}
+                        preview={previewSurface}
                       />
                     </div>
                   </PlanningSection>

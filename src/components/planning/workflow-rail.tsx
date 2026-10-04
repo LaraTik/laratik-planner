@@ -234,7 +234,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
     // layout flash on every page load.
     return (
       <aside
-        className="border-border bg-surface w-[320px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
+        className="border-border bg-surface w-[304px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
         data-testid="workflow-rail"
       >
         <WorkflowRailBody {...props} />
@@ -294,7 +294,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
 
   return (
     <aside
-      className="border-border bg-surface w-[320px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
+      className="border-border bg-surface w-[304px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
       data-testid="workflow-rail"
     >
       <header className="border-border flex items-center justify-between border-b px-4 py-3">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { CheckCircle2, Save, Send, X } from "lucide-react";
@@ -250,6 +250,7 @@ export function PublishPackageForm({
   publishingSetupReady = false,
   metaPublishingReadiness,
   metaPublishingCopy,
+  preview,
   t: tProp,
 }: {
   workspaceId: string;
@@ -306,6 +307,8 @@ export function PublishPackageForm({
   publishingSetupReady?: boolean;
   metaPublishingReadiness?: MetaPublishingReadiness;
   metaPublishingCopy?: MetaPublishingReadinessCopy;
+  /** Platform simulator rendered beside the active channel composer. */
+  preview?: ReactNode;
   /**
    * Bound translator from the parent. Phase 6e (2026-09-01)
    * migrates the top-level chrome (empty state, status
@@ -1497,6 +1500,7 @@ export function PublishPackageForm({
 
           {/* Preview stays visible beside the editor on large screens and
               remains first-class content on mobile, below the inputs. */}
+          {preview ? <div className="min-w-0">{preview}</div> : null}
           <Card
             id="publish-review"
             padding="lg"
