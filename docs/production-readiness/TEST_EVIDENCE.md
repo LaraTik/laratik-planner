@@ -18,6 +18,20 @@
 The implementation remains `Tested`, not `Verified`; authenticated MCP smoke,
 provider UAT, manual accessibility review, and independent review remain open.
 
+## Re-baseline — 2026-10-04, Viral Finder evidence filters @ `6dd74600`
+
+| Command / check                                       | Result           | Release interpretation                                                                                                    |
+| ----------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Focused unit and catalog contracts                    | **Pass — 16/16** | Quick/range filtering, reset behavior, accessibility labels, and EN/AR catalog parity are covered.                        |
+| Isolated Chromium Research flow                       | **Pass — 3/3**   | Watchlist creation, preview-only teardown, and teardown-to-brief handoff remain executable.                               |
+| Research visual/RTL matrix                            | **Pass — 6/6**   | Responsive Research surfaces pass at the committed widths, including Arabic/RTL overflow and serious/critical axe checks. |
+| Targeted lint / strict typecheck / `git diff --check` | **Pass**         | The implementation and catalogs are clean.                                                                                |
+| `pnpm build`                                          | **Pass**         | The production bundle builds successfully.                                                                                |
+
+The implementation is intentionally bounded to authorized saved observations;
+provider-backed account discovery, competitor refresh, paid insights, and
+authenticated MCP smoke remain separate capability/UAT gates.
+
 ## Coverage + gate re-tightening — 2026-09-28
 
 Two separate defects, both fixed in one change: tests that were missing, and

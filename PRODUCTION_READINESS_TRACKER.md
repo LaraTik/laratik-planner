@@ -31,6 +31,20 @@ light/dark verification before the Command Center surface is called ready.
 > credentials were guessed or transmitted. Provider UAT and independent
 > review remain open.
 
+> **2026-10-04 Viral Finder evidence-filter checkpoint** — The saved Research
+> evidence grid now provides a Meedro-informed, provider-neutral filter loop:
+> accessible quick presets for medium/high views, high engagement, outlier
+> score, and recency; advanced nullable-safe ranges for views, engagement, and
+> outlier score; and a reset recovery action. The filter panel uses native
+> controls, visible EN/AR labels, pressed-state semantics, progressive
+> disclosure, and a responsive layout. Focused unit/catalog tests pass 16/16;
+> the isolated Chromium Research flow passes 3/3; the strict Research visual
+> and Arabic/RTL matrix passes 6/6; lint, typecheck, and production build
+> pass. Commit `6dd74600` contains the implementation and corrected Meedro
+> reports. This is still source-only saved-observation capability, not
+> provider-backed competitor discovery; the implementation remains `Tested`,
+> not `Verified`.
+
 > **2026-10-02 named research watchlist implementation checkpoint** — M1 source-only
 > implementation is complete from the full Meedro integration plan. Migration
 > `0067_aberrant_bishop` adds named workspace watchlists and account membership
