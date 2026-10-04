@@ -22,6 +22,20 @@ light/dark verification before the Command Center surface is called ready.
 > `Verified`: authenticated production MCP smoke, provider UAT, manual
 > accessibility review, and independent review remain open.
 
+> **2026-10-04 Research watchlist synchronization checkpoint** — Commit
+> `3c2093e4` is clean, pushed to `main`, and deployed. Creating a named
+> watchlist now refreshes the server-rendered sibling account controls, while
+> the keyed editor remounts with the current membership options. Focused
+> Research unit contracts pass 7/7; the isolated Research Chromium flow passes
+> 3/3; the full local unit suite passes 462 files / 4,342 tests; and the full
+> integration suite passes. CI `37195489762`, Deploy `37196630237`, and
+> Release `37196710024` all passed. Production health reports version
+> `3c2093e` with database/schema, storage/R2, and rate limiting healthy. The
+> full Chromium advisory run remains nonblocking at 235 passed, 1 skipped, and
+> 10 known fixture/source-data or timeout failures. This is `Tested`, not
+> `Verified`: authenticated production MCP smoke, provider UAT, manual
+> accessibility review, and independent review remain open.
+
 > **2026-10-04 Trend Radar recovery and production checkpoint** — The source
 > onboarding wizard now aborts a stalled bulk-enable request after 15 seconds,
 > announces a localized timeout/error through an accessible alert, and offers a

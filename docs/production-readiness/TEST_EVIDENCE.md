@@ -29,6 +29,31 @@ manual accessibility review, and independent review remain open. The
 Chromium advisory failures are recorded as follow-up quality work rather than
 hidden or used to weaken a release gate.
 
+## Release checkpoint — 2026-10-04, Research watchlist synchronization @ `3c2093e4`
+
+This checkpoint records the Research UX fix that keeps the named-watchlist
+creation panel and the sibling account-membership editor synchronized. Creating
+a list now refreshes the server-rendered account controls, and the keyed editor
+remounts with the new membership options instead of retaining stale props.
+
+| Command / check                              | Result                                             | Release interpretation                                                                                                  |
+| -------------------------------------------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Focused Research unit contracts              | **Pass — 7/7**                                     | Watchlist creation and sibling-control refresh behavior are covered.                                                    |
+| Isolated Research Chromium flow              | **Pass — 3/3**                                     | Watchlist creation/membership, archive/restore, and teardown flows remain executable with the new synchronization.      |
+| Full local unit suite                        | **Pass — 462 files / 4,342 tests**                 | No tests were skipped or weakened.                                                                                      |
+| Full local integration suite                 | **Pass**                                           | Disposable Postgres integration coverage, including MCP HTTP smoke, passed.                                             |
+| GitHub CI `37195489762`                      | **Pass**                                           | Quality, integration, migration, audit, security/workflow linters, Docker build, image push, and smoke gates passed.    |
+| Deploy `37196630237` / Release `37196710024` | **Pass**                                           | The exact implementation SHA was deployed and released successfully.                                                    |
+| Production health check                      | **Pass — version `3c2093e`**                       | Database/schema, storage/R2, and rate limiting reported healthy.                                                        |
+| Chromium advisory run                        | **Nonblocking — 235 passed, 1 skipped, 10 failed** | Known full-suite browser fixture/source-data and timeout failures remain advisory; the isolated Research flow is green. |
+
+The implementation commit `3c2093e4` is `Tested` and deployed, not `Verified`.
+Production authenticated MCP smoke with an owner-approved temporary token,
+provider-backed competitor UAT, manual accessibility review, and independent
+review remain open. The full §23 browser path still has a multi-context harness
+timeout, and Trend Radar fixture/source-data failures remain recorded advisory
+follow-up work.
+
 ## Re-baseline — 2026-10-04, authenticated MCP transport @ `63105a64`
 
 | Command / check                               | Result                             | Release interpretation                                                                                                                                     |
