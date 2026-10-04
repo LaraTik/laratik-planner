@@ -38,6 +38,23 @@ const labels = {
   results: "{count} saved items",
   filteredEmptyTitle: "No evidence matches these filters",
   filteredEmptyDescription: "Try a different search term.",
+  filters: "Filters",
+  quickFilters: "Quick filters",
+  advancedFilters: "Advanced filters",
+  noQuickFilter: "All saved evidence",
+  mediumViews: "Medium views (10K–100K)",
+  highViews: "High views (100K+)",
+  highEngagement: "High engagement (3%+)",
+  outlierAtLeast: "Outlier score (1x+)",
+  last3Months: "Last 3 months",
+  last6Months: "Last 6 months",
+  minViews: "Minimum views",
+  maxViews: "Maximum views",
+  minEngagement: "Minimum engagement %",
+  maxEngagement: "Maximum engagement %",
+  minOutlier: "Minimum outlier score",
+  maxOutlier: "Maximum outlier score",
+  resetFilters: "Reset filters",
   openSource: "Open source",
   createBrief: "Create brief",
   savedAt: "Saved {date}",
@@ -160,5 +177,31 @@ describe("ResearchEvidenceGrid", () => {
 
     await user.click(screen.getByRole("button", { name: "Clear comparison" }));
     expect(screen.queryByRole("heading", { name: "Selected comparison" })).not.toBeInTheDocument();
+  });
+
+  it("applies quick and advanced metric filters with accessible controls", async () => {
+    const user = userEvent.setup();
+    render(
+      <ResearchEvidenceGrid
+        workspaceSlug="acme"
+        slug="acme"
+        rows={rows}
+        canManage={false}
+        collections={[]}
+        labels={labels}
+      />,
+    );
+
+    await user.click(screen.getByText("Filters"));
+    await user.click(screen.getByRole("button", { name: "High views (100K+)" }));
+    expect(screen.getByText("No evidence matches these filters")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "All saved evidence" }));
+    await user.type(screen.getByRole("spinbutton", { name: "Minimum views" }), "2000");
+    expect(screen.queryByText("Halal Market")).not.toBeInTheDocument();
+    expect(screen.getByText("Reem Psychology")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Reset filters" }));
+    expect(screen.getByText("Halal Market")).toBeInTheDocument();
   });
 });

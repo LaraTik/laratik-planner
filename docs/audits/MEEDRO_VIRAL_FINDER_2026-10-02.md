@@ -5,6 +5,18 @@
 **Capture mode:** read-only UI investigation; no account was added or removed, no watchlist was changed, no watchlist refresh was requested, and no `Get Insights` action was run.  
 **Observed balance:** the live Meedro header displayed `687 Credits` during this capture. The original request mentioned 723 credits; this report treats the live UI value as an observation, not as a billing reconciliation.
 
+## Implementation addendum — 2026-10-04
+
+The Planner implementation has since added the safe, provider-neutral part of
+the Viral Finder interaction model: the saved research evidence grid now has
+accessible progressive-disclosure filters. Quick presets cover medium/high
+views, high engagement, outlier score, and recent windows; advanced controls
+support minimum/maximum views, engagement, and outlier score. The controls are
+catalog-driven in English and Arabic, use native pressed-state buttons and
+visible labels, and operate only on normalized observations already authorized
+for the workspace. This is not a claim of provider-backed competitor discovery
+or scraping parity.
+
 ## 1. Executive decision
 
 Viral Finder is a competitor-research loop, not merely a video gallery:
@@ -398,28 +410,36 @@ This is enough to support the durable part of Viral Finder without adding a para
 
 ### 5.2 Current gaps relative to Meedro
 
-The current Planner watchlist is intentionally a source registry, not a discovery/scraping service. It does not yet provide:
+The current Planner watchlist is intentionally a source registry, not a discovery/scraping service. The following remain open:
 
-- Named watchlists with account membership.
 - Account capacity or plan-based watchlist limits.
 - Search-by-description account discovery.
 - Provider-backed competitor account resolution.
-- A competitor result grid with Outliers/ER/Views/Likes/Comments/Latest sorting.
-- Quick filters and range filters for research observations.
+- A provider-backed competitor result grid. The saved-observation grid already
+  supports transparent Outliers/ER/Views/Likes/Comments/Latest sorting and
+  quick/range filters, but it does not pretend that saved evidence is a live
+  competitor inventory.
 - A provider-backed refresh scheduler for competitor accounts.
 - A distinct trial-reel visibility state.
 - A paid “Get Insights” entitlement and reservation flow.
-- A one-click “Create brief from this observation” action from the competitor grid.
+- Provider-backed account cards with discovery provenance and canonical IDs.
 
-The first five are product-surface gaps. The provider-backed rows are capability and compliance gates, not just UI work.
+Already implemented in the source-only Planner path are named watchlists with
+account membership, archive/restore and copy/move management, normalized
+observation ranking, collections, teardown review, and one-click brief handoff
+from a saved observation.
+
+The remaining provider-backed rows are capability and compliance gates, not
+just UI work.
 
 ### 5.3 Recommended data design
 
-**Phase 1: extend existing watchlist identity**
+**Phase 1: extend existing watchlist identity — implemented for source-only use**
 
 - Keep `research_watchlist_account` as the account registry.
-- Add named watchlist membership only when a real multi-list use case is required; avoid adding a second account table.
-- If named lists are implemented, use a workspace-scoped `research_watchlist` plus a membership relation keyed by the provider account identity. Preserve the existing source registry as the canonical account record.
+- Use the workspace-scoped `research_watchlist` plus membership relation keyed by
+  the source account identity. Preserve the existing source registry as the
+  canonical account record.
 - Keep `providerStatus`, `lastCheckedAt`, and provider errors explicit.
 
 **Phase 2: reuse normalized observations**
@@ -442,6 +462,13 @@ actions: openSource, save, createBrief, requestInsights
 ```
 
 Do not persist a derived metric unless its formula, input fields, baseline, and provenance are known.
+
+The current saved-evidence UI is the Phase 3 reference implementation. It
+keeps filters client-side because the page loads a bounded, workspace-scoped
+set of normalized bookmarks. A future provider inventory must move filtering
+and pagination behind a server/provider boundary once volume or provider
+limits require it; it must preserve the same null-safe metric semantics and
+visible freshness/completeness state.
 
 ### 5.4 Provider boundary
 

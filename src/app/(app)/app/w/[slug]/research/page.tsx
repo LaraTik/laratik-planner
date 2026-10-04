@@ -441,6 +441,23 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
           compareTitle: t("research.evidenceCompareTitle"),
           compareDescription: t("research.evidenceCompareDescription"),
           clearComparison: t("research.evidenceClearComparison"),
+          filters: t("research.evidenceFilters"),
+          quickFilters: t("research.evidenceQuickFilters"),
+          advancedFilters: t("research.evidenceAdvancedFilters"),
+          noQuickFilter: t("research.evidenceNoQuickFilter"),
+          mediumViews: t("research.evidenceMediumViews"),
+          highViews: t("research.evidenceHighViews"),
+          highEngagement: t("research.evidenceHighEngagement"),
+          outlierAtLeast: t("research.evidenceOutlierAtLeast"),
+          last3Months: t("research.evidenceLast3Months"),
+          last6Months: t("research.evidenceLast6Months"),
+          minViews: t("research.evidenceMinViews"),
+          maxViews: t("research.evidenceMaxViews"),
+          minEngagement: t("research.evidenceMinEngagement"),
+          maxEngagement: t("research.evidenceMaxEngagement"),
+          minOutlier: t("research.evidenceMinOutlier"),
+          maxOutlier: t("research.evidenceMaxOutlier"),
+          resetFilters: t("research.evidenceResetFilters"),
         }}
       />
     </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowUpRight, Bookmark } from "lucide-react";
+import { ArrowUpRight, Bookmark, SlidersHorizontal } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -85,9 +85,39 @@ type Labels = {
   compareTitle: string;
   compareDescription: string;
   clearComparison: string;
+  filters: string;
+  quickFilters: string;
+  advancedFilters: string;
+  noQuickFilter: string;
+  mediumViews: string;
+  highViews: string;
+  highEngagement: string;
+  outlierAtLeast: string;
+  last3Months: string;
+  last6Months: string;
+  minViews: string;
+  maxViews: string;
+  minEngagement: string;
+  maxEngagement: string;
+  minOutlier: string;
+  maxOutlier: string;
+  resetFilters: string;
 };
 
 type SortKey = "newest" | "published" | "views" | "likes" | "comments" | "engagement" | "outlier";
+type QuickFilter =
+  | "none"
+  | "mediumViews"
+  | "highViews"
+  | "highEngagement"
+  | "outlier"
+  | "last3Months"
+  | "last6Months";
+
+type FilterRange = {
+  min: number | null;
+  max: number | null;
+};
 
 function matchesSearch(row: ResearchEvidenceRow, query: string) {
   if (!query.trim()) return true;
@@ -108,6 +138,57 @@ function asMetricInput(row: ResearchEvidenceRow): ResearchMetricInput {
     shares: row.shares,
     interactions: row.interactions,
   };
+}
+
+function numberOrNull(value: string) {
+  if (!value.trim()) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+}
+
+function matchesRange(value: number | null | undefined, range: FilterRange) {
+  if (range.min === null && range.max === null) return true;
+  if (value === null || value === undefined) return false;
+  return (range.min === null || value >= range.min) && (range.max === null || value <= range.max);
+}
+
+function matchesQuickFilter(row: ResearchEvidenceRow, quickFilter: QuickFilter) {
+  if (quickFilter === "none") return true;
+  if (quickFilter === "mediumViews")
+    return row.views !== null && row.views >= 10_000 && row.views <= 100_000;
+  if (quickFilter === "highViews") return row.views !== null && row.views >= 100_000;
+  if (quickFilter === "highEngagement" || quickFilter === "outlier") return true;
+  if (!row.publishedAt) return false;
+
+  const publishedAt = Date.parse(row.publishedAt);
+  if (!Number.isFinite(publishedAt)) return false;
+  const months = quickFilter === "last3Months" ? 3 : 6;
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - months);
+  return publishedAt >= cutoff.getTime();
+}
+
+function matchesFilters(
+  row: ResearchEvidenceRow,
+  derived: ReturnType<typeof calculateResearchMetrics> | undefined,
+  quickFilter: QuickFilter,
+  ranges: { views: FilterRange; engagement: FilterRange; outlier: FilterRange },
+) {
+  if (!matchesQuickFilter(row, quickFilter)) return false;
+  const engagement = derived?.engagementRatePercent;
+  const outlier = derived?.outlierScore;
+  if (
+    quickFilter === "highEngagement" &&
+    (engagement === null || engagement === undefined || engagement < 3)
+  )
+    return false;
+  if (quickFilter === "outlier" && (outlier === null || outlier === undefined || outlier < 1))
+    return false;
+  return (
+    matchesRange(row.views, ranges.views) &&
+    matchesRange(derived?.engagementRatePercent, ranges.engagement) &&
+    matchesRange(derived?.outlierScore, ranges.outlier)
+  );
 }
 
 function sortRows(
@@ -155,6 +236,13 @@ export function ResearchEvidenceGrid({
   const [query, setQuery] = React.useState("");
   const [platform, setPlatform] = React.useState("all");
   const [sort, setSort] = React.useState<SortKey>("newest");
+  const [quickFilter, setQuickFilter] = React.useState<QuickFilter>("none");
+  const [minViews, setMinViews] = React.useState("");
+  const [maxViews, setMaxViews] = React.useState("");
+  const [minEngagement, setMinEngagement] = React.useState("");
+  const [maxEngagement, setMaxEngagement] = React.useState("");
+  const [minOutlier, setMinOutlier] = React.useState("");
+  const [maxOutlier, setMaxOutlier] = React.useState("");
   const [selectedObservationIds, setSelectedObservationIds] = React.useState<string[]>([]);
   const metrics = React.useMemo(() => {
     const peerInputs = rows.map(asMetricInput);
@@ -173,13 +261,48 @@ export function ResearchEvidenceGrid({
     () =>
       sortRows(
         rows.filter(
-          (row) => (platform === "all" || row.platform === platform) && matchesSearch(row, query),
+          (row) =>
+            (platform === "all" || row.platform === platform) &&
+            matchesSearch(row, query) &&
+            matchesFilters(row, metrics.get(row.observationId), quickFilter, {
+              views: { min: numberOrNull(minViews), max: numberOrNull(maxViews) },
+              engagement: {
+                min: numberOrNull(minEngagement),
+                max: numberOrNull(maxEngagement),
+              },
+              outlier: { min: numberOrNull(minOutlier), max: numberOrNull(maxOutlier) },
+            }),
         ),
         sort,
         metrics,
       ),
-    [metrics, platform, query, rows, sort],
+    [
+      maxEngagement,
+      maxOutlier,
+      maxViews,
+      metrics,
+      minEngagement,
+      minOutlier,
+      minViews,
+      platform,
+      query,
+      quickFilter,
+      rows,
+      sort,
+    ],
   );
+  const hasActiveFilters =
+    quickFilter !== "none" ||
+    [minViews, maxViews, minEngagement, maxEngagement, minOutlier, maxOutlier].some(Boolean);
+  const resetFilters = () => {
+    setQuickFilter("none");
+    setMinViews("");
+    setMaxViews("");
+    setMinEngagement("");
+    setMaxEngagement("");
+    setMinOutlier("");
+    setMaxOutlier("");
+  };
   const selectedRows = React.useMemo(
     () => rows.filter((row) => selectedObservationIds.includes(row.observationId)),
     [rows, selectedObservationIds],
@@ -255,6 +378,85 @@ export function ResearchEvidenceGrid({
               </select>
             </label>
           </div>
+          <details className="border-border mt-4 rounded-[var(--radius-control)] border">
+            <summary className="text-body text-fg-primary flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 font-semibold focus-visible:ring-2 focus-visible:outline-none">
+              <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{labels.filters}</span>
+              {hasActiveFilters ? <Badge variant="outline">{labels.advancedFilters}</Badge> : null}
+            </summary>
+            <div className="border-border space-y-4 border-t p-3">
+              <fieldset className="space-y-2">
+                <legend className="text-label text-fg-primary font-semibold">
+                  {labels.quickFilters}
+                </legend>
+                <div className="flex flex-wrap gap-2" role="group" aria-label={labels.quickFilters}>
+                  {(
+                    [
+                      ["none", labels.noQuickFilter],
+                      ["mediumViews", labels.mediumViews],
+                      ["highViews", labels.highViews],
+                      ["highEngagement", labels.highEngagement],
+                      ["outlier", labels.outlierAtLeast],
+                      ["last3Months", labels.last3Months],
+                      ["last6Months", labels.last6Months],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <Button
+                      key={value}
+                      type="button"
+                      variant={quickFilter === value ? "secondary" : "outline"}
+                      size="sm"
+                      aria-pressed={quickFilter === value}
+                      onClick={() => setQuickFilter(value)}
+                    >
+                      {label}
+                    </Button>
+                  ))}
+                </div>
+              </fieldset>
+              <fieldset className="space-y-2">
+                <legend className="text-label text-fg-primary font-semibold">
+                  {labels.advancedFilters}
+                </legend>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {(
+                    [
+                      [labels.minViews, minViews, setMinViews],
+                      [labels.maxViews, maxViews, setMaxViews],
+                      [labels.minEngagement, minEngagement, setMinEngagement],
+                      [labels.maxEngagement, maxEngagement, setMaxEngagement],
+                      [labels.minOutlier, minOutlier, setMinOutlier],
+                      [labels.maxOutlier, maxOutlier, setMaxOutlier],
+                    ] as const
+                  ).map(([label, value, setValue]) => (
+                    <label
+                      key={label}
+                      className="text-label text-fg-primary grid gap-1 font-semibold"
+                    >
+                      <span>{label}</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="any"
+                        value={value}
+                        onChange={(event) => setValue(event.target.value)}
+                        className="h-11"
+                      />
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={!hasActiveFilters}
+                onClick={resetFilters}
+              >
+                {labels.resetFilters}
+              </Button>
+            </div>
+          </details>
           <p className="text-label text-fg-muted mt-3" aria-live="polite">
             {labels.results.replace("{count}", String(visibleRows.length))}
           </p>
