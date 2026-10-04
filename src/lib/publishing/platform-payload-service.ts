@@ -197,8 +197,14 @@ export async function savePlatformPayload(
 
   // Optimistic concurrency. Reject a write whose base row moved since the
   // client read it, rather than silently overwriting a collaborator's
-  // package. The comparison is inside the UPDATE's WHERE so a concurrent
-  // commit between the read and the write is caught too.
+  // package.
+  //
+  // Two layers, because the read above alone is a TOCTOU check: it closes
+  // the window between the page load and this call, but nothing stopped a
+  // collaborator committing *after* it. The same `updatedAt` predicate is
+  // therefore also placed in the UPDATE's `WHERE` below, and a zero-row
+  // write is treated as a lost race rather than a success. The batch path
+  // does this inside a transaction for the same reason.
   const expected = input.expectedUpdatedAt ? new Date(input.expectedUpdatedAt).getTime() : null;
   if (expected !== null && existingRow?.updatedAt) {
     if (existingRow.updatedAt.getTime() !== expected) {
@@ -226,15 +232,31 @@ export async function savePlatformPayload(
     approval: serverApproval,
   });
 
-  await db
+  const [written] = await db
     .update(contentItemChannels)
     .set({ platformPayload: payload, updatedAt: new Date() })
     .where(
       and(
         eq(contentItemChannels.contentItemId, input.contentItemId),
         eq(contentItemChannels.socialChannelId, input.socialChannelId),
+        // Compare-and-set. Without this predicate a collaborator who saved
+        // between the read above and this write would be silently
+        // overwritten, and the optimistic-concurrency token would be a
+        // suggestion rather than a guarantee.
+        ...(expected !== null && existingRow?.updatedAt
+          ? [eq(contentItemChannels.updatedAt, existingRow.updatedAt)]
+          : []),
       ),
+    )
+    .returning({ socialChannelId: contentItemChannels.socialChannelId });
+
+  if (!written) {
+    throw new PlatformPayloadError(
+      "INVALID",
+      "This channel package changed while saving. Reload and try again.",
+      { contentItemId: input.contentItemId, socialChannelId: input.socialChannelId },
     );
+  }
 
   // Materiality — payload is a material edit per the master
   // prompt's "Material edits and approvals" section.

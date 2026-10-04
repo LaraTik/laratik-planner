@@ -4,17 +4,17 @@ This is the implementation contract for English/Arabic interface work, RTL behav
 
 ## Sources of truth
 
-| Concern                               | Source                                                                      |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| Supported locale codes and directions | `src/lib/i18n/locales.ts`                                                   |
-| Interface/content locale resolution   | `src/lib/i18n/resolve-active-locale.ts`                                     |
-| Public locale cookie                  | `src/lib/i18n/cookie.ts`                                                    |
-| Message catalogs                      | `src/messages/en/common.json`, `src/messages/ar/common.json`                |
-| Profile save path                     | `src/app/(app)/app/account/actions.ts`                                      |
-| Per-field direction                   | `src/lib/i18n/dir.ts`, `src/components/forms/dir-aware-textarea.tsx`        |
-| Format-specific content translations  | `formatPayload.translations[locale]` and `src/lib/format-payload/mapper.ts` |
-| Architectural decision                | `docs/decisions/0009-user-interface-locale.md`                              |
-| Page-by-page audit                    | `docs/design/UI_UX_REFINEMENT_2026-09-01.md`                                |
+| Concern                               | Source                                                                                                                                                                               |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Supported locale codes and directions | `src/lib/i18n/locales.ts`                                                                                                                                                            |
+| Interface/content locale resolution   | `src/lib/i18n/resolve-active-locale.ts`                                                                                                                                              |
+| Public locale cookie                  | `src/lib/i18n/cookie.ts`                                                                                                                                                             |
+| Message catalogs                      | `src/messages/{en,ar}/<namespace>.json`, aggregated by `src/messages/en/index.ts`; `common.json` for shared chrome, `contentDetail.json` for the content-detail and publish surfaces |
+| Profile save path                     | `src/app/(app)/app/account/actions.ts`                                                                                                                                               |
+| Per-field direction                   | `src/lib/i18n/dir.ts`, `src/components/forms/dir-aware-textarea.tsx`                                                                                                                 |
+| Format-specific content translations  | `formatPayload.translations[locale]` and `src/lib/format-payload/mapper.ts`                                                                                                          |
+| Architectural decision                | `docs/decisions/0009-user-interface-locale.md`                                                                                                                                       |
+| Page-by-page audit                    | `docs/design/UI_UX_REFINEMENT_2026-09-01.md`                                                                                                                                         |
 
 ## Three independent language concepts
 

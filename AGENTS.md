@@ -650,11 +650,17 @@ Avoid fixed pixel widths in component CSS. Use Tailwind responsive prefixes (`md
 
 Do not show the same metadata repeatedly in the page header, tabs, cards, sidebar, and workflow rail unless repetition provides clear task context. The "what" appears once (e.g. content title in the header), the "who" appears once in the inspector, the "when" appears once. Cross-reference by anchor, not by repetition.
 
+A link that crosses from one surface to another must land on a control that can actually resolve it, or it must not exist. A blocker that has no collectable control renders an explicit state (e.g. manual dispatch) — never a generic anchor that returns the operator to where they already were. There is deliberately **no fallback anchor**: an unmapped path renders no affordance, and `tests/unit/publishing/readiness-anchor-map.test.ts` enumerates the readiness service's own paths so a new field without an anchor fails the test. The map is `src/lib/publishing/blocker-targets.ts`.
+
 ### F. Make actions obvious
 
 Every page and workflow state must answer "What can I do now?" The primary CTA is the visually dominant action (full-color button, top-right or in the inspector). Secondary actions are outline buttons. Tertiary actions are text links or menu items. **Never present five actions with identical hierarchy.**
 
 The Next-Action card in the content detail (`OverviewCommandCenter` → `NextActionCard`) is the canonical source of "what to do now" for a content item. The primary action label is the same string in the workspace header (server-computed `nextActionLabel` in the page). The two must never disagree.
+
+**One state, one action.** A screen shows exactly one primary action, and the level of that action must match the level of the screen: a package-level surface never offers a lifecycle advance. On the Publishing tab the command center's dominant CTA and the sticky bar are both gated on `workflowAtPublishingSetup`, so while the item is still at Planning the canonical next action stays "Submit for review" and the publish surface offers only package-level actions. Counting is by what _changed_, not by what exists: a channel that has **never been saved** is not dirty but has no persisted package either, so its primary action is still Save — collapsing it into "not dirty" would remove the only way to persist the draft, and offering "mark setup ready" would promise what the server cannot keep. That third state is why the rule needs three branches, not two.
+
+A sticky action bar must not change height when its status line appears or disappears. `position: sticky` puts the control under the pointer as it shifts, so a `min-h` floor is required (`sm:min-h-[4.5rem]` in `publish-package-form.tsx`).
 
 ### G. Prefer contextual editing
 
@@ -835,6 +841,10 @@ The browser gate was unblocked (disposable `TEST_DATABASE_URL` provisioned, Fire
 WebKit installed) and immediately caught a defect the unit suite structurally could not.
 Evidence in `docs/production-readiness/TEST_EVIDENCE.md`.
 
+_There is no PR5 entry below because PR5 was the QA/parity leg, not a code change: it is
+the gate this entry ran. Its results live in `docs/production-readiness/TEST_EVIDENCE.md`
+and `docs/visual-parity/CURRENT_SYNC.md` rather than here._
+
 - **fix(publishing): a single edited channel could not be saved on a multi-channel item.**
   PR4's one-action bar chose between "Save all" and "Save draft" on `channels.length > 1`,
   so on any item with two or more channels a **single** edited channel rendered
@@ -995,9 +1005,12 @@ information architecture is unchanged until PR3.
   `savePlatformPayload` re-reads the stored approval and spreads it **last**, discarding
   whatever the client sent (`platform-payload-service.ts:129-130,147-150`). So the form
   displayed "not approved" for a package the server still considered approved, and the
-  discrepancy silently healed on the next render. The reset is deleted, and so is
-  `approvalResetHint` — which promised a reset that never happened. Only
-  `setFinalCopyApprovalAction` changes approval now.
+  discrepancy silently healed on the next render. The client-side reset is deleted, and
+  with it the form's use of `approvalResetHint` — which promised a reset that never
+  happened. The **catalog key itself is still present** in both `en` and `ar`
+  `contentDetail.json` and now has no reader, so the string still ships unused; removing
+  it is a catalog cleanup, not part of this change. Only `setFinalCopyApprovalAction`
+  changes approval now.
 
 - **fix(publishing): switching channel tabs silently carried an unsaved draft.** The
   unload and navigation guards only intercept leaving the page, so the one transition they

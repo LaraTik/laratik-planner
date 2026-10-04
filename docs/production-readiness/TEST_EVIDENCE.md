@@ -64,7 +64,7 @@ before believing a single failure.
 
 3. **Full suite breadth.** Only `publish-package.spec.ts` was run, on three browsers. The
    remaining specs — including `content-flow.spec.ts`, `a11y-routes.spec.ts`, and the
-   375/768/1024/1280/1440 matrix — have not been run against these four commits.
+   375/768/1024/1280/1440 matrix — have not been run against these six commits.
 4. **Arabic / RTL rendered evidence.** The unit tests cover Arabic copy and the `dir`
    attributes, not rendered Arabic layout or LTR-shell-with-RTL-content behaviour.
 5. **The real platform preview is still deferred**, and `publish-ia.test.tsx` asserts that

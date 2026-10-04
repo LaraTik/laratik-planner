@@ -1,6 +1,6 @@
 # Current repository ↔ Google Stitch synchronization
 
-Updated 2026-09-10.
+Updated 2026-10-04.
 
 ## Canonical design source
 
@@ -36,7 +36,7 @@ LaraTik tokens, not from the archived screen set.
 | Access and first-admin setup       | `/signin`, `/setup`                                                                                                                             | Desktop | `c6e51dea498041958a5631d4cd21c715` | Complete |
 | Workspaces and users               | `/app/workspaces`, `/app/users`, `/app/w/[slug]/team`                                                                                           | Desktop | `f9fae47e44a44fb09a9870485ae7806e` | Complete |
 | Brand kit and channels             | `/app/w/[slug]/brand-kit`, `/app/w/[slug]/channels`                                                                                             | Desktop | `b8b3b576e09e47a0825637f3bab5d0c5` | Complete |
-| Publishing and recovery            | `/app/w/[slug]/planning/[id]/publish`                                                                                                           | Desktop | `95dfecceb93e46a699f2598263b0d54c` | Complete |
+| Publishing and recovery            | `/app/w/[slug]/planning/[id]#publishing` (`/publish` is a server-side `redirect()` shim)                                                        | Desktop | `95dfecceb93e46a699f2598263b0d54c` | Complete |
 | Client review and calendar         | `/app/w/[slug]/client`, `/app/w/[slug]/client/calendar`                                                                                         | Desktop | `a62bb395ab294343bd2853b4f11941d9` | Complete |
 | Account and notifications          | `/app/account`                                                                                                                                  | Desktop | `76e0913910d04e0f8de463b349a5bc73` | Complete |
 | Planning board and calendar        | `/app/w/[slug]/board`, `/app/w/[slug]/calendar`                                                                                                 | Desktop | `b75a9ec57d5b4859ab318e2003f2bf65` | Complete |
@@ -95,17 +95,22 @@ comes from the product or from a refreshed design reference.
 
 ## Verification boundary
 
-- **Publishing and recovery — visual parity NOT re-verified after PR3.** PR3 changed
-  two components the Copy tab also renders, so its captured baseline is now stale:
-  `PlatformPreview`'s no-media empty state (previously a full platform aspect-ratio
-  frame — `aspect-square` / `aspect-[4/5]` / `aspect-[9/16]` — around two words) and
-  `MetaPublishingReadinessCard` (previously six paragraphs of prose, now one line plus
-  a disclosure on healthy states). The re-capture could not be run: `TEST_DATABASE_URL`
-  is not set, so `scripts/run-e2e-tests.ts` refuses to start, and only
-  `chromium-*` is present in the Playwright cache, so the `visual-chromium` project
-  cannot be driven either. See `docs/production-readiness/TEST_EVIDENCE.md` for the
-  full outstanding list and the commands that close it. Treat the Publishing and Copy
-  tab baselines as **stale** until then.
+- **Publishing and recovery — 6 baselines moved at `4bb71fcb`; the Copy tab's held.**
+  `pnpm test:visual` was run against `4bb71fcb` with the gate open (`planner_test` is the
+  disposable target; Firefox and WebKit are installed). Result: exact-reference
+  **19 pass, 1 fail** (`95dfecceb93e46a699f2598263b0d54c`, the publishing-recovery screen)
+  and the responsive planning matrix **5 fail, all publish** (mobile, tablet, laptop,
+  wide, desktop).
+
+  The earlier prediction was wrong in a useful direction: PR3 changed
+  `PlatformPreview`'s no-media empty state and `MetaPublishingReadinessCard`, both shared
+  with the Copy tab, but **no Copy-tab baseline moved**. The Copy tab is therefore _not_
+  stale. Only the Publishing tab's 6 are, and they are stale because the rendering
+  changed, not because the capture was blocked. These need a deliberate recapture
+  **after** someone confirms the new rendering is correct — the standing rule is that a
+  baseline is not blessed merely because the screenshot changed. Evidence and the
+  outstanding list: `docs/production-readiness/TEST_EVIDENCE.md`.
+
 - **Known divergence — Publishing and recovery (`95dfecceb93e46a699f2598263b0d54c`).**
   The Stitch screen shows the publication-proof step as "Step 2 of 2" accepting
   either a public/creator-manager reference URL **or** a `PNG, JPG, or PDF` proof
@@ -125,10 +130,11 @@ comes from the product or from a refreshed design reference.
   production build.
 - `pnpm format:check` and `git diff --check` pass after the documentation
   refresh.
-- The full current visual matrix is green: `pnpm test:visual` passed 87/87
-  exact-reference and responsive checks, including the platform-admin states
-  and the 375/768/1024/1440 planning-detail matrix. Capture mode rejects
-  Next.js runtime-error overlays so they cannot become visual baselines.
+- The full current visual matrix was green at the capture commit — `pnpm test:visual`
+  passed 87/87 exact-reference and responsive checks, including the platform-admin states
+  and the 375/768/1024/1440 planning-detail matrix. **That is not the state at HEAD:**
+  the run recorded above against `4bb71fcb` has 6 publish-tab failures. Capture mode
+  rejects Next.js runtime-error overlays so they cannot become visual baselines.
 - Direct live interaction with the Stitch UI remains pending until the local
   desktop is unlocked. The repository-side sync and visual evidence are
   complete; this lock only prevents a second visual inspection of the remote

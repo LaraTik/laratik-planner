@@ -180,6 +180,73 @@ describe("per-platform required fields", () => {
   });
 });
 
+describe("platform rights confirmations", () => {
+  it("round-trips the Instagram Reel audio and transcript confirmations into the saved payload", async () => {
+    resetSaveMock();
+    renderForm({ platform: "instagram_reel" });
+
+    // These are false-defaulted booleans a readiness rule blocks on
+    // (`missing_audio_rights`, `transcript_not_reviewed`). Rendering them
+    // is not the contract — persisting them is: the draft is only ever
+    // sent to the server as this JSON string, so a flag that is missing
+    // here is a flag that is silently lost, and the blocker it clears
+    // can never clear.
+    fireEvent.click(screen.getByRole("checkbox", { name: "I hold the rights to the audio" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "I reviewed the transcript" }));
+    fireEvent.click(screen.getByTestId("publish-save-draft"));
+
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledTimes(1);
+    });
+    const call = saveMock.mock.calls[0]![0] as { payload: string };
+    const sent = JSON.parse(call.payload) as {
+      platform: string;
+      audioRightsConfirmed: boolean;
+      transcriptReviewed: boolean;
+    };
+    expect(sent).toMatchObject({
+      platform: "instagram_reel",
+      audioRightsConfirmed: true,
+      transcriptReviewed: true,
+    });
+  });
+
+  it("round-trips the TikTok music-rights confirmation into the saved payload", async () => {
+    resetSaveMock();
+    renderForm({ platform: "tiktok" });
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "I hold the rights to the music" }));
+    fireEvent.click(screen.getByTestId("publish-save-draft"));
+
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledTimes(1);
+    });
+    const call = saveMock.mock.calls[0]![0] as { payload: string };
+    expect(JSON.parse(call.payload)).toMatchObject({
+      platform: "tiktok",
+      musicRightsConfirmed: true,
+    });
+  });
+
+  it("sends an unconfirmed rights flag as false rather than dropping it", async () => {
+    // The schema defaults these to `false`, so an operator who never
+    // touches the box must still produce an explicit `false`. Omitting
+    // the key would let the Zod default re-apply server-side and hide
+    // that the confirmation was never made.
+    resetSaveMock();
+    renderForm({ platform: "tiktok" });
+
+    fireEvent.click(screen.getByTestId("publish-save-draft"));
+
+    await waitFor(() => {
+      expect(saveMock).toHaveBeenCalledTimes(1);
+    });
+    const call = saveMock.mock.calls[0]![0] as { payload: string };
+    const sent = JSON.parse(call.payload) as Record<string, unknown>;
+    expect(sent).toHaveProperty("musicRightsConfirmed", false);
+  });
+});
+
 describe("write authority on the publish form", () => {
   it("renders a read-only summary with no editable controls when saving is not permitted", async () => {
     renderForm({ platform: "youtube", canSavePackage: false });

@@ -31,6 +31,8 @@ type DrizzleState = {
   selectResults: unknown[][];
   insertCalls: { values: unknown }[];
   updateCalls: { set: unknown; where: unknown }[];
+  /** Simulate an optimistic-concurrency race: the UPDATE matches no row. */
+  updateWritesNoRows: boolean;
   lastSelectRowCount: number;
 };
 
@@ -72,8 +74,17 @@ function makeDrizzleMock(state: DrizzleState) {
   updateChain.where = vi.fn((where: unknown) => {
     state.updateCalls.push({ set: lastSet, where });
     lastSet = undefined;
-    return Promise.resolve();
+    return updateChain;
   });
+  // `savePlatformPayload` chains `.returning()` and treats a zero-row
+  // write as a lost optimistic-concurrency race. Default to one row so
+  // the ordinary path succeeds; a test can set
+  // `state.updateWritesNoRows` to simulate the race.
+  updateChain.returning = vi.fn(() =>
+    Promise.resolve(
+      state.updateWritesNoRows ? [] : [{ socialChannelId: "22222222-2222-4222-8222-222222222222" }],
+    ),
+  );
   const update = vi.fn(() => updateChain);
 
   const insertChain: Record<string, unknown> = {};
@@ -98,6 +109,7 @@ const dbState: DrizzleState = vi.hoisted(() => ({
   selectResults: [] as unknown[][],
   insertCalls: [] as { values: unknown }[],
   updateCalls: [] as { set: unknown; where: unknown }[],
+  updateWritesNoRows: false,
   lastSelectRowCount: 0,
 }));
 const dbMock = vi.hoisted(() => makeDrizzleMock(dbState));
@@ -163,6 +175,7 @@ function resetState() {
   dbState.selectResults = [];
   dbState.insertCalls = [];
   dbState.updateCalls = [];
+  dbState.updateWritesNoRows = false;
   dbState.lastSelectRowCount = 0;
   policyMock.hasWorkspaceRole.mockReset();
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -326,6 +339,129 @@ describe("savePlatformPayload", () => {
         } as unknown as Parameters<typeof savePlatformPayload>[2]["payload"],
       }),
     ).rejects.toThrow();
+  });
+});
+
+/**
+ * Optimistic concurrency on the SINGLE-channel path.
+ *
+ * The plan required `expectedUpdatedAt` to be enforced on both the
+ * single and the batch path, because a collaborator's commit between
+ * the page load and the save must be caught rather than silently
+ * overwritten. `publish-batch-save.test.ts` covers the batch side; this
+ * block is the single-channel half, which had no coverage at all — every
+ * existing case in this file dequeues an empty `existingRow`, so the
+ * comparison at `platform-payload-service.ts:202-217` was never
+ * reached.
+ */
+describe("savePlatformPayload — optimistic concurrency (expectedUpdatedAt)", () => {
+  const STORED_UPDATED_AT = "2026-08-24T10:00:00.000Z";
+  const COLLABORATOR_UPDATED_AT = "2026-08-24T11:30:00.000Z";
+
+  /**
+   * Queue the two reads the service performs, in order:
+   *   1. `ensureContentItemChannelInWorkspace` — the channel link check.
+   *   2. the `platformPayload` / `updatedAt` read the token is compared
+   *      against.
+   */
+  function queueReads(
+    storedRow: {
+      platformPayload?: unknown;
+      updatedAt?: Date | undefined;
+    } | null,
+  ) {
+    dbState.selectResults.push([{ id: "channel-link" }]);
+    dbState.selectResults.push(storedRow ? [storedRow] : []);
+  }
+
+  it("rejects a save whose base row moved since the client read it", async () => {
+    queueReads({
+      platformPayload: makePayload(),
+      updatedAt: new Date(COLLABORATOR_UPDATED_AT),
+    });
+
+    const error = await savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      payload: makePayload({ altText: "Locally edited alt text" }),
+      expectedUpdatedAt: STORED_UPDATED_AT,
+    }).then(
+      () => null,
+      (e: unknown) => e,
+    );
+
+    expect(error).toBeInstanceOf(PlatformPayloadError);
+    expect(error).toMatchObject({ code: "INVALID" });
+    // The details carry both timestamps so the action layer can report a
+    // field-level conflict rather than a bare "save failed".
+    expect((error as InstanceType<typeof PlatformPayloadError>).details).toMatchObject({
+      contentItemId,
+      socialChannelId,
+      expectedUpdatedAt: STORED_UPDATED_AT,
+      actualUpdatedAt: COLLABORATOR_UPDATED_AT,
+    });
+
+    // Nothing was written and no material edit was recorded: a rejected
+    // save must not leave a bumped revision with no payload saved.
+    expect(dbState.updateCalls).toHaveLength(0);
+    expect(materialityMock.recordMaterialityEvent).not.toHaveBeenCalled();
+  });
+
+  it("accepts a save whose token still matches the stored row", async () => {
+    queueReads({
+      platformPayload: makePayload(),
+      updatedAt: new Date(STORED_UPDATED_AT),
+    });
+
+    const result = await savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      payload: makePayload({ altText: "Locally edited alt text" }),
+      expectedUpdatedAt: STORED_UPDATED_AT,
+    });
+
+    expect(result.altText).toBe("Locally edited alt text");
+    // The payload write plus the copySourceRevision bookkeeping write.
+    expect(dbState.updateCalls).toHaveLength(2);
+    expect(materialityMock.recordMaterialityEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps last-write-wins when the caller supplies no token", async () => {
+    // Documented on `SavePlatformPayloadInputSchema`: `null`/absent is
+    // the escape hatch for callers that cannot supply the token. It is
+    // also the asymmetry with the batch, where the token is required —
+    // worth pinning so the difference stays deliberate.
+    queueReads({
+      platformPayload: makePayload(),
+      updatedAt: new Date(COLLABORATOR_UPDATED_AT),
+    });
+
+    const result = await savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      payload: makePayload({ altText: "Last write wins" }),
+      expectedUpdatedAt: null,
+    });
+
+    expect(result.altText).toBe("Last write wins");
+    expect(dbState.updateCalls).toHaveLength(2);
+  });
+
+  it("saves a channel that has never been written, which has no updatedAt to compare", async () => {
+    // A brand-new channel row has a null `updated_at` on the read side, so
+    // there is no token to reject against. This is the path every
+    // "publish a package for the first time" save takes.
+    queueReads({ platformPayload: null, updatedAt: undefined });
+
+    const result = await savePlatformPayload(actor, workspaceId, {
+      contentItemId,
+      socialChannelId,
+      payload: makePayload({ altText: "First save" }),
+      expectedUpdatedAt: STORED_UPDATED_AT,
+    });
+
+    expect(result.altText).toBe("First save");
+    expect(dbState.updateCalls).toHaveLength(2);
   });
 });
 
