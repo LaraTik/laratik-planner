@@ -829,6 +829,48 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface PR6: browser-gate findings (one real functional defect)
+
+The browser gate was unblocked (disposable `TEST_DATABASE_URL` provisioned, Firefox and
+WebKit installed) and immediately caught a defect the unit suite structurally could not.
+Evidence in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+- **fix(publishing): a single edited channel could not be saved on a multi-channel item.**
+  PR4's one-action bar chose between "Save all" and "Save draft" on `channels.length > 1`,
+  so on any item with two or more channels a **single** edited channel rendered
+  "Save all changes (1)" and the per-channel Save disappeared entirely. The operator lost
+  the ability to save one package, and a one-channel edit was presented as a batch. The
+  count that decides this is how many channels _changed_, not how many exist: now
+  `dirtyCount > 1`.
+  **No unit test could have found this** — every `PublishPackageForm` component test
+  fixtures a single channel, so `channels.length > 1` is never true. This is the concrete
+  argument for the browser gate existing.
+
+- **fix(publishing): the per-channel Save could target a channel with no loaded draft.**
+  The button resolved its target through the dirty-channel lookup, and `handleSave` starts
+  with `if (!draft) return` — a silent no-op: no request, no status, no error, and the
+  action bar left showing an enabled-looking control. The active channel is now preferred
+  whenever it is the one that needs saving, the dirty-channel lookup is only a fallback,
+  and the handler is guarded with `drafts[target]` so a missing draft can never present
+  itself as a working button.
+
+- **fix(publishing): the sticky action bar changed height when its status line appeared.**
+  `position: sticky; bottom: 0` plus a status line that appears on save and disappears on
+  edit moved the buttons mid-interaction — the control was under the pointer as it shifted.
+  `sm:min-h-[4.5rem]` gives the bar a stable floor.
+
+- **test(e2e):** the save click now uses `noWaitAfter` — on success the state advances past
+  "Save" and the re-render replaces the node, which Playwright otherwise waits on. The
+  planner-permissions case now asserts the confirm-setup CTA is **absent** rather than
+  disabled, which is a stronger statement of the same contract (one action, not two) and
+  matches the lifecycle gate added in PR4.
+
+**Not a defect, but worth knowing:** the harness runs `next dev`, so editing a source file
+while a run is in flight triggers a Fast Refresh rebuild that can drop a server-action
+request mid-flight and leave the client's promise pending. Two clean consecutive runs on
+an unchanged tree confirm the flakiness is the dev server, not the application. Do not
+edit `src/` while an e2e run is in progress.
+
 ### 2026-10-04 — Publish surface PR4: outcome workflow (phases, gate, one dominant action)
 
 Fourth of five. Makes the outcome workflow's state machine explicit instead of

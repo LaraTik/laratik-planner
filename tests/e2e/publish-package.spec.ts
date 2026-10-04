@@ -31,7 +31,17 @@ test.describe("Publish package", () => {
     const caption = `Publish package copy ${Date.now()}`;
     await page.getByTestId("publish-caption").fill(caption);
     await expect(page.getByTestId("publish-caption")).toHaveValue(caption);
-    await page.getByTestId("publish-save-draft").click();
+    /*
+     * `noWaitAfter` because the action bar holds exactly one primary
+     * action and, on a successful save, the state advances past "Save"
+     * to the next action. Without it Playwright waits on a node that the
+     * re-render replaces, which reads as an intermittent hang.
+     *
+     * The save's real contract is that it persisted, so that is what is
+     * asserted below after a reload — a stronger signal than a transient
+     * banner. The banner is still checked, for the operator's benefit.
+     */
+    await page.getByTestId("publish-save-draft").click({ noWaitAfter: true });
     await expect(
       page
         .getByTestId("publish-package-form")
@@ -60,6 +70,10 @@ test.describe("Publish package", () => {
     await expect(page.getByTestId("publish-save-draft")).toBeEnabled();
     await expect(page.getByTestId("publish-final-copy-approved")).toHaveCount(0);
     await expect(page.getByText(/agency administrator must approve/i).first()).toBeVisible();
-    await expect(page.getByTestId("publish-ready")).toBeDisabled();
+    // The confirm-setup CTA is **absent**, not merely disabled, while
+    // blockers remain: the action bar renders exactly one primary action
+    // and at this point that is "Review blockers". A disabled button
+    // would still be a second affordance competing for the click.
+    await expect(page.getByTestId("publish-ready")).toHaveCount(0);
   });
 });

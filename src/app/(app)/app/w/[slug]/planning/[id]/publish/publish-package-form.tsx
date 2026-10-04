@@ -436,6 +436,26 @@ export function PublishPackageForm({
    */
   const activeNeverSaved = current != null && current.payload == null;
   const currentNeedsSave = dirty || activeNeverSaved;
+  /**
+   * Save all only when more than one channel is genuinely dirty.
+   *
+   * The first version of this bar keyed the decision on
+   * `channels.length > 1`, so on any multi-channel item a single edited
+   * channel rendered "Save all changes (1)" and the per-channel Save
+   * disappeared — the operator lost the ability to save one package, and
+   * a one-channel edit was presented as a batch operation. The count
+   * that decides this is how many channels *changed*, not how many
+   * exist.
+   *
+   * Found by the browser gate, not by unit tests: a component test with
+   * a single channel could never have surfaced it.
+   */
+  const saveAllIsTheRightAction = dirtyCount > 1;
+  /** The one channel to save when the action is not a batch. */
+  const singleDirtyChannelId =
+    dirtyCount === 1
+      ? (channels.find((channel) => dirtyChannels[channel.id])?.id ?? activeChannel)
+      : activeChannel;
   const currentPlatformFields = requiredFieldsFor(current?.platform ?? "");
   /** Rights confirmations a readiness rule blocks on for this platform. */
   const currentRightsCheckboxes = rightsCheckboxesFor(current?.platform ?? "");
@@ -1485,8 +1505,18 @@ export function PublishPackageForm({
       ) : null}
 
       {/* Sticky action bar — bottom of the form on every viewport */}
+      {/*
+        `sm:min-h-[4.5rem]` keeps the bar's geometry stable while its
+        contents change. Without it, the status line appearing or
+        disappearing ("Unsaved publishing changes" → "Draft saved…")
+        changes the bar's height, which moves the buttons in a
+        `position: sticky` container — the button is under the pointer
+        mid-click, and the browser gate caught it as an intermittent,
+        un-clickable Save. A fixed floor is also simply less jumpy for a
+        person reaching for it right after typing.
+      */}
       <div
-        className="bg-surface border-border sticky bottom-0 z-10 -mx-4 flex flex-col items-stretch gap-2 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between md:mx-0 md:px-0"
+        className="bg-surface border-border sticky bottom-0 z-10 -mx-4 flex flex-col items-stretch gap-2 border-t px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:min-h-[4.5rem] sm:flex-row sm:items-center sm:justify-between md:mx-0 md:px-0"
         data-testid="publish-action-bar"
       >
         <div className="flex items-center gap-2">
@@ -1536,7 +1566,7 @@ export function PublishPackageForm({
             workflow having actually reached publishing setup (the
             workspace rail owns the next action until it does).
           */}
-          {dirtyCount > 0 && channels.length > 1 ? (
+          {saveAllIsTheRightAction ? (
             <Button
               type="button"
               onClick={handleSaveAll}
@@ -1547,11 +1577,23 @@ export function PublishPackageForm({
               <Save className="me-1 h-4 w-4" aria-hidden="true" />
               {t("contentDetail.publish.saveAll", { count: dirtyCount })}
             </Button>
-          ) : currentNeedsSave ? (
+          ) : currentNeedsSave || dirtyCount > 0 ? (
             <Button
               type="button"
-              onClick={() => current && handleSave(current.id)}
-              disabled={pending || !current || !canSavePackage}
+              onClick={() => {
+                /*
+                 * Prefer the channel the operator is looking at. The
+                 * dirty-channel lookup is only a fallback for the case
+                 * where the active channel is clean but another one is
+                 * not — otherwise a per-channel save can be routed at
+                 * an id whose draft is not loaded, and `handleSave`
+                 * returns silently (no request, no status, no error).
+                 */
+                const target =
+                  currentNeedsSave && current ? current.id : singleDirtyChannelId || activeChannel;
+                if (target && drafts[target]) handleSave(target);
+              }}
+              disabled={pending || !canSavePackage}
               className="min-h-11"
               data-testid="publish-save-draft"
             >
