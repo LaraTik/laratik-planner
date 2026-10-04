@@ -6,6 +6,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResearchWatchlists } from "@/components/workspace/research-watchlists";
 
+const { refreshMock } = vi.hoisted(() => ({ refreshMock: vi.fn() }));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: refreshMock }),
+}));
+
 const labels = {
   title: "Account watchlists",
   description: "Group reference accounts.",
@@ -38,6 +44,7 @@ describe("ResearchWatchlists", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
+    refreshMock.mockReset();
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify({ ok: true }), { status: 200 }),
     );
@@ -127,6 +134,33 @@ describe("ResearchWatchlists", () => {
       "/api/research/watchlists/44444444-4444-4444-8444-444444444444",
       expect.objectContaining({ method: "DELETE" }),
     );
+  });
+
+  it("refreshes sibling account controls after creating a watchlist", async () => {
+    const user = userEvent.setup();
+    const created = {
+      id: "77777777-7777-4777-8777-777777777777",
+      name: "New references",
+      description: null,
+      shareScope: "me" as const,
+      accountIds: [],
+    };
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ watchlist: created }), {
+          status: 201,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    render(
+      <ResearchWatchlists workspaceSlug="acme" canManage initialWatchlists={[]} labels={labels} />,
+    );
+
+    await user.type(screen.getByRole("textbox", { name: "Watchlist name" }), "New references");
+    await user.click(screen.getByRole("button", { name: "Create watchlist" }));
+
+    await waitFor(() => expect(screen.getByText("New references")).toBeInTheDocument());
+    expect(refreshMock).toHaveBeenCalledOnce();
   });
 
   it("restores an archived watchlist and preserves its members", async () => {

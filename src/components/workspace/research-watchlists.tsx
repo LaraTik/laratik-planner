@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { Archive, ArrowDown, ArrowUp, Copy, ListFilter, Move, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
@@ -65,6 +66,7 @@ export function ResearchWatchlists({
   accounts?: ResearchWatchlistAccountOption[];
   labels: Labels;
 }) {
+  const router = useRouter();
   const [watchlists, setWatchlists] = React.useState(initialWatchlists);
   const [archivedWatchlists, setArchivedWatchlists] = React.useState(initialArchivedWatchlists);
   const [name, setName] = React.useState("");
@@ -113,6 +115,9 @@ export function ResearchWatchlists({
     );
     setName("");
     setPending(false);
+    // Refresh the sibling account editor so its membership controls receive
+    // the newly created watchlist without a full-page navigation.
+    router.refresh();
   }
 
   async function archiveWatchlist(watchlistId: string) {

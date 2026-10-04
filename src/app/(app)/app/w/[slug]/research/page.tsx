@@ -295,6 +295,7 @@ export default async function ResearchPage({ params }: { params: Promise<{ slug:
       />
 
       <ResearchWatchlist
+        key={namedWatchlists.map((watchlist) => watchlist.id).join(":")}
         workspaceSlug={slug}
         canManage={canManage}
         watchlists={namedWatchlists}

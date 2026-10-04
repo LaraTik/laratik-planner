@@ -35,14 +35,24 @@ test.describe("research teardown preview", () => {
     await expect(page.getByRole("heading", { name: "Delivery app references" })).toBeVisible({
       timeout: 30_000,
     });
-    await page.reload();
+    // The research page keeps a long-lived client request open while it
+    // refreshes watchlist state. Commit is sufficient here because the
+    // following visible assertion waits for the rendered page before the
+    // interactive archive control is used.
+    await page.reload({ waitUntil: "commit" });
     await expect(page.getByRole("heading", { name: "Delivery app references" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Copy" }).first()).toBeVisible();
     await page.getByRole("button", { name: "Copy" }).first().click();
     const deliveryCard = page
       .getByRole("heading", { name: "Delivery app references" })
       .locator("xpath=../../..");
+    const archiveResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/research/watchlists/") &&
+        response.request().method() === "DELETE",
+    );
     await deliveryCard.getByRole("button", { name: "Archive watchlist" }).click();
+    expect((await archiveResponse).ok()).toBeTruthy();
     await expect(page.getByRole("heading", { name: "Archived watchlists" })).toBeVisible();
     const archivedDeliveryCard = page
       .getByRole("heading", { name: "Delivery app references" })
