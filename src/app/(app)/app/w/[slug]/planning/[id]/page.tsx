@@ -423,6 +423,14 @@ export default async function ContentDetailPage({
   const canEditProduction =
     actorRoles.isDesigner && item.designerId === actor.id && item.status !== "cancelled";
   const canEdit = canEditAll || canEditProduction;
+  // `savePlatformPayload` authorises workspace managers and content
+  // planners only (`platform-payload-service.ts:110-120`). `canEdit`
+  // additionally covers an assigned designer, who could therefore see
+  // an enabled Save that always failed with FORBIDDEN. Keep the write
+  // authority separate so the publish form can render a read-only
+  // summary instead of a control the server will reject.
+  const canSavePackage =
+    (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
   const editableFields =
     canEditProduction && !canEditAll ? designerEditableFieldsFor(item.format) : undefined;
   // Canonical copy remains editable by managers and planners after approval.
@@ -1520,7 +1528,7 @@ export default async function ContentDetailPage({
                           isFinalApproved: d.isFinalApproved,
                         }))}
                         readiness={readiness}
-                        canEdit={canEditAll}
+                        canSavePackage={canSavePackage}
                         canApproveFinalCopy={canApproveFinalCopy}
                         canConfirmReadiness={canConfirmReadiness}
                         canExcludeChannel={

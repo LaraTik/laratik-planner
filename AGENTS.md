@@ -829,6 +829,77 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface PR1: correctness (platform fields, blocker→control map, write authority)
+
+First of five PRs remodelling the Publishing tab. No IA change in this one — the page
+looks the same, but it stops lying and stops failing on Pinterest/YouTube. Full plan:
+5 PRs, each committed to `main` on its own gate.
+
+- **fix(publishing): a YouTube or Pinterest package could not be saved at all.**
+  `YouTubePayloadSchema.title` and `PinterestPayloadSchema.pinTitle` / `.boardId` are
+  `z.string().min(1)` with no default, `defaultPayloadFor` seeded them to `""`, and the
+  form had no input for any of them. Both platforms were selectable in `/channels`.
+  `savePlatformPayload` calls `PlatformPayloadSchema.parse(...)`, which threw a
+  `ZodError` — **not** a `PlatformPayloadError` — so `publish/actions.ts` collapsed it
+  into a bare `saveFailed` with no field to fix. New
+  `lib/publishing/platform-required-fields.ts` is the single source of truth for these
+  controls (YouTube title + visibility, Pinterest pin title + board, TikTok audience);
+  the form renders a **Platform settings** card from it, and a client pre-flight mirrors
+  the `min(1)` constraint so the message is field-level before a request is sent. The
+  action now also returns `fieldPath` from both the pre-flight `safeParse` and a
+  server-side `ZodError`, satisfying "never a bare save failure".
+
+- **fix(publishing): a readiness blocker could link to a page with no control to edit.**
+  `readinessAnchorForPath` special-cased only delivery and approval paths and returned a
+  bare `#publishing` for everything else, so `missing_title`, `missing_pin_title`,
+  `missing_board`, `missing_privacy`, `missing_audio_rights`, `transcript_not_reviewed`,
+  `missing_cover`, `missing_thumbnail` and `missing_music_rights` all produced a
+  "Resolve in Publish" link that landed the operator exactly where they started. New
+  `lib/publishing/blocker-targets.ts` maps **all 18** emittable paths to one of three
+  states — editable here (an in-page anchor), editable elsewhere (Assets / Workflow), or
+  an explicit `manual` state with **no fix link** for `payload.destinationProfile`
+  (facebook / linkedin / ig_reel / other, which resolves at channel-link time and has no
+  control on this page). There is deliberately no fallback: an unmapped path returns
+  `undefined` and renders no affordance.
+  `tests/unit/publishing/readiness-anchor-map.test.ts` reads the readiness service's own
+  source to enumerate the paths it can emit, so adding a `REQUIRED_FIELDS` entry
+  without an anchor fails the test rather than shipping a dead-end link.
+
+- **fix(publishing): the form showed a Save the server would always reject.**
+  `savePlatformPayload` authorises `workspace_manager` and `content_planner` only, while
+  the page's `canEdit` also covers an assigned designer — so a designer got
+  `FORBIDDEN — "Only workspace managers and content planners can save a publish package."`
+  Conversely, a viewer with neither flag saw a **fully editable** form whose Save was
+  permanently disabled, and typing still marked the channel dirty. The form's single
+  write path now takes a single write-authority flag, `canSavePackage` (`canEdit` is
+  removed from its props), and renders a **read-only definition list** when it is false —
+  a definition list, not disabled inputs, because a disabled input looks editable until
+  the operator types into it. The two independent gates that must stay independent:
+  excluding a channel from publication is a publisher/manager lifecycle decision, so it
+  sits **outside** the `canSavePackage` gate.
+
+- **fix(publishing): the per-platform rights confirmations were unreachable.**
+  `audioRightsConfirmed` (Reel), `transcriptReviewed` (Reel) and `musicRightsConfirmed`
+  (TikTok) are `false`-defaulted booleans, so an unedited package always fails the
+  matching readiness rule, and the form exposed no control for any of them. Rendered
+  from the same table, each with its own anchor so a blocker deep-links to the box.
+
+- **fix(publishing): `<details open={defaultOpen}>` re-drove the operator's choice.**
+  `<details>` has no `defaultOpen` attribute — only `open` — so React reset the
+  attribute on every render and any `router.refresh()` after a server action reverted a
+  manual collapse. The disclosure is now uncontrolled state initialised once, split into
+  `planning-section-disclosure.tsx` so the parent stays a Server Component. Invariant:
+  the server value decides the state at mount; after that the operator's toggle wins.
+
+- **fix(publishing):** `readiness-presentation.ts` gained titles for the per-platform
+  blocker codes, which previously reached the Overview panel through `humanizeCode` as
+  "Missing Title" / "Missing Board" — reading as a UI bug rather than a field to fill.
+
+**Known divergence, not in scope:** the Stitch screen for this surface shows a "Step 2 of
+2" proof capture accepting a PNG/JPG/PDF upload and a "Mark as delayed" state. The code
+accepts a URL only, and `publication_status` is
+`pending|published|failed|skipped`. Recorded in `docs/visual-parity/CURRENT_SYNC.md`.
+
 ### 2026-09-27 — Pre-deploy review of the observability / publications / rename / assetless batch
 
 Reviewed the five unpushed commits on `main` (`ff5ef3b1` observability,

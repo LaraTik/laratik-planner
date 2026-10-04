@@ -190,7 +190,9 @@
     "markPublishingSetupReady": "تحديد إعداد النشر كجاهز",
     "markPublishingSetupReadyDescription": "تحقق من حزمة النشر الكاملة واجعل قنواتها جاهزة للنشر. لا يؤدي هذا إلى الجدولة أو النشر.",
     "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية.",
-    "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر."
+    "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر.",
+    "statusFixRequiredFields": "أكمل حقول المنصة المطلوبة قبل الحفظ.",
+    "statusFixRequiredFields_many": "أكمل حقول المنصة المطلوبة في {count} قنوات قبل الحفظ."
   },
   "readinessPanel": {
     "readyTitle": "جاهز للنشر",
@@ -1021,7 +1023,10 @@
     "delivery_version_missing": "إصدار التسليم المعتمد لم يعد متاحًا.",
     "rights_not_confirmed": "أكد حقوق الوسائط قبل النشر.",
     "synthetic_media_disclosure_recommended": "صرّح بالمحتوى الاصطناعي عندما يكون المحتوى مولدًا بالذكاء الاصطناعي.",
-    "approvals_open": "أكمل الاعتماد المعلّق قبل النشر."
+    "approvals_open": "أكمل الاعتماد المعلّق قبل النشر.",
+    "fixInPackage": "المعالجة في الحزمة",
+    "fixManually": "نشر يدوي",
+    "manualDispatch": "نشر يدوي"
   },
   "publishForm": {
     "destinationCaption": "الوجهة والتعليق",
@@ -1087,7 +1092,58 @@
     "approvalResetHint": "تم الاعتماد قبل تعديلات لاحقة. تبقى الموافقة سارية وفق سياسة مساحة العمل.",
     "note": "ملاحظة",
     "addNote": "إضافة ملاحظة",
-    "noCaption": "لا يوجد كابشن"
+    "noCaption": "لا يوجد كابشن",
+    "platformSettingsTitle": "إعدادات المنصة",
+    "platformSettingsDescription": "مطلوبة من {platform} قبل حفظ هذه الحزمة.",
+    "platformFieldLabels": {
+      "youtubeTitle": "عنوان الفيديو",
+      "youtubePrivacy": "الظهور",
+      "pinterestPinTitle": "عنوان الدبوس",
+      "pinterestBoardId": "معرّف اللوحة",
+      "tiktokPrivacy": "الجمهور"
+    },
+    "platformFieldOptions": {
+      "youtubePrivacy": {
+        "public": "عام",
+        "unlisted": "غير مدرج",
+        "private": "خاص"
+      },
+      "tiktokPrivacy": {
+        "public": "الجميع",
+        "friends": "الأصدقاء",
+        "followers_only": "المتابعون",
+        "private": "أنا فقط"
+      }
+    },
+    "platformFieldErrors": {
+      "youtubeTitle": {
+        "required": "أضف عنوان الفيديو.",
+        "tooLong": "استخدم {max} حرفًا أو أقل."
+      },
+      "pinterestPinTitle": {
+        "required": "أضف عنوان الدبوس.",
+        "tooLong": "استخدم {max} حرفًا أو أقل."
+      },
+      "pinterestBoardId": {
+        "required": "اختر لوحة بينتريست.",
+        "tooLong": "استخدم {max} حرفًا أو أقل."
+      }
+    },
+    "platformRightsLabels": {
+      "audioRights": "أملك حقوق الصوت",
+      "transcriptReviewed": "راجعت النص المكتوب",
+      "musicRights": "أملك حقوق الموسيقى"
+    },
+    "readOnlySummaryTitle": "حزمة القناة",
+    "readOnlySummaryDescription": "يمكنك عرض هذه الحزمة لكن لا يمكنك تعديلها.",
+    "disclosureLabels": {
+      "rightsConfirmed": "تم تأكيد الحقوق",
+      "aiGenerated": "مُولّد بالذكاء الاصطناعي",
+      "paidPartnership": "شراكة مدفوعة"
+    },
+    "disclosureYes": "نعم",
+    "disclosureNo": "لا",
+    "approvedDeliveryCount": "{count} معتمدة"
   },
   "publishErrors": {
     "authRequired": "يجب تسجيل الدخول.",

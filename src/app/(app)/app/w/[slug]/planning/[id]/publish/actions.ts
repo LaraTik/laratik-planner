@@ -29,8 +29,39 @@ import {
  * `revalidatePath` for the publish page.
  */
 
-function failure(errorCode: PublishActionErrorCode) {
-  return { ok: false as const, errorCode };
+export interface PublishActionFailure {
+  ok: false;
+  errorCode: PublishActionErrorCode;
+  /**
+   * Dotted payload path of the field that was rejected, when the
+   * failure came from payload validation. The form attaches this to
+   * the matching control so a save reports *which* field is wrong
+   * instead of a bare "save failed".
+   */
+  fieldPath?: string;
+}
+
+function failure(errorCode: PublishActionErrorCode, fieldPath?: string): PublishActionFailure {
+  return fieldPath ? { ok: false, errorCode, fieldPath } : { ok: false, errorCode };
+}
+
+/**
+ * Extract the most specific field name from a Zod issue path.
+ *
+ * `PlatformPayloadSchema` is a discriminated union keyed on
+ * `platform`, so a YouTube title failure arrives as
+ * `["platform", "youtube", "title"]` (the union branch contributes the
+ * platform segment). The last path segment is the field the operator
+ * has to fix, which is what we surface.
+ */
+function zodFieldPath(error: z.ZodError): string | undefined {
+  for (const issue of error.issues) {
+    const segments = issue.path.filter((segment): segment is string => typeof segment === "string");
+    const last = segments.at(-1);
+    // Array indices and the discriminator itself are not fields.
+    if (last && last !== "platform" && !/^\d+$/.test(last)) return last;
+  }
+  return undefined;
 }
 
 const SavePayloadFormSchema = z.object({
@@ -52,7 +83,13 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
     if (!workspace) return failure("workspaceNotFound");
     const candidate: unknown = JSON.parse(parsed.data.payload);
     const payload = PlatformPayloadSchema.safeParse(candidate);
-    if (!payload.success) return failure("invalidPlatformPayload");
+    if (!payload.success) {
+      // Previously this returned a bare `invalidPlatformPayload` with no
+      // field, so an empty required field (youtube.title,
+      // pinterest.pinTitle / .boardId) surfaced as a generic failure the
+      // operator had no control to fix.
+      return failure("invalidPlatformPayload", zodFieldPath(payload.error));
+    }
     const result = await savePlatformPayload(actor, workspace.id, {
       contentItemId: parsed.data.contentItemId,
       socialChannelId: parsed.data.socialChannelId,
@@ -66,6 +103,13 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
   } catch (e) {
     if (e instanceof PlatformPayloadError) {
       return failure(platformPayloadErrorCode(e.code));
+    }
+    // `savePlatformPayload` re-parses the payload server-side to
+    // re-apply the server-owned approval, so a `ZodError` can surface
+    // here even though the action already validated above. Surface the
+    // field rather than collapsing it to `saveFailed`.
+    if (e instanceof z.ZodError) {
+      return failure("invalidPlatformPayload", zodFieldPath(e));
     }
     return failure("saveFailed");
   }

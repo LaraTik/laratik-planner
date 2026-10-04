@@ -45,6 +45,24 @@ const CODE_TO_TITLE: Record<string, string> = {
   delivery_not_approved: "Approve a delivery version",
   approvals_open: "Re-review approvals",
   ai_suggestion: "AI suggestion",
+  // Per-platform required fields. Without these entries
+  // `humanizeCode` produced "Missing Title" / "Missing Board" in the
+  // aggregate Overview panel, which reads as a UI bug rather than a
+  // field the operator has to fill in.
+  missing_title: "Add the video title",
+  missing_pin_title: "Add the pin title",
+  missing_board: "Choose a Pinterest board",
+  missing_privacy: "Set the privacy level",
+  missing_thumbnail: "Set a thumbnail",
+  missing_cover: "Choose a cover frame",
+  missing_music_rights: "Confirm music rights",
+  missing_post_text: "Add the post text",
+  missing_payload: "Save a publish package",
+  missing_platform: "Set the package platform",
+  invalid_payload: "Fix the stored publish package",
+  no_approved_delivery: "Approve a delivery asset version",
+  delivery_version_missing: "Re-approve the delivery version",
+  synthetic_media_disclosure_recommended: "Declare synthetic media",
 };
 
 const PATH_PATTERNS: Array<{ test: RegExp; href: string }> = [

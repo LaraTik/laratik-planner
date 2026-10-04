@@ -20,6 +20,26 @@ import {
 } from "./actions";
 import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
+/*
+ * Value imports come from the concrete modules, never the
+ * `@/lib/publishing` barrel. The barrel re-exports `service.ts`, which
+ * is `server-only` and imports `revalidatePath`; pulling it into this
+ * client component fails the webpack build. The type-only import above
+ * is erased at compile time, which is why it was always safe.
+ */
+import {
+  isManualDispatchBlocker,
+  readinessAnchorForPath as resolveReadinessAnchor,
+} from "@/lib/publishing/blocker-targets";
+import {
+  requiredFieldsFor,
+  rightsCheckboxesFor,
+  readPlatformField,
+  readRightsFlag,
+  validateRequiredFields,
+  type PlatformRequiredField,
+  type PlatformRightsCheckbox,
+} from "@/lib/publishing/platform-required-fields";
 import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-payload/mapper";
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
@@ -215,9 +235,9 @@ export function PublishPackageForm({
   channels,
   deliveryVersions,
   readiness,
-  canEdit,
   canApproveFinalCopy,
   canConfirmReadiness,
+  canSavePackage,
   canExcludeChannel = false,
   publishingSetupReady = false,
   metaPublishingReadiness,
@@ -246,9 +266,21 @@ export function PublishPackageForm({
   channels: ChannelSummary[];
   deliveryVersions: DeliveryVersionSummary[];
   readiness: ReadinessReport;
-  canEdit: boolean;
   canApproveFinalCopy: boolean;
   canConfirmReadiness: boolean;
+  /**
+   * Whether this actor may persist a package.
+   *
+   * This replaces the old `canEdit` prop. `savePlatformPayload`
+   * authorises `workspace_manager` and `content_planner` only
+   * (`platform-payload-service.ts:110-120`), while the page's
+   * `canEdit` also covers an assigned designer — so the form used to
+   * render Save for a designer whose save always failed with
+   * FORBIDDEN. The package form has exactly one write path, so it
+   * now takes exactly one write-authority flag and renders a
+   * read-only summary when it is false.
+   */
+  canSavePackage: boolean;
   /** Publishers and managers may exclude an unrecorded channel from publication. */
   canExcludeChannel?: boolean;
   /** Package-level lifecycle gate, independent from platform capability. */
@@ -314,6 +346,14 @@ export function PublishPackageForm({
   const [savedAt, setSavedAt] = useState<Record<string, number>>({});
   const [dirtyChannels, setDirtyChannels] = useState<Record<string, boolean>>({});
   const [bulkLanguage, setBulkLanguage] = useState(contentLocale ?? locale);
+  /**
+   * Field-scoped validation messages, keyed by payload field name.
+   * Populated before a save attempt (client pre-flight mirroring the
+   * schema's `min(1)`) and from the server's `fieldPath` when a save
+   * is rejected, so a Pinterest board error never degrades to a bare
+   * "save failed".
+   */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const formRef = useRef<HTMLFormElement | null>(null);
   const dirty = channels.some((channel) => dirtyChannels[channel.id]);
   const dirtyCount = channels.filter((channel) => dirtyChannels[channel.id]).length;
@@ -362,6 +402,10 @@ export function PublishPackageForm({
         JSON.stringify(sharedCopy[key as keyof MappedPlatformFields]),
     ),
   );
+  /** Schema-required extras for the active channel's platform. */
+  const currentPlatformFields = requiredFieldsFor(current?.platform ?? "");
+  /** Rights confirmations a readiness rule blocks on for this platform. */
+  const currentRightsCheckboxes = rightsCheckboxesFor(current?.platform ?? "");
 
   function applySharedCopy(channelId: string, language: string) {
     const shared =
@@ -420,9 +464,29 @@ export function PublishPackageForm({
     setDirtyChannels((previous) => ({ ...previous, [channelId]: true }));
   }
 
+  /**
+   * Pre-flight a channel's required platform fields. Returns true when
+   * the draft can be submitted; otherwise records field-scoped messages
+   * and returns false.
+   */
+  function validateChannel(channelId: string): boolean {
+    const channel = channels.find((candidate) => candidate.id === channelId);
+    const draft = drafts[channelId];
+    if (!channel || !draft) return true;
+    const errors = validateRequiredFields(channel.platform, draft, t);
+    setFieldErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setError(null);
+      setStatusMessage(t("contentDetail.publish.statusFixRequiredFields"));
+      return false;
+    }
+    return true;
+  }
+
   function handleSave(channelId: string) {
     const draft = drafts[channelId];
     if (!draft) return;
+    if (!validateChannel(channelId)) return;
     start(async () => {
       setError(null);
       setStatusMessage(null);
@@ -433,9 +497,19 @@ export function PublishPackageForm({
         payload: JSON.stringify(draft),
       });
       if (!result.ok) {
-        setError(translatePublishError(t, result, "saveFailed"));
+        if (result.fieldPath) {
+          // Server rejected a specific field — surface it on the
+          // control instead of collapsing to a page-level error.
+          setFieldErrors({
+            [result.fieldPath]: t("contentDetail.publishErrors.invalidPlatformPayload"),
+          });
+          setError(null);
+        } else {
+          setError(translatePublishError(t, result, "saveFailed"));
+        }
         return;
       }
+      setFieldErrors({});
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
       setDirtyChannels((previous) => ({ ...previous, [channelId]: false }));
@@ -448,6 +522,15 @@ export function PublishPackageForm({
       .filter((channel) => dirtyChannels[channel.id])
       .map((channel) => channel.id);
     if (dirtyIds.length === 0) return;
+    // Validate every dirty channel before submitting any of them, so a
+    // single empty Pinterest board cannot leave the batch half-saved.
+    const invalid = dirtyIds.filter((channelId) => !validateChannel(channelId));
+    if (invalid.length > 0) {
+      setStatusMessage(
+        t("contentDetail.publish.statusFixRequiredFields", { count: invalid.length }),
+      );
+      return;
+    }
     start(async () => {
       setError(null);
       setStatusMessage(null);
@@ -673,7 +756,7 @@ export function PublishPackageForm({
               type="button"
               variant="outline"
               onClick={applyLanguageToAll}
-              disabled={pending || !canEdit}
+              disabled={pending || !canSavePackage}
               className="min-h-11"
               data-testid="publish-apply-language-all"
             >
@@ -722,279 +805,439 @@ export function PublishPackageForm({
           ) : null}
           <div className="min-w-0 space-y-4">
             {/* Editor column — destination + caption/discovery, then disclosures */}
-            <Card id="publish-destination" padding="lg" className="min-w-0 scroll-mt-24 space-y-3">
-              <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
+            {/*
+              `canSavePackage` gates the whole editor, not just the Save
+              button. Rendering disabled inputs for a viewer (or an
+              assigned designer, whom the server rejects anyway) left a
+              form that accepted typing, marked the channel dirty, and
+              then offered a permanently greyed-out Save. A read-only
+              summary is honest about what the actor can do, and it is
+              the same definition-list grammar the plan specifies
+              instead of "disabled controls that look enabled".
+            */}
+            {/* Excluding a channel from publication is a publisher/manager
+                lifecycle decision, gated by `canExcludeChannel` — not a
+                package write. It therefore stays available to actors who
+                cannot edit the payload, so it sits outside the
+                `canSavePackage` editor gate below. */}
+            {canExcludeCurrentChannel ? (
               <div
-                className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
-                role="note"
-                data-testid="publish-shared-copy-hint"
+                className="border-warning/30 bg-warning-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                data-testid="publish-exclude-channel"
               >
-                <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
-              </div>
-              <Field
-                label={t("contentDetail.publishForm.channel")}
-                value={current.accountName}
-                readOnly
-                testId="publish-channel-name"
-              />
-              {canExcludeCurrentChannel ? (
-                <div
-                  className="border-warning/30 bg-warning-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
-                  data-testid="publish-exclude-channel"
-                >
-                  <p className="text-label text-fg-secondary">
-                    {t("contentDetail.publish.excludeChannelDescription")}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="min-h-11"
-                    onClick={handleExcludeChannel}
-                    disabled={pending}
-                    data-testid="publish-exclude-channel-button"
-                  >
-                    <X className="me-1 h-4 w-4" aria-hidden="true" />
-                    {t("contentDetail.publish.excludeChannel")}
-                  </Button>
-                </div>
-              ) : null}
-              <Field
-                label={t("contentDetail.publishForm.itemTitle")}
-                value={itemTitle}
-                readOnly
-                testId="publish-item-title"
-              />
-              <Field
-                label={t("contentDetail.publishForm.format")}
-                value={localizedFormatLabel(itemFormat)}
-                readOnly
-                testId="publish-item-format"
-              />
-              <div>
-                <label
-                  htmlFor="publish-content-language"
-                  className="text-body text-fg-primary mb-1 block font-semibold"
-                >
-                  {t("contentDetail.publishForm.publishLanguage")}
-                </label>
-                <select
-                  id="publish-content-language"
-                  value={
-                    (currentDraft as { contentLanguage?: string }).contentLanguage ??
-                    contentLocale ??
-                    locale
-                  }
-                  onChange={(e) => applySharedCopy(current.id, e.target.value)}
-                  className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
-                  data-testid="publish-content-language"
-                >
-                  <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
-                  <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
-                </select>
-                <p className="text-label text-fg-muted mt-1">
-                  {t("contentDetail.publishForm.publishLanguageHint")}
+                <p className="text-label text-fg-secondary">
+                  {t("contentDetail.publish.excludeChannelDescription")}
                 </p>
-              </div>
-              <div>
-                <CaptionField
-                  id="publish-caption"
-                  name="caption"
-                  label={t("contentDetail.publishForm.caption")}
-                  value={(currentDraft as { caption?: string }).caption ?? ""}
-                  onChange={(next) => updateDraft(current.id, { caption: next })}
-                  hint={t("contentDetail.publishForm.captionHint")}
-                  testId="publish-caption"
-                />
-              </div>
-              <div>
-                <HashtagEditor
-                  id="publish-hashtags"
-                  name="hashtags"
-                  label={t("contentDetail.publishForm.hashtags")}
-                  value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
-                  onChange={(next) => updateDraft(current.id, { hashtags: next })}
-                  hint={t("contentDetail.publishForm.hashtagsHint")}
-                  locale={locale}
-                  t={t}
-                  testId="publish-hashtags"
-                />
-              </div>
-              {sharedCopy && sharedCopyDiffers ? (
-                <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
-                  <p className="text-label text-fg-secondary">
-                    {current.copySourceRevision != null &&
-                    current.copySourceRevision < readiness.revision
-                      ? t("contentDetail.copy.staleOverride")
-                      : t("contentDetail.publishForm.sharedCopyChanged")}
-                  </p>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="min-h-11"
-                    onClick={() => applySharedCopy(current.id, selectedLanguage)}
-                    data-testid="publish-use-shared-copy"
-                  >
-                    {t("contentDetail.publishForm.useSharedCopy")}
-                  </Button>
-                </div>
-              ) : null}
-              <Field
-                label={t("contentDetail.publishForm.firstComment")}
-                value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
-                onChange={(v) => updateDraft(current.id, { firstComment: v })}
-                multiline
-                testId="publish-first-comment"
-              />
-              <Field
-                label={t("contentDetail.publishForm.destinationUrl")}
-                value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
-                onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
-                placeholder="https://"
-                testId="publish-destination-url"
-              />
-            </Card>
-
-            <Card id="publish-compliance" padding="lg" className="min-w-0 scroll-mt-24 space-y-3">
-              <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
-              <div>
-                <label
-                  htmlFor="publish-alt-text"
-                  className="text-body text-fg-primary mb-1 block font-semibold"
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="min-h-11"
+                  onClick={handleExcludeChannel}
+                  disabled={pending}
+                  data-testid="publish-exclude-channel-button"
                 >
-                  {t("contentDetail.publishForm.altText")}
-                </label>
-                <DirAwareTextarea
-                  id="publish-alt-text"
-                  locale={locale}
-                  rows={3}
-                  value={(currentDraft as { altText?: string }).altText ?? ""}
-                  onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
-                  data-testid="publish-alt-text"
-                />
+                  <X className="me-1 h-4 w-4" aria-hidden="true" />
+                  {t("contentDetail.publish.excludeChannel")}
+                </Button>
               </div>
-              <details
-                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-                data-testid="publish-advanced-disclosures"
-              >
-                <summary className="text-body text-fg-primary cursor-pointer font-semibold">
-                  {t("contentDetail.publishForm.advancedDisclosures")}
-                  <span className="text-label text-fg-muted ms-2 font-normal">
-                    {t("contentDetail.publishForm.advancedDisclosuresSummary")}
-                  </span>
-                </summary>
-                <div className="mt-3 space-y-3">
-                  <Checkbox
-                    label={t("contentDetail.publishForm.rightsConfirmed")}
-                    checked={Boolean(
-                      (currentDraft as { disclosures?: { rightsConfirmed?: boolean } }).disclosures
-                        ?.rightsConfirmed,
-                    )}
-                    onChange={(v) =>
-                      updateDraft(current.id, {
-                        disclosures: {
-                          paidPartnership: Boolean(
-                            (currentDraft as { disclosures?: { paidPartnership?: boolean } })
-                              .disclosures?.paidPartnership,
-                          ),
-                          aiGenerated: Boolean(
-                            (currentDraft as { disclosures?: { aiGenerated?: boolean } })
-                              .disclosures?.aiGenerated,
-                          ),
-                          syntheticMedia: Boolean(
-                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                              .disclosures?.syntheticMedia,
-                          ),
-                          rightsConfirmed: v,
-                        },
-                      })
-                    }
-                    testId="publish-rights-confirmed"
+            ) : null}
+
+            {canSavePackage ? (
+              <>
+                <Card
+                  id="publish-destination"
+                  padding="lg"
+                  className="min-w-0 scroll-mt-24 space-y-3"
+                >
+                  <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
+                  <div
+                    className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
+                    role="note"
+                    data-testid="publish-shared-copy-hint"
+                  >
+                    <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
+                  </div>
+                  <Field
+                    label={t("contentDetail.publishForm.channel")}
+                    value={current.accountName}
+                    readOnly
+                    testId="publish-channel-name"
                   />
-                  <Checkbox
-                    label={t("contentDetail.publishForm.aiGenerated")}
-                    checked={Boolean(
-                      (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
-                        ?.aiGenerated,
-                    )}
-                    onChange={(v) =>
-                      updateDraft(current.id, {
-                        disclosures: {
-                          paidPartnership: Boolean(
-                            (currentDraft as { disclosures?: { paidPartnership?: boolean } })
-                              .disclosures?.paidPartnership,
-                          ),
-                          aiGenerated: v,
-                          syntheticMedia: Boolean(
-                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                              .disclosures?.syntheticMedia,
-                          ),
-                          rightsConfirmed: Boolean(
-                            (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
-                              .disclosures?.rightsConfirmed,
-                          ),
-                        },
-                      })
-                    }
-                    testId="publish-ai-generated"
+                  <Field
+                    label={t("contentDetail.publishForm.itemTitle")}
+                    value={itemTitle}
+                    readOnly
+                    testId="publish-item-title"
                   />
-                  <Checkbox
-                    label={t("contentDetail.publishForm.paidPartnership")}
-                    checked={Boolean(
-                      (currentDraft as { disclosures?: { paidPartnership?: boolean } }).disclosures
-                        ?.paidPartnership,
-                    )}
-                    onChange={(v) =>
-                      updateDraft(current.id, {
-                        disclosures: {
-                          paidPartnership: v,
-                          aiGenerated: Boolean(
-                            (currentDraft as { disclosures?: { aiGenerated?: boolean } })
-                              .disclosures?.aiGenerated,
-                          ),
-                          syntheticMedia: Boolean(
-                            (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
-                              .disclosures?.syntheticMedia,
-                          ),
-                          rightsConfirmed: Boolean(
-                            (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
-                              .disclosures?.rightsConfirmed,
-                          ),
-                        },
-                      })
-                    }
-                    testId="publish-paid-partnership"
+                  <Field
+                    label={t("contentDetail.publishForm.format")}
+                    value={localizedFormatLabel(itemFormat)}
+                    readOnly
+                    testId="publish-item-format"
                   />
-                </div>
-              </details>
-              <div>
-                {/* Phase 8 (2026-08-30): user-facing label renamed from
+                  <div>
+                    <label
+                      htmlFor="publish-content-language"
+                      className="text-body text-fg-primary mb-1 block font-semibold"
+                    >
+                      {t("contentDetail.publishForm.publishLanguage")}
+                    </label>
+                    <select
+                      id="publish-content-language"
+                      value={
+                        (currentDraft as { contentLanguage?: string }).contentLanguage ??
+                        contentLocale ??
+                        locale
+                      }
+                      onChange={(e) => applySharedCopy(current.id, e.target.value)}
+                      className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
+                      data-testid="publish-content-language"
+                    >
+                      <option value="en">{t("contentDetail.publishForm.languageEnglish")}</option>
+                      <option value="ar">{t("contentDetail.publishForm.languageArabic")}</option>
+                    </select>
+                    <p className="text-label text-fg-muted mt-1">
+                      {t("contentDetail.publishForm.publishLanguageHint")}
+                    </p>
+                  </div>
+                  <div>
+                    <CaptionField
+                      id="publish-caption"
+                      name="caption"
+                      label={t("contentDetail.publishForm.caption")}
+                      value={(currentDraft as { caption?: string }).caption ?? ""}
+                      onChange={(next) => updateDraft(current.id, { caption: next })}
+                      hint={t("contentDetail.publishForm.captionHint")}
+                      testId="publish-caption"
+                    />
+                  </div>
+                  <div>
+                    <HashtagEditor
+                      id="publish-hashtags"
+                      name="hashtags"
+                      label={t("contentDetail.publishForm.hashtags")}
+                      value={(currentDraft as { hashtags?: string[] }).hashtags ?? []}
+                      onChange={(next) => updateDraft(current.id, { hashtags: next })}
+                      hint={t("contentDetail.publishForm.hashtagsHint")}
+                      locale={locale}
+                      t={t}
+                      testId="publish-hashtags"
+                    />
+                  </div>
+                  {sharedCopy && sharedCopyDiffers ? (
+                    <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
+                      <p className="text-label text-fg-secondary">
+                        {current.copySourceRevision != null &&
+                        current.copySourceRevision < readiness.revision
+                          ? t("contentDetail.copy.staleOverride")
+                          : t("contentDetail.publishForm.sharedCopyChanged")}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => applySharedCopy(current.id, selectedLanguage)}
+                        data-testid="publish-use-shared-copy"
+                      >
+                        {t("contentDetail.publishForm.useSharedCopy")}
+                      </Button>
+                    </div>
+                  ) : null}
+                  <Field
+                    label={t("contentDetail.publishForm.firstComment")}
+                    value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
+                    onChange={(v) => updateDraft(current.id, { firstComment: v })}
+                    multiline
+                    testId="publish-first-comment"
+                  />
+                  <Field
+                    label={t("contentDetail.publishForm.destinationUrl")}
+                    value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
+                    onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
+                    placeholder="https://"
+                    testId="publish-destination-url"
+                  />
+                </Card>
+
+                {/*
+              Platform settings — the schema-required fields per
+              platform. Before this section a YouTube or Pinterest
+              channel could be attached to an item but its package
+              could never be saved: `YouTubePayloadSchema.title` and
+              `PinterestPayloadSchema.pinTitle` / `.boardId` are
+              `min(1)` with no default, the form had no input, and the
+              ZodError collapsed to a bare "save failed". Rendered from
+              `PLATFORM_REQUIRED_FIELDS` so the controls and the
+              blocker→anchor map cannot drift apart. Platforms with no
+              required extras render nothing.
+            */}
+                {currentPlatformFields.length > 0 ? (
+                  <Card
+                    id="publish-platform-settings"
+                    padding="lg"
+                    className="min-w-0 scroll-mt-24 space-y-3"
+                  >
+                    <CardTitle>{t("contentDetail.publishForm.platformSettingsTitle")}</CardTitle>
+                    <CardDescription>
+                      {t("contentDetail.publishForm.platformSettingsDescription")}
+                    </CardDescription>
+                    {currentPlatformFields.map((field) => {
+                      const inputId = `publish-platform-${field.key}`;
+                      const error = fieldErrors[field.key];
+                      const describedBy = error ? `${inputId}-error` : undefined;
+                      return (
+                        <div key={field.key}>
+                          <label
+                            htmlFor={inputId}
+                            className="text-body text-fg-primary mb-1 block font-semibold"
+                          >
+                            {t(`contentDetail.publishForm.platformFieldLabels.${field.labelKey}`)}
+                          </label>
+                          {field.kind === "select" ? (
+                            <select
+                              id={inputId}
+                              value={readPlatformField(currentDraft, field.key)}
+                              onChange={(event) =>
+                                updateDraft(current.id, {
+                                  [field.key]: event.target.value,
+                                } as unknown as Partial<PlatformPayload>)
+                              }
+                              disabled={pending || !canSavePackage}
+                              aria-invalid={error ? true : undefined}
+                              aria-describedby={describedBy}
+                              data-testid={`publish-platform-${field.key}`}
+                              className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {field.options?.map((option) => (
+                                <option key={option} value={option}>
+                                  {t(
+                                    `contentDetail.publishForm.platformFieldOptions.${field.labelKey}.${option}`,
+                                  )}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <DirAwareInput
+                              id={inputId}
+                              locale={locale}
+                              value={readPlatformField(currentDraft, field.key)}
+                              onChange={(event) =>
+                                updateDraft(current.id, {
+                                  [field.key]: event.target.value,
+                                } as unknown as Partial<PlatformPayload>)
+                              }
+                              disabled={pending || !canSavePackage}
+                              aria-invalid={error ? true : undefined}
+                              aria-describedby={describedBy}
+                              data-testid={`publish-platform-${field.key}`}
+                              className="min-h-11"
+                            />
+                          )}
+                          {error ? (
+                            <p
+                              id={`${inputId}-error`}
+                              className="text-label text-danger mt-1"
+                              role="alert"
+                            >
+                              {error}
+                            </p>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </Card>
+                ) : null}
+
+                <Card
+                  id="publish-compliance"
+                  padding="lg"
+                  className="min-w-0 scroll-mt-24 space-y-3"
+                >
+                  <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
+                  <div>
+                    <label
+                      htmlFor="publish-alt-text"
+                      className="text-body text-fg-primary mb-1 block font-semibold"
+                    >
+                      {t("contentDetail.publishForm.altText")}
+                    </label>
+                    <DirAwareTextarea
+                      id="publish-alt-text"
+                      locale={locale}
+                      rows={3}
+                      value={(currentDraft as { altText?: string }).altText ?? ""}
+                      onChange={(e) => updateDraft(current.id, { altText: e.target.value })}
+                      data-testid="publish-alt-text"
+                    />
+                  </div>
+                  <details
+                    id="publish-disclosures"
+                    className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                    data-testid="publish-advanced-disclosures"
+                  >
+                    <summary className="text-body text-fg-primary cursor-pointer font-semibold">
+                      {t("contentDetail.publishForm.advancedDisclosures")}
+                      <span className="text-label text-fg-muted ms-2 font-normal">
+                        {t("contentDetail.publishForm.advancedDisclosuresSummary")}
+                      </span>
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <Checkbox
+                        label={t("contentDetail.publishForm.rightsConfirmed")}
+                        checked={Boolean(
+                          (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                            .disclosures?.rightsConfirmed,
+                        )}
+                        onChange={(v) =>
+                          updateDraft(current.id, {
+                            disclosures: {
+                              paidPartnership: Boolean(
+                                (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                                  .disclosures?.paidPartnership,
+                              ),
+                              aiGenerated: Boolean(
+                                (currentDraft as { disclosures?: { aiGenerated?: boolean } })
+                                  .disclosures?.aiGenerated,
+                              ),
+                              syntheticMedia: Boolean(
+                                (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                                  .disclosures?.syntheticMedia,
+                              ),
+                              rightsConfirmed: v,
+                            },
+                          })
+                        }
+                        testId="publish-rights-confirmed"
+                      />
+                      <Checkbox
+                        label={t("contentDetail.publishForm.aiGenerated")}
+                        checked={Boolean(
+                          (currentDraft as { disclosures?: { aiGenerated?: boolean } }).disclosures
+                            ?.aiGenerated,
+                        )}
+                        onChange={(v) =>
+                          updateDraft(current.id, {
+                            disclosures: {
+                              paidPartnership: Boolean(
+                                (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                                  .disclosures?.paidPartnership,
+                              ),
+                              aiGenerated: v,
+                              syntheticMedia: Boolean(
+                                (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                                  .disclosures?.syntheticMedia,
+                              ),
+                              rightsConfirmed: Boolean(
+                                (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                                  .disclosures?.rightsConfirmed,
+                              ),
+                            },
+                          })
+                        }
+                        testId="publish-ai-generated"
+                      />
+                      <Checkbox
+                        label={t("contentDetail.publishForm.paidPartnership")}
+                        checked={Boolean(
+                          (currentDraft as { disclosures?: { paidPartnership?: boolean } })
+                            .disclosures?.paidPartnership,
+                        )}
+                        onChange={(v) =>
+                          updateDraft(current.id, {
+                            disclosures: {
+                              paidPartnership: v,
+                              aiGenerated: Boolean(
+                                (currentDraft as { disclosures?: { aiGenerated?: boolean } })
+                                  .disclosures?.aiGenerated,
+                              ),
+                              syntheticMedia: Boolean(
+                                (currentDraft as { disclosures?: { syntheticMedia?: boolean } })
+                                  .disclosures?.syntheticMedia,
+                              ),
+                              rightsConfirmed: Boolean(
+                                (currentDraft as { disclosures?: { rightsConfirmed?: boolean } })
+                                  .disclosures?.rightsConfirmed,
+                              ),
+                            },
+                          })
+                        }
+                        testId="publish-paid-partnership"
+                      />
+                    </div>
+                  </details>
+                  {/*
+                Per-platform rights / review confirmations. These are
+                booleans with a `false` default, so an unedited
+                package always fails the matching readiness rule
+                (`missing_audio_rights`, `transcript_not_reviewed`,
+                `missing_music_rights`) — the operator must positively
+                confirm them. They live outside the advanced
+                disclosures disclosure because a readiness blocker
+                links straight here.
+              */}
+                  {currentRightsCheckboxes.map((entry) => {
+                    const anchorId = `publish-${entry.labelKey.replace(/([A-Z])/g, "-$1").toLowerCase()}`;
+                    const boxId = `${anchorId}-checkbox`;
+                    return (
+                      <div key={entry.key} id={anchorId} className="scroll-mt-24">
+                        <Checkbox
+                          label={t(
+                            `contentDetail.publishForm.platformRightsLabels.${entry.labelKey}`,
+                          )}
+                          checked={readRightsFlag(currentDraft, entry.key)}
+                          onChange={(v) =>
+                            updateDraft(current.id, {
+                              [entry.key]: v,
+                            } as unknown as Partial<PlatformPayload>)
+                          }
+                          testId={boxId}
+                        />
+                      </div>
+                    );
+                  })}
+                  <div>
+                    {/* Phase 8 (2026-08-30): user-facing label renamed from
                   "Approved delivery version" → "Approved version"
                   per the terminology sweep in the planning-detail
                   refactor (spec §10 / §16 — the DB column
                   `delivery_versions` is unchanged). */}
-                <CardTitle className="text-title-card">
-                  {t("contentDetail.publishForm.approvedVersion")}
-                </CardTitle>
-                {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
-                  <p
-                    className="text-label text-warning mt-1"
-                    data-testid="publish-no-approved-delivery"
-                  >
-                    {t("contentDetail.publish.noApprovedDelivery")}
-                  </p>
-                ) : (
-                  <ul className="mt-2 space-y-1 text-sm" data-testid="publish-approved-deliveries">
-                    {deliveryVersions
-                      .filter((d) => d.isFinalApproved)
-                      .map((d) => (
-                        <li key={d.id}>v{d.versionNumber}</li>
-                      ))}
-                  </ul>
-                )}
-              </div>
-            </Card>
+                    <CardTitle className="text-title-card">
+                      {t("contentDetail.publishForm.approvedVersion")}
+                    </CardTitle>
+                    {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
+                      <p
+                        className="text-label text-warning mt-1"
+                        data-testid="publish-no-approved-delivery"
+                      >
+                        {t("contentDetail.publish.noApprovedDelivery")}
+                      </p>
+                    ) : (
+                      <ul
+                        className="mt-2 space-y-1 text-sm"
+                        data-testid="publish-approved-deliveries"
+                      >
+                        {deliveryVersions
+                          .filter((d) => d.isFinalApproved)
+                          .map((d) => (
+                            <li key={d.id}>v{d.versionNumber}</li>
+                          ))}
+                      </ul>
+                    )}
+                  </div>
+                </Card>
+              </>
+            ) : (
+              <ReadOnlyPackageSummary
+                payload={currentDraft}
+                platform={current.platform}
+                platformFields={currentPlatformFields}
+                rightsCheckboxes={currentRightsCheckboxes}
+                approvedDeliveryCount={deliveryVersions.filter((d) => d.isFinalApproved).length}
+                t={t}
+              />
+            )}
           </div>
 
           {/* Preview stays visible beside the editor on large screens and
@@ -1006,7 +1249,10 @@ export function PublishPackageForm({
           >
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
             <PreviewPane payload={currentDraft} platform={current.platform} />
-            <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">
+            <div
+              id="publish-approval"
+              className="border-border bg-surface-subtle scroll-mt-24 rounded-[var(--radius-control)] border p-3"
+            >
               <p className="text-body text-fg-primary font-semibold">
                 {currentDraft.approval.finalCopyApproved
                   ? t("contentDetail.publishForm.finalCopyApproved")
@@ -1099,7 +1345,7 @@ export function PublishPackageForm({
             type="button"
             variant="outline"
             onClick={() => current && handleSave(current.id)}
-            disabled={pending || !current || !canEdit}
+            disabled={pending || !current || !canSavePackage}
             className="min-h-11"
             data-testid="publish-save-draft"
           >
@@ -1111,7 +1357,7 @@ export function PublishPackageForm({
               type="button"
               variant="outline"
               onClick={handleSaveAll}
-              disabled={pending || dirtyCount === 0 || !canEdit}
+              disabled={pending || dirtyCount === 0 || !canSavePackage}
               className="min-h-11"
               data-testid="publish-save-all"
             >
@@ -1165,12 +1411,18 @@ function translatePublishError(
   return t(`contentDetail.publishErrors.${code}`);
 }
 
-function readinessAnchorForPath(path: string): string {
-  if (/^channels\[\d+\]\.approvedDeliveryVersion/.test(path) || /^delivery\./.test(path)) {
-    return "#assets-versions";
-  }
-  if (/^approvals\./.test(path)) return "#workflow";
-  return "#publishing";
+/**
+ * Resolve an issue path to an in-page anchor using the canonical map in
+ * `lib/publishing/blocker-targets`.
+ *
+ * There is no `#publishing` fallback: an unmapped path returns
+ * `undefined` and the checklist renders no fix affordance, because a
+ * link to a section that cannot fix the issue is a dead end. Manual
+ * dispatch blockers also return `undefined` and render an explicit
+ * state instead.
+ */
+function readinessAnchorForPath(path: string): string | undefined {
+  return resolveReadinessAnchor(path);
 }
 
 function focusReadinessTarget(target: HTMLElement): void {
@@ -1309,11 +1561,26 @@ function PublishReadinessChecklist({
               </span>
               {(() => {
                 const anchor = readinessAnchorForPath(issue.path);
+                const issueText = readinessIssueText(t, issue.code, issue.message);
+                if (!anchor) {
+                  // Either a manual-dispatch blocker (no collectable
+                  // control exists) or an unmapped path. Render the
+                  // state explicitly instead of a link to a section
+                  // that cannot resolve it.
+                  return (
+                    <span
+                      className="text-label text-fg-muted shrink-0 rounded-[var(--radius-control)] px-2 py-1"
+                      data-testid={`publish-readiness-manual-${issue.code}`}
+                    >
+                      {t("contentDetail.publishReadiness.manualDispatch")}
+                    </span>
+                  );
+                }
                 return (
                   <Link
                     href={anchor}
                     onClick={(event) => focusReadinessLinkTarget(event, anchor)}
-                    aria-label={`${readinessFixLabel(issue.path, t)}: ${readinessIssueText(t, issue.code, issue.message)}`}
+                    aria-label={`${readinessFixLabel(issue.path, t)}: ${issueText}`}
                     className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
                     data-testid={`publish-readiness-fix-${issue.code}`}
                   >
@@ -1339,11 +1606,14 @@ function readinessFixLabel(
   path: string,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
-  if (/^channels\[\d+\]\.approvedDeliveryVersion/.test(path) || /^delivery\./.test(path)) {
-    return t("contentDetail.publishReadiness.fixInAssets");
+  if (isManualDispatchBlocker(path)) {
+    return t("contentDetail.publishReadiness.fixManually");
   }
-  if (/^approvals\./.test(path)) return t("contentDetail.publishReadiness.fixInWorkflow");
-  return t("contentDetail.publishReadiness.fixInPublishing");
+  const anchor = resolveReadinessAnchor(path);
+  if (anchor === "#assets-versions") return t("contentDetail.publishReadiness.fixInAssets");
+  if (anchor === "#workflow") return t("contentDetail.publishReadiness.fixInWorkflow");
+  if (anchor) return t("contentDetail.publishReadiness.fixInPackage");
+  return t("contentDetail.publishReadiness.fixManually");
 }
 
 function Field({
@@ -1419,6 +1689,145 @@ function Checkbox({
       <UiCheckbox id={id} checked={checked} onCheckedChange={(next) => onChange(next === true)} />
       <span>{label}</span>
     </label>
+  );
+}
+
+/**
+ * Read-only rendering of a channel package for actors who may view but
+ * not save it.
+ *
+ * A definition list, not a disabled form. A disabled input looks
+ * editable until the operator types into it, which is exactly the
+ * failure the `canSavePackage` split was introduced to prevent.
+ */
+function ReadOnlyPackageSummary({
+  payload,
+  platform,
+  platformFields,
+  rightsCheckboxes,
+  approvedDeliveryCount,
+  t,
+}: {
+  payload: PlatformPayload;
+  platform: string;
+  platformFields: readonly PlatformRequiredField[];
+  rightsCheckboxes: readonly PlatformRightsCheckbox[];
+  approvedDeliveryCount: number;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  const flat = payload as unknown as Record<string, unknown>;
+  const captions = (flat.caption as string | undefined) ?? "";
+  const disclosureValues: Array<[string, boolean]> = [
+    [
+      "rightsConfirmed",
+      Boolean((flat.disclosures as { rightsConfirmed?: boolean } | undefined)?.rightsConfirmed),
+    ],
+    [
+      "aiGenerated",
+      Boolean((flat.disclosures as { aiGenerated?: boolean } | undefined)?.aiGenerated),
+    ],
+    [
+      "paidPartnership",
+      Boolean((flat.disclosures as { paidPartnership?: boolean } | undefined)?.paidPartnership),
+    ],
+    ...rightsCheckboxes.map(
+      (entry) => [entry.labelKey, readRightsFlag(payload, entry.key)] as [string, boolean],
+    ),
+  ];
+
+  const rows: Array<{ key: string; label: string; value: string }> = [
+    {
+      key: "caption",
+      label: t("contentDetail.publishForm.caption"),
+      value: captions || `—`,
+    },
+    {
+      key: "hashtags",
+      label: t("contentDetail.publishForm.hashtags"),
+      value:
+        ((flat.hashtags as string[] | undefined) ?? []).map((tag) => `#${tag}`).join(" ") || "—",
+    },
+    {
+      key: "firstComment",
+      label: t("contentDetail.publishForm.firstComment"),
+      value: (flat.firstComment as string | undefined) || "—",
+    },
+    {
+      key: "destinationUrl",
+      label: t("contentDetail.publishForm.destinationUrl"),
+      value: (flat.destinationUrl as string | undefined) || "—",
+    },
+    {
+      key: "altText",
+      label: t("contentDetail.publishForm.altText"),
+      value: (flat.altText as string | undefined) || "—",
+    },
+    {
+      key: "contentLanguage",
+      label: t("contentDetail.publishForm.publishLanguage"),
+      value: (flat.contentLanguage as string | undefined) || "—",
+    },
+    ...platformFields.map((field) => ({
+      key: field.key,
+      label: t(`contentDetail.publishForm.platformFieldLabels.${field.labelKey}`),
+      value: readPlatformField(payload, field.key) || "—",
+    })),
+  ];
+
+  return (
+    <Card id="publish-destination" padding="lg" className="min-w-0 scroll-mt-24 space-y-3">
+      <CardTitle>{t("contentDetail.publishForm.readOnlySummaryTitle")}</CardTitle>
+      <CardDescription>{t("contentDetail.publishForm.readOnlySummaryDescription")}</CardDescription>
+      <p className="text-label text-fg-muted" data-testid="publish-read-only-platform">
+        {t(`contentDetail.publishForm.platformLabels.${platform}`)}
+      </p>
+      <dl className="space-y-2" data-testid="publish-read-only-summary">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className="grid grid-cols-1 gap-0.5 sm:grid-cols-[minmax(0,10rem)_1fr]"
+          >
+            <dt className="text-label text-fg-muted font-semibold">{row.label}</dt>
+            <dd
+              className="text-body text-fg-primary break-words whitespace-pre-wrap"
+              data-testid={`publish-read-only-${row.key}`}
+            >
+              {row.value}
+            </dd>
+          </div>
+        ))}
+        {disclosureValues.map(([key, value]) => (
+          <div key={key} className="grid grid-cols-1 gap-0.5 sm:grid-cols-[minmax(0,10rem)_1fr]">
+            <dt className="text-label text-fg-muted font-semibold">
+              {t(`contentDetail.publishForm.disclosureLabels.${key}`)}
+            </dt>
+            <dd
+              className="text-body text-fg-primary"
+              data-testid={`publish-read-only-disclosure-${key}`}
+            >
+              {value
+                ? t("contentDetail.publishForm.disclosureYes")
+                : t("contentDetail.publishForm.disclosureNo")}
+            </dd>
+          </div>
+        ))}
+        <div className="grid grid-cols-1 gap-0.5 sm:grid-cols-[minmax(0,10rem)_1fr]">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.publishForm.approvedVersion")}
+          </dt>
+          <dd
+            className="text-body text-fg-primary"
+            data-testid="publish-read-only-approved-deliveries"
+          >
+            {approvedDeliveryCount === 0
+              ? t("contentDetail.publish.noApprovedDelivery")
+              : t("contentDetail.publishForm.approvedDeliveryCount", {
+                  count: approvedDeliveryCount,
+                })}
+          </dd>
+        </div>
+      </dl>
+    </Card>
   );
 }
 

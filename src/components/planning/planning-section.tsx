@@ -1,6 +1,6 @@
 import * as React from "react";
-import { ChevronDown } from "lucide-react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { PlanningSectionDisclosure } from "@/components/planning/planning-section-disclosure";
 import { cn } from "@/lib/utils";
 
 /**
@@ -70,31 +70,17 @@ export function PlanningSection({
   }
   if (collapsible) {
     return (
-      <details
+      <PlanningSectionDisclosure
         id={id}
-        tabIndex={id ? -1 : undefined}
-        data-testid={testId}
-        className={cn(
-          "border-border bg-surface group relative scroll-mt-24 rounded-[var(--radius-card)] border p-4 sm:p-5",
-          className,
-        )}
-        open={defaultOpen}
+        title={title}
+        description={description}
+        actions={actions}
+        initialOpen={defaultOpen}
+        testId={testId}
+        className={className}
       >
-        <summary className="focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-start gap-3 pe-20 focus:outline-none focus-visible:ring-2 [&::-webkit-details-marker]:hidden">
-          <div className="min-w-0 flex-1">
-            <CardTitle className="text-body text-fg-primary font-semibold">{title}</CardTitle>
-            {description ? <CardDescription className="mt-1">{description}</CardDescription> : null}
-          </div>
-          <ChevronDown
-            className="text-fg-muted mt-0.5 h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
-            aria-hidden="true"
-          />
-        </summary>
-        {actions ? (
-          <div className="absolute end-4 top-4 flex items-center gap-1">{actions}</div>
-        ) : null}
-        <div className="mt-4">{children}</div>
-      </details>
+        {children}
+      </PlanningSectionDisclosure>
     );
   }
 

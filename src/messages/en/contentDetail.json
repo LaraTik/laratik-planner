@@ -190,7 +190,9 @@
     "markPublishingSetupReady": "Mark publishing setup ready",
     "markPublishingSetupReadyDescription": "Validate the complete publication package and make its channels ready to publish. This does not schedule or publish anything.",
     "noApprovedDelivery": "No approved version yet — block from readiness.",
-    "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup."
+    "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup.",
+    "statusFixRequiredFields": "Complete the required platform fields before saving.",
+    "statusFixRequiredFields_many": "Complete the required platform fields on {count} channels before saving."
   },
   "readinessPanel": {
     "readyTitle": "Ready for publishing",
@@ -1021,7 +1023,10 @@
     "delivery_version_missing": "The approved delivery version is no longer available.",
     "rights_not_confirmed": "Confirm media rights before publishing.",
     "synthetic_media_disclosure_recommended": "Declare synthetic media when content is AI-generated.",
-    "approvals_open": "Complete the outstanding approval before publishing."
+    "approvals_open": "Complete the outstanding approval before publishing.",
+    "fixInPackage": "Resolve in package",
+    "fixManually": "Manual dispatch",
+    "manualDispatch": "Dispatch manually"
   },
   "publishForm": {
     "destinationCaption": "Destination & caption",
@@ -1087,7 +1092,58 @@
     "approvalResetHint": "Approved before later edits. Approval remains valid according to workspace policy.",
     "note": "Note",
     "addNote": "Add note",
-    "noCaption": "No caption"
+    "noCaption": "No caption",
+    "platformSettingsTitle": "Platform settings",
+    "platformSettingsDescription": "Required by {platform} before this package can be saved.",
+    "platformFieldLabels": {
+      "youtubeTitle": "Video title",
+      "youtubePrivacy": "Visibility",
+      "pinterestPinTitle": "Pin title",
+      "pinterestBoardId": "Board ID",
+      "tiktokPrivacy": "Audience"
+    },
+    "platformFieldOptions": {
+      "youtubePrivacy": {
+        "public": "Public",
+        "unlisted": "Unlisted",
+        "private": "Private"
+      },
+      "tiktokPrivacy": {
+        "public": "Everyone",
+        "friends": "Friends",
+        "followers_only": "Followers",
+        "private": "Only me"
+      }
+    },
+    "platformFieldErrors": {
+      "youtubeTitle": {
+        "required": "Add a video title.",
+        "tooLong": "Use {max} characters or fewer."
+      },
+      "pinterestPinTitle": {
+        "required": "Add a pin title.",
+        "tooLong": "Use {max} characters or fewer."
+      },
+      "pinterestBoardId": {
+        "required": "Choose a Pinterest board.",
+        "tooLong": "Use {max} characters or fewer."
+      }
+    },
+    "platformRightsLabels": {
+      "audioRights": "I hold the rights to the audio",
+      "transcriptReviewed": "I reviewed the transcript",
+      "musicRights": "I hold the rights to the music"
+    },
+    "readOnlySummaryTitle": "Channel package",
+    "readOnlySummaryDescription": "You can view this package but not change it.",
+    "disclosureLabels": {
+      "rightsConfirmed": "Rights confirmed",
+      "aiGenerated": "AI generated",
+      "paidPartnership": "Paid partnership"
+    },
+    "disclosureYes": "Yes",
+    "disclosureNo": "No",
+    "approvedDeliveryCount": "{count} approved"
   },
   "publishErrors": {
     "authRequired": "Sign in is required.",

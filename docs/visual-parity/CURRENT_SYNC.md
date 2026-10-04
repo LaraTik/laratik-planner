@@ -95,6 +95,18 @@ comes from the product or from a refreshed design reference.
 
 ## Verification boundary
 
+- **Known divergence — Publishing and recovery (`95dfecceb93e46a699f2598263b0d54c`).**
+  The Stitch screen shows the publication-proof step as "Step 2 of 2" accepting
+  either a public/creator-manager reference URL **or** a `PNG, JPG, or PDF` proof
+  upload, plus a "Mark as delayed / Flag issue" action. The implementation
+  accepts a URL only (`publishedUrl`, with `expiresAt` as the documented escape
+  hatch for an ephemeral Story), and `publication_status` is
+  `pending | published | failed | skipped` — there is no `delayed` state. Proof
+  upload is a new capability rather than a visual-parity fix, so it is out of
+  scope for the publish-surface work and stays a known difference rather than a
+  parity failure. The route is also a server-side redirect to
+  `/app/w/[slug]/planning/[id]#publishing` since Phase 7 (2026-08-30), so the
+  screen is verified on the Publishing tab rather than at `/publish`.
 - Manifest identity and pair counts were checked against the current Stitch
   project: 25 screens, 25 HTML files, and 25 PNG files.
 - `pnpm verify` passed after the capture was added: formatting, lint, strict

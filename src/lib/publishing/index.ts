@@ -56,6 +56,39 @@ export {
   ReadinessError,
 } from "./materiality-helpers";
 
+// Publish surface UI contracts. `blocker-targets` is the canonical
+// readiness-issue → control map (no generic `#publishing` fallback, so a
+// Fix link can never dead-end); `platform-required-fields` describes the
+// per-platform schema fields the form must expose so YouTube and
+// Pinterest packages are saveable at all.
+export {
+  // Blocker → control map
+  PUBLISH_FIELD_ANCHORS,
+  WORKSPACE_SECTION_ANCHORS,
+  KNOWN_BLOCKER_PATHS,
+  normaliseBlockerPath,
+  resolveBlockerTarget,
+  readinessAnchorForPath,
+  isManualDispatchBlocker,
+} from "./blocker-targets";
+export type { PublishBlockerKind, PublishBlockerTarget } from "./blocker-targets";
+
+// Per-platform required fields
+export {
+  PLATFORM_REQUIRED_FIELDS,
+  PLATFORM_RIGHTS_CHECKBOXES,
+  requiredFieldsFor,
+  rightsCheckboxesFor,
+  readPlatformField,
+  readRightsFlag,
+  validateRequiredFields,
+} from "./platform-required-fields";
+export type {
+  PlatformFieldKind,
+  PlatformRequiredField,
+  PlatformRightsCheckbox,
+} from "./platform-required-fields";
+
 // FEAT-17 (GAP-FULL-REVIEW-2026-08-25) — per-platform publishing
 // adapter slot. The LinkedIn + X stubs ship today; the M4.5 worker
 // will replace their bodies with real provider calls.

@@ -70,7 +70,7 @@ describe("PublishPackageForm localization", () => {
           ]}
           deliveryVersions={[]}
           readiness={readiness}
-          canEdit={false}
+          canSavePackage={true}
           canApproveFinalCopy={false}
           canConfirmReadiness={false}
         />
@@ -125,7 +125,7 @@ describe("PublishPackageForm localization", () => {
               },
             ],
           }}
-          canEdit={false}
+          canSavePackage={false}
           canApproveFinalCopy={false}
           canConfirmReadiness={false}
         />
@@ -194,7 +194,7 @@ describe("PublishPackageForm localization", () => {
               },
             ],
           }}
-          canEdit={false}
+          canSavePackage={false}
           canApproveFinalCopy={false}
           canConfirmReadiness={false}
         />
@@ -233,7 +233,7 @@ describe("PublishPackageForm localization", () => {
           ]}
           deliveryVersions={[]}
           readiness={readiness}
-          canEdit={false}
+          canSavePackage={false}
           canApproveFinalCopy={false}
           canConfirmReadiness={false}
           canExcludeChannel
@@ -300,7 +300,7 @@ describe("PublishPackageForm localization", () => {
                 },
               ],
             }}
-            canEdit={false}
+            canSavePackage={false}
             canApproveFinalCopy={false}
             canConfirmReadiness={false}
           />
@@ -370,7 +370,7 @@ describe("PublishPackageForm localization", () => {
                 },
               ],
             }}
-            canEdit={false}
+            canSavePackage={false}
             canApproveFinalCopy={false}
             canConfirmReadiness={false}
           />
