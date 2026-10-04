@@ -81,10 +81,12 @@ export function MetaPublishingReadinessCard({
   readiness,
   copy,
   testId = "meta-publishing-readiness-card",
+  compact = false,
 }: {
   readiness: MetaPublishingReadiness;
   copy: ReadinessCopy;
   testId?: string;
+  compact?: boolean;
 }) {
   const style = STATUS_STYLE[readiness.status];
   const Icon = style.icon;
@@ -135,6 +137,34 @@ export function MetaPublishingReadinessCard({
       <p className="text-label text-fg-secondary">{copy.nextStepDescription}</p>
     </div>
   );
+
+  if (compact) {
+    return (
+      <Card padding="sm" data-testid={testId}>
+        <details className="group" data-testid={`${testId}-details`}>
+          <summary
+            className={`focus-visible:ring-focus-ring flex cursor-pointer list-none items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 ${style.container}`}
+          >
+            <Icon className={`h-4 w-4 shrink-0 ${style.iconClass}`} aria-hidden="true" />
+            <span className="text-label text-fg-primary min-w-0 flex-1 font-semibold">
+              {copy.title}
+            </span>
+            <span className="text-label text-fg-secondary">{copy.statusLabel}</span>
+            <ChevronDown
+              className="text-fg-muted h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            />
+          </summary>
+          <div className="mt-3 space-y-3">
+            <p className="text-label text-fg-secondary">{copy.description}</p>
+            {statusBlock}
+            {capabilityBlocks}
+            {nextStep(false)}
+          </div>
+        </details>
+      </Card>
+    );
+  }
 
   if (collapsed) {
     /* One compact line: icon + card title + status summary.

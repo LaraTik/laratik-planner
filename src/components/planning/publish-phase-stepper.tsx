@@ -95,7 +95,7 @@ export function PublishPhaseStepper({
   };
   return (
     <div
-      className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-2"
+      className="border-border bg-surface rounded-[var(--radius-control)] border px-2 py-1.5"
       data-testid="publish-phase-stepper"
       role="navigation"
       aria-label={t("contentDetail.publishForm.phaseNavLabel")}
@@ -109,16 +109,13 @@ export function PublishPhaseStepper({
         follow. The heading names it explicitly; the rail owns "what
         happens to this item next", this owns "is this channel ready".
       */}
-      <p
-        className="text-label text-fg-primary px-1 pt-1 font-semibold"
-        data-testid="publish-phase-stepper-title"
-      >
+      <p className="sr-only" data-testid="publish-phase-stepper-title">
         {t("contentDetail.publishForm.phaseStepsTitle")}
       </p>
-      <p className="text-label text-fg-muted px-1 pb-1" id="publish-phase-stepper-description">
+      <p className="sr-only" id="publish-phase-stepper-description">
         {t("contentDetail.publishForm.phaseStepsDescription")}
       </p>
-      <ol className="flex flex-wrap items-center gap-1">
+      <ol className="flex flex-wrap items-center gap-0.5">
         {phases.map((phase, idx) => {
           const complete = isComplete(phase.id);
           const isCurrent =
@@ -127,7 +124,7 @@ export function PublishPhaseStepper({
           return (
             <li
               key={phase.id}
-              className="flex flex-1 items-center gap-2"
+              className="flex min-w-0 flex-1 items-center gap-1"
               aria-current={isCurrent ? "step" : undefined}
             >
               <a
@@ -136,7 +133,7 @@ export function PublishPhaseStepper({
               >
                 <div
                   className={cn(
-                    "border-border text-body flex h-7 min-w-7 items-center justify-center rounded-full border px-2 font-semibold",
+                    "border-border text-label flex h-6 min-w-6 items-center justify-center rounded-full border px-1.5 font-semibold",
                     complete && "border-success bg-success-subtle text-success",
                     isCurrent && "border-warning bg-warning-subtle text-warning",
                     isNext && "border-border bg-surface text-fg-muted",
@@ -153,7 +150,7 @@ export function PublishPhaseStepper({
                 <div className="min-w-0 flex-1">
                   <p
                     className={cn(
-                      "text-body font-semibold",
+                      "text-label font-semibold",
                       isNext ? "text-fg-muted" : "text-fg-primary",
                     )}
                   >
@@ -175,7 +172,7 @@ export function PublishPhaseStepper({
               {idx < phases.length - 1 ? (
                 <span
                   aria-hidden="true"
-                  className={cn("mx-1 h-px w-6 sm:w-10", complete ? "bg-success" : "bg-border")}
+                  className={cn("mx-0.5 h-px w-3 sm:w-8", complete ? "bg-success" : "bg-border")}
                 />
               ) : null}
             </li>

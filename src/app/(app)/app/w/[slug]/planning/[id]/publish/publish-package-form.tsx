@@ -832,6 +832,7 @@ export function PublishPackageForm({
         <MetaPublishingReadinessCard
           readiness={metaPublishingReadiness}
           copy={metaPublishingCopy}
+          compact
           testId="publish-meta-readiness-card"
         />
       ) : null}
@@ -1062,10 +1063,12 @@ export function PublishPackageForm({
               <>
                 <Card
                   id="publish-destination"
-                  padding="lg"
-                  className="min-w-0 scroll-mt-24 space-y-3"
+                  padding="md"
+                  className="grid min-w-0 scroll-mt-24 gap-3 lg:grid-cols-2"
                 >
-                  <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
+                  <CardTitle className="lg:col-span-2">
+                    {t("contentDetail.publishForm.destinationCaption")}
+                  </CardTitle>
                   {/*
                     The three read-only Fields that used to sit here
                     (channel name, item title, format) duplicated the
@@ -1134,7 +1137,7 @@ export function PublishPackageForm({
                   */}
                   {current?.payload ? (
                     <p
-                      className="text-label text-fg-muted flex flex-wrap items-center gap-2"
+                      className="text-label text-fg-muted flex flex-wrap items-center gap-2 lg:col-span-2"
                       data-testid="publish-copy-source"
                     >
                       {isCopyStale ? (
@@ -1183,7 +1186,7 @@ export function PublishPackageForm({
                     </p>
                   ) : null}
                   {sharedCopy && sharedCopyDiffers && !isCopyStale ? (
-                    <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
+                    <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2 lg:col-span-2">
                       <p className="text-label text-fg-secondary">
                         {current.copySourceRevision != null &&
                         current.copySourceRevision < readiness.revision
@@ -1202,20 +1205,28 @@ export function PublishPackageForm({
                       </Button>
                     </div>
                   ) : null}
-                  <Field
-                    label={t("contentDetail.publishForm.firstComment")}
-                    value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
-                    onChange={(v) => updateDraft(current.id, { firstComment: v })}
-                    multiline
-                    testId="publish-first-comment"
-                  />
-                  <Field
-                    label={t("contentDetail.publishForm.destinationUrl")}
-                    value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
-                    onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
-                    placeholder="https://"
-                    testId="publish-destination-url"
-                  />
+                  <details className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3 lg:col-span-2">
+                    <summary className="text-label text-fg-primary cursor-pointer font-semibold">
+                      {t("contentDetail.publishForm.firstComment")} &amp;{" "}
+                      {t("contentDetail.publishForm.destinationUrl")}
+                    </summary>
+                    <div className="mt-3 grid gap-3 lg:grid-cols-2">
+                      <Field
+                        label={t("contentDetail.publishForm.firstComment")}
+                        value={(currentDraft as { firstComment?: string }).firstComment ?? ""}
+                        onChange={(v) => updateDraft(current.id, { firstComment: v })}
+                        multiline
+                        testId="publish-first-comment"
+                      />
+                      <Field
+                        label={t("contentDetail.publishForm.destinationUrl")}
+                        value={(currentDraft as { destinationUrl?: string }).destinationUrl ?? ""}
+                        onChange={(v) => updateDraft(current.id, { destinationUrl: v })}
+                        placeholder="https://"
+                        testId="publish-destination-url"
+                      />
+                    </div>
+                  </details>
                 </Card>
 
                 {/*

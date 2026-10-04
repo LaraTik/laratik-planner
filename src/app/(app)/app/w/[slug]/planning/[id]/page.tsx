@@ -463,6 +463,22 @@ export default async function ContentDetailPage({
       configured,
     };
   });
+  const publishRail = {
+    blockers: readiness.issues.filter((issue) => issue.severity === "blocker"),
+    channelReadiness: readiness.channels.map((channel) => {
+      const itemChannel = item.channels.find(
+        (candidate) => candidate.socialChannelId === channel.socialChannelId,
+      );
+      return {
+        id: channel.socialChannelId,
+        platform: channel.platform ?? itemChannel?.platform ?? "other",
+        accountName: itemChannel?.accountName ?? channel.socialChannelId.slice(0, 8),
+        blockerCount: channel.blockerCount,
+      };
+    }),
+    integration:
+      metaPublishingReadiness.status === "ready" ? ("ready" as const) : ("attention" as const),
+  };
   const approvedBeforeLaterEdits = item.channels.some((channel) => {
     const payload = (channelPayloads as Record<string, unknown>)[channel.socialChannelId];
     const approval =
@@ -830,6 +846,7 @@ export default async function ContentDetailPage({
                   ? { designer: { id: designer.id, label: designer.displayName } }
                   : {})}
                 planningPresentation={planningPresentation}
+                publishRail={publishRail}
               />
             </div>
             {/* Compact header — answers the four questions at a
@@ -889,6 +906,7 @@ export default async function ContentDetailPage({
           designers,
           ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
           planningPresentation,
+          publishRail,
           scenario: activeScenario,
         }}
         workspace={{
