@@ -25,6 +25,19 @@ export interface PublishingCommandCenterProps {
    * explicit manual-dispatch state — never a dead link to `#publishing`.
    */
   issues?: ReadinessIssue[];
+  /**
+   * Whether the global workflow has reached Publishing setup.
+   *
+   * The workspace's right rail publishes its own canonical next action
+   * (`planningPresentation.nextAction`), and while the item is still at
+   * Planning that is "Submit for review". The Publishing tab must not
+   * present a lifecycle-advancing action of its own at the same time —
+   * two primary buttons describing different lifecycle levels is how a
+   * user ends up advancing the wrong thing. Below this gate the panel
+   * still offers its package-level actions (save, fix a blocker) but
+   * never "Mark setup ready".
+   */
+  workflowAtPublishingSetup?: boolean;
   t: Translator;
 }
 
@@ -40,6 +53,7 @@ export function PublishingCommandCenter({
   publishingSetupReady,
   outcomesRecorded,
   issues = [],
+  workflowAtPublishingSetup = true,
   t,
 }: PublishingCommandCenterProps) {
   const hasNoChannels = channelCount === 0;
@@ -88,10 +102,18 @@ export function PublishingCommandCenter({
               href: "#publish-outcomes",
               label: t("contentDetail.publishCommandCenter.actionRecordOutcomes"),
             }
-          : {
-              href: "#publish-package",
-              label: t("contentDetail.publishCommandCenter.actionConfirmSetup"),
-            };
+          : workflowAtPublishingSetup
+            ? {
+                href: "#publish-package",
+                label: t("contentDetail.publishCommandCenter.actionConfirmSetup"),
+              }
+            : {
+                // Package is clean, but the global workflow has not
+                // reached publishing setup yet. Do not invite a
+                // lifecycle advance the rail is not ready for.
+                href: "#publish-package",
+                label: t("contentDetail.publishCommandCenter.actionReviewSetup"),
+              };
   const summary = t("contentDetail.publishCommandCenter.summary", {
     ready: readyChannelCount,
     total: channelCount,

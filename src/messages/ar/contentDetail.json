@@ -578,7 +578,8 @@
     "scheduleDescription": "حدّد التاريخ المخطط والوجهات المختارة قبل تجهيز كل قناة.",
     "outcomesDescription": "سجّل ما حدث في كل وجهة بعد النشر.",
     "packageTitle": "حزمة النشر",
-    "packageDescription": "جهّز نسخة القنوات والإفصاحات والموافقات والجاهزية النهائية من مكان واحد."
+    "packageDescription": "جهّز نسخة القنوات والإفصاحات والموافقات والجاهزية النهائية من مكان واحد.",
+    "outcomesLockedDescription": "متاح بعد اكتمال إعداد النشر."
   },
   "publishCommandCenter": {
     "eyebrow": "النشر",
@@ -600,7 +601,8 @@
     "actionReviewBlockers": "مراجعة الموانع",
     "actionConfirmSetup": "مراجعة وتأكيد",
     "actionRecordOutcomes": "تسجيل النتائج",
-    "actionViewOutcomes": "عرض النتائج"
+    "actionViewOutcomes": "عرض النتائج",
+    "actionReviewSetup": "مراجعة الإعداد"
   },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
@@ -1062,10 +1064,10 @@
     "channelReady": "جاهزة",
     "phaseNavLabel": "تقدم مراحل النشر",
     "phase": {
-      "channels": "القنوات",
-      "copy": "نسخة الجمهور",
+      "package": "الحزمة",
       "compliance": "الامتثال",
-      "review": "المراجعة والإرسال"
+      "review": "المراجعة والموافقة",
+      "outcome": "النتيجة"
     },
     "phaseActiveBlockers": "{count} عوائق مفتوحة على هذه القناة",
     "phaseActiveNetworks": "{count} قناة/قنوات أخرى لا تزال بها عوائق",
@@ -1156,7 +1158,9 @@
     "copySourceOverrideAction": "تجاوز لهذه القناة",
     "copySourceResetAction": "إعادة تعيين إلى النص المشترك",
     "additionalOptions": "خيارات نشر إضافية",
-    "helpLabel": "مزيد من المعلومات"
+    "helpLabel": "مزيد من المعلومات",
+    "phaseStepsTitle": "خطوات إعداد النشر",
+    "phaseStepsDescription": "تجهيز هذه القناة للنشر اليدوي، منفصلة عن سير عمل مساحة العمل."
   },
   "publishErrors": {
     "authRequired": "يجب تسجيل الدخول.",

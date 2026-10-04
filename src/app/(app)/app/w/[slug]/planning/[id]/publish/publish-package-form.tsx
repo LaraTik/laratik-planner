@@ -2,6 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { CheckCircle2, Save, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
@@ -241,6 +242,7 @@ export function PublishPackageForm({
   canApproveFinalCopy,
   canConfirmReadiness,
   canSavePackage,
+  workflowAtPublishingSetup = true,
   canExcludeChannel = false,
   publishingSetupReady = false,
   metaPublishingReadiness,
@@ -283,6 +285,18 @@ export function PublishPackageForm({
    * read-only summary when it is false.
    */
   canSavePackage: boolean;
+  /**
+   * Whether the global workflow has reached Publishing setup. Below
+   * this the sticky bar must not offer "Mark setup ready": the
+   * workspace rail's next action is still the primary one, and two
+   * primary buttons describing different lifecycle levels is how the
+   * wrong one gets clicked.
+   *
+   * Optional so an isolated consumer (a test, a future sub-route)
+   * renders the full bar without restating the gate; the page always
+   * supplies it.
+   */
+  workflowAtPublishingSetup?: boolean | undefined;
   /** Publishers and managers may exclude an unrecorded channel from publication. */
   canExcludeChannel?: boolean;
   /** Package-level lifecycle gate, independent from platform capability. */
@@ -413,6 +427,15 @@ export function PublishPackageForm({
     current?.copySourceRevision != null && current.copySourceRevision < readiness.revision,
   );
   /** Schema-required extras for the active channel's platform. */
+  /**
+   * A channel that has never been saved has nothing to save *back to*,
+   * so it is not dirty — but it also has no persisted package, so the
+   * primary action must still be Save rather than a status link. This
+   * is the "one state, one action" rule's third state, and collapsing
+   * it into "not dirty" would hide the only way to persist the draft.
+   */
+  const activeNeverSaved = current != null && current.payload == null;
+  const currentNeedsSave = dirty || activeNeverSaved;
   const currentPlatformFields = requiredFieldsFor(current?.platform ?? "");
   /** Rights confirmations a readiness rule blocks on for this platform. */
   const currentRightsCheckboxes = rightsCheckboxesFor(current?.platform ?? "");
@@ -1503,61 +1526,67 @@ export function PublishPackageForm({
           ) : null}
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => current && handleSave(current.id)}
-            disabled={pending || !current || !canSavePackage}
-            className="min-h-11"
-            data-testid="publish-save-draft"
-          >
-            <Save className="me-1 h-4 w-4" aria-hidden="true" />
-            {t("contentDetail.publish.saveDraft")}
-          </Button>
-          {channels.length > 1 && dirtyCount > 0 ? (
+          {/*
+            One state, one primary action. The bar used to render four
+            competing controls in one line — Save draft, Save all, a
+            blockers count, and Mark publishing setup ready — so the
+            operator had to decide which of them was the next step. The
+            primary slot now holds exactly one action, chosen by state,
+            and the "mark setup ready" button is gated on the global
+            workflow having actually reached publishing setup (the
+            workspace rail owns the next action until it does).
+          */}
+          {dirtyCount > 0 && channels.length > 1 ? (
             <Button
               type="button"
-              variant="outline"
               onClick={handleSaveAll}
-              disabled={pending || dirtyCount === 0 || !canSavePackage}
+              disabled={pending || !canSavePackage}
               className="min-h-11"
               data-testid="publish-save-all"
             >
               <Save className="me-1 h-4 w-4" aria-hidden="true" />
               {t("contentDetail.publish.saveAll", { count: dirtyCount })}
             </Button>
-          ) : null}
-          {!readiness.canPublish ? (
-            <span
-              id="publish-ready-hint"
-              className="text-label text-warning max-w-56"
-              data-testid="publish-ready-hint"
+          ) : currentNeedsSave ? (
+            <Button
+              type="button"
+              onClick={() => current && handleSave(current.id)}
+              disabled={pending || !current || !canSavePackage}
+              className="min-h-11"
+              data-testid="publish-save-draft"
             >
-              {t(
-                currentBlockerCount === 1
-                  ? "contentDetail.publish.blockersRemainingOne"
-                  : "contentDetail.publish.blockersRemainingMany",
-                { count: currentBlockerCount },
-              )}
-            </span>
+              <Save className="me-1 h-4 w-4" aria-hidden="true" />
+              {t("contentDetail.publish.saveDraft")}
+            </Button>
+          ) : !readiness.canPublish ? (
+            <Link
+              href="#publish-package"
+              aria-describedby="publish-ready-hint"
+              className="text-label text-warning inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              data-testid="publish-review-blockers"
+            >
+              {t("contentDetail.publishCommandCenter.actionReviewBlockers")}
+            </Link>
+          ) : publishingSetupReady ? (
+            <Link
+              href="#publish-outcomes"
+              className="text-label text-primary inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+              data-testid="publish-record-outcome"
+            >
+              {t("contentDetail.publishCommandCenter.actionRecordOutcomes")}
+            </Link>
+          ) : workflowAtPublishingSetup ? (
+            <Button
+              type="button"
+              onClick={handleConfirmReadiness}
+              disabled={pending || dirty || !readiness.canPublish || !canConfirmReadiness}
+              className="min-h-11"
+              data-testid="publish-ready"
+            >
+              <Send className="me-1 h-4 w-4" aria-hidden="true" />
+              {t("contentDetail.publish.markPublishingSetupReady")}
+            </Button>
           ) : null}
-          <Button
-            type="button"
-            onClick={handleConfirmReadiness}
-            disabled={
-              pending ||
-              dirty ||
-              publishingSetupReady ||
-              !readiness.canPublish ||
-              !canConfirmReadiness
-            }
-            className="min-h-11"
-            {...(!readiness.canPublish ? { "aria-describedby": "publish-ready-hint" } : {})}
-            data-testid="publish-ready"
-          >
-            <Send className="me-1 h-4 w-4" aria-hidden="true" />
-            {t("contentDetail.publish.markPublishingSetupReady")}
-          </Button>
         </div>
       </div>
     </form>

@@ -829,6 +829,44 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface PR4: outcome workflow (phases, gate, one dominant action)
+
+Fourth of five. Makes the outcome workflow's state machine explicit instead of
+inferable, and stops two lifecycle-level CTAs competing on one screen.
+
+- **fix(publishing): a newer readiness flag could hide a legacy item's publication
+  history.** `#publish-outcomes` is now gated on `outcomesUnlocked` — setup readiness
+  **or** any record of prior publication **or** a `partially_published` / `published`
+  status — rather than on `publishingSetupReady` alone. Publication history is the one
+  thing an operator can never recreate, so no later flag may hide it. The locked state
+  says why it is locked instead of appearing as an empty collapsed section.
+
+- **fix(publishing): two primary actions at different lifecycle levels.** The workspace's
+  right rail publishes its own canonical next action, and while the item is still at
+  Planning that is "Submit for review" — while the Publishing tab simultaneously offered
+  "Mark setup ready". Both the command center's dominant CTA and the sticky bar are now
+  gated on `workflowAtPublishingSetup` (`ready_to_publish` and later). Below that gate the
+  panel still offers its package-level actions but never a lifecycle advance.
+
+- **fix(publishing): the sticky bar had four competing controls in one line.** Now one
+  state, one primary action: _Save_ (multi-channel dirty → Save all; otherwise per-channel),
+  _Review blockers_ (a link, with the blocker count as its accessible description),
+  _Record outcomes_ once setup is confirmed, or _Mark setup ready_ once the workflow has
+  reached publishing setup. A third state was needed to make this correct: a channel that
+  has **never been saved** is not dirty but also has no persisted package, so its primary
+  action must be Save — collapsing it into "not dirty" would have removed the only way to
+  persist the draft, and offering "mark setup ready" for it would be a promise the server
+  cannot keep.
+
+- **refactor(publishing): one canonical four-phase model.** The stepper's phases were
+  `channels | copy | compliance | review`, a second proposal in the plan said three steps,
+  and the Stitch screen said "Step 2 of 2". They are now `Package | Compliance |
+Review & approval | Outcome`, and the strip is titled **"Publishing setup steps"** with
+  a description that names it as per-channel preparation. It is explicitly not a second
+  navigation model and explicitly not the workspace lifecycle — those are six stages and
+  answer a different question ("what happens to this item next" vs "is this channel
+  ready").
+
 ### 2026-10-04 — Publish surface PR3: information architecture (removals, not restyling)
 
 Third of five. The Publishing tab had four surfaces describing the same

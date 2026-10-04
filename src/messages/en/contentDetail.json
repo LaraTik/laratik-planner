@@ -578,7 +578,8 @@
     "scheduleDescription": "Set the planned date and selected destinations before preparing each channel.",
     "outcomesDescription": "Record what happened on each destination after publishing.",
     "packageTitle": "Publish package",
-    "packageDescription": "Prepare channel copy, disclosures, approvals, and final readiness in one place."
+    "packageDescription": "Prepare channel copy, disclosures, approvals, and final readiness in one place.",
+    "outcomesLockedDescription": "Available once publishing setup is complete."
   },
   "publishCommandCenter": {
     "eyebrow": "Publishing",
@@ -600,7 +601,8 @@
     "actionReviewBlockers": "Review blockers",
     "actionConfirmSetup": "Review and confirm",
     "actionRecordOutcomes": "Record outcomes",
-    "actionViewOutcomes": "View outcomes"
+    "actionViewOutcomes": "View outcomes",
+    "actionReviewSetup": "Review setup"
   },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
@@ -1062,10 +1064,10 @@
     "channelReady": "Ready",
     "phaseNavLabel": "Publish phase progress",
     "phase": {
-      "channels": "Channels",
-      "copy": "Audience copy",
+      "package": "Package",
       "compliance": "Compliance",
-      "review": "Review & submit"
+      "review": "Review & approval",
+      "outcome": "Outcome"
     },
     "phaseActiveBlockers": "{count} open blocker(s) on this channel",
     "phaseActiveNetworks": "{count} other channel(s) still have blockers",
@@ -1156,7 +1158,9 @@
     "copySourceOverrideAction": "Override for this channel",
     "copySourceResetAction": "Reset to shared copy",
     "additionalOptions": "Additional publishing options",
-    "helpLabel": "More information"
+    "helpLabel": "More information",
+    "phaseStepsTitle": "Publishing setup steps",
+    "phaseStepsDescription": "Preparing this channel for manual dispatch. Separate from the workspace workflow."
   },
   "publishErrors": {
     "authRequired": "Sign in is required.",

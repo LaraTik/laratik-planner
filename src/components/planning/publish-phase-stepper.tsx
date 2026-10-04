@@ -29,7 +29,7 @@ export interface PublishPhaseStepperProps {
 }
 
 interface Phase {
-  id: "channels" | "copy" | "compliance" | "review";
+  id: "package" | "compliance" | "review" | "outcome";
   labelKey: string;
 }
 
@@ -54,10 +54,10 @@ export function PublishPhaseStepper({
 }: PublishPhaseStepperProps) {
   const phases: ReadonlyArray<Phase> = React.useMemo(
     () => [
-      { id: "channels", labelKey: "contentDetail.publishForm.phase.channels" },
-      { id: "copy", labelKey: "contentDetail.publishForm.phase.copy" },
+      { id: "package", labelKey: "contentDetail.publishForm.phase.package" },
       { id: "compliance", labelKey: "contentDetail.publishForm.phase.compliance" },
       { id: "review", labelKey: "contentDetail.publishForm.phase.review" },
+      { id: "outcome", labelKey: "contentDetail.publishForm.phase.outcome" },
     ],
     [],
   );
@@ -71,12 +71,14 @@ export function PublishPhaseStepper({
   function isComplete(phaseId: Phase["id"]): boolean {
     if (currentReadinessBlockerCount > 0) return false;
     if (blockingChannels > 0) return false;
-    // Channels step is complete once a channel is selected and the
+    // The Package step is complete once a channel is selected and the
     // network has at least one reachable channel.
-    if (phaseId === "channels") return activeChannel !== "" && channels.length > 0;
-    // Compliance + Review sit downstream of copy being clean — we
-    // don't introspect the underlying form state here; the readiness
-    // checklist already gates approval eligibility.
+    if (phaseId === "package") return activeChannel !== "" && channels.length > 0;
+    // Outcome is a recording step, not a package-completeness step: it
+    // is complete only once every channel has a publication record, and
+    // it is LOCKED until publishing setup is ready. The other phases are
+    // downstream of the package being clean — we don't introspect the
+    // form state here; readiness already gates approval eligibility.
     return currentReadinessBlockerCount === 0;
   }
   // The "current" phase is the EARLIEST one still open. After that,
@@ -84,12 +86,12 @@ export function PublishPhaseStepper({
   const firstIncompletePhaseIdx = phases.findIndex((p) => !isComplete(p.id));
   const allPhasesComplete = firstIncompletePhaseIdx === -1;
   const currentPhaseIdx = allPhasesComplete ? phases.length - 1 : firstIncompletePhaseIdx;
-  const totalBlockingCopyStep = blockingChannels > 0 || currentReadinessBlockerCount > 0;
+  const totalBlockingPackageStep = blockingChannels > 0 || currentReadinessBlockerCount > 0;
   const phaseHref: Record<Phase["id"], string> = {
-    channels: "#publish-channel-workspace",
-    copy: "#publish-destination",
+    package: "#publish-destination",
     compliance: "#publish-compliance",
-    review: "#publish-review",
+    review: "#publish-approval",
+    outcome: "#publish-outcomes",
   };
   return (
     <div
@@ -97,11 +99,30 @@ export function PublishPhaseStepper({
       data-testid="publish-phase-stepper"
       role="navigation"
       aria-label={t("contentDetail.publishForm.phaseNavLabel")}
+      aria-describedby="publish-phase-stepper-description"
     >
+      {/*
+        Labelled and described, not just styled. This is a four-step
+        preparation strip for ONE channel, and the workspace's right
+        rail is a six-stage lifecycle — two horizontal step-looking
+        things on one screen is how a user ends up unsure which one to
+        follow. The heading names it explicitly; the rail owns "what
+        happens to this item next", this owns "is this channel ready".
+      */}
+      <p
+        className="text-label text-fg-primary px-1 pt-1 font-semibold"
+        data-testid="publish-phase-stepper-title"
+      >
+        {t("contentDetail.publishForm.phaseStepsTitle")}
+      </p>
+      <p className="text-label text-fg-muted px-1 pb-1" id="publish-phase-stepper-description">
+        {t("contentDetail.publishForm.phaseStepsDescription")}
+      </p>
       <ol className="flex flex-wrap items-center gap-1">
         {phases.map((phase, idx) => {
           const complete = isComplete(phase.id);
-          const isCurrent = idx === currentPhaseIdx && (totalBlockingCopyStep || allPhasesComplete);
+          const isCurrent =
+            idx === currentPhaseIdx && (totalBlockingPackageStep || allPhasesComplete);
           const isNext = idx > currentPhaseIdx;
           return (
             <li
@@ -138,7 +159,7 @@ export function PublishPhaseStepper({
                   >
                     {t(phase.labelKey)}
                   </p>
-                  {isCurrent && phase.id === "copy" ? (
+                  {isCurrent && phase.id === "package" ? (
                     <p className="text-label text-warning" data-testid="publish-phase-current-hint">
                       {currentReadinessBlockerCount > 0
                         ? t("contentDetail.publishForm.phaseActiveBlockers", {

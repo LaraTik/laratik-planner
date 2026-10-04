@@ -491,6 +491,19 @@ export default async function ContentDetailPage({
   // first channel that still needs an outcome. This removes a redundant
   // "open outcomes → choose a channel → open the form" sequence while
   // keeping the remaining channels available below it.
+  /*
+   * D5 — the outcomes section unlocks on setup readiness **or** on any
+   * record of prior publication. Gating it on `publishingSetupReady`
+   * alone would let a newer readiness flag hide a legacy item's
+   * publication history, which is the one thing an operator can never
+   * recreate. Every historical term stays an unlock trigger.
+   */
+  const outcomesUnlocked =
+    publishingSetupReady ||
+    publicationByChannel.size > 0 ||
+    item.status === "partially_published" ||
+    item.status === "published";
+
   const firstPendingOutcomeChannelId = publishingSetupReady
     ? (item.channels.find((channel) => !publicationByChannel.has(channel.id))?.id ?? null)
     : null;
@@ -1445,6 +1458,11 @@ export default async function ContentDetailPage({
                   publishingSetupReady={publishingSetupReady}
                   outcomesRecorded={publicationByChannel.size}
                   issues={readiness.issues}
+                  workflowAtPublishingSetup={
+                    item.status === "ready_to_publish" ||
+                    item.status === "partially_published" ||
+                    item.status === "published"
+                  }
                   t={t}
                 />
                 {approvedBeforeLaterEdits ? (
@@ -1536,6 +1554,11 @@ export default async function ContentDetailPage({
                         }))}
                         readiness={readiness}
                         canSavePackage={canSavePackage}
+                        workflowAtPublishingSetup={
+                          item.status === "ready_to_publish" ||
+                          item.status === "partially_published" ||
+                          item.status === "published"
+                        }
                         canApproveFinalCopy={canApproveFinalCopy}
                         canConfirmReadiness={canConfirmReadiness}
                         canExcludeChannel={
@@ -1574,14 +1597,13 @@ export default async function ContentDetailPage({
                   <PlanningSection
                     id="publish-outcomes"
                     title={t("contentDetail.publishNavigator.outcomes")}
-                    description={t("contentDetail.publishWorkspace.outcomesDescription")}
-                    collapsible
-                    defaultOpen={
-                      publishingSetupReady ||
-                      publicationByChannel.size > 0 ||
-                      item.status === "partially_published" ||
-                      item.status === "published"
+                    description={
+                      outcomesUnlocked
+                        ? t("contentDetail.publishWorkspace.outcomesDescription")
+                        : t("contentDetail.publishWorkspace.outcomesLockedDescription")
                     }
+                    collapsible
+                    defaultOpen={outcomesUnlocked}
                   >
                     <div className="space-y-3" data-testid="publishing-cards">
                       {item.channels.map((ch) => {

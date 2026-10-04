@@ -85,7 +85,11 @@ describe("PublishPackageForm localization", () => {
     expect(screen.getByTestId("publish-channel-meta")).toHaveTextContent("منشور ثابت");
     expect(screen.getByLabelText("النص البديل وإمكانية الوصول")).toHaveAttribute("dir", "rtl");
     expect(screen.getByTestId("publish-save-draft")).toHaveTextContent("حفظ المسودة");
-    expect(screen.getByTestId("publish-ready")).toHaveTextContent("تحديد إعداد النشر كجاهز");
+    // One state, one action. This channel has never been saved, so Save
+    // is the primary action — offering "mark setup ready" for a package
+    // that does not exist yet would be a lie the server rejects.
+    expect(screen.getByTestId("publish-save-draft")).toBeInTheDocument();
+    expect(screen.queryByTestId("publish-ready")).not.toBeInTheDocument();
   });
 
   it("offers a localized exclusion action for a pending channel", () => {
