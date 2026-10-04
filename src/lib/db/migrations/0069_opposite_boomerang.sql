@@ -1,0 +1,2 @@
+ALTER TABLE "mcp_access_token" DROP CONSTRAINT "mcp_access_token_scopes_valid";--> statement-breakpoint
+ALTER TABLE "mcp_access_token" ADD CONSTRAINT "mcp_access_token_scopes_valid" CHECK ("mcp_access_token"."scopes" <@ ARRAY['content:read', 'content:write', 'platform:diagnostics:read', 'platform:diagnostics:write']::text[] AND cardinality("mcp_access_token"."scopes") > 0);

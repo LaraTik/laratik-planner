@@ -12,6 +12,16 @@ Authorization: Bearer lpm_<token>
 Content-Type: application/json
 ```
 
+Clients must also send `Accept: application/json, text/event-stream` on every
+POST. The deployed route currently returns one JSON response per request; the
+MCP-required SSE media type remains in `Accept` for protocol compatibility.
+
+The disposable authenticated transport contract is covered by
+`tests/integration/mcp-http-smoke.test.ts`: it issues a token through the real
+token service, completes `initialize`, `tools/list`, and
+`laratik_planner_list_research`, then revokes the token and proves the next
+request returns HTTP 401. It uses no production credentials or data.
+
 Keep this reference, the route catalog, evaluation cases, tests, Account UI,
 and production evidence synchronized. The mandatory change checklist is in
 [`docs/operations/mcp-maintenance.md`](../operations/mcp-maintenance.md).

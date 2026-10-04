@@ -1,5 +1,34 @@
 # Migration and deployment evidence
 
+## Migration 0069 — MCP diagnostics scope compatibility
+
+`0069_opposite_boomerang.sql` replaces the `mcp_access_token_scopes_valid`
+check constraint with the complete four-scope vocabulary already exposed by
+the token service and Account UI: `content:read`, `content:write`,
+`platform:diagnostics:read`, and `platform:diagnostics:write`. Existing token
+rows are unchanged; the migration only widens the accepted set, and the
+non-empty-array invariant remains enforced.
+
+Compatibility: older application images continue to authenticate existing
+content-only tokens. The diagnostics scope was already part of the service
+allowlist, so this forward migration repairs the persistence mismatch without
+changing token format, expiry, revocation, authorization, or stored secrets.
+No data backfill is required.
+
+Backup + rollback: take the normal Postgres backup before deployment. A normal
+application rollback leaves the widened check in place and is safe because
+older images ignore the additional accepted values. A schema rollback is
+forward-only: restore the verified pre-migration backup, or apply a reviewed
+forward-fix that restores the narrower check only after confirming that no
+diagnostics-scoped token rows exist. Never edit this applied migration.
+
+Evidence: `tests/integration/mcp-http-smoke.test.ts` issues a token carrying
+`platform:diagnostics:read`, exercises authenticated `initialize`,
+`tools/list`, `laratik_planner_list_research`, and immediate revocation over
+the real HTTP route, and runs against the disposable database. The migration
+drill and exact-clean release evidence are recorded below and in
+`docs/production-readiness/TEST_EVIDENCE.md`.
+
 ## Migration 0066 — named research collections
 
 `0066_last_robin_chapel.sql` is additive. It creates the workspace-scoped

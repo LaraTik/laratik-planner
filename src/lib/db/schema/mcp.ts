@@ -40,7 +40,7 @@ export const mcpAccessTokens = pgTable(
     check("mcp_access_token_expiry_valid", sql`${t.expiresAt} > ${t.createdAt}`),
     check(
       "mcp_access_token_scopes_valid",
-      sql`${t.scopes} <@ ARRAY['content:read', 'content:write']::text[] AND cardinality(${t.scopes}) > 0`,
+      sql`${t.scopes} <@ ARRAY['content:read', 'content:write', 'platform:diagnostics:read', 'platform:diagnostics:write']::text[] AND cardinality(${t.scopes}) > 0`,
     ),
   ],
 );
