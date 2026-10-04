@@ -9,6 +9,19 @@ the plan. The first implementation slice must preserve the current Stitch
 source, extend the existing authorized social analytics read model, and add
 light/dark verification before the Command Center surface is called ready.
 
+> **2026-10-04 exact-SHA release checkpoint** — Commit `5f310cd2` is clean,
+> pushed to `main`, and deployed. The release-blocking brand-kit build issue
+> was repaired by removing module-load `next/font/google` preview loaders and
+> using local CSS preview families with stable fallbacks. Focused typography
+> tests pass 16/16; the full local unit suite passes 462 files / 4,341 tests;
+> the full integration suite passes; CI `37191755586`, Deploy `37192724539`,
+> and Release `37192802008` all passed. Production health reports version
+> `5f310cd` with database/schema, storage/R2, and rate limiting healthy. The
+> advisory Chromium run remains nonblocking with 236 passed, 1 skipped, and 9
+> known fixture/source-data or timeout failures. This is `Tested`, not
+> `Verified`: authenticated production MCP smoke, provider UAT, manual
+> accessibility review, and independent review remain open.
+
 > **2026-10-04 Trend Radar recovery and production checkpoint** — The source
 > onboarding wizard now aborts a stalled bulk-enable request after 15 seconds,
 > announces a localized timeout/error through an accessible alert, and offers a

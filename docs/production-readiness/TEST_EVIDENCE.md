@@ -3,6 +3,32 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Release checkpoint — 2026-10-04, exact clean SHA @ `5f310cd2`
+
+This checkpoint records the release-blocking build repair after the MCP
+transport work. Brand-kit typography previews no longer import
+`next/font/google` at module load, so the production build does not depend on
+the external Google Fonts response shape. Preview family names and fallback
+styling remain available through local CSS declarations.
+
+| Command / check                              | Result                                            | Release interpretation                                                                                                               |
+| -------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused brand-kit typography tests           | **Pass — 16/16**                                  | Typography family metadata, preview classes, and template rendering remain covered.                                                  |
+| Strict typecheck / formatting                | **Pass**                                          | The build repair and CSS preview declarations are clean.                                                                             |
+| `pnpm build`                                 | **Pass**                                          | The production bundle builds without the previous `next/font/google` loader failure.                                                 |
+| Full local unit suite                        | **Pass — 462 files / 4,341 tests**                | No tests were skipped or weakened.                                                                                                   |
+| Full local integration suite                 | **Pass**                                          | Disposable Postgres integration coverage, including authenticated MCP HTTP smoke, passed.                                            |
+| GitHub CI `37191755586`                      | **Pass**                                          | Quality, integration, migration, audit, security/workflow linters, Docker build, image push, and smoke gates passed.                 |
+| Deploy `37192724539` / Release `37192802008` | **Pass**                                          | The exact SHA was deployed and released successfully.                                                                                |
+| Production health check                      | **Pass — version `5f310cd`**                      | Database/schema, storage/R2, and rate limiting reported healthy.                                                                     |
+| Chromium advisory run                        | **Nonblocking — 236 passed, 1 skipped, 9 failed** | Remaining failures are known Trend Radar fixture/source-data and two timeout cases; the advisory job does not gate CI or deployment. |
+
+The implementation is `Tested`, not `Verified`. Production authenticated MCP
+smoke with an owner-approved temporary token, provider-backed competitor UAT,
+manual accessibility review, and independent review remain open. The
+Chromium advisory failures are recorded as follow-up quality work rather than
+hidden or used to weaken a release gate.
+
 ## Re-baseline — 2026-10-04, authenticated MCP transport @ `63105a64`
 
 | Command / check                               | Result                             | Release interpretation                                                                                                                                     |
