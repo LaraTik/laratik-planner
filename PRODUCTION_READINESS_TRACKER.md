@@ -9,6 +9,28 @@ the plan. The first implementation slice must preserve the current Stitch
 source, extend the existing authorized social analytics read model, and add
 light/dark verification before the Command Center surface is called ready.
 
+> **2026-10-04 Trend Radar recovery and production checkpoint** — The source
+> onboarding wizard now aborts a stalled bulk-enable request after 15 seconds,
+> announces a localized timeout/error through an accessible alert, and offers a
+> localized retry while preserving the selected sources. English and Arabic
+> copy remain catalog-driven. Targeted i18n/Trend UX contracts pass 12/12;
+> targeted lint and typecheck pass; the production build passes. The local full
+> unit attempt was resource-stressed and ended at 4,338/4,340 with only the
+> unrelated `dev-sign-in-retry` and `ui/combobox` timeout tests failing; the
+> authoritative GitHub CI run `37184020252` passed the full quality,
+> integration, audit, workflow, sidecar, and image gates. Commit `1f686f30`
+> is deployed by `37184955989`; production health reports database/schema,
+> storage/R2, and rate limiting up, with the app container healthy and VPS
+> disk usage at 31%. This remains `Tested`, not `Verified`.
+
+> **2026-10-04 MCP boundary status** — The public MCP transport boundary
+> remains verified only at the unauthenticated layer: POST returns 401 with
+> bearer challenge and GET returns 405 with `Allow: POST`. The authenticated
+> `initialize` → `tools/list` → `list_research` smoke and immediate token
+> revocation still require an authenticated Account browser session; no
+> credentials were guessed or transmitted. Provider UAT and independent
+> review remain open.
+
 > **2026-10-02 named research watchlist implementation checkpoint** — M1 source-only
 > implementation is complete from the full Meedro integration plan. Migration
 > `0067_aberrant_bishop` adds named workspace watchlists and account membership

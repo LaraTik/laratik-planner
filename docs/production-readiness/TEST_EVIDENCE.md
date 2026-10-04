@@ -3,6 +3,21 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Re-baseline — 2026-10-04, Trend Radar recovery @ `1f686f30`
+
+| Command / check                    | Result                                                                                                                                                     | Release interpretation                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Targeted Trend/i18n contracts      | **Pass — 12/12**                                                                                                                                           | The timeout, localized error, retry, and catalog contracts are covered.                       |
+| Targeted lint / strict typecheck   | **Pass**                                                                                                                                                   | The changed UI and catalogs are clean.                                                        |
+| `pnpm build`                       | **Pass**                                                                                                                                                   | The production bundle builds successfully.                                                    |
+| GitHub CI `37184020252`            | **Pass** — full quality/integration/audit, workflow/security linters, Trend sidecar, SMTP, Docker image, smoke, and GHCR push                              | CI is authoritative for this revision.                                                        |
+| Deploy `37184955989` + live health | **Pass** — production version `1f686f3`; DB/schema, storage/R2, and rate limiting healthy; app container healthy                                           | The exact tested image is live.                                                               |
+| Local full unit attempt            | **4,338/4,340 passed**; unrelated timeout failures in `tests/unit/dev-sign-in-retry.test.ts` and `tests/unit/ui/combobox.test.tsx` under resource pressure | Not treated as a green local full-suite claim; no workaround or test weakening was committed. |
+| Advisory quality run `37184020251` | Cancelled after the known dev-server stall pattern                                                                                                         | Non-blocking advisory signal; critical CI remained green.                                     |
+
+The implementation remains `Tested`, not `Verified`; authenticated MCP smoke,
+provider UAT, manual accessibility review, and independent review remain open.
+
 ## Coverage + gate re-tightening — 2026-09-28
 
 Two separate defects, both fixed in one change: tests that were missing, and
