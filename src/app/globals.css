@@ -241,6 +241,52 @@ html[dir="rtl"] body {
     sans-serif;
 }
 
+/* Brand-kit typography previews. These stay as local CSS declarations so
+ * production builds never depend on Google Fonts being reachable or
+ * returning a particular stylesheet response. */
+.font-preview-inter {
+  font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-roboto {
+  font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-open-sans {
+  font-family: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-lato {
+  font-family: "Lato", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-montserrat {
+  font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-poppins {
+  font-family: "Poppins", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-source-sans-3 {
+  font-family: "Source Sans 3", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-nunito {
+  font-family: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-work-sans {
+  font-family: "Work Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-ibm-plex-sans {
+  font-family: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-playfair-display {
+  font-family: "Playfair Display", Georgia, serif;
+}
+.font-preview-merriweather {
+  font-family: "Merriweather", Georgia, serif;
+}
+.font-preview-raleway {
+  font-family: "Raleway", ui-sans-serif, system-ui, sans-serif;
+}
+.font-preview-fira-sans {
+  font-family: "Fira Sans", ui-monospace, monospace;
+}
+
 /* Focus ring — always visible for keyboard users (§18) */
 *:focus-visible {
   outline: 2px solid var(--focus-ring);
