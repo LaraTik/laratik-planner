@@ -5,7 +5,11 @@ import { db } from "@/lib/db";
 import { activityEvents, contentItemChannels, contentItems, workspaces } from "@/lib/db/schema";
 import { hasWorkspaceRole, isAgencyAdmin, type Actor } from "@/lib/auth/policy";
 import { PlatformPayloadSchema, type PlatformPayload } from "./payload-schemas";
-import { recordMaterialityEvent, MATERIAL_RESOURCE_PLATFORM_PAYLOAD } from "./materiality";
+import {
+  recordMaterialityEvent,
+  recordMaterialityEventInTx,
+  MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
+} from "./materiality";
 
 /**
  * STUDIOFLOW_MASTER_PROMPT.md §4 (Milestone 4) — Platform
@@ -36,8 +40,57 @@ export const SavePlatformPayloadInputSchema = z.object({
   contentItemId: z.string().uuid(),
   socialChannelId: z.string().uuid(),
   payload: PlatformPayloadSchema,
+  /**
+   * Optimistic-concurrency token: the `content_item_channels.updated_at`
+   * the client read before editing.
+   *
+   * This is deliberately NOT `copySourceRevision`. That column is
+   * *provenance* — "the content revision this channel last inherited
+   * shared audience copy from" (`content.ts:163-165`) — and is written
+   * as `materiality.revision` at save time. Using it as a write token
+   * would conflate "which copy revision is this based on" with "has
+   * this row changed since I read it", and the two diverge the moment
+   * anyone saves without touching shared copy.
+   *
+   * `null`/absent keeps last-write-wins for callers that cannot supply
+   * the token; the publish form always supplies it.
+   */
+  expectedUpdatedAt: z.string().datetime().nullable().optional(),
 });
 export type SavePlatformPayloadInput = z.infer<typeof SavePlatformPayloadInputSchema>;
+
+/**
+ * One channel's entry in an atomic batch save.
+ *
+ * `expectedUpdatedAt` is the same optimistic-concurrency token the
+ * single-channel path uses. It is required here (not optional) because
+ * a batch is exactly the situation where a stale write is most likely:
+ * the operator edits several channels against one page load, and a
+ * collaborator may have saved one of them in between.
+ */
+export const SavePlatformPayloadBatchEntrySchema = z.object({
+  socialChannelId: z.string().uuid(),
+  payload: PlatformPayloadSchema,
+  expectedUpdatedAt: z.string().datetime().nullable(),
+});
+export type SavePlatformPayloadBatchEntry = z.infer<typeof SavePlatformPayloadBatchEntrySchema>;
+
+export const SavePlatformPayloadBatchInputSchema = z.object({
+  contentItemId: z.string().uuid(),
+  entries: z.array(SavePlatformPayloadBatchEntrySchema).min(1).max(25),
+});
+export type SavePlatformPayloadBatchInput = z.infer<typeof SavePlatformPayloadBatchInputSchema>;
+
+/** Per-channel outcome of a batch. `ok: false` carries the failing field. */
+export type BatchChannelResult =
+  | { socialChannelId: string; ok: true; payload: PlatformPayload }
+  | {
+      socialChannelId: string;
+      ok: false;
+      errorCode: string;
+      fieldPath?: string | undefined;
+      message?: string | undefined;
+    };
 
 export const FinalCopyApprovalInputSchema = z.object({
   contentItemId: z.string().uuid(),
@@ -129,7 +182,10 @@ export async function savePlatformPayload(
   // Approval metadata is server-owned. Editing the package must not revoke
   // an existing approval; only the explicit approval action may change it.
   const [existingRow] = await db
-    .select({ platformPayload: contentItemChannels.platformPayload })
+    .select({
+      platformPayload: contentItemChannels.platformPayload,
+      updatedAt: contentItemChannels.updatedAt,
+    })
     .from(contentItemChannels)
     .where(
       and(
@@ -138,6 +194,27 @@ export async function savePlatformPayload(
       ),
     )
     .limit(1);
+
+  // Optimistic concurrency. Reject a write whose base row moved since the
+  // client read it, rather than silently overwriting a collaborator's
+  // package. The comparison is inside the UPDATE's WHERE so a concurrent
+  // commit between the read and the write is caught too.
+  const expected = input.expectedUpdatedAt ? new Date(input.expectedUpdatedAt).getTime() : null;
+  if (expected !== null && existingRow?.updatedAt) {
+    if (existingRow.updatedAt.getTime() !== expected) {
+      throw new PlatformPayloadError(
+        "INVALID",
+        "This channel package changed since you loaded it. Reload before saving.",
+        {
+          contentItemId: input.contentItemId,
+          socialChannelId: input.socialChannelId,
+          expectedUpdatedAt: input.expectedUpdatedAt,
+          actualUpdatedAt: existingRow.updatedAt.toISOString(),
+        },
+      );
+    }
+  }
+
   const existingPayload = existingRow?.platformPayload
     ? PlatformPayloadSchema.safeParse(existingRow.platformPayload)
     : null;
@@ -181,6 +258,173 @@ export async function savePlatformPayload(
     );
 
   return payload;
+}
+
+/**
+ * Save several channel packages as ONE material edit.
+ *
+ * Invariant: **one call = one material edit.** Every payload lands in a
+ * single transaction together with exactly one `content_items.revision`
+ * increment, one audit row, and one reviewer notification fan-out.
+ *
+ * The previous behaviour looped the single-channel action from the
+ * client, which meant N sequential round-trips, N revision increments
+ * and N notification batches for what the operator experienced as one
+ * click — and a partial failure left the form reporting "2 of 5
+ * channels failed" with no way to tell which or to retry them.
+ *
+ * Validate-first: if any entry fails schema validation or its
+ * `expectedUpdatedAt` is stale, **nothing** is written and every failing
+ * channel is reported. Savepoints for partial persistence are
+ * deliberately not offered — half-saved publishing state is worse than
+ * a rejected batch, because the operator cannot tell which packages the
+ * notifications were about.
+ */
+export async function savePlatformPayloadsBatch(
+  actor: Actor,
+  workspaceId: string,
+  input: SavePlatformPayloadBatchInput,
+): Promise<{
+  ok: boolean;
+  results: BatchChannelResult[];
+  revision: number | null;
+}> {
+  const parsed = SavePlatformPayloadBatchInputSchema.parse(input);
+  const allowed = await hasWorkspaceRole({ id: actor.id }, workspaceId, [
+    "workspace_manager",
+    "content_planner",
+  ]);
+  if (!allowed) {
+    throw new PlatformPayloadError(
+      "FORBIDDEN",
+      "Only workspace managers and content planners can save a publish package.",
+      { workspaceId },
+    );
+  }
+
+  for (const entry of parsed.entries) {
+    await ensureContentItemChannelInWorkspace(
+      parsed.contentItemId,
+      entry.socialChannelId,
+      workspaceId,
+    );
+  }
+
+  // ─── Validate every channel before writing any of them ────────────
+  const existingRows = await db
+    .select({
+      socialChannelId: contentItemChannels.socialChannelId,
+      platformPayload: contentItemChannels.platformPayload,
+      updatedAt: contentItemChannels.updatedAt,
+    })
+    .from(contentItemChannels)
+    .where(eq(contentItemChannels.contentItemId, parsed.contentItemId));
+  const existingByChannel = new Map(existingRows.map((row) => [row.socialChannelId, row]));
+
+  const results: BatchChannelResult[] = [];
+  const ready: Array<{ socialChannelId: string; payload: PlatformPayload }> = [];
+
+  for (const entry of parsed.entries) {
+    const row = existingByChannel.get(entry.socialChannelId);
+    if (entry.expectedUpdatedAt && row?.updatedAt) {
+      if (row.updatedAt.toISOString() !== new Date(entry.expectedUpdatedAt).toISOString()) {
+        results.push({
+          socialChannelId: entry.socialChannelId,
+          ok: false,
+          errorCode: "stale",
+          message: "This channel package changed since you loaded it. Reload before saving.",
+        });
+        continue;
+      }
+    }
+    const existingPayload = row?.platformPayload
+      ? PlatformPayloadSchema.safeParse(row.platformPayload)
+      : null;
+    const serverApproval = existingPayload?.success
+      ? existingPayload.data.approval
+      : { finalCopyApproved: false, approvedByUserId: null, approvedAt: null };
+    const merged = PlatformPayloadSchema.safeParse({
+      ...entry.payload,
+      approval: serverApproval,
+    });
+    if (!merged.success) {
+      // Defence in depth. `SavePlatformPayloadBatchInputSchema` already
+      // validated every `payload` through `PlatformPayloadSchema` when
+      // this function was entered, and `serverApproval` is either a
+      // value that previously passed `ApprovalPayloadSchema` or a
+      // hard-coded valid literal — so this re-parse cannot fail with
+      // today's callers. A schema-invalid payload therefore surfaces as
+      // a `ZodError` from the entry parse, with zero writes; the
+      // *action* layer is what reports it per channel, with a
+      // `fieldPath`, before it ever reaches here.
+      const issue = merged.error.issues[0];
+      const segments = (issue?.path ?? []).filter(
+        (segment): segment is string => typeof segment === "string",
+      );
+      const fieldPath = segments.at(-1);
+      results.push({
+        socialChannelId: entry.socialChannelId,
+        ok: false,
+        errorCode: "invalidPlatformPayload",
+        ...(fieldPath && fieldPath !== "platform" && !/^\d+$/.test(fieldPath) ? { fieldPath } : {}),
+        message: issue?.message,
+      });
+      continue;
+    }
+    ready.push({ socialChannelId: entry.socialChannelId, payload: merged.data });
+  }
+
+  // Any failure aborts the whole batch: nothing has been written yet.
+  if (results.length > 0) {
+    return { ok: false, results, revision: null };
+  }
+
+  const revision = await db.transaction(async (tx) => {
+    // Compare-and-set per row. The read above and this write are in the
+    // same transaction as the revision bump, so a collaborator's commit
+    // between them is caught here rather than silently overwritten.
+    for (const entry of ready) {
+      const row = existingByChannel.get(entry.socialChannelId);
+      const [written] = await tx
+        .update(contentItemChannels)
+        .set({ platformPayload: entry.payload, updatedAt: new Date() })
+        .where(
+          and(
+            eq(contentItemChannels.contentItemId, parsed.contentItemId),
+            eq(contentItemChannels.socialChannelId, entry.socialChannelId),
+            ...(row?.updatedAt ? [eq(contentItemChannels.updatedAt, row.updatedAt)] : []),
+          ),
+        )
+        .returning({ socialChannelId: contentItemChannels.socialChannelId });
+      if (!written) {
+        throw new PlatformPayloadError(
+          "INVALID",
+          "This channel package changed while saving. Reload and try again.",
+          { socialChannelId: entry.socialChannelId },
+        );
+      }
+    }
+
+    // One revision bump, one audit row, one notification fan-out for the
+    // whole batch.
+    const outcome = await recordMaterialityEventInTx(tx, {
+      actor,
+      contentItemId: parsed.contentItemId,
+      resource: MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
+      beforeValue: null,
+      afterValue: ready.map((entry) => ({
+        socialChannelId: entry.socialChannelId,
+        payload: entry.payload,
+      })),
+      reasonCode: "platform_payload.save_batch",
+    });
+    return outcome.revision;
+  });
+
+  for (const entry of ready) {
+    results.push({ socialChannelId: entry.socialChannelId, ok: true, payload: entry.payload });
+  }
+  return { ok: true, results, revision };
 }
 
 /**
@@ -400,6 +644,12 @@ export async function readAllChannelPayloads(input: {
 export type ChannelPayloadState = {
   payload: PlatformPayload | null;
   copySourceRevision: number | null;
+  /**
+   * Row timestamp, surfaced so the publish form can send it back as
+   * `expectedUpdatedAt`. `copySourceRevision` is provenance, not a row
+   * version, so it cannot serve as the write token.
+   */
+  updatedAt: string | null;
 };
 
 /** Read payload plus the shared-copy revision it was saved against. */
@@ -427,6 +677,7 @@ export async function readAllChannelPayloadStates(input: {
       socialChannelId: contentItemChannels.socialChannelId,
       platformPayload: contentItemChannels.platformPayload,
       copySourceRevision: contentItemChannels.copySourceRevision,
+      updatedAt: contentItemChannels.updatedAt,
     })
     .from(contentItemChannels)
     .innerJoin(contentItems, eq(contentItems.id, contentItemChannels.contentItemId))
@@ -442,6 +693,7 @@ export async function readAllChannelPayloadStates(input: {
     out[row.socialChannelId] = {
       payload: raw?.platform ? PlatformPayloadSchema.parse(raw) : null,
       copySourceRevision: row.copySourceRevision,
+      updatedAt: row.updatedAt ? row.updatedAt.toISOString() : null,
     };
   }
   return out;

@@ -829,6 +829,62 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface PR2: atomic batch save, optimistic concurrency, approval ownership
+
+Second of five PRs remodelling the Publishing tab. Changes the _save mechanics_; the
+information architecture is unchanged until PR3.
+
+- **fix(publishing): "Save all" was N material edits, not one.** The form looped the
+  single-channel action client-side, so one click produced N sequential server round-trips,
+  N `content_items.revision` increments and N reviewer-notification fan-outs — while a
+  partial failure reported only "2 of 5 channels failed", with no way to identify which or
+  to retry them. New `savePlatformPayloadsBatch` is **atomic**: every entry is validated
+  first, and if any fails, **nothing** is written and each failing channel is reported
+  with its own result. Otherwise one transaction writes all payloads, bumps the revision
+  exactly once, and records one materiality event. The client-side loop is gone.
+  Savepoints for partial persistence are deliberately not offered: half-saved publishing
+  state is worse than a rejected batch, because the operator cannot tell which packages
+  the notifications were about.
+
+- **feat(publishing): optimistic concurrency on `content_item_channels.updated_at`.**
+  Deliberately **not** `copySourceRevision` — that column is _provenance_ ("the content
+  revision this channel last inherited shared audience copy from", `content.ts:163-165`)
+  and is written as `materiality.revision` at save time, so the two diverge the moment
+  anyone saves without touching shared copy. The token is enforced on **both** the single
+  and the batch path, as a compare-and-set inside the transaction's `WHERE`, so a
+  collaborator's commit between read and write is caught rather than silently overwritten.
+  `ChannelPayloadState` now surfaces `updatedAt`. The form keeps every local draft on a
+  conflict and says so — it never discards the operator's work to resolve one.
+
+- **fix(publishing): the client was clearing an approval the server never revoked.**
+  `updateDraft` reset `payload.approval` to unapproved on every keystroke, but
+  `savePlatformPayload` re-reads the stored approval and spreads it **last**, discarding
+  whatever the client sent (`platform-payload-service.ts:129-130,147-150`). So the form
+  displayed "not approved" for a package the server still considered approved, and the
+  discrepancy silently healed on the next render. The reset is deleted, and so is
+  `approvalResetHint` — which promised a reset that never happened. Only
+  `setFinalCopyApprovalAction` changes approval now.
+
+- **fix(publishing): switching channel tabs silently carried an unsaved draft.** The
+  unload and navigation guards only intercept leaving the page, so the one transition they
+  cannot cover had no prompt and no autosave to catch it. Channel switching now confirms
+  first. Autosave is still the wrong answer here: every save is a material edit that
+  increments the revision and fans out approval activity.
+
+- **refactor(publishing):** `recordMaterialityEvent` now delegates to a new
+  `recordMaterialityEventInTx(tx, input)` so the batch can share one transaction. The
+  member/item pre-flight stays **outside** the transaction — a missing item or a
+  non-member must not take one at all, which
+  `publishing-materiality.test.ts` asserts via `transactionCalls`. A new reason code
+  `platform_payload.save_batch` distinguishes the batch audit row.
+
+**Documented, not a defect:** the per-channel `invalidPlatformPayload` branch inside
+`savePlatformPayloadsBatch` is defence in depth and unreachable with today's callers —
+the batch input schema already validates each payload through `PlatformPayloadSchema`
+before the loop. A schema-invalid payload surfaces as a `ZodError` with zero writes, and
+it is the _action_ layer that reports it per channel with a `fieldPath`. Asserted as the
+real observable behaviour rather than as a weakened expectation.
+
 ### 2026-10-04 — Publish surface PR1: correctness (platform fields, blocker→control map, write authority)
 
 First of five PRs remodelling the Publishing tab. No IA change in this one — the page

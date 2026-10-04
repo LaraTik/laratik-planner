@@ -192,7 +192,8 @@
     "noApprovedDelivery": "لا توجد نسخة معتمدة بعد — يمنع الجاهزية.",
     "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر.",
     "statusFixRequiredFields": "أكمل حقول المنصة المطلوبة قبل الحفظ.",
-    "statusFixRequiredFields_many": "أكمل حقول المنصة المطلوبة في {count} قنوات قبل الحفظ."
+    "statusFixRequiredFields_many": "أكمل حقول المنصة المطلوبة في {count} قنوات قبل الحفظ.",
+    "statusBatchStale": "تغيّر {count} قناة منذ تحميل هذه الصفحة. تم الاحتفاظ بمسوداتك — أعد التحميل قبل الحفظ."
   },
   "readinessPanel": {
     "readyTitle": "جاهز للنشر",

@@ -67,6 +67,7 @@ export const MATERIAL_RESOURCE_PLATFORM_PAYLOAD: MaterialResource = "platform_pa
 
 export const MaterialityReasonCodeSchema = z.enum([
   "platform_payload.save",
+  "platform_payload.save_batch",
   "platform_payload.clear",
   "caption.update",
   "audience_copy.update",
@@ -166,9 +167,9 @@ export function toAuditData(resource: MaterialResource, value: unknown): Record<
  * its channel. The actor must be a workspace member of the
  * item's workspace.
  */
-export async function recordMaterialityEvent(
+async function assertMaterialityAllowed(
   input: RecordMaterialityEventInput,
-): Promise<{ revision: number; cancelledApprovalCount: number; notifiedReviewerCount: number }> {
+): Promise<{ id: string; workspaceId: string }> {
   const [item] = await db
     .select({ id: contentItems.id, workspaceId: contentItems.workspaceId })
     .from(contentItems)
@@ -189,8 +190,43 @@ export async function recordMaterialityEvent(
       workspaceId: item.workspaceId,
     });
   }
+  return item;
+}
 
-  return db.transaction(async (tx) => {
+export async function recordMaterialityEvent(
+  input: RecordMaterialityEventInput,
+): Promise<{ revision: number; cancelledApprovalCount: number; notifiedReviewerCount: number }> {
+  // Pre-flight BEFORE opening a transaction: a missing item or a
+  // non-member must not take a transaction at all.
+  const item = await assertMaterialityAllowed(input);
+  return db.transaction((tx) => recordMaterialityEventInTx(tx, input, item));
+}
+
+/**
+ * The body of `recordMaterialityEvent`, taking the caller's transaction.
+ *
+ * The publish surface saves several channel packages as ONE material
+ * edit (one revision bump, one audit row, one notification fan-out).
+ * To make that atomic with the payload writes, the batch opens its own
+ * transaction and calls this with the same `tx` — otherwise the payload
+ * writes and the revision bump would be two independent transactions and
+ * a failure between them would leave bumped revisions with no payloads
+ * saved.
+ *
+ * `item` is passed in by `recordMaterialityEvent`, which has already run
+ * the pre-flight outside the transaction. A caller already inside a
+ * transaction (the batch path) omits it and the pre-flight runs here
+ * against `db`, since the two reads it performs do not need to share the
+ * caller's transaction.
+ */
+export async function recordMaterialityEventInTx(
+  tx: Parameters<Parameters<typeof db.transaction>[0]>[0],
+  input: RecordMaterialityEventInput,
+  resolvedItem?: { id: string; workspaceId: string },
+): Promise<{ revision: number; cancelledApprovalCount: number; notifiedReviewerCount: number }> {
+  const item = resolvedItem ?? (await assertMaterialityAllowed(input));
+
+  {
     // 1. Increment revision. The atomic UPDATE ... SET revision
     //    = revision + 1 is race-free — concurrent writers each
     //    get a unique revision value.
@@ -274,7 +310,7 @@ export async function recordMaterialityEvent(
       cancelledApprovalCount: 0,
       notifiedReviewerCount: notified,
     };
-  });
+  }
 }
 
 /**

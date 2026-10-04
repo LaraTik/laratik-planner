@@ -1515,6 +1515,13 @@ export default async function ContentDetailPage({
                                 { copySourceRevision: number | null }
                               >
                             )[c.socialChannelId]?.copySourceRevision ?? null,
+                          // The row timestamp, used as the optimistic
+                          // concurrency token. `copySourceRevision` is
+                          // provenance and cannot serve as a write token.
+                          updatedAt:
+                            (channelPayloadStates as Record<string, { updatedAt?: string | null }>)[
+                              c.socialChannelId
+                            ]?.updatedAt ?? null,
                           ...(publicationByChannel.get(c.id)?.publication_record?.status
                             ? {
                                 publicationStatus: publicationByChannel.get(c.id)!

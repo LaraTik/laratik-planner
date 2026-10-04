@@ -35,8 +35,11 @@ export {
 } from "./payload-schemas";
 export {
   SavePlatformPayloadInputSchema,
+  SavePlatformPayloadBatchEntrySchema,
+  SavePlatformPayloadBatchInputSchema,
   FinalCopyApprovalInputSchema,
   savePlatformPayload,
+  savePlatformPayloadsBatch,
   setFinalCopyApproval,
   readPlatformPayload,
   readAllChannelPayloads,
@@ -44,6 +47,9 @@ export {
   clearChannelPayload,
   PlatformPayloadError,
   type SavePlatformPayloadInput,
+  type SavePlatformPayloadBatchInput,
+  type SavePlatformPayloadBatchEntry,
+  type BatchChannelResult,
   type FinalCopyApprovalInput,
   type ChannelPayloadState,
 } from "./platform-payload-service";
@@ -53,6 +59,7 @@ export {
   MaterialityReasonCodeSchema,
   RecordNonMaterialityEventInputSchema,
   recordMaterialityEvent,
+  recordMaterialityEventInTx,
   recordNonMaterialityEvent,
   listMaterialEdits,
   newMaterialityCorrelationId,

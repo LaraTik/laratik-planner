@@ -16,6 +16,7 @@ import {
   markPublishingSetupReadyAction,
   recordInternalNoteAction,
   savePublishPackageAction,
+  savePublishPackageBatchAction,
   setFinalCopyApprovalAction,
 } from "./actions";
 import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
@@ -111,6 +112,14 @@ type ChannelSummary = {
   accountName: string;
   payload: PlatformPayload | null;
   copySourceRevision?: number | null;
+  /**
+   * `content_item_channels.updated_at` at read time, sent back as
+   * `expectedUpdatedAt` so a save is rejected if a collaborator saved
+   * first. NOT `copySourceRevision` — that column is provenance
+   * ("which content revision this inherited shared copy from"), not a
+   * row version.
+   */
+  updatedAt?: string | null;
   publicationStatus?: "pending" | "published" | "failed" | "skipped";
 };
 
@@ -437,6 +446,23 @@ export function PublishPackageForm({
     setStatusMessage(t("contentDetail.publish.statusLanguageApplied", { count: channels.length }));
   }
 
+  /**
+   * Channel switching is the one draft transition the unload guard
+   * cannot cover: `useBeforeunloadDirtyGuard` / `useNavigationDirtyGuard`
+   * only intercept leaving the page, so switching tabs silently carried
+   * an unsaved draft forward with no warning and no autosave to catch
+   * it. Drafts are deliberately *not* auto-saved — every save is a
+   * material edit that increments `content_items.revision` and fans out
+   * approval activity — so the guard is the only honest option.
+   */
+  function selectChannel(nextChannelId: string) {
+    if (nextChannelId === activeChannel) return;
+    if (dirtyChannels[activeChannel] && !window.confirm(t("contentDetail.publish.unsavedGuard"))) {
+      return;
+    }
+    setActiveChannel(nextChannelId);
+  }
+
   function updateDraft(channelId: string, patch: Partial<PlatformPayload>) {
     setDrafts((prev) => {
       const base =
@@ -448,16 +474,21 @@ export function PublishPackageForm({
       // Cast through unknown — the form patches across platform
       // variants and the discriminated union narrows at the
       // server-side Zod parse.
+      //
+      // `approval` is deliberately NOT reset here. The server owns it:
+      // `savePlatformPayload` re-reads the stored approval and spreads
+      // it *last*, so whatever the client sends is discarded
+      // (`platform-payload-service.ts:129-130,147-150`). Clearing it
+      // locally therefore made the form report "not approved" for a
+      // package the server still considered approved, and the
+      // discrepancy silently healed on the next render. It was also
+      // the reason `approvalResetHint` promised a reset that never
+      // happened. Only `setFinalCopyApprovalAction` changes it.
       return {
         ...prev,
         [channelId]: {
           ...(base as object),
           ...(patch as object),
-          approval: {
-            finalCopyApproved: false,
-            approvedByUserId: null,
-            approvedAt: null,
-          },
         } as PlatformPayload,
       };
     });
@@ -495,6 +526,7 @@ export function PublishPackageForm({
         contentItemId,
         socialChannelId: channels.find((c) => c.id === channelId)?.socialChannelId ?? "",
         payload: JSON.stringify(draft),
+        expectedUpdatedAt: channels.find((c) => c.id === channelId)?.updatedAt ?? null,
       });
       if (!result.ok) {
         if (result.fieldPath) {
@@ -531,35 +563,90 @@ export function PublishPackageForm({
       );
       return;
     }
+    const entries = dirtyIds.flatMap((channelId) => {
+      const channel = channels.find((candidate) => candidate.id === channelId);
+      const draft = drafts[channelId];
+      if (!channel || !draft) return [];
+      return [
+        {
+          socialChannelId: channel.socialChannelId,
+          payload: JSON.stringify(draft),
+          expectedUpdatedAt: channel.updatedAt ?? null,
+        },
+      ];
+    });
+    if (entries.length === 0) return;
+    const channelIdBySocial = new Map(
+      channels.map((channel) => [channel.socialChannelId, channel.id]),
+    );
+
     start(async () => {
       setError(null);
       setStatusMessage(null);
-      let savedCount = 0;
-      let failedCount = 0;
-      for (const channelId of dirtyIds) {
-        const channel = channels.find((candidate) => candidate.id === channelId);
-        const draft = drafts[channelId];
-        if (!channel || !draft) continue;
-        const result = await savePublishPackageAction({
-          workspaceSlug,
-          contentItemId,
-          socialChannelId: channel.socialChannelId,
-          payload: JSON.stringify(draft),
-        });
-        if (!result.ok) {
-          failedCount += 1;
-          continue;
+      /*
+       * One call = one material edit. The service validates every entry
+       * first and writes nothing unless all of them pass, so this no
+       * longer produces N revision bumps and N notification batches for
+       * one click, and it can no longer half-save.
+       */
+      const result = await savePublishPackageBatchAction({
+        workspaceSlug,
+        contentItemId,
+        entries,
+      });
+      if (!result.ok) {
+        const failures = "results" in result ? result.results : [];
+        const stale = failures.filter(
+          (entry): entry is Extract<typeof entry, { ok: false }> =>
+            !entry.ok && entry.errorCode === "stale",
+        );
+        if (stale.length > 0) {
+          // A collaborator saved one of these channels after this page
+          // loaded. Keep every local draft and say so — never discard
+          // the operator's work to resolve a conflict.
+          setStatusMessage(t("contentDetail.publish.statusBatchStale", { count: stale.length }));
+        } else {
+          const firstFailure = failures.find(
+            (entry): entry is Extract<typeof entry, { ok: false }> => !entry.ok,
+          );
+          if (firstFailure && "fieldPath" in firstFailure && firstFailure.fieldPath) {
+            setFieldErrors({
+              [firstFailure.fieldPath]: t("contentDetail.publishErrors.invalidPlatformPayload"),
+            });
+            setError(null);
+          } else {
+            setError(translatePublishError(t, result, "saveFailed"));
+          }
         }
-        savedCount += 1;
-        setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
-        setSavedAt((previous) => ({ ...previous, [channelId]: Date.now() }));
-        setDirtyChannels((previous) => ({ ...previous, [channelId]: false }));
+        return;
       }
-      if (failedCount > 0) {
-        setError(t("contentDetail.publish.statusSaveAllPartial", { count: failedCount }));
-      } else {
-        setStatusMessage(t("contentDetail.publish.statusSaveAll", { count: savedCount }));
-      }
+      const now = Date.now();
+      setFieldErrors({});
+      setDrafts((previous) => {
+        const next = { ...previous };
+        for (const entry of result.results) {
+          const channelId = channelIdBySocial.get(entry.socialChannelId);
+          if (channelId && entry.ok) next[channelId] = entry.payload;
+        }
+        return next;
+      });
+      setSavedAt((previous) => {
+        const next = { ...previous };
+        for (const entry of result.results) {
+          const channelId = channelIdBySocial.get(entry.socialChannelId);
+          if (channelId && entry.ok) next[channelId] = now;
+        }
+        return next;
+      });
+      setDirtyChannels((previous) => {
+        const next = { ...previous };
+        for (const entry of result.results) {
+          const channelId = channelIdBySocial.get(entry.socialChannelId);
+          if (channelId && entry.ok) next[channelId] = false;
+        }
+        return next;
+      });
+      setStatusMessage(t("contentDetail.publish.statusSaveAll", { count: result.results.length }));
     });
   }
 
@@ -682,7 +769,7 @@ export function PublishPackageForm({
                 role="tab"
                 aria-selected={ch.id === activeChannel}
                 aria-controls={`publish-channel-panel-${ch.id}`}
-                onClick={() => setActiveChannel(ch.id)}
+                onClick={() => selectChannel(ch.id)}
                 className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
                   ch.id === activeChannel
                     ? "border-primary bg-primary-subtle text-primary"
@@ -1292,9 +1379,6 @@ export function PublishPackageForm({
                 </p>
               )}
             </div>
-            <p className="text-label text-fg-muted">
-              {t("contentDetail.publishForm.approvalResetHint")}
-            </p>
           </Card>
         </div>
       ) : null}

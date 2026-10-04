@@ -192,7 +192,8 @@
     "noApprovedDelivery": "No approved version yet — block from readiness.",
     "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup.",
     "statusFixRequiredFields": "Complete the required platform fields before saving.",
-    "statusFixRequiredFields_many": "Complete the required platform fields on {count} channels before saving."
+    "statusFixRequiredFields_many": "Complete the required platform fields on {count} channels before saving.",
+    "statusBatchStale": "{count} channel(s) changed since you loaded this page. Your drafts were kept — reload before saving."
   },
   "readinessPanel": {
     "readyTitle": "Ready for publishing",

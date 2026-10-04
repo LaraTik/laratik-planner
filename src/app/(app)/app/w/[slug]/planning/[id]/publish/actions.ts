@@ -9,6 +9,7 @@ import {
   confirmPublishReadiness,
   PlatformPayloadSchema,
   savePlatformPayload,
+  savePlatformPayloadsBatch,
   setFinalCopyApproval,
   recordNonMaterialityEvent,
   PlatformPayloadError,
@@ -69,6 +70,7 @@ const SavePayloadFormSchema = z.object({
   contentItemId: z.string().uuid(),
   socialChannelId: z.string().uuid(),
   payload: z.string(), // JSON-stringified PlatformPayload
+  expectedUpdatedAt: z.string().datetime().nullable().optional(),
 });
 
 export async function savePublishPackageAction(input: z.input<typeof SavePayloadFormSchema>) {
@@ -94,6 +96,7 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
       contentItemId: parsed.data.contentItemId,
       socialChannelId: parsed.data.socialChannelId,
       payload: payload.data,
+      expectedUpdatedAt: parsed.data.expectedUpdatedAt ?? null,
     });
     revalidatePath(
       `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
@@ -108,6 +111,96 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
     // re-apply the server-owned approval, so a `ZodError` can surface
     // here even though the action already validated above. Surface the
     // field rather than collapsing it to `saveFailed`.
+    if (e instanceof z.ZodError) {
+      return failure("invalidPlatformPayload", zodFieldPath(e));
+    }
+    return failure("saveFailed");
+  }
+}
+
+/**
+ * Save every dirty channel package as ONE material edit.
+ *
+ * Atomic by contract: if any channel fails validation or carries a stale
+ * `expectedUpdatedAt`, **nothing** is written and the caller gets a
+ * per-channel result set. The single-channel `savePublishPackageAction`
+ * is unchanged and still used for the per-channel Save, so the existing
+ * e2e contract keeps working.
+ */
+const BatchPayloadFormSchema = z.object({
+  workspaceSlug: z.string().min(1).max(64),
+  contentItemId: z.string().uuid(),
+  entries: z
+    .array(
+      z.object({
+        socialChannelId: z.string().uuid(),
+        payload: z.string(), // JSON-stringified PlatformPayload
+        expectedUpdatedAt: z.string().datetime().nullable(),
+      }),
+    )
+    .min(1)
+    .max(25),
+});
+
+export async function savePublishPackageBatchAction(input: z.input<typeof BatchPayloadFormSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) return failure("authRequired");
+  const actor = await currentActor();
+  if (!actor) return failure("authRequired");
+  const parsed = BatchPayloadFormSchema.safeParse(input);
+  if (!parsed.success) return failure("invalidPublishRequest");
+  try {
+    const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug);
+    if (!workspace) return failure("workspaceNotFound");
+
+    // Zod-parse every entry up front so an invalid payload is reported
+    // against its own channel rather than aborting the action.
+    const entries: Array<{
+      socialChannelId: string;
+      payload: z.infer<typeof PlatformPayloadSchema>;
+      expectedUpdatedAt: string | null;
+    }> = [];
+    for (const entry of parsed.data.entries) {
+      const payload = PlatformPayloadSchema.safeParse(JSON.parse(entry.payload) as unknown);
+      if (!payload.success) {
+        return {
+          ok: false as const,
+          errorCode: "invalidPlatformPayload" as const,
+          fieldPath: zodFieldPath(payload.error),
+          socialChannelId: entry.socialChannelId,
+        };
+      }
+      entries.push({
+        socialChannelId: entry.socialChannelId,
+        payload: payload.data,
+        expectedUpdatedAt: entry.expectedUpdatedAt,
+      });
+    }
+
+    const result = await savePlatformPayloadsBatch(actor, workspace.id, {
+      contentItemId: parsed.data.contentItemId,
+      entries,
+    });
+    revalidatePath(
+      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
+    );
+    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
+    return result.ok
+      ? ({
+          ok: true as const,
+          results: result.results,
+          revision: result.revision,
+        } as const)
+      : ({
+          ok: false as const,
+          errorCode: "invalidPlatformPayload" as const,
+          results: result.results,
+          revision: null,
+        } as const);
+  } catch (e) {
+    if (e instanceof PlatformPayloadError) {
+      return failure(platformPayloadErrorCode(e.code));
+    }
     if (e instanceof z.ZodError) {
       return failure("invalidPlatformPayload", zodFieldPath(e));
     }
