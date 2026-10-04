@@ -24,11 +24,15 @@ light/dark verification before the Command Center surface is called ready.
 > disk usage at 31%. This remains `Tested`, not `Verified`.
 
 > **2026-10-04 MCP boundary status** — The public MCP transport boundary
-> remains verified only at the unauthenticated layer: POST returns 401 with
-> bearer challenge and GET returns 405 with `Allow: POST`. The authenticated
-> `initialize` → `tools/list` → `list_research` smoke and immediate token
-> revocation still require an authenticated Account browser session; no
-> credentials were guessed or transmitted. Provider UAT and independent
+> remains verified at the public layer: POST returns 401 with bearer challenge
+> and GET returns 405 with `Allow: POST`. Commit `63105a64` also fixes a real
+> persistence mismatch: the Account UI and token service exposed diagnostics
+> scopes while the database constraint allowed only content scopes. Migration
+> `0069_opposite_boomerang` widens that check compatibly. The disposable real
+> HTTP smoke now passes authenticated `initialize` → `tools/list` →
+> `list_research` plus immediate token revocation (HTTP 401 after revoke), and
+> the full local unit suite passes 462 files / 4,341 tests. CI/deploy evidence
+> for `63105a64`, production authenticated smoke, provider UAT, and independent
 > review remain open.
 
 > **2026-10-04 Viral Finder evidence-filter checkpoint** — The saved Research

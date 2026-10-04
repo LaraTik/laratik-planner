@@ -3,6 +3,21 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Re-baseline — 2026-10-04, authenticated MCP transport @ `63105a64`
+
+| Command / check                               | Result                             | Release interpretation                                                                                                                                     |
+| --------------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused MCP unit/catalog contracts            | **Pass — 53/53**                   | Token actions, research projection, diagnostics gates, Account copy, and catalog parity remain covered.                                                    |
+| Authenticated MCP HTTP smoke                  | **Pass — 1/1**                     | Disposable Postgres path issued a diagnostics-capable token, completed `initialize`, `tools/list`, `list_research`, then revoked it and received HTTP 401. |
+| Migration drill                               | **Pass — 5/5**                     | From-zero, repair, in-place, backup/restore, and failed-migration abort passed with a 70/70 Drizzle ledger.                                                |
+| Full local unit suite                         | **Pass — 462 files / 4,341 tests** | No tests were skipped or weakened; ordinary test warnings remained non-failing.                                                                            |
+| Strict typecheck / targeted lint / formatting | **Pass**                           | Schema, route smoke, migration docs, and MCP documentation are clean.                                                                                      |
+| `pnpm build`                                  | **Pass**                           | The production bundle builds with the widened persisted scope vocabulary.                                                                                  |
+
+The implementation is `Tested`, not `Verified`; CI/deploy for `63105a64`,
+production authenticated smoke with an owner-approved temporary token,
+provider UAT, manual accessibility review, and independent review remain open.
+
 ## Re-baseline — 2026-10-04, Trend Radar recovery @ `1f686f30`
 
 | Command / check                    | Result                                                                                                                                                     | Release interpretation                                                                        |
