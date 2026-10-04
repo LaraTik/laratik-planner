@@ -72,9 +72,11 @@ function TabsHost({ initial = "overview" as WorkspaceTabId }) {
         value={value}
         panels={{
           overview: <div data-testid="panel-overview">overview</div>,
-          content: <div data-testid="panel-content">content</div>,
+          "create-basics": <div data-testid="panel-content">content</div>,
+          content: <div data-testid="panel-content-legacy">content</div>,
           copy: <div data-testid="panel-copy">copy</div>,
           delivery: <div data-testid="panel-delivery">delivery</div>,
+          "publish-settings": <div data-testid="panel-publish-settings">publish settings</div>,
           preview: <div data-testid="panel-preview">preview</div>,
           publishing: <div data-testid="panel-publishing">publishing</div>,
           activity: <div data-testid="panel-activity">activity</div>,
@@ -116,7 +118,8 @@ describe("WorkspaceTabs — four-workspace contract", () => {
     const user = userEvent.setup();
     render(<TabsHost initial="create" />);
     await user.click(screen.getByTestId("workspace-tab-publish"));
-    expect(screen.getByTestId("panel-copy")).toBeInTheDocument();
+    expect(screen.getByTestId("panel-publish-settings")).toBeInTheDocument();
+    expect(screen.getByTestId("panel-copy").parentElement).toHaveAttribute("hidden");
     // Active tab is reflected in aria-current.
     expect(screen.getByTestId("workspace-tab-publish")).toHaveAttribute("aria-current", "true");
   });

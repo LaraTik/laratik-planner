@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import { Clock, Copy as CopyIcon, Eye, Sparkles } from "lucide-react";
+import { CalendarDays, Clock, Copy as CopyIcon, Eye, Sparkles } from "lucide-react";
 import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -42,7 +42,6 @@ import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
-import { CreateSectionNavigator } from "@/components/planning/create-section-navigator";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
@@ -966,17 +965,9 @@ export default async function ContentDetailPage({
             "create-basics": canEditAll ? (
               <section
                 id="create-basics"
-                className="mt-6 scroll-mt-24 space-y-4"
+                className="scroll-mt-24 space-y-4"
                 data-testid="workspace-create-basics"
               >
-                <CreateSectionNavigator
-                  label={t("contentDetail.createNavigator.label")}
-                  sections={[
-                    { id: "create-plan", label: t("contentDetail.overview.details") },
-                    { id: "creative", label: t("contentDetail.sectionCreativeTitle") },
-                    { id: "assets-versions", label: t("contentDetail.sectionAssetsTitle") },
-                  ]}
-                />
                 <PlanningSection
                   id="create-plan"
                   title={t("contentDetail.overview.details")}
@@ -1003,7 +994,7 @@ export default async function ContentDetailPage({
             content: (
               <section
                 id="content"
-                className="mt-6 scroll-mt-24 space-y-6"
+                className="scroll-mt-24 space-y-6"
                 data-testid="workspace-tab-panel-content"
               >
                 {/* Phase 6 of the planning-detail refactor (2026-08-30):
@@ -1241,7 +1232,7 @@ export default async function ContentDetailPage({
             delivery: (
               <section
                 id="delivery"
-                className="mt-6 scroll-mt-24 space-y-4"
+                className="scroll-mt-24 space-y-4"
                 data-testid="workspace-tab-panel-delivery"
               >
                 <PlanningSection
@@ -1299,43 +1290,62 @@ export default async function ContentDetailPage({
             "publish-settings": (
               <section
                 id="publish-settings"
-                className="mt-6 scroll-mt-24"
+                className="scroll-mt-24"
                 data-testid="workspace-publish-settings"
               >
-                <CreateSectionNavigator
-                  label={t("contentDetail.publishNavigator.label")}
-                  workspaceHash="#publish"
-                  testId="publish-section-navigator"
-                  sections={[
-                    { id: "publish-schedule", label: t("contentDetail.publishNavigator.schedule") },
-                    { id: "copy", label: t("contentDetail.publishNavigator.copy") },
-                    { id: "preview", label: t("contentDetail.publishNavigator.preview") },
-                    { id: "publish-outcomes", label: t("contentDetail.publishNavigator.outcomes") },
-                  ]}
-                />
-                {canEditAll ? (
-                  <PlanningSection
-                    id="publish-schedule"
-                    title={t("contentDetail.overview.plannedPublish")}
-                    description={t("contentDetail.publishWorkspace.scheduleDescription")}
-                    className="mt-4"
-                  >
-                    <EditIdeaForm
-                      workspaceSlug={slug}
-                      contentItemId={item.id}
-                      workspaceTimezone={ws.timezone}
-                      channels={planningChannels}
-                      mode="publish"
-                      initial={{
-                        title: item.title,
-                        format: item.format,
-                        brief: item.brief ?? "",
-                        plannedPublishAtIso: item.plannedPublishAt.toISOString(),
-                        channelIds: [...selectedChannelIds],
-                      }}
-                    />
-                  </PlanningSection>
-                ) : null}
+                <PlanningSection
+                  id="publish-schedule"
+                  title={t("contentDetail.publishNavigator.schedule")}
+                  description={t("contentDetail.publishWorkspace.scheduleDescription")}
+                >
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="bg-primary-subtle text-primary inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
+                        <CalendarDays className="h-5 w-5" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-label text-fg-muted font-semibold uppercase">
+                          {t("contentDetail.overview.plannedPublish")}
+                        </p>
+                        <p className="text-body text-fg-primary truncate font-semibold">
+                          {formatDate(item.plannedPublishAt, code, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                            timeZone: ws.timezone,
+                          })}
+                        </p>
+                        <p className="text-label text-fg-muted">{ws.timezone}</p>
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-1 flex-wrap gap-2 lg:justify-center">
+                      {channelConfigs.length > 0 ? (
+                        channelConfigs.map((channel) => (
+                          <span
+                            key={channel.id}
+                            className="border-border bg-surface-subtle text-label text-fg-secondary inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-semibold"
+                          >
+                            <span
+                              className="bg-primary h-1.5 w-1.5 rounded-full"
+                              aria-hidden="true"
+                            />
+                            {humanPlatform(channel.platform, t)}
+                            <span className="text-fg-muted">·</span>
+                            <bdi>{channel.accountName}</bdi>
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-label text-fg-muted">
+                          {t("contentDetail.overview.noChannels")}
+                        </span>
+                      )}
+                    </div>
+                    {canEditAll ? (
+                      <Button asChild size="sm" variant="outline" className="shrink-0">
+                        <Link href={editHref}>{t("contentDetail.overview.editDetails")}</Link>
+                      </Button>
+                    ) : null}
+                  </div>
+                </PlanningSection>
               </section>
             ),
             copy: (
@@ -1521,6 +1531,7 @@ export default async function ContentDetailPage({
                   publishingSetupReady={publishingSetupReady}
                   outcomesRecorded={publicationByChannel.size}
                   issues={readiness.issues}
+                  compact
                   workflowAtPublishingSetup={
                     item.status === "ready_to_publish" ||
                     item.status === "partially_published" ||

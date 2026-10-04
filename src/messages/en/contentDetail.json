@@ -376,6 +376,8 @@
     "filterPublishing": "Publishing",
     "filterSystem": "System",
     "filterToolbarAria": "Filter activity",
+    "searchLabel": "Search activity",
+    "searchPlaceholder": "Search activity…",
     "filterEmpty": "No {label} activity yet.",
     "kindStatusTransition": "moved the workflow forward",
     "kindBriefUpdated": "updated the brief",

@@ -99,6 +99,7 @@ export function ActivityWithFilters({
   const localeT = useLocaleT();
   const t = tProp ?? localeT;
   const [filter, setFilter] = React.useState<ActivityFilterId>(defaultFilter);
+  const [query, setQuery] = React.useState("");
 
   const counts = React.useMemo(() => {
     const result: Record<ActivityFilterId, number> = {
@@ -119,7 +120,14 @@ export function ActivityWithFilters({
   }, [events]);
 
   const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0]!;
-  const visible = events.filter((e) => active.match(e.kind));
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visible = events.filter((e) => {
+    if (!active.match(e.kind)) return false;
+    if (!normalizedQuery) return true;
+    return [e.summary, e.actorName, e.targetLabel ?? "", e.kind].some((value) =>
+      value.toLocaleLowerCase().includes(normalizedQuery),
+    );
+  });
   const activeLabel = t(FILTER_LABEL_KEYS[active.id]);
   const visibleFilters = FILTERS.filter(
     (f) => f.id === "all" || f.id === filter || counts[f.id] > 0,
@@ -130,41 +138,55 @@ export function ActivityWithFilters({
       <div
         role="toolbar"
         aria-label={t("contentDetail.activity.filterToolbarAria")}
-        className="flex flex-wrap items-center gap-1.5"
+        className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-control)] border p-2 sm:flex-row sm:items-center"
         data-testid="activity-filter-chips"
       >
-        {visibleFilters.map((f) => {
-          const isActive = f.id === filter;
-          const count = counts[f.id];
-          const label = t(FILTER_LABEL_KEYS[f.id]);
-          return (
-            <button
-              key={f.id}
-              type="button"
-              onClick={() => setFilter(f.id)}
-              aria-pressed={isActive}
-              data-testid={`activity-filter-${f.id}`}
-              data-count={count}
-              className={cn(
-                "text-label inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 py-1 font-semibold",
-                "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
-                isActive
-                  ? "border-primary bg-primary-subtle text-primary"
-                  : "border-border bg-surface text-fg-secondary hover:bg-surface-subtle",
-              )}
-            >
-              <span>{label}</span>
-              <span
+        <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+          {visibleFilters.map((f) => {
+            const isActive = f.id === filter;
+            const count = counts[f.id];
+            const label = t(FILTER_LABEL_KEYS[f.id]);
+            return (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setFilter(f.id)}
+                aria-pressed={isActive}
+                data-testid={`activity-filter-${f.id}`}
+                data-count={count}
                 className={cn(
-                  "rounded-full px-1.5 tabular-nums",
-                  isActive ? "bg-primary/15" : "bg-surface-subtle text-fg-muted",
+                  "text-label inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 py-1 font-semibold",
+                  "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none",
+                  isActive
+                    ? "border-primary bg-primary-subtle text-primary"
+                    : "border-border bg-surface text-fg-secondary hover:bg-surface-subtle",
                 )}
               >
-                {count}
-              </span>
-            </button>
-          );
-        })}
+                <span>{label}</span>
+                <span
+                  className={cn(
+                    "rounded-full px-1.5 tabular-nums",
+                    isActive ? "bg-primary/15" : "bg-surface-subtle text-fg-muted",
+                  )}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <label className="relative block min-w-0 sm:w-52">
+          <span className="sr-only">{t("contentDetail.activity.searchLabel")}</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t("contentDetail.activity.searchPlaceholder")}
+            aria-label={t("contentDetail.activity.searchLabel")}
+            className="border-border bg-surface text-label text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring min-h-9 w-full rounded-full border px-3 py-1.5 outline-none focus-visible:ring-2"
+            data-testid="activity-search"
+          />
+        </label>
       </div>
 
       {visible.length > 0 ? (

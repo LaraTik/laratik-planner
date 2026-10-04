@@ -4,7 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Circle, Info } from "lucide-react";
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
-import { Card, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
 import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
@@ -138,6 +138,7 @@ export function OverviewCommandCenter({
   contentStatus,
   title,
   brief,
+  format,
   plannedPublishAt,
   plannedPublishAtIso,
   workspaceTimezone,
@@ -168,7 +169,7 @@ export function OverviewCommandCenter({
   const localeT = useLocaleT();
   const t = tProp ?? localeT;
   return (
-    <div className="space-y-6" data-testid="overview-command-center">
+    <div className="space-y-4" data-testid="overview-command-center">
       {/* Top: the single most important card — "what's next" — stays
           full-width so the planner's eye lands here first. */}
       <NextActionCard
@@ -190,7 +191,7 @@ export function OverviewCommandCenter({
       {/* Mid: pair the "what is this" details with the "what needs
           fixing" attention list. The two are related — both about
           the basics of the idea — so they share a row on lg+. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="overview-mid-grid">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" data-testid="overview-mid-grid">
         <DetailsSection
           workspaceSlug={workspaceSlug}
           contentItemId={contentItemId}
@@ -199,6 +200,8 @@ export function OverviewCommandCenter({
           plannedPublishAtIso={plannedPublishAtIso}
           workspaceTimezone={workspaceTimezone}
           plannedPublishAtLabel={plannedPublishAt}
+          format={format}
+          channels={channels}
           productionNotes={productionNotes}
           canEdit={canEditOverview}
           t={t}
@@ -219,7 +222,7 @@ export function OverviewCommandCenter({
       {/* Mid-low: readiness + snapshot. Readiness is "are we ready
           to publish?", snapshot is "what do we already have?". Both
           are operational summaries, so they pair well. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2" data-testid="overview-status-grid">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2" data-testid="overview-status-grid">
         <ReadinessSummary
           blockers={readinessBlockers}
           canPublish={readinessCanPublish}
@@ -508,30 +511,36 @@ function NextActionCard({
         : "border-primary/30 bg-primary-subtle/40";
 
   return (
-    <Card padding="md" data-testid="overview-next-action" className={tone}>
-      <div className="space-y-1.5">
-        <p className="text-label text-fg-muted font-semibold uppercase">
-          {t("contentDetail.overview.actionRequired")}
-        </p>
-        {workflowStageLabel ? (
-          <p className="text-label text-fg-secondary" data-testid="overview-workflow-stage">
-            {workflowStageLabel}
-          </p>
-        ) : null}
-        <CardTitle className="text-body text-fg-primary text-lg font-semibold">
-          {headline}
-        </CardTitle>
-        {body ? <CardDescription>{body}</CardDescription> : null}
-        {primaryActionLabel ? (
-          <p className="text-label text-fg-secondary pt-1" data-testid="overview-next-action-label">
-            <span className="font-semibold">{t("contentDetail.overview.nextActionLabel")}</span>{" "}
-            {primaryActionLabel}
-          </p>
-        ) : null}
+    <Card padding="sm" data-testid="overview-next-action" className={tone}>
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <p className="text-label text-fg-muted font-semibold uppercase">
+              {t("contentDetail.overview.actionRequired")}
+            </p>
+            {workflowStageLabel ? (
+              <p className="text-label text-fg-secondary" data-testid="overview-workflow-stage">
+                {workflowStageLabel}
+              </p>
+            ) : null}
+          </div>
+          <p className="text-body text-fg-primary mt-1 font-semibold">{headline}</p>
+          {body ? <p className="text-label text-fg-secondary mt-1 max-w-3xl">{body}</p> : null}
+          {primaryActionLabel ? (
+            <p
+              className="text-label text-fg-secondary mt-1"
+              data-testid="overview-next-action-label"
+            >
+              <span className="font-semibold">{t("contentDetail.overview.nextActionLabel")}</span>{" "}
+              {primaryActionLabel}
+            </p>
+          ) : null}
+        </div>
         {nextActionDestinationTab ? (
           <TabSwitchLink
             href={`#${nextActionDestinationTab}`}
-            className="text-label text-primary focus-visible:ring-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+            className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-9 shrink-0 items-center gap-1 rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
             data-testid="overview-next-action-destination"
           >
             {nextActionExecutable
@@ -540,19 +549,19 @@ function NextActionCard({
             <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
           </TabSwitchLink>
         ) : null}
-        {contentStatus === "changes_requested" && reviewChangesHref ? (
-          <Link
-            href={reviewChangesHref}
-            className="text-label text-primary focus-visible:ring-focus-ring mt-1 inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
-            data-testid="overview-next-action-link"
-          >
-            {t("contentDetail.overview.openNextAction", {
-              action: primaryActionLabel ?? t("contentDetail.nextAction.changesRequested"),
-            })}
-            <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
-          </Link>
-        ) : null}
       </div>
+      {contentStatus === "changes_requested" && reviewChangesHref ? (
+        <Link
+          href={reviewChangesHref}
+          className="text-label text-primary focus-visible:ring-focus-ring ms-8 mt-1 inline-flex min-h-9 items-center gap-1 rounded-[var(--radius-control)] font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+          data-testid="overview-next-action-link"
+        >
+          {t("contentDetail.overview.openNextAction", {
+            action: primaryActionLabel ?? t("contentDetail.nextAction.changesRequested"),
+          })}
+          <DirAwareArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      ) : null}
     </Card>
   );
 }
@@ -794,6 +803,8 @@ function DetailsSection({
   brief,
   plannedPublishAtIso,
   plannedPublishAtLabel,
+  format,
+  channels,
   workspaceTimezone,
   productionNotes,
   canEdit,
@@ -805,6 +816,8 @@ function DetailsSection({
   brief: string;
   plannedPublishAtIso: string;
   plannedPublishAtLabel: string;
+  format: string;
+  channels: OverviewSummaryChannel[];
   workspaceTimezone: string;
   productionNotes: string;
   canEdit: boolean;
@@ -818,6 +831,24 @@ function DetailsSection({
       >
         {t("contentDetail.overview.detailsHeading")}
       </h2>
+      <dl className="border-border mb-4 grid grid-cols-2 gap-3 border-b pb-4 sm:grid-cols-3">
+        <div className="grid gap-1">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.overview.format")}
+          </dt>
+          <dd className="text-body text-fg-primary font-semibold">
+            {t(`planningFilters.formatLabels.${format}`)}
+          </dd>
+        </div>
+        <div className="grid gap-1">
+          <dt className="text-label text-fg-muted font-semibold">
+            {t("contentDetail.overview.channels")}
+          </dt>
+          <dd className="text-body text-fg-primary font-semibold">
+            {t("contentDetail.overview.channelsCount", { count: channels.length })}
+          </dd>
+        </div>
+      </dl>
       <dl className="grid gap-3">
         <div className="grid gap-1">
           <dt className="text-label text-fg-muted font-semibold">

@@ -3,7 +3,17 @@
 import * as React from "react";
 import { useEffect, useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle,
+  Circle,
+  XCircle,
+  Ban,
+  Play,
+  Info,
+  Palette,
+} from "lucide-react";
 import {
   DirAwareArrowRight,
   DirAwareChevronLeft,
@@ -465,6 +475,9 @@ function WorkflowRailBody({
       "ready_to_publish",
     ].includes(status) &&
       roles.isManager);
+  const railAttention = (planningPresentation?.attention ?? []).filter(
+    (item) => item.severity !== "recommendation",
+  );
 
   return (
     <div
@@ -736,6 +749,65 @@ function WorkflowRailBody({
           },
         )}
       </ol>
+
+      {railAttention.length > 0 ? (
+        <div
+          className="border-border space-y-2 border-t px-3 py-3"
+          data-testid="workflow-rail-attention"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-label text-fg-primary font-semibold uppercase">
+              {tr("contentDetail.overview.needsAttention", "Needs attention")}
+            </p>
+            <Badge variant="warning">
+              {railAttention.reduce((total, item) => total + (item.count ?? 1), 0)}
+            </Badge>
+          </div>
+          <ul className="space-y-1.5">
+            {railAttention.slice(0, 4).map((item) => {
+              const destination = item.destinationAnchor
+                ? `#${item.destinationAnchor}`
+                : item.destinationTab
+                  ? `#${item.destinationTab}`
+                  : null;
+              const Icon = item.severity === "blocking" ? AlertTriangle : Info;
+              return (
+                <li
+                  key={`${item.path}-${item.code}`}
+                  className="border-border bg-surface-subtle flex items-start gap-2 rounded-[var(--radius-control)] border p-2"
+                >
+                  <Icon
+                    className={cn(
+                      "mt-0.5 h-3.5 w-3.5 shrink-0",
+                      item.severity === "blocking" ? "text-danger" : "text-warning",
+                    )}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-label text-fg-secondary line-clamp-2">
+                      {item.messageKey ? tr(item.messageKey, item.message) : item.message}
+                    </p>
+                    {destination ? (
+                      <TabSwitchLink
+                        href={destination}
+                        className="text-label text-primary mt-1 inline-flex min-h-8 items-center font-semibold hover:underline"
+                      >
+                        {tr(
+                          item.severity === "blocking"
+                            ? "contentDetail.workflow.goToAction"
+                            : "contentDetail.workflow.viewAction",
+                          item.severity === "blocking" ? "Fix" : "View",
+                        )}
+                        <DirAwareArrowRight className="ms-1 h-3 w-3" aria-hidden="true" />
+                      </TabSwitchLink>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ) : null}
 
       {activeApprovals.length > 0 ? (
         <div className="border-border border-t px-3 py-2">

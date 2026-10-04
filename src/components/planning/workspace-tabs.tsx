@@ -260,13 +260,108 @@ export interface WorkspacePanelsProps {
   value: WorkspaceTabId;
 }
 
+type CreateWorkspacePanelId = "details" | "creative" | "assets";
+
+interface CreateWorkspaceTabsProps {
+  details?: React.ReactNode;
+  creative?: React.ReactNode;
+  assets?: React.ReactNode;
+  labels: Record<CreateWorkspacePanelId, string>;
+}
+
+function createWorkspacePanelFromHash(): CreateWorkspacePanelId {
+  if (typeof window === "undefined") return "details";
+  const value = window.location.hash.replace(/^#/, "");
+  if (value === "creative" || value === "content") return "creative";
+  if (value === "assets" || value === "delivery" || value === "assets-versions") {
+    return "assets";
+  }
+  return "details";
+}
+
+/**
+ * The Create workspace has a second, local navigation layer because its
+ * three surfaces are all part of one production task. Only the selected
+ * surface mounts, which keeps the editor focused and prevents the details,
+ * creative, and delivery cards from becoming one very long page.
+ */
+export function CreateWorkspaceTabs({
+  details,
+  creative,
+  assets,
+  labels,
+}: CreateWorkspaceTabsProps) {
+  const [active, setActive] = React.useState<CreateWorkspacePanelId>("details");
+
+  React.useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActive(createWorkspacePanelFromHash());
+  }, []);
+
+  const panels: Record<CreateWorkspacePanelId, React.ReactNode | undefined> = {
+    details,
+    creative,
+    assets,
+  };
+
+  const select = (id: CreateWorkspacePanelId) => {
+    setActive(id);
+    const hash = id === "details" ? "create-basics" : id === "creative" ? "creative" : "assets";
+    window.history.replaceState(null, "", `#${hash}`);
+  };
+
+  return (
+    <div className="mt-5 space-y-4" data-testid="create-workspace-tabs">
+      <div
+        className="border-border bg-surface-subtle/70 flex flex-wrap gap-1 rounded-[var(--radius-control)] border p-1"
+        role="tablist"
+        aria-label={labels.details}
+      >
+        {(Object.keys(labels) as CreateWorkspacePanelId[]).map((id) => {
+          const isActive = active === id;
+          return (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={`create-workspace-panel-${id}`}
+              data-testid={`create-workspace-tab-${id}`}
+              onClick={() => select(id)}
+              className={cn(
+                "text-label inline-flex min-h-10 flex-1 items-center justify-center rounded-[calc(var(--radius-control)-2px)] px-3 py-2 font-semibold transition-colors sm:flex-none",
+                "focus-visible:ring-focus-ring focus-visible:ring-2 focus-visible:outline-none",
+                isActive
+                  ? "bg-surface text-primary shadow-sm"
+                  : "text-fg-secondary hover:bg-surface/70 hover:text-fg-primary",
+              )}
+            >
+              {labels[id]}
+            </button>
+          );
+        })}
+      </div>
+      <div
+        id={`create-workspace-panel-${active}`}
+        role="tabpanel"
+        aria-label={labels[active]}
+        data-testid={`create-workspace-panel-${active}`}
+      >
+        {panels[active] ?? null}
+      </div>
+    </div>
+  );
+}
+
 export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
+  const t = useLocaleT();
   const panelGroups: Record<WorkspaceTabId, readonly WorkspacePanelId[]> = {
     overview: ["overview"],
     create: ["create-basics", "content", "delivery"],
-    // Keep the publishing composer next to its preview. The preview panel
-    // itself is supplied as a slot by the publishing surface below.
-    publish: ["publish-settings", "publishing", "copy"],
+    // Keep the publishing composer next to its preview. Audience copy is
+    // edited inside that composer; the legacy copy panel stays mounted
+    // behind the canonical Publish owner for old hashes and drafts.
+    publish: ["publish-settings", "publishing"],
     activity: ["activity"],
   };
   const visiblePanels = new Set(panelGroups[value]);
@@ -281,11 +376,25 @@ export function WorkspacePanels({ panels, value }: WorkspacePanelsProps) {
     "preview",
     "publishing",
   ]);
+  const createPanelIds = new Set<WorkspacePanelId>(["create-basics", "content", "delivery"]);
   return (
     <>
+      {value === "create" ? (
+        <CreateWorkspaceTabs
+          details={panels["create-basics"]}
+          creative={panels.content}
+          assets={panels.delivery}
+          labels={{
+            details: t("contentDetail.overview.details"),
+            creative: t("contentDetail.sectionCreativeTitle"),
+            assets: t("contentDetail.sectionAssetsTitle"),
+          }}
+        />
+      ) : null}
       {Object.entries(panels).map(([id, panel]) => {
         if (!panel) return null;
         const panelId = id as WorkspacePanelId;
+        if (value === "create" && createPanelIds.has(panelId)) return null;
         const visible = visiblePanels.has(panelId);
         if (!visible && !persistent.has(panelId)) return null;
         return (

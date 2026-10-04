@@ -38,6 +38,8 @@ export interface PublishingCommandCenterProps {
    * never "Mark setup ready".
    */
   workflowAtPublishingSetup?: boolean;
+  /** Compact warning/status strip used at the top of the Publish workspace. */
+  compact?: boolean;
   t: Translator;
 }
 
@@ -54,6 +56,7 @@ export function PublishingCommandCenter({
   outcomesRecorded,
   issues = [],
   workflowAtPublishingSetup = true,
+  compact = false,
   t,
 }: PublishingCommandCenterProps) {
   const hasNoChannels = channelCount === 0;
@@ -122,33 +125,43 @@ export function PublishingCommandCenter({
 
   return (
     <section
-      className="border-border bg-surface rounded-[var(--radius-card)] border p-4 shadow-[var(--shadow-card)] sm:p-5"
+      className={cn(
+        "border-border bg-surface rounded-[var(--radius-card)] border shadow-[var(--shadow-card)]",
+        compact ? "p-3" : "p-4 sm:p-5",
+      )}
       aria-labelledby="publishing-command-center-title"
       data-testid="publishing-command-center"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-label text-primary font-semibold tracking-wide uppercase">
-            {t("contentDetail.publishCommandCenter.eyebrow")}
-          </p>
-          <h2
-            id="publishing-command-center-title"
-            className="text-title-card text-fg-primary mt-1 font-semibold"
-          >
-            {t("contentDetail.publishCommandCenter.title")}
-          </h2>
-          <p className="text-body text-fg-secondary mt-1 max-w-2xl">
-            {t("contentDetail.publishCommandCenter.description")}
-          </p>
+      {compact ? (
+        <h2 id="publishing-command-center-title" className="sr-only">
+          {t("contentDetail.publishCommandCenter.title")}
+        </h2>
+      ) : (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-label text-primary font-semibold tracking-wide uppercase">
+              {t("contentDetail.publishCommandCenter.eyebrow")}
+            </p>
+            <h2
+              id="publishing-command-center-title"
+              className="text-title-card text-fg-primary mt-1 font-semibold"
+            >
+              {t("contentDetail.publishCommandCenter.title")}
+            </h2>
+            <p className="text-body text-fg-secondary mt-1 max-w-2xl">
+              {t("contentDetail.publishCommandCenter.description")}
+            </p>
+          </div>
+          <Badge variant={hasBlockers ? "warning" : outcomesComplete ? "success" : "info"}>
+            {statusLabel}
+          </Badge>
         </div>
-        <Badge variant={hasBlockers ? "warning" : outcomesComplete ? "success" : "info"}>
-          {statusLabel}
-        </Badge>
-      </div>
+      )}
 
       <div
         className={cn(
-          "mt-4 flex items-start gap-2 rounded-[var(--radius-control)] border p-3",
+          "flex items-start gap-2 rounded-[var(--radius-control)] border p-3",
+          compact ? "mt-0" : "mt-4",
           blockerCount > 0 || hasNoChannels
             ? "border-warning/40 bg-warning-subtle"
             : outcomesComplete
@@ -178,7 +191,7 @@ export function PublishingCommandCenter({
         </a>
       </div>
 
-      {issues.length > 0 ? <PublishingBlockers issues={issues} /> : null}
+      {!compact && issues.length > 0 ? <PublishingBlockers issues={issues} /> : null}
     </section>
   );
 }

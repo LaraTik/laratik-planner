@@ -376,6 +376,8 @@
     "filterPublishing": "النشر",
     "filterSystem": "النظام",
     "filterToolbarAria": "تصفية النشاط",
+    "searchLabel": "البحث في النشاط",
+    "searchPlaceholder": "البحث في النشاط…",
     "filterEmpty": "لا يوجد نشاط في {label} بعد.",
     "kindStatusTransition": "حرّك سير العمل إلى الأمام",
     "kindBriefUpdated": "حدّث الموجز",
