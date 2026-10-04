@@ -3,6 +3,54 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Publish-surface work — 2026-10-04, PRs 1–4 committed to `main` (`5419aa4d`, `3a8b4c99`, `845f640b`, `ca0e1db3`)
+
+**The pre-merge browser checklist could NOT be run in this environment.** Two
+independent blockers, both environment setup rather than code work:
+
+| Blocker                          | Evidence                                                                                                                                                                                                                                                                                                           |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| No disposable test database      | `scripts/run-e2e-tests.ts` exits with `TEST_DATABASE_URL is required and must point to a disposable PostgreSQL database.` The only configured database is the working `planner` DB in `.env`; the harness deliberately refuses to run against a non-disposable target, and pointing it there would risk real data. |
+| Firefox and WebKit not installed | `~/Library/Caches/ms-playwright/` contains only `chromium-*`. The five-project matrix in `playwright.config.ts` is `chromium, firefox, webkit, mobile-chrome, mobile-safari, visual-chromium`, so three of six projects cannot start.                                                                              |
+
+The committed PostgreSQL server itself is healthy (`pg_isready` → accepting
+connections), so the first blocker is configuration, not infrastructure.
+
+### What was verified at the exact HEAD of each commit
+
+| Check                                                           | Result                                                      |
+| --------------------------------------------------------------- | ----------------------------------------------------------- |
+| `pnpm format:check`                                             | Pass, every PR                                              |
+| `pnpm lint` (`--max-warnings=0`)                                | Pass, every PR                                              |
+| `pnpm typecheck`                                                | Pass, every PR                                              |
+| `pnpm build`                                                    | Pass, every PR                                              |
+| `pnpm test:unit`                                                | Pass — 470 files / 4,400 tests, no test skipped or weakened |
+| Pre-commit hook (lint-staged + typecheck + affected→full suite) | Pass, every PR                                              |
+
+### What is therefore NOT yet evidenced
+
+Per `AGENTS.md` and `docs/i18n/CONTRACT.md`, the bilingual gate needs evidence
+at the exact clean HEAD. For the Publishing tab these are **outstanding**:
+
+1. EN/AR rendering, RTL layout, and LTR-shell-with-RTL-content behaviour on the
+   changed surfaces (the unit tests cover Arabic _copy_ and the RTL `dir`
+   attributes, not rendered Arabic layout).
+2. Keyboard traversal across the new one-action sticky bar, the command
+   center's collapsible blocker body, and the `publish-copy-source` /
+   `publish-copy-reset` affordances.
+3. The 375 / 768 / 1024 / 1280 / 1440 responsive matrix, and the information
+   density target (status + next action + schedule + channel selector + start of
+   the copy editor visible without scrolling at 1280×800).
+4. `axe` on the Publishing tab.
+5. Visual parity for the four Stitch captures touched by PR3 (the collapsed
+   preview empty state and the compressed Meta readiness card change rendered
+   output on the Copy tab too, since both are shared components).
+
+**To close this out:** provision a disposable test database, set
+`TEST_DATABASE_URL`, run `npx playwright install firefox webkit`, then run
+`pnpm test:e2e:isolated` and `pnpm test:visual`. Until then, treat the four
+commits as unit-verified only, and do not record the bilingual gate as passed.
+
 ## Release checkpoint — 2026-10-04, exact clean SHA @ `5f310cd2`
 
 This checkpoint records the release-blocking build repair after the MCP

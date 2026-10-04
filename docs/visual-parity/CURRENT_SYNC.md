@@ -95,6 +95,17 @@ comes from the product or from a refreshed design reference.
 
 ## Verification boundary
 
+- **Publishing and recovery — visual parity NOT re-verified after PR3.** PR3 changed
+  two components the Copy tab also renders, so its captured baseline is now stale:
+  `PlatformPreview`'s no-media empty state (previously a full platform aspect-ratio
+  frame — `aspect-square` / `aspect-[4/5]` / `aspect-[9/16]` — around two words) and
+  `MetaPublishingReadinessCard` (previously six paragraphs of prose, now one line plus
+  a disclosure on healthy states). The re-capture could not be run: `TEST_DATABASE_URL`
+  is not set, so `scripts/run-e2e-tests.ts` refuses to start, and only
+  `chromium-*` is present in the Playwright cache, so the `visual-chromium` project
+  cannot be driven either. See `docs/production-readiness/TEST_EVIDENCE.md` for the
+  full outstanding list and the commands that close it. Treat the Publishing and Copy
+  tab baselines as **stale** until then.
 - **Known divergence — Publishing and recovery (`95dfecceb93e46a699f2598263b0d54c`).**
   The Stitch screen shows the publication-proof step as "Step 2 of 2" accepting
   either a public/creator-manager reference URL **or** a `PNG, JPG, or PDF` proof
