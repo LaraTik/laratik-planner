@@ -835,6 +835,32 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface: per-channel field errors
+
+Found by a test-coverage audit after the browser gate, and live in production
+since `3a8b4c99` until this commit.
+
+**A batch validation error was painted on the wrong channel.** `fieldErrors` was a
+flat `Record<fieldName, string>`, so `handleSaveAll`'s pre-flight loop left only the
+**last** failing channel's errors in state, and they rendered inside whichever channel
+happened to be active. With two Pinterest channels — A active and valid, B with an
+empty board — Save all painted "Choose a Pinterest board." under **A's** board input
+and pointed **A's** `aria-describedby` at **B's** error, while the status line said one
+channel needed fixing. A correct message on an un-actionable control is worse than no
+message, because the operator edits the one field that was already right.
+
+Errors are now keyed by channel id, so each channel carries its own, and a server-side
+`fieldPath` rejection additionally **switches the operator to the failing channel** — a
+correct message on another channel's panel is invisible, which is the same defect in a
+new place. Success clears only the channels that were actually saved, so saving one
+channel no longer wipes another's errors.
+
+The field error `<p>` also gained a `data-testid`; it had an `id` and `role="alert"` but
+nothing addressable, which is part of why this went unnoticed.
+
+`tests/unit/publishing/publish-field-errors-per-channel.test.tsx` reproduces the exact
+two-Pinterest-channel scenario and asserts the error is absent from A and present on B.
+
 ### 2026-10-04 — Publish surface PR6: browser-gate findings (one real functional defect)
 
 The browser gate was unblocked (disposable `TEST_DATABASE_URL` provisioned, Firefox and

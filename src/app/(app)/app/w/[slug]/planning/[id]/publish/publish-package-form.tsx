@@ -119,6 +119,9 @@ type ChannelSummary = {
   publicationStatus?: "pending" | "published" | "failed" | "skipped";
 };
 
+/** Stable empty map so a channel with no errors does not re-render on every keystroke. */
+const EMPTY_FIELD_ERRORS: Record<string, string> = {};
+
 function defaultPayloadFor(platform: string, socialChannelId: string): PlatformPayload {
   // Build a per-platform minimal default. The schema is the
   // gate; if a key is missing the Zod discriminated union will
@@ -369,7 +372,25 @@ export function PublishPackageForm({
    * is rejected, so a Pinterest board error never degrades to a bare
    * "save failed".
    */
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  /**
+   * Field-scoped validation messages, keyed **by channel id** then by
+   * payload field name.
+   *
+   * This was a flat `Record<fieldName, string>`, which meant a batch
+   * save left only the *last* failing channel's errors in state, and
+   * they were rendered inside whichever channel happened to be active.
+   * With two Pinterest channels — A active and valid, B with an empty
+   * board — Save all painted "Choose a Pinterest board." under A's
+   * board input and pointed A's `aria-describedby` at B's error, while
+   * the status line said one channel needed fixing. Keying by channel
+   * makes the message land on the field that caused it, which is the
+   * only place it can be acted on.
+   */
+  const [fieldErrorsByChannel, setFieldErrorsByChannel] = useState<
+    Record<string, Record<string, string>>
+  >({});
+  /** Errors for the channel currently being edited. */
+  const fieldErrors = fieldErrorsByChannel[activeChannel] ?? EMPTY_FIELD_ERRORS;
   const formRef = useRef<HTMLFormElement | null>(null);
   const dirty = channels.some((channel) => dirtyChannels[channel.id]);
   const dirtyCount = channels.filter((channel) => dirtyChannels[channel.id]).length;
@@ -549,7 +570,7 @@ export function PublishPackageForm({
     const draft = drafts[channelId];
     if (!channel || !draft) return true;
     const errors = validateRequiredFields(channel.platform, draft, t);
-    setFieldErrors(errors);
+    setFieldErrorsByChannel((previous) => ({ ...previous, [channelId]: errors }));
     if (Object.keys(errors).length > 0) {
       setError(null);
       setStatusMessage(t("contentDetail.publish.statusFixRequiredFields"));
@@ -576,16 +597,20 @@ export function PublishPackageForm({
         if (result.fieldPath) {
           // Server rejected a specific field — surface it on the
           // control instead of collapsing to a page-level error.
-          setFieldErrors({
-            [result.fieldPath]: t("contentDetail.publishErrors.invalidPlatformPayload"),
-          });
+          const rejectedField = result.fieldPath;
+          setFieldErrorsByChannel((previous) => ({
+            ...previous,
+            [channelId]: {
+              [rejectedField]: t("contentDetail.publishErrors.invalidPlatformPayload"),
+            },
+          }));
           setError(null);
         } else {
           setError(translatePublishError(t, result, "saveFailed"));
         }
         return;
       }
-      setFieldErrors({});
+      setFieldErrorsByChannel((previous) => ({ ...previous, [channelId]: EMPTY_FIELD_ERRORS }));
       setDrafts((previous) => ({ ...previous, [channelId]: result.payload }));
       setSavedAt((prev) => ({ ...prev, [channelId]: Date.now() }));
       setDirtyChannels((previous) => ({ ...previous, [channelId]: false }));
@@ -653,10 +678,23 @@ export function PublishPackageForm({
           const firstFailure = failures.find(
             (entry): entry is Extract<typeof entry, { ok: false }> => !entry.ok,
           );
+          const failedChannelId = firstFailure
+            ? channelIdBySocial.get(firstFailure.socialChannelId)
+            : undefined;
           if (firstFailure && "fieldPath" in firstFailure && firstFailure.fieldPath) {
-            setFieldErrors({
-              [firstFailure.fieldPath]: t("contentDetail.publishErrors.invalidPlatformPayload"),
-            });
+            const fieldPath = firstFailure.fieldPath;
+            if (failedChannelId) {
+              setFieldErrorsByChannel((previous) => ({
+                ...previous,
+                [failedChannelId]: {
+                  [fieldPath]: t("contentDetail.publishErrors.invalidPlatformPayload"),
+                },
+              }));
+              // The error lives on the failing channel's panel, so bring
+              // the operator to it. Without this the message is correct
+              // but invisible, which is the same defect as before.
+              setActiveChannel(failedChannelId);
+            }
             setError(null);
           } else {
             setError(translatePublishError(t, result, "saveFailed"));
@@ -665,7 +703,14 @@ export function PublishPackageForm({
         return;
       }
       const now = Date.now();
-      setFieldErrors({});
+      setFieldErrorsByChannel((previous) => {
+        const next = { ...previous };
+        for (const entry of result.results) {
+          const channelId = channelIdBySocial.get(entry.socialChannelId);
+          if (channelId && entry.ok) next[channelId] = EMPTY_FIELD_ERRORS;
+        }
+        return next;
+      });
       setDrafts((previous) => {
         const next = { ...previous };
         for (const entry of result.results) {
@@ -1249,6 +1294,7 @@ export function PublishPackageForm({
                               id={`${inputId}-error`}
                               className="text-label text-danger mt-1"
                               role="alert"
+                              data-testid={`${inputId}-error`}
                             >
                               {error}
                             </p>
