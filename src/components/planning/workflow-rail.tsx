@@ -234,7 +234,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
     // layout flash on every page load.
     return (
       <aside
-        className="border-border bg-surface w-[300px] overflow-hidden rounded-[var(--radius-control)] border"
+        className="border-border bg-surface w-[320px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
         data-testid="workflow-rail"
       >
         <WorkflowRailBody {...props} />
@@ -245,7 +245,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
   if (collapsed) {
     return (
       <aside
-        className="border-border bg-surface w-14 overflow-hidden rounded-[var(--radius-control)] border"
+        className="border-border bg-surface w-14 overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
         data-testid="workflow-rail"
         data-collapsed="true"
         aria-label={tr("contentDetail.workflow.railCollapsed", "Workflow rail (collapsed)")}
@@ -294,11 +294,11 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
 
   return (
     <aside
-      className="border-border bg-surface w-[300px] overflow-hidden rounded-[var(--radius-control)] border"
+      className="border-border bg-surface w-[320px] overflow-hidden rounded-[var(--radius-card)] border shadow-sm"
       data-testid="workflow-rail"
     >
-      <header className="border-border flex items-center justify-between border-b px-3 py-2">
-        <p className="text-label text-fg-secondary font-semibold uppercase">
+      <header className="border-border flex items-center justify-between border-b px-4 py-3">
+        <p className="text-title-card text-fg-primary font-semibold">
           {tr("contentDetail.workflow.label", "Workflow")}
         </p>
         <button

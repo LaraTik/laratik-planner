@@ -791,6 +791,7 @@ export default async function ContentDetailPage({
                 platform: ch.platform,
                 accountName: ch.accountName,
               }))}
+              thumbnailUrl={firstImageSignedPreviewUrl}
               channelsSummary={
                 item.channels.length === 0
                   ? t("contentDetail.overview.noChannels")

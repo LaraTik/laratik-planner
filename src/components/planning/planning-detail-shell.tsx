@@ -94,22 +94,12 @@ export function PlanningDetailShell({
 }: PlanningDetailShellProps) {
   const t = useLocaleT();
   return (
-    <div className="space-y-4" data-testid="planning-detail-shell">
-      {/* Header — spans the full center column. */}
-      <div data-testid="planning-detail-header">{header}</div>
-
-      {/* Center + right rail grid. The `lg` breakpoint only
-          includes the rail if the user has expanded it (the
-          `WorkflowRail` component renders a 56px collapsed icon
-          rail by default at narrow widths, then a 300px full
-          rail when expanded). At `<lg` the rail is hidden; the
-          page renders a `WorkflowSheet` trigger pill in the
-          header area. The grid template reserves the rail
-          column at `lg+` regardless of collapsed/expanded so
-          the center column doesn't reflow when the user
-          toggles. */}
+    <div data-testid="planning-detail-shell">
+      {/* The header and rail share one grid row so lifecycle context is
+          visible beside the content identity, matching the reference
+          workspace composition. */}
       <div
-        className="grid min-w-0 grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_auto]"
+        className="grid min-w-0 grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_auto]"
         data-testid="planning-detail-grid"
       >
         {/* Center column — tabs + active panel. */}
@@ -118,6 +108,7 @@ export function PlanningDetailShell({
           data-testid="planning-detail-center"
           aria-label={t("common.contentWorkspace")}
         >
+          <div data-testid="planning-detail-header">{header}</div>
           <WorkspaceShell
             {...workspace}
             {...(workspace.editHref ? { editHref: workspace.editHref } : {})}
@@ -134,7 +125,7 @@ export function PlanningDetailShell({
             header) controls the rail's width inside this
             column. */}
         <aside
-          className="sticky top-16 hidden self-start lg:block"
+          className="sticky top-20 hidden self-start lg:block"
           id="workflow"
           tabIndex={-1}
           data-testid="planning-detail-rail"

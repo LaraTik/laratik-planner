@@ -23,16 +23,16 @@ workspace workflow invariants.
 
 | Token            | Light value           | Usage                                  |
 | ---------------- | --------------------- | -------------------------------------- |
-| canvas           | `#F7F7F5`             | page background                        |
+| canvas           | `#F7F8FB`             | page background                        |
 | surface          | `#FFFFFF`             | panels and navigation                  |
-| surface-subtle   | `#F1F3F5`             | grouped controls and quiet regions     |
-| border           | `#DDE1E6`             | dividers and card boundaries           |
-| fg-primary       | `#172033`             | headings and primary values            |
-| fg-secondary     | `#5D6678`             | supporting copy                        |
+| surface-subtle   | `#F4F5F9`             | grouped controls and quiet regions     |
+| border           | `#E0E3EB`             | dividers and card boundaries           |
+| fg-primary       | `#17213A`             | headings and primary values            |
+| fg-secondary     | `#5C667B`             | supporting copy                        |
 | fg-muted         | `#5B6270`             | quiet copy with WCAG AA contrast       |
-| primary          | `#4F46E5`             | primary action and active state        |
-| primary-hover    | `#4338CA`             | hover/pressed primary action           |
-| primary-subtle   | `#EEF2FF`             | selected and low-emphasis action state |
+| primary          | `#5846ED`             | primary action and active state        |
+| primary-hover    | `#4936D7`             | hover/pressed primary action           |
+| primary-subtle   | `#F0EFFF`             | selected and low-emphasis action state |
 | focus-ring       | `#6366F1`             | keyboard focus                         |
 | success / subtle | `#15803D` / `#ECFDF3` | positive state                         |
 | warning / subtle | `#B45309` / `#FFF7E6` | attention state                        |

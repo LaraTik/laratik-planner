@@ -205,7 +205,7 @@ export function WorkspaceShell({
 
   return (
     <>
-      <div className="border-border bg-surface sticky top-0 z-20 -mx-1 mb-3 flex flex-col gap-2 rounded-[var(--radius-control)] border px-2 py-1.5 backdrop-blur-sm md:flex-row md:items-center md:justify-between">
+      <div className="border-border bg-surface sticky top-0 z-20 mb-3 flex flex-col gap-2 rounded-[var(--radius-card)] border px-2 py-1.5 shadow-sm backdrop-blur-sm md:flex-row md:items-center md:justify-between md:px-3">
         <div className="min-w-0 md:flex-1">
           <WorkspaceTabs
             tabs={primaryTabs}

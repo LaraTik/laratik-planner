@@ -45,6 +45,8 @@ export interface PlanningHeaderProps {
   canTrash: boolean;
   /** Href to the legacy `/edit/[id]` form. */
   editHref: string;
+  /** Optional signed preview for the compact content thumbnail. */
+  thumbnailUrl?: string | null;
 }
 
 export function PlanningHeader({
@@ -65,10 +67,16 @@ export function PlanningHeader({
   canEdit,
   canTrash,
   editHref,
+  thumbnailUrl = null,
 }: PlanningHeaderProps) {
   return (
-    <Card padding="md" data-testid="planning-header" data-content-item-id={contentItemId}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <Card
+      padding="md"
+      className="overflow-hidden shadow-sm"
+      data-testid="planning-header"
+      data-content-item-id={contentItemId}
+    >
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">
           <Link
             href={`/app/w/${workspaceSlug}/planning`}
@@ -78,35 +86,59 @@ export function PlanningHeader({
             <DirAwareArrowLeft className="h-3.5 w-3.5" />
             {backLabel ?? `Back to ${workspaceName}`}
           </Link>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <CardTitle className="text-title-page text-fg-primary font-bold break-words">
-              {title}
-            </CardTitle>
-            <Badge variant={statusBadgeVariant(status)} data-testid="planning-header-status">
-              {statusLabel ?? humanStatus(status)}
-            </Badge>
-          </div>
-          <div className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="inline-flex items-center gap-1.5" data-testid="planning-header-format">
-              <FileText className="h-3.5 w-3.5" aria-hidden="true" />
-              {formatLabel ?? humanFormat(format)}
-            </span>
-            <span
-              className="inline-flex items-center gap-1.5"
-              data-testid="planning-header-channels"
-            >
-              <Users className="h-3.5 w-3.5" aria-hidden="true" />
-              {channelsSummary ??
-                (channels.length === 0
-                  ? "No channels"
-                  : channels.length === 1
-                    ? channels[0]!.accountName
-                    : `${channels.length} channels`)}
-            </span>
-            <span className="inline-flex items-center gap-1.5" data-testid="planning-header-date">
-              <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
-              {plannedPublishAt} <span className="text-fg-muted">· {workspaceTimezone}</span>
-            </span>
+          <div className="mt-2 flex min-w-0 items-center gap-3">
+            {thumbnailUrl ? (
+              <div className="border-border bg-surface-subtle relative h-14 w-14 shrink-0 overflow-hidden rounded-[var(--radius-control)] border">
+                {/* R2 signed URLs are intentionally not in next.config image
+                    remotePatterns; this is the same direct-preview path used
+                    by the rest of the media surfaces. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={thumbnailUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                  data-testid="planning-header-thumbnail"
+                />
+              </div>
+            ) : null}
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-title-page text-fg-primary max-w-4xl break-words">
+                  {title}
+                </CardTitle>
+                <Badge variant={statusBadgeVariant(status)} data-testid="planning-header-status">
+                  {statusLabel ?? humanStatus(status)}
+                </Badge>
+              </div>
+              <div className="text-label text-fg-secondary mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-testid="planning-header-format"
+                >
+                  <FileText className="h-3.5 w-3.5" aria-hidden="true" />
+                  {formatLabel ?? humanFormat(format)}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-testid="planning-header-channels"
+                >
+                  <Users className="h-3.5 w-3.5" aria-hidden="true" />
+                  {channelsSummary ??
+                    (channels.length === 0
+                      ? "No channels"
+                      : channels.length === 1
+                        ? channels[0]!.accountName
+                        : `${channels.length} channels`)}
+                </span>
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  data-testid="planning-header-date"
+                >
+                  <Calendar className="h-3.5 w-3.5" aria-hidden="true" />
+                  {plannedPublishAt} <span className="text-fg-muted">· {workspaceTimezone}</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
         <PlanningHeaderActions

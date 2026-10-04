@@ -125,7 +125,7 @@ export function WorkspaceTabs({
       aria-label={ariaLabel}
       data-testid="workspace-tabs"
       className={cn(
-        "border-border bg-surface sticky top-0 z-10 -mx-1 -mb-2 max-w-full min-w-0 border-b backdrop-blur-sm",
+        "border-border bg-surface sticky top-0 z-10 max-w-full min-w-0 rounded-t-[var(--radius-card)] border backdrop-blur-sm",
         className,
       )}
     >
