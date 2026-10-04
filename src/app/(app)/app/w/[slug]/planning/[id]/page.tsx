@@ -1444,6 +1444,7 @@ export default async function ContentDetailPage({
                   blockerCount={readiness.blockers}
                   publishingSetupReady={publishingSetupReady}
                   outcomesRecorded={publicationByChannel.size}
+                  issues={readiness.issues}
                   t={t}
                 />
                 {approvedBeforeLaterEdits ? (
@@ -1486,7 +1487,6 @@ export default async function ContentDetailPage({
                         workspaceSlug={slug}
                         workspaceTimezone={ws.timezone}
                         contentItemId={item.id}
-                        itemTitle={item.title}
                         itemFormat={item.format}
                         contentLocale={contentLocale}
                         audienceCopy={buildAudienceCopyViewModel({

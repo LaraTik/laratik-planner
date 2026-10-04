@@ -44,6 +44,15 @@ const baseProps = {
   hashtags: ["#spring", "#drop"],
 };
 
+/*
+ * The aspect-ratio frame is only allocated once media exists. With no
+ * thumbnail the component renders a compact empty state instead, so
+ * these fixtures — which assert the frame and its safe-area overlay —
+ * must supply a thumbnail. `publish-preview-empty-state.test.tsx`
+ * covers the no-media branch.
+ */
+const WITH_MEDIA = "https://x.com/hero.png";
+
 describe("PlatformPreview — aspect ratio + safe area", () => {
   it("renders no diagnostic when no thumbnail is set", () => {
     render(<PlatformPreview {...baseProps} thumbnailUrl={null} />);
@@ -60,12 +69,12 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
   });
 
   it("renders the safe-area toggle when the format is reel", () => {
-    render(<PlatformPreview {...baseProps} initialFormat="reel" />);
+    render(<PlatformPreview {...baseProps} thumbnailUrl={WITH_MEDIA} initialFormat="reel" />);
     expect(screen.getByTestId("safe-area-toggle")).toBeInTheDocument();
   });
 
   it("renders the safe-area toggle for the feed format too (overlay is informational)", () => {
-    render(<PlatformPreview {...baseProps} initialFormat="feed" />);
+    render(<PlatformPreview {...baseProps} thumbnailUrl={WITH_MEDIA} initialFormat="feed" />);
     // The toggle button is part of the SafeAreaOverlay wrapper
     // which is mounted for feed/reel/story alike. The overlay
     // itself is the same; only the painted regions differ.
@@ -73,7 +82,7 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
   });
 
   it("toggles the safe-area overlay when the button is pressed", () => {
-    render(<PlatformPreview {...baseProps} initialFormat="reel" />);
+    render(<PlatformPreview {...baseProps} thumbnailUrl={WITH_MEDIA} initialFormat="reel" />);
     expect(screen.queryByTestId("safe-area-overlay")).not.toBeInTheDocument();
     fireEvent.click(screen.getByTestId("safe-area-toggle"));
     expect(screen.getByTestId("safe-area-overlay")).toBeInTheDocument();
@@ -85,7 +94,7 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
   });
 
   it("switches the media canvas to the portrait minimum", () => {
-    render(<PlatformPreview {...baseProps} thumbnailUrl={null} />);
+    render(<PlatformPreview {...baseProps} thumbnailUrl={WITH_MEDIA} />);
 
     fireEvent.click(screen.getByTestId("platform-preview-dimension-portrait"));
 
@@ -131,7 +140,7 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByText("لا توجد وسائط بعد")).toBeInTheDocument();
+    expect(screen.getByText("لا توجد وسائط معتمدة بعد")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "الموجز" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "قصة" })).toBeInTheDocument();
     expect(screen.getByText("الآن")).toBeInTheDocument();

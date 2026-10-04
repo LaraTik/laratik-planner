@@ -829,6 +829,60 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface PR3: information architecture (removals, not restyling)
+
+Third of five. The Publishing tab had four surfaces describing the same
+state and several blocks that restated what was already on screen. This PR deletes
+and demotes; it does not add containers.
+
+- **fix(publishing): the no-media preview was the single largest wasted area.** The empty
+  state was rendered _inside_ the platform aspect-ratio box — `square: aspect-square`,
+  `portrait: aspect-[4/5]`, `vertical: aspect-[9/16] max-h-[420px]`
+  (`platform-preview.tsx`) — so a missing thumbnail cost several hundred pixels for two
+  words of text, in a ~40%-width column. The ratio frame is now allocated only when media
+  exists; the empty state is a compact block (icon, one sentence, `Review assets` →
+  `#assets-versions`) with no nested `Card`. Shared with the Copy tab, so both benefit.
+
+- **fix(publishing): three read-only `Field`s restated the page header.** Channel name, item
+  title, and format were rendered as three labels plus three 44px controls while the
+  channel name was already the active tab label and the title and format were already in
+  `PlanningHeader`. Replaced by one meta row — `format · accountName · platform` plus the
+  channel's blocker badge. `itemTitle` is no longer a prop of the form.
+
+- **fix(publishing): `PreviewPane` echoed the two fields directly above it.** It rendered
+  caption and hashtags with no media, no platform chrome, and no limit simulation. Deleted
+  rather than replaced here; see the note below on why the real preview is PR4 work.
+
+- **fix(publishing): the blocker list now lives in the command center.** The panel had four
+  status surfaces — the command center, a full-width `PublishReadinessChecklist` above the
+  editor, a red "Publishing requirements" block, and the red count pills on the channel
+  tabs. The checklist is gone; the command center is the single status surface and hosts
+  the aggregate issue list as a **collapsed** body, so the count appears once and the list
+  only costs space when there is something to do. Its rows resolve through
+  `blocker-targets`, so a manual-dispatch blocker renders an explicit state rather than a
+  dead link — the behaviour the four `publish-package-form-locale` cases that asserted
+  `publish-readiness-fix-*` covered is now asserted on the command center instead.
+
+- **feat(publishing): the shared-copy → inherits → override chain is now visible.** The same
+  text appeared in the Copy tab and again in the publish package with nothing saying which
+  was which, so identical text read as a duplication bug. The form now states
+  `Using shared audience copy` / `Channel override` / `Shared copy changed since this
+channel last saved`, with a reset or refresh action — which also gives
+  `copySourceRevision` a user-facing meaning.
+
+- **feat(publishing):** the Meta readiness card collapses to a single line on healthy
+  states, with the analytics / publishing / next-step prose behind a disclosure. It is only
+  promoted to a warning treatment when the connection is genuinely blocking
+  (`not_configured`). No new copy: the component keeps taking all strings through its
+  `ReadinessCopy` prop.
+
+**Deliberately deferred to PR4, not done:** `PlatformPreviewSwitcher` is not yet in the
+publish form. It takes a `storage-object` media id, and the form has no storage context, so
+wiring it properly needs a fourth prop plus a loader query — a guess would have produced a
+preview that silently never resolves. PR4 adds it. PR3 leaves the preview absent in the
+form rather than substituting a fake, and `publish-ia.test.tsx` asserts exactly that so the
+gap stays visible instead of being papered over.
+
 ### 2026-10-04 — Publish surface PR2: atomic batch save, optimistic concurrency, approval ownership
 
 Second of five PRs remodelling the Publishing tab. Changes the _save mechanics_; the

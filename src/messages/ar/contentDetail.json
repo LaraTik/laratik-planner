@@ -988,7 +988,10 @@
       "reel": "ريل",
       "story": "قصة",
       "post": "منشور"
-    }
+    },
+    "noMediaTitle": "لا توجد وسائط معتمدة بعد",
+    "noMediaDescription": "تظهر المعاينة بعد اعتماد أحد أصول التسليم.",
+    "reviewAssets": "مراجعة الأصول"
   },
   "publishReadiness": {
     "title": "متطلبات النشر",
@@ -1027,7 +1030,9 @@
     "approvals_open": "أكمل الاعتماد المعلّق قبل النشر.",
     "fixInPackage": "المعالجة في الحزمة",
     "fixManually": "نشر يدوي",
-    "manualDispatch": "نشر يدوي"
+    "manualDispatch": "نشر يدوي",
+    "viewAllBlockers": "عرض كل العوائق",
+    "hideBlockers": "إخفاء العوائق"
   },
   "publishForm": {
     "destinationCaption": "الوجهة والتعليق",
@@ -1144,7 +1149,14 @@
     },
     "disclosureYes": "نعم",
     "disclosureNo": "لا",
-    "approvedDeliveryCount": "{count} معتمدة"
+    "approvedDeliveryCount": "{count} معتمدة",
+    "copySourceShared": "يستخدم نص الجمهور المشترك",
+    "copySourceOverride": "تجاوز خاص بالقناة",
+    "copySourceStale": "تغيّر النص المشترك منذ آخر حفظ لهذه القناة",
+    "copySourceOverrideAction": "تجاوز لهذه القناة",
+    "copySourceResetAction": "إعادة تعيين إلى النص المشترك",
+    "additionalOptions": "خيارات نشر إضافية",
+    "helpLabel": "مزيد من المعلومات"
   },
   "publishErrors": {
     "authRequired": "يجب تسجيل الدخول.",

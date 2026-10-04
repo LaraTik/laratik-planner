@@ -79,7 +79,6 @@ function renderForm({
         workspaceSlug="demo"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
-        itemTitle="Autumn cold brew"
         itemFormat="short_form_video"
         contentLocale="en"
         deliveryVersions={[]}

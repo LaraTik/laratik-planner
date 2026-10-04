@@ -23,6 +23,7 @@ import { SafeAreaOverlay, type SafeAreaShape } from "@/components/preview/safe-a
 import { LinkifyText } from "@/components/ui/linkify-text";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { platformLabel } from "@/components/workspace/platform-icon";
+import { WORKSPACE_SECTION_ANCHORS } from "@/lib/publishing/blocker-targets";
 
 /**
  * PlatformPreview — a recognisable, format-aware preview of a
@@ -58,6 +59,10 @@ import { platformLabel } from "@/components/workspace/platform-icon";
  *   - Updates to the caption or thumbnail flow in via props; the
  *     preview re-renders. (Re-renders are cheap — the component
  *     is small.)
+ *   - Without an approved asset the aspect-ratio frame is
+ *     skipped entirely and a compact empty state takes its
+ *     place (see `PreviewEmptyState`). The frame is allocated
+ *     only when there is media to render inside it.
  */
 export type PreviewFormat = "feed" | "reel" | "story" | "post";
 type PreviewDimension = "square" | "portrait" | "vertical";
@@ -132,6 +137,78 @@ function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: stri
   const key = `contentDetail.publishForm.platformLabels.${platform}`;
   const value = t(key);
   return value === key ? platformLabel(platform) : value;
+}
+
+/**
+ * Compact stand-in for a preview with no approved media.
+ *
+ * The platform frame is the single largest area on this
+ * surface. In the ~40%-wide preview column an `aspect-square`
+ * box is several hundred pixels of height for a line of copy,
+ * so when there is no media to show we do not allocate the
+ * frame at all: the aspect-ratio map is only applied once an
+ * asset exists.
+ *
+ * Two variants:
+ *   - default: one ~200px block with the reason, a sentence,
+ *     and the single control that fixes it (an in-page link to
+ *     the assets panel, the same anchor the delivery blockers
+ *     use).
+ *   - `compact`: a bare marker for the compare grid, where the
+ *     per-dimension headers already carry the label text and
+ *     the action would be repeated once per column.
+ *
+ * Deliberately NOT a `<Card>`: the preview root is already a
+ * bordered surface and this project keeps surface nesting to a
+ * single level. A dashed border on plain spacing reads the same
+ * without adding a second card.
+ */
+function PreviewEmptyState({
+  dimension,
+  format,
+  compact = false,
+}: {
+  dimension: PreviewDimension;
+  format: PreviewFormat;
+  compact?: boolean;
+}) {
+  const t = useLocaleT();
+  const Icon = dimension === "vertical" || format === "reel" ? Play : ImageIcon;
+
+  if (compact) {
+    return (
+      <div
+        className="text-fg-muted flex flex-col items-center gap-1.5 px-3 py-4 text-center"
+        data-testid="platform-preview-empty"
+      >
+        <Icon className="h-6 w-6" aria-hidden="true" />
+        <p className="text-label">{t("contentDetail.preview.noMedia")}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="border-border text-fg-muted m-3 flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-[var(--radius-control)] border border-dashed px-4 py-6 text-center"
+      data-testid="platform-preview-empty"
+    >
+      <Icon className="h-8 w-8" aria-hidden="true" />
+      <p className="text-label text-fg-primary font-semibold">
+        {t("contentDetail.preview.noMediaTitle")}
+      </p>
+      <p className="text-label max-w-[36ch]">{t("contentDetail.preview.noMediaDescription")}</p>
+      {/* A plain anchor: it jumps to the assets panel inside the
+          workspace, stays keyboard reachable, and — unlike a
+          button inside a form — can never submit anything. */}
+      <a
+        href={WORKSPACE_SECTION_ANCHORS.assets}
+        className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline"
+        data-testid="platform-preview-review-assets"
+      >
+        {t("contentDetail.preview.reviewAssets")}
+      </a>
+    </div>
+  );
 }
 
 export function PlatformPreview({
@@ -258,7 +335,14 @@ export function PlatformPreview({
       ) : null}
     </div>
   );
-  const mediaBody = renderMedia(activeDimension, format, "platform-preview-media");
+  // The aspect-ratio frame is only worth its pixels once there
+  // is something to show inside it. Without an approved asset
+  // we render the compact empty state instead (see
+  // `PreviewEmptyState`).
+  const hasMedia = Boolean(thumbnailUrl);
+  const mediaBody = hasMedia
+    ? renderMedia(activeDimension, format, "platform-preview-media")
+    : null;
 
   return (
     <div
@@ -409,10 +493,18 @@ export function PlatformPreview({
                     {t("contentDetail.preview.minimumResolution", spec.recommended)}
                   </p>
                 </div>
-                {renderMedia(
-                  targetDimension,
-                  targetDimension === "vertical" ? "reel" : "feed",
-                  `platform-preview-compare-media-${targetDimension}`,
+                {hasMedia ? (
+                  renderMedia(
+                    targetDimension,
+                    targetDimension === "vertical" ? "reel" : "feed",
+                    `platform-preview-compare-media-${targetDimension}`,
+                  )
+                ) : (
+                  <PreviewEmptyState
+                    dimension={targetDimension}
+                    format={targetDimension === "vertical" ? "reel" : "feed"}
+                    compact
+                  />
                 )}
                 {thumbnailUrl ? (
                   <div className="px-2 pb-2">
@@ -423,10 +515,14 @@ export function PlatformPreview({
             );
           })}
         </div>
-      ) : safeAreaShape ? (
-        <SafeAreaOverlay shape={safeAreaShape}>{mediaBody}</SafeAreaOverlay>
+      ) : hasMedia ? (
+        safeAreaShape ? (
+          <SafeAreaOverlay shape={safeAreaShape}>{mediaBody}</SafeAreaOverlay>
+        ) : (
+          mediaBody
+        )
       ) : (
-        mediaBody
+        <PreviewEmptyState dimension={activeDimension} format={format} />
       )}
 
       {/* Aspect-ratio diagnostic. The view hides itself when

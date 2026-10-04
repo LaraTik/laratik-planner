@@ -1,6 +1,8 @@
 import { CheckCircle2, CircleAlert, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { PublishingBlockers } from "@/components/planning/publishing-blockers";
+import type { ReadinessIssue } from "@/lib/publishing/readiness";
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
@@ -10,6 +12,19 @@ export interface PublishingCommandCenterProps {
   blockerCount: number;
   publishingSetupReady: boolean;
   outcomesRecorded: number;
+  /**
+   * The aggregate readiness issues, rendered as this component's
+   * expandable body.
+   *
+   * The command center is the single status surface for the Publishing
+   * tab: it already shows the blocker count, so the per-channel
+   * checklist that used to sit full-width above the editor was a
+   * second copy of the same number plus the same list. Each row here
+   * resolves through `blocker-targets`, so a Fix link either reaches
+   * the control that resolves it, reaches another panel, or renders an
+   * explicit manual-dispatch state — never a dead link to `#publishing`.
+   */
+  issues?: ReadinessIssue[];
   t: Translator;
 }
 
@@ -24,6 +39,7 @@ export function PublishingCommandCenter({
   blockerCount,
   publishingSetupReady,
   outcomesRecorded,
+  issues = [],
   t,
 }: PublishingCommandCenterProps) {
   const hasNoChannels = channelCount === 0;
@@ -139,6 +155,8 @@ export function PublishingCommandCenter({
           {action.label}
         </a>
       </div>
+
+      {issues.length > 0 ? <PublishingBlockers issues={issues} /> : null}
     </section>
   );
 }

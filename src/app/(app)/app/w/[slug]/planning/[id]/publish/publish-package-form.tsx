@@ -1,9 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition, type MouseEvent } from "react";
-import Link from "next/link";
+import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, CheckCircle2, Info, Save, Send, X } from "lucide-react";
+import { CheckCircle2, Save, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -28,10 +27,6 @@ import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
  * client component fails the webpack build. The type-only import above
  * is erased at compile time, which is why it was always safe.
  */
-import {
-  isManualDispatchBlocker,
-  readinessAnchorForPath as resolveReadinessAnchor,
-} from "@/lib/publishing/blocker-targets";
 import {
   requiredFieldsFor,
   rightsCheckboxesFor,
@@ -236,7 +231,6 @@ export function PublishPackageForm({
   workspaceSlug,
   workspaceTimezone,
   contentItemId,
-  itemTitle,
   itemFormat,
   audienceCopy,
   formatPayloadPreFill,
@@ -257,7 +251,6 @@ export function PublishPackageForm({
   workspaceSlug: string;
   workspaceTimezone: string;
   contentItemId: string;
-  itemTitle: string;
   itemFormat: string;
   /** Canonical audience copy plus locale-resolved publishing values. */
   audienceCopy?: AudienceCopyViewModel;
@@ -410,6 +403,14 @@ export function PublishPackageForm({
         JSON.stringify((currentDraft as Record<string, unknown>)[key]) !==
         JSON.stringify(sharedCopy[key as keyof MappedPlatformFields]),
     ),
+  );
+  /**
+   * True when the shared audience copy has been revised since this
+   * channel last saved — the one case where "using shared copy" is a
+   * stale claim rather than a true one.
+   */
+  const isCopyStale = Boolean(
+    current?.copySourceRevision != null && current.copySourceRevision < readiness.revision,
   );
   /** Schema-required extras for the active channel's platform. */
   const currentPlatformFields = requiredFieldsFor(current?.platform ?? "");
@@ -796,6 +797,37 @@ export function PublishPackageForm({
         </div>
       </div>
 
+      {/*
+        Channel identity, stated once. This replaces the three read-only
+        `Field`s (channel name, item title, format) that duplicated the
+        active tab and `PlanningHeader` — three labels and three 44px
+        controls for information already on screen.
+      */}
+      {current ? (
+        <p
+          className="text-label text-fg-muted flex flex-wrap items-center gap-x-2 gap-y-1"
+          data-testid="publish-channel-meta"
+        >
+          <span className="text-fg-secondary font-semibold">
+            {localizedFormatLabel(itemFormat)}
+          </span>
+          <span aria-hidden="true">·</span>
+          <span>{current.accountName}</span>
+          <span aria-hidden="true">·</span>
+          <span>{localizedPlatformLabel(current.platform)}</span>
+          {currentBlockerCount > 0 ? (
+            <Badge variant="danger" data-testid="publish-channel-meta-blockers">
+              {t(
+                currentBlockerCount === 1
+                  ? "contentDetail.publishReadiness.blockersOne"
+                  : "contentDetail.publishReadiness.blockersMany",
+                { count: currentBlockerCount },
+              )}
+            </Badge>
+          ) : null}
+        </p>
+      ) : null}
+
       {channels.length > 0 ? (
         <PublishPhaseStepper
           activeChannel={activeChannel}
@@ -887,9 +919,14 @@ export function PublishPackageForm({
           className="grid grid-cols-1 gap-4 lg:grid-cols-2"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
-          {currentReadiness ? (
-            <PublishReadinessChecklist currentReadiness={currentReadiness} t={t} />
-          ) : null}
+          {/*
+            The per-channel readiness checklist used to render here as a
+            full-width block above the editor, duplicating the count and
+            status the `PublishingCommandCenter` already renders at the
+            top of the panel. The command center is now the single
+            status surface and hosts the blocker list as its expandable
+            body; the per-channel counts stay on the channel tabs.
+          */}
           <div className="min-w-0 space-y-4">
             {/* Editor column — destination + caption/discovery, then disclosures */}
             {/*
@@ -938,31 +975,15 @@ export function PublishPackageForm({
                   className="min-w-0 scroll-mt-24 space-y-3"
                 >
                   <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
-                  <div
-                    className="border-info bg-info-subtle text-fg-primary rounded-[var(--radius-control)] border p-3"
-                    role="note"
-                    data-testid="publish-shared-copy-hint"
-                  >
-                    <p className="text-label">{t("contentDetail.publishForm.sharedCopyHint")}</p>
-                  </div>
-                  <Field
-                    label={t("contentDetail.publishForm.channel")}
-                    value={current.accountName}
-                    readOnly
-                    testId="publish-channel-name"
-                  />
-                  <Field
-                    label={t("contentDetail.publishForm.itemTitle")}
-                    value={itemTitle}
-                    readOnly
-                    testId="publish-item-title"
-                  />
-                  <Field
-                    label={t("contentDetail.publishForm.format")}
-                    value={localizedFormatLabel(itemFormat)}
-                    readOnly
-                    testId="publish-item-format"
-                  />
+                  {/*
+                    The three read-only Fields that used to sit here
+                    (channel name, item title, format) duplicated the
+                    active channel tab and the page header verbatim, at a
+                    cost of three labels and three 44px controls. Channel
+                    identity is now a single meta row above the editor —
+                    `format · accountName · platform` — and the item
+                    title and format live in `PlanningHeader`.
+                  */}
                   <div>
                     <label
                       htmlFor="publish-content-language"
@@ -1012,7 +1033,65 @@ export function PublishPackageForm({
                       testId="publish-hashtags"
                     />
                   </div>
-                  {sharedCopy && sharedCopyDiffers ? (
+                  {/*
+                    Make the shared-copy → channel-inherits → optional
+                    override chain visible. The same Arabic text appears in
+                    the Copy tab and again here, and nothing on screen said
+                    which was which — so identical text read as a
+                    duplication bug rather than an inheritance. This also
+                    gives `copySourceRevision` a user-facing meaning.
+                  */}
+                  {current?.payload ? (
+                    <p
+                      className="text-label text-fg-muted flex flex-wrap items-center gap-2"
+                      data-testid="publish-copy-source"
+                    >
+                      {isCopyStale ? (
+                        <>
+                          <span className="text-warning font-semibold">
+                            {t("contentDetail.publishForm.copySourceStale")}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11"
+                            onClick={() => applySharedCopy(current.id, selectedLanguage)}
+                            data-testid="publish-copy-refresh"
+                          >
+                            {t("contentDetail.publishForm.useSharedCopy")}
+                          </Button>
+                        </>
+                      ) : sharedCopyDiffers ? (
+                        <>
+                          <span className="text-fg-secondary font-semibold">
+                            {t("contentDetail.publishForm.copySourceOverride")}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11"
+                            onClick={() => applySharedCopy(current.id, selectedLanguage)}
+                            data-testid="publish-copy-reset"
+                          >
+                            {t("contentDetail.publishForm.copySourceResetAction")}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2
+                            className="text-success h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                          <span className="text-fg-secondary">
+                            {t("contentDetail.publishForm.copySourceShared")}
+                          </span>
+                        </>
+                      )}
+                    </p>
+                  ) : null}
+                  {sharedCopy && sharedCopyDiffers && !isCopyStale ? (
                     <div className="border-info bg-info-subtle flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-2">
                       <p className="text-label text-fg-secondary">
                         {current.copySourceRevision != null &&
@@ -1335,7 +1414,6 @@ export function PublishPackageForm({
             className="min-w-0 scroll-mt-24 space-y-3 self-start lg:sticky lg:top-24"
           >
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
-            <PreviewPane payload={currentDraft} platform={current.platform} />
             <div
               id="publish-approval"
               className="border-border bg-surface-subtle scroll-mt-24 rounded-[var(--radius-control)] border p-3"
@@ -1493,211 +1571,6 @@ function translatePublishError(
 ): string {
   const code = result.errorCode ?? fallback;
   return t(`contentDetail.publishErrors.${code}`);
-}
-
-/**
- * Resolve an issue path to an in-page anchor using the canonical map in
- * `lib/publishing/blocker-targets`.
- *
- * There is no `#publishing` fallback: an unmapped path returns
- * `undefined` and the checklist renders no fix affordance, because a
- * link to a section that cannot fix the issue is a dead end. Manual
- * dispatch blockers also return `undefined` and render an explicit
- * state instead.
- */
-function readinessAnchorForPath(path: string): string | undefined {
-  return resolveReadinessAnchor(path);
-}
-
-function focusReadinessTarget(target: HTMLElement): void {
-  target.focus({ preventScroll: true });
-  const reduceMotion =
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  target.scrollIntoView?.({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-}
-
-function isHiddenReadinessTarget(target: HTMLElement): boolean {
-  return (
-    target.hidden ||
-    target.getAttribute("aria-hidden") === "true" ||
-    Boolean(target.closest('[hidden], [aria-hidden="true"]')) ||
-    window.getComputedStyle(target).display === "none" ||
-    window.getComputedStyle(target).visibility === "hidden"
-  );
-}
-
-function focusReadinessLinkTarget(event: MouseEvent<HTMLAnchorElement>, anchor: string): void {
-  const directTarget = document.querySelector<HTMLElement>(anchor);
-  const mobileWorkflowTrigger =
-    anchor === "#workflow"
-      ? document.querySelector<HTMLElement>('[data-testid="workflow-mobile-trigger"]')
-      : null;
-  const target =
-    directTarget && !isHiddenReadinessTarget(directTarget)
-      ? directTarget
-      : mobileWorkflowTrigger && !isHiddenReadinessTarget(mobileWorkflowTrigger)
-        ? mobileWorkflowTrigger
-        : null;
-
-  if (target) {
-    event.preventDefault();
-    window.history.replaceState(null, "", anchor);
-    focusReadinessTarget(target);
-    return;
-  }
-
-  // Delivery is a lazily mounted workspace panel. Select it first, then
-  // focus the exact section once React has mounted the target. This keeps
-  // blocker recovery usable from both pointer and keyboard activation.
-  if (anchor === "#assets-versions") {
-    event.preventDefault();
-    window.location.hash = "#delivery";
-    let attempts = 0;
-    const retry = () => {
-      const deliveryTarget = document.querySelector<HTMLElement>(anchor);
-      if (deliveryTarget && !isHiddenReadinessTarget(deliveryTarget)) {
-        window.history.replaceState(null, "", anchor);
-        focusReadinessTarget(deliveryTarget);
-        return;
-      }
-      attempts += 1;
-      if (attempts < 10) window.requestAnimationFrame(retry);
-    };
-    window.requestAnimationFrame(retry);
-  }
-}
-
-function readinessIssueText(
-  t: (key: string, params?: Record<string, string | number>) => string,
-  code: string,
-  fallback: string,
-): string {
-  const key = `contentDetail.publishReadiness.${code}`;
-  const localized = t(key);
-  return localized.startsWith("[contentDetail.publishReadiness.") ? fallback : localized;
-}
-
-function PublishReadinessChecklist({
-  currentReadiness,
-  t,
-}: {
-  currentReadiness: ReadinessReport["channels"][number];
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  const hasBlockers = currentReadiness.blockerCount > 0;
-  const hasRecommendations = currentReadiness.recommendationCount > 0;
-  const tone = hasBlockers
-    ? "border-danger bg-danger-container"
-    : hasRecommendations
-      ? "border-warning bg-warning-subtle"
-      : "border-success bg-success-container";
-  return (
-    <section
-      className={`${tone} text-fg-primary rounded-[var(--radius-control)] border p-3 lg:col-span-2`}
-      aria-labelledby="publish-readiness-title"
-      data-testid="publish-readiness-checklist"
-      data-blockers={currentReadiness.blockerCount}
-    >
-      <div className="flex items-start gap-2">
-        {hasBlockers ? (
-          <AlertTriangle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        ) : hasRecommendations ? (
-          <Info className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        ) : (
-          <CheckCircle2 className="text-success mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-        )}
-        <div className="min-w-0 flex-1">
-          <h2 id="publish-readiness-title" className="text-body font-semibold">
-            {t("contentDetail.publishReadiness.title")}
-          </h2>
-          <p className="text-label mt-1">
-            {t("contentDetail.publishReadiness.progress", {
-              completed: currentReadiness.requiredCompleted,
-              total: currentReadiness.requiredTotal,
-            })}
-          </p>
-        </div>
-        <span className="text-label shrink-0 font-semibold" data-testid="publish-readiness-count">
-          {hasBlockers
-            ? t(
-                currentReadiness.blockerCount === 1
-                  ? "contentDetail.publishReadiness.blockersOne"
-                  : "contentDetail.publishReadiness.blockersMany",
-                { count: currentReadiness.blockerCount },
-              )
-            : hasRecommendations
-              ? t(
-                  currentReadiness.recommendationCount === 1
-                    ? "contentDetail.publishReadiness.recommendationsOne"
-                    : "contentDetail.publishReadiness.recommendationsMany",
-                  { count: currentReadiness.recommendationCount },
-                )
-              : t("contentDetail.publishReadiness.ready")}
-        </span>
-      </div>
-      {currentReadiness.issues.length > 0 ? (
-        <ul className="text-label mt-3 space-y-2" data-testid="publish-readiness-issues">
-          {currentReadiness.issues.map((issue, index) => (
-            <li key={`${issue.code}-${index}`} className="flex flex-wrap items-start gap-2">
-              <span className="min-w-0 flex-1">
-                {readinessIssueText(t, issue.code, issue.message)}
-              </span>
-              {(() => {
-                const anchor = readinessAnchorForPath(issue.path);
-                const issueText = readinessIssueText(t, issue.code, issue.message);
-                if (!anchor) {
-                  // Either a manual-dispatch blocker (no collectable
-                  // control exists) or an unmapped path. Render the
-                  // state explicitly instead of a link to a section
-                  // that cannot resolve it.
-                  return (
-                    <span
-                      className="text-label text-fg-muted shrink-0 rounded-[var(--radius-control)] px-2 py-1"
-                      data-testid={`publish-readiness-manual-${issue.code}`}
-                    >
-                      {t("contentDetail.publishReadiness.manualDispatch")}
-                    </span>
-                  );
-                }
-                return (
-                  <Link
-                    href={anchor}
-                    onClick={(event) => focusReadinessLinkTarget(event, anchor)}
-                    aria-label={`${readinessFixLabel(issue.path, t)}: ${issueText}`}
-                    className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-                    data-testid={`publish-readiness-fix-${issue.code}`}
-                  >
-                    {readinessFixLabel(issue.path, t)}
-                  </Link>
-                );
-              })()}
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-label mt-3" data-testid="publish-readiness-clear">
-          {hasRecommendations
-            ? t("contentDetail.publishReadiness.recommendationsDescription")
-            : t("contentDetail.publishReadiness.clearDescription")}
-        </p>
-      )}
-    </section>
-  );
-}
-
-function readinessFixLabel(
-  path: string,
-  t: (key: string, params?: Record<string, string | number>) => string,
-): string {
-  if (isManualDispatchBlocker(path)) {
-    return t("contentDetail.publishReadiness.fixManually");
-  }
-  const anchor = resolveReadinessAnchor(path);
-  if (anchor === "#assets-versions") return t("contentDetail.publishReadiness.fixInAssets");
-  if (anchor === "#workflow") return t("contentDetail.publishReadiness.fixInWorkflow");
-  if (anchor) return t("contentDetail.publishReadiness.fixInPackage");
-  return t("contentDetail.publishReadiness.fixManually");
 }
 
 function Field({
@@ -1912,35 +1785,5 @@ function ReadOnlyPackageSummary({
         </div>
       </dl>
     </Card>
-  );
-}
-
-function PreviewPane({ payload, platform }: { payload: PlatformPayload; platform: string }) {
-  const t = useLocaleT();
-  const displayPlatform = (() => {
-    const key = `contentDetail.publishForm.platformLabels.${platform}`;
-    const value = t(key);
-    return value === key ? platformLabel(platform) : value;
-  })();
-  const caption = (payload as { caption?: string }).caption ?? "";
-  const hashtags = (payload as { hashtags?: string[] }).hashtags ?? [];
-  return (
-    <div
-      className="border-border rounded-[var(--radius-control)] border p-3"
-      data-testid="publish-preview-pane"
-    >
-      <p className="text-label text-fg-muted uppercase">{displayPlatform}</p>
-      <p
-        className="text-body text-fg-primary mt-1 whitespace-pre-wrap"
-        data-testid="publish-preview-caption"
-      >
-        {caption || (
-          <span className="text-fg-muted italic">({t("contentDetail.publishForm.noCaption")})</span>
-        )}
-      </p>
-      {hashtags.length > 0 ? (
-        <p className="text-label text-fg-muted mt-1">{hashtags.map((h) => `#${h}`).join(" ")}</p>
-      ) : null}
-    </div>
   );
 }

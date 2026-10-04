@@ -988,7 +988,10 @@
       "reel": "Reel",
       "story": "Story",
       "post": "Post"
-    }
+    },
+    "noMediaTitle": "No approved media yet",
+    "noMediaDescription": "The preview appears once a delivery asset is approved.",
+    "reviewAssets": "Review assets"
   },
   "publishReadiness": {
     "title": "Publishing requirements",
@@ -1027,7 +1030,9 @@
     "approvals_open": "Complete the outstanding approval before publishing.",
     "fixInPackage": "Resolve in package",
     "fixManually": "Manual dispatch",
-    "manualDispatch": "Dispatch manually"
+    "manualDispatch": "Dispatch manually",
+    "viewAllBlockers": "View all blockers",
+    "hideBlockers": "Hide blockers"
   },
   "publishForm": {
     "destinationCaption": "Destination & caption",
@@ -1144,7 +1149,14 @@
     },
     "disclosureYes": "Yes",
     "disclosureNo": "No",
-    "approvedDeliveryCount": "{count} approved"
+    "approvedDeliveryCount": "{count} approved",
+    "copySourceShared": "Using shared audience copy",
+    "copySourceOverride": "Channel override",
+    "copySourceStale": "Shared copy changed since this channel last saved",
+    "copySourceOverrideAction": "Override for this channel",
+    "copySourceResetAction": "Reset to shared copy",
+    "additionalOptions": "Additional publishing options",
+    "helpLabel": "More information"
   },
   "publishErrors": {
     "authRequired": "Sign in is required.",
