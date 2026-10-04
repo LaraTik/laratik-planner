@@ -53,10 +53,13 @@ export function OnboardingWizard({
   const handleConfirm = async () => {
     setError(null);
     setSubmitting(true);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 15_000);
     try {
       const res = await fetch("/api/trends/sources/bulk-enable", {
         method: "POST",
         headers: { "content-type": "application/json" },
+        signal: controller.signal,
         body: JSON.stringify({
           workspaceSlug,
           keys: Array.from(selected),
@@ -71,9 +74,17 @@ export function OnboardingWizard({
       if (typeof window !== "undefined") {
         window.location.reload();
       }
-    } catch {
-      setError(t("trends.onboarding.error") || "Could not save your selection. Try again.");
+    } catch (error) {
+      const isTimeout = error instanceof Error && error.name === "AbortError";
+      setError(
+        isTimeout
+          ? t("trends.onboarding.timeout") ||
+              "Saving took too long. Check your connection and try again."
+          : t("trends.onboarding.error") || "Could not save your selection. Try again.",
+      );
       setSubmitting(false);
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   };
 
@@ -155,9 +166,21 @@ export function OnboardingWizard({
           </ul>
 
           {error ? (
-            <p role="alert" data-testid="onboarding-error" className="text-body text-danger">
-              {error}
-            </p>
+            <div
+              role="alert"
+              data-testid="onboarding-error"
+              className="flex flex-col gap-2 text-start sm:flex-row sm:items-center sm:justify-between"
+            >
+              <p className="text-body text-danger">{error}</p>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleConfirm}
+                disabled={!canConfirm}
+              >
+                {t("trends.onboarding.retry") || "Try again"}
+              </Button>
+            </div>
           ) : null}
 
           <footer className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
