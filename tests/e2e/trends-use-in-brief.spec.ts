@@ -15,7 +15,11 @@ import { bootstrapTestSession } from "./_helpers";
 test.describe("Trend Radar — Use in brief", () => {
   const workspaceSlug = "trend-brief";
   test.beforeEach(async ({ page }) => {
-    await bootstrapTestSession(page, { agencySlug: "trend-brief-agency", workspaceSlug });
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-brief-agency",
+      workspaceSlug,
+      enableTrendRadar: true,
+    });
     const source = await page.request.post("/api/dev/trend-source/force-open", {
       data: { sourceKey: "tiktok_creative_center" },
     });

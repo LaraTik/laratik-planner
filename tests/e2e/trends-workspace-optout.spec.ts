@@ -16,7 +16,11 @@ import { bootstrapTestSession } from "./_helpers";
 test.describe("Trend Radar — workspace opt-out", () => {
   const workspaceSlug = "trend-optout";
   test.beforeEach(async ({ page }) => {
-    await bootstrapTestSession(page, { agencySlug: "trend-optout-agency", workspaceSlug });
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-optout-agency",
+      workspaceSlug,
+      enableTrendRadar: true,
+    });
     const source = await page.request.post("/api/dev/trend-source/force-open", {
       data: { sourceKey: "tiktok_creative_center" },
     });

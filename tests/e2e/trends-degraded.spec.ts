@@ -19,7 +19,11 @@ import { bootstrapTestSession } from "./_helpers";
 test.describe("Trend Radar — degraded source UX", () => {
   const workspaceSlug = "trend-degraded";
   test.beforeEach(async ({ page }) => {
-    await bootstrapTestSession(page, { agencySlug: "trend-degraded-agency", workspaceSlug });
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-degraded-agency",
+      workspaceSlug,
+      enableTrendRadar: true,
+    });
   });
 
   test("circuit-open source shows degraded banner, not a crash", async ({

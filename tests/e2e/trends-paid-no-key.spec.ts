@@ -14,6 +14,7 @@ test.describe("Trend Radar — paid source without key", () => {
     await bootstrapTestSession(page, {
       agencySlug: "trend-paid-agency",
       workspaceSlug: "trend-paid",
+      enableTrendRadar: true,
     });
   });
 

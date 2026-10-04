@@ -17,7 +17,11 @@ import { bootstrapTestSession } from "./_helpers";
 test.describe("Trend Radar — saved filters", () => {
   const workspaceSlug = "trend-filters";
   test.beforeEach(async ({ page }) => {
-    await bootstrapTestSession(page, { agencySlug: "trend-filters-agency", workspaceSlug });
+    await bootstrapTestSession(page, {
+      agencySlug: "trend-filters-agency",
+      workspaceSlug,
+      enableTrendRadar: true,
+    });
   });
 
   test("save → apply → share with workspace", async ({

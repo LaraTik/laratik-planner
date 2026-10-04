@@ -196,7 +196,13 @@ export function OnboardingWizard({
               ) : null}
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Button type="button" variant="ghost" onClick={onClose} disabled={submitting}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={onClose}
+                disabled={submitting}
+                data-testid="onboarding-close"
+              >
                 {t("common.skip") || "Skip for now"}
               </Button>
               <Button

@@ -17,6 +17,7 @@ test.describe("Trend Radar — Sources admin page", () => {
     await bootstrapTestSession(page, {
       agencySlug: "trend-sources-agency",
       workspaceSlug: "trend-sources",
+      enableTrendRadar: true,
     });
   });
 

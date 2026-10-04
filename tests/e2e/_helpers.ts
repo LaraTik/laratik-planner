@@ -215,6 +215,7 @@ async function applySeededAgencyContext(page: Page, result: SeedResult) {
   if (!result.activeAgencyCookie) {
     throw new Error(`devSeed did not return a ${ACTIVE_AGENCY_COOKIE_NAME} cookie`);
   }
+  await page.context().clearCookies({ name: ACTIVE_AGENCY_COOKIE_NAME });
   await page.context().addCookies([
     {
       name: ACTIVE_AGENCY_COOKIE_NAME,
@@ -310,6 +311,10 @@ export async function setAuthCookie(
   // Playwright configurations, so we apply the cookie explicitly
   // rather than relying on the request-context propagation that
   // `bootstrapTestSession` leans on.
+  // A single test may intentionally switch identities on one page. Clear the
+  // previous JWT first so the browser cannot send two same-name cookies and
+  // resolve the earlier role.
+  await page.context().clearCookies({ name: DEV_SESSION_COOKIE_NAME });
   await page.context().addCookies([
     {
       name: sessionCookie.name,

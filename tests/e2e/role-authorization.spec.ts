@@ -110,16 +110,27 @@ const ROLE_MATRIX: RoleCase[] = [
 ];
 
 test.describe("role-separated workspace access (existing)", () => {
-  test("content planner can create while viewer cannot", async ({ page }) => {
+  test("content planner can create while viewer cannot", async ({ page, browser }) => {
     await bootstrapRoleSession(page, "content_planner");
     await page.goto("/app/w/acme/planning");
     await expect(page.getByRole("link", { name: /Quick Create/i })).toBeVisible();
 
-    await bootstrapRoleSession(page, "viewer");
-    await page.goto("/app/w/acme/planning");
-    await expect(page.getByRole("link", { name: /Quick Create/i })).toHaveCount(0);
-    await page.goto("/app/w/acme/planning/new");
-    await expect(page.getByRole("heading", { name: "Creation access required" })).toBeVisible();
+    // Keep role identities in separate browser contexts. A single page can
+    // retain navigation and cookie state while the dev fixture is replacing
+    // the JWT, which makes a deny assertion observe the previous role.
+    const viewerContext = await browser.newContext();
+    const viewerPage = await viewerContext.newPage();
+    try {
+      await bootstrapRoleSession(viewerPage, "viewer");
+      await viewerPage.goto("/app/w/acme/planning", { waitUntil: "commit" });
+      await expect(viewerPage.getByRole("link", { name: /Quick Create/i })).toHaveCount(0);
+      await viewerPage.goto("/app/w/acme/planning/new", { waitUntil: "commit" });
+      await expect(
+        viewerPage.getByRole("heading", { name: "Creation access required" }),
+      ).toBeVisible();
+    } finally {
+      await viewerContext.close();
+    }
   });
 
   test("review roles see only their review surface", async ({ page }) => {

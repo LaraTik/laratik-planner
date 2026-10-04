@@ -443,6 +443,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
           timeout: 10_000,
         });
         await publisherPage.getByTestId("workspace-tab-publish").click();
+        const channelPublishingOutcomes = publisherPage.locator("details#publish-outcomes");
+        await expect(channelPublishingOutcomes).toBeVisible({ timeout: 10_000 });
+        if ((await channelPublishingOutcomes.getAttribute("open")) === null) {
+          await channelPublishingOutcomes.locator("summary").click();
+        }
         const card = publisherPage.locator(
           `[data-testid="channel-publishing-card"][data-channel-id="${channelId}"]`,
         );
