@@ -177,109 +177,110 @@ export async function savePlatformPayload(
     workspaceId,
   );
 
-  // The schema is the source of truth. The discriminated union
-  // narrows the payload type at the call site.
-  // Approval metadata is server-owned. Editing the package must not revoke
-  // an existing approval; only the explicit approval action may change it.
-  const [existingRow] = await db
-    .select({
-      platformPayload: contentItemChannels.platformPayload,
-      updatedAt: contentItemChannels.updatedAt,
-    })
-    .from(contentItemChannels)
-    .where(
-      and(
-        eq(contentItemChannels.contentItemId, input.contentItemId),
-        eq(contentItemChannels.socialChannelId, input.socialChannelId),
-      ),
-    )
-    .limit(1);
+  /*
+   * Read, write and record the material edit inside ONE transaction, with
+   * the row locked. That is what actually prevents a collaborator's
+   * concurrent save from being silently overwritten.
+   *
+   * The earlier version tried to achieve the same thing with a
+   * compare-and-set on `updatedAt` in the UPDATE's `WHERE`. That does not
+   * work and never did: `content_item_channels.updated_at` defaults to
+   * `now()`, which Postgres stores at **microsecond** precision, while a
+   * value read back through a JS `Date` is truncated to **milliseconds**.
+   * The equality therefore never matched, every save threw INVALID, and
+   * the publish form showed "Check the platform-specific publish fields."
+   * for a payload that was perfectly valid. `FOR UPDATE` serialises the
+   * writers without depending on timestamp arithmetic at all.
+   *
+   * The client's `expectedUpdatedAt` is still checked, but only as a
+   * user-facing staleness signal — "you loaded this before someone else
+   * saved" — not as the concurrency guarantee.
+   */
+  return db.transaction(async (tx) => {
+    const [existingRow] = await tx
+      .select({
+        platformPayload: contentItemChannels.platformPayload,
+        updatedAt: contentItemChannels.updatedAt,
+      })
+      .from(contentItemChannels)
+      .where(
+        and(
+          eq(contentItemChannels.contentItemId, input.contentItemId),
+          eq(contentItemChannels.socialChannelId, input.socialChannelId),
+        ),
+      )
+      .for("update")
+      .limit(1);
 
-  // Optimistic concurrency. Reject a write whose base row moved since the
-  // client read it, rather than silently overwriting a collaborator's
-  // package.
-  //
-  // Two layers, because the read above alone is a TOCTOU check: it closes
-  // the window between the page load and this call, but nothing stopped a
-  // collaborator committing *after* it. The same `updatedAt` predicate is
-  // therefore also placed in the UPDATE's `WHERE` below, and a zero-row
-  // write is treated as a lost race rather than a success. The batch path
-  // does this inside a transaction for the same reason.
-  const expected = input.expectedUpdatedAt ? new Date(input.expectedUpdatedAt).getTime() : null;
-  if (expected !== null && existingRow?.updatedAt) {
-    if (existingRow.updatedAt.getTime() !== expected) {
+    const expected = input.expectedUpdatedAt ? new Date(input.expectedUpdatedAt).getTime() : null;
+    if (expected !== null && existingRow?.updatedAt) {
+      if (existingRow.updatedAt.getTime() !== expected) {
+        throw new PlatformPayloadError(
+          "INVALID",
+          "This channel package changed since you loaded it. Reload before saving.",
+          {
+            contentItemId: input.contentItemId,
+            socialChannelId: input.socialChannelId,
+            expectedUpdatedAt: input.expectedUpdatedAt,
+            actualUpdatedAt: existingRow.updatedAt.toISOString(),
+          },
+        );
+      }
+    }
+
+    const existingPayload = existingRow?.platformPayload
+      ? PlatformPayloadSchema.safeParse(existingRow.platformPayload)
+      : null;
+    const serverApproval = existingPayload?.success
+      ? existingPayload.data.approval
+      : { finalCopyApproved: false, approvedByUserId: null, approvedAt: null };
+    const payload = PlatformPayloadSchema.parse({
+      ...input.payload,
+      approval: serverApproval,
+    });
+
+    const [written] = await tx
+      .update(contentItemChannels)
+      .set({ platformPayload: payload, updatedAt: new Date() })
+      .where(
+        and(
+          eq(contentItemChannels.contentItemId, input.contentItemId),
+          eq(contentItemChannels.socialChannelId, input.socialChannelId),
+        ),
+      )
+      .returning({ socialChannelId: contentItemChannels.socialChannelId });
+
+    if (!written) {
       throw new PlatformPayloadError(
-        "INVALID",
-        "This channel package changed since you loaded it. Reload before saving.",
-        {
-          contentItemId: input.contentItemId,
-          socialChannelId: input.socialChannelId,
-          expectedUpdatedAt: input.expectedUpdatedAt,
-          actualUpdatedAt: existingRow.updatedAt.toISOString(),
-        },
+        "NOT_FOUND",
+        "This channel is no longer attached to the content item.",
+        { contentItemId: input.contentItemId, socialChannelId: input.socialChannelId },
       );
     }
-  }
 
-  const existingPayload = existingRow?.platformPayload
-    ? PlatformPayloadSchema.safeParse(existingRow.platformPayload)
-    : null;
-  const serverApproval = existingPayload?.success
-    ? existingPayload.data.approval
-    : { finalCopyApproved: false, approvedByUserId: null, approvedAt: null };
-  const payload = PlatformPayloadSchema.parse({
-    ...input.payload,
-    approval: serverApproval,
+    // Materiality — payload is a material edit per the master
+    // prompt's "Material edits and approvals" section.
+    const materiality = await recordMaterialityEventInTx(tx, {
+      actor,
+      contentItemId: input.contentItemId,
+      resource: MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
+      beforeValue: null, // The materiality service diffs the channel row.
+      afterValue: payload,
+      reasonCode: "platform_payload.save",
+    });
+
+    await tx
+      .update(contentItemChannels)
+      .set({ copySourceRevision: materiality.revision, updatedAt: new Date() })
+      .where(
+        and(
+          eq(contentItemChannels.contentItemId, input.contentItemId),
+          eq(contentItemChannels.socialChannelId, input.socialChannelId),
+        ),
+      );
+
+    return payload;
   });
-
-  const [written] = await db
-    .update(contentItemChannels)
-    .set({ platformPayload: payload, updatedAt: new Date() })
-    .where(
-      and(
-        eq(contentItemChannels.contentItemId, input.contentItemId),
-        eq(contentItemChannels.socialChannelId, input.socialChannelId),
-        // Compare-and-set. Without this predicate a collaborator who saved
-        // between the read above and this write would be silently
-        // overwritten, and the optimistic-concurrency token would be a
-        // suggestion rather than a guarantee.
-        ...(expected !== null && existingRow?.updatedAt
-          ? [eq(contentItemChannels.updatedAt, existingRow.updatedAt)]
-          : []),
-      ),
-    )
-    .returning({ socialChannelId: contentItemChannels.socialChannelId });
-
-  if (!written) {
-    throw new PlatformPayloadError(
-      "INVALID",
-      "This channel package changed while saving. Reload and try again.",
-      { contentItemId: input.contentItemId, socialChannelId: input.socialChannelId },
-    );
-  }
-
-  // Materiality — payload is a material edit per the master
-  // prompt's "Material edits and approvals" section.
-  const materiality = await recordMaterialityEvent({
-    actor,
-    contentItemId: input.contentItemId,
-    resource: MATERIAL_RESOURCE_PLATFORM_PAYLOAD,
-    beforeValue: null, // The materiality service diffs the channel row.
-    afterValue: payload,
-    reasonCode: "platform_payload.save",
-  });
-
-  await db
-    .update(contentItemChannels)
-    .set({ copySourceRevision: materiality.revision, updatedAt: new Date() })
-    .where(
-      and(
-        eq(contentItemChannels.contentItemId, input.contentItemId),
-        eq(contentItemChannels.socialChannelId, input.socialChannelId),
-      ),
-    );
-
-  return payload;
 }
 
 /**

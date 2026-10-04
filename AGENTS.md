@@ -835,6 +835,44 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-04 — Publish surface: the compare-and-set could never match (saved every save)
+
+Live regression from `c107e699`, caught by the advisory pre-push E2E subset and then
+reproduced deterministically in isolation.
+
+**The optimistic-concurrency guard broke every save.** The previous commit added
+`eq(contentItemChannels.updatedAt, existingRow.updatedAt)` to the UPDATE's `WHERE` so a
+concurrent writer would be caught rather than silently overwritten. It never matched:
+
+```
+content_item_channels.updated_at  timestamptz DEFAULT now()   → Postgres stores MICROSECONDS
+value read back through a JS Date                              → truncated to MILLISECONDS
+WHERE updated_at = '<ms-truncated value>'                       → never equals the stored row
+```
+
+So `written` was always empty, the new "lost race" branch threw `INVALID`, and the publish
+form showed **"Check the platform-specific publish fields."** for a payload that was
+perfectly valid. A 4-channel, multi-platform surface could not save anything at all.
+
+**The fix is a row lock, not timestamp arithmetic.** Read, write, and the material-edit
+record now happen inside one `db.transaction` with `SELECT … FOR UPDATE` on the channel
+row, via `recordMaterialityEventInTx`. That serialises concurrent writers without
+depending on how many digits a timestamp happens to carry, and it makes the single-channel
+save atomic with its own materiality event — the same shape the batch path already used.
+The client's `expectedUpdatedAt` is still checked, but only as a **user-facing staleness
+signal** ("you loaded this before someone else saved"), not as the correctness guarantee.
+
+**The batch path had the same latent defect** (`platform-payload-service.ts:417`) and was
+masked because `publish-batch-save.test.ts` mocks the database, so the equality was never
+exercised against a real `timestamptz`. It is fixed by the same reasoning and needs its own
+check against a real row.
+
+**Why the unit suite did not catch either bug:** every test mocks the db, so a predicate
+that cannot match a real row is indistinguishable from one that can. This is a third
+instance of the same lesson as the multi-channel save — _a mocked database cannot detect a
+predicate that real data rejects._ Anything comparing a stored column for equality needs a
+real-DB test (`tests/integration`) or it is unverified.
+
 ### 2026-10-04 — Publish surface: per-channel field errors
 
 Found by a test-coverage audit after the browser gate, and live in production

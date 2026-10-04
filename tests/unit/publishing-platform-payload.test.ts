@@ -59,6 +59,9 @@ function makeDrizzleMock(state: DrizzleState) {
           return Reflect.get(target, prop, receiver);
         },
       });
+    // `.for("update")` is the row-lock clause the service now uses to
+    // serialise concurrent writers; it must stay on the same chain.
+    chain.for = vi.fn(() => chain);
     chain.where = vi.fn(() => thenable(() => chain));
     chain.innerJoin = vi.fn(() => thenable(() => chain));
     return chain;
@@ -153,6 +156,10 @@ vi.mock("@/lib/publishing/materiality", async (importOriginal) => {
   return {
     ...actual,
     recordMaterialityEvent: materialityMock.recordMaterialityEvent,
+    // The service calls the in-transaction variant now, so both entry
+    // points have to be stubbed — otherwise the real implementation runs
+    // its own pre-flight select against the mock's empty result queue.
+    recordMaterialityEventInTx: materialityMock.recordMaterialityEvent,
   };
 });
 
@@ -309,11 +316,14 @@ describe("savePlatformPayload", () => {
     // The materiality service was invoked with the platform_payload
     // resource + the platform_payload.save reason code.
     expect(materialityMock.recordMaterialityEvent).toHaveBeenCalledTimes(1);
+    // `recordMaterialityEventInTx(tx, input)` — the input is the second
+    // argument, because the transaction handle is passed first.
     const call = (
       materialityMock.recordMaterialityEvent.mock.calls[0] as unknown as [
+        unknown,
         { resource: string; reasonCode: string; contentItemId: string },
       ]
-    )?.[0];
+    )?.[1];
     expect(call?.resource).toBe("platform_payload");
     expect(call?.reasonCode).toBe("platform_payload.save");
     expect(call?.contentItemId).toBe(contentItemId);
