@@ -35,7 +35,10 @@ export type CommandCenterContentInventoryLabels = {
   comments: string;
 };
 
-const PAGE_SIZE = 10;
+// The reference Observed content card is a compact preview, not a full
+// catalogue: six cards reads as a glanceable sample, where ten pushed the
+// Top content and planning sections entirely below the fold.
+const PAGE_SIZE = 6;
 
 function metric(post: ObservedPost): number {
   return post.views ?? post.interactions ?? (post.likes ?? 0) + (post.comments ?? 0);

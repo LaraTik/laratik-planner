@@ -12,6 +12,53 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the Command Center "Best time to post" heatmap was always blank
+
+The timing grid rendered six hardcoded rows (06:00, 09:00, 12:00, 15:00,
+18:00, 21:00) while `buildCommandCenterSummary` keyed every slot by the
+**exact** published hour. A post published at 14:23 produced a slot at
+hour 14 that no row could ever draw, so the grid came out empty even with
+a full observation history, and `bestTime` was usually `null` for the same
+reason: three posts had to share one exact hour on one weekday, which real
+publishing cadence almost never produces.
+
+The mismatch was not cosmetic — it silently discarded the entire signal the
+panel exists to show. The fix buckets in the **domain**, not the component:
+`toTimeBandHour()` maps every hour of the day onto the six rendered bands
+(pre-dawn hours fold into the first band rather than being dropped), and
+`COMMAND_CENTER_TIME_BAND_HOURS` is now the single source of truth shared by
+the domain and the grid. Bucketing also raises samples per slot, so
+`COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE` (3) is now reachable on real data.
+
+Covered by three new regression tests: an off-row publish hour landing in a
+renderable band, a pre-dawn hour folding rather than disappearing, and a
+guard asserting every hour 0–23 maps to one of the six rendered bands.
+
+### Changed — Command Center rebuilt to the reference screen
+
+The Command Center now matches the reference StudioFlow layout: one bordered
+panel with the window/tab bar in its header, a **Data health** card beside four
+sparkline KPI tiles, a **Follower trend / Strongest accounts / Best time to
+post** row, **Top content** as a ranked table, **Observed content** as a
+compact preview, and a **Planning & workflow** section header on the Overview
+page. Two new components carry the primitives: `Sparkline` (KPI trend glyph)
+and `BestTimeHeatmap` (day × band grid).
+
+Accessibility and honesty fixes that came with the rewrite:
+
+- The Data health status counts were bare coloured numbers — a colour-only
+  signal. They now carry their status word and an icon, per `design-system.md`
+  "status always uses text + icon, never colour alone".
+- Heatmap cells expose their average and sample size in text (title + visually
+  hidden span + `aria-label`), so the grid is never the only way to read a value.
+  Low-sample slots are flagged rather than presented as recommendations.
+- The best-slot pill renders `21:00`, matching the heatmap row label it refers to.
+- Observed content page size dropped 10 → 6 so it reads as a glanceable preview
+  instead of pushing the planning sections below the fold.
+
+Verified in a real browser at 1440px and 390px, in light and dark, in English
+and Arabic RTL: 7 painted cells, exactly one marked best, zero console errors.
+
 ### Fixed — assigning a workspace role from /app/users silently did nothing
 
 Ticking a role chip in the member drawer on the global user screen

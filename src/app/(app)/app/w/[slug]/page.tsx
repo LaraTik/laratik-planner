@@ -13,7 +13,7 @@ import {
   workspaceSettings,
 } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
-import { Clock, ListChecks, Plus } from "lucide-react";
+import { ArrowUpRight, Clock, ListChecks, Plus } from "lucide-react";
 import { DirAwareChevronLeft, DirAwareChevronRight } from "@/components/ui/dir-aware-icon";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -616,60 +616,102 @@ export default async function WorkspaceOverviewPage({
           watchlistProviderError: t(
             "workspaceOverviewDashboard.commandCenter.watchlistProviderError",
           ),
+          manageAccounts: t("workspaceOverviewDashboard.commandCenter.manageAccounts"),
+          viewAllChannels: t("workspaceOverviewDashboard.commandCenter.viewAllChannels"),
+          viewAll: t("workspaceOverviewDashboard.commandCenter.viewAll"),
+          lastSynced: t("workspaceOverviewDashboard.commandCenter.lastSynced"),
+          comparedToPrevious: t("workspaceOverviewDashboard.commandCenter.comparedToPrevious"),
+          bestSlot: t("workspaceOverviewDashboard.commandCenter.bestSlot"),
+          bestSlotDescription: t("workspaceOverviewDashboard.commandCenter.bestSlotDescription"),
+          basedOnRecentContent: t("workspaceOverviewDashboard.commandCenter.basedOnRecentContent"),
+          heatMapLess: t("workspaceOverviewDashboard.commandCenter.heatMapLess"),
+          heatMapMore: t("workspaceOverviewDashboard.commandCenter.heatMapMore"),
+          heatMapLegend: t("workspaceOverviewDashboard.commandCenter.heatMapLegend"),
+          noFollowerData: t("workspaceOverviewDashboard.commandCenter.noFollowerData"),
+          observedContent: t("workspaceOverviewDashboard.commandCenter.observedContent"),
+          observedContentDescription: t(
+            "workspaceOverviewDashboard.commandCenter.observedContentDescription",
+          ),
+          channel: t("workspaceOverviewDashboard.commandCenter.channel"),
         }}
         windowDays={socialWindowDays}
         window30Href={commandCenterWindowHref(30)}
         window90Href={commandCenterWindowHref(90)}
       />
 
-      {/* Planning execution summary follows the decision layer. */}
-      <OverviewKpiStrip tiles={kpiTiles} t={t} />
-
-      {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-7">
-          <PlanCoverageCard
-            total={dashboard.total}
-            monthlyTarget={dashboard.monthlyTarget}
-            coveragePercent={dashboard.coveragePercent}
-            formatBreakdown={dashboard.formatBreakdown.map((entry) => ({
-              ...entry,
-              label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
-            }))}
-            buildFormatHref={formatHref}
-            settingsHref={`/app/w/${slug}/settings`}
-            t={t}
-          />
+      {/* Planning & workflow — matches the reference section header that
+          groups plan coverage, delivery health and the workflow pipeline. */}
+      <section aria-labelledby="planning-and-workflow-title" className="space-y-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h2
+              id="planning-and-workflow-title"
+              className="text-title-card text-fg-primary font-semibold"
+            >
+              {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflow")}
+            </h2>
+            <p className="text-label text-fg-secondary mt-1">
+              {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflowDescription")}
+            </p>
+          </div>
+          <Link
+            href={`/app/w/${slug}/planning`}
+            className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
+          >
+            {t("workspaceOverviewDashboard.commandCenter.goToPlanning")}
+            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
         </div>
-        <div className="lg:col-span-5">
-          <DeliveryHealthCard
-            total={dashboard.total}
-            onTrackCount={dashboard.onTrack}
-            onTrackPercent={dashboard.onTrackPercent}
-            atRiskCount={dashboard.atRisk}
-            atRiskPercent={dashboard.atRiskPercent}
-            blockedCount={dashboard.blocked}
-            blockedPercent={dashboard.blockedPercent}
-            riskReasons={riskReasons}
-            atRiskHref={buildPlanningHref({ risk: "at_risk" })}
-            onTrackHref={buildPlanningHref({ status: null, risk: null })}
-            blockedHref={buildPlanningHref({ status: "blocked" })}
-            viewAllHref={buildPlanningHref({ risk: "at_risk" })}
-            t={t}
-          />
-        </div>
-      </div>
 
-      {/* Workflow pipeline (master prompt §10-13) */}
-      <WorkflowPipeline
-        stages={dashboard.workflowStages.map((s) => ({
-          stage: s.stage,
-          label: t(`workspaceOverviewDashboard.workflowStages.${s.stage}`),
-          count: s.count,
-        }))}
-        buildHref={stageHref}
-        t={t}
-      />
+        {/* Planning execution summary follows the decision layer. */}
+        <OverviewKpiStrip tiles={kpiTiles} t={t} />
+
+        {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="lg:col-span-7">
+            <PlanCoverageCard
+              total={dashboard.total}
+              monthlyTarget={dashboard.monthlyTarget}
+              coveragePercent={dashboard.coveragePercent}
+              formatBreakdown={dashboard.formatBreakdown.map((entry) => ({
+                ...entry,
+                label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
+              }))}
+              buildFormatHref={formatHref}
+              settingsHref={`/app/w/${slug}/settings`}
+              t={t}
+            />
+          </div>
+          <div className="lg:col-span-5">
+            <DeliveryHealthCard
+              total={dashboard.total}
+              onTrackCount={dashboard.onTrack}
+              onTrackPercent={dashboard.onTrackPercent}
+              atRiskCount={dashboard.atRisk}
+              atRiskPercent={dashboard.atRiskPercent}
+              blockedCount={dashboard.blocked}
+              blockedPercent={dashboard.blockedPercent}
+              riskReasons={riskReasons}
+              atRiskHref={buildPlanningHref({ risk: "at_risk" })}
+              onTrackHref={buildPlanningHref({ status: null, risk: null })}
+              blockedHref={buildPlanningHref({ status: "blocked" })}
+              viewAllHref={buildPlanningHref({ risk: "at_risk" })}
+              t={t}
+            />
+          </div>
+        </div>
+
+        {/* Workflow pipeline (master prompt §10-13) */}
+        <WorkflowPipeline
+          stages={dashboard.workflowStages.map((s) => ({
+            stage: s.stage,
+            label: t(`workspaceOverviewDashboard.workflowStages.${s.stage}`),
+            count: s.count,
+          }))}
+          buildHref={stageHref}
+          t={t}
+        />
+      </section>
 
       {/* Needs attention + Recently updated (master prompt §14-16) */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">

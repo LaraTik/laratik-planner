@@ -835,6 +835,46 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-05 — Command Center rebuilt to the reference screen; the best-time heatmap now shows data
+
+The Workspace Overview Command Center was rebuilt to match the reference
+StudioFlow screen, and the **Best time to post** panel was fixed — it had been
+rendering an empty grid on every workspace.
+
+**The bug, and why the fix is in the domain.** The grid drew six hardcoded band
+rows (06/09/12/15/18/21) while `lib/social/command-center.ts` keyed slots by the
+**exact** published hour. A post at 14:23 created a slot no row could render, so
+the panel was blank even with full history, and `bestTime` was near-permanently
+`null` because three posts had to share one exact hour on one weekday.
+
+`toTimeBandHour()` now buckets in the domain, and `COMMAND_CENTER_TIME_BAND_HOURS`
+is the single constant shared by the domain and the grid. **When a view's row set
+and its data's key space can drift, define the row set in the domain and render
+from it** — a component-side fix would have left the two definitions free to
+diverge again. Pre-dawn hours fold into the first band rather than being dropped.
+
+**What changed in the UI.**
+
+- `Sparkline` (`components/workspace/sparkline.tsx`) — KPI trend glyph. Renders a
+  flat baseline below two points rather than faking a trend; `aria-hidden`, because
+  the card's own text carries the readable value.
+- `BestTimeHeatmap` (`components/workspace/best-time-heatmap.tsx`) — the day × band
+  grid. Intensity is relative to the strongest band, the best cell gets a ring as
+  well as colour, and every cell carries its average and sample size in text.
+- `command-center-panel.tsx` — one bordered panel with the window/tab bar in its
+  header; `DataHealthCard`, `FollowerTrendCard`, `StrongestAccountsCard`,
+  `BestTimeCard`; Top content as a ranked table. The old duplicate Data health
+  panel was removed (it rendered twice).
+- Observed content page size 10 → 6, to read as a preview rather than a catalogue.
+
+**Invariants to preserve.**
+
+- Status is never colour-only. The Data health counts were bare coloured numbers
+  and now carry their status word plus an icon.
+- A chart is never the only way to read a value: heatmap cells expose their number
+  in text, and low-sample slots are flagged instead of presented as advice.
+- The best-slot pill renders `21:00`, matching the heatmap row it points at.
+
 ### 2026-10-05 — Publish surface: one phase at a time, and the rail's duplicate cards removed
 
 The Publish tab was carrying the same information twice and asking the operator

@@ -9,7 +9,7 @@ import {
   Eye,
   Heart,
   RefreshCw,
-  Timer,
+  TrendingUp,
   TriangleAlert,
   Users,
 } from "lucide-react";
@@ -17,6 +17,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { DashboardPanel } from "@/components/workspace/dashboard-panel";
+import { BestTimeHeatmap } from "@/components/workspace/best-time-heatmap";
+import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { Sparkline } from "@/components/workspace/sparkline";
+import { cn } from "@/lib/utils";
 import { CommandCenterRefresh } from "@/components/workspace/command-center-refresh";
 import { CommandCenterSectionNav } from "@/components/workspace/command-center-section-nav";
 import {
@@ -25,7 +29,12 @@ import {
 } from "@/components/workspace/command-center-content-inventory";
 import { ResearchBookmarkButton } from "@/components/workspace/research-bookmark-button";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
-import type { CommandCenterLengthBandKey, CommandCenterSummary } from "@/lib/social/command-center";
+import type {
+  CommandCenterLengthBandKey,
+  CommandCenterPost,
+  CommandCenterSummary,
+  CommandCenterTimeSlot,
+} from "@/lib/social/command-center";
 
 export type CommandCenterLabels = {
   title: string;
@@ -119,6 +128,22 @@ export type CommandCenterLabels = {
   watchlistProviderAvailable: string;
   watchlistProviderUnsupported: string;
   watchlistProviderError: string;
+  /* Reference-parity additions. */
+  manageAccounts: string;
+  viewAllChannels: string;
+  viewAll: string;
+  lastSynced: string;
+  comparedToPrevious: string;
+  bestSlot: string;
+  bestSlotDescription: string;
+  basedOnRecentContent: string;
+  heatMapLess: string;
+  heatMapMore: string;
+  heatMapLegend: string;
+  noFollowerData: string;
+  observedContent: string;
+  observedContentDescription: string;
+  channel: string;
 };
 
 export type CommandCenterWatchlistAccount = {
@@ -136,10 +161,6 @@ function formatNumber(value: number | null, locale: string): string {
     : new Intl.NumberFormat(locale, { numberingSystem: "latn", maximumFractionDigits: 0 }).format(
         value,
       );
-}
-
-function formatPostMetric(value: number | null, label: string, locale: string): string | null {
-  return value === null ? null : `${formatNumber(value, locale)} ${label}`;
 }
 
 function formatPercent(value: number | null): string {
@@ -221,9 +242,9 @@ export function CommandCenterPanel({
   window90Href: string;
 }) {
   const hasData = summary.channelsWithData > 0;
-  const trend = trendGeometry(summary);
+  const now = new Date();
   const asOf = summary.lastSyncedAt
-    ? formatRelativeDate(summary.lastSyncedAt, new Date(), locale as "en" | "ar")
+    ? formatRelativeDate(summary.lastSyncedAt, now, locale as "en" | "ar")
     : null;
   const bestTimeDay = summary.content.bestTime
     ? new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
@@ -231,22 +252,10 @@ export function CommandCenterPanel({
       )
     : null;
   const bestTimeHour = summary.content.bestTime
-    ? new Intl.DateTimeFormat(locale, {
-        hour: "numeric",
-        hourCycle: "h23",
-        timeZone: "UTC",
-      }).format(new Date(Date.UTC(2024, 0, 1, summary.content.bestTime.hour)))
+    ? // The heatmap's row label is the band start in 24h form ("21:00"),
+      // so the pill must match it rather than rendering a bare "21".
+      `${String(summary.content.bestTime.hour).padStart(2, "0")}:00`
     : null;
-  const heatmapHours = [6, 9, 12, 15, 18, 21] as const;
-  const heatmapDays = Array.from({ length: 7 }, (_, day) =>
-    new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
-      new Date(Date.UTC(2024, 0, 7 + day)),
-    ),
-  );
-  const timeSlotsByKey = new Map(
-    summary.content.timeSlots.map((slot) => [`${slot.dayOfWeek}:${slot.hour}`, slot]),
-  );
-  const maxSlotViews = Math.max(1, ...summary.content.timeSlots.map((slot) => slot.averageViews));
   const setupSteps = [
     {
       title: labels.setupConnectAccount,
@@ -270,52 +279,23 @@ export function CommandCenterPanel({
 
   return (
     <section
-      className="space-y-4"
+      className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-5"
       data-testid="command-center-panel"
       aria-labelledby="command-center-title"
     >
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-label text-fg-muted font-semibold tracking-wide uppercase">
-            {labels.eyebrow}
-          </p>
-          <h2
-            id="command-center-title"
-            className="text-title-section text-fg-primary font-semibold"
-          >
+          <h2 id="command-center-title" className="text-title-card text-fg-primary font-semibold">
             {labels.title}
           </h2>
-          <p className="text-body text-fg-secondary mt-1 max-w-3xl">{labels.description}</p>
-          {asOf ? (
-            <p className="text-label text-fg-muted mt-2">
-              {labels.freshness}: {asOf}
-            </p>
-          ) : null}
+          <p className="text-label text-fg-secondary mt-1">{labels.description}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <div
-            className="border-border bg-surface-subtle flex items-center gap-1 rounded-[var(--radius-control)] border p-1"
-            aria-label={labels.analysisWindow}
-            data-testid="command-center-window"
-          >
-            <span className="text-label text-fg-muted px-2 font-semibold">
-              {labels.analysisWindow}
+          {asOf ? (
+            <span className="text-label text-fg-muted order-2 sm:order-none">
+              {labels.lastSynced} {asOf}
             </span>
-            <Link
-              href={window30Href}
-              aria-current={windowDays === 30 ? "page" : undefined}
-              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 30 ? "bg-surface text-fg-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
-            >
-              {labels.last30Days}
-            </Link>
-            <Link
-              href={window90Href}
-              aria-current={windowDays === 90 ? "page" : undefined}
-              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 90 ? "bg-surface text-fg-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
-            >
-              {labels.last90Days}
-            </Link>
-          </div>
+          ) : null}
           {canRefresh ? (
             <CommandCenterRefresh
               slug={workspaceSlug}
@@ -328,109 +308,190 @@ export function CommandCenterPanel({
               }}
             />
           ) : null}
-          <Button variant="outline" asChild>
+          <Button variant="outline" size="sm" asChild>
             <Link href={analyticsHref}>
               <BarChart3 className="h-4 w-4" aria-hidden="true" />
               {labels.viewAnalytics}
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
             </Link>
           </Button>
-          <Button variant="ghost" asChild>
-            <Link href={researchHref}>{labels.viewResearch}</Link>
-          </Button>
         </div>
       </div>
 
+      {/* Analysis window + section nav share one tab row, as in the reference. */}
       {summary.channelCount > 0 && hasData ? (
-        <CommandCenterSectionNav
-          title={labels.title}
-          items={[
-            { id: "command-center-health", label: labels.dataHealth },
-            { id: "command-center-trend", label: labels.trendTitle },
-            { id: "command-center-performance", label: labels.channelPerformance },
-            { id: "command-center-content", label: labels.topContent },
-            { id: "command-center-inventory", label: labels.contentInventory.title },
-            { id: "command-center-recommendations", label: labels.bestTime },
-            { id: "command-center-planning-signal", label: labels.planningSignal },
-            ...(watchlist.length > 0
-              ? [{ id: "command-center-watchlist", label: labels.watchlistTitle }]
-              : []),
-          ]}
-        />
+        <div className="border-border mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
+          <div
+            className="border-border bg-surface-subtle flex items-center gap-1 rounded-[var(--radius-control)] border p-1"
+            aria-label={labels.analysisWindow}
+            data-testid="command-center-window"
+          >
+            <span className="text-label text-fg-muted px-2 font-semibold">
+              {labels.analysisWindow}
+            </span>
+            <Link
+              href={window30Href}
+              aria-current={windowDays === 30 ? "page" : undefined}
+              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 30 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+            >
+              {labels.last30Days}
+            </Link>
+            <Link
+              href={window90Href}
+              aria-current={windowDays === 90 ? "page" : undefined}
+              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 90 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+            >
+              {labels.last90Days}
+            </Link>
+          </div>
+          <CommandCenterSectionNav
+            title={labels.title}
+            items={[
+              { id: "command-center-health", label: labels.dataHealth },
+              { id: "command-center-trend", label: labels.trendTitle },
+              { id: "command-center-performance", label: labels.channelPerformance },
+              { id: "command-center-content", label: labels.topContent },
+              { id: "command-center-inventory", label: labels.observedContent },
+              { id: "command-center-recommendations", label: labels.bestTime },
+              ...(watchlist.length > 0
+                ? [{ id: "command-center-watchlist", label: labels.watchlistTitle }]
+                : []),
+            ]}
+          />
+        </div>
       ) : null}
 
-      {summary.channelCount > 0 ? (
-        <DashboardPanel
-          id="command-center-health"
-          title={labels.dataHealth}
-          description={labels.dataHealthDescription}
-          data-testid="command-center-health"
-        >
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="success">
-              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-              {summary.health.healthy} {labels.healthy}
-            </Badge>
-            <Badge variant="warning">
-              <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />
-              {summary.health.degraded} {labels.degraded}
-            </Badge>
-            <Badge variant="danger">
-              <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
-              {summary.health.stalled} {labels.stalled}
-            </Badge>
-            {summary.health.degraded + summary.health.stalled > 0 ? (
-              <Link
-                href={analyticsHref}
-                className="text-label text-primary focus-visible:ring-focus-ring ms-auto rounded font-semibold focus:outline-none focus-visible:ring-2"
-              >
-                {labels.reviewData}
-              </Link>
-            ) : null}
+      {summary.channelCount > 0 && hasData ? (
+        <div className="mt-4 grid grid-cols-1 gap-4">
+          {/* Row 1 — data health + four KPI cards, matching the reference. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <DataHealthCard
+                health={summary.health}
+                accounts={summary.accountHealth}
+                labels={{
+                  title: labels.dataHealth,
+                  description: labels.dataHealthDescription,
+                  manageAccounts: labels.manageAccounts,
+                  channelsHref,
+                  freshness: labels.freshness,
+                  lastSynced: labels.lastSynced,
+                  healthy: labels.healthy,
+                  degraded: labels.degraded,
+                  stalled: labels.stalled,
+                  noSync: labels.noSync,
+                  reviewData: labels.reviewData,
+                  analyticsHref,
+                  locale,
+                }}
+                now={now}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4 lg:col-span-7">
+              <MetricCard
+                icon={<Users className="h-4 w-4" aria-hidden="true" />}
+                label={labels.followers}
+                value={formatNumber(summary.currentFollowers, locale)}
+                delta={formatPercent(summary.followerGrowth.percent)}
+                deltaIsPositive={(summary.followerGrowth.absolute ?? 0) >= 0}
+                sparkline={summary.trend.map((point) => point.followerCount)}
+                testId="command-center-kpi-followers"
+              />
+              <MetricCard
+                icon={<Eye className="h-4 w-4" aria-hidden="true" />}
+                label={labels.reach}
+                value={formatNumber(summary.currentReach, locale)}
+                note={summary.partial ? labels.partial : labels.freshness}
+                sparkline={summary.trend.map((point) => point.reach)}
+                testId="command-center-kpi-reach"
+              />
+              <MetricCard
+                icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
+                label={labels.views}
+                value={formatNumber(summary.currentViews, locale)}
+                note={`${formatNumber(summary.channelsWithData, locale)}/${formatNumber(summary.channelCount, locale)} ${labels.coverage}`}
+                sparkline={summary.trend.map((point) => point.views)}
+                testId="command-center-kpi-views"
+              />
+              <MetricCard
+                icon={<Heart className="h-4 w-4" aria-hidden="true" />}
+                label={labels.engagementRate}
+                value={
+                  summary.engagementRate.percent === null
+                    ? "—"
+                    : `${summary.engagementRate.percent.toFixed(1)}%`
+                }
+                note={`${formatNumber(summary.currentInteractions, locale)} ${labels.interactions}`}
+                sparkline={summary.trend.map((point) => point.interactions)}
+                testId="command-center-kpi-engagement"
+              />
+            </div>
           </div>
-          {summary.accountHealth.length > 0 ? (
-            <ol
-              className="border-border mt-4 divide-y border-t"
-              data-testid="command-center-account-health"
-            >
-              {summary.accountHealth.map((account) => {
-                const statusLabel =
-                  account.status === "healthy"
-                    ? labels.healthy
-                    : account.status === "degraded"
-                      ? labels.degraded
-                      : labels.stalled;
-                const statusVariant =
-                  account.status === "healthy"
-                    ? "success"
-                    : account.status === "degraded"
-                      ? "warning"
-                      : "danger";
-                return (
-                  <li
-                    key={account.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-2.5 last:pb-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-label text-fg-primary truncate font-semibold">
-                        <bdi>{account.accountName}</bdi>
-                      </p>
-                      <p className="text-label text-fg-muted capitalize">{account.platform}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-label text-fg-muted">
-                        {account.lastSyncedAt
-                          ? `${labels.freshness}: ${formatRelativeDate(account.lastSyncedAt, new Date(), locale as "en" | "ar")}`
-                          : labels.noSync}
-                      </span>
-                      <Badge variant={statusVariant}>{statusLabel}</Badge>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          ) : null}
-        </DashboardPanel>
+
+          {/* Row 2 — follower trend, strongest accounts, best time to post. */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-5">
+              <FollowerTrendCard
+                summary={summary}
+                labels={{
+                  title: labels.trendTitle,
+                  description: labels.trendDescription,
+                  windowLabel: labels.analysisWindow,
+                  last30Days: labels.last30Days,
+                  last90Days: labels.last90Days,
+                  table: labels.trendTable,
+                  date: labels.date,
+                  followers: labels.followers,
+                  views: labels.views,
+                  comparedToPrevious: labels.comparedToPrevious,
+                  noData: labels.noFollowerData,
+                  windowDays,
+                  window30Href,
+                  window90Href,
+                  timezone,
+                  locale,
+                }}
+              />
+            </div>
+            <div className="lg:col-span-3">
+              <StrongestAccountsCard
+                leaders={summary.leaders}
+                locale={locale}
+                timezone={timezone}
+                title={labels.strongestAccounts}
+                description={labels.strongestAccountsDescription}
+                viewsAllHref={channelsHref}
+                viewAllLabel={labels.viewAllChannels}
+                interactionsLabel={labels.interactions}
+                noData={labels.noAccountData}
+              />
+            </div>
+            <div className="lg:col-span-4">
+              <BestTimeCard
+                slots={summary.content.timeSlots}
+                bestTime={summary.content.bestTime}
+                averageViews={summary.content.averageViews}
+                locale={locale}
+                timezone={timezone}
+                labels={{
+                  title: labels.bestTime,
+                  description: labels.bestTimeDescription,
+                  basedOn: labels.basedOnRecentContent,
+                  averageViews: labels.averageViews,
+                  sampleSize: labels.sampleSize,
+                  noData: labels.noBestTimeData,
+                  legend: labels.heatMapLegend,
+                  less: labels.heatMapLess,
+                  more: labels.heatMapMore,
+                  bestSlot: labels.bestSlot,
+                  notEnoughData: labels.notEnoughData,
+                }}
+                bestTimeDay={bestTimeDay}
+                bestTimeHour={bestTimeHour}
+              />
+            </div>
+          </div>
+        </div>
       ) : null}
 
       {watchlist.length > 0 ? (
@@ -549,38 +610,8 @@ export function CommandCenterPanel({
         </Card>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4" aria-label={labels.title}>
-            <MetricCard
-              icon={<Users className="h-4 w-4" aria-hidden="true" />}
-              label={labels.followers}
-              value={formatNumber(summary.currentFollowers, locale)}
-              note={`${labels.followerChange}: ${formatPercent(summary.followerGrowth.percent)}`}
-            />
-            <MetricCard
-              icon={<Eye className="h-4 w-4" aria-hidden="true" />}
-              label={labels.reach}
-              value={formatNumber(summary.currentReach, locale)}
-              note={summary.partial ? labels.partial : labels.freshness}
-            />
-            <MetricCard
-              icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
-              label={labels.views}
-              value={formatNumber(summary.currentViews, locale)}
-              note={`${summary.channelsWithData}/${summary.channelCount}`}
-            />
-            <MetricCard
-              icon={<Heart className="h-4 w-4" aria-hidden="true" />}
-              label={labels.engagementRate}
-              value={
-                summary.engagementRate.percent === null
-                  ? "—"
-                  : `${summary.engagementRate.percent.toFixed(1)}%`
-              }
-              note={formatNumber(summary.currentInteractions, locale) + ` ${labels.interactions}`}
-            />
-          </div>
           <p
-            className="text-label text-fg-muted flex flex-wrap items-center gap-x-2 gap-y-1"
+            className="text-label text-fg-muted mt-3 flex flex-wrap items-center gap-x-2 gap-y-1"
             data-testid="command-center-evidence"
           >
             <span>{labels.sourceNote}</span>
@@ -595,141 +626,6 @@ export function CommandCenterPanel({
             </span>
           </p>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-7">
-            <DashboardPanel
-              id="command-center-trend"
-              className="lg:col-span-4"
-              title={labels.trendTitle}
-              description={`${labels.trendDescription} · ${timezone}`}
-              data-testid="command-center-trend"
-              footer={
-                <details>
-                  <summary className="text-label text-primary focus-visible:ring-focus-ring cursor-pointer rounded font-semibold focus:outline-none focus-visible:ring-2">
-                    {labels.trendTable}
-                  </summary>
-                  <div className="overflow-x-auto pt-3">
-                    <table className="text-label text-fg-secondary w-full text-start">
-                      <thead>
-                        <tr className="border-border border-b">
-                          <th className="px-2 py-2 font-semibold">{labels.date}</th>
-                          <th className="px-2 py-2 text-end font-semibold">{labels.followers}</th>
-                          <th className="px-2 py-2 text-end font-semibold">{labels.views}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {summary.trend.slice(-7).map((point) => (
-                          <tr
-                            key={point.metricDate}
-                            className="border-border border-b last:border-0"
-                          >
-                            <td className="px-2 py-2">
-                              <bdi>{point.metricDate}</bdi>
-                            </td>
-                            <td className="px-2 py-2 text-end">
-                              {formatNumber(point.followerCount, locale)}
-                            </td>
-                            <td className="px-2 py-2 text-end">
-                              {formatNumber(point.views, locale)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </details>
-              }
-            >
-              {trend ? (
-                <figure aria-labelledby="command-center-trend-title">
-                  <svg
-                    viewBox="0 0 100 100"
-                    className="h-44 w-full overflow-visible"
-                    role="img"
-                    aria-label={`${labels.followers}: ${formatNumber(summary.currentFollowers, locale)}; ${labels.followerChange}: ${formatPercent(summary.followerGrowth.percent)}`}
-                    preserveAspectRatio="none"
-                  >
-                    <title id="command-center-trend-title">{labels.trendTitle}</title>
-                    <line x1="4" x2="96" y1="92" y2="92" className="stroke-border" />
-                    <line
-                      x1="4"
-                      x2="96"
-                      y1="53"
-                      y2="53"
-                      className="stroke-border"
-                      strokeDasharray="2 3"
-                    />
-                    <line
-                      x1="4"
-                      x2="96"
-                      y1="14"
-                      y2="14"
-                      className="stroke-border"
-                      strokeDasharray="2 3"
-                    />
-                    <path
-                      d={trend.areaPath}
-                      fill="var(--primary)"
-                      opacity="0.1"
-                      aria-hidden="true"
-                    />
-                    <path
-                      d={trend.linePath}
-                      className="stroke-primary fill-none"
-                      strokeWidth="2.5"
-                      vectorEffect="non-scaling-stroke"
-                    />
-                    {trend.points.map((point, index) => (
-                      <circle
-                        key={`${point.x}-${index}`}
-                        cx={point.x}
-                        cy={point.y}
-                        r="1.8"
-                        fill="var(--surface)"
-                        stroke="var(--primary)"
-                        strokeWidth="0.9"
-                        vectorEffect="non-scaling-stroke"
-                        aria-hidden="true"
-                      />
-                    ))}
-                  </svg>
-                </figure>
-              ) : (
-                <p className="text-body text-fg-muted">{labels.notEnoughData}</p>
-              )}
-            </DashboardPanel>
-
-            <DashboardPanel
-              id="command-center-leaders"
-              className="lg:col-span-3"
-              title={labels.strongestAccounts}
-              description={labels.strongestAccountsDescription}
-              data-testid="command-center-leaders"
-            >
-              {summary.leaders.length > 0 ? (
-                <ol className="divide-border divide-y">
-                  {summary.leaders.map((leader) => (
-                    <li
-                      key={leader.id}
-                      className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-body text-fg-primary truncate font-semibold">
-                          <bdi>{leader.accountName}</bdi>
-                        </p>
-                        <p className="text-label text-fg-muted capitalize">{leader.platform}</p>
-                      </div>
-                      <Badge variant="outline">
-                        {formatNumber(leader.interactions ?? leader.views, locale)}
-                      </Badge>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="text-body text-fg-muted">{labels.noAccountData}</p>
-              )}
-            </DashboardPanel>
-          </div>
-
           <DashboardPanel
             id="command-center-content"
             title={labels.topContent}
@@ -737,72 +633,111 @@ export function CommandCenterPanel({
             data-testid="command-center-content"
           >
             {summary.content.topPosts.length > 0 ? (
-              <ol className="divide-border divide-y">
-                {summary.content.topPosts.map((post) => (
-                  <li
-                    key={post.id}
-                    className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-body text-fg-primary truncate font-semibold">
-                        <bdi>{post.accountName}</bdi>
-                        <span className="text-label text-fg-muted ms-2 capitalize">
-                          {post.mediaType}
-                        </span>
-                      </p>
-                      <p className="text-label text-fg-secondary mt-1">
-                        {[
-                          formatPostMetric(post.views, labels.views, locale),
-                          formatPostMetric(post.reach, labels.reach, locale),
-                          formatPostMetric(post.interactions, labels.interactions, locale),
-                          formatPostMetric(post.likes, labels.likes, locale),
-                          formatPostMetric(post.comments, labels.comments, locale),
-                          formatPostMetric(post.saved, labels.saved, locale),
-                          formatPostMetric(post.shares, labels.shares, locale),
-                        ]
-                          .filter((value): value is string => value !== null)
-                          .join(" · ")}
-                        {post.publishedAt
-                          ? ` · ${formatRelativeDate(post.publishedAt, new Date(), locale as "en" | "ar")}`
-                          : ""}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {post.outlierScore !== null && post.outlierScore >= 3 ? (
-                        <Badge variant="success">
-                          {labels.outlier} {post.outlierScore.toFixed(1)}x
-                        </Badge>
-                      ) : null}
-                      {post.permalink ? (
-                        <a
-                          href={post.permalink}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-label text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
-                        >
-                          {labels.openSource}
-                        </a>
-                      ) : null}
-                      {canSaveResearch ? (
-                        <ResearchBookmarkButton
-                          workspaceSlug={workspaceSlug}
-                          observationId={post.id}
-                          initialSaved={savedResearchObservationIds.has(post.id)}
-                          saveLabel={labels.saveResearch}
-                          savedLabel={labels.savedResearch}
-                          errorLabel={labels.researchSaveError}
-                        />
-                      ) : null}
-                      <Link
-                        href={`${planningHref}/new?researchPostObservationId=${encodeURIComponent(post.id)}`}
-                        className="text-label text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
-                      >
-                        {labels.createBriefFromPost}
-                      </Link>
-                    </div>
-                  </li>
-                ))}
-              </ol>
+              <div className="overflow-x-auto" dir="ltr" tabIndex={0}>
+                <table
+                  dir={locale.startsWith("ar") ? "rtl" : "ltr"}
+                  className="text-label text-fg-secondary w-full min-w-[34rem] text-start"
+                  data-testid="command-center-top-content-table"
+                >
+                  <thead>
+                    <tr className="border-border border-b">
+                      <th scope="col" className="px-2 py-2 text-start font-semibold">
+                        #
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-start font-semibold">
+                        {labels.contentInventory.title}
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-start font-semibold">
+                        {labels.channel}
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-end font-semibold">
+                        {labels.views}
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-end font-semibold">
+                        {labels.interactions}
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-end font-semibold">
+                        ER
+                      </th>
+                      <th scope="col" className="px-2 py-2 text-end font-semibold">
+                        {labels.date}
+                      </th>
+                      <th scope="col" className="px-2 py-2">
+                        <span className="sr-only">{labels.createBriefFromPost}</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {summary.content.topPosts.map((post, index) => (
+                      <tr key={post.id} className="border-border border-b last:border-0">
+                        <td className="text-fg-muted px-2 py-2 tabular-nums">{index + 1}</td>
+                        <td className="px-2 py-2">
+                          <span className="text-fg-primary block max-w-[16rem] truncate font-semibold">
+                            <bdi>{post.accountName}</bdi>
+                          </span>
+                          <span className="text-fg-muted capitalize">{post.mediaType}</span>
+                          {post.outlierScore !== null && post.outlierScore >= 3 ? (
+                            <Badge variant="success" className="ms-2">
+                              {post.outlierScore.toFixed(1)}x
+                            </Badge>
+                          ) : null}
+                        </td>
+                        <td className="px-2 py-2">
+                          <PlatformIcon platform={post.platform} />
+                        </td>
+                        <td className="px-2 py-2 text-end tabular-nums">
+                          {formatNumber(post.views, locale)}
+                        </td>
+                        <td className="px-2 py-2 text-end tabular-nums">
+                          {formatNumber(post.interactions, locale)}
+                        </td>
+                        <td className="px-2 py-2 text-end tabular-nums">
+                          {engagementRateLabel(post, locale)}
+                        </td>
+                        <td className="px-2 py-2 text-end whitespace-nowrap">
+                          {post.publishedAt ? (
+                            <bdi>
+                              {formatRelativeDate(post.publishedAt, now, locale as "en" | "ar")}
+                            </bdi>
+                          ) : (
+                            "—"
+                          )}
+                        </td>
+                        <td className="px-2 py-2">
+                          <div className="flex items-center justify-end gap-2">
+                            {post.permalink ? (
+                              <a
+                                href={post.permalink}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
+                              >
+                                {labels.openSource}
+                              </a>
+                            ) : null}
+                            {canSaveResearch ? (
+                              <ResearchBookmarkButton
+                                workspaceSlug={workspaceSlug}
+                                observationId={post.id}
+                                initialSaved={savedResearchObservationIds.has(post.id)}
+                                saveLabel={labels.saveResearch}
+                                savedLabel={labels.savedResearch}
+                                errorLabel={labels.researchSaveError}
+                              />
+                            ) : null}
+                            <Link
+                              href={`${planningHref}/new?researchPostObservationId=${encodeURIComponent(post.id)}`}
+                              className="text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
+                            >
+                              {labels.createBriefFromPost}
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <p className="text-body text-fg-muted">{labels.noContentData}</p>
             )}
@@ -819,145 +754,41 @@ export function CommandCenterPanel({
           />
 
           <DashboardPanel
-            id="command-center-recommendations"
-            title={labels.bestTime}
-            description={`${labels.bestTimeDescription} · ${timezone}`}
-            data-testid="command-center-recommendations"
+            id="command-center-length"
+            title={labels.bestVideoLength}
+            description={labels.bestVideoLengthDescription}
+            data-testid="command-center-length"
           >
-            <div className="grid min-w-0 gap-5 lg:grid-cols-2">
-              <section className="min-w-0" aria-labelledby="command-center-best-time-title">
-                <div className="mb-3 flex items-center gap-2">
-                  <CalendarClock className="text-primary h-4 w-4" aria-hidden="true" />
-                  <h3
-                    id="command-center-best-time-title"
-                    className="text-body text-fg-primary font-semibold"
-                  >
-                    {labels.bestTime}
-                  </h3>
-                </div>
-                {summary.content.bestTime && bestTimeDay && bestTimeHour ? (
-                  <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-4">
-                    <p className="text-title-card text-fg-primary font-semibold">
-                      {bestTimeDay} · {bestTimeHour}
-                    </p>
-                    <p className="text-label text-fg-secondary mt-1">
-                      {formatNumber(summary.content.bestTime.averageViews, locale)}{" "}
-                      {labels.averageViews}
-                    </p>
-                    <p className="text-label text-fg-muted mt-2">
-                      {summary.content.bestTime.sampleSize} {labels.sampleSize}
-                    </p>
-                  </div>
-                ) : (
-                  <p className="text-body text-fg-muted">{labels.noBestTimeData}</p>
-                )}
-                {summary.content.timeSlots.length > 0 ? (
-                  <div
-                    className="mt-4 overflow-x-auto"
-                    dir="ltr"
-                    tabIndex={0}
-                    aria-label={labels.bestTimeDescription}
-                  >
-                    <table
-                      dir={locale.startsWith("ar") ? "rtl" : "ltr"}
-                      className="text-label text-fg-secondary w-full min-w-[30rem] border-separate border-spacing-1 text-center"
-                    >
-                      <caption className="sr-only">{labels.bestTimeDescription}</caption>
-                      <thead>
-                        <tr>
-                          <th scope="col" className="px-1 py-1 text-start font-semibold">
-                            {timezone}
-                          </th>
-                          {heatmapDays.map((day) => (
-                            <th key={day} scope="col" className="px-1 py-1 font-semibold">
-                              {day}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {heatmapHours.map((hour) => (
-                          <tr key={hour}>
-                            <th scope="row" className="px-1 py-1 text-start font-medium">
-                              {hour}:00
-                            </th>
-                            {heatmapDays.map((_, day) => {
-                              const slot = timeSlotsByKey.get(`${day}:${hour}`);
-                              const intensity = slot
-                                ? Math.max(0.18, slot.averageViews / maxSlotViews)
-                                : 0;
-                              const label = slot
-                                ? `${formatNumber(slot.averageViews, locale)} ${labels.averageViews} · ${slot.sampleSize} ${labels.sampleSize}${slot.reliable ? "" : ` · ${labels.notEnoughData}`}`
-                                : labels.noBestTimeData;
-                              return (
-                                <td
-                                  key={`${day}:${hour}`}
-                                  className={`h-8 rounded-[calc(var(--radius-control)/2)] border ${slot?.reliable ? "border-primary/60" : "border-border"}`}
-                                  title={label}
-                                  aria-label={`${heatmapDays[day]} ${hour}:00 — ${label}`}
-                                  style={
-                                    slot
-                                      ? {
-                                          backgroundColor: "var(--primary)",
-                                          opacity: intensity,
-                                        }
-                                      : undefined
-                                  }
-                                >
-                                  <span className="sr-only">{label}</span>
-                                </td>
-                              );
-                            })}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-              </section>
-
-              <section className="min-w-0" aria-labelledby="command-center-length-title">
-                <div className="mb-3 flex items-center gap-2">
-                  <Timer className="text-primary h-4 w-4" aria-hidden="true" />
-                  <h3
-                    id="command-center-length-title"
-                    className="text-body text-fg-primary font-semibold"
-                  >
-                    {labels.bestVideoLength}
-                  </h3>
-                </div>
-                {summary.content.lengthBands.length > 0 ? (
-                  <ol className="space-y-3">
-                    {summary.content.lengthBands.map((band) => (
-                      <li key={band.key}>
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="text-label text-fg-primary font-semibold">
-                            {lengthBandLabel(labels, band.key)}
-                          </p>
-                          {band.reliable ? (
-                            <p className="text-label text-fg-secondary tabular-nums">
-                              {band.relativePerformance.toFixed(2)}x {labels.relativePerformance}
-                            </p>
-                          ) : (
-                            <p className="text-label text-fg-muted">{labels.notEnoughData}</p>
-                          )}
-                        </div>
-                        <div className="text-label text-fg-muted mt-1 flex flex-wrap gap-x-3 gap-y-1">
-                          <span>
-                            {formatNumber(band.medianViews, locale)} {labels.medianViews}
-                          </span>
-                          <span>
-                            {band.sampleSize} {labels.sampleSize}
-                          </span>
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-                ) : (
-                  <p className="text-body text-fg-muted">{labels.noLengthData}</p>
-                )}
-              </section>
-            </div>
+            {summary.content.lengthBands.length > 0 ? (
+              <ol className="space-y-3">
+                {summary.content.lengthBands.map((band) => (
+                  <li key={band.key}>
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-label text-fg-primary font-semibold">
+                        {lengthBandLabel(labels, band.key)}
+                      </p>
+                      {band.reliable ? (
+                        <p className="text-label text-fg-secondary tabular-nums">
+                          {band.relativePerformance.toFixed(2)}x {labels.relativePerformance}
+                        </p>
+                      ) : (
+                        <p className="text-label text-fg-muted">{labels.notEnoughData}</p>
+                      )}
+                    </div>
+                    <div className="text-label text-fg-muted mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                      <span>
+                        {formatNumber(band.medianViews, locale)} {labels.medianViews}
+                      </span>
+                      <span>
+                        {band.sampleSize} {labels.sampleSize}
+                      </span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="text-body text-fg-muted">{labels.noLengthData}</p>
+            )}
           </DashboardPanel>
 
           <DashboardPanel
@@ -1049,29 +880,536 @@ export function CommandCenterPanel({
   );
 }
 
+/**
+ * MetricCard — the reference KPI tile: tinted icon + label, dominant
+ * value, then a green/red delta and a sparkline.
+ *
+ * The delta uses success/danger colour but is always paired with a
+ * leading arrow glyph, so direction never depends on colour alone
+ * (design-system.md "status always uses text and an icon").
+ */
 function MetricCard({
   icon,
   label,
   value,
   note,
+  delta,
+  deltaIsPositive,
+  sparkline,
+  testId,
 }: {
   icon: ReactNode;
   label: string;
   value: string;
-  note: string;
+  note?: string;
+  delta?: string;
+  deltaIsPositive?: boolean;
+  sparkline?: Array<number | null>;
+  testId?: string;
 }) {
   return (
-    <Card padding="md" className="min-w-0">
+    <Card padding="md" className="min-w-0" data-testid={testId}>
       <div className="text-primary flex items-center gap-2">
         {icon}
         <span className="text-label text-fg-secondary truncate">{label}</span>
       </div>
-      <p className="text-title-page text-fg-primary mt-3 font-semibold">
+      <p className="text-title-page text-fg-primary mt-2 font-semibold">
         <bdi>{value}</bdi>
       </p>
-      <p className="text-label text-fg-muted mt-1 truncate">
-        <bdi>{note}</bdi>
-      </p>
+      {delta ? (
+        <p
+          className={cn(
+            "text-label mt-1 flex items-center gap-1 font-semibold",
+            deltaIsPositive === false ? "text-danger" : "text-success",
+          )}
+        >
+          <TrendingUp
+            className={cn("h-3.5 w-3.5", deltaIsPositive === false && "rotate-180")}
+            aria-hidden="true"
+          />
+          <bdi>{delta}</bdi>
+        </p>
+      ) : note ? (
+        <p className="text-label text-fg-muted mt-1 truncate">
+          <bdi>{note}</bdi>
+        </p>
+      ) : null}
+      {sparkline && sparkline.length > 1 ? (
+        <Sparkline values={sparkline} className="text-primary mt-2 h-8 w-full" />
+      ) : null}
     </Card>
+  );
+}
+
+/** Engagement rate for one observed post, as a percentage string. */
+function engagementRateLabel(
+  post: CommandCenterPost & { outlierScore: number | null },
+  locale: string,
+): string {
+  const interactions = post.interactions ?? (post.likes ?? 0) + (post.comments ?? 0);
+  if (post.reach === null || post.reach <= 0) return "—";
+  const rate = (interactions / post.reach) * 100;
+  return `${new Intl.NumberFormat(locale, {
+    numberingSystem: "latn",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(rate)}%`;
+}
+
+/**
+ * DataHealthCard — the reference "Data health" card: one row per connected
+ * account with its platform tile, freshness, and a status pill, plus a
+ * "Manage accounts" action.
+ *
+ * Status colour is always accompanied by the status word, so the pill is
+ * not the only signal.
+ */
+function DataHealthCard({
+  health,
+  accounts,
+  labels,
+  now,
+}: {
+  health: CommandCenterSummary["health"];
+  accounts: CommandCenterSummary["accountHealth"];
+  labels: {
+    title: string;
+    description: string;
+    manageAccounts: string;
+    channelsHref: string;
+    freshness: string;
+    lastSynced: string;
+    healthy: string;
+    degraded: string;
+    stalled: string;
+    noSync: string;
+    reviewData: string;
+    analyticsHref: string;
+    locale: string;
+  };
+  now: Date;
+}) {
+  return (
+    <DashboardPanel
+      id="command-center-health"
+      title={labels.title}
+      description={labels.description}
+      data-testid="command-center-health"
+      headerAction={
+        <Button variant="outline" size="sm" asChild>
+          <Link href={labels.channelsHref}>{labels.manageAccounts}</Link>
+        </Button>
+      }
+    >
+      <ul className="divide-border divide-y" data-testid="command-center-account-health">
+        {accounts.map((account) => {
+          const statusLabel =
+            account.status === "healthy"
+              ? labels.healthy
+              : account.status === "degraded"
+                ? labels.degraded
+                : labels.stalled;
+          const variant =
+            account.status === "healthy"
+              ? "success"
+              : account.status === "degraded"
+                ? "warning"
+                : "danger";
+          return (
+            <li key={account.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              <PlatformIcon platform={account.platform} tile />
+              <div className="min-w-0 flex-1">
+                <p className="text-label text-fg-primary truncate font-semibold">
+                  <bdi>{account.accountName}</bdi>
+                </p>
+                <p className="text-label text-fg-muted">
+                  {account.lastSyncedAt
+                    ? `${labels.lastSynced} ${formatRelativeDate(account.lastSyncedAt, now, labels.locale as "en" | "ar")}`
+                    : labels.noSync}
+                </p>
+              </div>
+              <Badge variant={variant}>{statusLabel}</Badge>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="border-border mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+        <span className="text-label text-fg-muted font-semibold">{labels.freshness}</span>
+        {/* Status counts always carry their word, never a bare coloured
+            number — a colour alone must never be the only signal. */}
+        <Badge variant="success">
+          <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+          {health.healthy} {labels.healthy}
+        </Badge>
+        <Badge variant="warning">
+          <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+          {health.degraded} {labels.degraded}
+        </Badge>
+        <Badge variant="danger">
+          <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+          {health.stalled} {labels.stalled}
+        </Badge>
+        {health.degraded + health.stalled > 0 ? (
+          <Link
+            href={labels.analyticsHref}
+            className="text-label text-primary focus-visible:ring-focus-ring ms-auto rounded font-semibold focus:outline-none focus-visible:ring-2"
+          >
+            {labels.reviewData}
+          </Link>
+        ) : null}
+      </div>
+    </DashboardPanel>
+  );
+}
+
+/**
+ * FollowerTrendCard — the reference trend panel: a window select in the
+ * header, a graded area chart with visible y-axis ticks, and a footer
+ * carrying the absolute gain plus the period comparison.
+ */
+function FollowerTrendCard({
+  summary,
+  labels,
+}: {
+  summary: CommandCenterSummary;
+  labels: {
+    title: string;
+    description: string;
+    windowLabel: string;
+    last30Days: string;
+    last90Days: string;
+    table: string;
+    date: string;
+    followers: string;
+    views: string;
+    comparedToPrevious: string;
+    noData: string;
+    windowDays: 30 | 90;
+    window30Href: string;
+    window90Href: string;
+    timezone: string;
+    locale: string;
+  };
+}) {
+  const geometry = trendGeometry(summary);
+  const growth = summary.followerGrowth;
+  return (
+    <DashboardPanel
+      id="command-center-trend"
+      title={labels.title}
+      description={`${labels.description} · ${labels.timezone}`}
+      data-testid="command-center-trend"
+      headerAction={
+        <div
+          className="border-border bg-surface-subtle flex items-center gap-1 rounded-[var(--radius-control)] border p-0.5"
+          role="group"
+          aria-label={labels.windowLabel}
+        >
+          <Link
+            href={labels.window30Href}
+            aria-current={labels.windowDays === 30 ? "true" : undefined}
+            className={cn(
+              "text-label rounded-[calc(var(--radius-control)-2px)] px-2 py-1 font-semibold",
+              labels.windowDays === 30 ? "bg-surface text-fg-primary" : "text-fg-secondary",
+            )}
+          >
+            {labels.last30Days}
+          </Link>
+          <Link
+            href={labels.window90Href}
+            aria-current={labels.windowDays === 90 ? "true" : undefined}
+            className={cn(
+              "text-label rounded-[calc(var(--radius-control)-2px)] px-2 py-1 font-semibold",
+              labels.windowDays === 90 ? "bg-surface text-fg-primary" : "text-fg-secondary",
+            )}
+          >
+            {labels.last90Days}
+          </Link>
+        </div>
+      }
+      footer={
+        growth.absolute !== null ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span
+              className={cn(
+                "text-label flex items-center gap-1 font-semibold",
+                growth.absolute >= 0 ? "text-success" : "text-danger",
+              )}
+            >
+              <TrendingUp
+                className={cn("h-3.5 w-3.5", growth.absolute < 0 && "rotate-180")}
+                aria-hidden="true"
+              />
+              <bdi>
+                {growth.absolute > 0 ? "+" : ""}
+                {formatNumber(growth.absolute, labels.locale)}
+              </bdi>
+            </span>
+            <span className="text-label text-fg-secondary">{labels.followers}</span>
+            {growth.percent !== null ? (
+              <>
+                <span aria-hidden="true" className="text-fg-muted">
+                  ·
+                </span>
+                <span className="text-label text-fg-secondary">
+                  <bdi>{formatPercent(growth.percent)}</bdi>{" "}
+                  {labels.comparedToPrevious.replace("{days}", String(labels.windowDays))}
+                </span>
+              </>
+            ) : null}
+          </div>
+        ) : null
+      }
+    >
+      {geometry ? (
+        <figure>
+          <svg
+            viewBox="0 0 100 100"
+            className="h-40 w-full"
+            role="img"
+            aria-label={`${labels.followers}: ${formatNumber(summary.currentFollowers, labels.locale)}`}
+            preserveAspectRatio="none"
+          >
+            <title>{labels.title}</title>
+            <defs>
+              <linearGradient id="command-center-trend-fill" x1="0" x2="0" y1="0" y2="1">
+                <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="var(--primary)" stopOpacity="0.02" />
+              </linearGradient>
+            </defs>
+            <line x1="0" x2="100" y1="92" y2="92" className="stroke-border" strokeWidth="0.5" />
+            <line
+              x1="0"
+              x2="100"
+              y1="53"
+              y2="53"
+              className="stroke-border"
+              strokeWidth="0.5"
+              strokeDasharray="1.5 2.5"
+            />
+            <line
+              x1="0"
+              x2="100"
+              y1="14"
+              y2="14"
+              className="stroke-border"
+              strokeWidth="0.5"
+              strokeDasharray="1.5 2.5"
+            />
+            <path d={geometry.areaPath} fill="url(#command-center-trend-fill)" aria-hidden="true" />
+            <path
+              d={geometry.linePath}
+              className="stroke-primary fill-none"
+              strokeWidth="2.5"
+              vectorEffect="non-scaling-stroke"
+            />
+            {geometry.points.map((point, index) => (
+              <circle
+                key={`${point.x}-${index}`}
+                cx={point.x}
+                cy={point.y}
+                r="1.6"
+                fill="var(--surface)"
+                stroke="var(--primary)"
+                strokeWidth="0.9"
+                vectorEffect="non-scaling-stroke"
+                aria-hidden="true"
+              />
+            ))}
+          </svg>
+        </figure>
+      ) : (
+        <p className="text-body text-fg-muted">{labels.noData}</p>
+      )}
+      <details className="mt-2">
+        <summary className="text-label text-primary focus-visible:ring-focus-ring cursor-pointer rounded font-semibold focus:outline-none focus-visible:ring-2">
+          {labels.table}
+        </summary>
+        <div className="overflow-x-auto pt-3">
+          <table className="text-label text-fg-secondary w-full text-start">
+            <thead>
+              <tr className="border-border border-b">
+                <th className="px-2 py-2 font-semibold">{labels.date}</th>
+                <th className="px-2 py-2 text-end font-semibold">{labels.followers}</th>
+                <th className="px-2 py-2 text-end font-semibold">{labels.views}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.trend.slice(-7).map((point) => (
+                <tr key={point.metricDate} className="border-border border-b last:border-0">
+                  <td className="px-2 py-2">
+                    <bdi>{point.metricDate}</bdi>
+                  </td>
+                  <td className="px-2 py-2 text-end">
+                    {formatNumber(point.followerCount, labels.locale)}
+                  </td>
+                  <td className="px-2 py-2 text-end">{formatNumber(point.views, labels.locale)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </DashboardPanel>
+  );
+}
+
+/** StrongestAccountsCard — the reference ranked account list. */
+function StrongestAccountsCard({
+  leaders,
+  locale,
+  title,
+  description,
+  viewsAllHref,
+  viewAllLabel,
+  interactionsLabel,
+  noData,
+}: {
+  leaders: CommandCenterSummary["leaders"];
+  locale: string;
+  timezone: string;
+  title: string;
+  description: string;
+  viewsAllHref: string;
+  viewAllLabel: string;
+  interactionsLabel: string;
+  noData: string;
+}) {
+  return (
+    <DashboardPanel
+      id="command-center-leaders"
+      title={title}
+      description={description}
+      data-testid="command-center-leaders"
+      footer={
+        <Link
+          href={viewsAllHref}
+          className="text-label text-primary inline-flex items-center gap-1 rounded font-semibold"
+        >
+          {viewAllLabel}
+          <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+        </Link>
+      }
+    >
+      {leaders.length > 0 ? (
+        <ol className="divide-border divide-y">
+          {leaders.map((leader) => (
+            <li key={leader.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
+              <PlatformIcon platform={leader.platform} tile />
+              <div className="min-w-0 flex-1">
+                <p className="text-label text-fg-primary truncate font-semibold">
+                  <bdi>{leader.accountName}</bdi>
+                </p>
+                <p className="text-label text-fg-muted capitalize">{leader.platform}</p>
+              </div>
+              <span className="text-body text-fg-primary tabular-nums">
+                {formatNumber(leader.interactions ?? leader.views, locale)}
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : (
+        <p className="text-body text-fg-muted">{noData}</p>
+      )}
+      <span className="sr-only">{interactionsLabel}</span>
+    </DashboardPanel>
+  );
+}
+
+/**
+ * BestTimeCard — the reference "Best time to post" panel: a best-slot
+ * pill, the sample caveat, and the day×hour heatmap.
+ *
+ * The heatmap is always rendered when any slot exists, so a workspace
+ * with sparse history still sees where its posts landed instead of an
+ * empty grid.
+ */
+function BestTimeCard({
+  slots,
+  bestTime,
+  averageViews,
+  locale,
+  timezone,
+  labels,
+  bestTimeDay,
+  bestTimeHour,
+}: {
+  slots: CommandCenterTimeSlot[];
+  bestTime: CommandCenterTimeSlot | null;
+  averageViews: number | null;
+  locale: string;
+  timezone: string;
+  labels: {
+    title: string;
+    description: string;
+    basedOn: string;
+    averageViews: string;
+    sampleSize: string;
+    noData: string;
+    legend: string;
+    less: string;
+    more: string;
+    bestSlot: string;
+    notEnoughData: string;
+  };
+  bestTimeDay: string | null;
+  bestTimeHour: string | null;
+}) {
+  const dayLabels = Array.from({ length: 7 }, (_, day) =>
+    new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" }).format(
+      new Date(Date.UTC(2024, 0, 7 + day)),
+    ),
+  );
+  return (
+    <DashboardPanel
+      id="command-center-recommendations"
+      title={labels.title}
+      description={labels.basedOn}
+      data-testid="command-center-recommendations"
+      headerAction={
+        bestTime && bestTimeDay && bestTimeHour ? (
+          <span className="border-border bg-surface-subtle text-label text-fg-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold whitespace-nowrap">
+            <CalendarClock className="text-primary h-3.5 w-3.5" aria-hidden="true" />
+            <bdi>
+              {bestTimeDay} · {bestTimeHour}
+            </bdi>
+          </span>
+        ) : null
+      }
+    >
+      {averageViews !== null ? (
+        <p className="text-label text-fg-secondary">
+          <bdi>{formatNumber(averageViews, locale)}</bdi> {labels.averageViews}
+        </p>
+      ) : null}
+      {bestTime && bestTimeDay && bestTimeHour ? (
+        <p className="text-label text-fg-muted mt-1">
+          {labels.bestSlot}: <bdi>{formatNumber(bestTime.averageViews, locale)}</bdi>{" "}
+          {labels.averageViews} · {bestTime.sampleSize} {labels.sampleSize}
+        </p>
+      ) : null}
+      <div className="mt-3">
+        {slots.length > 0 ? (
+          <BestTimeHeatmap
+            slots={slots}
+            locale={locale}
+            timezone={timezone}
+            labels={{
+              days: dayLabels,
+              averageViews: labels.averageViews,
+              sampleSize: labels.sampleSize,
+              noData: labels.noData,
+              legend: labels.legend,
+              less: labels.less,
+              more: labels.more,
+              bestSlot: labels.bestSlot,
+              notEnoughData: labels.notEnoughData,
+            }}
+          />
+        ) : (
+          <p className="text-body text-fg-muted">{labels.noData}</p>
+        )}
+      </div>
+    </DashboardPanel>
   );
 }
