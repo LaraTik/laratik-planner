@@ -211,7 +211,15 @@ export async function devSeed(
   }, "devSeed");
 }
 
-async function applySeededAgencyContext(page: Page, result: SeedResult) {
+/**
+ * Point the browser at the agency a seed just created/reused.
+ *
+ * Exported so a spec that seeds its OWN agency (rather than the shared
+ * `test-agency` fixture) can isolate its mutations — see
+ * `tests/e2e/users-role-assignment.spec.ts`, where role assignment
+ * writes to a shared row and parallel workers would otherwise race.
+ */
+export async function applySeededAgencyContext(page: Page, result: SeedResult) {
   if (!result.activeAgencyCookie) {
     throw new Error(`devSeed did not return a ${ACTIVE_AGENCY_COOKIE_NAME} cookie`);
   }

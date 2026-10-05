@@ -256,3 +256,80 @@ export async function findUserByEmailAndPassword(
     mustChangePassword: user.mustChangePassword === true,
   };
 }
+
+/**
+ * Outcome of the pre-flight password sign-in check.
+ *
+ * The Credentials provider's `authorize` can only return `user | null`,
+ * so @auth/core collapses every failure into the single
+ * `CredentialsSignin` code. That made three genuinely different user
+ * situations render one message ("That email or password is wrong"):
+ *
+ *   - the email is not registered at all;
+ *   - the email IS registered but has no password (an account created
+ *     through Google or a magic link, or invited and never set one);
+ *   - the email is registered, has a password, and it was typed wrong.
+ *
+ * The middle case was the worst: the user is told to retry a password
+ * they were never given, and "Forgot password" is presented as if a
+ * password existed. `precheckPasswordSignIn` separates the three so
+ * the caller can render an accurate, actionable message.
+ *
+ * `can_sign_in` is deliberately *not* authoritative — the caller still
+ * hands the credentials to NextAuth, which re-verifies them. This
+ * function only answers "is there a reason to refuse before we try?".
+ */
+export type PasswordSignInPrecheck =
+  | { outcome: "can_sign_in" }
+  | { outcome: "unknown_account" }
+  | { outcome: "no_password" }
+  | { outcome: "wrong_password" };
+
+/**
+ * A bcrypt hash of a value nobody knows, used to burn the same CPU the
+ * real verify would. Without it the three failure modes would be
+ * trivially separable by response time even when the messages were
+ * identical: a missing row or a NULL `password_hash` returns
+ * immediately, while a wrong password pays the full bcrypt cost.
+ * We are already returning distinguishable *messages* on purpose (see
+ * the type docs above), but leaking the same fact through the stopwatch
+ * would make the distinction free to script.
+ */
+let dummyHashPromise: Promise<string> | null = null;
+function dummyHash(): Promise<string> {
+  // Generated once per process and memoised. The plaintext is not a
+  // secret — it exists only to be unguessable enough that a stolen
+  // hash is not a usable credential for any account.
+  dummyHashPromise ??= hashPassword(`not-a-real-password-${randomBytes(24).toString("hex")}`);
+  return dummyHashPromise;
+}
+
+/**
+ * Classify a password sign-in attempt *before* handing it to NextAuth.
+ *
+ * Returns `can_sign_in` for a (email, password) pair that looks valid,
+ * and one of the three refusal outcomes otherwise. See
+ * {@link PasswordSignInPrecheck} for why the split exists.
+ */
+export async function precheckPasswordSignIn(
+  email: string,
+  password: string,
+): Promise<PasswordSignInPrecheck> {
+  const normalized = email.trim().toLowerCase();
+  const [user] = await db
+    .select({ id: users.id, passwordHash: users.passwordHash })
+    .from(users)
+    .where(eq(users.email, normalized))
+    .limit(1);
+
+  if (!user) {
+    await verifyPassword(password, await dummyHash());
+    return { outcome: "unknown_account" };
+  }
+  if (!user.passwordHash) {
+    await verifyPassword(password, await dummyHash());
+    return { outcome: "no_password" };
+  }
+  const ok = await verifyPassword(password, user.passwordHash);
+  return ok ? { outcome: "can_sign_in" } : { outcome: "wrong_password" };
+}

@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { toggleAgencyAdminAction, updateMemberRolesAction, type MemberEditState } from "./actions";
 import { WorkspaceRoleMatrix } from "./_components/workspace-role-matrix";
 import { workspaceRoleSchema } from "@/lib/auth/invitation-command";
+import { roleDescription, roleKey, roleLabel } from "@/lib/auth/role-labels";
 import { MemberAuditPanel, type MemberAuditEntry } from "@/components/team/member-audit-panel";
 
 /**
@@ -92,36 +93,6 @@ export type MemberEditDrawerProps = {
   t?: (key: string, params?: Record<string, string | number>) => string;
 };
 
-const ROLE_LABELS: Record<string, string> = {
-  workspace_manager: "Workspace Manager",
-  content_planner: "Content Planner",
-  designer: "Designer",
-  internal_reviewer: "Internal Reviewer",
-  client_reviewer: "Client Reviewer",
-  publisher: "Publisher",
-  viewer: "Viewer",
-};
-
-const ROLE_DESCRIPTIONS: Record<string, string> = {
-  workspace_manager: "Full control of a workspace, including members and settings.",
-  content_planner: "Owns the brief, plan, and submission of content for review.",
-  designer: "Picks up design tasks and uploads delivery versions.",
-  internal_reviewer: "Reviews and approves content at the content + creative gates.",
-  client_reviewer: "Reviews and approves creative on behalf of the client.",
-  publisher: "Records per-channel publication outcomes once the item is live.",
-  viewer: "Read-only access. Cannot mutate any workspace state.",
-};
-
-const ROLE_LABEL_KEY: Record<string, string> = {
-  workspace_manager: "team.role.workspaceManager",
-  content_planner: "team.role.contentPlanner",
-  designer: "team.role.designer",
-  internal_reviewer: "team.role.internalReviewer",
-  client_reviewer: "team.role.clientReviewer",
-  publisher: "team.role.publisher",
-  viewer: "team.role.viewer",
-};
-
 export function MemberEditDrawer({
   subject,
   actorIsAgencyAdmin,
@@ -140,8 +111,27 @@ export function MemberEditDrawer({
       }}
     >
       <DialogContent
-        // Inline-end slide-in (override the centered default)
-        className="bg-surface fixed start-auto end-0 top-0 bottom-0 z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-y-auto rounded-none border-s border-e-0 border-t-0 border-b-0 p-0 shadow-xl"
+        // Inline-end slide-in (override the centered default).
+        //
+        // LAYOUT CONTRACT — the container is `flex flex-col` + `overflow-hidden`
+        // and the header, scroll body, and footer are three flex SIBLINGS with
+        // exactly one scroll region (the body). This is not cosmetic: the
+        // previous version made DialogContent itself the scroll container and
+        // marked the header/footer `sticky` inside it. Sticky elements overlay
+        // their siblings' content, so the footer's 72px band sat on top of the
+        // bottom of the role matrix and the header's 126px band sat on top of
+        // the top. Measured at a 720px viewport: the first workspace's `viewer`
+        // chip occupied y=640–670 while the sticky footer occupied y=648–720,
+        // so `document.elementFromPoint` at the chip's centre returned the
+        // FOOTER — the click was swallowed and the role never got selected.
+        // That is the "assigning permission does nothing on /app/users" bug:
+        // the action was never reached because the click landed on chrome.
+        //
+        // Sibling layout removes the overlap band entirely rather than
+        // compensating for it with padding, so every chip stays clickable and
+        // keyboard focus is never obscured (WCAG 2.2 AA `focus-not-obscured`).
+        // Same shape as `components/planning/ai-assistance-panel.tsx`.
+        className="bg-surface border-border fixed start-auto end-0 top-0 bottom-0 z-50 flex h-full w-full max-w-[560px] translate-x-0 translate-y-0 flex-col gap-0 overflow-hidden rounded-none border-s border-e-0 border-t-0 border-b-0 p-0 shadow-xl"
         data-testid="member-edit-drawer"
       >
         {subject ? (
@@ -237,7 +227,7 @@ function MemberEditForm({
 
   return (
     <>
-      <DialogHeader className="border-border bg-surface sticky top-0 z-10 border-b px-6 py-4">
+      <DialogHeader className="border-border bg-surface shrink-0 border-b px-6 py-4">
         <DialogTitle>
           {tr("users.memberEdit.title", `Edit ${subject.name}`, { name: subject.name })}
         </DialogTitle>
@@ -253,11 +243,15 @@ function MemberEditForm({
         </DialogDescription>
       </DialogHeader>
 
-      <form action={rolesFormAction} className="flex flex-1 flex-col">
+      <form action={rolesFormAction} className="flex min-h-0 flex-1 flex-col">
         {roleScopeWorkspaceId ? (
           <input type="hidden" name="roleScopeWorkspaceId" value={roleScopeWorkspaceId} />
         ) : null}
-        <div className="flex-1 space-y-6 px-6 py-5">
+        {/* The single scroll region of the drawer — see the layout contract on
+            DialogContent. `min-h-0` lets this shrink below its content height
+            inside the flex column, which is what makes `overflow-y-auto` bite
+            instead of the parent growing past the viewport. */}
+        <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
           <ReadOnlyField label={tr("users.memberEdit.emailLabel", "Email")} value={subject.email} />
           <ReadOnlyField
             label={tr("users.memberEdit.statusLabel", "Status")}
@@ -369,10 +363,10 @@ function MemberEditForm({
                     {workspaceRoleSchema.options.map((role) => (
                       <li key={role}>
                         <span className="text-fg-primary font-semibold">
-                          {tr(ROLE_LABEL_KEY[role] ?? role, ROLE_LABELS[role] ?? role)}
+                          {tr(roleKey(role), roleLabel(role))}
                         </span>
                         <span className="text-fg-muted mx-1">—</span>
-                        <span>{ROLE_DESCRIPTIONS[role] ?? ""}</span>
+                        <span>{roleDescription(role)}</span>
                       </li>
                     ))}
                   </ul>
@@ -397,7 +391,7 @@ function MemberEditForm({
           />
         </div>
 
-        <DialogFooter className="border-border bg-surface sticky bottom-0 px-6 py-4">
+        <DialogFooter className="border-border bg-surface shrink-0 border-t px-6 py-4">
           <Button type="button" variant="ghost" onClick={onClose} data-testid="member-edit-cancel">
             {tr("common.cancel", "Cancel")}
           </Button>

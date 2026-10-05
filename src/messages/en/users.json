@@ -343,7 +343,10 @@
     "roleForWorkspace": "{role} for {name}",
     "removeRoleAria": "Remove {role} from {name}",
     "noAccessWorkspace": "No access — pick a role to grant access to this workspace.",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "filterWorkspaces": "Filter {count} workspaces",
+    "filterWorkspacesAria": "Filter workspaces by name",
+    "noWorkspaceMatches": "No workspace matches “{filter}”."
   },
   "colorForm": {
     "nameLabel": "Color name",

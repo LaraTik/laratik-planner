@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { AlertCircle, Building2, CheckCircle2, Mail, RotateCcw, X } from "lucide-react";
 import { resendInviteAction, revokeInviteAction } from "./actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { roleKey } from "@/lib/auth/role-labels";
 
 type InvitationRow = {
   id: string;
@@ -13,21 +14,6 @@ type InvitationRow = {
   expiresAt: string;
   grantsAgencyAdmin: boolean;
   workspaceGrants: { workspaceId: string; workspaceName: string; role: string }[];
-};
-
-// Human-readable key for each role value. Mirrors the
-// `WORKSPACE_ROLE_LABELS` map in
-// `app/(app)/app/users/_components/workspace-role-matrix.tsx`.
-// Kept in sync intentionally — duplicated here so the list
-// view doesn't pull a server component into a client component.
-const ROLE_LABEL_KEY: Record<string, string> = {
-  workspace_manager: "team.role.workspaceManager",
-  content_planner: "team.role.contentPlanner",
-  designer: "team.role.designer",
-  internal_reviewer: "team.role.internalReviewer",
-  client_reviewer: "team.role.clientReviewer",
-  publisher: "team.role.publisher",
-  viewer: "team.role.viewer",
 };
 
 /**
@@ -155,7 +141,7 @@ export function InvitationList({
                     <Building2 className="h-3 w-3" aria-hidden="true" />
                     <span className="font-semibold">{g.workspaceName}</span>
                     <span aria-hidden="true">·</span>
-                    <span>{t(ROLE_LABEL_KEY[g.role] ?? g.role)}</span>
+                    <span>{t(roleKey(g.role))}</span>
                   </li>
                 ))}
               </ul>

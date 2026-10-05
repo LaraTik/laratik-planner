@@ -141,3 +141,70 @@ src/messages/{en,ar}/{platform,users,team}.json       new strings
 ✅ pnpm vitest run tests/unit/replace-active-agency-id.test.ts  27 / 27 passing
 ✅ pnpm test (full unit suite)            3556 / 3556 passing
 ```
+
+## Role-assignment invariants (2026-10-05)
+
+Assigning a workspace role from **/app/users** silently did nothing, while the
+identical flow on **/app/w/[slug]/team** worked. Two independent causes, both
+in the shared code, had to be fixed.
+
+### 1. Role-control ids must be unique per matrix instance
+
+`WorkspaceRoleMatrix` derives each checkbox id from the workspace and the role
+**only** — `workspace-role-${workspaceId}-${role}`. `/app/users` mounts the
+matrix three times on one screen (the "Send invitation" tab, the "Add directly"
+tab, and the edit drawer), so all three emitted byte-identical ids for the same
+pair. `<label htmlFor>` resolves to the **first match in tree order**, so every
+click on a drawer chip toggled the invite form's hidden checkbox:
+
+- the drawer's chip stayed `unchecked`;
+- the drawer's serialised `workspaceRoles` never changed;
+- the save re-submitted the previous selection, so the change reverted.
+
+The Team page mounts only the drawer's matrix, so nothing else claimed the id
+and the same click resolved correctly — which is exactly why the symptom looked
+screen-specific.
+
+The control id is now prefixed with `React.useId()`. That is guaranteed unique
+across every mounted instance and stable across SSR/hydration. Keying on the
+`testId` prop would also work but couples correctness to callers remembering to
+pass a distinct value — the assumption that just broke.
+
+**Rule for this component:** any id derived from data that could appear in more
+than one instance must be namespaced by the instance. Enforced by
+`tests/e2e/users-role-assignment.spec.ts` ("every role control on the page has a
+unique DOM id") and its companion test that the invite form's payload is
+untouched by a drawer click.
+
+### 2. The drawer has one scroll region, not sticky chrome inside one
+
+`DialogContent` was both the scroll container (`overflow-y-auto`) **and** the
+parent of `position: sticky` header/footer blocks. Sticky elements overlay
+their siblings, so the footer's 72px band sat on top of the bottom of the role
+matrix and the header's 126px band on top of the top. Measured at a 720px
+viewport: the first workspace's `viewer` chip occupied y=640–670 while the
+sticky footer occupied y=648–720, so `document.elementFromPoint` at the chip's
+centre returned the **footer** and the click was swallowed by chrome.
+
+The drawer is now a flex column with **three siblings** — static header,
+`min-h-0 flex-1 overflow-y-auto` body, static footer. Overlap is structurally
+impossible rather than padded for, which also keeps keyboard focus from being
+obscured (WCAG 2.2 AA `focus-not-obscured`). Same shape as
+`components/planning/ai-assistance-panel.tsx`.
+
+### 3. Many workspaces: filter, and access first
+
+An agency can hold dozens of workspaces (the dev agency this was found against
+holds 35), which rendered ~245 chip controls in one scrolling column and buried
+the member's actual access. Above 8 workspaces `WorkspaceRoleMatrix` now shows a
+name filter and sorts workspaces **holding access first**. The filter narrows
+only what is rendered — `selectedRoles` and the serialised payload are
+untouched, so filtering then saving cannot drop roles assigned in a hidden block.
+
+### 4. Role naming has one source of truth
+
+The 7-entry role → label map was copy-pasted into four files
+(`invitation-list.tsx`, `member-edit-drawer.tsx`, `workspace-role-matrix.tsx`,
+`w/[slug]/team/page.tsx`), so adding a role to `workspaceRoleSchema` left three
+of the four surfaces showing the raw enum slug. All four now import
+`src/lib/auth/role-labels.ts`.

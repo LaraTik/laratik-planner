@@ -8,8 +8,14 @@ const redirectMock = vi.hoisted(() =>
   }),
 );
 const signInErrorRedirectMock = vi.hoisted(() => vi.fn());
+const precheckMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/lib/auth/config", () => ({ signIn: signInMock }));
+// `signInWithPasswordAction` now classifies the attempt before handing it
+// to NextAuth (see `precheckPasswordSignIn`). That touches the DB, so the
+// seam is mocked here; the classification itself is covered in
+// tests/unit/password-signin-precheck.test.ts.
+vi.mock("@/lib/auth/password", () => ({ precheckPasswordSignIn: precheckMock }));
 vi.mock("@/lib/security/rate-limit", () => ({
   enforceRateLimit: enforceRateLimitMock,
 }));
@@ -33,6 +39,8 @@ describe("sign-in actions", () => {
     enforceRateLimitMock.mockResolvedValue({ allowed: true });
     redirectMock.mockClear();
     signInErrorRedirectMock.mockReset();
+    precheckMock.mockReset();
+    precheckMock.mockResolvedValue({ outcome: "can_sign_in" });
   });
 
   it("passes the remember choice and safe callback to credentials sign-in", async () => {
@@ -49,6 +57,65 @@ describe("sign-in actions", () => {
       remember: "on",
       redirectTo: "/app/workspaces",
     });
+  });
+
+  it("redirects with a distinct code when the email has no account", async () => {
+    precheckMock.mockResolvedValue({ outcome: "unknown_account" });
+    const formData = new FormData();
+    formData.set("email", "ghost@agency.com");
+    formData.set("password", "whatever");
+
+    await expect(signInWithPasswordAction("/app/workspaces", formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    const target = new URL(redirectMock.mock.calls[0]![0], "https://planner.example");
+    expect(target.pathname).toBe("/signin");
+    expect(target.searchParams.get("error")).toBe("NoSuchAccount");
+    expect(target.searchParams.get("callbackUrl")).toBe("/app/workspaces");
+    // The credentials provider must never see an attempt we already refused.
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects with a distinct code when the account has no password set", async () => {
+    precheckMock.mockResolvedValue({ outcome: "no_password" });
+    const formData = new FormData();
+    formData.set("email", "oauth@agency.com");
+    formData.set("password", "whatever");
+
+    await expect(signInWithPasswordAction("/app/workspaces", formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    const target = new URL(redirectMock.mock.calls[0]![0], "https://planner.example");
+    expect(target.searchParams.get("error")).toBe("PasswordNotSet");
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  it("redirects with a distinct code when the password is simply wrong", async () => {
+    precheckMock.mockResolvedValue({ outcome: "wrong_password" });
+    const formData = new FormData();
+    formData.set("email", "person@agency.com");
+    formData.set("password", "nope");
+
+    await expect(signInWithPasswordAction("/app/workspaces", formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    const target = new URL(redirectMock.mock.calls[0]![0], "https://planner.example");
+    expect(target.searchParams.get("error")).toBe("PasswordWrong");
+    expect(signInMock).not.toHaveBeenCalled();
+  });
+
+  it("refuses an empty password before any lookup", async () => {
+    const formData = new FormData();
+    formData.set("email", "person@agency.com");
+    formData.set("password", "");
+
+    await expect(signInWithPasswordAction("/app/workspaces", formData)).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    const target = new URL(redirectMock.mock.calls[0]![0], "https://planner.example");
+    expect(target.searchParams.get("error")).toBe("PasswordRequired");
+    expect(precheckMock).not.toHaveBeenCalled();
+    expect(signInMock).not.toHaveBeenCalled();
   });
 
   it("keeps magic-link validation errors on the selected method", async () => {

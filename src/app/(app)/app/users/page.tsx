@@ -55,7 +55,8 @@ export default async function UsersPage({
   const agencyId = ctx?.agencyId ?? null;
   if (!agencyId) redirect("/setup");
   const { t } = await tForActive();
-  if (!(await isAgencyAdmin(actor, agencyId))) {
+  const actorIsAgencyAdmin = await isAgencyAdmin(actor, agencyId);
+  if (!actorIsAgencyAdmin) {
     return (
       <div className="space-y-4">
         <PageHeader title={t("users.forbiddenTitle")} description={t("users.forbiddenBody")} />
@@ -297,6 +298,10 @@ export default async function UsersPage({
 
         <MemberList
           actorId={session.user.id}
+          // Derived from the same `isAgencyAdmin` check that gates this
+          // page, so the drawer's admin section can never disagree with
+          // the access decision that let us render.
+          actorIsAgencyAdmin={actorIsAgencyAdmin}
           workspaces={workspaceList}
           rolesByUser={rolesByUser}
           members={paginated.rows.map((m) => ({

@@ -40,6 +40,7 @@ describe("MemberList — round-3 UI/UX", () => {
     render(
       <MemberList
         actorId="actor"
+        actorIsAgencyAdmin={true}
         workspaces={workspaces}
         rolesByUser={{
           u1: {
@@ -79,6 +80,7 @@ describe("MemberList — round-3 UI/UX", () => {
     render(
       <MemberList
         actorId="actor"
+        actorIsAgencyAdmin={true}
         workspaces={[]}
         rolesByUser={{}}
         members={[
@@ -105,6 +107,7 @@ describe("MemberList — round-3 UI/UX", () => {
     render(
       <MemberList
         actorId="actor"
+        actorIsAgencyAdmin={true}
         workspaces={[{ id: "w1", name: "WS" }]}
         rolesByUser={{ u1: { w1: ["editor"] } }}
         members={[
@@ -130,6 +133,7 @@ describe("MemberList — round-3 UI/UX", () => {
     render(
       <MemberList
         actorId="actor"
+        actorIsAgencyAdmin={true}
         workspaces={[{ id: "w1", name: "WS" }]}
         rolesByUser={{}}
         members={[
@@ -151,7 +155,16 @@ describe("MemberList — round-3 UI/UX", () => {
   });
 
   it("shows the empty state when there are no members", () => {
-    render(<MemberList actorId="actor" workspaces={[]} rolesByUser={{}} members={[]} t={t} />);
+    render(
+      <MemberList
+        actorId="actor"
+        actorIsAgencyAdmin={true}
+        workspaces={[]}
+        rolesByUser={{}}
+        members={[]}
+        t={t}
+      />,
+    );
     expect(screen.getByTestId("users-empty-state")).toBeInTheDocument();
   });
 });

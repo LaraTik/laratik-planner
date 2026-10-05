@@ -31,14 +31,62 @@ describe("authError", () => {
     );
   });
 
-  it("maps the new InvalidEmail (anti-enumeration) code to the wrong-credentials copy", () => {
-    // The form action in src/app/signin/page.tsx redirects to
-    // ?error=InvalidEmail when the email fails Zod validation OR the
-    // password is empty. The user MUST see the same copy as
-    // CredentialsSignin — otherwise an unauthenticated probe can
-    // distinguish "user typed nothing" from "user typed the wrong
-    // password" by reading the rendered error string.
-    expect(callAuthError("InvalidEmail")).toBe(callAuthError("CredentialsSignin"));
+  it("gives each password-sign-in failure its own actionable message", () => {
+    // REVERTED CONTROL (2026-10-05) — this assertion used to be:
+    //
+    //   expect(callAuthError("InvalidEmail")).toBe(
+    //     callAuthError("CredentialsSignin"),
+    //   );
+    //
+    // The old form conflated "typed nothing / malformed email" with
+    // "wrong password" so an unauthenticated probe could not tell the
+    // states apart by reading the string. That anti-enumeration property
+    // was DELIBERATELY GIVEN UP: NextAuth's Credentials provider can only
+    // return `user | null`, so all three refusals rendered one message,
+    // and an account with no password at all (created via Google or a
+    // magic link) was told to retry a password it was never issued.
+    //
+    // Distinguishing "no such account" from "wrong password" makes this
+    // form an account oracle. That is an accepted trade-off for an
+    // invite-only tool where every legitimate visitor already belongs to
+    // a known agency, and `precheckPasswordSignIn` still burns an
+    // identical bcrypt cost on every refusal so the split is not also
+    // handed out through response timing.
+    //
+    // To restore the closed set: return `unknown_account` for all three
+    // refusals in `precheckPasswordSignIn` and point `InvalidEmail` and
+    // `PasswordRequired` back at the `CredentialsSignin` string. The
+    // decision lives in exactly two places, deliberately.
+    const codes = ["NoSuchAccount", "PasswordNotSet", "PasswordWrong", "PasswordRequired"];
+    const messages = codes.map(callAuthError);
+
+    // Every code has its own copy...
+    expect(new Set(messages).size).toBe(codes.length);
+    // ...and none of them falls through to the generic bucket, which stays
+    // reserved for genuinely unknown/internal codes.
+    const generic = callAuthError("SomeMadeUpCodeThatIsNotInTheMap");
+    for (const message of messages) {
+      expect(message).not.toBe(generic);
+    }
+  });
+
+  it("InvalidEmail reports a format problem, not a credential problem", () => {
+    // Telling someone their address is malformed leaks nothing about
+    // whether an account exists — this is input validation, not an
+    // account lookup — so it is honest to name it precisely.
+    expect(callAuthError("InvalidEmail")).toMatch(/valid email address/i);
+    expect(callAuthError("InvalidEmail")).not.toBe(callAuthError("NoSuchAccount"));
+  });
+
+  it("every copy tells the visitor what to do next", () => {
+    // Per the error-clarity rule: state the cause AND the recovery path.
+    // A user who only learns "this failed" has learned nothing actionable.
+    const actionable = ["NoSuchAccount", "PasswordNotSet", "PasswordWrong", "PasswordRequired"];
+    for (const code of actionable) {
+      expect(callAuthError(code), `${code} should offer a recovery path`).toMatch(
+        /try|check|ask|sign in|use|enter|set one|reset/i,
+      );
+    }
   });
 
   it("maps the new RateLimited code to a throttle-specific message", () => {

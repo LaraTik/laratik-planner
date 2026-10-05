@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { workspaceRoleSchema, type WorkspaceRole } from "@/lib/auth/invitation-command";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { roleLabel } from "@/lib/auth/role-labels";
 
 /**
  * Shared per-workspace role multi-selector used by the "Send invitation",
@@ -64,6 +65,47 @@ export function WorkspaceRoleMatrix({
   };
   const localizedRoleLabel = (role: WorkspaceRole) =>
     tr(`users.memberEdit.roleLabels.${role}`, roleLabel(role));
+
+  /**
+   * Per-instance id prefix for the role checkboxes.
+   *
+   * BUG (2026-10-05) — "assigning permission does nothing on /app/users,
+   * but works on the workspace Team page". The checkbox id used to be
+   * `workspace-role-${workspaceId}-${role}`, which is a function of the
+   * workspace and the role ONLY. `/app/users` mounts this matrix THREE
+   * times on one screen — the "Send invitation" tab, the "Add directly"
+   * tab, and the edit drawer — so all three emitted byte-identical ids
+   * for the same (workspace, role) pair. `document.querySelectorAll` on
+   * the document reported 2 elements with one drawer's checkbox id, and
+   * `<label htmlFor>` resolves to the FIRST match in tree order, which is
+   * the invite form's checkbox. Every click on a drawer's role chip
+   * therefore toggled the *invite form's* hidden checkbox and left the
+   * drawer's own state untouched: `data-state` stayed `unchecked` and the
+   * drawer's serialised `workspaceRoles` never changed. The save
+   * submitted the previous selection, so the assignment silently reverted.
+   *
+   * The workspace Team page mounts only the drawer's matrix, so no other
+   * element claimed the id and the same click resolved correctly — which
+   * is exactly why the bug looked screen-specific.
+   *
+   * `useId` is the fix: React guarantees the value is unique across every
+   * mounted instance (and stable across SSR/hydration), so each matrix
+   * addresses only its own checkboxes no matter how many forms share the
+   * page. Keying on `testId` would also work but couples correctness to
+   * callers remembering to pass a distinct `testId`, which is exactly the
+   * assumption that just broke.
+   */
+  /**
+   * How many workspace blocks we render before the name filter appears.
+   * Below this a filter is pure noise; above it the list is unusable
+   * without one. 8 keeps a small agency's single-screen layout untouched.
+   */
+  const FILTER_THRESHOLD = 8;
+
+  const instanceId = React.useId();
+  const roleControlId = (workspaceId: string, role: string) =>
+    `workspace-role${instanceId}-${workspaceId}-${role}`;
+
   const seed = React.useMemo<Record<string, string[]>>(() => {
     const next: Record<string, string[]> = {};
     for (const w of workspaces) {
@@ -119,9 +161,71 @@ export function WorkspaceRoleMatrix({
     [selectedRoles],
   );
 
+  /**
+   * Workspace filter.
+   *
+   * An agency can hold dozens of workspaces (the dev agency this was
+   * fixed against holds 35), and every one of them renders a 7-chip
+   * block. That is ~245 controls in one scrolling column, which buries
+   * the member's actual access and turns "give them access to Acme" into
+   * a scroll-and-scan task. Above `FILTER_THRESHOLD` we show a name
+   * filter, and blocks with existing access are pinned to the top of the
+   * list so the member's real state is always visible without scrolling.
+   *
+   * The filter only narrows what is RENDERED — `selectedRoles` and the
+   * serialised payload are untouched, so filtering and then saving
+   * cannot silently drop roles assigned in a hidden block.
+   */
+  const [filter, setFilter] = React.useState("");
+  const showFilter = workspaces.length > FILTER_THRESHOLD;
+
+  const visibleWorkspaces = React.useMemo(() => {
+    const needle = filter.trim().toLowerCase();
+    const matching = needle
+      ? workspaces.filter((w) => w.name.toLowerCase().includes(needle))
+      : workspaces;
+    // Access-holding workspaces first; `localeCompare` keeps the
+    // rest in a stable, human-sorted order rather than DB order.
+    return [...matching].sort((a, b) => {
+      const aHas = (selectedRoles[a.id] ?? []).length > 0 ? 0 : 1;
+      const bHas = (selectedRoles[b.id] ?? []).length > 0 ? 0 : 1;
+      if (aHas !== bHas) return aHas - bHas;
+      return a.name.localeCompare(b.name);
+    });
+  }, [workspaces, filter, selectedRoles]);
+
   return (
     <div className="space-y-3" data-testid={testId ? `${testId}-role-matrix` : undefined}>
-      {workspaces.map((w) => {
+      {showFilter ? (
+        <div className="flex items-center gap-2">
+          <Search className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+          <input
+            type="search"
+            value={filter}
+            onChange={(e) => setFilter(e.currentTarget.value)}
+            placeholder={tr("users.memberEdit.filterWorkspaces", "Filter {count} workspaces", {
+              count: workspaces.length,
+            })}
+            aria-label={tr("users.memberEdit.filterWorkspacesAria", "Filter workspaces by name")}
+            className="border-border bg-surface text-body text-fg-primary placeholder:text-fg-muted focus-visible:ring-focus-ring w-full rounded-[var(--radius-control)] border px-3 py-2 focus:outline-none focus-visible:ring-2"
+            data-testid={testId ? `${testId}-workspace-filter` : undefined}
+          />
+          <span className="text-label text-fg-muted shrink-0 tabular-nums">
+            {visibleWorkspaces.length}/{workspaces.length}
+          </span>
+        </div>
+      ) : null}
+      {visibleWorkspaces.length === 0 ? (
+        <p
+          className="text-body text-fg-muted"
+          data-testid={testId ? `${testId}-no-match` : undefined}
+        >
+          {tr("users.memberEdit.noWorkspaceMatches", "No workspace matches “{filter}”.", {
+            filter,
+          })}
+        </p>
+      ) : null}
+      {visibleWorkspaces.map((w) => {
         const selected = selectedRoles[w.id] ?? [];
         return (
           <div
@@ -161,6 +265,7 @@ export function WorkspaceRoleMatrix({
               >
                 {workspaceRoleSchema.options.map((role) => {
                   const isOn = selected.includes(role);
+                  const controlId = roleControlId(w.id, role);
                   return (
                     <div
                       key={role}
@@ -172,7 +277,7 @@ export function WorkspaceRoleMatrix({
                       data-testid={testId ? `${testId}-chip-${w.id}-${role}` : undefined}
                     >
                       <Checkbox
-                        id={`workspace-role-${w.id}-${role}`}
+                        id={controlId}
                         className="sr-only"
                         checked={isOn}
                         onCheckedChange={() => toggleRole(w.id, role)}
@@ -181,7 +286,7 @@ export function WorkspaceRoleMatrix({
                           name: w.name,
                         })}
                       />
-                      <label htmlFor={`workspace-role-${w.id}-${role}`} className="cursor-pointer">
+                      <label htmlFor={controlId} className="cursor-pointer">
                         {localizedRoleLabel(role)}
                       </label>
                     </div>
@@ -233,18 +338,4 @@ export function WorkspaceRoleMatrix({
       <input type="hidden" name="workspaceRoles" value={serialised} />
     </div>
   );
-}
-
-const ROLE_LABELS: Record<WorkspaceRole, string> = {
-  workspace_manager: "Workspace Manager",
-  content_planner: "Content Planner",
-  designer: "Designer",
-  internal_reviewer: "Internal Reviewer",
-  client_reviewer: "Client Reviewer",
-  publisher: "Publisher",
-  viewer: "Viewer",
-};
-
-function roleLabel(role: WorkspaceRole): string {
-  return ROLE_LABELS[role] ?? role;
 }

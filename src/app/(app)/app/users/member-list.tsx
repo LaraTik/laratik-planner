@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -20,12 +21,24 @@ type MemberRow = {
 
 export function MemberList({
   actorId,
+  actorIsAgencyAdmin,
   workspaces,
   rolesByUser,
   members,
   t: tProp,
 }: {
   actorId: string;
+  /**
+   * Whether the signed-in actor may grant agency-wide admin.
+   *
+   * Previously this prop did not exist and the drawer was rendered with
+   * a hardcoded `actorIsAgencyAdmin` — the section was always shown and
+   * always editable. The page is already gated on agency admin, so the
+   * value was right by coincidence; it is now threaded through from the
+   * session so the component stops asserting a fact about the user that
+   * only the caller actually knows.
+   */
+  actorIsAgencyAdmin: boolean;
   workspaces: { id: string; name: string }[];
   /**
    * Multi-role map. `rolesByUser[userId][workspaceId]` is the
@@ -50,13 +63,24 @@ export function MemberList({
   // it past an early return (the bug class the 2026-08-26
   // `users-hooks-order` regression guard was added to catch).
   // Multi-role: the page passes an array of roles per workspace.
-  const editingWorkspaces: MemberEditWorkspace[] = editing
-    ? workspaces.map((w) => ({
-        id: w.id,
-        name: w.name,
-        currentRoles: rolesByUser[editing.id]?.[w.id] ?? [],
-      }))
-    : [];
+  // Memoised on identity, not recomputed every render: an unmemoised
+  // array handed to the drawer invalidates the drawer's
+  // `defaultSelectedRoles` useMemo on every parent render, which makes
+  // the role matrix rebuild its whole seed object for no reason. The
+  // matrix keeps its selections in `useState`, so the churn is wasted
+  // work rather than lost edits — but it is work on every keystroke in
+  // the page-level search box.
+  const editingWorkspaces: MemberEditWorkspace[] = React.useMemo(
+    () =>
+      editing
+        ? workspaces.map((w) => ({
+            id: w.id,
+            name: w.name,
+            currentRoles: rolesByUser[editing.id]?.[w.id] ?? [],
+          }))
+        : [],
+    [editing, workspaces, rolesByUser],
+  );
 
   // Drawer is mounted from the first render so an open-drawer
   // → empty-members → re-populated sequence does not unmount and
@@ -204,7 +228,7 @@ export function MemberList({
       )}
       <MemberEditDrawer
         subject={editingSubject}
-        actorIsAgencyAdmin
+        actorIsAgencyAdmin={actorIsAgencyAdmin}
         actorUserId={actorId}
         workspaces={editingWorkspaces}
         t={t}

@@ -343,7 +343,10 @@
     "roleForWorkspace": "{role} في {name}",
     "removeRoleAria": "إزالة {role} من {name}",
     "noAccessWorkspace": "لا توجد صلاحية — اختر دورًا لمنح صلاحية على مساحة العمل هذه.",
-    "saving": "جارٍ الحفظ…"
+    "saving": "جارٍ الحفظ…",
+    "filterWorkspaces": "تصفية {count} مساحات عمل",
+    "filterWorkspacesAria": "تصفية مساحات العمل بالاسم",
+    "noWorkspaceMatches": "لا توجد مساحة عمل تطابق «{filter}»."
   },
   "colorForm": {
     "nameLabel": "اسم اللون",

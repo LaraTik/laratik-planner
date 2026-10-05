@@ -12,6 +12,86 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — assigning a workspace role from /app/users silently did nothing
+
+Ticking a role chip in the member drawer on the global user screen
+(`/app/users`) never took effect, while the same flow on the workspace Team
+page worked. The reported symptom was "assigning permission isn't working in
+the global screen but works in the workspace screen". Two independent defects
+in shared code had to be fixed, and both had to be fixed for a click to land.
+
+**1. Duplicate DOM ids across matrix instances.** `WorkspaceRoleMatrix` built
+each role checkbox id from the workspace id and the role only —
+`workspace-role-${workspaceId}-${role}`. `/app/users` mounts the matrix three
+times on one screen (the "Send invitation" tab, the "Add directly" tab, and the
+edit drawer), so all three emitted byte-identical ids for the same pair.
+`<label htmlFor>` resolves to the **first match in tree order**, which was the
+invite form's checkbox, so every drawer chip click toggled the invite form
+instead: the drawer chip stayed `unchecked`, the serialised `workspaceRoles`
+never changed, and the save re-submitted the previous selection. The Team page
+mounts only the drawer, so nothing else claimed the id — which is exactly why
+the bug looked screen-specific rather than component-specific. Ids are now
+prefixed with `React.useId()`, which is unique across every mounted instance.
+
+**2. Sticky chrome inside the drawer's scroll container.** `DialogContent` was
+both the scroll container (`overflow-y-auto`) and the parent of `sticky`
+header/footer blocks. Sticky overlays its siblings: at a 720px viewport the
+first workspace's `viewer` chip occupied y=640–670 while the sticky footer
+occupied y=648–720, so `document.elementFromPoint` at the chip's centre
+returned the footer and the click was swallowed by chrome. The drawer is now a
+flex column of three siblings — static header, scrolling body, static footer —
+so the overlap is structurally impossible and keyboard focus is never obscured
+(WCAG 2.2 AA `focus-not-obscured`).
+
+Also in this change:
+
+- **Many workspaces are usable now.** Above 8 workspaces `WorkspaceRoleMatrix`
+  shows a name filter and sorts workspaces holding access first. It filtered
+  ~245 controls in one scrolling column (the dev agency holds 35 workspaces),
+  which buried the member's real access. Filtering narrows only what is
+  rendered — the saved payload is untouched.
+- **Role naming has one source of truth.** The 7-entry role → label map was
+  copy-pasted into four files, so adding a role to `workspaceRoleSchema` left
+  three surfaces showing the raw enum slug. All four now import
+  `src/lib/auth/role-labels.ts`.
+- **`MemberList` no longer asserts a fact it cannot know.** The drawer was
+  rendered with a hardcoded `actorIsAgencyAdmin`; the page now threads the real
+  value from the same `isAgencyAdmin` check that gates the route. The drawer's
+  per-workspace props are memoised so they stop invalidating the role matrix's
+  seed on every keystroke in the page search box.
+
+### Fixed — password sign-in tells you which of the three failures you hit
+
+NextAuth's Credentials provider can only return `user | null`, so every refusal
+collapsed into the single `CredentialsSignin` code and one message: "That email
+or password is wrong". The worst case was an account created through Google or
+a magic link, which has no password at all — it was told to retry a password it
+was never issued, and offered "Forgot password" as though one existed.
+
+`precheckPasswordSignIn` (`src/lib/auth/password.ts`) resolves the account
+first and separates the cases: `NoSuchAccount`, `PasswordNotSet`,
+`PasswordWrong`, `PasswordRequired`, plus a corrected `InvalidEmail` message
+("Enter a valid email address" — it previously claimed the email or password
+was wrong). `can_sign_in` is deliberately not authoritative: the action still
+calls `signIn("credentials")` so the session, JWT claims, and failure logging
+stay on one code path.
+
+Distinguishing "no such account" from "wrong password" is an intentional
+account-oracle trade-off, appropriate for an invite-only tool where every
+legitimate visitor already belongs to a known agency. Every refusal still burns
+an identical bcrypt cost, so the split is not also handed out through response
+timing — asserted by a timing test. Reverting to a single message is a
+one-function change if the product ever becomes publicly reachable.
+
+> ⚠️ **Security-posture change — read before deploying publicly.** This
+> deliberately reverses an existing control. `tests/unit/auth-error-codes.test.ts`
+> previously asserted that `InvalidEmail` renders the _same_ copy as
+> `CredentialsSignin`, so a probe could not distinguish "typed nothing" from
+> "typed the wrong password". That anti-enumeration property is now given up,
+> and the test documents the reversal and how to restore it. The decision lives
+> in exactly two places: `precheckPasswordSignIn` (which refusals exist) and
+> `messages/{en,ar}/auth.json` (what they say).
+
 ### Changed — the channel setup workspace shows one phase at a time, and the rail's duplicate publish cards are gone
 
 The Publish tab was asking the operator to hold two competing mental models at

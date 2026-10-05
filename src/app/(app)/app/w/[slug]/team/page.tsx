@@ -29,6 +29,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
 import { MemberEditTrigger } from "./member-edit-trigger";
+import { roleKey } from "@/lib/auth/role-labels";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -78,9 +79,7 @@ function teamColumns(args: {
           {member.roles.length === 0 ? (
             <span className="text-fg-muted">&mdash;</span>
           ) : (
-            member.roles.map((role) => (
-              <Badge key={role}>{args.t(ROLE_LABEL_KEY[role] ?? role)}</Badge>
-            ))
+            member.roles.map((role) => <Badge key={role}>{args.t(roleKey(role))}</Badge>)
           )}
         </div>
       ),
@@ -139,16 +138,6 @@ function teamColumns(args: {
     },
   ];
 }
-
-const ROLE_LABEL_KEY: Record<string, string> = {
-  workspace_manager: "team.role.workspaceManager",
-  content_planner: "team.role.contentPlanner",
-  designer: "team.role.designer",
-  internal_reviewer: "team.role.internalReviewer",
-  client_reviewer: "team.role.clientReviewer",
-  publisher: "team.role.publisher",
-  viewer: "team.role.viewer",
-};
 
 /**
  * The full set of workspace roles surfaced as filter chips.
@@ -417,7 +406,7 @@ export default async function WorkspaceTeamPage({
                     })}
                   </p>
                 </div>
-                <Badge variant="info">{t(ROLE_LABEL_KEY[inv.role] ?? inv.role)}</Badge>
+                <Badge variant="info">{t(roleKey(inv.role))}</Badge>
               </li>
             ))}
           </ul>
@@ -468,7 +457,7 @@ export default async function WorkspaceTeamPage({
               name="role"
               value={role}
               selected={filters.role.includes(role)}
-              label={t(ROLE_LABEL_KEY[role] ?? role)}
+              label={t(roleKey(role))}
               testId={`team-filter-role-${role}`}
             />
           ))}

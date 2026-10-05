@@ -283,3 +283,47 @@ $ ./scripts/vps/preflight.sh
 ```
 
 The script targets bash 3.2 (macOS) and bash 4+ (Linux). The check is structural — it does not contact the running container, so it works on the very first deploy (before any image is pulled) and on subsequent deploys.
+
+## 7. Password sign-in error messages
+
+When the sign-in form offers a **password** field, the visitor can land in one
+of four situations, and each one gets its own message. This matters because
+accounts in this product are created in several ways (invited by an agency
+admin, provisioned through Google, or created from a magic link), and only some
+of them ever get a password.
+
+| Situation                                   | Error code         | What the visitor is told                                                                                |
+| ------------------------------------------- | ------------------ | ------------------------------------------------------------------------------------------------------- |
+| The email matches no account                | `NoSuchAccount`    | No account with that email — check the address or ask an admin for an invitation                        |
+| The account exists but has **no** password  | `PasswordNotSet`   | This account doesn't have a password yet — use Google / a sign-in link, or "Forgot password" to set one |
+| The account has a password and it was wrong | `PasswordWrong`    | That password is wrong — retry, or reset it                                                             |
+| The password field was empty                | `PasswordRequired` | Enter your password to sign in                                                                          |
+| Malformed email                             | `InvalidEmail`     | Enter a valid email address                                                                             |
+
+### Why the split exists
+
+The Credentials provider in `auth/config.ts` can only return `user | null`, so
+NextAuth collapses **every** refusal into the single `CredentialsSignin` code.
+That produced one message for all three failures — "That email or password is
+wrong" — which was actively misleading for the middle case: a Google or
+magic-link account was told to retry a password it was never issued, and
+"Forgot password" was offered as though a password existed.
+
+`precheckPasswordSignIn` (in `src/lib/auth/password.ts`) resolves the account
+_before_ the credentials reach NextAuth and raises the specific code above.
+`can_sign_in` is **not** authoritative — the action still calls `signIn("credentials")`
+so the session, JWT claims, and failure logging stay on one code path.
+
+### Security note
+
+This deliberately makes the sign-in form an account oracle, which is the
+requested behaviour for an invite-only internal tool where every legitimate
+visitor already belongs to a known agency. `precheckPasswordSignIn` still burns
+an identical bcrypt cost on every refusal — a missing row and a NULL
+`password_hash` verify against a throwaway hash rather than returning early —
+so the same fact is not handed out again via the stopwatch. This is asserted by
+the timing test in `tests/unit/password-signin-precheck.test.ts`.
+
+If the product ever becomes publicly reachable and this trade-off is
+revisited, the split is one function: return `unknown_account` for all three
+refusals in `precheckPasswordSignIn` and the three codes become unreachable.
