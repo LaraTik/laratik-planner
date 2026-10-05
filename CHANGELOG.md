@@ -56,6 +56,30 @@ Accessibility and honesty fixes that came with the rewrite:
 - Observed content page size dropped 10 → 6 so it reads as a glanceable preview
   instead of pushing the planning sections below the fold.
 
+### Fixed — two sparkline implementations had drifted apart
+
+The Command Center rewrite introduced a `Sparkline` primitive, which meant the
+app briefly had two components drawing a follower polyline — the pre-existing
+route-local `SocialSparkline` on the analytics page and the new shared one.
+They disagreed on non-null handling: the analytics version treats a missing day
+as a **gap** (the line breaks, mirroring `SocialGrowthChart`) and renders nothing
+below two points, while the new one **collapses** gaps and draws a flat baseline.
+Two components named "sparkline" with different gap semantics is a trap for the
+next person to touch either surface.
+
+The polyline geometry now lives solely in `components/workspace/sparkline.tsx`,
+and `SocialSparkline` is a thin wrapper that keeps its own contract: 60×16,
+7-day window, `preserveGaps`, render-nothing when insufficient, its own
+`ariaLabel` (it is the accessible element for its value, unlike the decorative
+KPI sparkline), and the `social-sparkline` testids. The two policies are now
+explicit props on one primitive rather than two divergent copies.
+
+`SocialSparkline` currently has no production call site — only its unit test
+exercises it — so this is recorded as a scope note rather than a user-visible
+fix. Covered by 10 new tests on the shared primitive, including the two that
+had no coverage before: gap collapsing versus gap preservation, and that a
+gap's horizontal position is preserved from the full index.
+
 Verified in a real browser at 1440px and 390px, in light and dark, in English
 and Arabic RTL: 7 painted cells, exactly one marked best, zero console errors.
 

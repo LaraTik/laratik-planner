@@ -2,7 +2,6 @@ import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { BestTimeHeatmap } from "@/components/workspace/best-time-heatmap";
-import { Sparkline } from "@/components/workspace/sparkline";
 import type { CommandCenterTimeSlot } from "@/lib/social/command-center";
 
 const labels = {
@@ -105,26 +104,5 @@ describe("BestTimeHeatmap", () => {
     expect(screen.getByTestId("command-center-heatmap-cell-2-9")).toHaveAccessibleName(
       /Not enough data/,
     );
-  });
-});
-
-describe("Sparkline", () => {
-  it("draws a flat baseline when there are fewer than two points", () => {
-    const { container } = render(<Sparkline values={[5]} />);
-    const line = container.querySelector("line");
-    expect(line).toBeTruthy();
-    // A single value has no shape to plot, so it must not fake a trend.
-    expect(container.querySelector("path.stroke-primary")).toBeNull();
-  });
-
-  it("draws an area and line once there are two points", () => {
-    const { container } = render(<Sparkline values={[1, 4, 2]} />);
-    expect(container.querySelector("path.stroke-primary")).toBeTruthy();
-    expect(container.querySelectorAll("path")).toHaveLength(2);
-  });
-
-  it("is hidden from assistive tech because the card text carries the value", () => {
-    const { container } = render(<Sparkline values={[1, 2]} />);
-    expect(container.querySelector("svg")).toHaveAttribute("aria-hidden", "true");
   });
 });

@@ -1,3 +1,4 @@
+import { Sparkline } from "@/components/workspace/sparkline";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
 
 /**
@@ -15,6 +16,15 @@ import type { MetricSeriesPoint } from "@/lib/social/analytics";
  *     in the 7-day window
  *   - no axes, no labels, no hover tooltip — that information
  *     belongs in the full chart and table
+ *
+ * Unlike the Command Center KPI sparkline, this one IS the accessible
+ * element for its value, so it passes its own `ariaLabel` rather than
+ * being decorative.
+ *
+ * The polyline geometry now lives in the shared `Sparkline` primitive;
+ * this component only carries the analytics-specific window, size,
+ * testids and gap policy, so the two sparkline surfaces cannot drift
+ * into two subtly different implementations.
  *
  * The component is a Server Component. It accepts a `MetricSeriesPoint[]`
  * and renders inline in the channel card header.
@@ -38,55 +48,24 @@ export function SocialSparkline({
   ariaLabel: string;
 }) {
   const windowed = series.slice(-7);
-  const numericPoints = windowed.filter(
-    (p): p is MetricSeriesPoint & { followerCount: number } => typeof p.followerCount === "number",
+  const values = windowed.map((point) =>
+    typeof point.followerCount === "number" ? point.followerCount : null,
   );
-  if (numericPoints.length < 2) return null;
-
-  const min = Math.min(...numericPoints.map((p) => p.followerCount));
-  const max = Math.max(...numericPoints.map((p) => p.followerCount));
-  const range = Math.max(1, max - min);
-  const stepX = SPARK_WIDTH / Math.max(1, windowed.length - 1);
-  const yOf = (v: number) => SPARK_HEIGHT - ((v - min) / range) * (SPARK_HEIGHT - 2) - 1;
-
-  // Build the polyline respecting gaps. We walk the windowed series
-  // and emit a "M" when a gap precedes a point, "L" otherwise. The
-  // path only contains non-null points; gaps break the line.
-  const segments: string[] = [];
-  let prevWasNumeric = false;
-  windowed.forEach((p, i) => {
-    if (typeof p.followerCount !== "number") {
-      prevWasNumeric = false;
-      return;
-    }
-    const x = i * stepX;
-    const y = yOf(p.followerCount);
-    segments.push(`${prevWasNumeric ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`);
-    prevWasNumeric = true;
-  });
 
   return (
-    <svg
+    <Sparkline
+      values={values}
       width={SPARK_WIDTH}
       height={SPARK_HEIGHT}
-      viewBox={`0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}`}
-      role="img"
-      aria-label={ariaLabel}
-      data-testid="social-sparkline"
-      data-testid-id={channelId}
+      preserveGaps
+      hideWhenInsufficient
+      fill={false}
+      strokeWidth={1.5}
+      ariaLabel={ariaLabel}
+      entityId={channelId}
+      testId="social-sparkline"
       className="shrink-0"
-      preserveAspectRatio="none"
-    >
-      <title>{ariaLabel}</title>
-      <path
-        d={segments.join(" ")}
-        fill="none"
-        className="stroke-primary"
-        strokeWidth={1.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    />
   );
 }
 

@@ -874,6 +874,15 @@ diverge again. Pre-dawn hours fold into the first band rather than being dropped
 - A chart is never the only way to read a value: heatmap cells expose their number
   in text, and low-sample slots are flagged instead of presented as advice.
 - The best-slot pill renders `21:00`, matching the heatmap row it points at.
+- **There is exactly one sparkline implementation.**
+  `components/workspace/sparkline.tsx` owns the geometry. Two callers use it with
+  deliberately different policies expressed as props, NOT as two components:
+  the Command Center KPI tile is decorative (`aria-hidden`, area fill, gaps
+  collapse, flat baseline under two points) while `SocialSparkline` on the
+  analytics page is self-describing (`ariaLabel`, `preserveGaps`, renders
+  nothing under two points, `social-sparkline` testids). The two previously
+  drifted into separate polyline implementations with different null handling —
+  never add a second sparkline; add a prop.
 
 ### 2026-10-05 — Publish surface: one phase at a time, and the rail's duplicate cards removed
 
