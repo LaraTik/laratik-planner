@@ -1,9 +1,11 @@
 "use client";
 
-import { useRef, useState, useTransition, type ReactNode } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Save, Send, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Languages, Plus, Save, Send, X } from "lucide-react";
+import { PerFieldAiSuggest } from "@/components/forms/per-field-ai-suggest";
+import { phaseBlockerCounts } from "@/lib/publishing/blocker-targets";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -41,9 +43,40 @@ import type { AudienceCopyViewModel, MappedPlatformFields } from "@/lib/format-p
 import type { PublishActionErrorCode } from "@/lib/publishing/action-errors";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatDate } from "@/lib/i18n/format-locale";
-import { platformLabel } from "@/components/workspace/platform-icon";
+import { platformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
+import { cn } from "@/lib/utils";
 import { humanFormat } from "@/lib/content/status";
 import { PublishPhaseStepper } from "@/components/planning/publish-phase-stepper";
+import {
+  PlatformPreviewSwitcher,
+  type PreviewChannel,
+} from "@/components/planning/platform-preview-switcher";
+
+/**
+ * Serializable preview inputs handed down from the server page. Kept as
+ * data (not a pre-rendered node) so the form can bind the simulator to
+ * the channel the operator is actually editing.
+ */
+/**
+ * In-page anchors for the four preparation phases, shared by the
+ * stepper's links and the action bar's "Continue to …" control so the
+ * two can never point at different sections.
+ */
+const PHASE_ANCHORS = {
+  destination: "#publish-destination",
+  content: "#publish-caption",
+  compliance: "#publish-compliance",
+  review: "#publish-approval",
+} as const;
+
+export interface PublishPreviewData {
+  channels: ReadonlyArray<PreviewChannel>;
+  sharedCaption: string;
+  sharedHashtags?: string[];
+  thumbnailUrl?: string | null;
+  thumbnailWidth?: number | null;
+  thumbnailHeight?: number | null;
+}
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import type { MetaPublishingReadiness } from "@/lib/db/schema";
@@ -250,7 +283,9 @@ export function PublishPackageForm({
   publishingSetupReady = false,
   metaPublishingReadiness,
   metaPublishingCopy,
-  preview,
+  previewData,
+  aiCaptionDraftsEnabled = false,
+  aiCaptionDisabledReason = null,
   t: tProp,
 }: {
   workspaceId: string;
@@ -307,8 +342,26 @@ export function PublishPackageForm({
   publishingSetupReady?: boolean;
   metaPublishingReadiness?: MetaPublishingReadiness;
   metaPublishingCopy?: MetaPublishingReadinessCopy;
-  /** Platform simulator rendered beside the active channel composer. */
-  preview?: ReactNode;
+  /**
+   * Serializable preview inputs, not a pre-rendered node.
+   *
+   * The simulator used to arrive as a `ReactNode` built by the server,
+   * which meant it could not know which channel the form had selected —
+   * so it shipped its own duplicate channel strip to stay clickable.
+   * Passing data instead lets the form render the preview itself and
+   * bind it to `activeChannel`, leaving one owner for channel
+   * selection: the channel tab row.
+   */
+  previewData?: PublishPreviewData;
+  /**
+   * Whether the agency has AI caption drafting switched on. The publish
+   * caption's "Generate with AI" control is hidden rather than disabled
+   * when it is off, matching the format editor — an operator should not
+   * be invited to a capability the agency has not bought.
+   */
+  aiCaptionDraftsEnabled?: boolean;
+  /** Why the AI control is unavailable, when the capability is off. */
+  aiCaptionDisabledReason?: string | null;
   /**
    * Bound translator from the parent. Phase 6e (2026-09-01)
    * migrates the top-level chrome (empty state, status
@@ -404,6 +457,33 @@ export function PublishPackageForm({
     confirmMessage: t("contentDetail.publish.unsavedGuard"),
   });
 
+  /**
+   * The next preparation phase to move into, or `null` when the
+   * operator is already on the last one.
+   *
+   * This is local navigation *within* the publish form — the same class
+   * of action as the stepper links — so it does not compete with the
+   * workspace rail's lifecycle "Next action". It is only offered once
+   * there is no unsaved work, because advancing past a phase whose edits
+   * are still in memory would strand them.
+   *
+   * Declared above the no-channels early return on purpose: hooks must
+   * run on every render, and this one is needed by the action bar.
+   */
+  const nextPhase = useMemo(() => {
+    const order = ["destination", "content", "compliance", "review"] as const;
+    const counts = phaseBlockerCounts(
+      readiness.issues.map((issue) => ({ path: issue.path, severity: issue.severity })),
+    );
+    const firstBlocking = order.findIndex((id) => counts[id] > 0);
+    if (firstBlocking === -1) return null;
+    // Never below Content when a destination is already selected, and
+    // never offer an advance while edits are still unsaved.
+    if (dirtyCount > 0 || dirty) return null;
+    const idx = Math.max(firstBlocking, 1);
+    return order[idx + 1] ?? null;
+  }, [readiness.issues, dirty, dirtyCount]);
+
   if (channels.length === 0) {
     return (
       <Card padding="lg" data-testid="publish-no-channels">
@@ -475,6 +555,11 @@ export function PublishPackageForm({
    * a single channel could never have surfaced it.
    */
   const saveAllIsTheRightAction = dirtyCount > 1;
+  const nextPhaseLabel = nextPhase
+    ? t("contentDetail.publishForm.continueToPhase", {
+        phase: t(`contentDetail.publishForm.phase.${nextPhase}`),
+      })
+    : null;
   /** The one channel to save when the action is not a batch. */
   const singleDirtyChannelId =
     dirtyCount === 1
@@ -841,51 +926,87 @@ export function PublishPackageForm({
         className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
         data-testid="publish-channel-workspace"
       >
-        <div className="mb-3">
-          <p className="text-body text-fg-primary font-semibold">
-            {t("contentDetail.publishForm.channelWorkspaceTitle")}
-          </p>
-          <p className="text-label text-fg-secondary mt-1">
-            {t("contentDetail.publishForm.channelWorkspaceHint")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2" data-testid="publish-channel-tabs" role="tablist">
-          {channels.map((ch) => {
-            const chReadiness = readiness.channels.find(
-              (c) => c.socialChannelId === ch.socialChannelId,
-            );
-            const blockers = chReadiness?.blockerCount ?? 0;
-            return (
-              <button
-                key={ch.id}
-                type="button"
-                role="tab"
-                aria-selected={ch.id === activeChannel}
-                aria-controls={`publish-channel-panel-${ch.id}`}
-                onClick={() => selectChannel(ch.id)}
-                className={`focus-visible:ring-focus-ring rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold ${
-                  ch.id === activeChannel
-                    ? "border-primary bg-primary-subtle text-primary"
-                    : "border-border bg-surface text-fg-primary"
-                } min-h-11 min-w-11`}
-                data-testid={`publish-channel-tab-${ch.socialChannelId}`}
-              >
-                <span>{ch.accountName}</span>
-                <span className="text-label text-fg-muted ms-2">
-                  {localizedPlatformLabel(ch.platform)}
-                </span>
-                {blockers > 0 ? (
-                  <Badge variant="danger" className="ms-2">
-                    {blockers}
-                  </Badge>
-                ) : chReadiness ? (
-                  <Badge variant="success" className="ms-2">
-                    {t("contentDetail.publishForm.channelReady")}
-                  </Badge>
-                ) : null}
-              </button>
-            );
-          })}
+        {/*
+          The tab row is the single owner of channel selection for this
+          form — the preview follows it rather than carrying its own
+          switcher. Each tab therefore leads with the platform mark so
+          the platform is recognisable before the label is read, and
+          states the platform as a name for assistive tech and for the
+          case where the glyph does not render.
+
+          "Add channel" is a sibling of the tablist, never a child. A
+          `tablist` may only contain `tab` elements; a `<button>` inside
+          one is an `aria-required-children` violation, and it is also
+          wrong semantically — adding a destination is not selecting
+          one. (The visual gate caught this on all five publish
+          surfaces before any pixel diff was compared.)
+        */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div
+            className="flex flex-wrap items-center gap-2"
+            data-testid="publish-channel-tabs"
+            role="tablist"
+          >
+            {channels.map((ch) => {
+              const chReadiness = readiness.channels.find(
+                (c) => c.socialChannelId === ch.socialChannelId,
+              );
+              const blockers = chReadiness?.blockerCount ?? 0;
+              const isActive = ch.id === activeChannel;
+              return (
+                <button
+                  key={ch.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`publish-channel-panel-${ch.id}`}
+                  onClick={() => selectChannel(ch.id)}
+                  className={cn(
+                    "focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 text-sm font-semibold",
+                    isActive
+                      ? "border-primary bg-primary-subtle text-primary"
+                      : "border-border bg-surface text-fg-primary hover:bg-surface",
+                  )}
+                  data-testid={`publish-channel-tab-${ch.socialChannelId}`}
+                >
+                  <PlatformIcon platform={ch.platform} tile className="h-6 w-6 shrink-0" />
+                  <span className="truncate">{localizedPlatformLabel(ch.platform)}</span>
+                  <span aria-hidden="true" className="text-fg-muted">
+                    ·
+                  </span>
+                  <span className="truncate">{ch.accountName}</span>
+                  {blockers > 0 ? (
+                    <Badge variant="danger" className="ms-0.5">
+                      {blockers}
+                    </Badge>
+                  ) : chReadiness ? (
+                    <CheckCircle2
+                      className="text-success ms-0.5 h-4 w-4 shrink-0"
+                      aria-label={t("contentDetail.publishForm.channelReady")}
+                    />
+                  ) : null}
+                </button>
+              );
+            })}
+          </div>
+          {/*
+            Adding a destination is a workspace-level decision (it
+            creates a social-channel link), not a package write, so it
+            routes to the Channels surface instead of mutating the
+            package. Before this existed the only way to reach it was
+            the global navigation, which is several levels away from
+            the one screen where "I need another account" arises.
+          */}
+          <Button
+            type="button"
+            variant="ghost"
+            className="min-h-11 border-dashed"
+            onClick={() => router.push(`/app/w/${workspaceSlug}/channels`)}
+            data-testid="publish-add-channel"
+          >
+            <Plus className="me-1 h-4 w-4" aria-hidden="true" />
+            {t("contentDetail.publishForm.addChannel")}
+          </Button>
         </div>
       </div>
 
@@ -927,11 +1048,10 @@ export function PublishPackageForm({
             id: c.id,
             socialChannelId: c.socialChannelId,
           }))}
-          channelsReadiness={readiness.channels.map((c) => ({
-            socialChannelId: c.socialChannelId,
-            blockerCount: c.blockerCount,
+          blockerIssues={readiness.issues.map((issue) => ({
+            path: issue.path,
+            severity: issue.severity,
           }))}
-          currentReadinessBlockerCount={currentReadiness?.blockerCount ?? 0}
           t={t}
         />
       ) : null}
@@ -1008,7 +1128,17 @@ export function PublishPackageForm({
         <div
           id={`publish-channel-panel-${current.id}`}
           role="tabpanel"
-          className="grid grid-cols-1 gap-4 lg:grid-cols-2"
+          /*
+            The simulator gets a fixed phone-width track and the editor
+            takes the rest. Splitting this 50/50 was what squeezed the
+            caption to roughly 100px: the center column is already
+            narrowed by the 248px nav and the 304px workflow rail, so a
+            half-and-half split left the writing surface with less room
+            than a label needed. A capped preview column gives the copy
+            the width it needs without hiding the preview on mobile,
+            where the grid collapses to one column anyway.
+          */
+          className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_17rem]"
           data-testid={`publish-channel-panel-${current.socialChannelId}`}
         >
           {/*
@@ -1064,11 +1194,17 @@ export function PublishPackageForm({
                 <Card
                   id="publish-destination"
                   padding="md"
-                  className="grid min-w-0 scroll-mt-24 gap-3 lg:grid-cols-2"
+                  /*
+                    A flex column, not a grid. This card is a plain
+                    vertical stack of one field after another, and the
+                    grid version collapsed its first track to 0px in
+                    practice — the card title and the field-tools row
+                    rendered with zero width beside a full-width
+                    sibling. A stack has no track to get wrong.
+                  */
+                  className="flex min-w-0 scroll-mt-24 flex-col gap-3"
                 >
-                  <CardTitle className="lg:col-span-2">
-                    {t("contentDetail.publishForm.destinationCaption")}
-                  </CardTitle>
+                  <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
                   {/*
                     The three read-only Fields that used to sit here
                     (channel name, item title, format) duplicated the
@@ -1078,7 +1214,7 @@ export function PublishPackageForm({
                     `format · accountName · platform` — and the item
                     title and format live in `PlanningHeader`.
                   */}
-                  <div>
+                  <div className="sm:max-w-xs">
                     <label
                       htmlFor="publish-content-language"
                       className="text-body text-fg-primary mb-1 block font-semibold"
@@ -1104,6 +1240,60 @@ export function PublishPackageForm({
                     </p>
                   </div>
                   <div>
+                    {/*
+                      Field-level tools sit on one row above the caption
+                      so the field itself keeps the full column width.
+                      They used to be absent from the Publish tab: AI
+                      drafting was reachable only from the Create tab's
+                      format-payload editor, so an operator writing
+                      channel copy had to leave the tab to get a draft.
+                      `PerFieldAiSuggest` is the same component the
+                      format editor uses — drafts only, never a write,
+                      and the operator confirms Insert / Replace.
+                    */}
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <PerFieldAiSuggest
+                        locale={locale}
+                        contentItemId={contentItemId}
+                        field="caption"
+                        currentValue={(currentDraft as { caption?: string }).caption ?? ""}
+                        contentLanguage={selectedLanguage}
+                        onApply={(text, mode) => {
+                          const existing = (currentDraft as { caption?: string }).caption ?? "";
+                          updateDraft(current.id, {
+                            caption:
+                              mode === "replace" || existing === "" ? text : `${existing}\n${text}`,
+                          });
+                        }}
+                        enabled={aiCaptionDraftsEnabled}
+                        disabledReason={aiCaptionDisabledReason}
+                        t={t}
+                      />
+                      {/*
+                          Translations of the shared audience copy are
+                          owned by the Create tab's copy editor — the
+                          per-channel publish payload has no
+                          `translations` map, so there is nothing to
+                          translate in place here. This control routes
+                          to that editor rather than opening a second,
+                          write-capable copy surface that would compete
+                          with the first one.
+                        */}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="min-h-11"
+                        onClick={() => {
+                          window.location.hash = "#create-plan";
+                          router.refresh();
+                        }}
+                        data-testid="publish-manage-translations"
+                      >
+                        <Languages className="me-1 h-4 w-4" aria-hidden="true" />
+                        {t("contentDetail.publishForm.manageTranslations")}
+                      </Button>
+                    </div>
                     <CaptionField
                       id="publish-caption"
                       name="caption"
@@ -1509,13 +1699,45 @@ export function PublishPackageForm({
             )}
           </div>
 
-          {/* Preview stays visible beside the editor on large screens and
-              remains first-class content on mobile, below the inputs. */}
-          {preview ? <div className="min-w-0">{preview}</div> : null}
+          {/*
+            The preview stays beside the editor on large screens and
+            drops below the inputs on mobile, where it is still
+            first-class content rather than a hidden tab. It renders
+            here — not as a server-built node — so it follows the
+            active channel from the tab row above and does not need its
+            own duplicate channel strip.
+          */}
+          {previewData && previewData.channels.length > 0 ? (
+            <div
+              id="publish-preview"
+              data-testid="publish-preview-panel"
+              className="min-w-0 scroll-mt-24 space-y-3"
+            >
+              <div>
+                <p className="text-title-card text-fg-primary font-semibold">
+                  {t("contentDetail.preview.title")}
+                </p>
+                <p className="text-label text-fg-secondary mt-0.5">
+                  {t("contentDetail.preview.description", {
+                    platform: localizedPlatformLabel(
+                      current?.platform ?? previewData.channels[0]!.platform,
+                    ),
+                    account: current?.accountName ?? previewData.channels[0]!.accountName,
+                  })}
+                </p>
+              </div>
+              <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
+            </div>
+          ) : null}
+          {/* The approval gate spans the full grid width rather than
+              orphaning itself in the editor column: it is the one card
+              whose action ("Approve final copy") is a lifecycle
+              decision, and a half-width card under a two-column editor
+              reads as a footnote when it is actually a gate. */}
           <Card
             id="publish-review"
             padding="lg"
-            className="min-w-0 scroll-mt-24 space-y-3 self-start lg:sticky lg:top-24"
+            className="min-w-0 scroll-mt-24 space-y-3 lg:col-span-2"
           >
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
             <div
@@ -1662,14 +1884,31 @@ export function PublishPackageForm({
               {t("contentDetail.publish.saveDraft")}
             </Button>
           ) : !readiness.canPublish ? (
-            <Link
-              href="#publish-package"
-              aria-describedby="publish-ready-hint"
-              className="text-label text-warning inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
-              data-testid="publish-review-blockers"
-            >
-              {t("contentDetail.publishCommandCenter.actionReviewBlockers")}
-            </Link>
+            /*
+              Blockers are open. If the operator's current phase is
+              settled and a later one is not, "Continue to …" is the
+              action that moves them; otherwise the honest primary is
+              still the link to the blockers.
+            */
+            nextPhase ? (
+              <a
+                href={PHASE_ANCHORS[nextPhase]}
+                className="text-label text-primary inline-flex min-h-11 items-center gap-1.5 rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                data-testid="publish-continue-phase"
+              >
+                {nextPhaseLabel}
+                <ArrowRight className="h-4 w-4 rtl:rotate-180" aria-hidden="true" />
+              </a>
+            ) : (
+              <Link
+                href="#publish-package"
+                aria-describedby="publish-ready-hint"
+                className="text-label text-warning inline-flex min-h-11 items-center rounded-[var(--radius-control)] px-2 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+                data-testid="publish-review-blockers"
+              >
+                {t("contentDetail.publishCommandCenter.actionReviewBlockers")}
+              </Link>
+            )
           ) : publishingSetupReady ? (
             <Link
               href="#publish-outcomes"

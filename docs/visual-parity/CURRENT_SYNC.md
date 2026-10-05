@@ -95,8 +95,29 @@ comes from the product or from a refreshed design reference.
 
 ## Verification boundary
 
+- **Open — baseline drift outside the publish tab, not caused by the
+  Publish-tab work.** A `pnpm test:visual` run at the Publish-tab cockpit
+  commit also failed on surfaces this work never touched:
+
+  | Surface                                                                             | Failure                                              |
+  | ----------------------------------------------------------------------------------- | ---------------------------------------------------- |
+  | `/app/w/acme/channels` @ tablet, mobile-s, wide                                     | 13px height drift (expected 1359px, received 1372px) |
+  | `/app/w/acme/settings`, `settings/plan` @ mobile-s, `settings/templates` @ mobile-s | height/pixel drift                                   |
+  | `/app/w/acme/planning/{contentItemId}` ×2                                           | pixel drift                                          |
+
+  These are pixel diffs of ~13px in height on pages with no shared code
+  path with the publish surface. The committed baselines date from the
+  `3f723bd4` / `193fc9b8` UI-alignment commits, so the set was already
+  drifting before this pass. **Do not fold these into a bulk
+  `test:visual:update`**: the standing rule in this file is that a
+  baseline is not blessed merely because the screenshot changed, and a
+  mass recapture would silently bless whatever those three commits
+  changed without anyone reviewing it. They need their own review pass.
+
 - **Publishing and recovery — 6 baselines moved at `4bb71fcb`; the Copy tab's held.**
-  `pnpm test:visual` was run against `4bb71fcb` with the gate open (`planner_test` is the
+  _(Superseded — see the entry above. This paragraph records the state at
+  `4bb71fcb`; the six failures were recaptured after the Publish-tab cockpit
+  pass.)_ `pnpm test:visual` was run against `4bb71fcb` with the gate open (`planner_test` is the
   disposable target; Firefox and WebKit are installed). Result: exact-reference
   **19 pass, 1 fail** (`95dfecceb93e46a699f2598263b0d54c`, the publishing-recovery screen)
   and the responsive planning matrix **5 fail, all publish** (mobile, tablet, laptop,
@@ -110,6 +131,48 @@ comes from the product or from a refreshed design reference.
   **after** someone confirms the new rendering is correct — the standing rule is that a
   baseline is not blessed merely because the screenshot changed. Evidence and the
   outstanding list: `docs/production-readiness/TEST_EVIDENCE.md`.
+
+- **Publishing and recovery — baselines recaptured after the Publish-tab
+  cockpit pass.**
+  The six stale publish-tab baselines recorded at `4bb71fcb` were held pending
+  confirmation that the new rendering was correct rather than merely different.
+  That confirmation now exists and is recorded below.
+
+  The pass that unblocked them was not only cosmetic. Three defects made the
+  Publish tab unusable by its primary route, and each was invisible in a
+  screenshot taken by deep link:
+
+  1. `WorkflowRail` gated its publish-only cards on a `hashchange` subscription,
+     but `WorkspaceShell` switches tabs with `history.pushState`, which does not
+     fire `hashchange`. **Blockers, Publishing integrations, and Channel
+     readiness never rendered for anyone who clicked the "Publish" tab** — only
+     for a full page load directly onto `#publishing`. The rail was not merely
+     sparse on this screen; three of the mockup's four rail cards were absent
+     in normal use.
+  2. Deep-linking to `#publish` landed on Overview. The adoption effect queued
+     `setActiveId("publish")` and returned early, so the sync effect pushed
+     `#overview` over the hash in the same commit; the adoption effect then
+     re-read the hash it had just clobbered and reverted the tab.
+  3. The publish caption textarea resolved to **26px** — narrower than its own
+     character counter — because the editor was a 50/50 grid whose left half
+     nested a second two-column grid, inside a center column already narrowed by
+     the 248px nav and the 304px rail. The hashtag helper wrapped to eight
+     lines.
+
+  The URL hash is now the single source of truth for the active tab, the rail
+  subscribes to an explicit announcement rather than parsing the hash, and the
+  editor gives the simulator a capped phone-width track. Verified by rendered
+  box measurement, not by eye: the caption is 388px at 1440px, against 26px
+  before.
+
+  **Parity note.** The shipped tab keeps one deliberate divergence from the
+  Stitch screen: the rail's lifecycle "Next action" is global to the workspace,
+  so it can render "Submit for review" while the publish tab is open. The tab's
+  own primary action is therefore scoped to _local_ work — save, or
+  "Continue to {phase}" — and never a second lifecycle advance. This preserves
+  the rule at `publish-package-form.tsx` ("two primary buttons describing
+  different lifecycle levels is how a user ends up advancing the wrong thing").
+  Matching the screenshot literally here would reintroduce that bug.
 
 - **Known divergence — Publishing and recovery (`95dfecceb93e46a699f2598263b0d54c`).**
   The Stitch screen shows the publication-proof step as "Step 2 of 2" accepting

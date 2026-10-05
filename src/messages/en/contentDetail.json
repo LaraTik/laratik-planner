@@ -604,7 +604,10 @@
     "actionConfirmSetup": "Review and confirm",
     "actionRecordOutcomes": "Record outcomes",
     "actionViewOutcomes": "View outcomes",
-    "actionReviewSetup": "Review setup"
+    "actionReviewSetup": "Review setup",
+    "headlineBlockerOne": "1 thing required before publishing",
+    "headlineBlockersMany": "{count} things required before publishing",
+    "viewBlockers": "View blockers ({count})"
   },
   "sectionCreativeTitle": "Creative brief",
   "sectionCreativeDescription": "Turn the idea into direction a writer, designer, and reviewer can act on. Audience copy is maintained in the Copy tab.",
@@ -1078,10 +1081,10 @@
     "channelReady": "Ready",
     "phaseNavLabel": "Publish phase progress",
     "phase": {
-      "package": "Package",
+      "destination": "Destination",
+      "content": "Content",
       "compliance": "Compliance",
-      "review": "Review & approval",
-      "outcome": "Outcome"
+      "review": "Review & approval"
     },
     "phaseActiveBlockers": "{count} open blocker(s) on this channel",
     "phaseActiveNetworks": "{count} other channel(s) still have blockers",
@@ -1174,7 +1177,15 @@
     "additionalOptions": "Additional publishing options",
     "helpLabel": "More information",
     "phaseStepsTitle": "Publishing setup steps",
-    "phaseStepsDescription": "Preparing this channel for manual dispatch. Separate from the workspace workflow."
+    "phaseStepsDescription": "Preparing this channel for manual dispatch. Separate from the workspace workflow.",
+    "addChannel": "Add channel",
+    "captionTools": "Caption",
+    "manageTranslations": "Manage translations",
+    "phaseActiveBlockerOne": "1 open blocker on this channel",
+    "phaseActiveBlockersMany": "{count} open blockers on this channel",
+    "phaseActiveNetworkOne": "1 other channel still has blockers",
+    "phaseActiveNetworksMany": "{count} other channels still have blockers",
+    "continueToPhase": "Continue to {phase}"
   },
   "publishErrors": {
     "authRequired": "Sign in is required.",

@@ -203,3 +203,89 @@ export function readinessAnchorForPath(path: string): string | undefined {
 export function isManualDispatchBlocker(path: string): boolean {
   return resolveBlockerTarget(path)?.kind === "manual";
 }
+
+// ─── Phase ownership ──────────────────────────────────────────────────
+
+/**
+ * The four preparation phases the publish stepper walks, in the order an
+ * operator actually works them.
+ */
+export type PublishPhaseId = "destination" | "content" | "compliance" | "review";
+
+/**
+ * Which phase owns a given blocker.
+ *
+ * The stepper used to mark a phase complete only when the *aggregate*
+ * blocker count was zero, which made it a second, blunter copy of the
+ * "N things required" banner: with any open blocker every phase read as
+ * incomplete and the strip never moved. That in turn made a
+ * "Continue to …" action impossible to offer honestly, because the
+ * product could never say which phase you were standing on.
+ *
+ * Bucketing each blocker by the control that fixes it gives the strip
+ * per-phase progress: a channel with its destination chosen but no
+ * caption shows Destination done and Content current, which is the
+ * state the operator is actually in.
+ *
+ * The bucketing is derived from the same normalised paths as
+ * `BLOCKER_TARGETS`, so a blocker and the phase that owns it cannot
+ * drift apart. An unmapped path falls back to `destination`, the phase
+ * that must be settled before anything else is meaningful.
+ */
+export function publishPhaseForBlockerPath(path: string): PublishPhaseId {
+  const normalised = normaliseBlockerPath(path);
+
+  // Final copy approval is the last gate before dispatch.
+  if (normalised === "payload.approval.finalCopyApproved") return "review";
+
+  // Accessibility text, rights, privacy, and disclosure checkboxes are
+  // all the "is this safe to ship" cluster.
+  if (
+    normalised.startsWith("disclosures.") ||
+    /^payload\.(altText|privacy|audioRightsConfirmed|musicRightsConfirmed|transcriptReviewed)$/.test(
+      normalised,
+    )
+  ) {
+    return "compliance";
+  }
+
+  // Copy, hashtags, platform text, and the media itself are the content
+  // the operator is writing or attaching.
+  if (
+    /^payload\.(caption|hashtags|title|pinTitle|boardId|coverFrame|thumbnail|postText)$/.test(
+      normalised,
+    ) ||
+    // A destination profile that can only be resolved at channel-link
+    // time still blocks *this* channel's content from going out.
+    normalised === "approvedDeliveryVersion" ||
+    normalised.startsWith("delivery.") ||
+    normalised.startsWith("approvals.")
+  ) {
+    return "content";
+  }
+
+  // Everything else — a missing or malformed payload, a missing
+  // platform tag, a destination profile with no control — is a
+  // destination problem: there is no channel to write content for yet.
+  return "destination";
+}
+
+/**
+ * Blocker counts per phase, for one channel. Phases with no blockers
+ * are omitted, so callers can treat absence as "complete".
+ */
+export function phaseBlockerCounts(
+  issues: ReadonlyArray<{ path: string; severity?: string }>,
+): Record<PublishPhaseId, number> {
+  const counts: Record<PublishPhaseId, number> = {
+    destination: 0,
+    content: 0,
+    compliance: 0,
+    review: 0,
+  };
+  for (const issue of issues) {
+    if (issue.severity === "recommendation") continue;
+    counts[publishPhaseForBlockerPath(issue.path)] += 1;
+  }
+  return counts;
+}

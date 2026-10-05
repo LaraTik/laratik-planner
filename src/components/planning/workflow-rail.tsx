@@ -22,6 +22,11 @@ import {
 } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { normalizeWorkspaceTabId } from "@/components/planning/workspace-tabs";
+import {
+  readWorkspaceTabFromHash,
+  subscribeToWorkspaceTabChanges,
+} from "@/components/planning/workspace-tab-events";
 import {
   Dialog,
   DialogClose,
@@ -415,14 +420,28 @@ function WorkflowRailBody({
 }) {
   const t = useLocaleT();
   const router = useRouter();
-  const publishView = useSyncExternalStore(
-    (onStoreChange) => {
-      window.addEventListener("hashchange", onStoreChange);
-      return () => window.removeEventListener("hashchange", onStoreChange);
-    },
-    () => window.location.hash === "#publishing",
-    () => false,
+  /*
+    The rail's publish-only cards (Blockers, Publishing integrations,
+    Channel readiness) are gated on the Publish tab being active.
+
+    This previously subscribed to the native `hashchange` event alone.
+    `WorkspaceShell` switches tabs with `history.pushState`, which does
+    NOT fire `hashchange` — so clicking the "Publish" tab in the tab
+    strip left this `false`, and the cards stayed hidden for anyone who
+    navigated to the page the normal way. They only appeared when a full
+    page load landed directly on `#publishing`, which made the rail look
+    broken on exactly the route the mockup puts them on.
+
+    `subscribeToWorkspaceTabChanges` delivers both the real hash change
+    and the shell's explicit announcement, so the rail agrees with the
+    tab strip in every path into this page.
+  */
+  const activeWorkspaceTab = useSyncExternalStore(
+    subscribeToWorkspaceTabChanges,
+    readWorkspaceTabFromHash,
+    () => "",
   );
+  const publishView = normalizeWorkspaceTabId(activeWorkspaceTab) === "publish";
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
     return value === key ? fallback : value;

@@ -126,8 +126,19 @@ export function PublishingCommandCenter({
   return (
     <section
       className={cn(
-        "border-border bg-surface rounded-[var(--radius-card)] border shadow-[var(--shadow-card)]",
-        compact ? "p-3" : "p-4 sm:p-5",
+        "border-border rounded-[var(--radius-card)] border",
+        compact
+          ? // The compact strip is the page's gate banner. The reference
+            // design gives it a tinted surface and a hairline outline so
+            // it reads as "this is the one thing standing between you and
+            // the next step" rather than as another status line in a
+            // column of cards.
+            hasBlockers
+            ? "border-warning/40 bg-warning-subtle p-4"
+            : outcomesComplete
+              ? "border-success/40 bg-success-subtle p-4"
+              : "border-primary/30 bg-primary-subtle/40 p-4"
+          : "bg-surface p-4 shadow-[var(--shadow-card)] sm:p-5",
       )}
       aria-labelledby="publishing-command-center-title"
       data-testid="publishing-command-center"
@@ -160,38 +171,67 @@ export function PublishingCommandCenter({
 
       <div
         className={cn(
-          "flex items-start gap-2 rounded-[var(--radius-control)] border p-3",
-          compact ? "mt-0" : "mt-4",
-          blockerCount > 0 || hasNoChannels
-            ? "border-warning/40 bg-warning-subtle"
-            : outcomesComplete
-              ? "border-success/40 bg-success-subtle"
-              : "border-primary/30 bg-primary-subtle/30",
+          "flex items-start gap-3",
+          compact ? "" : "rounded-[var(--radius-control)] border p-3",
+          !compact &&
+            (blockerCount > 0 || hasNoChannels
+              ? "border-warning/40 bg-warning-subtle"
+              : outcomesComplete
+                ? "border-success/40 bg-success-subtle"
+                : "border-primary/30 bg-primary-subtle/30"),
         )}
         role="status"
         data-testid="publishing-command-center-status"
       >
         {blockerCount > 0 || hasNoChannels ? (
-          <CircleAlert className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <CircleAlert className="text-warning mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         ) : outcomesComplete ? (
-          <CheckCircle2 className="text-success mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <CheckCircle2 className="text-success mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         ) : (
-          <Send className="text-primary mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <Send className="text-primary mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         )}
         <div className="min-w-0 flex-1">
-          <p className="text-label text-fg-secondary">{statusMessage}</p>
-          <p className="text-label text-fg-muted mt-1">{summary}</p>
+          {/*
+            The headline is the quantified gap, not a sentence. "4 things
+            required before publishing" tells the operator how much work
+            is left and can be scanned from across the room; the previous
+            copy ("Resolve the blockers shown below…") was a full
+            sentence of the same fact and could not be skimmed.
+          */}
+          <p className="text-title-card text-fg-primary font-semibold">
+            {compact && hasBlockers
+              ? blockerCount === 1
+                ? t("contentDetail.publishCommandCenter.headlineBlockerOne")
+                : t("contentDetail.publishCommandCenter.headlineBlockersMany", {
+                    count: blockerCount,
+                  })
+              : statusMessage}
+          </p>
+          <p className="text-label text-fg-secondary mt-1">{summary}</p>
         </div>
+        {/*
+          A real control, not a text link. The count is repeated inside
+          the label so the CTA is unambiguous when it is read out of
+          context (screen-reader list, or a glance at the rail).
+        */}
         <a
           href={action.href}
-          className="text-label text-primary shrink-0 rounded-[var(--radius-control)] px-1 py-1 font-semibold underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:outline-none"
+          className="text-label border-border bg-surface text-fg-primary hover:bg-surface-subtle inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-[var(--radius-control)] border px-3 font-semibold focus-visible:ring-2 focus-visible:outline-none"
           data-testid="publishing-command-center-action"
         >
-          {action.label}
+          {compact && hasBlockers
+            ? t("contentDetail.publishCommandCenter.viewBlockers", { count: blockerCount })
+            : action.label}
         </a>
       </div>
 
-      {!compact && issues.length > 0 ? <PublishingBlockers issues={issues} /> : null}
+      {/*
+        The blocker list is the banner's expandable body in BOTH modes.
+        Suppressing it in `compact` was the reason the publish tab showed
+        a count with no way to see what it counted: the operator had to
+        know the rail happened to also carry the list.
+      */}
+      {issues.length > 0 ? <PublishingBlockers issues={issues} /> : null}
     </section>
   );
 }

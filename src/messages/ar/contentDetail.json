@@ -604,7 +604,10 @@
     "actionConfirmSetup": "مراجعة وتأكيد",
     "actionRecordOutcomes": "تسجيل النتائج",
     "actionViewOutcomes": "عرض النتائج",
-    "actionReviewSetup": "مراجعة الإعداد"
+    "actionReviewSetup": "مراجعة الإعداد",
+    "headlineBlockerOne": "شيء واحد مطلوب قبل النشر",
+    "headlineBlockersMany": "{count} أشياء مطلوبة قبل النشر",
+    "viewBlockers": "عرض العوائق ({count})"
   },
   "sectionCreativeTitle": "الموجز الإبداعي",
   "sectionCreativeDescription": "حوّل الفكرة إلى توجيه يمكن للكاتب والمصمم والمراجع العمل عليه. تُدار نسخة الجمهور في علامة تبويب النسخة.",
@@ -1078,10 +1081,10 @@
     "channelReady": "جاهزة",
     "phaseNavLabel": "تقدم مراحل النشر",
     "phase": {
-      "package": "الحزمة",
+      "destination": "الوجهة",
+      "content": "المحتوى",
       "compliance": "الامتثال",
-      "review": "المراجعة والموافقة",
-      "outcome": "النتيجة"
+      "review": "المراجعة والموافقة"
     },
     "phaseActiveBlockers": "{count} عوائق مفتوحة على هذه القناة",
     "phaseActiveNetworks": "{count} قناة/قنوات أخرى لا تزال بها عوائق",
@@ -1174,7 +1177,15 @@
     "additionalOptions": "خيارات نشر إضافية",
     "helpLabel": "مزيد من المعلومات",
     "phaseStepsTitle": "خطوات إعداد النشر",
-    "phaseStepsDescription": "تجهيز هذه القناة للنشر اليدوي، منفصلة عن سير عمل مساحة العمل."
+    "phaseStepsDescription": "تجهيز هذه القناة للنشر اليدوي، منفصلة عن سير عمل مساحة العمل.",
+    "addChannel": "إضافة قناة",
+    "captionTools": "النص التوضيحي",
+    "manageTranslations": "إدارة الترجمات",
+    "phaseActiveBlockerOne": "عوائق مفتوح واحد على هذه القناة",
+    "phaseActiveBlockersMany": "{count} عوائق مفتوحة على هذه القناة",
+    "phaseActiveNetworkOne": "قناة واحدة أخرى لا تزال بها عوائق",
+    "phaseActiveNetworksMany": "{count} قنوات أخرى لا تزال بها عوائق",
+    "continueToPhase": "المتابعة إلى {phase}"
   },
   "publishErrors": {
     "authRequired": "يجب تسجيل الدخول.",

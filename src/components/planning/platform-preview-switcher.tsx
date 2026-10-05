@@ -35,21 +35,37 @@ export interface PlatformPreviewSwitcherProps {
   thumbnailWidth?: number | null;
   thumbnailHeight?: number | null;
   initialFormat?: PreviewFormat;
+  /**
+   * Channel the host page has already selected. When present this
+   * component renders a pure preview of that channel and hides its own
+   * chip strip, because the host (the Publish tab's channel tab row) is
+   * the single owner of channel selection. When absent the component
+   * keeps its own switcher so the standalone preview panel can still
+   * change channel on its own.
+   */
+  activeChannelId?: string;
   /** Catalog key prefix for the platform labels (e.g. "contentDetail.publishForm.platformLabels"). */
   platformLabelCatalogPrefix?: string;
 }
 
 /**
- * PlatformPreviewSwitcher — wraps `PlatformPreview` with a thin
- * chip-strip channel switcher above it. With 4 IG accounts and 1
- * FB account, the planner previously had to refresh the page to
- * see each one. Now they click through.
+ * PlatformPreviewSwitcher — renders `PlatformPreview` for one channel.
  *
- * The caption / hashtags shown for each channel follow the same
- * priority as the old server-rendered preview:
+ * This component used to draw its own channel chip strip above the
+ * preview. Inside the Publish tab that strip was a straight duplicate
+ * of the channel tab row directly above it, two identical lists on one
+ * screen: the operator could not tell which one selected the editor, and
+ * the two could drift out of sync when a tab's blocker count changed.
+ * Channel selection now has exactly one owner — the tab row — so this
+ * component only resolves the active channel and hands it to the
+ * preview. The surface switcher (Feed / Reel / Story) stays inside
+ * `PlatformPreview`, where it changes the *rendering* of the active
+ * channel rather than which channel is active.
+ *
+ * The caption / hashtags shown follow the same priority as the old
+ * server-rendered preview:
  *   1. per-channel `platformPayload.caption` / `hashtags` (override)
  *   2. shared `formatPayload` caption / hashtags
- *   3. brief (caption fallback only)
  */
 export function PlatformPreviewSwitcher({
   channels,
@@ -59,15 +75,29 @@ export function PlatformPreviewSwitcher({
   thumbnailWidth,
   thumbnailHeight,
   initialFormat,
+  activeChannelId,
 }: PlatformPreviewSwitcherProps) {
-  const [activeId, setActiveId] = React.useState<string | null>(channels[0]?.id ?? null);
+  /*
+    Controlled when the host page owns channel selection (the Publish
+    tab passes `activeChannelId` so the preview follows the editor
+    tabs), uncontrolled otherwise so the standalone `#preview` panel
+    still switches channels on its own.
+  */
+  const [internalId, setInternalId] = React.useState<string | null>(channels[0]?.id ?? null);
+  const activeId = activeChannelId ?? internalId;
   if (channels.length === 0 || activeId === null) return null;
   const active = channels.find((c) => c.id === activeId) ?? channels[0]!;
   const caption = active.payload?.caption ?? sharedCaption;
   const hashtags = active.payload?.hashtags ?? sharedHashtags;
   return (
     <div className="space-y-3" data-testid="platform-preview-switcher">
-      {channels.length > 1 ? (
+      {/*
+        Only rendered when this component is the standalone preview
+        panel and therefore the sole way to change channel. In the
+        Publish tab the tab row above owns selection, so repeating it
+        here would be the duplicate strip.
+      */}
+      {activeChannelId === undefined && channels.length > 1 ? (
         <div
           role="tablist"
           aria-label="Channel preview switcher"
@@ -82,7 +112,7 @@ export function PlatformPreviewSwitcher({
                 type="button"
                 role="tab"
                 aria-selected={isActive}
-                onClick={() => setActiveId(channel.id)}
+                onClick={() => setInternalId(channel.id)}
                 data-testid={`platform-preview-channel-${channel.socialChannelId}`}
                 className={cn(
                   "text-label focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold transition-colors",

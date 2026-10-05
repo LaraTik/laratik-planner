@@ -12,6 +12,160 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the Publish tab's right-rail cards were unreachable by clicking
+
+Three navigation defects on `/app/w/[slug]/planning/[id]` meant the
+Publish tab was not actually usable by its primary route. All three
+shared one root cause: the URL hash and React state were two sources of
+truth that reconciled in the wrong order.
+
+1. **The rail's publish-only cards never appeared on a tab click.**
+   `WorkflowRail` decided whether to render Blockers, Publishing
+   integrations, and Channel readiness by subscribing to the native
+   `hashchange` event. `WorkspaceShell` switches tabs with
+   `history.pushState`, which does **not** fire `hashchange`. Clicking
+   "Publish" therefore left the gate `false`, and all three cards were
+   reachable only by a full page load directly onto `#publishing`.
+2. **Deep-linking to `#publish` silently landed on Overview.** The shell
+   kept the active tab in state and mirrored it to the hash in an
+   effect, using a one-shot ref to decide when to adopt a deep link. On
+   a deep link the adoption effect queued `setActiveId("publish")` and
+   returned early; the sync effect then ran in the same commit with the
+   _old_ state and pushed `#overview` over it. On the next commit the
+   adoption effect ran again — the ref was still unset because the early
+   return skipped setting it — read the hash it had just clobbered, and
+   reverted the tab.
+3. **Back/forward was not observed.** `pushState` navigations do not
+   report through `hashchange`, so browser history across tabs was inert.
+
+The URL hash is now the single source of truth: the shell reads it
+during the first client render (no hydration mismatch, because the panel
+is a client component and the server falls back to the same default),
+mirrors state back with `pushState`, and observes `hashchange` **and**
+`popstate` for inbound navigation. The rail no longer parses the hash
+itself — it subscribes to an explicit announcement from the one
+component that knows the answer, via `workspace-tab-events.ts`. This is
+the same reasoning already applied to `TabSwitchLink`, which had to set
+`window.location.hash` by hand for exactly this reason.
+
+### Fixed — the publish caption was rendering ~26px wide
+
+The channel editor was a `lg:grid-cols-2` split, and the "Destination &
+caption" card nested a second two-column grid inside its left half. The
+center column is already narrowed by the 248px nav and the 304px
+workflow rail, so the caption textarea resolved to **26px** — narrower
+than its own character counter — and the hashtag helper wrapped to
+eight lines. The card title and the field-tools row also measured 0px,
+because the grid's first track collapsed beside a full-width sibling.
+
+Three changes, each independently verifiable:
+
+- The editor/preview split is now `lg:grid-cols-[minmax(0,1fr)_17rem]`,
+  so the simulator gets a capped phone-width track and the writing
+  surface takes the rest. It was an uncapped 50/50.
+- The "Destination & caption" card is a flex column, not a grid. It is
+  a plain vertical stack of one field after another and has no track to
+  get wrong.
+- The caption textarea now measures **388px** in the seeded fixture at
+  1440px, against 26px before.
+
+The "Preview & approval" card also spans the full grid width now. It is
+a lifecycle gate, and a half-width card under a two-column editor reads
+as a footnote.
+
+### Changed — the publish stepper tracks per-phase progress
+
+The strip was `Package → Compliance → Review & approval → Outcome` and
+marked a phase complete only when the _aggregate_ blocker count was
+zero. That made it a blunter copy of the "N things required" banner:
+with any blocker open, every phase read as incomplete and the strip
+never moved.
+
+It is now `Destination → Content → Compliance → Review & approval`, and
+each phase completes on the blockers it actually owns.
+`publishPhaseForBlockerPath` in `blocker-targets.ts` buckets every
+readiness path into the phase whose control fixes it, derived from the
+same normalised paths as the existing blocker→control map so a blocker
+and its phase cannot drift apart. A channel with a destination chosen
+and no caption now shows Destination done and Content current — the
+state the operator is actually in.
+
+Recording a publication Outcome is no longer a preparation phase; it
+happens after the item is live and already owns a collapsible panel, so
+putting it on this strip invited "finish publishing setup" by recording
+an outcome for something that had not shipped.
+
+The stepper's singular/plural blocker hint is split properly; "(s)" is
+not pluralization, it is a placeholder the reader has to resolve.
+
+### Added — "Continue to …" phase advance, and per-field tools on the publish caption
+
+- The action bar offers **Continue to {phase}** when the current phase
+  is settled, a later one is not, and there is no unsaved work. It is
+  local navigation inside the form, the same class of action as the
+  stepper links, so it does not compete with the rail's lifecycle "Next
+  action". Suppressed while edits are unsaved, because advancing past a
+  phase whose edits are still in memory would strand them.
+- The publish caption now has **Generate with AI**, reusing
+  `PerFieldAiSuggest` — the same drafts-only, operator-confirms contract
+  as the format editor. It is hidden rather than disabled when the
+  agency has not enabled `caption_drafts`.
+- **Manage translations** routes to the Create tab's copy editor. The
+  per-channel publish payload has no `translations` map, so there is
+  nothing to translate in place; a second write-capable copy surface
+  would have competed with the first.
+- Channel tabs lead with a platform mark and offer **Add channel**,
+  which routes to the Channels surface. Adding a destination is a
+  workspace-level decision, not a package write, and previously the
+  only route to it was the global nav. It sits **beside** the tablist,
+  not inside it — see the a11y entry below.
+
+### Changed — the Publish tab is a decision surface with one status surface
+
+- The gate banner states the quantified gap ("6 things required before
+  publishing") instead of a sentence, and its CTA is a real control
+  carrying the count ("View blockers (6)") rather than a bare text
+  link. The blocker list is now its expandable body in **both** modes;
+  suppressing it in compact left a count with no way to see what it
+  counted.
+- The preview no longer ships its own channel switcher. It arrived as a
+  server-rendered `ReactNode`, so it could not observe the form's active
+  channel and had to duplicate the tab row above it — two identical
+  lists that could drift out of sync. It is now passed as serializable
+  `previewData` and rendered inside the form, leaving one owner for
+  channel selection. The standalone `#preview` panel keeps its own
+  switcher, which is correct there.
+- The phase anchors are shared between the stepper and the action bar via
+  `PHASE_ANCHORS`, so the two can never point at different sections.
+
+### Fixed — an `aria-required-children` violation the a11y gate caught on all five publish surfaces
+
+The new "Add channel" control was first rendered **inside** the channel
+`role="tablist"`. A `tablist` may only contain `tab` elements, so every
+publish baseline failed on `aria-required-children` — critical, "Element
+has children which are not allowed: button" — before a single pixel was
+compared.
+
+The button is now a sibling of the tablist rather than a child. This is
+also the semantically correct structure: adding a destination is not
+selecting one, and a screen-reader user announcing "tab list, 4 items"
+should not encounter a non-tab in the count.
+
+Worth recording because the pixel comparison never ran. The a11y
+assertion short-circuits first, so the only visible symptom was "1
+critical/serious a11y violation(s)" on all five publish surfaces — which
+reads like a pre-existing accessibility debt rather than a regression
+introduced by the change under review. Re-running axe directly against
+the tab (`0 violations`, and `tablist` children confirmed as three
+`BUTTON/tab` and nothing else) is what localised it.
+
+### Added — `scripts/dev-test-db.sh`
+
+Boots `next dev` against the disposable `planner_test` database. The
+seeded E2E content item lives there, so a dev server on the default
+`planner` database 500s the detail page on a missing relation while
+`docker exec … pg_isready` still passes. Refuses to point at `planner`.
+
 ### Added — `scripts/daily-report.py`, a read-only daily planning report
 
 Prints a per-person, per-workspace view of what needs attention and appends each

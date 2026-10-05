@@ -3,6 +3,58 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Publish-tab cockpit pass — 2026-10-05
+
+Target: match the reference Publish-tab design, and fix what rendering it exposed.
+
+### Verified
+
+| Check                                             | Result                                         |
+| ------------------------------------------------- | ---------------------------------------------- |
+| `pnpm typecheck`                                  | clean                                          |
+| `pnpm lint`                                       | clean, `--max-warnings=0`                      |
+| `pnpm exec prettier --check` (all touched files)  | clean                                          |
+| `pnpm test:unit`                                  | **474 files / 4438 tests pass**                |
+| `pnpm test:integration`                           | 21 tests pass (15 + 6)                         |
+| axe (wcag2a/2aa/21a/21aa) against the Publish tab | **0 violations**                               |
+| `publish-phase-stepper` per-phase state           | 1 `current`, 2 `todo`; measured, not eyeballed |
+| Caption textarea width @1440                      | **388px**, against **26px** before             |
+
+### What the browser gate caught that unit tests could not
+
+| Finding                                                                                                                                                                                                                                                                       | Class                                         | Disposition                                                                                                                                                                |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Rail's publish-only cards never rendered on a tab click.** `WorkflowRail` gated Blockers / Publishing integrations / Channel readiness on a `hashchange` subscription, but `WorkspaceShell` switches tabs with `history.pushState`, which does not fire `hashchange`.       | **functional**                                | Fixed. The rail subscribes to an explicit announcement from the one component that knows the active tab. Three of the four reference rail cards were absent in normal use. |
+| **Deep-linking to `#publish` landed on Overview.** The adoption effect queued `setActiveId` and returned early, so the sync effect pushed `#overview` over the hash in the same commit; the adoption effect then re-read the hash it had just clobbered and reverted the tab. | **functional**                                | Fixed. The hash is the single source of truth.                                                                                                                             |
+| **Back/forward across tabs was inert** — `pushState` does not report through `hashchange`.                                                                                                                                                                                    | **functional**                                | Fixed. `hashchange` + `popstate`.                                                                                                                                          |
+| **`aria-required-children`, critical** — the new "Add channel" `<button>` sat inside `role="tablist"`, which may only contain `tab`. Failed on all five publish surfaces.                                                                                                     | **a11y regression introduced by this change** | Fixed. The button is a sibling of the tablist.                                                                                                                             |
+| Caption textarea at **26px** — narrower than its own character counter; hashtag helper wrapped to eight lines.                                                                                                                                                                | **layout**                                    | Fixed. Editor/preview split capped the preview at 17rem; the card became a flex stack.                                                                                     |
+
+**The a11y one is the instructive failure.** The pixel comparison never ran —
+the a11y assertion short-circuits first — so the only symptom was "1
+critical/serious a11y violation(s)" on all five publish surfaces, which reads
+like pre-existing accessibility debt rather than a regression introduced by the
+change under review. Re-running axe directly against the tab localised it in one
+pass.
+
+### Not fixed here — pre-existing baseline drift
+
+`pnpm test:visual` also failed on surfaces this work never touched:
+`/app/w/acme/channels` (tablet, mobile-s, wide — 13px height drift),
+`/app/w/acme/settings` (+ two mobile-s sub-surfaces), and two
+`/app/w/acme/planning/{contentItemId}` variants. No shared code path with the
+publish surface. The committed baselines date from the `3f723bd4` /
+`193fc9b8` UI-alignment commits, so the set was already drifting.
+
+Deliberately **not** folded into a bulk `test:visual:update`: the standing rule
+in `docs/visual-parity/CURRENT_SYNC.md` is that a baseline is not blessed merely
+because the screenshot changed, and a mass recapture would silently bless those
+commits without review. They need their own pass.
+
+The five publish-tab baselines are also still pending recapture for the same
+reason — the new rendering is confirmed correct, but the recapture should be a
+deliberate, reviewed step rather than a side effect of a bulk update.
+
 ## Publish-surface work — 2026-10-04, PRs 1–6 on `main` (`5419aa4d` … `4bb71fcb`)
 
 **The browser gate is now runnable and has been run.** It was previously blocked: no

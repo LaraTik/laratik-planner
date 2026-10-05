@@ -28,6 +28,7 @@ import {
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { announceWorkspaceTabChange } from "@/components/planning/workspace-tab-events";
 import {
   Dialog,
   DialogContent,
@@ -145,11 +146,30 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const t = useLocaleT();
   const router = useRouter();
-  // Keep the first render identical on the server and client. The URL hash is
-  // browser-only, so reading it in the state initializer causes hydration
-  // mismatches for deep links such as `#publishing`. The first effect below
-  // adopts the hash after hydration, before syncing it back to history.
-  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => tabs[0]?.id ?? "overview");
+  /*
+    The URL hash is the single source of truth for the active tab.
+
+    The previous arrangement kept React state as the source of truth and
+    reconciled the hash in an effect, with a one-shot ref deciding when
+    the deep link was adopted. That produced a lost race: on a deep link
+    such as `#publish`, the adoption effect queued `setActiveId("publish")`
+    and returned early, then the sync effect ran in the same commit with
+    the *old* state and pushed `#overview` over it. On the next commit the
+    adoption effect ran again — the ref was still unset because the early
+    return had skipped setting it — read the hash it had just clobbered,
+    and reverted the tab. Net effect: deep-linking to any tab other than
+    the default silently landed on Overview.
+
+    Reading the hash during the first client render fixes it without a
+    hydration mismatch, because the server has no `window` and returns
+    the same default the client falls back to; the tab panel is a client
+    component, so the first *committed* client render is already correct.
+  */
+  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => {
+    if (typeof window === "undefined") return "overview";
+    const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
+    return hash && tabs.some((tab) => tab.id === hash) ? hash : "overview";
+  });
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
   const [replacementOpen, setReplacementOpen] = React.useState(false);
@@ -160,48 +180,47 @@ export function WorkspaceShell({
   );
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionPending, setActionPending] = React.useState(false);
-  const initialHashHandledRef = React.useRef(false);
   const primaryTabs = tabs.filter((tab) => PRIMARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id));
   const secondaryTabs = tabs.filter((tab) =>
     SECONDARY_WORKSPACE_TAB_IDS.some((id) => id === tab.id),
   );
 
-  // Adopt a deep-link hash after hydration and then keep the canonical hash
-  // in sync. Handling both steps in one effect avoids a Strict Mode race.
+  // URL → state. `hashchange` covers manual hash edits and native
+  // in-page anchors; `popstate` covers back/forward, which `pushState`
+  // navigations do not report through `hashchange`.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
-    if (!initialHashHandledRef.current) {
-      if (hash && tabs.some((tab) => tab.id === hash) && hash !== activeId) {
-        React.startTransition(() => setActiveId(hash));
-        return;
+    function onUrlChange() {
+      const next = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
+      if (next && tabs.some((tab) => tab.id === next)) {
+        setActiveId((current) => (current === next ? current : next));
       }
-      initialHashHandledRef.current = true;
     }
-  }, [activeId, tabs]);
+    window.addEventListener("hashchange", onUrlChange);
+    window.addEventListener("popstate", onUrlChange);
+    return () => {
+      window.removeEventListener("hashchange", onUrlChange);
+      window.removeEventListener("popstate", onUrlChange);
+    };
+  }, [tabs]);
 
-  // Sync the active tab to the URL hash so deep links and the
-  // back/forward buttons keep working.
+  // state → URL. Runs after the state above has settled, so it mirrors
+  // the active tab instead of racing the adoption of a deep link.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
     const target = `#${activeId}`;
     if (window.location.hash !== target) {
       window.history.pushState(null, "", target);
     }
-  }, [activeId, tabs]);
-
-  // Hash → state (back/forward button, manual hash edit).
-  React.useEffect(() => {
-    if (typeof window === "undefined") return;
-    function onHashChange() {
-      const next = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
-      if (next && tabs.some((t) => t.id === next) && next !== activeId) {
-        setActiveId(next);
-      }
-    }
-    window.addEventListener("hashchange", onHashChange);
-    return () => window.removeEventListener("hashchange", onHashChange);
-  }, [tabs, activeId]);
+    /*
+      `pushState` does not fire `hashchange`, so observers that watch the
+      URL alone never learn about a tab the operator clicked. Announce the
+      change explicitly — the rail's publish-only cards (Blockers,
+      Publishing integrations, Channel readiness) are gated on this and
+      were previously reachable only via a full navigation to `#publishing`.
+     */
+    announceWorkspaceTabChange(activeId);
+  }, [activeId]);
 
   return (
     <>
