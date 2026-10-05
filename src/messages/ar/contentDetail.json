@@ -193,7 +193,11 @@
     "noChannelsBody": "لم يتم اختيار قنوات. أضف قناة أولاً، ثم اضبط إعدادات النشر.",
     "statusFixRequiredFields": "أكمل حقول المنصة المطلوبة قبل الحفظ.",
     "statusFixRequiredFields_many": "أكمل حقول المنصة المطلوبة في {count} قنوات قبل الحفظ.",
-    "statusBatchStale": "تغيّر {count} قناة منذ تحميل هذه الصفحة. تم الاحتفاظ بمسوداتك — أعد التحميل قبل الحفظ."
+    "statusBatchStale": "تغيّر {count} قناة منذ تحميل هذه الصفحة. تم الاحتفاظ بمسوداتك — أعد التحميل قبل الحفظ.",
+    "saveStateSaved": "تم حفظ كل التغييرات",
+    "saveStateSaving": "جارٍ الحفظ…",
+    "saveStateUnsaved": "تغييرات غير محفوظة",
+    "saveStateError": "فشل الحفظ — ما زالت تعديلاتك محفوظة هنا"
   },
   "readinessPanel": {
     "readyTitle": "جاهز للنشر",
@@ -1078,6 +1082,8 @@
     "applyLanguageToAllButton": "تطبيق على الكل",
     "channelWorkspaceTitle": "إعداد القنوات",
     "channelWorkspaceHint": "اعمل على كل قناة بشكل منفصل. ابدأ بالقناة التي تحتوي على موانع.",
+    "destinationStepTitle": "الوجهة",
+    "destinationStepDescription": "تأكد من الحساب المحدد واتصال النشر قبل تعديل نسخة القناة.",
     "channelReady": "جاهزة",
     "phaseNavLabel": "تقدم مراحل النشر",
     "phase": {

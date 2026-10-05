@@ -3,9 +3,9 @@
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, Languages, Plus, Save, Send, X } from "lucide-react";
+import { ArrowRight, CheckCircle2, Check, Languages, Plus, Save, Send, X } from "lucide-react";
 import { PerFieldAiSuggest } from "@/components/forms/per-field-ai-suggest";
-import { phaseBlockerCounts } from "@/lib/publishing/blocker-targets";
+import { phaseBlockerCounts, type PublishPhaseId } from "@/lib/publishing/blocker-targets";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -76,6 +76,25 @@ export interface PublishPreviewData {
   thumbnailUrl?: string | null;
   thumbnailWidth?: number | null;
   thumbnailHeight?: number | null;
+}
+
+const PUBLISH_PHASE_ORDER: readonly PublishPhaseId[] = [
+  "destination",
+  "content",
+  "compliance",
+  "review",
+];
+
+function firstOpenPhase(
+  issues: ReadonlyArray<{ path: string; severity?: string }>,
+): PublishPhaseId {
+  const counts = phaseBlockerCounts(issues);
+  // A selected channel already has a destination by definition. Keep the
+  // editor useful on first open even when the destination connection still
+  // has setup blockers; Destination remains available from the stepper.
+  return (
+    PUBLISH_PHASE_ORDER.find((phase) => phase !== "destination" && counts[phase] > 0) ?? "content"
+  );
 }
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
@@ -388,6 +407,15 @@ export function PublishPackageForm({
     return value === key ? humanFormat(format) : value;
   };
   const [activeChannel, setActiveChannel] = useState<string>(channels[0]?.id ?? "");
+  const [activePhase, setActivePhase] = useState<PublishPhaseId>(() => {
+    const firstChannel = channels[0];
+    const channelIssues = firstChannel
+      ? readiness.channels.find(
+          (channel) => channel.socialChannelId === firstChannel.socialChannelId,
+        )?.issues
+      : undefined;
+    return firstOpenPhase(channelIssues ?? readiness.issues);
+  });
   const [drafts, setDrafts] = useState<Record<string, PlatformPayload>>(() => {
     const initial: Record<string, PlatformPayload> = {};
     for (const ch of channels) {
@@ -568,6 +596,15 @@ export function PublishPackageForm({
   const currentPlatformFields = requiredFieldsFor(current?.platform ?? "");
   /** Rights confirmations a readiness rule blocks on for this platform. */
   const currentRightsCheckboxes = rightsCheckboxesFor(current?.platform ?? "");
+  const saveState = error
+    ? "error"
+    : pending && (dirty || currentNeedsSave)
+      ? "saving"
+      : dirty || currentNeedsSave
+        ? "unsaved"
+        : Object.keys(savedAt).length > 0
+          ? "saved"
+          : "clean";
 
   function applySharedCopy(channelId: string, language: string) {
     const shared =
@@ -613,6 +650,13 @@ export function PublishPackageForm({
     if (dirtyChannels[activeChannel] && !window.confirm(t("contentDetail.publish.unsavedGuard"))) {
       return;
     }
+    const nextChannel = channels.find((channel) => channel.id === nextChannelId);
+    const nextIssues = nextChannel
+      ? readiness.channels.find(
+          (channel) => channel.socialChannelId === nextChannel.socialChannelId,
+        )?.issues
+      : undefined;
+    setActivePhase(firstOpenPhase(nextIssues ?? readiness.issues));
     setActiveChannel(nextChannelId);
   }
 
@@ -909,23 +953,20 @@ export function PublishPackageForm({
       data-workspace-id={workspaceId}
       onSubmit={(event) => event.preventDefault()}
     >
-      {metaPublishingReadiness &&
-      metaPublishingCopy &&
-      channels.some(
-        (channel) => channel.platform === "instagram" || channel.platform === "facebook",
-      ) ? (
-        <MetaPublishingReadinessCard
-          readiness={metaPublishingReadiness}
-          copy={metaPublishingCopy}
-          compact
-          testId="publish-meta-readiness-card"
-        />
-      ) : null}
-
       <div
-        className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+        className="border-border bg-surface rounded-[var(--radius-control)] border p-2"
         data-testid="publish-channel-workspace"
       >
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 px-1">
+          <div>
+            <h2 className="text-title-card text-fg-primary font-semibold">
+              {t("contentDetail.publishForm.channelWorkspaceTitle")}
+            </h2>
+            <p className="text-label text-fg-muted">
+              {t("contentDetail.publishForm.channelWorkspaceHint")}
+            </p>
+          </div>
+        </div>
         {/*
           The tab row is the single owner of channel selection for this
           form — the preview follows it rather than carrying its own
@@ -1048,10 +1089,12 @@ export function PublishPackageForm({
             id: c.id,
             socialChannelId: c.socialChannelId,
           }))}
-          blockerIssues={readiness.issues.map((issue) => ({
+          blockerIssues={(currentReadiness?.issues ?? readiness.issues).map((issue) => ({
             path: issue.path,
             severity: issue.severity,
           }))}
+          activePhase={activePhase}
+          onPhaseChange={setActivePhase}
           t={t}
         />
       ) : null}
@@ -1189,10 +1232,58 @@ export function PublishPackageForm({
               </div>
             ) : null}
 
+            {canSavePackage && activePhase === "destination" ? (
+              <Card id="publish-destination" padding="md" className="scroll-mt-24 space-y-3">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <CardTitle>{t("contentDetail.publishForm.destinationStepTitle")}</CardTitle>
+                    <p className="text-label text-fg-secondary mt-1">
+                      {t("contentDetail.publishForm.destinationStepDescription")}
+                    </p>
+                  </div>
+                  <CheckCircle2 className="text-success h-5 w-5" aria-hidden="true" />
+                </div>
+                <div className="border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-control)] border p-3">
+                  <PlatformIcon platform={current.platform} tile className="h-8 w-8 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-body text-fg-primary font-semibold">
+                      {localizedPlatformLabel(current.platform)}
+                    </p>
+                    <p className="text-label text-fg-secondary truncate">
+                      <bdi>{current.accountName}</bdi>
+                    </p>
+                  </div>
+                  <Badge
+                    variant={currentBlockerCount === 0 ? "success" : "warning"}
+                    className="ms-auto"
+                  >
+                    {currentBlockerCount === 0
+                      ? t("contentDetail.publishForm.channelReady")
+                      : t(
+                          currentBlockerCount === 1
+                            ? "contentDetail.publishReadiness.blockersOne"
+                            : "contentDetail.publishReadiness.blockersMany",
+                          { count: currentBlockerCount },
+                        )}
+                  </Badge>
+                </div>
+                {metaPublishingReadiness &&
+                metaPublishingCopy &&
+                (current.platform === "instagram" || current.platform === "facebook") ? (
+                  <MetaPublishingReadinessCard
+                    readiness={metaPublishingReadiness}
+                    copy={metaPublishingCopy}
+                    compact
+                    testId="publish-meta-readiness-card"
+                  />
+                ) : null}
+              </Card>
+            ) : null}
+
             {canSavePackage ? (
               <>
                 <Card
-                  id="publish-destination"
+                  id="publish-content"
                   padding="md"
                   /*
                     A flex column, not a grid. This card is a plain
@@ -1202,7 +1293,10 @@ export function PublishPackageForm({
                     rendered with zero width beside a full-width
                     sibling. A stack has no track to get wrong.
                   */
-                  className="flex min-w-0 scroll-mt-24 flex-col gap-3"
+                  className={cn(
+                    "flex min-w-0 scroll-mt-24 flex-col gap-3",
+                    activePhase !== "content" && "hidden",
+                  )}
                 >
                   <CardTitle>{t("contentDetail.publishForm.destinationCaption")}</CardTitle>
                   {/*
@@ -1435,7 +1529,10 @@ export function PublishPackageForm({
                   <Card
                     id="publish-platform-settings"
                     padding="lg"
-                    className="min-w-0 scroll-mt-24 space-y-3"
+                    className={cn(
+                      "min-w-0 scroll-mt-24 space-y-3",
+                      activePhase !== "content" && "hidden",
+                    )}
                   >
                     <CardTitle>{t("contentDetail.publishForm.platformSettingsTitle")}</CardTitle>
                     <CardDescription>
@@ -1512,7 +1609,10 @@ export function PublishPackageForm({
                 <Card
                   id="publish-compliance"
                   padding="lg"
-                  className="min-w-0 scroll-mt-24 space-y-3"
+                  className={cn(
+                    "min-w-0 scroll-mt-24 space-y-3",
+                    activePhase !== "compliance" && "hidden",
+                  )}
                 >
                   <CardTitle>{t("contentDetail.publishForm.mediaDisclosures")}</CardTitle>
                   <div>
@@ -1656,35 +1756,6 @@ export function PublishPackageForm({
                       </div>
                     );
                   })}
-                  <div>
-                    {/* Phase 8 (2026-08-30): user-facing label renamed from
-                  "Approved delivery version" → "Approved version"
-                  per the terminology sweep in the planning-detail
-                  refactor (spec §10 / §16 — the DB column
-                  `delivery_versions` is unchanged). */}
-                    <CardTitle className="text-title-card">
-                      {t("contentDetail.publishForm.approvedVersion")}
-                    </CardTitle>
-                    {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
-                      <p
-                        className="text-label text-warning mt-1"
-                        data-testid="publish-no-approved-delivery"
-                      >
-                        {t("contentDetail.publish.noApprovedDelivery")}
-                      </p>
-                    ) : (
-                      <ul
-                        className="mt-2 space-y-1 text-sm"
-                        data-testid="publish-approved-deliveries"
-                      >
-                        {deliveryVersions
-                          .filter((d) => d.isFinalApproved)
-                          .map((d) => (
-                            <li key={d.id}>v{d.versionNumber}</li>
-                          ))}
-                      </ul>
-                    )}
-                  </div>
                 </Card>
               </>
             ) : (
@@ -1708,26 +1779,49 @@ export function PublishPackageForm({
             own duplicate channel strip.
           */}
           {previewData && previewData.channels.length > 0 ? (
-            <div
-              id="publish-preview"
-              data-testid="publish-preview-panel"
-              className="min-w-0 scroll-mt-24 space-y-3"
-            >
-              <div>
-                <p className="text-title-card text-fg-primary font-semibold">
-                  {t("contentDetail.preview.title")}
-                </p>
-                <p className="text-label text-fg-secondary mt-0.5">
-                  {t("contentDetail.preview.description", {
-                    platform: localizedPlatformLabel(
-                      current?.platform ?? previewData.channels[0]!.platform,
-                    ),
-                    account: current?.accountName ?? previewData.channels[0]!.accountName,
-                  })}
-                </p>
+            <>
+              <div
+                id="publish-preview"
+                data-testid="publish-preview-panel"
+                className="sticky top-24 hidden min-w-0 scroll-mt-24 space-y-3 xl:block"
+              >
+                <div>
+                  <p className="text-title-card text-fg-primary font-semibold">
+                    {t("contentDetail.preview.title")}
+                  </p>
+                  <p className="text-label text-fg-secondary mt-0.5">
+                    {t("contentDetail.preview.description", {
+                      platform: localizedPlatformLabel(
+                        current?.platform ?? previewData.channels[0]!.platform,
+                      ),
+                      account: current?.accountName ?? previewData.channels[0]!.accountName,
+                    })}
+                  </p>
+                </div>
+                <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
               </div>
-              <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
-            </div>
+              <details className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3 xl:hidden">
+                <summary className="text-body text-fg-primary flex min-h-11 cursor-pointer items-center justify-between font-semibold">
+                  {t("contentDetail.openPreview")}
+                  <span aria-hidden="true">↗</span>
+                </summary>
+                <div
+                  id="publish-preview-drawer"
+                  data-testid="publish-preview-drawer-panel"
+                  className="mt-3 min-w-0 space-y-3"
+                >
+                  <p className="text-label text-fg-secondary">
+                    {t("contentDetail.preview.description", {
+                      platform: localizedPlatformLabel(
+                        current?.platform ?? previewData.channels[0]!.platform,
+                      ),
+                      account: current?.accountName ?? previewData.channels[0]!.accountName,
+                    })}
+                  </p>
+                  <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
+                </div>
+              </details>
+            </>
           ) : null}
           {/* The approval gate spans the full grid width rather than
               orphaning itself in the editor column: it is the one card
@@ -1737,9 +1831,43 @@ export function PublishPackageForm({
           <Card
             id="publish-review"
             padding="lg"
-            className="min-w-0 scroll-mt-24 space-y-3 lg:col-span-2"
+            className={cn(
+              "min-w-0 scroll-mt-24 space-y-3 lg:col-span-2",
+              activePhase !== "review" && "hidden",
+            )}
           >
             <CardTitle>{t("contentDetail.publishForm.previewApproval")}</CardTitle>
+            <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div>
+                  <h3 className="text-body text-fg-primary font-semibold">
+                    {t("contentDetail.publishForm.approvedVersion")}
+                  </h3>
+                  {deliveryVersions.filter((d) => d.isFinalApproved).length === 0 ? (
+                    <p
+                      className="text-label text-warning mt-1"
+                      data-testid="publish-no-approved-delivery"
+                    >
+                      {t("contentDetail.publish.noApprovedDelivery")}
+                    </p>
+                  ) : (
+                    <ul
+                      className="text-label text-fg-secondary mt-2 space-y-1"
+                      data-testid="publish-approved-deliveries"
+                    >
+                      {deliveryVersions
+                        .filter((d) => d.isFinalApproved)
+                        .map((d) => (
+                          <li key={d.id} className="inline-flex items-center gap-1.5">
+                            <Check className="text-success h-3.5 w-3.5" aria-hidden="true" />v
+                            {d.versionNumber}
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
             <div
               id="publish-approval"
               className="border-border bg-surface-subtle scroll-mt-24 rounded-[var(--radius-control)] border p-3"
@@ -1803,6 +1931,33 @@ export function PublishPackageForm({
         data-testid="publish-action-bar"
       >
         <div className="flex items-center gap-2">
+          {saveState !== "clean" ? (
+            <span
+              className={cn(
+                "text-label inline-flex items-center gap-1.5 font-semibold",
+                saveState === "saved" && "text-success",
+                saveState === "saving" && "text-primary",
+                saveState === "unsaved" && "text-warning",
+                saveState === "error" && "text-danger",
+              )}
+              role="status"
+              data-testid={dirty ? "publish-unsaved-state" : "publish-save-state"}
+              data-save-state={saveState}
+            >
+              {saveState === "saved" ? (
+                <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+              ) : null}
+              {t(
+                saveState === "saved"
+                  ? "contentDetail.publish.saveStateSaved"
+                  : saveState === "saving"
+                    ? "contentDetail.publish.saveStateSaving"
+                    : saveState === "unsaved"
+                      ? "contentDetail.publish.saveStateUnsaved"
+                      : "contentDetail.publish.saveStateError",
+              )}
+            </span>
+          ) : null}
           <ReasonDialog
             trigger={
               <Button
@@ -1826,15 +1981,6 @@ export function PublishPackageForm({
               {t("contentDetail.publish.lastSaved", {
                 time: new Date(Math.max(...Object.values(savedAt))).toLocaleTimeString(),
               })}
-            </span>
-          ) : null}
-          {dirty ? (
-            <span
-              className="text-label text-warning font-semibold"
-              role="status"
-              data-testid="publish-unsaved-state"
-            >
-              {t("contentDetail.publish.unsaved")}
             </span>
           ) : null}
         </div>

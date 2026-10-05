@@ -193,7 +193,11 @@
     "noChannelsBody": "No channels selected. Add a channel first, then configure the publishing setup.",
     "statusFixRequiredFields": "Complete the required platform fields before saving.",
     "statusFixRequiredFields_many": "Complete the required platform fields on {count} channels before saving.",
-    "statusBatchStale": "{count} channel(s) changed since you loaded this page. Your drafts were kept — reload before saving."
+    "statusBatchStale": "{count} channel(s) changed since you loaded this page. Your drafts were kept — reload before saving.",
+    "saveStateSaved": "All changes saved",
+    "saveStateSaving": "Saving…",
+    "saveStateUnsaved": "Unsaved changes",
+    "saveStateError": "Save failed — your edits are still here"
   },
   "readinessPanel": {
     "readyTitle": "Ready for publishing",
@@ -1078,6 +1082,8 @@
     "applyLanguageToAllButton": "Apply to all",
     "channelWorkspaceTitle": "Channel setup",
     "channelWorkspaceHint": "Work through each channel separately. Start with the channel that has blockers.",
+    "destinationStepTitle": "Destination",
+    "destinationStepDescription": "Confirm the selected account and publishing connection before editing channel copy.",
     "channelReady": "Ready",
     "phaseNavLabel": "Publish phase progress",
     "phase": {

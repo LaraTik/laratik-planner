@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
@@ -141,6 +141,21 @@ describe("publish form information architecture", () => {
     expect(screen.getByTestId("publish-alt-text")).toBeInTheDocument();
     expect(document.querySelector("#publish-disclosures")).not.toBeNull();
     expect(document.querySelector("#publish-approval")).not.toBeNull();
+  });
+
+  it("shows one local setup phase at a time", async () => {
+    renderForm(true);
+    await screen.findByTestId("publish-save-draft");
+
+    expect(document.querySelector("#publish-content")).not.toHaveClass("hidden");
+    expect(document.querySelector("#publish-compliance")).toHaveClass("hidden");
+    expect(document.querySelector("#publish-review")).toHaveClass("hidden");
+
+    fireEvent.click(screen.getByRole("link", { name: "Compliance" }));
+
+    expect(document.querySelector("#publish-content")).toHaveClass("hidden");
+    expect(document.querySelector("#publish-compliance")).not.toHaveClass("hidden");
+    expect(document.querySelector("#publish-review")).toHaveClass("hidden");
   });
 
   it("renders the read-only summary rather than the editor without write authority", async () => {

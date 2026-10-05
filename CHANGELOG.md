@@ -12,6 +12,69 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — the channel setup workspace shows one phase at a time, and the rail's duplicate publish cards are gone
+
+The Publish tab was asking the operator to hold two competing mental models at
+once. The right rail rendered **Blockers**, **Publishing integrations**, and
+**Channel readiness** as compact cards, while the channel setup workspace
+rendered the **same** destination, blocker, and integration information inline
+— so every fact on this surface existed in two places, and the rail's copy was
+the one that was unreachable (see the previous entry). Meanwhile all four setup
+phases (Destination & caption, Platform settings, Media & disclosures, Preview &
+approval) were stacked open simultaneously, so the workspace was one very long
+scrolling column with no way to know which part still needed attention.
+
+**The phase stack is now a single active phase.** `PublishPhaseStepper` gained
+`activePhase` / `onPhaseChange`, so it stopped being a progress _indicator_ and
+became a real control. The four form regions toggle a `hidden` class against
+`activePhase` rather than unmounting, which preserves every draft field, scroll
+position, and focus target across a phase switch. Opening a channel lands on
+its **first blocking phase** (`firstOpenPhase`), falling back to `content` when
+the channel is clean — deliberately skipping `destination`, because a selected
+channel already has a destination by definition and opening on a read-only
+summary card would be a dead end. The blocker counts the stepper renders are now
+scoped to the **active channel's** issues rather than the whole item, so a
+blocker on channel B no longer marks channel A's phases as incomplete.
+
+**The rail's publish cards are removed, not moved.** `WorkflowRail` no longer
+takes `publishRail`, and `page.tsx` no longer builds it — the server-side
+`ReadinessIssue[]` prop, the `readinessAnchorForPath` deep-link targets, and the
+tab-hash subscription they needed are all gone with it. The information they
+carried is now owned by the **Destination** phase, which is a real step in the
+sequence rather than a sidebar aside: it confirms the platform, account, and
+publishing connection, carries the channel's blocker count as a badge, and hosts
+the `MetaPublishingReadinessCard` that previously floated above the channel
+workspace. The old `#publish-destination` id moved to the caption card, now
+`#publish-content`; the new Destination card takes `#publish-destination`.
+
+**Approved delivery versions moved from compliance to review.** Listing
+`v{n}` rows inside the Media & disclosures card was a category error — an
+approved version is the thing the approval gate is about, not a disclosure. It
+now sits in the Review & approval card next to the gate it feeds, with a check
+icon per version.
+
+**The save state is stated, not implied.** The action bar renders
+`saved` / `saving` / `unsaved` / `error` from the existing `error`, `pending`,
+`dirty`, and `savedAt` state — it added no new save bookkeeping, it only reads
+what the form already knew. It carries `role="status"` and
+`data-save-state` (`publish-unsaved-state` / `publish-save-state`), so the
+failure case reads "Save failed — your edits are still here" instead of leaving
+the operator to infer it from a disabled button. The indicator is suppressed
+before the first save, so it is never decoration on an untouched form.
+
+**The preview respects the viewport.** The simulator is a sticky side panel at
+`xl` and above; below that it collapses into a `<details>` drawer, because a
+phone-width simulator in a two-column grid is the same 0px-track class of bug
+the caption field hit. The existing `contentDetail.openPreview` key is reused
+for the drawer summary in both locales.
+
+`tests/unit/publishing/publish-ia.test.tsx` now asserts the phase isolation
+directly — that `#publish-content` is visible while `#publish-compliance` and
+`#publish-review` carry `hidden`, and that clicking the Compliance step swaps
+exactly that. The E2E spec clicks through the "Review & approval" stepper link
+before reaching the approval control, because the control it needs is no longer
+in the initial phase.
+
 ### Fixed — the Publish tab's right-rail cards were unreachable by clicking
 
 Three navigation defects on `/app/w/[slug]/planning/[id]` meant the

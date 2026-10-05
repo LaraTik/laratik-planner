@@ -52,6 +52,7 @@ test.describe("Publish package", () => {
     await page.reload();
     await expect(page.getByTestId("publish-package-form")).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId("publish-caption")).toHaveValue(caption);
+    await page.getByRole("link", { name: /Review & approval/ }).click();
     await page.getByTestId("publish-final-copy-approved").click();
     await expect(
       page
@@ -69,6 +70,7 @@ test.describe("Publish package", () => {
 
     await expect(page.getByTestId("publish-save-draft")).toBeEnabled();
     await expect(page.getByTestId("publish-final-copy-approved")).toHaveCount(0);
+    await page.getByRole("link", { name: /Review & approval/ }).click();
     await expect(page.getByText(/agency administrator must approve/i).first()).toBeVisible();
     // The confirm-setup CTA is **absent**, not merely disabled, while
     // blockers remain: the action bar renders exactly one primary action

@@ -835,6 +835,56 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-05 — Publish surface: one phase at a time, and the rail's duplicate cards removed
+
+The Publish tab was carrying the same information twice and asking the operator
+to reconcile it. `WorkflowRail` rendered **Blockers**, **Publishing
+integrations**, and **Channel readiness** as compact cards; the channel setup
+workspace rendered the same destination/blocker/integration facts inline. The
+rail's copy was also the unreachable one (fixed in `def18671`). All four setup
+phases were stacked open at once, producing one long unscannable column.
+
+**What changed.**
+
+- `PublishPhaseStepper` gained `activePhase` / `onPhaseChange` and is now a
+  control, not an indicator. The four form regions toggle a `hidden` class
+  against `activePhase` instead of unmounting, so drafts, scroll position, and
+  focus survive a phase switch.
+- `firstOpenPhase` opens a channel on its first blocking phase, defaulting to
+  `content`, and deliberately **skips `destination`** — a selected channel
+  already has a destination, so opening there is a read-only dead end.
+- The stepper's blocker counts are scoped to the **active channel**, so a
+  blocker on channel B no longer marks channel A's phases incomplete.
+- `WorkflowRail` no longer takes `publishRail`; `page.tsx` no longer builds it.
+  The `ReadinessIssue[]` prop, the `readinessAnchorForPath` deep links, and the
+  tab-hash subscription they required are all deleted.
+- Destination is now a real phase: `#publish-destination` confirms platform,
+  account, and connection, shows the blocker count as a badge, and hosts
+  `MetaPublishingReadinessCard`. The caption card's id moved to
+  `#publish-content`.
+- Approved delivery versions moved from the compliance card to the review card,
+  next to the approval gate they feed.
+- The action bar states the save state (`saved`/`saving`/`unsaved`/`error`) with
+  `role="status"` and `data-save-state`. It reads the existing `error`,
+  `pending`, `dirty`, `savedAt` state and adds no new bookkeeping.
+- The preview is a sticky side panel at `xl`+, a `<details>` drawer below it.
+
+**Two things worth keeping in mind when editing this surface.**
+
+1. **`hidden`, not unmount.** The phase regions toggle a class precisely so that
+   per-channel drafts and focus survive a phase switch. Swapping this for
+   conditional rendering is a regression, not a cleanup.
+2. **The channel tabs and the phase stepper are separate axes.** Switching
+   channel re-runs `firstOpenPhase` for the incoming channel; switching phase
+   does not touch `activeChannel`. Conflating them reintroduces the bug the
+   previous entry documents.
+
+Coverage: `tests/unit/publishing/publish-ia.test.tsx` asserts phase isolation
+(`#publish-content` visible, the other two `hidden`, and a step swap).
+`tests/e2e/publish-package.spec.ts` clicks the "Review & approval" stepper
+link before touching the approval control, since that control is no longer in
+the initial phase.
+
 ### 2026-10-04 — Publish surface: the compare-and-set could never match (saved every save)
 
 Live regression from `c107e699`, caught by the advisory pre-push E2E subset and then

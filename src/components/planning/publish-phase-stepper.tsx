@@ -24,6 +24,10 @@ export interface PublishPhaseStepperProps {
    * read as done while another phase still has work.
    */
   blockerIssues: ReadonlyArray<{ path: string; severity?: string }>;
+  /** The phase currently open in the local channel setup workspace. */
+  activePhase?: Phase["id"];
+  /** Switch the local setup phase without changing the lifecycle tab. */
+  onPhaseChange?: (phase: Phase["id"]) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
@@ -56,6 +60,8 @@ export function PublishPhaseStepper({
   activeChannel,
   channels,
   blockerIssues,
+  activePhase,
+  onPhaseChange,
   t,
 }: PublishPhaseStepperProps) {
   const phases: ReadonlyArray<Phase> = React.useMemo(
@@ -85,7 +91,12 @@ export function PublishPhaseStepper({
       : activeChannel === "" || channels.length === 0
         ? 0
         : Math.max(firstBlockingPhaseIdx, 1);
-  const currentPhaseIdx = firstIncompletePhaseIdx;
+  const currentPhaseIdx = activePhase
+    ? Math.max(
+        phases.findIndex((phase) => phase.id === activePhase),
+        0,
+      )
+    : firstIncompletePhaseIdx;
 
   function isComplete(phaseId: Phase["id"]): boolean {
     // No destination means no phase is meaningfully done, whatever the
@@ -142,6 +153,7 @@ export function PublishPhaseStepper({
             >
               <a
                 href={phaseHref[phase.id]}
+                onClick={() => onPhaseChange?.(phase.id)}
                 className="focus-visible:ring-focus-ring hover:bg-surface flex min-w-0 flex-1 items-center gap-2 rounded-[var(--radius-control)] p-1 outline-none focus-visible:ring-2"
               >
                 <div

@@ -1,20 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useId, useState, useSyncExternalStore, useTransition } from "react";
+import { useEffect, useId, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import {
-  AlertTriangle,
-  Check,
-  CheckCircle,
-  Circle,
-  XCircle,
-  Ban,
-  Play,
-  Info,
-  Palette,
-  Link2,
-} from "lucide-react";
+import { Check, CheckCircle, Circle, XCircle, Ban, Play, Info, Palette } from "lucide-react";
 import {
   DirAwareArrowRight,
   DirAwareChevronLeft,
@@ -22,11 +11,6 @@ import {
 } from "@/components/ui/dir-aware-icon";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { normalizeWorkspaceTabId } from "@/components/planning/workspace-tabs";
-import {
-  readWorkspaceTabFromHash,
-  subscribeToWorkspaceTabChanges,
-} from "@/components/planning/workspace-tab-events";
 import {
   Dialog,
   DialogClose,
@@ -56,8 +40,6 @@ import { planningStageForStatus } from "@/lib/planning/presentation";
 import type { ScenarioSpec } from "@/lib/content/workflow";
 import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
 import type { PlanningPresentation } from "@/lib/planning/presentation";
-import type { ReadinessIssue } from "@/lib/publishing/readiness";
-import { readinessAnchorForPath } from "@/lib/publishing/blocker-targets";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -360,17 +342,6 @@ export interface WorkflowRailBodyProps {
   designer?: AssignedDesigner | null;
   /** Canonical lifecycle/action presentation from the server. */
   planningPresentation?: PlanningPresentation;
-  /** Compact publish-context cards shown beneath the lifecycle rail. */
-  publishRail?: {
-    blockers: ReadinessIssue[];
-    channelReadiness: {
-      id: string;
-      platform: string;
-      accountName: string;
-      blockerCount: number;
-    }[];
-    integration: "ready" | "attention";
-  };
   /**
    * Optional workflow scenario spec. When provided, the rail renders
    * only the stages included by the workspace's active scenario
@@ -396,7 +367,6 @@ function WorkflowRailBody({
   designers,
   designer,
   planningPresentation,
-  publishRail,
   scenario,
 }: {
   workspaceSlug: string;
@@ -415,33 +385,10 @@ function WorkflowRailBody({
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
   planningPresentation?: PlanningPresentation;
-  publishRail?: WorkflowRailBodyProps["publishRail"];
   scenario?: ScenarioSpec | null;
 }) {
   const t = useLocaleT();
   const router = useRouter();
-  /*
-    The rail's publish-only cards (Blockers, Publishing integrations,
-    Channel readiness) are gated on the Publish tab being active.
-
-    This previously subscribed to the native `hashchange` event alone.
-    `WorkspaceShell` switches tabs with `history.pushState`, which does
-    NOT fire `hashchange` — so clicking the "Publish" tab in the tab
-    strip left this `false`, and the cards stayed hidden for anyone who
-    navigated to the page the normal way. They only appeared when a full
-    page load landed directly on `#publishing`, which made the rail look
-    broken on exactly the route the mockup puts them on.
-
-    `subscribeToWorkspaceTabChanges` delivers both the real hash change
-    and the shell's explicit announcement, so the rail agrees with the
-    tab strip in every path into this page.
-  */
-  const activeWorkspaceTab = useSyncExternalStore(
-    subscribeToWorkspaceTabChanges,
-    readWorkspaceTabFromHash,
-    () => "",
-  );
-  const publishView = normalizeWorkspaceTabId(activeWorkspaceTab) === "publish";
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
     return value === key ? fallback : value;
@@ -518,10 +465,6 @@ function WorkflowRailBody({
       "ready_to_publish",
     ].includes(status) &&
       roles.isManager);
-  const railAttention = (planningPresentation?.attention ?? []).filter(
-    (item) => item.severity !== "recommendation",
-  );
-
   return (
     <div
       data-status={status}
@@ -793,153 +736,6 @@ function WorkflowRailBody({
         )}
       </ol>
 
-      {railAttention.length > 0 ? (
-        <div
-          className="border-border space-y-2 border-t px-3 py-3"
-          data-testid="workflow-rail-attention"
-        >
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-label text-fg-primary font-semibold uppercase">
-              {tr("contentDetail.overview.needsAttention", "Needs attention")}
-            </p>
-            <Badge variant="warning">
-              {railAttention.reduce((total, item) => total + (item.count ?? 1), 0)}
-            </Badge>
-          </div>
-          <ul className="space-y-1.5">
-            {railAttention.slice(0, 4).map((item) => {
-              const destination = item.destinationAnchor
-                ? `#${item.destinationAnchor}`
-                : item.destinationTab
-                  ? `#${item.destinationTab}`
-                  : null;
-              const Icon = item.severity === "blocking" ? AlertTriangle : Info;
-              return (
-                <li
-                  key={`${item.path}-${item.code}`}
-                  className="border-border bg-surface-subtle flex items-start gap-2 rounded-[var(--radius-control)] border p-2"
-                >
-                  <Icon
-                    className={cn(
-                      "mt-0.5 h-3.5 w-3.5 shrink-0",
-                      item.severity === "blocking" ? "text-danger" : "text-warning",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-label text-fg-secondary line-clamp-2">
-                      {item.messageKey ? tr(item.messageKey, item.message) : item.message}
-                    </p>
-                    {destination ? (
-                      <TabSwitchLink
-                        href={destination}
-                        className="text-label text-primary mt-1 inline-flex min-h-8 items-center font-semibold hover:underline"
-                      >
-                        {tr(
-                          item.severity === "blocking"
-                            ? "contentDetail.workflow.goToAction"
-                            : "contentDetail.workflow.viewAction",
-                          item.severity === "blocking" ? "Fix" : "View",
-                        )}
-                        <DirAwareArrowRight className="ms-1 h-3 w-3" aria-hidden="true" />
-                      </TabSwitchLink>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ) : null}
-
-      {publishView && publishRail ? (
-        <div
-          className="border-border space-y-3 border-t px-3 py-3"
-          data-testid="workflow-rail-publish"
-        >
-          <RailBlockersCard blockers={publishRail.blockers} t={t} />
-          <div
-            className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-            data-testid="workflow-rail-integration"
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex min-w-0 items-center gap-2">
-                <Link2 className="text-primary h-4 w-4 shrink-0" aria-hidden="true" />
-                <p className="text-label text-fg-primary font-semibold">
-                  {tr("contentDetail.workflow.publishingIntegrations", "Publishing integrations")}
-                </p>
-              </div>
-              <Badge variant={publishRail.integration === "ready" ? "success" : "warning"}>
-                {publishRail.integration === "ready"
-                  ? tr("contentDetail.workflow.integrationConnected", "Connected")
-                  : tr("contentDetail.workflow.integrationDisabled", "Disabled")}
-              </Badge>
-            </div>
-            <p className="text-label text-fg-muted mt-2">
-              {publishRail.integration === "ready"
-                ? tr(
-                    "contentDetail.workflow.integrationReadyDescription",
-                    "Publishing connections are ready for this workspace.",
-                  )
-                : tr(
-                    "contentDetail.workflow.integrationDisabledDescription",
-                    "Connect your Meta accounts to enable publishing.",
-                  )}
-            </p>
-            <TabSwitchLink
-              href="#publishing"
-              className="text-label text-primary mt-2 inline-flex min-h-8 items-center font-semibold hover:underline"
-            >
-              {tr("contentDetail.workflow.manageIntegration", "Manage")}
-              <DirAwareArrowRight className="ms-1 h-3 w-3" aria-hidden="true" />
-            </TabSwitchLink>
-          </div>
-
-          <div
-            className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-            data-testid="workflow-rail-channel-readiness"
-          >
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <p className="text-label text-fg-primary font-semibold">
-                {tr("contentDetail.workflow.channelReadiness", "Channel readiness")}
-              </p>
-              <TabSwitchLink
-                href="#publishing"
-                className="text-label text-primary font-semibold hover:underline"
-              >
-                {tr("contentDetail.workflow.viewDetails", "View details")}
-              </TabSwitchLink>
-            </div>
-            <ul className="space-y-1.5">
-              {publishRail.channelReadiness.map((channel) => (
-                <li
-                  key={channel.id}
-                  className="border-border bg-surface flex items-center gap-2 rounded-[var(--radius-control)] border px-2 py-1.5"
-                >
-                  <span
-                    className={cn(
-                      "h-2 w-2 shrink-0 rounded-full",
-                      channel.blockerCount > 0 ? "bg-danger" : "bg-success",
-                    )}
-                    aria-hidden="true"
-                  />
-                  <span className="text-label text-fg-secondary min-w-0 flex-1 truncate">
-                    <bdi>{channel.accountName}</bdi>
-                  </span>
-                  <span className="text-label text-fg-muted shrink-0">
-                    {channel.blockerCount > 0
-                      ? tr("contentDetail.workflow.channelIssues", "{count} issues", {
-                          count: channel.blockerCount,
-                        })
-                      : tr("contentDetail.workflow.channelReady", "Ready")}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ) : null}
-
       {activeApprovals.length > 0 ? (
         <div className="border-border border-t px-3 py-2">
           <ApprovalTimeline
@@ -994,64 +790,6 @@ function WorkflowRailBody({
           />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function RailBlockersCard({
-  blockers,
-  t,
-}: {
-  blockers: ReadinessIssue[];
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  if (blockers.length === 0) return null;
-  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
-    const value = t(key, params);
-    return value === key ? fallback : value;
-  };
-  return (
-    <div
-      className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-      data-testid="workflow-rail-blockers"
-    >
-      <div className="mb-2 flex items-center justify-between gap-2">
-        <p className="text-label text-fg-primary font-semibold">
-          {tr("contentDetail.workflow.blockersTitle", `Blockers (${blockers.length})`, {
-            count: blockers.length,
-          })}
-        </p>
-        <TabSwitchLink
-          href="#publish-package"
-          className="text-label text-primary font-semibold hover:underline"
-        >
-          {tr("contentDetail.workflow.viewAllBlockers", "View all")}
-        </TabSwitchLink>
-      </div>
-      <ul className="space-y-2">
-        {blockers.slice(0, 4).map((issue, index) => {
-          const anchor = readinessAnchorForPath(issue.path) ?? "#publish-package";
-          const key = `contentDetail.publishReadiness.${issue.code}`;
-          const message = t(key) === key ? issue.message : t(key);
-          return (
-            <li key={`${issue.code}-${index}`} className="flex items-start gap-2">
-              <AlertTriangle
-                className="text-danger mt-0.5 h-3.5 w-3.5 shrink-0"
-                aria-hidden="true"
-              />
-              <span className="text-label text-fg-secondary line-clamp-2 min-w-0 flex-1">
-                {message}
-              </span>
-              <TabSwitchLink
-                href={anchor}
-                className="border-border text-label text-primary hover:bg-surface shrink-0 rounded-[var(--radius-control)] border px-2 py-0.5 font-semibold"
-              >
-                {tr("contentDetail.workflow.goToAction", "Go")}
-              </TabSwitchLink>
-            </li>
-          );
-        })}
-      </ul>
     </div>
   );
 }
