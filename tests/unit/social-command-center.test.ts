@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCommandCenterSummary, type CommandCenterChannel } from "@/lib/social/command-center";
+import {
+  buildCommandCenterSummary,
+  COMMAND_CENTER_TIME_BAND_HOURS,
+  toTimeBandHour,
+  type CommandCenterChannel,
+} from "@/lib/social/command-center";
 
 function channel(
   id: string,
@@ -334,16 +339,19 @@ describe("buildCommandCenterSummary", () => {
       "UTC",
     );
 
+    // Slots are bucketed to the heatmap band start hour (06/09/12/15/18/21),
+    // so the 10:00–10:30 Tuesday posts land in the 09:00 band and the
+    // 12:00–12:15 Wednesday posts land in the 12:00 band.
     expect(summary.content.bestTime).toEqual({
       dayOfWeek: 2,
-      hour: 10,
+      hour: 9,
       sampleSize: 3,
       averageViews: 2_000 / 3,
       reliable: true,
     });
     expect(summary.content.timeSlots).toHaveLength(2);
     expect(
-      summary.content.timeSlots.find((slot) => slot.dayOfWeek === 2 && slot.hour === 10),
+      summary.content.timeSlots.find((slot) => slot.dayOfWeek === 2 && slot.hour === 9),
     ).toEqual(summary.content.bestTime);
     expect(summary.content.lengthBands[0]).toMatchObject({
       key: "15to30",
@@ -408,5 +416,101 @@ describe("buildCommandCenterSummary", () => {
       sampleSize: 2,
       reliable: false,
     });
+  });
+
+  it("buckets off-row publish hours into a heatmap band the grid actually renders", () => {
+    // Regression: slots used to be keyed by the EXACT published hour while
+    // the heatmap only drew the 06/09/12/15/18/21 rows. A post at 14:23
+    // created a slot no row could render, so the grid came out blank.
+    // The 12:00 band covers 12:00–14:59, so 14:23 and 14:50 land in it.
+    const summary = buildCommandCenterSummary(
+      [channel("one", "One", [])],
+      new Date("2026-09-30T12:00:00Z"),
+      [
+        {
+          id: "off-row-1",
+          channelId: "one",
+          platform: "instagram",
+          accountName: "One",
+          permalink: null,
+          publishedAt: new Date("2026-09-29T14:23:00Z"),
+          mediaType: "reel",
+          views: 800,
+          reach: null,
+          likes: null,
+          comments: null,
+          saved: null,
+          shares: null,
+          interactions: null,
+          durationSeconds: 20,
+        },
+        {
+          id: "off-row-2",
+          channelId: "one",
+          platform: "instagram",
+          accountName: "One",
+          permalink: null,
+          publishedAt: new Date("2026-09-29T14:50:00Z"),
+          mediaType: "reel",
+          views: 400,
+          reach: null,
+          likes: null,
+          comments: null,
+          saved: null,
+          shares: null,
+          interactions: null,
+          durationSeconds: 20,
+        },
+      ],
+      "UTC",
+    );
+
+    expect(summary.content.timeSlots).toEqual([
+      { dayOfWeek: 2, hour: 12, sampleSize: 2, averageViews: 600, reliable: false },
+    ]);
+  });
+
+  it("folds pre-dawn publish hours into the first band instead of dropping them", () => {
+    const summary = buildCommandCenterSummary(
+      [channel("one", "One", [])],
+      new Date("2026-09-30T12:00:00Z"),
+      [
+        {
+          id: "early-1",
+          channelId: "one",
+          platform: "instagram",
+          accountName: "One",
+          permalink: null,
+          publishedAt: new Date("2026-09-29T02:10:00Z"),
+          mediaType: "reel",
+          views: 300,
+          reach: null,
+          likes: null,
+          comments: null,
+          saved: null,
+          shares: null,
+          interactions: null,
+          durationSeconds: 20,
+        },
+      ],
+      "UTC",
+    );
+
+    expect(summary.content.timeSlots).toEqual([
+      { dayOfWeek: 2, hour: 6, sampleSize: 1, averageViews: 300, reliable: false },
+    ]);
+  });
+
+  it("maps every hour of the day onto a renderable band", () => {
+    // Guards the band table itself: no hour may fall outside the six rows.
+    const rendered = new Set<number>();
+    for (let hour = 0; hour < 24; hour += 1) {
+      const band = toTimeBandHour(hour);
+      rendered.add(band);
+      expect(COMMAND_CENTER_TIME_BAND_HOURS).toContain(
+        band as (typeof COMMAND_CENTER_TIME_BAND_HOURS)[number],
+      );
+    }
+    expect([...rendered].sort((a, b) => a - b)).toEqual([...COMMAND_CENTER_TIME_BAND_HOURS]);
   });
 });

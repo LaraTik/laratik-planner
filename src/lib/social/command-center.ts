@@ -128,6 +128,37 @@ const STALE_THRESHOLD_MS = 25 * 60 * 60 * 1000;
 /** Three observations keeps planning signals useful without overfitting one post. */
 export const COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE = 3;
 
+/**
+ * The timing heatmap renders six three-hour rows (06:00, 09:00 … 21:00).
+ * Bucketing happens HERE, in the domain, rather than in the component,
+ * because the previous design keyed slots by the EXACT published hour
+ * (`dayOfWeek:hour`) while the grid only drew those six rows. A post
+ * published at 14:23 produced a slot at hour 14 that no row could ever
+ * render, so the heatmap came out blank even with a full history of
+ * observations — and the same mismatch silently emptied `bestTime`.
+ *
+ * Bucketing to the band fixes both: every observation now lands in a
+ * cell the grid draws, and samples per band rise fast enough for
+ * `COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE` to be reachable on real
+ * workspaces (exact hours almost never reach 3 same-hour posts).
+ */
+export const COMMAND_CENTER_TIME_BAND_HOURS = [6, 9, 12, 15, 18, 21] as const;
+
+/**
+ * Map an exact hour to its heatmap band start hour. Hours before the
+ * first band (00:00–05:59) fold into the 06:00 band rather than being
+ * dropped, so no observation is silently discarded.
+ */
+export function toTimeBandHour(hour: number): number {
+  const first: number = COMMAND_CENTER_TIME_BAND_HOURS[0];
+  if (hour < first) return first;
+  let band = first;
+  for (const candidate of COMMAND_CENTER_TIME_BAND_HOURS) {
+    if (hour >= candidate) band = candidate;
+  }
+  return band;
+}
+
 function classifyHealth(channel: CommandCenterChannel, now: Date): keyof CommandCenterHealth {
   if (channel.lastSyncErrorCode || channel.latestProviderErrorCode) return "degraded";
   if (
@@ -212,8 +243,11 @@ function buildCommandCenterContent(
   for (const post of ranked) {
     if (!post.publishedAt || post.views === null) continue;
     const { dayOfWeek, hour } = timeParts(post.publishedAt, timezone);
-    const key = `${dayOfWeek}:${hour}`;
-    const bucket = timeBuckets.get(key) ?? { dayOfWeek, hour, views: [] };
+    // Bucket to the heatmap band start hour so the rendered grid and the
+    // data share one definition (see COMMAND_CENTER_TIME_BAND_HOURS).
+    const bandHour = toTimeBandHour(hour);
+    const key = `${dayOfWeek}:${bandHour}`;
+    const bucket = timeBuckets.get(key) ?? { dayOfWeek, hour: bandHour, views: [] };
     bucket.views.push(post.views);
     timeBuckets.set(key, bucket);
   }
