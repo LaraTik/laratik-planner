@@ -584,11 +584,14 @@ async function seedInternal(f: {
       }
 
       // A small bounded post-observation fixture keeps the Command Center
-      // inventory and pagination journeys deterministic without pretending
-      // that provider media or thumbnails exist in the test database.
+      // inventory and pagination journeys deterministic. Posts carry a
+      // caption and a preview image so the thumbnail and title paths are
+      // exercised end to end; every third post deliberately has NEITHER, so
+      // the placeholder fallback stays covered instead of only the happy case.
       for (const postOffset of Array.from({ length: 12 }, (_, index) => index)) {
         const observedAt = new Date(now.getTime() - postOffset * 24 * 60 * 60 * 1000);
         const isOutlier = postOffset === 0;
+        const hasMedia = postOffset % 3 !== 2;
         await db
           .insert(socialPostObservations)
           .values({
@@ -598,6 +601,10 @@ async function seedInternal(f: {
             externalProvider: fixture.platform === "tiktok" ? "tiktok" : "meta",
             externalPostId: `e2e-${fixture.platform}-${postOffset}`,
             permalink: `https://example.test/${fixture.platform}/post-${postOffset}`,
+            thumbnailUrl: hasMedia ? `/e2e-thumbnails/${fixture.platform}-${postOffset}.svg` : null,
+            caption: hasMedia
+              ? `E2E fixture caption for ${fixture.platform} post ${postOffset} — a deliberately long line of post text so the two-line clamp and the hover tooltip are both exercised in the Command Center inventory.`
+              : null,
             publishedAt: observedAt,
             mediaType: postOffset % 3 === 0 ? "reel" : "video",
             mediaProductType: "e2e_fixture",

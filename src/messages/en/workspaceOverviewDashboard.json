@@ -122,7 +122,8 @@
     "heatMapMore": "More",
     "heatMapLegend": "Average views by day and hour in {timezone}",
     "noFollowerData": "No follower history in this window yet.",
-    "channel": "Channel"
+    "channel": "Channel",
+    "post": "Post"
   },
   "workflow": {
     "title": "Workflow",

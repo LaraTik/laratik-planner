@@ -72,6 +72,14 @@ export type SocialPostObservation = {
   provider: "meta" | "tiktok";
   externalPostId: string;
   permalink: string | null;
+  /**
+   * Provider-hosted preview image. `null` whenever the provider did not
+   * return one (and for every row written before the column existed), so
+   * consumers must render a placeholder rather than assume a URL.
+   */
+  thumbnailUrl: string | null;
+  /** Post text as the provider exposes it; `null` when absent or blank. */
+  caption: string | null;
   publishedAt: Date | null;
   mediaType: "image" | "video" | "carousel" | "reel" | "story" | "unknown";
   mediaProductType: string | null;

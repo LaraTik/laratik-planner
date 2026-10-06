@@ -122,7 +122,8 @@
     "heatMapMore": "أكثر",
     "heatMapLegend": "متوسط المشاهدات حسب اليوم والساعة في {timezone}",
     "noFollowerData": "لا يوجد سجل متابعين في هذه الفترة بعد.",
-    "channel": "القناة"
+    "channel": "القناة",
+    "post": "منشور"
   },
   "workflow": {
     "title": "سير العمل",

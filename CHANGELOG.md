@@ -12,6 +12,79 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — official coloured Instagram and Facebook marks
+
+Instagram rendered as a generic lucide **Camera** icon and Facebook as
+lucide's monochrome glyph, so neither row read as the platform it names.
+`lucide-react` is monochrome (`currentColor`) and has no brand marks, so
+`components/workspace/brand-marks.tsx` now draws the two official marks —
+Instagram's published five-stop gradient and Facebook's `#1877F2` disc with
+the letterform inset from the circle edge. `PlatformIcon` references them
+directly, so every existing call site (Command Center account rows, Top
+content, Channel performance, the channels table) picks them up at once.
+
+The marks are `aria-hidden`: the account name beside them is the accessible
+name, and a glyph must not announce itself a second time. `design-system.md`
+now records this as the single documented exception to "never add raw
+page-level colour values" — a brand mark is third-party identity, not UI
+chrome, and nothing else on a row takes colour from it. Every other platform
+keeps its Lucide glyph.
+
+Both marks were checked rendered at 96px and 16px before shipping: the first
+Facebook path filled the whole disc and read as a blob, so the letterform was
+rebuilt with explicit stem/bar/hook geometry and inset from the circle.
+
+### Added — post thumbnails and captions in Top content and Observed content
+
+Both fields are new, not a rendering change: `social_post_observation` had no
+thumbnail and no caption, and the observations sync never requested them, so
+the reference design's images could not be reproduced from what the database
+held. Migration `0070` adds `thumbnail_url` and `caption`; the Meta provider now
+asks for `caption` and `thumbnail_url` (Instagram) and `message` +
+`full_picture` + attachment `thumbnail_url` (Facebook) **on the existing list
+call** — these are extra `fields=` on a request already being made, not new
+round trips, which retires the "fetched on demand" note in the provider. Rows
+written before the migration keep a null thumbnail until their next sync.
+
+`PostThumbnail` renders the image in a fixed square with explicit width/height
+(so nothing shifts when bytes arrive), `sizes` matched to the rendered width
+and `loading="lazy"`. The placeholder is a first-class state, not an error
+case: a provider CDN link is short-lived and can 403 once expired, so a failed
+load falls back to the same neutral tile instead of a broken-image glyph. The
+tile carries a media-type glyph rather than the brand mark, because the
+Channel column already shows the brand — repeating it showed the same logo
+twice per row.
+
+Layout and copy fixes made while verifying in the browser: the Top content
+column was headed "Observed content", colliding with the section of that name;
+action labels wrapped mid-phrase ("Create / brief"); caption-less rows repeated
+the account name twice; and Observed content's third column squeezed its
+actions past the card edge, so the grid is now two columns as in the reference.
+
+`next/image` `remotePatterns` was `[]`. It now allows the provider CDN hosts
+only (`**.fbcdn.net`, `**.fbsbx.com`, `**.ttcdn.com`, `**.tiktokcdn.com`),
+https-pinned to match the new `thumbnail_url` CHECK constraint. That constraint
+also accepts a leading-slash path, which cannot leave our origin; that is what
+lets test fixtures reference local assets without putting a test host in the
+production allowlist.
+
+### Changed — Facebook post content is now persisted (reverses an earlier test contract)
+
+`fetchMetaFacebookPageSnapshot`'s feed observation previously stored metrics
+only, and a test asserted the post's `message` was **never** persisted. There is
+no recorded rationale for that rule — it arrived with the foundation commit
+(`4718725c`) and appears nowhere in `AGENTS.md` or `docs/`. Displaying the post
+title in Top content requires the caption, so the contract is reversed: the
+caption and thumbnail are now mapped onto the observation.
+
+The "bounded" part of the original guarantee is preserved and still tested — the
+feed response's incidental fields are not copied into `sourceMetadata`.
+
+If storing post text was a deliberate data-minimisation stance rather than an
+incidental test guard, this is the commit to revisit: dropping `caption` from
+the feed request and the observation mapping reverts it without touching the
+thumbnail work.
+
 ### Fixed — the Command Center "Best time to post" heatmap was always blank
 
 The timing grid rendered six hardcoded rows (06:00, 09:00, 12:00, 15:00,

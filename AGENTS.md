@@ -835,6 +835,40 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-06 — Official brand marks, and post thumbnails + captions
+
+Two related additions to the Command Center's content surfaces.
+
+**Brand marks.** `components/workspace/brand-marks.tsx` owns the official
+Instagram and Facebook marks; `PlatformIcon` references them directly, so every
+call site picks them up. Instagram previously rendered a generic lucide
+**Camera** icon. Keep the two rules that make this safe:
+
+- Marks are `aria-hidden`. The account name beside them is the accessible name;
+  a glyph must not announce itself separately. Never give a mark a tooltip.
+- Marks carry brand colour and nothing else. `design-system.md` records this as
+  the single exception to "no raw page-level colour"; do not let that colour
+  bleed into a tile, a badge or any other part of the row. A platform with no
+  mark keeps its Lucide glyph — do not hand-draw one elsewhere.
+
+**Provider media.** `social_post_observation.thumbnail_url` and `.caption` are
+new (migration `0070`). Both are nullable **by design**: rows written before the
+migration have no thumbnail until their next sync, and not every provider
+returns an image. `PostThumbnail` therefore treats the placeholder as a normal
+state and also falls back to it on a failed load, because provider CDN links are
+short-lived and 403 once expired. Never make a component assume `src` is
+present.
+
+**A reversed contract worth knowing.** `fetchMetaFacebookPageSnapshot`
+previously stored metrics only, and a test asserted the post's `message` was
+never persisted. There is no recorded reason for it — it arrived with the
+foundation commit and is documented nowhere. Showing a post's title in Top
+content needs the caption, so that contract is now reversed and the "bounded"
+half (no wholesale copy of the feed payload into `sourceMetadata`) is still
+tested. If storing post text turns out to matter for a data-minimisation or
+legal reason, revert `caption` in the feed request and the observation mapping;
+the thumbnail work is independent.
+
 ### 2026-10-05 — Command Center rebuilt to the reference screen; the best-time heatmap now shows data
 
 The Workspace Overview Command Center was rebuilt to match the reference

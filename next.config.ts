@@ -11,9 +11,24 @@ const nextConfig: NextConfig = {
   // argon2 / node-rs bindings in production; pg is pure-JS so it's fine.
   serverExternalPackages: ["@node-rs/argon2", "pg"],
 
-  // Allow remote image sources we trust (none for v1, left empty intentionally).
+  // Remote image sources we trust.
+  //
+  // These are the provider CDNs that serve post preview images:
+  //   scontent.*.fbcdn.net / lookaside.fbsbx.com — Meta CDN media and thumbs
+  //   *.fbcdn.net                                — Meta CDN, other shard hosts
+  //   *.ttcdn.com / *.tiktokcdn.com              — TikTok CDN (not yet written)
+  //
+  // Scoped to the CDN hosts rather than opened up wholesale, so a thumbnail
+  // URL from a provider response cannot be used to fetch an arbitrary origin.
+  // Protocol is pinned to https, matching the
+  // `social_post_observation_thumbnail_https` CHECK constraint.
   images: {
-    remotePatterns: [],
+    remotePatterns: [
+      { protocol: "https", hostname: "**.fbcdn.net" },
+      { protocol: "https", hostname: "**.fbsbx.com" },
+      { protocol: "https", hostname: "**.ttcdn.com" },
+      { protocol: "https", hostname: "**.tiktokcdn.com" },
+    ],
   },
 
   // Strict React in dev, no surprises in prod.

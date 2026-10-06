@@ -1,4 +1,5 @@
 import "server-only";
+import { httpsUrl, stringValue } from "@/lib/social/media-fields";
 
 export type MetaPublicationPlatform = "facebook" | "instagram";
 export type MetaPublicationStatus = "scheduled" | "published";
@@ -28,21 +29,6 @@ export type MetaPublicationCandidate = {
 };
 
 export type MetaPublicationCandidateRaw = Record<string, unknown>;
-
-function stringValue(value: unknown): string | null {
-  return typeof value === "string" && value.trim().length > 0 ? value : null;
-}
-
-function httpsUrl(value: unknown): string | null {
-  const candidate = stringValue(value);
-  if (!candidate) return null;
-  try {
-    const url = new URL(candidate);
-    return url.protocol === "https:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
 
 function dateValue(value: unknown): Date | null {
   const raw = stringValue(value) ?? (typeof value === "number" ? String(value) : null);

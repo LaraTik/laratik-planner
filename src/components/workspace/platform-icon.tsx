@@ -1,27 +1,24 @@
 import * as React from "react";
-import {
-  Camera,
-  Facebook,
-  Linkedin,
-  Music2,
-  PlayCircle,
-  Twitter,
-  type LucideIcon,
-} from "lucide-react";
+import { Camera, Linkedin, Music2, PlayCircle, Twitter, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { FacebookMark, InstagramMark } from "@/components/workspace/brand-marks";
 
 /**
- * PlatformIcon — maps a `social_platform` enum value to a recognizable
- * lucide icon. Used in the channels table and any content row that
- * displays a target channel.
+ * PlatformIcon — maps a `social_platform` enum value to its icon.
+ * Used in the channels table, the Command Center's account rows, Top
+ * content, Channel performance and anywhere a channel is named.
+ *
+ * Instagram and Facebook resolve to their **official coloured brand marks**
+ * (`brand-marks.tsx`), which take precedence over the lucide mapping below:
+ * lucide is monochrome and its Instagram slot is a generic camera, so it
+ * cannot render the real logo. Every other platform keeps its lucide glyph
+ * so a row of mixed channels still reads consistently.
  *
  * Stitch uses Material Symbols (`photo_camera`, `music_note`, etc.).
  * We map to lucide because that's the project's icon library. The
  * mapping is intentionally loose — visual parity, not byte parity.
  */
 const PLATFORM_ICONS: Record<string, LucideIcon> = {
-  instagram: Camera,
-  facebook: Facebook,
   tiktok: Music2,
   linkedin: Linkedin,
   youtube: PlayCircle,
@@ -40,6 +37,18 @@ export interface PlatformIconProps extends React.SVGAttributes<SVGSVGElement> {
 }
 
 export function PlatformIcon({ platform, tile, className, ...props }: PlatformIconProps) {
+  const size = tile ? "h-6 w-6" : "h-4 w-4";
+  // Brand marks are referenced directly rather than looked up from a map:
+  // rendering a component resolved during render is flagged by
+  // react-hooks/static-components because it would remount (and reset any
+  // state) on every render. A direct reference is also clearer to read.
+  if (platform === "instagram" || platform === "instagram_reel") {
+    return <InstagramMark className={cn(size, className)} />;
+  }
+  if (platform === "facebook") {
+    return <FacebookMark className={cn(size, className)} />;
+  }
+
   const Icon = PLATFORM_ICONS[platform] ?? PlayCircle;
   if (tile) {
     return (

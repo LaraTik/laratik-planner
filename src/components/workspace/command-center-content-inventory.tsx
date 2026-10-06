@@ -6,6 +6,8 @@ import { ArrowUpRight, ChevronLeft, ChevronRight, Eye } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { PostCaption, PostThumbnail } from "@/components/workspace/post-thumbnail";
 import { ResearchBookmarkButton } from "@/components/workspace/research-bookmark-button";
 import type { CommandCenterPost } from "@/lib/social/command-center";
 
@@ -135,27 +137,45 @@ export function CommandCenterContentInventory({
       </div>
 
       {visible.length > 0 ? (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        // Two columns, as in the reference. A third column squeezed the three
+        // row actions until the primary one overflowed the card edge.
+        <div className="grid gap-3 md:grid-cols-2">
           {visible.map((post) => (
             <article
               key={post.id}
               className="border-border bg-surface-subtle flex min-w-0 flex-col gap-3 rounded-[var(--radius-control)] border p-3"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-body text-fg-primary truncate font-semibold">
-                    <bdi>{post.accountName}</bdi>
-                  </p>
-                  <p className="text-label text-fg-muted mt-1 capitalize">
-                    {post.platform} · {post.mediaType}
-                    {post.publishedAt
-                      ? ` · ${new Intl.DateTimeFormat(locale, { dateStyle: "medium", numberingSystem: "latn" }).format(post.publishedAt)}`
-                      : ""}
+              {/* Thumbnail leads the card, then the caption is the primary
+                  identifier and the account/platform line is the meta. */}
+              <div className="flex items-start gap-3">
+                <PostThumbnail src={post.thumbnailUrl} mediaType={post.mediaType} size={56} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <PostCaption caption={post.caption} className="text-fg-primary font-medium" />
+                    {post.outlierScore !== null && post.outlierScore >= 3 ? (
+                      <Badge variant="success">{post.outlierScore.toFixed(1)}x</Badge>
+                    ) : null}
+                  </div>
+                  <p className="text-label text-fg-muted mt-1 flex items-center gap-x-1.5 overflow-hidden whitespace-nowrap">
+                    <PlatformIcon platform={post.platform} className="h-3.5 w-3.5" />
+                    <span className="truncate">
+                      <bdi>{post.accountName}</bdi>
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span className="capitalize">{post.mediaType}</span>
+                    {post.publishedAt ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <bdi>
+                          {new Intl.DateTimeFormat(locale, {
+                            dateStyle: "medium",
+                            numberingSystem: "latn",
+                          }).format(post.publishedAt)}
+                        </bdi>
+                      </>
+                    ) : null}
                   </p>
                 </div>
-                {post.outlierScore !== null && post.outlierScore >= 3 ? (
-                  <Badge variant="success">{post.outlierScore.toFixed(1)}x</Badge>
-                ) : null}
               </div>
 
               <div className="grid grid-cols-3 gap-2">
@@ -170,13 +190,13 @@ export function CommandCenterContentInventory({
                 />
               </div>
 
-              <div className="mt-auto flex flex-wrap items-center gap-2 pt-1">
+              <div className="mt-auto flex items-center justify-between gap-2 pt-1">
                 {post.permalink ? (
                   <a
                     href={post.permalink}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
+                    className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center gap-1 rounded font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2"
                   >
                     <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                     {labels.openSource}
@@ -194,7 +214,7 @@ export function CommandCenterContentInventory({
                 ) : null}
                 <Link
                   href={`${planningHref}/new?researchPostObservationId=${encodeURIComponent(post.id)}`}
-                  className="text-label text-primary focus-visible:ring-focus-ring ms-auto inline-flex min-h-9 items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
+                  className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center gap-1 rounded font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2"
                 >
                   {labels.createBrief}
                   <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />

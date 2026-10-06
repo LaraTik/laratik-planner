@@ -196,6 +196,23 @@ export const socialPostObservations = pgTable(
     externalProvider: text("external_provider").notNull(),
     externalPostId: text("external_post_id").notNull(),
     permalink: text("permalink"),
+    /**
+     * Provider-hosted preview image for the post. Nullable because it is only
+     * populated from a successful sync, so rows written before this column
+     * existed stay empty until their next sync. The UI must render a branded
+     * placeholder rather than assume a URL is present.
+     *
+     * Constrained to https like `permalink`: the value is rendered as an
+     * image source, so a non-https or non-http value must never reach it.
+     */
+    thumbnailUrl: text("thumbnail_url"),
+    /**
+     * The post's own caption / message text, as the provider exposes it
+     * (Instagram `caption`, Facebook `message`, TikTok `description`).
+     * Nullable for the same reason as `thumbnailUrl`, and because not every
+     * provider returns text for every media type.
+     */
+    caption: text("caption"),
     publishedAt: timestamp("published_at", { withTimezone: true, mode: "date" }),
     mediaType: text("media_type").notNull(),
     mediaProductType: text("media_product_type"),
@@ -247,6 +264,15 @@ export const socialPostObservations = pgTable(
     check(
       "social_post_observation_permalink_https",
       sql`${t.permalink} IS NULL OR ${t.permalink} ~* '^https://'`,
+    ),
+    check(
+      "social_post_observation_thumbnail_https",
+      // The value is rendered as an image source, so it must be either an
+      // absolute https URL or a same-origin relative path. A leading-slash
+      // path cannot leave our origin, so allowing it is safe and keeps test
+      // fixtures able to reference local assets without a test host in the
+      // production `remotePatterns` list.
+      sql`${t.thumbnailUrl} IS NULL OR ${t.thumbnailUrl} ~* '^https://' OR ${t.thumbnailUrl} ~* '^/'`,
     ),
     uniqueIndex("social_post_observation_channel_daily_unique").on(
       t.socialChannelId,

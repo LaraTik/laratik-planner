@@ -19,6 +19,7 @@ import { Card } from "@/components/ui/card";
 import { DashboardPanel } from "@/components/workspace/dashboard-panel";
 import { BestTimeHeatmap } from "@/components/workspace/best-time-heatmap";
 import { PlatformIcon } from "@/components/workspace/platform-icon";
+import { PostCaption, PostThumbnail } from "@/components/workspace/post-thumbnail";
 import { Sparkline } from "@/components/workspace/sparkline";
 import { cn } from "@/lib/utils";
 import { CommandCenterRefresh } from "@/components/workspace/command-center-refresh";
@@ -144,6 +145,7 @@ export type CommandCenterLabels = {
   observedContent: string;
   observedContentDescription: string;
   channel: string;
+  post: string;
 };
 
 export type CommandCenterWatchlistAccount = {
@@ -645,7 +647,7 @@ export function CommandCenterPanel({
                         #
                       </th>
                       <th scope="col" className="px-2 py-2 text-start font-semibold">
-                        {labels.contentInventory.title}
+                        {labels.post}
                       </th>
                       <th scope="col" className="px-2 py-2 text-start font-semibold">
                         {labels.channel}
@@ -672,15 +674,48 @@ export function CommandCenterPanel({
                       <tr key={post.id} className="border-border border-b last:border-0">
                         <td className="text-fg-muted px-2 py-2 tabular-nums">{index + 1}</td>
                         <td className="px-2 py-2">
-                          <span className="text-fg-primary block max-w-[16rem] truncate font-semibold">
-                            <bdi>{post.accountName}</bdi>
-                          </span>
-                          <span className="text-fg-muted capitalize">{post.mediaType}</span>
-                          {post.outlierScore !== null && post.outlierScore >= 3 ? (
-                            <Badge variant="success" className="ms-2">
-                              {post.outlierScore.toFixed(1)}x
-                            </Badge>
-                          ) : null}
+                          {/* Thumbnail + text share one cell so the row reads as a
+                              single unit. The caption is the primary identifier —
+                              it is what the operator recognises the post by — and
+                              the account is the secondary meta line. Posts with no
+                              caption fall back to the account name as the title. */}
+                          <div className="flex items-start gap-3">
+                            <PostThumbnail
+                              src={post.thumbnailUrl}
+                              mediaType={post.mediaType}
+                              size={40}
+                            />
+                            <div className="max-w-[20rem] min-w-0">
+                              {post.caption ? (
+                                <PostCaption
+                                  caption={post.caption}
+                                  className="text-fg-primary font-medium"
+                                />
+                              ) : (
+                                <span className="text-label text-fg-primary block truncate font-semibold">
+                                  <bdi>{post.accountName}</bdi>
+                                </span>
+                              )}
+                              {/* Meta line: the account is only repeated when the
+                                  caption already carries the row's identity. */}
+                              <span className="text-label text-fg-muted mt-0.5 flex flex-wrap items-center gap-x-1.5">
+                                {post.caption ? (
+                                  <>
+                                    <span className="truncate">
+                                      <bdi>{post.accountName}</bdi>
+                                    </span>
+                                    <span aria-hidden="true">·</span>
+                                  </>
+                                ) : null}
+                                <span className="capitalize">{post.mediaType}</span>
+                                {post.outlierScore !== null && post.outlierScore >= 3 ? (
+                                  <Badge variant="success">
+                                    {labels.outlier} {post.outlierScore.toFixed(1)}x
+                                  </Badge>
+                                ) : null}
+                              </span>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-2 py-2">
                           <PlatformIcon platform={post.platform} />
@@ -704,13 +739,13 @@ export function CommandCenterPanel({
                           )}
                         </td>
                         <td className="px-2 py-2">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="flex items-center justify-end gap-3 whitespace-nowrap">
                             {post.permalink ? (
                               <a
                                 href={post.permalink}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
+                                className="text-primary focus-visible:ring-focus-ring rounded font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2"
                               >
                                 {labels.openSource}
                               </a>
@@ -727,7 +762,7 @@ export function CommandCenterPanel({
                             ) : null}
                             <Link
                               href={`${planningHref}/new?researchPostObservationId=${encodeURIComponent(post.id)}`}
-                              className="text-primary focus-visible:ring-focus-ring rounded font-semibold focus:outline-none focus-visible:ring-2"
+                              className="text-primary focus-visible:ring-focus-ring rounded font-semibold whitespace-nowrap focus:outline-none focus-visible:ring-2"
                             >
                               {labels.createBriefFromPost}
                             </Link>

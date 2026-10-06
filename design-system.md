@@ -131,6 +131,16 @@ item; add a join table only when multi-project reuse is demonstrated.
 - Reuse `Card`, `Button`, `Checkbox`, `PageHeader`, `SegmentedControl`, and
   existing chart/data-table components before creating a new primitive.
 - Use Lucide icons consistently; no emoji as structural icons.
+- **Exception — third-party brand marks carry their published colours.**
+  `components/workspace/brand-marks.tsx` holds the official Instagram and
+  Facebook marks at their brand values (`#4F5BD5 → #FEDA75` gradient;
+  `#1877F2`). This is the one place a raw hex is allowed inside a component,
+  because a monochrome Instagram logo is the _wrong_ logo: a brand mark is
+  third-party identity, not UI chrome, and it does not carry status or emphasis
+  meaning. Scope the exception tightly — nothing else on a row or card may take
+  colour from it. Platform marks are always `aria-hidden`, since the account
+  name beside them is the accessible name. Every other platform keeps its
+  Lucide glyph; if you add a mark, add it to `brand-marks.tsx` and nowhere else.
 - Use logical spacing and direction-aware inputs for EN/AR.
 - Preserve visible focus, 44px touch targets, reduced-motion behavior, and
   bilingual catalog parity.

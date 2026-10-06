@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import { Camera, Facebook, Linkedin, Music2, PlayCircle, Twitter } from "lucide-react";
+import { Linkedin, Music2, PlayCircle, Twitter } from "lucide-react";
 import {
   localizedPlatformLabel,
   PlatformIcon,
@@ -52,18 +52,59 @@ describe("PlatformIcon", () => {
     expect(container.querySelector("svg")).toBeTruthy();
   });
 
-  it("wraps the icon in a coloured tile when tile=true", () => {
-    const { container } = render(<PlatformIcon platform="instagram" tile />);
+  it("renders the official brand mark for Instagram and Facebook", () => {
+    const { container: ig } = render(<PlatformIcon platform="instagram" />);
+    expect(ig.querySelector('[data-testid="brand-mark-instagram"]')).toBeTruthy();
+    // A brand mark must not fall back to the monochrome lucide glyphs —
+    // Instagram used to render a generic Camera icon.
+    expect(ig.querySelector('[class*="lucide"]')).toBeNull();
+
+    const { container: fb } = render(<PlatformIcon platform="facebook" />);
+    expect(fb.querySelector('[data-testid="brand-mark-facebook"]')).toBeTruthy();
+  });
+
+  it("keeps the lucide glyph for platforms without a brand mark", () => {
+    const { container } = render(<PlatformIcon platform="tiktok" />);
+    expect(container.querySelector("[class*='lucide']")).toBeTruthy();
+  });
+
+  it("wraps a monochrome glyph in a coloured tile when tile=true", () => {
+    const { container } = render(<PlatformIcon platform="linkedin" tile />);
     const tile = container.firstElementChild;
     expect(tile?.className).toMatch(/inline-flex/);
     expect(tile?.className).toMatch(/rounded-lg/);
   });
 
+  it("does not wrap a brand mark in the neutral tile", () => {
+    // The mark already carries its own square silhouette and full colour, so
+    // a neutral tile behind it would only mute it.
+    const { container } = render(<PlatformIcon platform="instagram" tile />);
+    const root = container.firstElementChild;
+    expect(root?.getAttribute("data-testid")).toBe("brand-mark-instagram");
+    expect(root?.getAttribute("class") ?? "").not.toMatch(/inline-flex/);
+  });
+
+  it("hides brand marks from assistive tech", () => {
+    // The account name beside the mark is the accessible name; the glyph
+    // must never announce itself a second time.
+    const { container } = render(<PlatformIcon platform="facebook" />);
+    const svg = container.querySelector("svg");
+    expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("uses the published Instagram gradient and Facebook blue", () => {
+    const { container: ig } = render(<PlatformIcon platform="instagram" />);
+    const stops = [...ig.querySelectorAll("stop")].map((s) => s.getAttribute("stop-color"));
+    expect(stops).toEqual(["#FEDA75", "#FA7E1E", "#D62976", "#962FBF", "#4F5BD5"]);
+
+    const { container: fb } = render(<PlatformIcon platform="facebook" />);
+    expect(fb.querySelector("circle")?.getAttribute("fill")).toBe("#1877F2");
+  });
+
   it("imports the right lucide primitives (regression)", () => {
-    // If the icon map ever drifts, this test fails fast.
+    // If the icon map ever drifts, this test fails fast. Instagram and
+    // Facebook are excluded: they resolve to brand marks, not lucide.
     const expected = {
-      instagram: Camera,
-      facebook: Facebook,
       tiktok: Music2,
       linkedin: Linkedin,
       youtube: PlayCircle,
@@ -73,11 +114,8 @@ describe("PlatformIcon", () => {
       const { container } = render(<PlatformIcon platform={platform} />);
       const rendered = container.querySelector("svg");
       expect(rendered).toBeTruthy();
-      // lucide renders the icon name as a class on the <svg> element.
       const cls = rendered?.getAttribute("class") ?? "";
-      // The actual class is `lucide-<icon-name>`. Loose check via name.
-      const iconName = Icon.displayName ?? "";
-      expect(iconName).toBeTruthy();
+      expect(Icon.displayName ?? "").toBeTruthy();
       expect(cls).toContain("lucide");
     }
   });

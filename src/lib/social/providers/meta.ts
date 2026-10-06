@@ -24,6 +24,7 @@ import {
   type MetaPublicationCandidateRaw,
   type MetaPublicationPlatform,
 } from "@/lib/social/meta-publications";
+import { blankToNull, httpsOrNull } from "@/lib/social/media-fields";
 
 /**
  * M2 — Meta (Facebook Login for Business) provider adapter.
@@ -779,11 +780,10 @@ type IgBusinessResponse = {
    * Present when the request was field-expanded to include
    * `media.limit(10){...}`. The IG profile exposes this as a
    * nested `data` array of posts. The first element is the
-   * most recent post. Each post is intentionally narrow — we
-   * only need identity, basic engagement, and video duration for the
-   * bounded post-observation slice. Deeper fields (caption,
-   * thumbnail, etc.) are fetched on demand from `/{media-id}`
-   * or `/{media-id}/insights`.
+   * most recent post. Each post carries identity, basic
+   * engagement, video duration, caption and thumbnail — all
+   * requested on this one account call, so the bounded
+   * post-observation slice needs no extra round trip.
    */
   media?: {
     data: IgMediaSummary[];
@@ -799,6 +799,14 @@ type IgMediaSummary = {
   media_type?: string;
   media_product_type?: string;
   video_duration?: number;
+  /**
+   * Post text and preview image. Both ride along on the SAME account
+   * request as the engagement fields, so they cost no extra round trip —
+   * the earlier "fetched on demand" note only applies to per-media
+   * `/{media-id}` calls.
+   */
+  caption?: string;
+  thumbnail_url?: string;
 };
 
 type PageInsightsResponse = {
@@ -1254,6 +1262,8 @@ async function fetchMetaInstagramPostObservations(args: {
         provider: "meta",
         externalPostId: item.id,
         permalink: candidate.permalink,
+        thumbnailUrl: httpsOrNull(item.thumbnail_url),
+        caption: blankToNull(item.caption),
         publishedAt: candidate.publishedAt ?? candidate.createdAt,
         mediaType: candidate.mediaType,
         mediaProductType: item.media_product_type ?? null,
@@ -1280,7 +1290,11 @@ type FacebookFeedPostSummary = {
   created_time?: unknown;
   permalink_url?: unknown;
   status_type?: unknown;
-  attachments?: { data?: Array<{ media_type?: unknown }> };
+  /** Post text. Facebook calls this `message`. */
+  message?: unknown;
+  /** Page-post preview image. */
+  full_picture?: unknown;
+  attachments?: { data?: Array<{ media_type?: unknown; thumbnail_url?: unknown }> };
   reactions?: { summary?: { total_count?: unknown } };
   comments?: { summary?: { total_count?: unknown } };
   shares?: { count?: unknown };
@@ -1304,7 +1318,7 @@ async function fetchMetaFacebookPostObservations(args: {
   const url = new URL(`${graphBaseUrl(args.apiVersion)}/${args.pageId}/feed`);
   url.searchParams.set(
     "fields",
-    "id,created_time,permalink_url,status_type,attachments{media_type},reactions.limit(0).summary(true),comments.limit(0).summary(true),shares",
+    "id,created_time,permalink_url,status_type,message,full_picture,attachments{media_type,thumbnail_url},reactions.limit(0).summary(true),comments.limit(0).summary(true),shares",
   );
   url.searchParams.set("limit", String(POST_OBSERVATION_LIMIT));
   url.searchParams.set("access_token", args.accessToken);
@@ -1345,6 +1359,11 @@ async function fetchMetaFacebookPostObservations(args: {
         provider: "meta",
         externalPostId: item.id,
         permalink: candidate.permalink,
+        // A page post has no media object of its own; the preview image
+        // lives on the attachment, with `full_picture` as the fallback.
+        thumbnailUrl:
+          httpsOrNull(item.attachments?.data?.[0]?.thumbnail_url) ?? httpsOrNull(item.full_picture),
+        caption: blankToNull(item.message),
         publishedAt: candidate.publishedAt ?? candidate.createdAt,
         mediaType: candidate.mediaType,
         mediaProductType: null,
@@ -1718,7 +1737,7 @@ export async function fetchMetaInstagramSnapshot(args: {
   // the bounded post-observation fan-out below uses this same response.
   url.searchParams.set(
     "fields",
-    "followers_count,media_count,follows_count,username,name,media.limit(10){id,like_count,comments_count,permalink,timestamp,media_type,media_product_type,video_duration}",
+    "followers_count,media_count,follows_count,username,name,media.limit(10){id,like_count,comments_count,permalink,timestamp,media_type,media_product_type,video_duration,caption,thumbnail_url}",
   );
   url.searchParams.set("access_token", accessToken);
   const { body, requestId, usage: basicFieldsUsage } = await providerRequest(url.toString());

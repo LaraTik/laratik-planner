@@ -1,0 +1,3 @@
+ALTER TABLE "social_post_observation" ADD COLUMN "thumbnail_url" text;--> statement-breakpoint
+ALTER TABLE "social_post_observation" ADD COLUMN "caption" text;--> statement-breakpoint
+ALTER TABLE "social_post_observation" ADD CONSTRAINT "social_post_observation_thumbnail_https" CHECK ("social_post_observation"."thumbnail_url" IS NULL OR "social_post_observation"."thumbnail_url" ~* '^https://' OR "social_post_observation"."thumbnail_url" ~* '^/');

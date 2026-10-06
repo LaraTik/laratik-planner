@@ -261,6 +261,8 @@ export default async function WorkspaceOverviewPage({
       platform: channel.platform as "facebook" | "instagram" | "tiktok",
       accountName: channel.accountName,
       permalink: observation.permalink,
+      thumbnailUrl: observation.thumbnailUrl,
+      caption: observation.caption,
       publishedAt: observation.publishedAt,
       mediaType: observation.mediaType as
         "image" | "video" | "carousel" | "reel" | "story" | "unknown",
@@ -633,6 +635,7 @@ export default async function WorkspaceOverviewPage({
             "workspaceOverviewDashboard.commandCenter.observedContentDescription",
           ),
           channel: t("workspaceOverviewDashboard.commandCenter.channel"),
+          post: t("workspaceOverviewDashboard.commandCenter.post"),
         }}
         windowDays={socialWindowDays}
         window30Href={commandCenterWindowHref(30)}

@@ -59,6 +59,14 @@ export type CommandCenterPost = {
   platform: CommandCenterChannel["platform"];
   accountName: string;
   permalink: string | null;
+  /**
+   * Provider-hosted preview image, or null when the provider returned none
+   * (and for every row written before the column existed). The UI must render
+   * a branded placeholder instead of assuming a URL.
+   */
+  thumbnailUrl: string | null;
+  /** Post text as the provider exposes it, or null. */
+  caption: string | null;
   publishedAt: Date | null;
   mediaType: "image" | "video" | "carousel" | "reel" | "story" | "unknown";
   views: number | null;

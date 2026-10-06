@@ -1124,7 +1124,14 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
     expect((snapshot.sourceMetadata as { partial?: boolean }).partial).toBe(false);
   });
 
-  it("stores bounded Facebook feed observations without persisting post content", async () => {
+  it("stores bounded Facebook feed observations including the post caption and thumbnail", async () => {
+    // This test previously asserted the OPPOSITE — that post content must
+    // never be persisted. The Command Center's Top content and Observed
+    // content now need the post's own text and preview image, so the feed
+    // call requests `message` / `full_picture` / attachment `thumbnail_url`
+    // and both are mapped onto the observation. The "bounded" guarantee is
+    // unchanged: only the fields the provider was asked for are stored, and
+    // the raw feed payload is never dumped into sourceMetadata.
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));
       if (url.pathname.endsWith(`/${pageId}/feed`)) {
@@ -1134,8 +1141,16 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
               id: "post-1",
               created_time: "2026-09-29T12:00:00Z",
               permalink_url: "https://facebook.com/post-1",
-              message: "must not be persisted",
-              attachments: { data: [{ media_type: "video" }] },
+              message: "the post caption",
+              full_picture: "https://scontent.xx.fbcdn.net/v/full.jpg",
+              attachments: {
+                data: [
+                  {
+                    media_type: "video",
+                    thumbnail_url: "https://scontent.xx.fbcdn.net/v/thumb.jpg",
+                  },
+                ],
+              },
               reactions: { summary: { total_count: 10 } },
               comments: { summary: { total_count: 3 } },
               shares: { count: 2 },
@@ -1168,8 +1183,14 @@ describe("fetchMetaFacebookPageSnapshot — Page insights metric_type + partial 
       shares: 2,
       interactions: 15,
       views: null,
+      caption: "the post caption",
+      // The attachment thumbnail wins over `full_picture` because it is the
+      // field that matches the attachment the media type came from.
+      thumbnailUrl: "https://scontent.xx.fbcdn.net/v/thumb.jpg",
     });
-    expect(JSON.stringify(snapshot)).not.toContain("must not be persisted");
+    // Still bounded: the feed response's incidental fields are not copied
+    // wholesale into the observation's metadata.
+    expect(JSON.stringify(snapshot)).not.toContain("reactions");
   });
 
   it("marks the snapshot as partial when the follower is captured but insights are null", async () => {
