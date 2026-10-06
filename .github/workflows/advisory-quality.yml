@@ -30,6 +30,96 @@ env:
   ADVISORY_SUITE: ${{ inputs.suite || 'critical' }}
 
 jobs:
+  # A dependency advisory is published on someone else's schedule, so the
+  # deploy gate only discovers it when somebody pushes — which is the worst
+  # possible moment, because a routine commit gets blocked by unrelated
+  # news. This job runs the audit daily (and on push) and opens/updates an
+  # issue instead of failing the deploy. See
+  # docs/operations/runbook.md § "Patching a dependency advisory".
+  dependency-advisory:
+    name: Dependency advisory
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.10.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Informational at `low` — this job reports, it does not gate. The
+      # blocking check stays in ci.yml at the documented high threshold.
+      - name: Audit production dependencies
+        run: pnpm audit --prod || true
+
+      - name: Publish advisory summary
+        uses: actions/github-script@v7
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            let report = '';
+            try {
+              report = execSync('pnpm audit --prod --json', { encoding: 'utf8' });
+            } catch (error) {
+              // pnpm exits non-zero when it finds anything, and still prints
+              // the JSON body to stdout — that is the payload we want.
+              report = error.stdout || '';
+            }
+            let advisories = [];
+            try {
+              const parsed = JSON.parse(report);
+              advisories = parsed.advisories
+                ? Object.values(parsed.advisories).map((a) => ({
+                    name: a.module_name,
+                    severity: a.severity,
+                    title: a.title,
+                    url: a.url,
+                    patched: a.patched_versions,
+                  }))
+                : [];
+            } catch {
+              // A non-JSON body means the registry could not be reached; say
+              // so in the issue rather than silently reporting "clean".
+              advisories = [{ name: 'audit', severity: 'unknown', title: 'Could not parse pnpm audit output — the registry may be unreachable.', url: '', patched: '' }];
+            }
+            const high = advisories.filter((a) => a.severity === 'high' || a.severity === 'critical');
+            const issue = high.length
+              ? `🚨 **${high.length} high/critical production advisories** require a \`pnpm.overrides\` entry or a dependency bump before the next push ships.\n\n` +
+                high.map((a) => `- **${a.name}** (${a.severity}) — ${a.title}\n  patched: \`${a.patched || 'n/a'}\`\n  ${a.url}`).join('\n')
+              : advisories.length
+                ? `ℹ️ ${advisories.length} lower-severity production advisories. These do not block deploy (the gate is high/critical).\n\n` +
+                  advisories.map((a) => `- ${a.name} (${a.severity}) — ${a.title}`).join('\n')
+                : '✅ No known production dependency advisories.';
+
+            const { title, body } = {
+              title: high.length ? 'Dependency advisory blocks deploy' : 'Dependency advisory (informational)',
+              body: [
+                `Advisory scan of \`${context.sha}\` (\`${context.ref}\`).\n\n`,
+                'Run: `pnpm audit --prod`\n\n',
+                issue,
+                '\n\n---\n_Opened by `.github/workflows/advisory-quality.yml`. Re-run with workflow_dispatch, or close once the overrides land._',
+              ].join(''),
+            };
+            return github.rest.issues.create({ owner: context.repo.owner, repo: context.repo.repo, title, body });
+
   coverage:
     name: Coverage advisory
     runs-on: ubuntu-latest

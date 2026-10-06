@@ -543,6 +543,53 @@ local E2E** section above and
 [`../testing/strategy.md`](../testing/strategy.md) (Release gates)
 for the full contract.
 
+## Patching a dependency advisory
+
+A published advisory blocks the deploy gate (`pnpm audit --prod --audit-level
+high` in `ci.yml`) as soon as the next commit is pushed, even if that commit
+touched none of the affected code. This is expected: the advisory database
+changes on someone else's schedule.
+
+**Who sees it first.** The nightly `Advisory quality` workflow runs the audit at
+`06:00 UTC` and opens an issue instead of failing the deploy, so an advisory
+normally surfaces _before_ it can block a push. If you are reading this because a
+push was blocked, the nightly issue should be open too — check it, because it
+lists the advisory links and the patched ranges.
+
+**The fix is always the same shape.** Add a `pnpm.overrides` entry in
+`package.json` pinning the package to the patched range, then reinstall:
+
+```bash
+# 1. add to pnpm.overrides, e.g. "proxy-addr": ">=2.0.8"
+pnpm install
+pnpm audit --prod --audit-level high   # must print "No known vulnerabilities found"
+```
+
+Overrides use a `>=` floor rather than a pinned version, matching the existing
+entries (`fast-uri`, `ip-address`, `brace-expansion`). Prefer an override over
+editing a transitive lockfile: the next `pnpm install` silently reverts manual
+lockfile edits.
+
+**Override safely.** A blanket override applies to _every_ instance of that
+package, so check the major line is unchanged before you force it:
+
+```bash
+pnpm ls <package> --depth 8 | grep -oE "<package> [0-9]+\.[0-9]+\.[0-9]+" | sort -u
+```
+
+If the patched version is a different major than what a dependent declares,
+add a scoped override (`"pkg@<current>": ">=<patched>"`) so only the vulnerable
+range moves — that is the pattern already used for
+`minimatch@10.2.6>brace-expansion`.
+
+**Then prove it.** `sharp` is the one override that can break the build, because
+`next/image` calls it at build and request time:
+
+```bash
+pnpm build          # sharp loads at build; a bad override fails here
+pnpm test:unit
+```
+
 ## Troubleshooting
 
 | Symptom                                                             | First check                                        | Fix                                                                                                                            |

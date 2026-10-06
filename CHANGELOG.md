@@ -12,6 +12,45 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the deploy gate was blocked by four newly published advisories
+
+CI failed on the brand-mark/media push and `Deploy` was skipped behind it. The
+failing step was `Dependency audit`; unit (479 files) and integration were
+green. Nothing in that commit touched a dependency — the advisory database
+simply gained four entries between pushes, and `pnpm audit` fails on finding
+anything at all.
+
+Four transitive production advisories, all patched inside their existing major:
+
+| Package       | Was    | Patched | Path                                  |
+| ------------- | ------ | ------- | ------------------------------------- |
+| proxy-addr    | 2.0.7  | ≥2.0.8  | `@modelcontextprotocol/sdk > express` |
+| shell-quote   | 1.10.0 | ≥1.11.0 | `drizzle-orm > gel`                   |
+| source-map-js | 1.2.1  | ≥1.2.2  | `next > postcss`                      |
+| sharp         | 0.35.4 | ≥0.35.5 | direct                                |
+
+Each is now a `pnpm.overrides` entry using the repo's existing `>=` floor style.
+`pnpm build` is the load-bearing check here: `next/image` calls sharp at build
+and request time, so a bad override there fails the build rather than the audit.
+
+**Two changes so this stops blocking unrelated pushes:**
+
+- The deploy gate ran `pnpm audit --prod` with no `--audit-level`, so pnpm's
+  default of `low` applied and a low or moderate advisory failed the deploy —
+  stricter than the contract in `ci.yml`'s own header, which says "zero
+  critical/high production audit findings". It now passes
+  `--audit-level high`, matching the documented contract. Lower severities are
+  no longer ignored, they are reported (below).
+- The nightly `Advisory quality` workflow did not audit at all, so an advisory
+  could only ever be discovered by someone pushing — the worst possible moment,
+  since an unrelated commit gets blocked. It now runs the audit at `06:00 UTC`
+  and opens a GitHub issue instead of failing the deploy, so advisories
+  normally surface a day before they can block anything.
+
+`docs/operations/runbook.md` gains a "Patching a dependency advisory" section
+covering the override workflow, how to check the major line before forcing an
+override, and why a manual lockfile edit is the wrong fix.
+
 ### Added — official coloured Instagram and Facebook marks
 
 Instagram rendered as a generic lucide **Camera** icon and Facebook as
