@@ -550,6 +550,11 @@ high` in `ci.yml`) as soon as the next commit is pushed, even if that commit
 touched none of the affected code. This is expected: the advisory database
 changes on someone else's schedule.
 
+**"Fixed the audit" is a snapshot, not a state.** Advisories keep arriving —
+patching one batch only buys time until the next lands. Never record an audit
+as clean and stop; re-run the exact CI command immediately before pushing, and
+treat the nightly issue as the standing source of truth.
+
 **Who sees it first.** The nightly `Advisory quality` workflow runs the audit at
 `06:00 UTC` and opens an issue instead of failing the deploy, so an advisory
 normally surfaces _before_ it can block a push. If you are reading this because a
