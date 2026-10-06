@@ -51,6 +51,26 @@ and request time, so a bad override there fails the build rather than the audit.
 covering the override workflow, how to check the major line before forcing an
 override, and why a manual lockfile edit is the wrong fix.
 
+### Fixed — a second advisory landed while the first was being fixed
+
+`pnpm audit --prod --audit-level high` began failing again within hours of the
+previous fix going green: `@modelcontextprotocol/sdk` 1.30.0 →
+[GHSA-6qxp-vccf-f47h](https://github.com/advisories/GHSA-6qxp-vccf-f47h) — the MCP
+TypeScript SDK's OAuth client could send credentials to an authorization server
+chosen by the MCP server. Patched in >=1.31.0; the dependency is now `^1.31.0`.
+
+This one is a **direct** production dependency rather than a transitive one, so
+the correct fix is bumping the declared range — an override would have silenced
+the audit while leaving `package.json` claiming a vulnerable version.
+
+It also carries the risk an override does not: the MCP server imports the SDK by
+deep subpath (`@modelcontextprotocol/sdk/server/mcp.js` and
+`.../server/webStandardStreamableHttp.js`), and those paths can move between
+minors. Both were confirmed to resolve on 1.32.1 and the 44 MCP unit tests pass.
+
+The runbook now distinguishes the two cases up front, since reaching for an
+override first is the easy mistake.
+
 ### Added — official coloured Instagram and Facebook marks
 
 Instagram rendered as a generic lucide **Camera** icon and Facebook as

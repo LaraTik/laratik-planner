@@ -556,6 +556,26 @@ normally surfaces _before_ it can block a push. If you are reading this because 
 push was blocked, the nightly issue should be open too — check it, because it
 lists the advisory links and the patched ranges.
 
+**Check whether the package is direct or transitive first.** The fix differs:
+
+```bash
+pnpm audit --prod --audit-level high            # the Paths column tells you which
+node -e "const p=require('./package.json');
+  console.log(p.dependencies?.['<pkg>'] ?? p.devDependencies?.['<pkg>'] ?? 'transitive')"
+```
+
+- **Direct dependency** → bump the range in `dependencies` (or
+  `devDependencies`) to the patched version and run `pnpm install`. Do **not**
+  add an override for it; an override for a package you already declare just
+  hides the real version from anyone reading `package.json`.
+- **Transitive dependency** → use the `pnpm.overrides` flow below.
+
+A direct bump carries its own risk that an override does not: deep subpath
+imports can move between minors. If the package is imported by subpath, verify
+each one actually resolves _and_ that its tests pass — `@modelcontextprotocol/sdk`
+is the live example, imported as
+`@modelcontextprotocol/sdk/server/{mcp,webStandardStreamableHttp}.js`.
+
 **The fix is always the same shape.** Add a `pnpm.overrides` entry in
 `package.json` pinning the package to the patched range, then reinstall:
 
