@@ -68,6 +68,22 @@ also accepts a leading-slash path, which cannot leave our origin; that is what
 lets test fixtures reference local assets without putting a test host in the
 production allowlist.
 
+### Verified — the advisory E2E failures are not from this change
+
+The pre-push advisory chromium run reported 10 failed / 242 passed, up from 6 on
+the previous push, with `platform-access-responsive`, `trends-degraded` and
+`trends-workspace-optout` appearing for the first time. Baselined rather than
+assumed: the five implicated specs were run in isolation on both sides.
+
+|                        | HEAD (`c5465f36`) | parent (`002d5aec`) |
+| ---------------------- | ----------------- | ------------------- |
+| 5 specs, `--workers=1` | 18 passed         | 18 passed           |
+
+Identical, so the full-suite failures are ordering/timing behaviour in the
+252-test serial run, not a regression from the brand marks or media work. None
+of those specs touch a changed surface — they exercise `/trends`,
+`/settings/trends`, `/planning/new` and the platform-admin routes.
+
 ### Changed — Facebook post content is now persisted (reverses an earlier test contract)
 
 `fetchMetaFacebookPageSnapshot`'s feed observation previously stored metrics
