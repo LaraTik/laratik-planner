@@ -2,6 +2,7 @@ import "server-only";
 
 import { querySocialAnalytics, querySocialPostObservations } from "@/lib/social/analytics-query";
 import { buildCommandCenterSummary } from "@/lib/social/command-center";
+import { countPostsMissingThumbnails } from "@/lib/social/thumbnail-backfill";
 import { db as appDb } from "@/lib/db";
 
 type Db = typeof appDb;
@@ -24,6 +25,8 @@ export interface CommandCenterSnapshot {
     distinctPosts: number;
     rowsMissingThumbnail: number;
     rowsMissingCaption: number;
+    /** Distinct POSTS still missing a preview image — the backfill backlog. */
+    missingThumbnails: number;
   };
 }
 
@@ -92,12 +95,22 @@ export async function getCommandCenterSnapshot(
     summary,
     observationStats: {
       rows: observations.length,
-      distinctPosts: summary.content.topPosts.length,
+      // The number of DISTINCT posts, not topPosts.length (which is capped at
+      // five): comparing it against `rows` is what exposes snapshot
+      // duplication, which is the whole point of surfacing this.
+      distinctPosts: new Set(
+        observations.map(
+          ({ observation }) =>
+            `${observation.socialChannelId}|${observation.externalProvider}|${observation.externalPostId}`,
+        ),
+      ).size,
       rowsMissingThumbnail: observations.filter(
         ({ observation }) => observation.thumbnailUrl === null,
       ).length,
       rowsMissingCaption: observations.filter(({ observation }) => observation.caption === null)
         .length,
+      // Distinct POSTS still missing a preview image — the backfill backlog.
+      missingThumbnails: await countPostsMissingThumbnails(database, workspaceId),
     },
   };
 }

@@ -858,6 +858,12 @@ on distinct posts, is bounded, and never overwrites an existing image. If you
 extend it, keep all four properties — an unbounded backfill turns a missing
 thumbnail into a provider bill.
 
+Reach it through `backfillWorkspaceThumbnails`, which resolves credentials the
+same way the sync does (workspace → agency DEK → connection → access token).
+Do not unwrap keys in a new script or route; that creates a second path to a
+plaintext provider token. Operators trigger it through the
+`laratik_planner_backfill_thumbnails` MCP tool, which defaults to `dry_run: true`.
+
 ### 2026-10-06 — Official brand marks, and post thumbnails + captions
 
 Two related additions to the Command Center's content surfaces.

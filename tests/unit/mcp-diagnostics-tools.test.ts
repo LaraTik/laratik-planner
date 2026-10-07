@@ -118,10 +118,20 @@ describe("diagnostics tool registration", () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
     // 15 content/brand tools + 5 diagnostics + 1 read-only research tool
-    // + 1 read-only Command Center reader.
-    expect(tools).toHaveLength(22);
+    // + 1 read-only Command Center reader + 1 thumbnail backfill.
+    expect(tools).toHaveLength(23);
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_get_command_center");
+    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_backfill_thumbnails");
+  });
+
+  it("marks the thumbnail backfill as a WRITE, not a read", async () => {
+    // The backfill spends provider quota and writes rows, so it must not
+    // advertise itself as read-only.
+    const client = await connect([READ]);
+    const { tools } = await client.listTools();
+    const backfill = tools.find((tool) => tool.name === "laratik_planner_backfill_thumbnails");
+    expect(backfill?.annotations?.readOnlyHint).toBe(false);
   });
 
   it("exposes the Command Center reader as read-only", async () => {

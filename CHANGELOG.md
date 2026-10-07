@@ -71,6 +71,26 @@ minors. Both were confirmed to resolve on 1.32.1 and the 44 MCP unit tests pass.
 The runbook now distinguishes the two cases up front, since reaching for an
 override first is the easy mistake.
 
+### Fixed — the backfill was unreachable, and `distinctPosts` reported the wrong number
+
+Two defects in the de-duplication work shipped immediately before this one.
+
+**The backfill had no entry point.** `backfillMissingThumbnails` existed but
+nothing called it — a library function cannot fix a workspace. It is now
+reachable through `backfillWorkspaceThumbnails`, which resolves credentials the
+same way the social sync does (workspace → agency DEK → connection → access
+token) rather than duplicating key unwrapping, and through the
+`laratik_planner_backfill_thumbnails` MCP tool. That tool defaults to
+`dry_run: true`, reports the backlog without spending provider quota, and is
+marked `readOnlyHint: false` because it writes.
+
+**`observation_stats.distinctPosts` was reporting `topPosts.length`**, which is
+capped at five — so the one number meant to expose snapshot duplication was
+useless. It now counts distinct posts across the observations, which is what
+makes `rows` vs `distinctPosts` a real diagnostic. Added
+`missing_thumbnails` to the same block: the distinct posts still lacking a
+preview image, i.e. the backfill backlog.
+
 ### Fixed — Top content and Observed content repeated the same post
 
 Three symptoms, one cause. `social_post_observation` stores **one row per post
