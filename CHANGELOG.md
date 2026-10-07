@@ -12,6 +12,32 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — nested scroll containers and a 100vh shell hid page content on mobile
+
+Two independent defects, both visible on the workspace list / app home.
+
+**Nested scroll containers.** The workspaces page wrapped `DataTable` in
+`overflow-x-auto`, and `DataTable` already provides one internally. CSS
+compounds it: an explicit `overflow-x` forces `overflow-y` to compute to
+`auto`, so each container scrolls in **both** axes. Stacked, the inner
+momentum scroller swallows vertical page drags on iOS — which reads as
+"scrolling doesn't work". Removed the redundant wrapper: one container, one
+axis. This is the `scroll-behavior` rule ("avoid nested scroll regions that
+interfere with the main scroll experience").
+
+**`min-h-screen` instead of `min-h-dvh`.** The shell was sized to `100vh`, which
+on mobile is the viewport with the browser chrome **retracted** — taller than
+anything the user can see — so the bottom of every page sat below the fold. This
+is the `viewport-units` rule ("prefer `min-h-dvh` over `100vh` on mobile").
+
+Ruled out rather than assumed: no `overflow-hidden` on any ancestor (the
+document scroller was already clean); bottom-nav clearance was already correct
+(`7rem` + `env(safe-area-inset-bottom)` on `<main>`); and `RouteScrollReset`,
+which force-scrolls to top per navigation and does make a page feel
+unscrollable, is not a visibility defect and was left alone.
+
+Diagnosed from source; not confirmed in a browser at a mobile viewport.
+
 ### Fixed — the Overview month switcher appeared to do nothing
 
 Changing `?month=YYYY-MM` on the workspace Overview left the page looking
