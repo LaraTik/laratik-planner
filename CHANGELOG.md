@@ -12,6 +12,54 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — a shared post's link pointed at `0.0.0.0`, not the public domain
+
+Sharing a post's delivery (the asset collection behind
+`POST /api/media/share-collections`) returned
+`http://0.0.0.0:3000/share/media-collection/<token>`. Copy-link, WhatsApp and
+the native share sheet all handed the recipient a dead URL.
+
+**The root cause is that one share route read the deploy topology and the
+other did not.** Production runs behind Traefik with `HOSTNAME=0.0.0.0` (see
+`Dockerfile`), so the host a route handler observes is the container's bind
+address rather than the public domain.
+`src/lib/http/public-app-origin.ts` (`resolvePublicAppOrigin`) exists exactly
+to reject those hosts, and the single-asset public-link route has used it
+since `4ed0522a`. The collection route arrived later (`03412a47`, "delivery
+asset collections and zip sharing") and derived its origin inline:
+
+```ts
+const origin = new URL(req.url).origin;
+```
+
+So the guard was never missing — it was never applied to the second share
+route. Two share routes, two ways of computing an origin, and the newer one
+was the broken one.
+
+- **`src/app/api/media/share-collections/route.ts`** now resolves the origin
+  through `resolvePublicAppOrigin` with the same candidate order as its
+  sibling (configured origins first, request origin only as a development
+  fallback, canonical domain last), so a proxy-facing host can never reach a
+  link that leaves the app.
+
+**Invariants to preserve**
+
+- **A link that leaves the app never reads its origin off the request.**
+  `tests/unit/architecture/public-link-origin.test.ts` fails the build when any
+  API route reads `.origin` from `req.url` / `req.nextUrl` without the
+  resolver. Reading `new URL(req.url)` for **query params** is fine and is not
+  flagged.
+- **Both share routes stay in step.** They must build their URL from
+  `resolvePublicAppOrigin`; neither may concatenate a request-derived origin.
+  Pinned in `tests/unit/media/share-collections-route.test.ts`.
+
+**Audited and deliberately left alone:** emailed links — invitations
+(`src/lib/auth/invitations.ts`), password reset, agency URLs — are built from
+`serverEnv.AUTH_URL || clientEnv.NEXT_PUBLIC_APP_URL` and never read the
+request origin, so a proxy-facing host cannot reach them. Their only exposure
+is a misconfigured `AUTH_URL`, which is a deployment-config question (see
+`docs/operations/environment.md`), not a code defect.
+
 ### Fixed — a shared workspace link could open the wrong tenant's workspace
 
 `/app/w/food-game` did not mean _that_ workspace. A workspace's identity is

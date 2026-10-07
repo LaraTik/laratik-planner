@@ -835,6 +835,29 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-07 — a share link is never built from the request origin
+
+Production runs behind Traefik with `HOSTNAME=0.0.0.0` (see `Dockerfile`), so
+the host an API route observes is the container's bind address, not
+`planner.laratik.com`. **Any URL that leaves the app — a shared post, a public
+media link — must resolve its origin through
+`src/lib/http/public-app-origin.ts` (`resolvePublicAppOrigin`), never from
+`req.url` / `req.nextUrl`.**
+
+This bit us twice. The single-asset public link was hardened in `4ed0522a`; the
+collection share added later (`03412a47`) still did
+`new URL(req.url).origin` and handed recipients
+`http://0.0.0.0:3000/share/media-collection/...`. The guard was not missing —
+it was just never applied to the second share route.
+
+- **`tests/unit/architecture/public-link-origin.test.ts` enforces it** — any
+  API route reading `.origin` off the request without the resolver fails the
+  build. `new URL(req.url)` for query params is fine and is not flagged.
+- **When you add a share, copy the origin block from a route that already
+  does this** rather than deriving the host. Do not add an exception to the
+  architecture test; the resolver's whole job is that a public link has a
+  correct origin without the call site knowing how the app is deployed.
+
 ### 2026-10-07 — Command Center observations collapse to one row per post
 
 `social_post_observation` holds **one row per post per sync day** (the unique
