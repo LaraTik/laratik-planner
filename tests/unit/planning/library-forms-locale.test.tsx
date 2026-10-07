@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions", () => ({
   archiveCampaignAction: vi.fn(),
   archivePillarAction: vi.fn(),
   archiveTemplateAction: vi.fn(),
@@ -16,7 +16,7 @@ import {
   NewCampaignForm,
   NewPillarForm,
   NewTemplateForm,
-} from "@/app/(app)/app/w/[slug]/library/library-forms";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/library/library-forms";
 
 describe("planning library forms localization", () => {
   it("renders Arabic campaign form copy", () => {

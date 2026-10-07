@@ -31,7 +31,19 @@ import { tFor } from "@/messages";
  */
 describe("planning page empty-state structure (UX-04)", () => {
   const source = readFileSync(
-    join(process.cwd(), "src", "app", "(app)", "app", "w", "[slug]", "planning", "page.tsx"),
+    join(
+      process.cwd(),
+      "src",
+      "app",
+      "(app)",
+      "app",
+      "a",
+      "[agencySlug]",
+      "w",
+      "[slug]",
+      "planning",
+      "page.tsx",
+    ),
     "utf8",
   );
 

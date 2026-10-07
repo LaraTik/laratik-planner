@@ -10,6 +10,8 @@ describe("planning edit page localization", () => {
       "app",
       "(app)",
       "app",
+      "a",
+      "[agencySlug]",
       "w",
       "[slug]",
       "planning",

@@ -1318,11 +1318,17 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
         // Reuse the same permission gate as the Settings UI to
         // avoid duplicating role checks across the MCP surface.
         const { applyWorkflowScenarioAction } =
-          await import("@/app/(app)/app/w/[slug]/settings/templates-actions");
-        const { getAccessibleWorkspace } = await import("@/lib/workspaces/context");
+          await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/templates-actions");
+        const { getAccessibleWorkspace, findAgencySlugById } =
+          await import("@/lib/workspaces/context");
         const ws = await getAccessibleWorkspace(context.actor, workspace_id);
         if (!ws) return errorResult(new Error("Workspace not found"));
-        const outcome = await applyWorkflowScenarioAction(ws.slug, scenario_id);
+        // The scenario action now takes the explicit (agencySlug, workspaceSlug)
+        // pair so the tenant comes from an identified context rather than the
+        // active-agency cookie. The MCP surface resolves the same pair.
+        const agencySlug = await findAgencySlugById(ws.agencyId);
+        if (!agencySlug) return errorResult(new Error("Workspace agency not found"));
+        const outcome = await applyWorkflowScenarioAction(agencySlug, ws.slug, scenario_id);
         if (!outcome.ok) return errorResult(new Error(outcome.error ?? "could not apply scenario"));
         return result(
           {

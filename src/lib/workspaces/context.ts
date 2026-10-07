@@ -1,7 +1,7 @@
 import "server-only";
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { workspaceMemberships, workspaces } from "@/lib/db/schema";
+import { agencyMemberships, agencies, workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
   canAccessClientWorkspace,
   canAccessInternalWorkspace,
@@ -125,7 +125,121 @@ export async function getClientWorkspace(actor: Actor, slug: string, requestedAg
  * cookie (or the single-active-agency fallback) — see
  * `resolveActiveAgencyContext`.
  */
+/**
+ * Agency id for a slug, gated on the actor being an ACTIVE member.
+ *
+ * Fails closed: returns `null` for a non-member rather than the row, so a
+ * canonical URL can never widen access. Paired with the workspace lookup that
+ * returns `null` too, the two together make a wrong-tenant URL a 404 rather
+ * than a redirect into data the actor should not see.
+ *
+ * This is the same anti-IDOR contract `findWorkspaceBySlug` applies to its
+ * `requestedAgencyId`; it lives here so the canonical path resolves the slug
+ * to an id without the caller having to remember to gate it.
+ */
+export async function findAgencyIdBySlug(actor: Actor, agencySlug: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: agencies.id })
+    .from(agencies)
+    .innerJoin(
+      agencyMemberships,
+      and(eq(agencyMemberships.agencyId, agencies.id), eq(agencyMemberships.userId, actor.id)),
+    )
+    .where(
+      and(
+        eq(agencies.slug, agencySlug),
+        eq(agencyMemberships.status, "active"),
+        sql`${agencies.suspendedAt} IS NULL`,
+        sql`${agencies.archivedAt} IS NULL`,
+      ),
+    )
+    .limit(1);
+  return row?.id ?? null;
+}
+
+/**
+ * Canonical-path entry point: resolve `(agencySlug, workspaceSlug)` from the URL.
+ *
+ * Both segments come from the URL, so the workspace is identified rather than
+ * guessed from the visitor's active-agency cookie. The agency slug is gated on
+ * membership before it is used, and a miss yields `null` → 404.
+ *
+ * Every page and action under `/app/a/[agencySlug]/w/[workspaceSlug]/` should
+ * call one of these two instead of `getAccessibleWorkspace(actor, slug)`.
+ */
+export async function getAccessibleWorkspaceAtPath(actor: Actor, agencySlug: string, slug: string) {
+  const agencyId = await findAgencyIdBySlug(actor, agencySlug);
+  if (!agencyId) return null;
+  return getAccessibleWorkspace(actor, slug, agencyId);
+}
+
+export async function getClientWorkspaceAtPath(actor: Actor, agencySlug: string, slug: string) {
+  const agencyId = await findAgencyIdBySlug(actor, agencySlug);
+  if (!agencyId) return null;
+  return getClientWorkspace(actor, slug, agencyId);
+}
+
+/**
+ * Agency slug for an id, or `null`. Used by the legacy `/app/w/` redirect to
+ * build a canonical href when the visitor has no reachable workspace for the
+ * slug but does have an active agency.
+ *
+ * Deliberately not membership-gated: the caller has ALREADY established that
+ * the actor is a member of this agency via `resolveActiveAgencyContext`. This
+ * only converts the id into a path segment.
+ */
+export async function findAgencySlugById(agencyId: string): Promise<string | null> {
+  const [agency] = await db
+    .select({ slug: agencies.slug })
+    .from(agencies)
+    .where(eq(agencies.id, agencyId))
+    .limit(1);
+  return agency?.slug ?? null;
+}
+
 export type SwitcherWorkspace = { id: string; name: string; slug: string };
+
+/**
+ * Every agency in which `actor` can reach a workspace with this slug.
+ *
+ * This is deliberately NOT built on `listSwitcherWorkspaces` — that helper
+ * resolves the ACTIVE agency internally and therefore only ever returns
+ * workspaces in the cookie's agency. Using it to answer "which workspace did
+ * this shared link mean?" would reproduce the exact bug the canonical URL
+ * exists to fix.
+ *
+ * Returns one row per reachable workspace. More than one row means the slug is
+ * genuinely ambiguous for this actor and the caller must not guess — it should
+ * send them somewhere that makes the choice explicit. Zero rows is the
+ * anti-IDOR case: indistinguishable from a slug that does not exist.
+ *
+ * Membership-only (not admin-broad): the redirect's job is to resolve a link a
+ * human was sent, and the human has to actually be a member of the workspace to
+ * use it.
+ */
+export async function findReachableWorkspacesBySlug(
+  actor: Actor,
+  slug: string,
+): Promise<{ workspaceId: string; agencyId: string; agencySlug: string }[]> {
+  return db
+    .select({
+      workspaceId: workspaces.id,
+      agencyId: workspaces.agencyId,
+      agencySlug: agencies.slug,
+    })
+    .from(workspaces)
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
+    .innerJoin(workspaceMemberships, eq(workspaceMemberships.workspaceId, workspaces.id))
+    .where(
+      and(
+        eq(workspaces.slug, slug),
+        eq(workspaces.status, "active"),
+        eq(workspaceMemberships.userId, actor.id),
+        eq(workspaceMemberships.status, "active"),
+      ),
+    )
+    .limit(10);
+}
 
 export async function listSwitcherWorkspaces(
   actor: Actor,

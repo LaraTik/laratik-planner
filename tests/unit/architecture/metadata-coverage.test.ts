@@ -5,16 +5,23 @@ import { describe, expect, it } from "vitest";
 const appRoot = resolve(process.cwd(), "src/app");
 
 const intentionalExceptions = new Set([
-  "(app)/app/w/[slug]/settings/approvals/page.tsx",
-  "(app)/app/w/[slug]/settings/defaults/page.tsx",
-  "(app)/app/w/[slug]/settings/lead-times/page.tsx",
-  "(app)/app/w/[slug]/settings/lifecycle/page.tsx",
-  "(app)/app/w/[slug]/planning/[id]/publish/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/settings/approvals/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/settings/defaults/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/settings/lead-times/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/settings/lifecycle/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/page.tsx",
   // Round 2 of ui-ux-pro-max / Team & Access expansion: Activity
   // moved out of brand-kit to /app/w/[slug]/activity. The
   // brand-kit/activity route is preserved as a server-side redirect
   // shim so existing Slack/email deep links keep working.
-  "(app)/app/w/[slug]/brand-kit/activity/page.tsx",
+  "(app)/app/a/[agencySlug]/w/[slug]/brand-kit/activity/page.tsx",
+  // Legacy `/app/w/<workspaceSlug>` — a workspace slug is unique only per
+  // agency, so the old shape was ambiguous. This catch-all resolves the
+  // visitor's reachable workspaces and 307s to the canonical
+  // `/app/a/[agencySlug]/w/[workspaceSlug]`, or sends them to the workspace
+  // switcher when the slug is genuinely ambiguous. Pure redirect shim, so it
+  // declares no metadata by design.
+  "(app)/app/w/[...legacy]/page.tsx",
 ]);
 
 function collectPageFiles(directory: string, relativeDirectory = ""): string[] {

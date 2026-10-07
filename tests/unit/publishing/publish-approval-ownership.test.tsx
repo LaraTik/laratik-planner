@@ -34,7 +34,7 @@ const { saveMock, batchSaveMock, setApprovalMock } = vi.hoisted(() => ({
   setApprovalMock: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: saveMock,
@@ -42,7 +42,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
   setFinalCopyApprovalAction: setApprovalMock,
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -51,7 +51,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 // Type-only import: the payload schemas module pulls no server code, and
 // a value import of `@/lib/publishing` would drag in the server-only
@@ -139,6 +139,7 @@ function renderForm({
       <PublishPackageForm
         workspaceId={workspaceId}
         workspaceSlug="demo"
+        agencySlug="acme"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
         itemFormat="short_form_video"

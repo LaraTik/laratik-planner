@@ -26,7 +26,7 @@ import { hasMixedScript } from "@/lib/i18n/dir";
  *      (`src/components/forms/format-aware-content-editor.tsx`)
  *      — for the planner's working draft.
  *   3. The PublishPackageForm
- *      (`src/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form.tsx`)
+ *      (`src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form.tsx`)
  *      — per-platform adaptation.
  *
  * The shared component is the single source of truth for the

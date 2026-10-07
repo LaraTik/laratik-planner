@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ConnectionActions } from "@/app/(app)/app/w/[slug]/channels/connection-actions";
-import { testChannelConnectionAction } from "@/app/(app)/app/w/[slug]/channels/actions";
+import { ConnectionActions } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/connection-actions";
+import { testChannelConnectionAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
 
 /**
  * UX-03 (GAP-FULL-REVIEW-2026-08-25) — the connection revoke
@@ -29,7 +29,7 @@ import { testChannelConnectionAction } from "@/app/(app)/app/w/[slug]/channels/a
  *   - set `aria-busy` while the transition is in flight
  */
 
-vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
   disconnectChannelAction: vi.fn(async () => ({})),
   revokeConnectionAction: vi.fn(async () => ({})),
   testChannelConnectionAction: vi.fn(async () => ({})),

@@ -15,7 +15,7 @@ import { fieldsFor } from "@/components/forms/format-payload-field-set";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
-import { updateAudienceCopyAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { updateAudienceCopyAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatNumber } from "@/lib/i18n/format-locale";
 import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";

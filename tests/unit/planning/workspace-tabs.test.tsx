@@ -13,7 +13,7 @@ import {
   type WorkspaceTab,
   type WorkspaceTabId,
 } from "@/components/planning/workspace-tabs";
-import { WorkspaceShell } from "@/app/(app)/app/w/[slug]/planning/[id]/workspace-shell";
+import { WorkspaceShell } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell";
 import { EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea-shared";
 
 // WorkspaceShell's optional operator and discussion surfaces import
@@ -25,10 +25,10 @@ vi.mock("@/components/forms/destructive-confirm-dialog", () => ({
 vi.mock("@/components/planning/discussion-drawer", () => ({
   DiscussionDrawer: () => null,
 }));
-vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions", () => ({
   duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
 }));
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   archiveContentItemAction: vi.fn(async () => undefined),
   restoreContentItemAction: vi.fn(async () => undefined),
 }));

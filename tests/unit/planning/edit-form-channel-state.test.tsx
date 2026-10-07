@@ -17,7 +17,7 @@
  *
  * Fix: the edit page server component now unions the active
  * channel list with the channels already selected on the item
- * (lines 79-107 in `app/(app)/app/w/[slug]/planning/edit/[id]/page.tsx`).
+ * (lines 79-107 in `app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/page.tsx`).
  *
  * This test pins the contract:
  *   1. The server passes a `channels` prop that includes every
@@ -35,11 +35,11 @@ import { render, screen } from "@testing-library/react";
 // `updateContentItemAction` via the relative path
 // `../actions` (in the edit page's directory) — we mock the
 // same module the wrapper imports.
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   updateContentItemAction: vi.fn(),
 }));
 
-import { EditIdeaForm } from "@/app/(app)/app/w/[slug]/planning/edit/[id]/edit-form";
+import { EditIdeaForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/edit-form";
 
 const ACTIVE_CHANNELS = [
   { id: "11111111-1111-1111-1111-111111111111", accountName: "Food Game", platform: "instagram" },

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ChannelRowActions } from "@/app/(app)/app/w/[slug]/channels/channel-edit-drawer";
+import { ChannelRowActions } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/channel-edit-drawer";
 
 /**
  * UX-09 (GAP-FULL-REVIEW-2026-08-25) — the kebab button on the
@@ -26,7 +26,7 @@ import { ChannelRowActions } from "@/app/(app)/app/w/[slug]/channels/channel-edi
  *     focused)
  */
 
-vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
   archiveChannelAction: vi.fn(async () => ({})),
   testChannelConnectionAction: vi.fn(async () => ({})),
   updateChannelAction: vi.fn(async () => ({})),
@@ -116,7 +116,19 @@ describe("channels row actions kebab (UX-09)", () => {
     // channels page (server component) here; instead we assert the
     // source file has the attribute on the inner icon line.
     const source = readFileSync(
-      join(process.cwd(), "src", "app", "(app)", "app", "w", "[slug]", "channels", "page.tsx"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "(app)",
+        "app",
+        "a",
+        "[agencySlug]",
+        "w",
+        "[slug]",
+        "channels",
+        "page.tsx",
+      ),
       "utf8",
     );
     expect(source).toMatch(/<MoreHorizontal[^>]*aria-hidden="true"/);

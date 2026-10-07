@@ -1,7 +1,7 @@
 /**
  * Inline-editability allow-list shared by the server actions
  * (in `./inline-update.ts`) and the page-level capability flag
- * (`src/app/(app)/app/w/[slug]/planning/[id]/page.tsx`).
+ * (`src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx`).
  *
  * Kept in a separate file from the "use server" actions because
  * Next.js will refuse to ship a server-action module that

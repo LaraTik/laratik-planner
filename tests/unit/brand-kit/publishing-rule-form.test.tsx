@@ -20,13 +20,13 @@ const actionMock = vi.hoisted(() => ({
   createPublishingRuleAction: vi.fn(),
   archivePublishingRuleAction: vi.fn(),
 }));
-vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions", () => ({
   createPublishingRuleAction: actionMock.createPublishingRuleAction,
   archivePublishingRuleAction: actionMock.archivePublishingRuleAction,
 }));
 
 import { useFormStatus } from "react-dom";
-import { PublishingRuleForm } from "@/app/(app)/app/w/[slug]/brand-kit/publishing-rule-form";
+import { PublishingRuleForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/publishing-rule-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 

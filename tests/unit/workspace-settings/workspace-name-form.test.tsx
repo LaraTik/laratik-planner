@@ -8,7 +8,7 @@ vi.mock("react-dom", async (importOriginal) => {
   return { ...actual, useFormStatus: vi.fn() };
 });
 
-vi.mock("@/app/(app)/app/w/[slug]/settings/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/actions", () => ({
   renameWorkspaceAction: vi.fn(),
 }));
 
@@ -16,7 +16,7 @@ import { useFormStatus } from "react-dom";
 import {
   WorkspaceNameForm,
   type RenameWorkspaceCopy,
-} from "@/app/(app)/app/w/[slug]/settings/_components/workspace-name-form";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/workspace-name-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 
@@ -43,7 +43,15 @@ const copy: RenameWorkspaceCopy = {
 function renderForm(overrides: Partial<Parameters<typeof WorkspaceNameForm>[0]> = {}) {
   mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
   return render(
-    <WorkspaceNameForm slug="acme" name="Acme" locale="en" canManage copy={copy} {...overrides} />,
+    <WorkspaceNameForm
+      slug="acme"
+      agencySlug="acme"
+      name="Acme"
+      locale="en"
+      canManage
+      copy={copy}
+      {...overrides}
+    />,
   );
 }
 

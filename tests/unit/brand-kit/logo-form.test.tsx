@@ -14,7 +14,7 @@ vi.mock("react-dom", async (importOriginal) => {
 });
 
 // Stub the action — we never submit, just assert the binding exists.
-vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions", () => ({
   createLogoAssetAction: vi.fn(),
   archiveLogoAssetAction: vi.fn(),
   createColorAssetAction: vi.fn(),
@@ -24,7 +24,7 @@ vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
 }));
 
 import { useFormStatus } from "react-dom";
-import { LogoForm } from "@/app/(app)/app/w/[slug]/brand-kit/logo-form";
+import { LogoForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/logo-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 

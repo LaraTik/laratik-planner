@@ -3,7 +3,7 @@
 import * as React from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { changeContentOwnerAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { changeContentOwnerAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

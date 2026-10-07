@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { updateFormatPayloadAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";

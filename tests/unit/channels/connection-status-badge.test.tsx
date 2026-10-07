@@ -4,7 +4,7 @@ import { tFor } from "@/messages";
 import {
   ConnectionStatusBadge,
   ConnectionStatusDot,
-} from "@/app/(app)/app/w/[slug]/channels/connection-status-badge";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/connection-status-badge";
 
 afterEach(() => {
   cleanup();

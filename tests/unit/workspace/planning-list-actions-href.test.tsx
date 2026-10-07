@@ -4,14 +4,14 @@ import userEvent from "@testing-library/user-event";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PlanningListActions } from "@/components/workspace/planning-list-actions";
-import { changeContentOwnerAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { changeContentOwnerAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   archiveContentItemAction: vi.fn(async () => undefined),
   restoreContentItemAction: vi.fn(async () => undefined),
   changeContentOwnerAction: vi.fn(async () => ({ ok: true })),
 }));
-vi.mock("@/app/(app)/app/w/[slug]/library/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions", () => ({
   duplicateContentItemAction: vi.fn(async () => ({ success: true, newId: "clone-1" })),
 }));
 vi.mock("next/navigation", () => ({

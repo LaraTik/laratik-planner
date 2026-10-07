@@ -6,7 +6,7 @@ import { CheckCircle2, ChevronDown, Save, Loader2, ListChecks } from "lucide-rea
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { updateFormatPayloadAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { updateFormatPayloadAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import {
   fieldsFor,

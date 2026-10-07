@@ -6,7 +6,7 @@ const t = tFor("en");
 
 // All four components import server actions; mock them so the test
 // stays pure structural (no Next.js server runtime needed).
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   transitionAction: vi.fn(),
   decideApprovalAction: vi.fn(),
   claimAction: vi.fn(),
@@ -25,7 +25,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { WorkflowRail } from "@/components/planning/workflow-rail";
-import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
+import { DeliverySection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/delivery-section";
 import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
 import { CommentForm } from "@/components/comments/comment-form";
 
@@ -196,6 +196,7 @@ describe("planning detail components — hooks order guard", () => {
           accountName: "@acme",
           configured: true,
         },
+        agencySlug: "acme",
         publication: null,
         isPublisher: true,
       };

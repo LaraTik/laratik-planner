@@ -14,16 +14,16 @@ vi.mock("react-dom", async (importOriginal) => {
 });
 
 // Stub the server actions so the test stays a pure component check.
-vi.mock("@/app/(app)/app/w/[slug]/settings/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/actions", () => ({
   updateLeadTimesSettingsAction: vi.fn(),
 }));
-vi.mock("@/app/(app)/app/w/[slug]/settings/ai-suggestions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/ai-suggestions", () => ({
   suggestLeadTimesAction: vi.fn(),
 }));
 
 import { useFormStatus } from "react-dom";
-import { LeadTimesForm } from "@/app/(app)/app/w/[slug]/settings/_components/lead-times-form";
-import { suggestLeadTimesAction } from "@/app/(app)/app/w/[slug]/settings/ai-suggestions";
+import { LeadTimesForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/lead-times-form";
+import { suggestLeadTimesAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/ai-suggestions";
 import { tFor } from "@/messages";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
@@ -41,6 +41,7 @@ function renderForm() {
   return render(
     <LeadTimesForm
       slug="acme"
+      agencySlug="acme"
       values={baseValues}
       approvalMode="simple"
       timezone="Europe/Vienna"

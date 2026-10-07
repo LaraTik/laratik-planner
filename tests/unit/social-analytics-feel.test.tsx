@@ -1,17 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { SocialHealthBanner } from "@/app/(app)/app/w/[slug]/analytics/social/social-health-banner";
+import { SocialHealthBanner } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-health-banner";
 import {
   SocialAggregateStrip,
   type AggregateChannel,
-} from "@/app/(app)/app/w/[slug]/analytics/social/social-aggregate-strip";
-import { SocialSparkline } from "@/app/(app)/app/w/[slug]/analytics/social/social-sparkline";
-import { SocialEngagementRateCard } from "@/app/(app)/app/w/[slug]/analytics/social/social-engagement-rate";
-import { SegmentedControl } from "@/app/(app)/app/w/[slug]/analytics/social/social-segmented-control";
-import { SocialHealthyStatus } from "@/app/(app)/app/w/[slug]/analytics/social/social-healthy-status";
-import { SocialGrowthChart } from "@/app/(app)/app/w/[slug]/analytics/social/social-growth-chart";
-import { SocialMetricsTable } from "@/app/(app)/app/w/[slug]/analytics/social/social-metrics-table";
-import { SocialDataQuality } from "@/app/(app)/app/w/[slug]/analytics/social/social-data-quality";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-aggregate-strip";
+import { SocialSparkline } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-sparkline";
+import { SocialEngagementRateCard } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-engagement-rate";
+import { SegmentedControl } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-segmented-control";
+import { SocialHealthyStatus } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-healthy-status";
+import { SocialGrowthChart } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-growth-chart";
+import { SocialMetricsTable } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-metrics-table";
+import { SocialDataQuality } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-data-quality";
 import type { MetricSeriesPoint } from "@/lib/social/analytics";
 import { makeTranslator } from "@/messages";
 import { LocaleProvider } from "@/components/i18n/locale-provider";

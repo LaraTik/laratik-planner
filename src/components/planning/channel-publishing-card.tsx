@@ -19,7 +19,7 @@ import {
   recordPublicationAction,
   refreshMetaPublicationAction,
   unlinkMetaPublicationAction,
-} from "@/app/(app)/app/w/[slug]/planning/actions";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { platformLabel, PlatformIcon } from "@/components/workspace/platform-icon";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { MetaPublicationLinkDialog } from "./meta-publication-link-dialog";
@@ -54,6 +54,8 @@ import { MetaPublicationLinkDialog } from "./meta-publication-link-dialog";
 
 export interface ChannelPublishingCardProps {
   workspaceSlug: string;
+  /** Tenant; a workspace slug is unique only per agency. */
+  agencySlug: string;
   channel: {
     id: string;
     platform: string;
@@ -130,6 +132,7 @@ function localizedDate(value: string | null | undefined, locale: "en" | "ar", ti
 
 export function ChannelPublishingCard({
   workspaceSlug,
+  agencySlug,
   channel,
   publication,
   isPublisher,
@@ -410,6 +413,7 @@ export function ChannelPublishingCard({
                 setError(null);
                 const result = await recordPublicationAction({
                   workspaceSlug,
+                  agencySlug,
                   contentItemChannelId: channel.id,
                   status: fd.get("status") as "published" | "skipped" | "failed",
                   ...(publishedUrl ? { publishedUrl } : {}),

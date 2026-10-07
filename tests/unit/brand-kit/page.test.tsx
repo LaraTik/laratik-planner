@@ -29,9 +29,17 @@ const authMock = vi.hoisted(() => ({
   auth: vi.fn(),
 }));
 
-const workspaceMock = vi.hoisted(() => ({
-  getAccessibleWorkspace: vi.fn(),
-}));
+const workspaceMock = vi.hoisted(() => {
+  // Pages under the canonical URL resolve the workspace from `(agencySlug,
+  // slug)`; the alias keeps one mock serving both call shapes.
+  const getAccessibleWorkspace = vi.fn();
+  return {
+    getAccessibleWorkspace,
+    getAccessibleWorkspaceAtPath: getAccessibleWorkspace,
+    getClientWorkspace: vi.fn(),
+    getClientWorkspaceAtPath: vi.fn(),
+  };
+});
 
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(),
@@ -134,7 +142,7 @@ vi.mock("next/navigation", () => ({
 
 // ─── Imports under test ──────────────────────────────────────────────
 async function loadPage() {
-  const mod = await import("@/app/(app)/app/w/[slug]/brand-kit/page");
+  const mod = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page");
   return mod.default;
 }
 
@@ -172,7 +180,7 @@ async function renderOverview(): Promise<ReturnType<typeof render>> {
   workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
   policyMock.hasWorkspaceRole.mockResolvedValue(true);
   const BrandKitPage = await loadPage();
-  return render(await BrandKitPage({ params: Promise.resolve({ slug }) }));
+  return render(await BrandKitPage({ params: Promise.resolve({ agencySlug: "acme", slug }) }));
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────

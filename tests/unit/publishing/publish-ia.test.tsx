@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: vi.fn(async () => ({ ok: true as const, payload: {} })),
@@ -9,7 +9,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 import { tFor } from "@/messages";
 
@@ -54,6 +54,7 @@ function renderForm(canSavePackage: boolean) {
       <PublishPackageForm
         workspaceId="33333333-3333-4333-8333-333333333333"
         workspaceSlug="acme"
+        agencySlug="acme"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
         itemFormat="static_post"

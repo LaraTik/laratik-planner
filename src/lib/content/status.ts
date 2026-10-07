@@ -9,9 +9,9 @@
  *
  * Used by:
  *  - src/app/(app)/app/page.tsx (My Work)
- *  - src/app/(app)/app/w/[slug]/planning/page.tsx (Planning list)
- *  - src/app/(app)/app/w/[slug]/planning/[id]/page.tsx (Detail header)
- *  - src/app/(app)/app/w/[slug]/planning/[id]/workflow-bar.tsx
+ *  - src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/page.tsx (Planning list)
+ *  - src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx (Detail header)
+ *  - src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workflow-bar.tsx
  *  - any future calendar / board / KPI view
  *
  * Per master prompt §3: status always uses text + colour (never colour

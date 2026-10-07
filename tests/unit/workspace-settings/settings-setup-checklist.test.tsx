@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { SettingsSetupChecklist } from "@/app/(app)/app/w/[slug]/settings/_components/settings-setup-checklist";
+import { SettingsSetupChecklist } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/settings-setup-checklist";
 import { tFor } from "@/messages";
 
 /**

@@ -51,7 +51,7 @@ const { saveMock, batchSaveMock, readyMock } = vi.hoisted(() => ({
   readyMock: vi.fn(async () => ({ ok: true as const, report: {} })),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: readyMock,
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: saveMock,
@@ -59,7 +59,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -69,7 +69,7 @@ vi.mock("next/navigation", () => ({
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 import type { PlatformPayload } from "@/lib/publishing/payload-schemas";
 // Type-only import: a value import of `@/lib/publishing` would drag in
@@ -164,6 +164,7 @@ function renderForm(overrides: Partial<FormOverrides> = {}) {
       <PublishPackageForm
         workspaceId={workspaceId}
         workspaceSlug="demo"
+        agencySlug="acme"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
         itemFormat="static_post"
@@ -403,6 +404,7 @@ describe("the lifecycle gate on the sticky bar (ca0e1db3 D-gate)", () => {
         <PublishPackageForm
           workspaceId={workspaceId}
           workspaceSlug="demo"
+          agencySlug="acme"
           workspaceTimezone="Europe/Berlin"
           contentItemId={contentItemId}
           itemFormat="static_post"

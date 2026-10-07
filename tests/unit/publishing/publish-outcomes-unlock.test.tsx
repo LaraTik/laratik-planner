@@ -33,7 +33,7 @@ import { tFor } from "@/messages";
  */
 
 const PAGE_SOURCE = readFileSync(
-  resolve(process.cwd(), "src/app/(app)/app/w/[slug]/planning/[id]/page.tsx"),
+  resolve(process.cwd(), "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx"),
   "utf8",
 );
 

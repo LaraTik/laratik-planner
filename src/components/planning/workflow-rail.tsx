@@ -26,7 +26,7 @@ import {
   decideApprovalAction,
   claimAction,
   assignDesignerAction,
-} from "@/app/(app)/app/w/[slug]/planning/actions";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";

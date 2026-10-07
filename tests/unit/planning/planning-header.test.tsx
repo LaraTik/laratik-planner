@@ -8,7 +8,7 @@ import { PlanningHeader } from "@/components/planning/planning-header";
 // file from loading when this dependency tree is reached).
 // The PlanningHeader test doesn't exercise the date editor itself
 // — it only checks the header chrome — so a stub is sufficient.
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields", () => ({
   InlineDateEditor: () => null,
   InlineBriefEditor: () => null,
   InlineTitleEditor: () => null,

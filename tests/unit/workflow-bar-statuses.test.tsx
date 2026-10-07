@@ -3,7 +3,7 @@ import { fireEvent, render } from "@testing-library/react";
 import { ALL_STATUSES } from "@/lib/content/status";
 import { WorkflowRail } from "@/components/planning/workflow-rail";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   transitionAction: vi.fn(),
   decideApprovalAction: vi.fn(),
   claimAction: vi.fn(),

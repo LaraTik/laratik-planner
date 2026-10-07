@@ -16,13 +16,13 @@ const actionMock = vi.hoisted(() => ({
   createLinkedResourceAction: vi.fn(),
   archiveLinkedResourceAction: vi.fn(),
 }));
-vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions", () => ({
   createLinkedResourceAction: actionMock.createLinkedResourceAction,
   archiveLinkedResourceAction: actionMock.archiveLinkedResourceAction,
 }));
 
 import { useFormStatus } from "react-dom";
-import { LinkedResourceForm } from "@/app/(app)/app/w/[slug]/brand-kit/linked-resource-form";
+import { LinkedResourceForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/linked-resource-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 

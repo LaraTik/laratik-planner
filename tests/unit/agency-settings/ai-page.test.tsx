@@ -85,7 +85,19 @@ describe("agency-ai-settings page structure", () => {
 
 describe("workspace-ai-settings page structure", () => {
   const source = readFileSync(
-    join(process.cwd(), "src", "app", "(app)", "app", "w", "[slug]", "ai-settings", "page.tsx"),
+    join(
+      process.cwd(),
+      "src",
+      "app",
+      "(app)",
+      "app",
+      "a",
+      "[agencySlug]",
+      "w",
+      "[slug]",
+      "ai-settings",
+      "page.tsx",
+    ),
     "utf8",
   );
 

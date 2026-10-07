@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { BrandKitHealth } from "@/app/(app)/app/w/[slug]/brand-kit/_components/brand-kit-health";
+import { BrandKitHealth } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/_components/brand-kit-health";
 
 /**
  * BrandKitHealth — the per-section coverage card on every

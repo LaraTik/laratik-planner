@@ -10,7 +10,7 @@ import type { ActivityRenderSpec } from "@/lib/activity/types";
  * ActivityFeed — workspace-wide activity feed row list.
  *
  * Replaces the inline `<ol>` block in
- * `src/app/(app)/app/w/[slug]/activity/page.tsx`. The page is
+ * `src/app/(app)/app/a/[agencySlug]/w/[slug]/activity/page.tsx`. The page is
  * server-rendered: it already has the activity rows + actor +
  * target labels. This component receives a list of pre-rendered
  * specs (built once in the page using `formatActivityEvent`)

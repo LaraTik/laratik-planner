@@ -11,7 +11,7 @@ const actions = vi.hoisted(() => ({
   unlink: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   listMetaPublicationCandidatesAction: actions.list,
   linkMetaPublicationAction: actions.link,
   recordPublicationAction: actions.record,
@@ -60,6 +60,7 @@ describe("Meta publication linking UI", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={null}
           isPublisher={true}
@@ -99,6 +100,7 @@ describe("Meta publication linking UI", () => {
       <LocaleProvider locale="ar">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={null}
           isPublisher={true}
@@ -131,6 +133,7 @@ describe("Meta publication linking UI", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={null}
           isPublisher={true}
@@ -166,6 +169,7 @@ describe("Meta publication linking UI", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={null}
           isPublisher={true}

@@ -7,7 +7,7 @@ import { AtSign, Lock, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { MentionPicker, type MentionableUser } from "@/components/comments/mention-picker";
-import { createCommentAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { createCommentAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
 

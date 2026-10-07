@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { tFor } from "@/messages";
-import { RecentUpdatesTable } from "@/app/(app)/app/w/[slug]/brand-kit/recent-updates-table";
+import { RecentUpdatesTable } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/recent-updates-table";
 
 describe("RecentUpdatesTable localization", () => {
   it("localizes table headers and unknown actors in Arabic", () => {

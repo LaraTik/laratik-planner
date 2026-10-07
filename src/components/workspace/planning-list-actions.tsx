@@ -5,11 +5,11 @@ import Link from "next/link";
 import { MoreHorizontal, Edit3, Copy, UserCog, Send, Archive, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import { duplicateContentItemAction } from "@/app/(app)/app/w/[slug]/library/actions";
+import { duplicateContentItemAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions";
 import {
   archiveContentItemAction,
   restoreContentItemAction,
-} from "@/app/(app)/app/w/[slug]/planning/actions";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import {
   DropdownMenu,
   DropdownMenuTrigger,

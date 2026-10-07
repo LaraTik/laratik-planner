@@ -60,7 +60,7 @@ import {
   InlineBriefEditor,
   InlineDateEditor,
   InlineTitleEditor,
-} from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields";
 import {
   inlineUpdateBriefAction,
   inlineUpdateDateAction,
@@ -69,7 +69,7 @@ import {
 
 const WRAPPER_PATH = resolve(
   process.cwd(),
-  "src/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields.tsx",
+  "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx",
 );
 
 describe("inline-editable-fields wrappers (planning detail)", () => {

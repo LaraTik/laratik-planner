@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { applyResearchTeardownAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { applyResearchTeardownAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 
 export function ResearchTeardownApply({
   workspaceSlug,

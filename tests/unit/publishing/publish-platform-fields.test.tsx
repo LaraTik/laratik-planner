@@ -18,14 +18,14 @@ function resetSaveMock() {
   saveMock.mockClear();
 }
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: readyMock,
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: saveMock,
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -34,7 +34,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 
 const contentItemId = "11111111-1111-4111-8111-111111111111";
@@ -77,6 +77,7 @@ function renderForm({
       <PublishPackageForm
         workspaceId="33333333-3333-4333-8333-333333333333"
         workspaceSlug="demo"
+        agencySlug="acme"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
         itemFormat="short_form_video"

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { AddChannelButton } from "@/app/(app)/app/w/[slug]/channels/add-channel-button";
+import { AddChannelButton } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/add-channel-button";
 
 /**
  * The Add channel CTA scrolls the inline form into view and focuses

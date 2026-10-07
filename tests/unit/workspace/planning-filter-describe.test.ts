@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { describeActiveFilter } from "@/app/(app)/app/w/[slug]/planning/filter-describe";
+import { describeActiveFilter } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/filter-describe";
 import { tFor } from "@/messages";
 
 /**

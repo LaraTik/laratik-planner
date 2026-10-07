@@ -114,7 +114,7 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
   });
 
   it("planning actions resolve workspace through the active agency context", () => {
-    const src = readSrc("app/(app)/app/w/[slug]/planning/actions.ts");
+    const src = readSrc("app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts");
     expect(src).toMatch(/resolveActiveAgencyContext/);
     expect(src).toMatch(/getAccessibleWorkspace/);
     expect(src).not.toMatch(/\.where\(eq\(workspaces\.slug, workspaceSlug\)\)/);
@@ -141,8 +141,8 @@ describe("structural: activeAgencyId() removed from non-bootstrap callsites", ()
   });
 
   it("w/[slug]/ai-settings + w/[slug]/planning/[id] use resolveActiveAgencyContext", () => {
-    const a = readSrc("app/(app)/app/w/[slug]/ai-settings/page.tsx");
-    const b = readSrc("app/(app)/app/w/[slug]/planning/[id]/page.tsx");
+    const a = readSrc("app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx");
+    const b = readSrc("app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx");
     for (const src of [a, b]) {
       expect(src).not.toMatch(/activeAgencyId\s*\(\s*\)/);
       expect(src).toMatch(/currentActor\s*\(\s*\)/);

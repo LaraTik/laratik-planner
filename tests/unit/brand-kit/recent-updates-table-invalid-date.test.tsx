@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { RecentUpdatesTable } from "@/app/(app)/app/w/[slug]/brand-kit/recent-updates-table";
+import { RecentUpdatesTable } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/recent-updates-table";
 
 /**
  * The recent-updates table previously crashed when any row had an invalid

@@ -1,10 +1,12 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({ batchCreateAction: vi.fn() }));
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
+  batchCreateAction: vi.fn(),
+}));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { BatchForm } from "@/app/(app)/app/w/[slug]/planning/batch/batch-form";
+import { BatchForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/batch/batch-form";
 
 describe("BatchForm", () => {
   it("renders the localized spreadsheet workflow and accepts Arabic row content", () => {

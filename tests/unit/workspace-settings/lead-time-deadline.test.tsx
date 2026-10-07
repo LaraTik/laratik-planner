@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { LeadTimeDeadline } from "@/app/(app)/app/w/[slug]/settings/_components/lead-time-deadline";
+import { LeadTimeDeadline } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/lead-time-deadline";
 
 describe("LeadTimeDeadline", () => {
   afterEach(() => vi.restoreAllMocks());

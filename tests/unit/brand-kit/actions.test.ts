@@ -115,7 +115,7 @@ const {
   archivePublishingRuleAction,
   createLinkedResourceAction,
   archiveLinkedResourceAction,
-} = await import("@/app/(app)/app/w/[slug]/brand-kit/actions");
+} = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions");
 
 const slug = "test-slug";
 const workspace = { id: "ws-1", slug, name: "Test" };

@@ -11,7 +11,7 @@ vi.mock("@/app/(app)/app/users/member-edit-drawer", () => ({
   ),
 }));
 
-import { MemberEditTrigger } from "@/app/(app)/app/w/[slug]/team/member-edit-trigger";
+import { MemberEditTrigger } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/team/member-edit-trigger";
 
 describe("MemberEditTrigger", () => {
   const member = {

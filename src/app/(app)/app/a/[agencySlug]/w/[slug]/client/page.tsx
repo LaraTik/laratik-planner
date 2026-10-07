@@ -1,0 +1,160 @@
+import Link from "next/link";
+import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
+import { and, eq, inArray, isNull } from "drizzle-orm";
+import { Calendar, Clock } from "lucide-react";
+import { auth } from "@/lib/auth/config";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { db } from "@/lib/db";
+import {
+  approvalRequests,
+  contentItems,
+  deliveryLinks,
+  deliveryVersions,
+  mediaAssetLinks,
+  mediaAssets,
+  storageObjects,
+} from "@/lib/db/schema";
+import { getClientWorkspaceAtPath } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await tForActive();
+  return { title: t("sidebar.clientReview") };
+}
+import { Card } from "@/components/ui/card";
+import { PageHeader } from "@/components/workspace/page-header";
+import { ClientReviewCard } from "./client-review-card";
+
+export default async function ClientReviewPortalPage({
+  params,
+}: {
+  params: Promise<{ agencySlug: string; slug: string }>;
+}) {
+  const { t } = await tForActive();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/signin");
+  const { agencySlug, slug } = await params;
+  const workspace = await getClientWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
+  if (!workspace) notFound();
+  if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["client_reviewer"])))
+    notFound();
+  // Deliberately select only client-safe columns. Internal comments, activity,
+  // assignments, internal gates, and private notes never enter this result.
+  const rows = await db
+    .select({
+      requestId: approvalRequests.id,
+      contentId: contentItems.id,
+      title: contentItems.title,
+      format: contentItems.format,
+      plannedPublishAt: contentItems.plannedPublishAt,
+      dueAt: approvalRequests.dueAt,
+      deliveryVersionId: approvalRequests.deliveryVersionId,
+      deliveryVersion: deliveryVersions.versionNumber,
+      deliveryDescription: deliveryVersions.description,
+    })
+    .from(approvalRequests)
+    .innerJoin(contentItems, eq(contentItems.id, approvalRequests.contentItemId))
+    .leftJoin(deliveryVersions, eq(deliveryVersions.id, approvalRequests.deliveryVersionId))
+    .where(
+      and(
+        eq(contentItems.workspaceId, workspace.id),
+        eq(approvalRequests.gate, "creative_client"),
+        eq(approvalRequests.status, "pending"),
+        isNull(approvalRequests.invalidatedAt),
+      ),
+    );
+  const versionIds = rows
+    .map((row) => row.deliveryVersionId)
+    .filter((id): id is string => Boolean(id));
+  const links = versionIds.length
+    ? await db
+        .select({
+          id: deliveryLinks.id,
+          deliveryVersionId: deliveryLinks.deliveryVersionId,
+          label: deliveryLinks.label,
+          url: deliveryLinks.url,
+        })
+        .from(deliveryLinks)
+        .where(inArray(deliveryLinks.deliveryVersionId, versionIds))
+    : [];
+  const mediaLinks = versionIds.length
+    ? await db
+        .select({
+          id: mediaAssetLinks.id,
+          deliveryVersionId: mediaAssetLinks.targetId,
+          label: mediaAssets.title,
+        })
+        .from(mediaAssetLinks)
+        .innerJoin(mediaAssets, eq(mediaAssets.id, mediaAssetLinks.mediaAssetId))
+        .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+        .where(
+          and(
+            eq(mediaAssetLinks.targetType, "delivery"),
+            eq(mediaAssetLinks.clientVisible, true),
+            eq(mediaAssetLinks.workspaceId, workspace.id),
+            eq(mediaAssetLinks.agencyId, workspace.agencyId),
+            inArray(mediaAssetLinks.targetId, versionIds),
+            eq(mediaAssets.status, "ready"),
+            eq(storageObjects.status, "active"),
+          ),
+        )
+    : [];
+  return (
+    <div className="space-y-6" data-testid="workspace-client-review">
+      <PageHeader
+        eyebrow={workspace.name}
+        title={t("sidebar.clientReviewPage.title")}
+        description={
+          <>
+            {t("sidebar.clientReviewPage.subtitle")}
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {workspace.timezone}
+            </span>
+          </>
+        }
+        action={
+          <Link
+            href={`/app/w/${slug}/client/calendar`}
+            className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
+          >
+            <Calendar className="h-4 w-4" aria-hidden="true" />
+            {t("sidebar.clientReviewPage.viewCalendar")}
+          </Link>
+        }
+      />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        {rows.map((row) => (
+          <ClientReviewCard
+            key={row.requestId}
+            workspaceSlug={slug}
+            requestId={row.requestId}
+            title={row.title}
+            deliveryDescription={
+              row.deliveryDescription || t("sidebar.clientReviewPage.creativeDeliveryFallback")
+            }
+            deliveryVersion={row.deliveryVersion}
+            plannedPublishAt={row.plannedPublishAt.toISOString()}
+            overdue={Boolean(row.dueAt && row.dueAt < new Date())}
+            links={[
+              ...links.filter((link) => link.deliveryVersionId === row.deliveryVersionId),
+              ...mediaLinks
+                .filter((link) => link.deliveryVersionId === row.deliveryVersionId)
+                .map((link) => ({
+                  id: link.id,
+                  label: link.label,
+                  url: `/api/deliveries/assets/${encodeURIComponent(link.id)}`,
+                })),
+            ]}
+          />
+        ))}
+      </div>
+      {rows.length === 0 ? (
+        <Card padding="lg" className="text-body text-fg-secondary text-center">
+          {t("sidebar.clientReviewPage.empty")}
+        </Card>
+      ) : null}
+    </div>
+  );
+}

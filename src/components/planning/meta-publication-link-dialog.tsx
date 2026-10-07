@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button";
 import {
   listMetaPublicationCandidatesAction,
   linkMetaPublicationAction,
-} from "@/app/(app)/app/w/[slug]/planning/actions";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
 export type MetaPublicationCandidateDto = {

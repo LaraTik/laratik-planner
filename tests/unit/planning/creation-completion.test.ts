@@ -6,13 +6,37 @@ import { tFor } from "@/messages";
 const readSrc = (...parts: string[]) => readFileSync(join(process.cwd(), ...parts), "utf8");
 
 describe("creation completion loop (UX-13)", () => {
-  const actions = readSrc("src", "app", "(app)", "app", "w", "[slug]", "planning", "actions.ts");
-  const planning = readSrc("src", "app", "(app)", "app", "w", "[slug]", "planning", "page.tsx");
+  const actions = readSrc(
+    "src",
+    "app",
+    "(app)",
+    "app",
+    "a",
+    "[agencySlug]",
+    "w",
+    "[slug]",
+    "planning",
+    "actions.ts",
+  );
+  const planning = readSrc(
+    "src",
+    "app",
+    "(app)",
+    "app",
+    "a",
+    "[agencySlug]",
+    "w",
+    "[slug]",
+    "planning",
+    "page.tsx",
+  );
   const detail = readSrc(
     "src",
     "app",
     "(app)",
     "app",
+    "a",
+    "[agencySlug]",
     "w",
     "[slug]",
     "planning",

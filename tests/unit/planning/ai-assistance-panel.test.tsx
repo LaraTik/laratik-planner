@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/ai-assistance-section", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/ai-assistance-section", () => ({
   AiAssistanceSection: () => <div data-testid="ai-assistance-section-mock" />,
 }));
 

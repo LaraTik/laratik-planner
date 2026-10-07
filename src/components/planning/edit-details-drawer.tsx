@@ -16,7 +16,7 @@ import {
 import {
   EditIdeaForm,
   type EditIdeaFormInitial,
-} from "@/app/(app)/app/w/[slug]/planning/edit/[id]/edit-form";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/edit-form";
 
 /**
  * EditDetailsDrawer — right-side drawer that hosts the

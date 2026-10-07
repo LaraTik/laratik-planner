@@ -14,7 +14,7 @@ vi.mock("react-dom", async (importOriginal) => {
 
 // Stub the action so we never submit; we only assert the form
 // binding exists.
-vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions", () => ({
   createFontAssetAction: vi.fn(),
   archiveFontAssetAction: vi.fn(),
 }));
@@ -43,7 +43,7 @@ vi.mock("next/font/google", () => {
 });
 
 import { useFormStatus } from "react-dom";
-import { TypographyForm } from "@/app/(app)/app/w/[slug]/brand-kit/typography-form";
+import { TypographyForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/typography-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 

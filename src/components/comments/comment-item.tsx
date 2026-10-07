@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { CheckCircle, Reply } from "lucide-react";
-import { resolveCommentAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { resolveCommentAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { LinkifyText } from "@/components/ui/linkify-text";

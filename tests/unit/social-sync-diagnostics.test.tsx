@@ -4,7 +4,7 @@ import {
   SocialSyncDiagnostics,
   classifyChannel,
   formatRelative,
-} from "@/app/(app)/app/w/[slug]/analytics/social/social-sync-diagnostics";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-sync-diagnostics";
 
 /**
  * M5 — sync diagnostics bento tests.

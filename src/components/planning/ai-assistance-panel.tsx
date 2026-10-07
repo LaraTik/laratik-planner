@@ -11,7 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { AiAssistanceSection } from "@/app/(app)/app/w/[slug]/planning/[id]/ai-assistance-section";
+import { AiAssistanceSection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/ai-assistance-section";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**

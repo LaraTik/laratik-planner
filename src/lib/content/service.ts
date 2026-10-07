@@ -1378,7 +1378,7 @@ export async function restoreContentItem(actor: Actor, input: ArchiveContentItem
 // if they ever need a "task owner" picker. Returns `displayName`
 // when set, otherwise `name`, otherwise a short id slice — same
 // precedence the planning list owner dropdown uses
-// (`src/app/(app)/app/w/[slug]/planning/page.tsx`).
+// (`src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/page.tsx`).
 
 import { users, workspaceMemberships as wsMemberships } from "@/lib/db/schema";
 

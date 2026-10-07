@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { BrandIdentityHero } from "@/app/(app)/app/w/[slug]/brand-kit/brand-identity-hero";
+import { BrandIdentityHero } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/brand-identity-hero";
 
 /**
  * The hero used to render `<time dateTime={lastUpdatedAt.toISOString()}>`

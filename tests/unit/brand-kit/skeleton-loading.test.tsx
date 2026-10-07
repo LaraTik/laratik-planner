@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@testing-library/react";
-import BrandKitLoading from "@/app/(app)/app/w/[slug]/brand-kit/loading";
+import BrandKitLoading from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/loading";
 
 describe("BrandKitLoading skeleton", () => {
   it("renders the loading state with aria-busy and aria-live", () => {

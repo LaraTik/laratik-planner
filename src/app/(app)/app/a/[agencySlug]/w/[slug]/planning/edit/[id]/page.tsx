@@ -1,0 +1,147 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { Clock } from "lucide-react";
+import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { and, eq, isNull } from "drizzle-orm";
+import { auth } from "@/lib/auth/config";
+import { db } from "@/lib/db";
+import { socialChannels } from "@/lib/db/schema";
+import { getContentItem } from "@/lib/content/service";
+import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/workspace/page-header";
+import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
+import { tForActive } from "@/lib/i18n/t-for-active";
+import { EditIdeaForm } from "./edit-form";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ agencySlug: string; slug: string; id: string }>;
+}) {
+  const { id } = await params;
+  const { t } = await tForActive();
+  return { title: t("planning.editMetaTitle", { id: id.slice(0, 8) }) };
+}
+
+/**
+ * Edit a draft / changes-requested idea. The page mirrors the Quick
+ * Create layout but pre-fills the existing values; the form posts to
+ * `updateContentItemAction` which validates, applies, and redirects
+ * back to the detail page.
+ */
+export default async function EditIdeaPage({
+  params,
+}: {
+  params: Promise<{ agencySlug: string; slug: string; id: string }>;
+}) {
+  const { agencySlug, slug, id } = await params;
+  const { t } = await tForActive();
+  const session = await auth();
+  if (!session?.user?.id) redirect("/signin");
+
+  const ws = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
+  if (!ws) notFound();
+
+  const item = await getContentItem({ id: session.user.id }, id);
+  if (!item || item.workspaceId !== ws.id) notFound();
+
+  if (
+    !(await hasWorkspaceRole({ id: session.user.id }, ws.id, [
+      "workspace_manager",
+      "content_planner",
+    ]))
+  ) {
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title={t("planning.editAccessDeniedTitle")}
+          description={t("planning.editAccessDeniedDescription")}
+        />
+        <Button asChild variant="ghost">
+          <Link href={`/app/w/${slug}/planning/${id}`}>
+            <DirAwareArrowLeft className="h-3.5 w-3.5" />
+            {t("contentDetail.copy.backToPlanning")}
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  // Channel list for the picker.
+  //
+  // Channel state contract: the channels that the picker renders
+  // must include every channel already selected on the content
+  // item, even if a channel was archived or deactivated after the
+  // idea was created. Otherwise the user can never deselect a
+  // stale channel from the edit form, and the picker would silently
+  // drop a row that the detail page still shows as selected —
+  // producing the "detail page says Instagram is selected, edit
+  // form shows it unchecked" inconsistency users reported.
+  //
+  // We therefore UNION the active workspace channels with the
+  // item's already-selected channels. `tests/unit/publishing/...`
+  // pins this contract.
+  const allChannels = await db
+    .select({
+      id: socialChannels.id,
+      accountName: socialChannels.accountName,
+      platform: socialChannels.platform,
+    })
+    .from(socialChannels)
+    .where(
+      and(
+        eq(socialChannels.workspaceId, ws.id),
+        eq(socialChannels.isActive, true),
+        isNull(socialChannels.archivedAt),
+      ),
+    );
+
+  const selectedChannelIds = new Set(item.channels.map((c) => c.socialChannelId));
+  const seenIds = new Set(allChannels.map((c) => c.id));
+  const missingSelected = item.channels
+    .filter((c) => !seenIds.has(c.socialChannelId))
+    .map((c) => ({
+      id: c.socialChannelId,
+      accountName: c.accountName,
+      platform: c.platform,
+    }));
+  if (missingSelected.length > 0) {
+    console.warn(
+      `[planning/edit] ${missingSelected.length} channel(s) on item ${id} are not in the active list; showing them as a read-only row so the user can deselect them.`,
+    );
+  }
+  void selectedChannelIds; // kept for clarity; consumed via `initial.channelIds`.
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-6" data-testid="workspace-planning-edit">
+      <PageHeader
+        eyebrow={ws.name}
+        title={t("planning.editIdeaTitle")}
+        description={
+          <>
+            {t("planning.editIdeaDescription")}
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
+              <Clock className="h-3 w-3" aria-hidden="true" />
+              {ws.timezone}
+            </span>
+          </>
+        }
+      />
+      <EditIdeaForm
+        mode="all"
+        workspaceSlug={slug}
+        contentItemId={item.id}
+        workspaceTimezone={ws.timezone}
+        channels={[...allChannels, ...missingSelected]}
+        initial={{
+          title: item.title,
+          format: item.format,
+          brief: item.brief,
+          plannedPublishAtIso: item.plannedPublishAt.toISOString(),
+          channelIds: item.channels.map((c) => c.socialChannelId),
+        }}
+      />
+    </div>
+  );
+}

@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 // CommentItem imports a server action; the test never invokes it, so a
 // no-op stub keeps the module graph small and avoids pulling next-auth
 // (which has a known Vitest/Node ESM issue) into the test bundle.
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   resolveCommentAction: vi.fn(),
 }));
 

@@ -20,7 +20,7 @@ vi.mock("react-dom", async (importOriginal) => {
 // CommentForm imports a server action; the test never invokes it, so
 // a no-op stub keeps the module graph small and avoids pulling
 // next-auth (which has a known Vitest/Node ESM issue) into the bundle.
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   createCommentAction: vi.fn(),
 }));
 

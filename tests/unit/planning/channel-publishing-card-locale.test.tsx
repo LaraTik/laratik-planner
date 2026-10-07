@@ -9,7 +9,7 @@ import { LocaleProvider } from "@/components/i18n/locale-provider";
  * shape to typecheck; the click → submit flow is covered by
  * `tests/e2e/content-flow.spec.ts`.
  */
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -35,6 +35,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={publishedPublication}
           isPublisher={false}
@@ -55,6 +56,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="ar">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={channel}
           publication={publishedPublication}
           isPublisher={false}
@@ -73,6 +75,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="ar">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={null}
           isPublisher={true}
@@ -88,6 +91,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="ar">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={publishedPublication}
           isPublisher={true}
@@ -103,6 +107,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={null}
           isPublisher={true}
@@ -122,6 +127,7 @@ describe("ChannelPublishingCard localization", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={null}
           isPublisher={true}
@@ -151,6 +157,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={ephemeral({ expiresAt: past })}
           isPublisher={false}
@@ -170,6 +177,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={ephemeral({ expiresAt: new Date(Date.now() + 3_600_000).toISOString() })}
           isPublisher={false}
@@ -188,6 +196,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true, timeZone: "UTC" }}
           publication={ephemeral({
             publishedUrl: "https://example.com/story-1",
@@ -208,6 +217,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={{
             status: "published" as const,
@@ -232,6 +242,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="ar">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={ephemeral({ expiresAt: new Date(Date.now() - 60_000).toISOString() })}
           isPublisher={false}
@@ -252,6 +263,7 @@ describe("ChannelPublishingCard ephemeral publications", () => {
       <LocaleProvider locale="en">
         <ChannelPublishingCard
           workspaceSlug="acme"
+          agencySlug="acme"
           channel={{ ...channel, configured: true }}
           publication={ephemeral({
             publishedUrl: "https://example.com/story-1",

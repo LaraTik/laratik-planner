@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/w/[slug]/channels/actions";
+import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
 
 type CommandCenterRefreshLabels = {
   refresh: string;

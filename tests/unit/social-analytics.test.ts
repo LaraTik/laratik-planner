@@ -400,7 +400,7 @@ import {
   csvFilename,
   escapeCsvCell,
   toCsv,
-} from "@/app/(app)/app/w/[slug]/analytics/social/social-csv";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-csv";
 
 describe("toCsv", () => {
   it("omits Instagram-only engaged accounts from a Facebook export", () => {

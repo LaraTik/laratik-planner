@@ -106,7 +106,7 @@ describe("WorkspaceTopTabs — accepts a serialisable iconName", () => {
 
 describe("brand-kit page — does not pass LucideIcon across the RSC boundary", () => {
   it("the page's local helpers (KpiCard, etc.) are server-side and only render icon components in JSX", () => {
-    const source = readRepoFile("src/app/(app)/app/w/[slug]/brand-kit/page.tsx");
+    const source = readRepoFile("src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx");
     // The original 2026-08-27 guard asserted the page used
     // `iconName: section.icon` in a `BRAND_KIT_SECTIONS.map(...)` block.
     // The page was restructured in `6cd738e feat(brand-kit): split
@@ -149,7 +149,7 @@ describe("brand-kit page — no 'use client' helper receives a LucideIcon as a p
   // module, that import's value must be a serialisable name, not a
   // LucideIcon function.
   it("scans for client imports + icon props and asserts no LucideIcon crosses", () => {
-    const source = readRepoFile("src/app/(app)/app/w/[slug]/brand-kit/page.tsx");
+    const source = readRepoFile("src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx");
     // The page itself must not be 'use client' (it's a Server Component).
     expect(
       source,

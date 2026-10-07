@@ -14,7 +14,7 @@ import {
   InlineDateEditor,
   InlineProductionNotesEditor,
   InlineTitleEditor,
-} from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { PlanningAttentionItem } from "@/lib/planning/presentation";
 

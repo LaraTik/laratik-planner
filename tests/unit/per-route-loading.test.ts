@@ -28,7 +28,19 @@ describe("per-route loading.tsx files (UX-08)", () => {
 
   function loadRouteLoading(slug: string, route: string) {
     return readFileSync(
-      join(process.cwd(), "src", "app", "(app)", "app", "w", `[${slug}]`, route, "loading.tsx"),
+      join(
+        process.cwd(),
+        "src",
+        "app",
+        "(app)",
+        "app",
+        "a",
+        "[agencySlug]",
+        "w",
+        `[${slug}]`,
+        route,
+        "loading.tsx",
+      ),
       "utf8",
     );
   }

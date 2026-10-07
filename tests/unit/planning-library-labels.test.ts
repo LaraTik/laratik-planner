@@ -4,7 +4,19 @@ import { join } from "node:path";
 
 describe("planning library user-facing labels", () => {
   const source = readFileSync(
-    join(process.cwd(), "src", "app", "(app)", "app", "w", "[slug]", "library", "page.tsx"),
+    join(
+      process.cwd(),
+      "src",
+      "app",
+      "(app)",
+      "app",
+      "a",
+      "[agencySlug]",
+      "w",
+      "[slug]",
+      "library",
+      "page.tsx",
+    ),
     "utf8",
   );
 

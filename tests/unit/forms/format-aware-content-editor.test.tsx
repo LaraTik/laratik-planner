@@ -7,7 +7,7 @@ vi.mock("@/components/forms/per-field-ai-suggest", () => ({
   PerFieldAiSuggest: () => null,
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   updateFormatPayloadAction: vi.fn(),
 }));
 

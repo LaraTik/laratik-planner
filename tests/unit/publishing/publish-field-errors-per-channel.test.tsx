@@ -26,7 +26,7 @@ const { saveMock, batchMock } = vi.hoisted(() => ({
   })),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: saveMock,
@@ -34,7 +34,7 @@ vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -43,7 +43,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 import { tFor } from "@/messages";
 
@@ -114,6 +114,7 @@ function renderTwoChannels({ channelBBoardId = "" }: { channelBBoardId?: string 
       <PublishPackageForm
         workspaceId="44444444-4444-4444-8444-444444444444"
         workspaceSlug="acme"
+        agencySlug="acme"
         workspaceTimezone="Europe/Berlin"
         contentItemId={contentItemId}
         itemFormat="static_post"

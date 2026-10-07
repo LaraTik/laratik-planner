@@ -13,14 +13,14 @@ vi.mock("react-dom", async (importOriginal) => {
 });
 
 // Stub the action — we never submit, just assert the binding exists.
-vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
   createChannelAction: vi.fn(),
   archiveChannelAction: vi.fn(),
   updateChannelAction: vi.fn(),
 }));
 
 import { useFormStatus } from "react-dom";
-import { ChannelForm } from "@/app/(app)/app/w/[slug]/channels/channel-form";
+import { ChannelForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/channel-form";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);

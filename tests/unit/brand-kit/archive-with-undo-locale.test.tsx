@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { ArchiveWithUndo } from "@/app/(app)/app/w/[slug]/brand-kit/archive-with-undo";
+import { ArchiveWithUndo } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/archive-with-undo";
 
 const toastMock = vi.hoisted(() => ({
   success: vi.fn(),

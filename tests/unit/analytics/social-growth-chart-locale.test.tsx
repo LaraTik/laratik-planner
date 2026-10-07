@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { SocialGrowthChart } from "@/app/(app)/app/w/[slug]/analytics/social/social-growth-chart";
+import { SocialGrowthChart } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/social-growth-chart";
 
 describe("SocialGrowthChart localization", () => {
   it("uses a localized platform label in Arabic", () => {

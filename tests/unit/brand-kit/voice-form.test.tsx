@@ -12,13 +12,13 @@ vi.mock("react-dom", async (importOriginal) => {
   };
 });
 
-vi.mock("@/app/(app)/app/w/[slug]/brand-kit/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions", () => ({
   createVoiceRuleAction: vi.fn(),
   archiveVoiceRuleAction: vi.fn(),
 }));
 
 import { useFormStatus } from "react-dom";
-import { VoiceForm } from "@/app/(app)/app/w/[slug]/brand-kit/voice-form";
+import { VoiceForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/voice-form";
 
 const mockedUseFormStatus = vi.mocked(useFormStatus);
 

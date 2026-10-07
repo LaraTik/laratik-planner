@@ -8,7 +8,7 @@ import { LocaleProvider } from "@/components/i18n/locale-provider";
  * `PlatformPreview` does not issue a duplicate `useImageDimensions`
  * probe when the parent has supplied stored dimensions.
  *
- * Pre-PR 1 the planning detail page (`/app/(app)/app/w/[slug]/planning/[id]/page.tsx`)
+ * Pre-PR 1 the planning detail page (`/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx`)
  * mounted `PlatformPreviewSwitcher` which mounted `PlatformPreview`,
  * which called `useImageDimensions(thumbnailUrl)`. Because the URL
  * was `/api/media/assets/<uuid>` (no recognised image extension),

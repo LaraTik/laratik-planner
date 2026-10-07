@@ -27,7 +27,7 @@ export const ChannelCommandSchema = z.object({
 /**
  * FEAT-07 (GAP-FULL-REVIEW-2026-08-25) — §14 `archiveChannel` /
  * `restoreChannel` Zod inputs. The existing `createChannel` /
- * `updateChannel` actions are in `src/app/(app)/app/w/[slug]/channels/actions.ts`;
+ * `updateChannel` actions are in `src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions.ts`;
  * these Zod schemas give the service layer a typed surface for the
  * archive / restore commands and let future callers validate at the
  * boundary.

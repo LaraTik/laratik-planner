@@ -1,13 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
   finalizeMetaSelectionAction: vi.fn(),
   disconnectChannelAction: vi.fn(),
   revokeConnectionAction: vi.fn(),
 }));
 
 import { fireEvent, render, screen } from "@testing-library/react";
-import { MetaAccountPicker } from "@/app/(app)/app/w/[slug]/channels/meta-account-picker";
+import { MetaAccountPicker } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/meta-account-picker";
 
 /**
  * M4 — Meta account picker unit contract.

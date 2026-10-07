@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { InlineDateEditor } from "@/app/(app)/app/w/[slug]/planning/[id]/inline-editable-fields";
+import { InlineDateEditor } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields";
 
 /**
  * PlanningHeaderActions — kebab (3-dot) menu on the right side of the

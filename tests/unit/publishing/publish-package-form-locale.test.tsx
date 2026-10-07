@@ -1,14 +1,14 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/[id]/publish/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions", () => ({
   markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: vi.fn(),
   setFinalCopyApprovalAction: vi.fn(),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
 
@@ -17,8 +17,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PublishPackageForm } from "@/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form";
-import { recordPublicationAction } from "@/app/(app)/app/w/[slug]/planning/actions";
+import { PublishPackageForm } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form";
+import { recordPublicationAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import type { ReadinessReport } from "@/lib/publishing/readiness";
 
 const contentItemId = "11111111-1111-4111-8111-111111111111";
@@ -54,6 +54,7 @@ describe("PublishPackageForm localization", () => {
         <PublishPackageForm
           workspaceId="33333333-3333-4333-8333-333333333333"
           workspaceSlug="food-game"
+          agencySlug="acme"
           workspaceTimezone="Europe/Berlin"
           contentItemId={contentItemId}
           itemFormat="static_post"
@@ -100,6 +101,7 @@ describe("PublishPackageForm localization", () => {
         <PublishPackageForm
           workspaceId="33333333-3333-4333-8333-333333333333"
           workspaceSlug="food-game"
+          agencySlug="acme"
           workspaceTimezone="Europe/Berlin"
           contentItemId={contentItemId}
           itemFormat="static_post"
@@ -131,6 +133,7 @@ describe("PublishPackageForm localization", () => {
     return waitFor(() => {
       expect(recordPublicationAction).toHaveBeenCalledWith({
         workspaceSlug: "food-game",
+        agencySlug: "acme",
         contentItemChannelId: "44444444-4444-4444-8444-444444444444",
         status: "skipped",
         note: "تم الاستبعاد من النشر",

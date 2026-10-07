@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { DeliverySection } from "@/app/(app)/app/w/[slug]/planning/[id]/delivery-section";
+import { DeliverySection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/delivery-section";
 import {
   setMediaRequiredAction,
   submitDeliveryAction,
-} from "@/app/(app)/app/w/[slug]/planning/actions";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   submitDeliveryAction: vi.fn(),
   setMediaRequiredAction: vi.fn(),
 }));

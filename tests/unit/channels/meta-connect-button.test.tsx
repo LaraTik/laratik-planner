@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { MetaConnectButton } from "@/app/(app)/app/w/[slug]/channels/meta-connect-button";
+import { MetaConnectButton } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/meta-connect-button";
 
 describe("MetaConnectButton", () => {
   it("posts the workspace slug and surfaces an accessible start error", async () => {

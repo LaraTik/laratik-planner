@@ -12,6 +12,51 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — a shared workspace link could open the wrong tenant's workspace
+
+`/app/w/food-game` did not mean _that_ workspace. A workspace's identity is
+`(agencyId, slug)` — the unique index is **per agency**, not global:
+
+```js
+uniqueIndex("workspace_agency_slug_unique").on(t.agencyId, sql`lower(${t.slug})`);
+```
+
+But the route carried only the slug, so `findWorkspaceBySlug` fell through to
+the **recipient's** sticky active-agency cookie (`"once a user lands in agency
+B, they stay there"`). The link's meaning therefore lived in recipient-side
+state: two agencies can both own `food-game`, and a link shared between them
+either 404'd or silently opened a different tenant's workspace.
+
+Not a cross-tenant data leak — every hop is membership-gated and an explicit
+override fails closed. It is a **wrong-destination** bug: a user in both
+agencies, cookie sticky on B, edits B's content believing it is A's.
+
+**The canonical URL now carries both segments:**
+
+```
+/app/a/<agencySlug>/w/<workspaceSlug>[/<section>][?query]
+```
+
+- **`src/lib/urls.ts`** is the new single source of truth for workspace URLs.
+- **`getAccessibleWorkspaceAtPath(actor, agencySlug, slug)`** maps the slug to an
+  id only for an active member and fails closed, so a wrong-tenant pair is a 404
+  rather than a redirect into data the actor cannot see.
+- **The workspace layout no longer reads the active-agency cookie at all.**
+  `tests/unit/workspace-layout-agency-context.test.tsx` previously asserted that
+  it _did_ — it was rewritten to pin the opposite contract.
+- **`/app/w/[...legacy]` keeps old links working:** one reachable match →
+  canonical; **more than one → the workspace switcher, never a guess**; none →
+  404 (preserving the anti-IDOR contract that slugs stay unenumerable). It uses
+  307 rather than 308 on purpose: the outcome depends on who is asking, and a
+  cached permanent redirect would freeze one visitor's answer for everyone.
+
+**Deliberately not in this change:** most read-only server actions still resolve
+via the active-agency context (unchanged, membership-gated behaviour), and link
+builders still emit the legacy shape — so navigation works but costs one redirect
+hop until they are migrated to `workspaceHref`.
+
+See [ADR 0018](docs/decisions/0018-workspace-url-carries-tenant.md).
+
 ### Fixed — the Overview month switcher appeared to do nothing
 
 Changing `?month=YYYY-MM` on the workspace Overview left the page looking

@@ -20,7 +20,7 @@ vi.mock("react-dom", async (importOriginal) => {
 import { MemberList } from "@/app/(app)/app/users/member-list";
 import { SendInviteForm } from "@/app/(app)/app/users/send-invite-form";
 import { InvitationList } from "@/app/(app)/app/users/invitation-list";
-import { MemberEditTrigger } from "@/app/(app)/app/w/[slug]/team/member-edit-trigger";
+import { MemberEditTrigger } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/team/member-edit-trigger";
 import { tFor } from "@/messages";
 
 const t = tFor("en");

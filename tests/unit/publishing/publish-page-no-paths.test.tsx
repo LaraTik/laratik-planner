@@ -29,11 +29,11 @@ import { resolve } from "node:path";
 
 const PAGE_PATH = resolve(
   process.cwd(),
-  "src/app/(app)/app/w/[slug]/planning/[id]/publish/page.tsx",
+  "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/page.tsx",
 );
 const FORM_PATH = resolve(
   process.cwd(),
-  "src/app/(app)/app/w/[slug]/planning/[id]/publish/publish-package-form.tsx",
+  "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form.tsx",
 );
 const PRESENTATION_PATH = resolve(process.cwd(), "src/lib/publishing/readiness-presentation.ts");
 

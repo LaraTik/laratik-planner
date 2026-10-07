@@ -3,7 +3,7 @@ import { render, screen, within } from "@testing-library/react";
 import {
   DesignQueueList,
   type DesignQueueListItem,
-} from "@/app/(app)/app/w/[slug]/design-queue/design-queue-list";
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/design-queue/design-queue-list";
 import { tFor } from "@/messages";
 
 const t = tFor("en");
@@ -20,7 +20,7 @@ vi.mock("next/navigation", () => ({
 // is not jsdom-friendly in the test runner. The test only
 // exercises the read path (canBulkArchive: false), so the
 // toolbar never renders — stub it to a no-op.
-vi.mock("@/app/(app)/app/w/[slug]/design-queue/bulk-toolbar", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/design-queue/bulk-toolbar", () => ({
   DesignQueueBulkToolbar: () => null,
 }));
 

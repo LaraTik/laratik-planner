@@ -12,7 +12,7 @@ import { ChannelCommandSchema } from "@/lib/channels/command";
  *
  * §14 listed `createChannel`, `updateChannel`, `archiveChannel`, and
  * `restoreChannel` as required commands. The page-level actions in
- * `src/app/(app)/app/w/[slug]/channels/actions.ts` already
+ * `src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions.ts` already
  * implemented create / update / archive, but they lived outside the
  * service layer — the §14 contract was missing the matching
  * service-level exports and `restoreChannel` did not exist at all.

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CommandCenterRefresh } from "@/components/workspace/command-center-refresh";
-import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/w/[slug]/channels/actions";
+import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
 
 const refresh = vi.fn();
 
@@ -10,7 +10,7 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh }),
 }));
 
-vi.mock("@/app/(app)/app/w/[slug]/channels/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions", () => ({
   refreshWorkspaceSocialDataAction: vi.fn(async () => ({ success: true, synced: 1, failed: 0 })),
 }));
 

@@ -3,11 +3,11 @@ import { describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 
-vi.mock("@/app/(app)/app/w/[slug]/planning/actions", () => ({
+vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   applyAiDraftAction: vi.fn(),
 }));
 
-import { AiAssistanceSection } from "@/app/(app)/app/w/[slug]/planning/[id]/ai-assistance-section";
+import { AiAssistanceSection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/ai-assistance-section";
 
 const baseProps = {
   workspaceSlug: "demo",
