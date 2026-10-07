@@ -481,7 +481,7 @@ export default async function WorkspaceTeamPage({
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div>
               <DataTable
                 data-testid="team-table"
                 getRowKey={(m) => m.id}

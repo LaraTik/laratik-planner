@@ -36,6 +36,17 @@ document scroller was already clean); bottom-nav clearance was already correct
 which force-scrolls to top per navigation and does make a page feel
 unscrollable, is not a visibility defect and was left alone.
 
+The same nested-wrapper defect existed on four more pages — `library`, `team`,
+`channels` and `platform/errors` — all wrapping `DataTable` in a second
+`overflow-x-auto`. All five are de-nested, and the constraint is now documented
+at the source component so the next table does not reintroduce it.
+
+The remaining `min-h-screen` uses (`privacy`, `terms`, `setup`,
+`accept-invitation`, `signin/verify`, `agency-unavailable`) are single-column
+centred pages with no bottom chrome, where it is the standard
+fill-the-viewport pattern and hides nothing; `channel-edit-drawer` uses
+`h-screen` correctly for a fixed overlay. Left alone.
+
 Diagnosed from source; not confirmed in a browser at a mobile viewport.
 
 ### Fixed — the Overview month switcher appeared to do nothing

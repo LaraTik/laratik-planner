@@ -193,7 +193,7 @@ export default async function PlanningLibraryPage({
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div>
             <DataTable
               getRowKey={(p) => p.id}
               getRowTestId={(p) => `library-pillar-${p.id}`}

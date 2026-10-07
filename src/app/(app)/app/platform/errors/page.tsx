@@ -493,7 +493,7 @@ export default async function PlatformErrorsPage({
               />
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div>
               <DataTable
                 getRowKey={(row) => row.id}
                 getRowTestId={(row) => `platform-error-group-row-${row.fingerprint}`}
@@ -512,7 +512,7 @@ export default async function PlatformErrorsPage({
           </div>
         ) : (
           <>
-            <div className="overflow-x-auto">
+            <div>
               <DataTable
                 getRowKey={(row) => row.id}
                 getRowTestId={(row) =>
