@@ -6,6 +6,7 @@ name: Advisory quality
 on:
   push:
     branches: [main]
+    paths-ignore: ["docs/**", "**.md", "**.mdx"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -33,11 +34,13 @@ jobs:
   # A dependency advisory is published on someone else's schedule, so the
   # deploy gate only discovers it when somebody pushes — which is the worst
   # possible moment, because a routine commit gets blocked by unrelated
-  # news. This job runs the audit daily (and on push) and opens/updates an
-  # issue instead of failing the deploy. See
+  # news. The authoritative CI audit runs once on every code push; this job
+  # runs the advisory scan on the daily schedule or by manual dispatch and
+  # opens/updates an issue instead of failing the deploy. See
   # docs/operations/runbook.md § "Patching a dependency advisory".
   dependency-advisory:
     name: Dependency advisory
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -47,6 +50,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
 
       - name: Setup pnpm
@@ -65,8 +69,14 @@ jobs:
 
       # Informational at `low` — this job reports, it does not gate. The
       # blocking check stays in ci.yml at the documented high threshold.
-      - name: Audit production dependencies
-        run: pnpm audit --prod || true
+      - name: Audit production dependencies once
+        run: |
+          set +e
+          pnpm audit --prod --json > audit-report.json 2>&1
+          status=$?
+          cat audit-report.json
+          echo "audit_status=$status" >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
       - name: Publish advisory summary
         uses: actions/github-script@v7
@@ -74,15 +84,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           script: |
-            const { execSync } = require('child_process');
-            let report = '';
-            try {
-              report = execSync('pnpm audit --prod --json', { encoding: 'utf8' });
-            } catch (error) {
-              // pnpm exits non-zero when it finds anything, and still prints
-              // the JSON body to stdout — that is the payload we want.
-              report = error.stdout || '';
-            }
+            const fs = require('fs');
+            const report = fs.readFileSync('audit-report.json', 'utf8');
             let advisories = [];
             try {
               const parsed = JSON.parse(report);
@@ -131,6 +134,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -176,27 +180,12 @@ jobs:
           echo "ADVISORY_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
           set +e
           if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
-            pnpm test:coverage > coverage-attempt-1.log 2>&1
+            pnpm test:coverage -- --retry=1 > coverage-attempt-1.log 2>&1
           else
-            pnpm test:coverage:advisory > coverage-attempt-1.log 2>&1
+            pnpm test:coverage:advisory -- --retry=1 > coverage-attempt-1.log 2>&1
           fi
           status=$?
           cat coverage-attempt-1.log
-          echo "status=${status}" >> "$GITHUB_OUTPUT"
-          exit 0
-
-      - name: Run coverage attempt 2 after failure
-        id: attempt_two
-        if: steps.attempt_one.outputs.status != '0'
-        run: |
-          set +e
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
-            pnpm test:coverage > coverage-attempt-2.log 2>&1
-          else
-            pnpm test:coverage:advisory > coverage-attempt-2.log 2>&1
-          fi
-          status=$?
-          cat coverage-attempt-2.log
           echo "status=${status}" >> "$GITHUB_OUTPUT"
           exit 0
 
@@ -219,19 +208,14 @@ jobs:
         if: always()
         env:
           ATTEMPT_ONE_STATUS: ${{ steps.attempt_one.outputs.status }}
-          ATTEMPT_TWO_STATUS: ${{ steps.attempt_two.outputs.status }}
         run: |
           first="${ATTEMPT_ONE_STATUS}"
-          second="${ATTEMPT_TWO_STATUS}"
           if [[ "${first}" == "0" ]]; then
             status=passed
             attempts=1
-          elif [[ "${second}" == "0" ]]; then
-            status=flaky
-            attempts=2
           else
             status=failed
-            attempts=2
+            attempts=1
           fi
           duration=$(($(date +%s) - ADVISORY_STARTED_AT))
           pnpm exec tsx scripts/ci/advisory-report.ts \
@@ -337,6 +321,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           fetch-depth: 0
           persist-credentials: false
 
@@ -353,6 +338,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Chromium
         if: github.event_name == 'push' && env.ADVISORY_SUITE != 'release-candidate'
@@ -377,38 +368,18 @@ jobs:
           echo "status=${status}" >> "$GITHUB_OUTPUT"
           exit 0
 
-      - name: Run E2E attempt 2 after failure
-        id: attempt_two
-        if: steps.attempt_one.outputs.status != '0'
-        run: |
-          set +e
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
-            pnpm test:e2e:release > e2e-attempt-2.log 2>&1
-          else
-            pnpm test:e2e:critical > e2e-attempt-2.log 2>&1
-          fi
-          status=$?
-          cat e2e-attempt-2.log
-          echo "status=${status}" >> "$GITHUB_OUTPUT"
-          exit 0
-
       - name: Write E2E advisory report
         if: always()
         env:
           ATTEMPT_ONE_STATUS: ${{ steps.attempt_one.outputs.status }}
-          ATTEMPT_TWO_STATUS: ${{ steps.attempt_two.outputs.status }}
         run: |
           first="${ATTEMPT_ONE_STATUS}"
-          second="${ATTEMPT_TWO_STATUS}"
           if [[ "${first}" == "0" ]]; then
             status=passed
             attempts=1
-          elif [[ "${second}" == "0" ]]; then
-            status=flaky
-            attempts=2
           else
             status=failed
-            attempts=2
+            attempts=1
           fi
           duration=$(($(date +%s) - ADVISORY_STARTED_AT))
           pnpm exec tsx scripts/ci/advisory-report.ts \

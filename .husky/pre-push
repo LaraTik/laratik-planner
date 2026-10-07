@@ -1,166 +1,82 @@
 #!/usr/bin/env sh
-# Pre-push hook — full local unit + integration + advisory critical E2E
-# before a push reaches CI.
+# Pre-push hook — affected unit + integration feedback before a push.
 #
-# Scope: catches regressions that the pre-commit affected unit run and
-# the lint-staged format/lint pass cannot catch:
-#   1. full unit suite  (catches cross-module regressions)
-#   2. integration      (catches DB / migration / authorization
-#                        regressions that need a real Postgres)
-#   3. critical E2E     (chromium functional subset; advisory by default)
-#
-# This is the second-tier of the 2026-08-26 CI-minimization plan
-# + the 2026-08-26 "E2E moves local" follow-up + the 2026-08-28
-# "integration moves local" follow-up. The full unit suite and
-# integration remain local hard gates. Critical E2E runs as an
-# advisory signal so browser setup/runtime does not block a push.
-# The benefit of the integration move is the dev sees
-# "I think I'm done" time converge with "actually shipped" time
-# — the CI deploy-gate then re-runs integration as the audit,
-# not the first signal.
+# Full unit, integration, migration, build, audit, and browser gates remain
+# authoritative in CI. Local E2E is available explicitly through
+# `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`.
 #
 # Skip when you know what you're doing:
 #   git push --no-verify
-#   SKIP_PREPUSH=1        git push
-#   SKIP_E2E=1            git push  (skip only the E2E step)
-#   SKIP_INTEGRATION=1    git push  (skip only the integration step)
-#
-# What runs:
-#   1. pnpm test:unit         — the full vitest suite, no coverage.
-#   2. pnpm test:integration  — runs migrations + the disposable
-#                               postgres integration suite. Missing
-#                               TEST_DATABASE_URL fails with a setup
-#                               message. Requires a local dev env (see
-#                               docs/operations/runbook.md
-#                               § "Local E2E recipes").
-#   3. pnpm test:e2e:critical — chromium functional subset
-#                               (advisory; skipped only for docs-only pushes).
-#                               Requires a local dev env.
-#
-# What does NOT run (intentionally — kept for CI or out of the
-# deploy-gate contract):
-#   • tsc --noEmit          (runs in pre-commit, on the staged surface)
-#   • pnpm build            (production build, platform-specific)
-#   • pnpm test:coverage    (v8 instrumentation, slow — kept in CI)
-#   • full 5-browser matrix (`pnpm test:e2e:isolated`, ~45 min on
-#     Linux CI / ~30-60 min on a Mac) — keep as a manual pre-merge
-#     step per the runbook. The critical subset is the
-#     pre-push signal; the full matrix is the release-candidate
-#     gate. Per 2026-08-26 "E2E moves local" decision.
+#   SKIP_PREPUSH=1 git push
+#   SKIP_INTEGRATION=1 git push  (unit checks only)
 
 set -e
 
-# Skip in non-interactive contexts (CI, scripted release runs) and via flag.
 if [ -n "$SKIP_PREPUSH" ] || [ -n "$SKIP_PRECOMMIT" ] || [ -n "$CI" ]; then
   echo "⏭  pre-push skipped (SKIP_PREPUSH=$SKIP_PREPUSH, SKIP_PRECOMMIT=$SKIP_PRECOMMIT, CI=$CI)"
   exit 0
 fi
 
-# The repository's local disposable database has a stable, safe default. Use
-# it when the developer has not supplied an override so a normal push does
-# not depend on an exported shell variable. The integration and E2E runners
-# still enforce their test/CI URL guards, and an explicit TEST_DATABASE_URL
-# always wins.
+# Use the repository's safe disposable database when the developer has not
+# supplied an override. The affected runner still enforces the test/CI URL
+# guard before it starts integration tests.
 if [ -z "${TEST_DATABASE_URL:-}" ]; then
   export TEST_DATABASE_URL="postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test"
   echo "ℹ TEST_DATABASE_URL not set; using the local disposable planner_test database."
 fi
 
-# Git supplies one line per ref being pushed on stdin:
-#   <local-ref> <local-sha> <remote-ref> <remote-sha>
-# Inspect those commit ranges. The index is normally clean after a commit,
-# so using git diff --cached here would incorrectly skip every normal push.
+# Git supplies one line per ref being pushed on stdin. Build immutable commit
+# ranges and deliberately omit the working tree so unrelated uncommitted work
+# cannot change which tests a push runs.
+ZERO="0000000000000000000000000000000000000000"
+PUSH_RANGES=""
 PUSH_HAS_TESTABLE_CHANGE=0
+
 while read -r LOCAL_REF LOCAL_SHA _REMOTE_REF REMOTE_SHA; do
   [ -n "$LOCAL_REF" ] || continue
   case "$LOCAL_SHA" in
-    0000000000000000000000000000000000000000) continue;;
+    "$ZERO") continue ;;
   esac
-  if [ "$REMOTE_SHA" = "0000000000000000000000000000000000000000" ]; then
-    PUSH_HAS_TESTABLE_CHANGE=1
-    continue
+
+  if [ "$REMOTE_SHA" = "$ZERO" ]; then
+    PUSH_BASE=$(git merge-base origin/main "$LOCAL_SHA" 2>/dev/null || true)
+    if [ -z "$PUSH_BASE" ]; then
+      PUSH_BASE=$(git rev-list --max-parents=0 "$LOCAL_SHA" | tail -n 1)
+    fi
+  else
+    PUSH_BASE="$REMOTE_SHA"
   fi
-  PUSHED_FILES=$(git diff --name-only "$REMOTE_SHA...$LOCAL_SHA" 2>/dev/null || true)
+
+  PUSH_RANGE="$PUSH_BASE...$LOCAL_SHA"
+  if [ -n "$PUSH_RANGES" ]; then
+    PUSH_RANGES=$(printf '%s\n%s' "$PUSH_RANGES" "$PUSH_RANGE")
+  else
+    PUSH_RANGES="$PUSH_RANGE"
+  fi
+
+  PUSHED_FILES=$(git diff --name-only "$PUSH_RANGE" 2>/dev/null || true)
   while IFS= read -r PUSHED_FILE; do
     [ -n "$PUSHED_FILE" ] || continue
     case "$PUSHED_FILE" in
       docs/*|*.md|*.mdx) ;;
-      *) PUSH_HAS_TESTABLE_CHANGE=1; break;;
+      *) PUSH_HAS_TESTABLE_CHANGE=1; break ;;
     esac
   done <<EOF
 $PUSHED_FILES
 EOF
 done
 
-# 1) Full unit suite. This is the exact command CI used to run; it
-#    now runs here so a failure is caught before a CI minute is
-#    spent. Skipped only for docs-only or ref-deletion pushes.
-if [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
-  printf '\n▶ pnpm test:unit — full suite before push:\n\n'
-  pnpm test:unit -- --reporter=verbose
-else
-  echo "⏭  pnpm test:unit skipped (docs-only or ref deletion push)"
+if [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 0 ]; then
+  echo "⏭ affected tests skipped (docs-only or ref-deletion push)"
+  exit 0
 fi
 
-# 2) Integration suite (DB + migration + authorization).
-#    Moved out of CI on 2026-08-28 so the dev sees a real failure
-#    signal before pushing. CI still re-runs integration as the
-#    audit gate (the `unit-quality` job in ci.yml), so skipping
-#    this locally does NOT weaken the deploy contract — it just
-#    makes the dev's pre-push signal faster than the CI one
-#    again, which was the whole point of the 2026-08-26
-#    CI-minimization plan.
-#
-#    Same pushed-change gate as unit: skip on a docs-only / ref-deletion
-#    commit. SKIP_INTEGRATION=1 escapes the gate for trivial pushes
-#    where the dev has already validated the change locally.
-#
-#    The hook supplies the repository's safe local planner_test default above.
-#    Set TEST_DATABASE_URL explicitly when using another disposable database.
-#    Use SKIP_INTEGRATION=1 only as an explicit, visible escape hatch.
-#
-#    Local pre-reqs (one-time):
-#      docker compose -f docker-compose.dev.yml up -d postgres
-#      psql -h localhost -U planner -d planner -c "CREATE DATABASE planner_test;"
-#      export TEST_DATABASE_URL=postgresql://planner:planner_dev_only@localhost:5432/planner_test
-#    Add the export to your shell rc / direnv so it persists.
+PUSH_LAYER=core
 if [ -n "$SKIP_INTEGRATION" ]; then
-  echo "⏭  pnpm test:integration skipped (SKIP_INTEGRATION=1)"
-elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
-  printf '\n▶ pnpm test:integration — disposable Postgres + migration + authz:\n'
-  printf '  (SKIP_INTEGRATION=1 to skip; setup in docs/operations/runbook.md)\n\n'
-  pnpm test:integration
-else
-  echo "⏭  pnpm test:integration skipped (docs-only or ref deletion push)"
+  echo "⏭ integration selection disabled (SKIP_INTEGRATION=1)"
+  PUSH_LAYER=unit
 fi
 
-# 3) Critical E2E (chromium functional subset). This is advisory locally;
-#    the GitHub advisory workflow repeats it on the exact pushed SHA.
-#    Visual regression is intentionally a separate manual release-candidate gate because
-#    the committed Stitch references require deliberate review when
-#    product copy, fixtures, or layout density changes.
-#
-#    Same pushed-change gate as unit: skip on a docs-only / ref-deletion
-#    commit. SKIP_E2E=1 escapes the gate for trivial pushes where
-#    the dev has already validated the change via `pnpm test:e2e`
-#    (or has a follow-up plan).
-#
-#    Local pre-reqs (one-time): `docker compose -f
-#    docker-compose.dev.yml up -d postgres`, `pnpm db:migrate`,
-#    `pnpm exec playwright install --with-deps chromium`. See
-#    `docs/operations/runbook.md` § "Local E2E recipes" for the
-#    full setup.
-if [ -n "$SKIP_E2E" ]; then
-  echo "⏭  pnpm test:e2e:critical skipped (SKIP_E2E=1)"
-elif [ "$PUSH_HAS_TESTABLE_CHANGE" -eq 1 ]; then
-  printf '\n▶ pnpm test:e2e:critical — chromium functional checks before push:\n'
-  printf '  (SKIP_E2E=1 to skip; full local pre-reqs in docs/operations/runbook.md)\n\n'
-  if pnpm test:e2e:critical; then
-    echo "✓ pnpm test:e2e:critical passed (advisory)"
-  else
-    echo "⚠ pnpm test:e2e:critical failed (advisory); push continues."
-    echo "  Run pnpm test:e2e:release before a release candidate."
-  fi
-else
-  echo "⏭  pnpm test:e2e:critical skipped (docs-only or ref deletion push)"
-fi
+printf '\n▶ affected unit/integration tests for pushed ranges:\n\n'
+AFFECTED_PUSH_RANGES="$PUSH_RANGES" \
+  pnpm test:affected -- --push --layer "$PUSH_LAYER"

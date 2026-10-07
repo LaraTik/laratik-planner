@@ -16,9 +16,10 @@ import { TEST_OWNERSHIP } from "./test-ownership";
 export type AffectedCliOptions = {
   since?: string;
   area?: string;
-  layer: TestLayer | "all";
+  layer: TestLayer | "all" | "core";
   coverage: boolean;
   staged: boolean;
+  push: boolean;
 };
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -28,6 +29,7 @@ export function parseAffectedArgs(args: string[]): AffectedCliOptions {
     layer: "all",
     coverage: false,
     staged: false,
+    push: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -41,6 +43,10 @@ export function parseAffectedArgs(args: string[]): AffectedCliOptions {
       options.staged = true;
       continue;
     }
+    if (argument === "--push") {
+      options.push = true;
+      continue;
+    }
 
     const [key, inlineValue] = argument.split("=", 2);
     if (key === "--since" || key === "--area" || key === "--layer") {
@@ -49,8 +55,14 @@ export function parseAffectedArgs(args: string[]): AffectedCliOptions {
       if (key === "--since") options.since = value;
       else if (key === "--area") options.area = value;
       else {
-        if (value !== "unit" && value !== "integration" && value !== "browser" && value !== "all") {
-          throw new Error("layer must be unit, integration, browser, or all");
+        if (
+          value !== "unit" &&
+          value !== "integration" &&
+          value !== "browser" &&
+          value !== "all" &&
+          value !== "core"
+        ) {
+          throw new Error("layer must be unit, integration, browser, core, or all");
         }
         options.layer = value;
       }
@@ -59,10 +71,27 @@ export function parseAffectedArgs(args: string[]): AffectedCliOptions {
     throw new Error(`Unknown option: ${argument}`);
   }
 
-  if (options.area && options.since) {
-    throw new Error("--area and --since cannot be combined");
+  if (options.area && (options.since || options.push)) {
+    throw new Error("--area cannot be combined with --since or --push");
+  }
+  if (options.since && options.push) {
+    throw new Error("--since and --push cannot be combined");
+  }
+  if (options.staged && options.push) {
+    throw new Error("--staged and --push cannot be combined");
   }
   return options;
+}
+
+export function parsePushRanges(value: string): string[] {
+  const ranges = value
+    .split(/\r?\n/)
+    .map((range) => range.trim())
+    .filter(Boolean);
+  if (ranges.length === 0 || ranges.some((range) => !/^.+\.\.\..+$/.test(range))) {
+    throw new Error("A pushed test selection expected base...head ranges");
+  }
+  return [...new Set(ranges)];
 }
 
 export function buildManualClassification(
@@ -110,13 +139,21 @@ function changedFilesFromDiff(args: string[]): string[] {
   return output.split("\0").filter(Boolean);
 }
 
-function collectChangedFiles(options: Pick<AffectedCliOptions, "since" | "staged">): string[] {
+function collectChangedFiles(
+  options: Pick<AffectedCliOptions, "since" | "staged" | "push">,
+): string[] {
   if (options.staged) {
     return changedFilesFromDiff(["--cached"]);
   }
 
   const files = new Set<string>();
   const add = (values: string[]) => values.forEach((file) => files.add(file));
+
+  if (options.push) {
+    const ranges = parsePushRanges(process.env.AFFECTED_PUSH_RANGES ?? "");
+    ranges.forEach((range) => add(changedFilesFromDiff([range])));
+    return [...files].filter(Boolean).sort();
+  }
 
   if (options.since) {
     add(changedFilesFromDiff([`${options.since}...HEAD`]));
@@ -182,7 +219,7 @@ function run(label: string, command: string, args: string[], env?: NodeJS.Proces
     throw new Error(`${label} failed with exit code ${result.status ?? "unknown"}`);
 }
 
-function selectedBrowserArgs(browser: BrowserSelection[]): string[] {
+export function selectedBrowserArgs(browser: BrowserSelection[]): string[] {
   const specs = [...new Set(browser.map((selection) => selection.spec))];
   const projects = [...new Set(browser.flatMap((selection) => selection.projects ?? ["chromium"]))];
   const greps = browser
@@ -199,7 +236,7 @@ function runUnit(
   options: AffectedCliOptions,
   repositoryFiles: string[],
 ): void {
-  if (options.layer !== "all" && options.layer !== "unit") return;
+  if (options.layer !== "all" && options.layer !== "unit" && options.layer !== "core") return;
   const sourceFiles = options.area
     ? []
     : changedFiles.filter((file) => file.startsWith("src/") && existsSync(join(ROOT, file)));
@@ -238,7 +275,8 @@ function runIntegration(
   options: AffectedCliOptions,
   repositoryFiles: string[],
 ): void {
-  if (options.layer !== "all" && options.layer !== "integration") return;
+  if (options.layer !== "all" && options.layer !== "integration" && options.layer !== "core")
+    return;
   if (classification.runAllIntegration) {
     run("full integration suite", "pnpm", ["test:integration"]);
     return;

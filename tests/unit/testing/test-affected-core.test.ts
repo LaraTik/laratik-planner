@@ -5,7 +5,12 @@ import {
   validateOwnershipManifest,
   type TestOwnershipManifest,
 } from "../../../scripts/test-affected-core";
-import { buildManualClassification, parseAffectedArgs } from "../../../scripts/test-affected";
+import {
+  buildManualClassification,
+  parseAffectedArgs,
+  parsePushRanges,
+  selectedBrowserArgs,
+} from "../../../scripts/test-affected";
 
 const manifest: TestOwnershipManifest = {
   unitSelection: {
@@ -155,10 +160,54 @@ describe("test affected core", () => {
   it("parses the affected command options and rejects unknown layers", () => {
     expect(
       parseAffectedArgs(["--since", "origin/main", "--layer", "browser", "--coverage"]),
-    ).toEqual({ since: "origin/main", layer: "browser", coverage: true, staged: false });
+    ).toEqual({
+      since: "origin/main",
+      layer: "browser",
+      coverage: true,
+      staged: false,
+      push: false,
+    });
+    expect(parseAffectedArgs(["--push", "--layer", "core"])).toEqual({
+      layer: "core",
+      coverage: false,
+      staged: false,
+      push: true,
+    });
     expect(() => parseAffectedArgs(["--layer", "database"])).toThrow(
-      "layer must be unit, integration, browser, or all",
+      "layer must be unit, integration, browser, core, or all",
     );
+  });
+
+  it("accepts only complete pushed commit ranges", () => {
+    expect(parsePushRanges("abc123...def456\n111111...222222")).toEqual([
+      "abc123...def456",
+      "111111...222222",
+    ]);
+    expect(parsePushRanges("abc123...def456\n")).toEqual(["abc123...def456"]);
+    expect(() => parsePushRanges("abc123")).toThrow("expected base...head ranges");
+  });
+
+  it("builds a deterministic affected E2E command from owned browser paths", () => {
+    expect(
+      selectedBrowserArgs([
+        { spec: "tests/e2e/auth-gate.spec.ts", projects: ["chromium"] },
+        {
+          spec: "tests/e2e/content-flow.spec.ts",
+          projects: ["chromium", "firefox"],
+          grep: "Content: Quick Create",
+        },
+      ]),
+    ).toEqual([
+      "--",
+      "--project",
+      "chromium",
+      "--project",
+      "firefox",
+      "tests/e2e/auth-gate.spec.ts",
+      "tests/e2e/content-flow.spec.ts",
+      "--grep",
+      "(?:Content: Quick Create)",
+    ]);
   });
 
   it("builds a manual area selection without requiring a Git diff", () => {

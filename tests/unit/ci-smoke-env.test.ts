@@ -41,7 +41,7 @@ describe("CI production-image smoke environment", () => {
   it("provides the required agency-cookie secret to the production container", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
     const buildSmokeStart = workflow.indexOf("  build-smoke:");
-    const buildSmokeEnd = workflow.indexOf("  check-smtp-cert:", buildSmokeStart);
+    const buildSmokeEnd = workflow.indexOf("  trends-quality:", buildSmokeStart);
     const buildSmoke = workflow.slice(buildSmokeStart, buildSmokeEnd);
 
     expect(buildSmokeStart).toBeGreaterThan(-1);
@@ -50,6 +50,77 @@ describe("CI production-image smoke environment", () => {
       "AGENCY_COOKIE_SECRET: ci_agency_cookie_secret_not_for_production_xxxxxxxxx",
     );
     expect(buildSmoke).toContain('-e "AGENCY_COOKIE_SECRET=$AGENCY_COOKIE_SECRET"');
+  });
+
+  it("keeps the Docker liveness smoke independent from Postgres", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+    const buildSmokeStart = workflow.indexOf("  build-smoke:");
+    const buildSmokeEnd = workflow.indexOf("  trends-quality:", buildSmokeStart);
+    const buildSmoke = workflow.slice(buildSmokeStart, buildSmokeEnd);
+
+    expect(buildSmoke).not.toContain("    services:");
+  });
+
+  it("lets the integration runner own the normal migration before tests", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+
+    expect(workflow).not.toContain("- name: Apply migrations");
+  });
+
+  it("runs the SMTP certificate probe once per CI run", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+
+    expect(workflow.match(/check-smtp-cert\.sh --warn 30 --critical 14/g)).toHaveLength(1);
+  });
+
+  it("keeps advisory work off documentation-only pushes and makes E2E SHA selection explicit", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
+      "utf8",
+    );
+
+    expect(workflow).toContain('paths-ignore: ["docs/**", "**.md", "**.mdx"]');
+    expect(workflow).toContain("ref: ${{ github.sha }}");
+    expect(workflow).not.toContain("Run coverage attempt 2 after failure");
+    expect(workflow).not.toContain("Run E2E attempt 2 after failure");
+  });
+
+  it("runs the pushed Chromium check from the immutable workflow SHA", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
+      "utf8",
+    );
+    const e2eStart = workflow.indexOf("  e2e:");
+    const e2e = workflow.slice(e2eStart);
+
+    expect(e2eStart).toBeGreaterThan(-1);
+    expect(e2e).toContain("ref: ${{ github.sha }}");
+    expect(e2e).toContain(
+      "if: github.event_name == 'push' && env.ADVISORY_SUITE != 'release-candidate'",
+    );
+    expect(e2e).toContain("pnpm test:e2e:critical");
+  });
+
+  it("keeps the local release command as the complete browser plus visual matrix", () => {
+    const packageJson = readFileSync(resolve(process.cwd(), "package.json"), "utf8");
+
+    expect(packageJson).toContain(
+      '"test:e2e:release": "pnpm test:e2e:isolated && pnpm test:visual"',
+    );
+  });
+
+  it("performs one dependency audit and reuses its JSON report", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
+      "utf8",
+    );
+    const dependencyStart = workflow.indexOf("  dependency-advisory:");
+    const coverageStart = workflow.indexOf("  coverage:", dependencyStart);
+    const dependencyJob = workflow.slice(dependencyStart, coverageStart);
+
+    expect(dependencyJob.match(/^\s*pnpm audit --prod/gm)).toHaveLength(1);
+    expect(dependencyJob).toContain("audit-report.json");
+    expect(dependencyJob).not.toContain("execSync('pnpm audit");
   });
 
   it("bakes the immutable Git SHA and does not replace it with the mutable image tag", () => {

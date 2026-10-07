@@ -122,9 +122,9 @@ git push origin main
 # CI: lint, typecheck, unit, integration, audit, build,
 #      Docker image + health smoke + GHCR push, SMTP cert probe,
 #      workflow/Dockerfile/shell linters. Required release-gate contract —
-# Advisory workflow: changed-line coverage + critical Chromium on each
-#      main push; strict coverage + full browser/visual matrix nightly
-#      and via release-candidate dispatch.
+# Advisory workflow: changed-line coverage + targeted Chromium against the
+#      pushed SHA on each non-documentation main push; strict coverage + full
+#      browser/visual matrix nightly and via release-candidate dispatch.
 #      see docs/testing/strategy.md (Release gates).
 # On green CI: deploy workflow verifies the GHCR tag, SSHes to the
 #              VPS, and runs scripts/deploy.sh.
@@ -311,11 +311,10 @@ PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ### CI vs. local E2E
 
 The authoritative deploy-gate workflow is `.github/workflows/ci.yml`.
-It runs the required contract that genuinely cannot be reproduced on a
-dev laptop:
+It runs the complete unit/integration and release contract:
 
-- integration + migration drill (`pnpm test:integration`) — the
-  audit re-run; the dev's pre-push already ran it locally;
+- full unit, migration-drill, and integration suites — local hooks select
+  only the affected unit/integration checks for faster feedback;
 - `pnpm audit --prod` (zero critical/high production findings);
 - production build, Docker image build, a `/api/health` smoke
   against the built image, **and the GHCR push** (app + migrator
@@ -325,9 +324,11 @@ dev laptop:
 - workflow / Dockerfile / shell linters (actionlint + zizmor +
   hadolint + shellcheck).
 
-Format, lint, typecheck, the full unit suite, and integration also run
-in the local hooks. Critical Chromium E2E is advisory locally and is
-repeated on the exact pushed SHA by `.github/workflows/advisory-quality.yml`.
+Format, lint, and typecheck run in the local hooks. Local E2E is explicit:
+`pnpm test:affected -- --layer browser` selects affected Chromium contracts,
+while `pnpm test:e2e:release` runs the complete local browser and visual
+release-candidate matrix. `.github/workflows/advisory-quality.yml` runs the
+targeted Chromium check against the exact pushed SHA.
 
 The full 5-browser E2E matrix and visual matrix run nightly and through
 the release-candidate dispatch. Their artifacts and structured result
@@ -375,9 +376,10 @@ psql "$TEST_DATABASE_URL" -tAc 'select current_database()'
 NODE_ENV=test pnpm migration-drill
 pnpm test:integration
 
-# Local advisory: critical Chromium functional subset. The pre-push hook
-# runs it when the disposable environment is available, but a failure is
-# reported without blocking the push.
+# Local affected Chromium feedback for the current working tree.
+pnpm test:affected -- --layer browser
+
+# Optional explicit Chromium-only critical suite.
 pnpm test:e2e:critical
 
 # Strict release-candidate: full five-browser + visual matrix.
@@ -399,19 +401,18 @@ Use `pnpm test:area <domain>` when you want to check one domain deliberately.
 Its browser path runs Chromium and only adds affected accessibility or visual
 selectors. Shared or unknown changes escalate to full relevant coverage.
 
-Pre-push remains a hard local gate for unit and integration checks. It reads
-the pushed commit range rather than the staging index, so a normal push after
-committing cannot silently skip those checks. Critical E2E is advisory and
-prints a visible warning on failure. `SKIP_E2E=1`, `SKIP_INTEGRATION=1`, and
-`git push --no-verify` remain explicit escape hatches, and CI remains authoritative.
+Pre-push runs affected unit and integration checks for the pushed commit range,
+not the staging index, so a normal push after committing cannot silently skip
+those checks. It does not run E2E. Run `pnpm test:affected -- --layer browser`
+for normal local browser feedback or `pnpm test:e2e:release` for a release
+candidate. `SKIP_INTEGRATION=1` and `git push --no-verify` remain explicit
+escape hatches, and CI remains authoritative.
 
 #### Local integration setup
 
-Integration moved out of CI into `.husky/pre-push` on 2026-08-28
-(symmetric with the 2026-08-26 "E2E moves local" decision). CI still
-re-runs integration as the deploy-gate audit, so skipping it locally
-is safe — it just makes the dev's pre-push signal weaker than the
-CI signal again.
+The pre-push hook selects affected integration tests on the pushed range.
+CI still runs the complete integration suite as the deploy-gate audit, so
+local selection is fast feedback and CI remains the authoritative result.
 
 The integration runner requires a disposable Postgres database that
 contains the substring `test` or `ci` in the URL
@@ -514,9 +515,7 @@ touchable.
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
-- run: pnpm db:migrate
 - run: pnpm test:integration
-- run: pnpm test:coverage
 - run: pnpm audit --prod
 - run: pnpm build
 - run: docker build ...
@@ -526,14 +525,14 @@ touchable.
 ```
 
 ```bash
-# Local pre-push (automatic via .husky/pre-push)
-pnpm test:unit
-pnpm test:integration   # requires TEST_DATABASE_URL=...planner_test
-pnpm test:e2e:critical
+# Local pre-push (automatic, affected unit + integration only)
+pnpm test:affected -- --push --layer core
 
-# Local pre-merge (manual checklist on the release-candidate branch)
-pnpm test:e2e:isolated
-pnpm test:visual
+# Local E2E feedback (explicit)
+pnpm test:affected -- --layer browser
+
+# Local release-candidate checklist (full five-browser + visual matrix)
+pnpm test:e2e:release
 ```
 
 The deploy workflow (`deploy.yml`) fires on `workflow_run: CI success`

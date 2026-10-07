@@ -27,20 +27,24 @@ workflow/container/shell linting.
 Move coverage and browser validation to the independent
 `.github/workflows/advisory-quality.yml` workflow:
 
-- every `main` push runs threshold-free coverage with changed-line
-  analysis and critical Chromium E2E;
+- every non-documentation `main` push runs threshold-free coverage with
+  changed-line analysis and targeted Chromium E2E against the exact pushed
+  SHA;
 - nightly and explicit release-candidate runs execute strict coverage,
   the complete five-browser matrix, and visual regression;
-- each check retries once, uploads logs/reports, writes a structured JSON
-  result and Actions summary, and updates one deduplicated GitHub issue;
+- each test command uses its framework's failed-test retry support, uploads
+  logs/reports, writes a structured JSON result and Actions summary, and
+  updates one deduplicated GitHub issue; failed workflows are not rerun as
+  complete duplicate suites;
 - a later passing SHA closes the matching advisory issue;
 - diagnosis is read-only and may propose classifications or fixes but may
   not edit, push, merge, or deploy code.
 
-The local pre-push hook still runs critical E2E when the disposable
-environment is available, but reports failures without blocking a normal
-push. `pnpm test:e2e:release` remains the strict local release-candidate
-command.
+The local affected runner is the normal developer E2E feedback loop:
+`pnpm test:affected -- --layer browser`. The pre-push hook runs only affected
+unit and integration checks for the pushed range. `pnpm test:e2e:release`
+remains the strict local release-candidate command; the full matrix is also
+available through the nightly or explicit release-candidate workflow.
 
 ## Consequences
 
@@ -58,7 +62,7 @@ Risks and mitigations:
 
 - a browser or coverage regression can deploy before detection; required
   unit/integration/build/smoke gates and automatic rollback remain in place;
-- issue automation can become noisy; one retry, one issue per check, and
+- issue automation can become noisy; framework retries, one issue per check, and
   automatic close-on-recovery limit duplication;
 - scheduled checks can be missed; the release-candidate workflow remains
   manually dispatchable and strict.

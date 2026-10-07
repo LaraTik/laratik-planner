@@ -167,10 +167,6 @@ jobs:
         run: pnpm migration-drill
         timeout-minutes: 20
 
-      - name: Apply migrations
-        run: pnpm db:migrate
-        timeout-minutes: 10
-
       - name: Integration tests
         run: pnpm test:integration
         timeout-minutes: 20
@@ -213,21 +209,6 @@ jobs:
     permissions:
       contents: read
       packages: write
-
-    services:
-      postgres:
-        image: postgres:16-alpine@sha256:cf78e76683b9ca8c5733cbbdce6c9262b45b6767934dd0a95e671f9a0fc20685
-        env:
-          POSTGRES_USER: planner
-          POSTGRES_PASSWORD: planner_ci
-          POSTGRES_DB: planner_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U planner -d planner_test"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
 
     env:
       DATABASE_URL: postgresql://planner:planner_ci@localhost:5432/planner_test
@@ -302,17 +283,18 @@ jobs:
 
       - name: Smoke e2e (liveness)
         # Smoke-test the production image's process startup. We hit
-        # /api/health/live (liveness only — no DB check) so a transient
-        # DB hiccup doesn't fail the smoke. Readiness (DB + schema)
-        # is verified by the unit-quality + integration jobs above
-        # and by Traefik's loadbalancer probe in production.
+        # /api/health/live (liveness only — no DB check) so this smoke stays
+        # independent from the Postgres service used by integration tests.
+        # Readiness (DB + schema) is verified by the unit-quality +
+        # integration jobs above and by Traefik's loadbalancer probe in
+        # production.
         #
         # Why 127.0.0.1 (not localhost): IPv6 trap — the GHA runner
         # resolves "localhost" to ::1 first and Next.js binds 0.0.0.0
         # (IPv4), so curl against "localhost" hits nothing. Same trap
         # called out in docker-compose.yml. `--network host` lets the
-        # smoke container reach the GHA postgres service via localhost
-        # and the published port 3000 of the runner host; the -p flag
+        # smoke container reach the published port 3000 of the runner host;
+        # the -p flag
         # is intentionally absent because Docker ignores it under
         # host networking anyway (would warn "Published ports are
         # discarded when using host network mode").
@@ -353,9 +335,8 @@ jobs:
           fi
           # Sanity-check the readiness endpoint exists and returns a
           # JSON body. We don't gate on 200 here because the smoke
-          # postgres has no migrations applied (that's the
-          # unit/integration job's job to verify). We just confirm the
-          # route is wired up.
+          # database is not attached to this smoke container. We just
+          # confirm the route is wired up.
           echo "─── /api/health/ready body ───"
           curl -sS -o /tmp/ready.json -w "HTTP %{http_code}\n" \
             http://127.0.0.1:3000/api/health/ready || true
@@ -445,25 +426,22 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y openssl ca-certificates
         timeout-minutes: 3
 
-      - name: Run cert-expiry probe (always log JSON, never fail this step)
-        # Writes a single JSON line to /tmp/cert.json; the next step
-        # reads it for the gate decision.
+      - name: Run cert-expiry probe and gate
+        # Probe once, preserve the JSON for the summary, and map the
+        # script's warning exit code (1) to a successful CI step. Critical
+        # expiry (2) and TLS/parse failure (3) remain deploy blockers.
         id: probe
         run: |
           set +e
           SMTP_HOST=mail.laratik.com SMTP_PORT=465 \
-            ./scripts/vps/check-smtp-cert.sh --warn 30 --critical 14 | tee /tmp/cert.json
-          echo "exit=$?" | tee -a /tmp/cert.json
-          exit 0
-        timeout-minutes: 2
-
-      - name: Gate on critical expiry
-        # Re-run the script and propagate its exit code as the job
-        # result. Exit 2 (critical) or 3 (TLS error) fail the job; exit
-        # 1 (warn) is allowed to pass — it pages but does not block.
-        run: |
-          SMTP_HOST=mail.laratik.com SMTP_PORT=465 \
-            ./scripts/vps/check-smtp-cert.sh --warn 30 --critical 14 > /dev/null
+            ./scripts/vps/check-smtp-cert.sh --warn 30 --critical 14 > /tmp/cert.json
+          status=$?
+          cat /tmp/cert.json
+          echo "exit=$status" >> /tmp/cert.json
+          if [ "$status" -eq 1 ]; then
+            exit 0
+          fi
+          exit "$status"
         timeout-minutes: 2
 
       - name: Annotate run with cert status (for the GH Actions UI)
