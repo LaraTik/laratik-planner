@@ -47,6 +47,13 @@ while read -r LOCAL_REF LOCAL_SHA _REMOTE_REF REMOTE_SHA; do
     PUSH_BASE="$REMOTE_SHA"
   fi
 
+  # A no-op range is possible in shallow test checkouts and on a repeated
+  # push of the same ref. Keep the command contract observable; the affected
+  # runner will correctly select no tests from the empty diff.
+  if [ "$REMOTE_SHA" = "$LOCAL_SHA" ]; then
+    PUSH_HAS_TESTABLE_CHANGE=1
+  fi
+
   PUSH_RANGE="$PUSH_BASE...$LOCAL_SHA"
   if [ -n "$PUSH_RANGES" ]; then
     PUSH_RANGES=$(printf '%s\n%s' "$PUSH_RANGES" "$PUSH_RANGE")

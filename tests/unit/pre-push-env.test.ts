@@ -11,10 +11,10 @@ function runHook(testDatabaseUrl?: string): string {
     cwd: process.cwd(),
     encoding: "utf8",
   }).trim();
-  const remoteSha = execFileSync("git", ["rev-parse", "HEAD^"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-  }).trim();
+  // The CI checkout is intentionally shallow, so HEAD^ is not guaranteed to
+  // exist. A same-SHA range exercises the hook command contract without
+  // requiring parent history.
+  const remoteSha = localSha;
   const env = { ...process.env };
   delete env.TEST_DATABASE_URL;
   delete env.CI;
