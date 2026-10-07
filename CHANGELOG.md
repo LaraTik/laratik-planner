@@ -50,10 +50,16 @@ agencies, cookie sticky on B, edits B's content believing it is A's.
   307 rather than 308 on purpose: the outcome depends on who is asking, and a
   cached permanent redirect would freeze one visitor's answer for everyone.
 
+**Navigation chrome migrated:** the sidebar, mobile nav, mobile context header and
+workspace switcher parse the canonical path and build links from it, so ordinary
+navigation no longer costs a redirect hop. Page-level link builders
+(breadcrumbs, back-links, card links) still emit the legacy shape; migrating them
+is mechanical against `src/lib/urls.ts`.
+
 **Deliberately not in this change:** most read-only server actions still resolve
-via the active-agency context (unchanged, membership-gated behaviour), and link
-builders still emit the legacy shape — so navigation works but costs one redirect
-hop until they are migrated to `workspaceHref`.
+via the active-agency context — unchanged, membership-gated behaviour. Threading
+the tenant through ~27 brand-kit actions and their call sites is real work that
+does not affect link sharing.
 
 See [ADR 0018](docs/decisions/0018-workspace-url-carries-tenant.md).
 

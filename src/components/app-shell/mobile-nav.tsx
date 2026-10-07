@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import {
   Activity,
   BarChart3,
@@ -78,11 +79,17 @@ export function MobileNav({
 }: MobileNavProps) {
   const pathname = usePathname();
   const labelFor = (key: string, fallback: string) => labels[key] ?? fallback;
-  const slug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
-  const currentWorkspace = slug
-    ? (workspaces.find((workspace) => workspace.slug === slug) ?? null)
+  // Canonical workspace URL carries BOTH segments — a workspace slug is unique
+  // only within an agency, so the tenant is part of the identity. See
+  // `src/lib/urls.ts`.
+  const parsedWorkspacePath = parseWorkspacePath(pathname);
+  const currentWorkspace = parsedWorkspacePath
+    ? (workspaces.find((workspace) => workspace.slug === parsedWorkspacePath.workspaceSlug) ?? null)
     : null;
-  const wsBase = currentWorkspace ? `/app/w/${currentWorkspace.slug}` : "";
+  const wsBase =
+    currentWorkspace && parsedWorkspacePath
+      ? workspaceBasePath(parsedWorkspacePath.agencySlug, currentWorkspace.slug)
+      : "";
   const clientOnly = currentWorkspace ? workspaceAccess[currentWorkspace.id] === "client" : false;
   const canAccessMedia = user.isAdmin || Object.values(workspaceAccess).includes("internal");
 
@@ -145,7 +152,9 @@ export function MobileNav({
       ];
 
   const onPlatformRoute = pathname.startsWith("/app/platform/");
-  const isWorkspaceRoute = /^\/app\/w\/[^/]+(?:\/|$)/.test(pathname);
+  // Canonical shape: the tenant is part of the workspace identity, so a bare
+  // `/app/w/<slug>` can no longer be treated as "a workspace route".
+  const isWorkspaceRoute = parsedWorkspacePath !== null;
   const planningPath = pathname.startsWith(`${wsBase}/planning/`)
     ? pathname.slice(`${wsBase}/planning/`.length)
     : null;
@@ -159,7 +168,9 @@ export function MobileNav({
   const isSettingsRoute =
     currentWorkspace !== null &&
     (pathname === `${wsBase}/settings` || pathname.startsWith(`${wsBase}/settings/`));
-  const isMediaRoute = /^\/app\/w\/[^/]+\/media(?:\/|$)/.test(pathname);
+  // Canonical workspace URL — both segments, because a workspace slug is unique
+  // only within an agency. See `src/lib/urls.ts`.
+  const isMediaRoute = /^\/app\/a\/[^/]+\/w\/[^/]+\/media(?:\/|$)/.test(pathname);
   const isTrendsRoute = currentWorkspace !== null && pathname === `${wsBase}/trends`;
   const isBrandKitRoute =
     currentWorkspace !== null &&

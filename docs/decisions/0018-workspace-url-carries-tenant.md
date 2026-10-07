@@ -93,10 +93,17 @@ Four parts:
   the tenant through ~27 brand-kit actions and their call sites is real work, but
   it does not affect link sharing, which is what this ADR is about. It is a
   follow-up, not an oversight.
-- **Link builders still emit the legacy `/app/w/...` shape.** Every navigation
-  therefore costs one redirect hop. This is _correct_ (the redirect resolves the
-  tenant and refuses to guess) but not yet canonical. Migrating them to
-  `workspaceHref` is the next step and the reason `lib/urls.ts` exists.
+- **Navigation chrome _is_ migrated.** The sidebar, mobile nav, mobile context
+  header and workspace switcher all parse the canonical path and build links
+  with `workspaceBasePath`, so ordinary navigation no longer bounces through the
+  redirect. Two route detectors in `mobile-nav.tsx` that still matched
+  `/app/w/[^/]+` were the subtle part: left alone, a canonical URL reads as "not
+  a workspace route", which silently changes when the create button appears. The
+  switcher takes the tenant from the URL and the slug from the verified
+  workspace, so the two can never disagree.
+- **Page-level link builders** (breadcrumbs, back-links, card links) still emit
+  the legacy shape, so a click from those costs one redirect hop. Migrating them
+  is mechanical against `lib/urls.ts`; that module exists precisely so it is.
 
 ## Consequences
 

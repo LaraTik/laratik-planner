@@ -148,13 +148,13 @@ describe("MobileNav", () => {
   });
 
   it("uses content creation inside a workspace and exposes secondary routes in More", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     const user = userEvent.setup();
     render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
     expect(screen.getByRole("link", { name: "Command Center" })).toHaveAttribute(
       "href",
-      "/app/w/northstar",
+      "/app/a/acme/w/northstar",
     );
     expect(screen.getByRole("link", { name: "Planning" })).toHaveAttribute("aria-current", "page");
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
@@ -181,7 +181,7 @@ describe("MobileNav", () => {
   });
 
   it("marks the current secondary workspace route active in More", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/settings/trends");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/settings/trends");
     const user = userEvent.setup();
     render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
@@ -209,7 +209,7 @@ describe("MobileNav", () => {
   });
 
   it("removes the generic create action from the workflow board", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/board");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/board");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
@@ -217,7 +217,7 @@ describe("MobileNav", () => {
 
   it("removes the generic create action from content detail", () => {
     usePathnameMock.mockReturnValue(
-      "/app/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc",
+      "/app/a/acme/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc",
     );
     render(<MobileNav {...baseProps} />);
 
@@ -226,7 +226,7 @@ describe("MobileNav", () => {
 
   it("removes the generic create action from publishing", () => {
     usePathnameMock.mockReturnValue(
-      "/app/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc/publish",
+      "/app/a/acme/w/northstar/planning/9f8c7d6e-5b4a-4321-9876-123456789abc/publish",
     );
     render(<MobileNav {...baseProps} />);
 
@@ -234,52 +234,52 @@ describe("MobileNav", () => {
   });
 
   it("removes the generic create action from Reviews", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/reviews");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/reviews");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("removes the generic create action from workspace Settings", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/settings");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/settings");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("removes the generic create action from Media", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/media");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/media");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("does not fall back to workspace creation on an unresolved workspace route", () => {
-    usePathnameMock.mockReturnValue("/app/w/unknown/media");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/unknown/media");
     render(<MobileNav {...baseProps} workspaces={[]} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("removes the generic create action from Trend Radar", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/trends");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/trends");
     render(<MobileNav {...baseProps} canAccessTrendRadar />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it("removes the generic create action from Brand Kit", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/brand-kit");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/brand-kit");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
   });
 
   it.each([
-    ["Social channels", "/app/w/northstar/channels"],
-    ["Social analytics", "/app/w/northstar/analytics/social"],
-    ["Design queue", "/app/w/northstar/design-queue"],
-    ["Planning library", "/app/w/northstar/library"],
+    ["Social channels", "/app/a/acme/w/northstar/channels"],
+    ["Social analytics", "/app/a/acme/w/northstar/analytics/social"],
+    ["Design queue", "/app/a/acme/w/northstar/design-queue"],
+    ["Planning library", "/app/a/acme/w/northstar/library"],
   ])("removes the generic create action from %s", (_label, pathname) => {
     usePathnameMock.mockReturnValue(pathname);
     render(<MobileNav {...baseProps} />);
@@ -302,17 +302,17 @@ describe("MobileNav", () => {
   });
 
   it("keeps client navigation restricted and removes the create action", async () => {
-    usePathnameMock.mockReturnValue("/app/w/autumn/client");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/autumn/client");
     const user = userEvent.setup();
     render(<MobileNav {...baseProps} />);
 
     expect(screen.getByRole("link", { name: "Reviews" })).toHaveAttribute(
       "href",
-      "/app/w/autumn/client",
+      "/app/a/acme/w/autumn/client",
     );
     expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
       "href",
-      "/app/w/autumn/client/calendar",
+      "/app/a/acme/w/autumn/client/calendar",
     );
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();
 
@@ -323,7 +323,7 @@ describe("MobileNav", () => {
   });
 
   it("does not advertise content creation to a read-only internal actor", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar");
     render(
       <MobileNav
         {...baseProps}
@@ -335,7 +335,7 @@ describe("MobileNav", () => {
   });
 
   it("keeps the Overview to one primary create action", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar");
     render(<MobileNav {...baseProps} />);
 
     expect(screen.queryByTestId("mobile-primary-create")).toBeNull();

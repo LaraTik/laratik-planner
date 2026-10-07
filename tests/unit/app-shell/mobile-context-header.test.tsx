@@ -15,7 +15,7 @@ const workspaces = [{ id: "workspace-1", slug: "acme", name: "Acme" }];
 
 describe("MobileContextHeader", () => {
   beforeEach(() => {
-    usePathname.mockReturnValue("/app/w/acme/planning");
+    usePathname.mockReturnValue("/app/a/acme/w/acme/planning");
   });
 
   it("uses the active Arabic catalog for the workspace context", () => {

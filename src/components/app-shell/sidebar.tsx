@@ -7,6 +7,7 @@ import { ChevronDown, Plus } from "lucide-react";
 import { isActivePath, cn } from "@/lib/utils";
 import { clampBadge } from "@/lib/nav/badge-format";
 import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
+import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
 import {
   buildAgencyNavigation,
@@ -93,14 +94,23 @@ export function Sidebar({
     [labels],
   );
 
-  // Detect workspace context from the URL. /app/w/[slug]/* means we
-  // are inside a workspace; everything else under /app is global.
-  const slugMatch = pathname.match(/^\/app\/w\/([^/]+)/);
-  const currentWorkspace = slugMatch
-    ? (workspaces.find((w) => w.slug === slugMatch[1]) ?? null)
+  // Detect workspace context from the URL. The canonical shape is
+  // `/app/a/<agencySlug>/w/<workspaceSlug>/*` — both segments are required,
+  // because a workspace slug is unique only WITHIN an agency. Building the base
+  // from the parsed path (rather than `/app/w/${slug}`) is what keeps sidebar
+  // navigation on canonical URLs instead of bouncing every click through the
+  // legacy redirect. See `src/lib/urls.ts`.
+  const parsedWorkspacePath = parseWorkspacePath(pathname);
+  const currentWorkspace = parsedWorkspacePath
+    ? (workspaces.find((w) => w.slug === parsedWorkspacePath.workspaceSlug) ?? null)
     : null;
   const inWorkspace = currentWorkspace !== null;
-  const wsBase = currentWorkspace ? `/app/w/${currentWorkspace.slug}` : "";
+  // Tenant comes from the URL; the slug comes from the verified workspace, so
+  // the pair can never disagree with what the user actually has access to.
+  const wsBase =
+    currentWorkspace && parsedWorkspacePath
+      ? workspaceBasePath(parsedWorkspacePath.agencySlug, currentWorkspace.slug)
+      : "";
   const clientOnly = currentWorkspace ? workspaceAccess[currentWorkspace.id] === "client" : false;
   const canCreateContent = currentWorkspace
     ? workspaceCanCreateContent[currentWorkspace.id] === true

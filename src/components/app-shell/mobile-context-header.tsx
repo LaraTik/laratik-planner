@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 type Workspace = { id: string; name: string; slug: string };
@@ -14,9 +15,16 @@ type Workspace = { id: string; name: string; slug: string };
 export function MobileContextHeader({ workspaces }: { workspaces: Workspace[] }) {
   const pathname = usePathname();
   const t = useLocaleT();
-  const slug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
-  const workspace = slug ? workspaces.find((candidate) => candidate.slug === slug) : undefined;
-  const href = workspace ? `/app/w/${workspace.slug}` : "/app";
+  // Both segments, not just the slug: the tenant is part of the workspace's
+  // identity. See `src/lib/urls.ts`.
+  const parsedWorkspacePath = parseWorkspacePath(pathname);
+  const workspace = parsedWorkspacePath
+    ? workspaces.find((candidate) => candidate.slug === parsedWorkspacePath.workspaceSlug)
+    : undefined;
+  const href =
+    workspace && parsedWorkspacePath
+      ? workspaceBasePath(parsedWorkspacePath.agencySlug, workspace.slug)
+      : "/app";
 
   return (
     <Link

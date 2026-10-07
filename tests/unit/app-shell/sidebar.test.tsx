@@ -181,18 +181,18 @@ describe("Sidebar (workspace-aware)", () => {
   );
 
   it("renders the workspace nav when the user is inside /app/w/[slug]/*", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     const user = userEvent.setup();
     render(<Sidebar {...baseProps} canAccessTrendRadar />);
     // Workspace tabs are rendered, pointing to the current workspace
     const overview = screen.getByRole("link", { name: "Command Center" });
-    expect(overview).toHaveAttribute("href", "/app/w/northstar");
+    expect(overview).toHaveAttribute("href", "/app/a/acme/w/northstar");
     const planning = screen.getByRole("link", { name: "Planning" });
-    expect(planning).toHaveAttribute("href", "/app/w/northstar/planning");
+    expect(planning).toHaveAttribute("href", "/app/a/acme/w/northstar/planning");
     expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
     expect(screen.getByRole("link", { name: "Trend Radar" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/trends",
+      "/app/a/acme/w/northstar/trends",
     );
     expect(screen.getByRole("link", { name: "Approvals" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Channels" })).toBeInTheDocument();
@@ -201,17 +201,17 @@ describe("Sidebar (workspace-aware)", () => {
     await user.click(screen.getByRole("button", { name: "Expand Settings" }));
     expect(screen.getByRole("link", { name: "Trend settings" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/settings/trends",
+      "/app/a/acme/w/northstar/settings/trends",
     );
     // "Workspaces" list link is NOT rendered in workspace mode
     expect(screen.queryByRole("link", { name: "Workspaces" })).toBeNull();
     // "Create content" CTA IS rendered in workspace mode
     const cta = screen.getByTestId("sidebar-create-content");
-    expect(cta).toHaveAttribute("href", "/app/w/northstar/planning/new");
+    expect(cta).toHaveAttribute("href", "/app/a/acme/w/northstar/planning/new");
   });
 
   it("keeps product branding compact and leaves workspace identity to the topbar", () => {
-    usePathnameMock.mockReturnValue("/app/w/autumn");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/autumn");
     render(<Sidebar {...baseProps} />);
     // Brand block: the parent <div class="min-w-0"> holds both the
     // product name and the workspace name.
@@ -223,15 +223,15 @@ describe("Sidebar (workspace-aware)", () => {
   });
 
   it("shows client reviewers only the client review navigation", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/client");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/client");
     render(<Sidebar {...baseProps} workspaceAccess={{ "ws-1": "client", "ws-2": "internal" }} />);
     expect(screen.getByRole("link", { name: "Client review" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/client",
+      "/app/a/acme/w/northstar/client",
     );
     expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/client/calendar",
+      "/app/a/acme/w/northstar/client/calendar",
     );
     expect(screen.queryByRole("link", { name: "Planning" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Brand Kit" })).toBeNull();
@@ -239,15 +239,15 @@ describe("Sidebar (workspace-aware)", () => {
   });
 
   it("shows client reviewers only the client review navigation", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/client");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/client");
     render(<Sidebar {...baseProps} workspaceAccess={{ "ws-1": "client", "ws-2": "internal" }} />);
     expect(screen.getByRole("link", { name: "Client review" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/client",
+      "/app/a/acme/w/northstar/client",
     );
     expect(screen.getByRole("link", { name: "Calendar" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/client/calendar",
+      "/app/a/acme/w/northstar/client/calendar",
     );
     expect(screen.queryByRole("link", { name: "Planning" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Brand Kit" })).toBeNull();
@@ -266,7 +266,7 @@ describe("Sidebar (workspace-aware)", () => {
   });
 
   it("highlights the active workspace tab based on the pathname", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/calendar");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/calendar");
     render(<Sidebar {...baseProps} />);
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("aria-current", "page");
@@ -275,9 +275,9 @@ describe("Sidebar (workspace-aware)", () => {
 
   it("keeps Planning active across its deep-link routes", () => {
     for (const pathname of [
-      "/app/w/northstar/planning/monthly",
-      "/app/w/northstar/planning/batch",
-      "/app/w/northstar/board",
+      "/app/a/acme/w/northstar/planning/monthly",
+      "/app/a/acme/w/northstar/planning/batch",
+      "/app/a/acme/w/northstar/board",
     ]) {
       usePathnameMock.mockReturnValue(pathname);
       const { unmount } = render(<Sidebar {...baseProps} />);
@@ -303,7 +303,7 @@ describe("Sidebar (workspace-aware)", () => {
   });
 
   it("ignores an unknown workspace slug in the URL (no crash, falls back to global)", () => {
-    usePathnameMock.mockReturnValue("/app/w/not-a-real-slug");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/not-a-real-slug");
     render(<Sidebar {...baseProps} />);
     // Falls back to global mode (no workspace name shown, no workspace
     // tabs). The user is still authenticated; the route's own gate
@@ -313,25 +313,25 @@ describe("Sidebar (workspace-aware)", () => {
   });
 
   it("exposes the canonical Planning route, design queue, and library in workspace navigation", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/board");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/board");
     render(<Sidebar {...baseProps} />);
     expect(screen.getByRole("link", { name: "Planning" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/planning",
+      "/app/a/acme/w/northstar/planning",
     );
     expect(screen.queryByRole("link", { name: /Board/i })).toBeNull();
     expect(screen.getByRole("link", { name: "Design queue" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/design-queue",
+      "/app/a/acme/w/northstar/design-queue",
     );
     expect(screen.getByRole("link", { name: "Library" })).toHaveAttribute(
       "href",
-      "/app/w/northstar/library",
+      "/app/a/acme/w/northstar/library",
     );
   });
 
   it("hides Create content when the actor lacks creation capability", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} workspaceCanCreateContent={{ "ws-1": false }} />);
     expect(screen.queryByTestId("sidebar-create-content")).toBeNull();
   });
@@ -343,7 +343,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("surfaces actionable badge counts in the workspace sidebar", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(
       <Sidebar
         {...baseProps}
@@ -360,7 +360,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("hides badges when the count is zero", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(
       <Sidebar
         {...baseProps}
@@ -375,7 +375,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("collapses to icon-rail without duplicating workspace context", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} collapsed={true} />);
     // Brand block: the logo (icon) is still discoverable via the link's
     // accessible name; the text label is hidden in icon-rail mode.
@@ -388,7 +388,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("groups workspace navigation by Plan / Understand / Produce / Manage", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/team");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/team");
     render(<Sidebar {...baseProps} />);
     // Group headings render
     expect(screen.getByText("Plan")).toBeInTheDocument();
@@ -398,7 +398,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("hides the Manage group when the user is a viewer (not a manager)", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(
       <Sidebar
         {...baseProps}
@@ -410,7 +410,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("does not render a duplicate workspace switcher in workspace mode", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     const nav = screen.getByRole("navigation", { name: "Primary" });
     expect(nav).not.toContainElement(screen.queryByTestId("topbar-workspace-switcher-trigger"));
@@ -418,7 +418,7 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
   });
 
   it("renames Reviews → Approvals and Social Channels → Channels per spec §5/§6", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     expect(screen.getByRole("link", { name: "Approvals" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Channels" })).toBeInTheDocument();
@@ -449,7 +449,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   });
 
   it("renders the Personal group (My tasks only) inside workspace mode", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     // The Personal group must show My tasks …
     expect(screen.getByRole("link", { name: "My tasks" })).toHaveAttribute(
@@ -477,7 +477,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   });
 
   it("resolves the Tenant header + group headings through the labels map (bilingual)", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(
       <Sidebar
         {...baseProps}
@@ -510,7 +510,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   });
 
   it("keeps workspace context out of the sidebar", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     expect(screen.queryByTestId("sidebar-workspace-context")).toBeNull();
     expect(screen.queryByTestId("sidebar-workspace-switcher-trigger")).toBeNull();
@@ -524,7 +524,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   });
 
   it("marks the active workspace link with a left-edge primary rail", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     const planning = screen.getByRole("link", { name: "Planning" });
     expect(planning).toHaveAttribute("aria-current", "page");
@@ -538,7 +538,7 @@ describe("Sidebar (round-4 /ui-ux-pro-max refinement)", () => {
   });
 
   it("renders group dividers between every pair of groups (after the first)", () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     render(<Sidebar {...baseProps} />);
     // The sidebar carries a Plan group heading and a Produce
     // group heading; the divider between them is the `border-t
@@ -595,38 +595,38 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
   }
 
   it("strips a detail id from /app/w/<old>/planning/<id> to the section index in the new workspace", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning/abc-123-uuid");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning");
   });
 
   it("strips a nested detail sub-path /app/w/<old>/planning/<id>/edit to the section index", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning/abc-123-uuid/edit");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning/abc-123-uuid/edit");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning");
   });
 
   it("keeps a known sub-action /app/w/<old>/planning/batch across the slug swap", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning/batch");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning/batch");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/batch");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning/batch");
   });
 
   it("keeps /app/w/<old>/planning/new across the slug swap", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning/new");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning/new");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning/new");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning/new");
   });
 
   it("strips the id from the edit detail route /app/w/<old>/planning/edit/<id> → /app/w/<new>/planning", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning/edit/abc-123-uuid");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning/edit/abc-123-uuid");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning");
   });
 
   it("strips a detail id from a NEW section (reviews) — section-agnostic generalisation", async () => {
@@ -634,16 +634,16 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
     // section. A future route under a different section would
     // leak a stale id. The new switcher treats any non-sub-action
     // segment as a detail id and strips it.
-    usePathnameMock.mockReturnValue("/app/w/northstar/reviews/abc-123-uuid");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/reviews/abc-123-uuid");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/reviews");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/reviews");
   });
 
   it("keeps a same-section path that has no detail id (/app/w/<old>/planning)", async () => {
-    usePathnameMock.mockReturnValue("/app/w/northstar/planning");
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/planning");
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
-    expect(pushMock).toHaveBeenCalledWith("/app/w/autumn/planning");
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning");
   });
 });
