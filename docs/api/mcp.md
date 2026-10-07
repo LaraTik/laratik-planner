@@ -79,6 +79,33 @@ token is refused.
 | `laratik_planner_export_brand_kit`       | `content:read`  | Read the full brand-kit (logos, colors, fonts, voice rules, publishing rules, linked resources, content pillars); logo binaries referenced by signed download URL                                                                                                                                                   |
 | `laratik_planner_import_brand_kit`       | `content:write` | Apply a brand-kit envelope to a workspace; supports `merge`/`fail`/`overwrite` conflict strategies; logo binaries via `base64`, `source_url`, or `external_url`                                                                                                                                                     |
 
+### Agency tasks
+
+Agency tasks use the existing agency-scoped task service and activity log.
+Call `laratik_planner_list_agencies` first and pass the exact returned
+`agency_id` to task-list and task-create calls. Active agency members can read
+active tasks; the task service continues to enforce creator/assignee/admin
+permissions for edits, assignment, archive, restore, and attachments.
+
+| Tool                                            | Scope           | Purpose                                                                                                                                                    |
+| ----------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laratik_planner_list_agencies`                 | `content:read`  | Resolve active agency memberships to `{ id, name, slug }` without exposing agencies outside the token owner's memberships.                                 |
+| `laratik_planner_list_tasks`                    | `content:read`  | Paginated active-task list with search, status, priority, workspace, assignee, mine, and overdue filters.                                                  |
+| `laratik_planner_get_task`                      | `content:read`  | Read one task, activity history, and ready attachments. Storage buckets and object keys are omitted; file attachments use short-lived signed URLs.         |
+| `laratik_planner_create_task`                   | `content:write` | Create an agency task with optional workspace, assignee, due date, and priority.                                                                           |
+| `laratik_planner_update_task`                   | `content:write` | Edit task fields or run a valid lifecycle transition through the existing task service.                                                                    |
+| `laratik_planner_archive_task`                  | `content:write` | Soft-archive a task; requires `confirm: true` and agency-admin permission.                                                                                 |
+| `laratik_planner_restore_task`                  | `content:write` | Restore a soft-archived task; requires agency-admin permission.                                                                                            |
+| `laratik_planner_list_task_attachments`         | `content:read`  | List ready attachments with signed read URLs and safe metadata.                                                                                            |
+| `laratik_planner_create_task_attachment_intent` | `content:write` | Create a five-minute direct-upload intent for an allowed file up to 50 MB. The client uploads exact bytes to `upload_url`, then calls the completion tool. |
+| `laratik_planner_complete_task_attachment`      | `content:write` | Verify uploaded object size and MIME type before marking it ready.                                                                                         |
+| `laratik_planner_link_task_attachment`          | `content:write` | Add an HTTPS external resource as a ready attachment without downloading it into Planner.                                                                  |
+
+MCP does not carry raw binary bodies. The upload flow is therefore
+`create_task_attachment_intent` → client `PUT` to the returned signed URL →
+`complete_task_attachment`. This preserves the task attachment storage contract
+and keeps object keys, buckets, and storage credentials out of MCP responses.
+
 ### Resolving user IDs to people
 
 `list_content` and `get_content` identify people **only** by UUID —
@@ -163,10 +190,11 @@ Write tools use the domain services already used by the web UI. The MCP
 surface does not offer direct SQL, raw file access, publishing credentials,
 social-provider credentials, or spreadsheet import.
 
-Agency tasks and the global calendar are currently web/API surfaces rather
-than MCP tools. The task routes are documented in the [API surface
-reference](./README.md); this milestone does not add an MCP scope or tool, so
-existing token permissions and the MCP evaluation contract remain unchanged.
+Agency tasks are now exposed through the MCP tools listed above. The global
+calendar remains a web/API surface; its task and content event views continue
+to use the existing calendar routes. MCP task writes delegate to the same
+domain services as the web UI, so activity logging, tenant checks, lifecycle
+transitions, storage verification, and role gates remain centralized.
 
 ### Structured content payloads
 
@@ -447,7 +475,9 @@ profile.
    shell variable that exists only in the session that will hand it to the
    MCP client. `.env.example` ships an empty `MCP_ACCESS_TOKEN=` placeholder
    for this purpose; copy the line into your local `.env` / `.env.local`
-   and fill it there. **Do not commit the filled value.**
+   and fill it there. Keep the local file owner-readable only (for example,
+   `chmod 600 .env.local`). **Do not commit the filled value or paste it into
+   documentation, tickets, logs, screenshots, or chat.**
 3. Register the endpoint with the Mavis profile, injecting the bearer as
    a write-only `Authorization` header. Headers are stored by the local
    runtime and never echoed back, so the plaintext does not leak through
@@ -466,6 +496,23 @@ profile.
 
 4. Verify with a single `initialize` + `tools/list` round-trip and revoke
    the token immediately if the smoke check fails or the work is finished.
+   The verification should report only status, server metadata, and tool
+   names; never print the bearer value or a full request header.
+
+For local scripts that use the same bearer, load the ignored file into the
+current shell and pass the value under the script's expected variable name
+without duplicating it into another file:
+
+```bash
+set -a
+source .env.local
+set +a
+PLANNER_TOKEN="$MCP_ACCESS_TOKEN" python3 scripts/daily-report.py --no-log
+```
+
+The token authenticates the documented MCP tools, including agency tasks. It
+does not grant access outside the token owner's active agency memberships or
+override the task service's existing role and workflow policies.
 
 ### CI / automation wiring
 

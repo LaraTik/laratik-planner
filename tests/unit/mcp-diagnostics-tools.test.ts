@@ -118,8 +118,9 @@ describe("diagnostics tool registration", () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
     // 15 content/brand tools + 5 diagnostics + 1 read-only research tool
-    // + 1 read-only Command Center reader + 1 thumbnail backfill.
-    expect(tools).toHaveLength(23);
+    // + 1 read-only Command Center reader + 1 thumbnail backfill
+    // + 11 agency task and task-attachment tools.
+    expect(tools).toHaveLength(34);
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_get_command_center");
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_backfill_thumbnails");

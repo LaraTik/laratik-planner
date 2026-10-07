@@ -57,7 +57,7 @@ async function seedWorkspace() {
     workspaceMembershipId: membership!.id,
     role: "workspace_manager",
   });
-  return { userId: user!.id, workspaceId: workspace!.id };
+  return { userId: user!.id, agencyId: agency!.id, workspaceId: workspace!.id };
 }
 
 async function postMcp(token: string, body: Record<string, unknown>) {
@@ -103,6 +103,12 @@ describe("authenticated MCP HTTP transport", () => {
       scopes: ["content:read", "platform:diagnostics:read"],
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
     });
+    const writeToken = await issueMcpAccessToken({
+      userId: seeded.userId,
+      name: "Integration HTTP task smoke",
+      scopes: ["content:write"],
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+    });
 
     const initialized = await postMcp(issued.token, {
       jsonrpc: "2.0",
@@ -133,6 +139,9 @@ describe("authenticated MCP HTTP transport", () => {
     expect(
       listBody.result?.tools?.some((tool) => tool.name === "laratik_planner_list_research"),
     ).toBe(true);
+    expect(
+      listBody.result?.tools?.some((tool) => tool.name === "laratik_planner_create_task"),
+    ).toBe(true);
 
     const research = await postMcp(issued.token, {
       jsonrpc: "2.0",
@@ -158,7 +167,45 @@ describe("authenticated MCP HTTP transport", () => {
       }),
     );
 
+    const createdTask = await postMcp(writeToken.token, {
+      jsonrpc: "2.0",
+      id: "create-task",
+      method: "tools/call",
+      params: {
+        name: "laratik_planner_create_task",
+        arguments: {
+          agency_id: seeded.agencyId,
+          title: "MCP HTTP smoke task",
+          description: "Disposable integration task.",
+        },
+      },
+    });
+    expect(createdTask.status).toBe(200);
+    const createdTaskBody = (await createdTask.json()) as {
+      result?: { isError?: boolean; structuredContent?: { result?: { task?: { id?: string } } } };
+    };
+    expect(createdTaskBody.result?.isError).not.toBe(true);
+    const taskId = createdTaskBody.result?.structuredContent?.result?.task?.id;
+    expect(taskId).toEqual(expect.any(String));
+
+    const readTask = await postMcp(writeToken.token, {
+      jsonrpc: "2.0",
+      id: "get-task",
+      method: "tools/call",
+      params: {
+        name: "laratik_planner_get_task",
+        arguments: { task_id: taskId },
+      },
+    });
+    expect(readTask.status).toBe(200);
+    const readTaskBody = (await readTask.json()) as {
+      result?: { isError?: boolean; structuredContent?: { result?: { id?: string } } };
+    };
+    expect(readTaskBody.result?.isError).not.toBe(true);
+    expect(readTaskBody.result?.structuredContent?.result?.id).toBe(taskId);
+
     expect(await revokeMcpAccessToken(seeded.userId, issued.id)).toBe(true);
+    expect(await revokeMcpAccessToken(seeded.userId, writeToken.id)).toBe(true);
     const revoked = await postMcp(issued.token, {
       jsonrpc: "2.0",
       id: "revoked",

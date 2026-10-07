@@ -35,4 +35,11 @@
   <case id="32">A hot error loop is bounded: the group's occurrenceCount keeps incrementing exactly while the number of persisted event rows stays within the per-minute burst cap, and app_health reports how many occurrences were capped.</case>
   <case id="33">list_research is read-only, requires content:read plus internal workspace access, returns the stable collections/bookmarks/teardowns/watchlist envelope, preserves bookmark source_kind/source IDs and metrics_version, hides private collections from other users, and never returns provider media, raw provider bodies, or raw planner notes.</case>
   <case id="34">The disposable authenticated HTTP smoke issues a token carrying platform:diagnostics:read, completes initialize, tools/list, and list_research over the real POST route, then revokes the token and receives HTTP 401; the database constraint accepts the same four scopes exposed by the token service.</case>
+  <case id="35">list_agencies returns only active agency memberships for the token owner, and a content:read token can resolve the exact agency UUID needed by agency task tools.</case>
+  <case id="36">list_tasks and create_task require content:read/content:write respectively, preserve agency tenancy, apply server-side filters and pagination, and record task activity through the existing domain service.</case>
+  <case id="37">get_task and update_task return task detail/activity while preserving creator/assignee/admin permissions and the existing valid lifecycle transition rules.</case>
+  <case id="38">archive_task requires confirm=true and agency-admin permission; restore_task reverses only the selected soft archive and both mutations record activity.</case>
+  <case id="39">Task attachment reads never expose bucket or objectKey; ready files use short-lived signed URLs, and the upload-intent → direct PUT → completion flow verifies exact byte size and MIME type before readiness.</case>
+  <case id="40">link_task_attachment accepts HTTPS URLs only, stores an external ready attachment through the existing service, and rejects HTTP or other schemes before writing.</case>
+  <case id="41">The authenticated HTTP smoke lists the task tools and creates then reads a disposable agency task with a content:write token; the test uses no production credentials or data.</case>
 </evaluation>
