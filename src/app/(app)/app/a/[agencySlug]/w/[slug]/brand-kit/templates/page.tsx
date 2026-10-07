@@ -52,7 +52,7 @@ export default async function BrandKitTemplatesPage({
 
   return (
     <div className="space-y-8">
-      <BrandKitBackLink slug={slug} />
+      <BrandKitBackLink slug={slug} agencySlug={agencySlug} />
       <PageHeader
         title={t("brandKit.templatesTitle")}
         description={t("brandKit.templatesDescription")}

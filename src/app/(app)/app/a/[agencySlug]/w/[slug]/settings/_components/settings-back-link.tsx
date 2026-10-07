@@ -2,16 +2,17 @@ import * as React from "react";
 import Link from "next/link";
 
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { workspaceHref } from "@/lib/urls";
 
 /**
  * SettingsBackLink — small "← Back to Settings" link for the
  * per-section pages. Mirrors the brand-kit equivalent
  * (BrandKitBackLink).
  */
-export function SettingsBackLink({ slug }: { slug: string }) {
+export function SettingsBackLink({ slug, agencySlug }: { slug: string; agencySlug: string }) {
   return (
     <Link
-      href={`/app/w/${slug}/settings`}
+      href={workspaceHref(agencySlug, slug, "settings")}
       className="text-label text-fg-secondary hover:text-fg-primary inline-flex items-center gap-1 font-semibold transition-colors"
       data-testid="settings-back-link"
     >

@@ -2,6 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
+import { workspaceHref } from "@/lib/urls";
 
 /**
  * BrandKitBackLink — the small "← Back to Brand Kit" link that
@@ -9,10 +10,10 @@ import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
  * keyboard users (the breadcrumb lives in the layout, this is a
  * visual shortcut for mouse / touch users).
  */
-export function BrandKitBackLink({ slug }: { slug: string }) {
+export function BrandKitBackLink({ slug, agencySlug }: { slug: string; agencySlug: string }) {
   return (
     <Link
-      href={`/app/w/${slug}/brand-kit`}
+      href={workspaceHref(agencySlug, slug, "brand-kit")}
       className="text-label text-fg-secondary hover:text-fg-primary inline-flex items-center gap-1 font-semibold transition-colors"
       data-testid="brand-kit-back-link"
     >

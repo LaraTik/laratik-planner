@@ -48,7 +48,7 @@ export default async function BrandKitPillarsPage({
 
   return (
     <div className="space-y-6">
-      <BrandKitBackLink slug={slug} />
+      <BrandKitBackLink slug={slug} agencySlug={agencySlug} />
       <PageHeader
         eyebrow={t("brandKit.pillarsEyebrow")}
         title={t("brandKit.pillarsTitle")}
