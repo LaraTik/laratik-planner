@@ -2,9 +2,41 @@ import { describe, expect, it } from "vitest";
 import {
   buildCommandCenterSummary,
   COMMAND_CENTER_TIME_BAND_HOURS,
+  commandCenterConfidence,
   toTimeBandHour,
   type CommandCenterChannel,
+  type CommandCenterPost,
 } from "@/lib/social/command-center";
+
+/** One post observation published at an exact ISO instant. */
+function observation(id: string, views: number, publishedAt: string): CommandCenterPost {
+  return {
+    id,
+    channelId: "one",
+    platform: "instagram",
+    accountName: "One",
+    permalink: null,
+    thumbnailUrl: null,
+    caption: null,
+    publishedAt: new Date(publishedAt),
+    mediaType: "reel",
+    views,
+    reach: null,
+    likes: null,
+    comments: null,
+    saved: null,
+    shares: null,
+    interactions: null,
+    durationSeconds: 20,
+  };
+}
+
+/** Tuesday (dayOfWeek 2) in the 09:00 band. */
+const tue9 = (id: string, views: number) => observation(id, views, "2026-09-29T09:10:00Z");
+/** Tuesday (dayOfWeek 2) in the 15:00 band. */
+const tue15 = (id: string, views: number) => observation(id, views, "2026-09-29T15:10:00Z");
+/** Friday (dayOfWeek 5) in the 12:00 band. */
+const fri12 = (id: string, views: number) => observation(id, views, "2026-10-02T12:10:00Z");
 
 function channel(
   id: string,
@@ -61,13 +93,113 @@ describe("buildCommandCenterSummary", () => {
       expect.objectContaining({ accountName: "One", status: "healthy" }),
       expect.objectContaining({ accountName: "Two", status: "healthy" }),
     ]);
+    // Flows are SUMMED over the window and the follower stock is taken from
+    // the last known day. These used to be the latest single day, which made
+    // the panel contradict the window its own header named.
     expect(summary.channelPerformance[0]).toMatchObject({
       accountName: "One",
       followers: 110,
-      reach: 450,
-      views: 1_000,
-      interactions: 50,
+      reach: 850,
+      views: 1_900,
+      interactions: 90,
     });
+    // One: 90 interactions / 850 reach. Two: 30 / 300. Both reach-based.
+    expect(summary.leaders[0]?.rate).toMatchObject({
+      percent: (90 / 850) * 100,
+      denominator: "reach",
+      interactions: 90,
+      denominatorValue: 850,
+      daysObserved: 2,
+      metricDate: "2026-09-29",
+    });
+  });
+
+  it("ranks strongest accounts on the rate it displays, and never mixes bases", () => {
+    // The regression this pins. Ranking used `views ?? interactions ?? reach`
+    // per row while rendering `interactions ?? views`, so the order and the
+    // printed number were different quantities: an account with views=100 and
+    // interactions=2 outranked one with views=null and interactions=50 and then
+    // printed 2 above 50. Meta reports views for Instagram but not for a
+    // Facebook Page, so this is the common case, not a corner case.
+    const summary = buildCommandCenterSummary(
+      [
+        // Big on views, tiny on interactions -> high reach, terrible rate.
+        {
+          ...channel("reachy", "Reachy", [["2026-09-29", 100, 1_000, 100, 2]]),
+          platform: "instagram",
+        },
+        // No views at all, but a genuinely strong rate.
+        {
+          ...channel("engaged", "Engaged", [["2026-09-29", 100, 400, null, 50]]),
+          platform: "facebook",
+        },
+      ],
+      new Date("2026-09-30T12:00:00Z"),
+      [],
+      "UTC",
+    );
+
+    // The engaged Page wins on rate despite having no views to sort on.
+    expect(summary.leaders.map((leader) => leader.accountName)).toEqual(["Engaged", "Reachy"]);
+    // And the displayed rate is strictly descending — order equals the number.
+    const percents = summary.leaders.map((leader) => leader.rate.percent ?? -1);
+    expect(percents[0]).toBeGreaterThan(percents[1]!);
+    expect(summary.leaders[0]?.rate.percent).toBeCloseTo((50 / 400) * 100, 6);
+    expect(summary.leaders[1]?.rate.percent).toBeCloseTo((2 / 1_000) * 100, 6);
+  });
+
+  it("falls back to followers and names the denominator it used", () => {
+    const summary = buildCommandCenterSummary(
+      [
+        {
+          ...channel("page", "Page", [["2026-09-29", 800, null, null, 40]]),
+          platform: "facebook",
+        },
+      ],
+      new Date("2026-09-30T12:00:00Z"),
+      [],
+      "UTC",
+    );
+
+    expect(summary.leaders[0]?.rate).toMatchObject({
+      denominator: "followers",
+      percent: 5,
+      interactions: 40,
+      denominatorValue: 800,
+    });
+  });
+
+  it("excludes an account it cannot compute a rate for rather than showing a fake zero", () => {
+    const summary = buildCommandCenterSummary(
+      [
+        channel("ghost", "Ghost", [["2026-09-29", null, null, 900, null]]),
+        channel("real", "Real", [["2026-09-29", 100, 500, 900, 25]]),
+      ],
+      new Date("2026-09-30T12:00:00Z"),
+      [],
+      "UTC",
+    );
+
+    expect(summary.leaders.map((leader) => leader.accountName)).toEqual(["Real"]);
+  });
+
+  it("stops reordering channel performance when the strongest accounts re-rank", () => {
+    // `leaders` used to be a slice of `channelPerformance`, so the two panels
+    // shared one sort. They are now ranked independently: this panel's bars
+    // are views, so an account with no views must not outrank one that has them.
+    const summary = buildCommandCenterSummary(
+      [
+        channel("noViews", "NoViews", [["2026-09-29", 50, 400, null, 50]]),
+        channel("views", "Views", [["2026-09-29", 100, 500, 1_200, 25]]),
+      ],
+      new Date("2026-09-30T12:00:00Z"),
+      [],
+      "UTC",
+    );
+
+    expect(summary.channelPerformance.map((c) => c.accountName)).toEqual(["Views", "NoViews"]);
+    // ...while the strongest-accounts ranking still prefers the higher rate.
+    expect(summary.leaders.map((c) => c.accountName)).toEqual(["NoViews", "Views"]);
   });
 
   it("keeps the trend and growth calculation inside the selected window", () => {
@@ -368,6 +500,10 @@ describe("buildCommandCenterSummary", () => {
       sampleSize: 3,
       averageViews: 2_000 / 3,
       reliable: true,
+      // Baseline across all six posts is 440, so the lift and the tier are
+      // derived rather than left to the caller.
+      liftRatio: 2_000 / 3 / 440,
+      confidence: "low",
     });
     expect(summary.content.timeSlots).toHaveLength(2);
     expect(
@@ -494,7 +630,17 @@ describe("buildCommandCenterSummary", () => {
     );
 
     expect(summary.content.timeSlots).toEqual([
-      { dayOfWeek: 2, hour: 12, sampleSize: 2, averageViews: 600, reliable: false },
+      {
+        dayOfWeek: 2,
+        hour: 12,
+        sampleSize: 2,
+        averageViews: 600,
+        reliable: false,
+        // The only posts in the window, so the baseline IS this cell: a lift of
+        // exactly 1.0 and therefore the floor tier, not a recommendation.
+        liftRatio: 1,
+        confidence: "low",
+      },
     ]);
   });
 
@@ -527,7 +673,15 @@ describe("buildCommandCenterSummary", () => {
     );
 
     expect(summary.content.timeSlots).toEqual([
-      { dayOfWeek: 2, hour: 6, sampleSize: 1, averageViews: 300, reliable: false },
+      {
+        dayOfWeek: 2,
+        hour: 6,
+        sampleSize: 1,
+        averageViews: 300,
+        reliable: false,
+        liftRatio: 1,
+        confidence: "low",
+      },
     ]);
   });
 
@@ -542,5 +696,68 @@ describe("buildCommandCenterSummary", () => {
       );
     }
     expect([...rendered].sort((a, b) => a - b)).toEqual([...COMMAND_CENTER_TIME_BAND_HOURS]);
+  });
+
+  it("carries lift and a confidence tier on the recommended slot", () => {
+    // Four Tuesday-afternoon posts well above the workspace average, plus a
+    // spread of other posts to form a realistic baseline.
+    const observations = [
+      ...[900, 900, 900, 900].map((views, index) => tue15(`tue-${index}`, views)),
+      ...[100, 100, 100, 100, 100].map((views, index) => tue9(`other-${index}`, views)),
+    ];
+    const summary = buildCommandCenterSummary(
+      [channel("one", "One", [])],
+      new Date("2026-09-30T12:00:00Z"),
+      observations,
+      "UTC",
+    );
+
+    const best = summary.content.bestTime;
+    expect(best).toMatchObject({ dayOfWeek: 2, hour: 15, sampleSize: 4, averageViews: 900 });
+    // Baseline = (4*900 + 5*100) / 9 = 455.6 -> lift 900/455.6 = 1.976
+    expect(best?.liftRatio).toBeCloseTo(900 / (4_100 / 9), 3);
+    // n=4 clears the gate but not the "good" threshold of 8.
+    expect(best?.confidence).toBe("low");
+  });
+
+  it("raises the tier with sample size and never on lift alone", () => {
+    expect(commandCenterConfidence(3, 2)).toBe("low");
+    expect(commandCenterConfidence(5, 2)).toBe("early");
+    expect(commandCenterConfidence(8, 2)).toBe("good");
+    // A slot barely above average drops exactly one step, never to the floor
+    // and never two — n=20 with a 2% lift is still "early", not "low".
+    expect(commandCenterConfidence(20, 1.02)).toBe("early");
+    expect(commandCenterConfidence(20, 1.1)).toBe("early");
+    expect(commandCenterConfidence(20, 1.2)).toBe("good");
+    // Already at the floor, a marginal lift cannot take it lower.
+    expect(commandCenterConfidence(3, 1.02)).toBe("low");
+    // No baseline to compare against leaves the sample-size tier alone.
+    expect(commandCenterConfidence(20, null)).toBe("good");
+  });
+
+  it("rings the same slot the panel recommends, using the domain's own choice", () => {
+    // The end-to-end shape of the reported bug: one loud single post and one
+    // well-supported slot. The pill must be the supported slot, and the grid's
+    // highlighted cell must be that same slot — never the louder outlier.
+    const observations = [
+      ...[900, 900, 900].map((views, index) => tue15(`tue-${index}`, views)),
+      fri12("fri-loud", 5_000),
+    ];
+    const summary = buildCommandCenterSummary(
+      [channel("one", "One", [])],
+      new Date("2026-09-30T12:00:00Z"),
+      observations,
+      "UTC",
+    );
+
+    const best = summary.content.bestTime;
+    expect(best).toMatchObject({ dayOfWeek: 2, hour: 15, sampleSize: 3 });
+    // The loud cell exists, tops the raw grid, and is still not recommended.
+    const loudest = [...summary.content.timeSlots].sort(
+      (a, b) => b.averageViews - a.averageViews,
+    )[0];
+    expect(loudest).toMatchObject({ dayOfWeek: 5, hour: 12, reliable: false });
+    expect(best?.dayOfWeek).not.toBe(loudest?.dayOfWeek);
+    expect(best?.hour).not.toBe(loudest?.hour);
   });
 });

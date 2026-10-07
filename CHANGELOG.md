@@ -12,6 +12,77 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — "Strongest accounts" ranked on one metric and displayed another, and "Best time to post" recommended Tuesday while highlighting Friday
+
+Two Command Center panels on the Workspace Overview read as confident
+recommendations that were neither comparable nor self-consistent. On the
+workspace that reported it, the "strongest account" column showed `8` and `0`
+with no unit, and the timing panel recommended `Tue · 15:00` while its grid
+ringed a different cell entirely.
+
+**`Strongest accounts` sorted and printed different quantities.** The row order
+came from `b.views ?? b.interactions ?? b.reach` and the printed number from
+`leader.interactions ?? leader.views` — opposite precedence. An account with
+`views=100, interactions=2` therefore outranked one with `views=null,
+interactions=50` and then displayed **2 above 50**. Meta reports views for
+Instagram but not for a Facebook Page, so every Instagram-vs-Facebook workspace
+hit this: two accounts ranked by two different metrics, then printed two other
+metrics, under the caption _"interaction or view signal"_.
+
+- **One declared basis, and it is the one displayed.** `leaders` is now ranked
+  on **engagement rate** over the analysis window — `interactions ÷ reach`,
+  falling back to `÷ followers` — and prints that same rate. Rate is the only
+  cross-platform comparable number, so a 2k account beating a 10k account at
+  identical quality is finally visible. `rate.denominator` is carried so the UI
+  can name the basis it actually used instead of implying a single fixed one.
+- **Accounts are now aggregated over the window, not read from its last day.**
+  `latestValue()` fed the panel a single metric day while the panel header named
+  a calendar month — the same page/panel contradiction ADR 0017 was written to
+  remove. Flows (`reach`, `views`, `interactions`) sum; `followerCount` is a
+  stock and is read from the last known day.
+- **An account whose rate cannot be computed is excluded**, not shown with an
+  invented zero.
+- **`channelPerformance` no longer shares that ranking.** `leaders` used to be
+  `channelPerformance.slice(0, 5)`, so re-ranking the strongest accounts
+  silently reordered the channel-performance readout. The two are now ranked
+  independently — that panel's bars are views, so it orders by views.
+
+**`Best time to post` pointed its own highlight at the wrong cell.** The grid
+derived its winner as the highest average across _all_ slots while the header
+pill took the highest average among _reliable_ (≥3 post) ones. On the reported
+data the pill read `Tue 15:00` (382 average views, 3 posts) and the ring landed
+on a **502-average cell backed by a single post** — the panel recommended
+Tuesday and highlighted Friday. That same one-post cell set `maxAverage`, so the
+whole colour scale was anchored to it and every well-supported cell washed out.
+
+- **`BestTimeHeatmap` now takes `bestTime` as a prop** and rings what the panel
+  recommends, so the grid cannot restate the winner. The colour scale anchors on
+  the strongest _reliable_ cell when one exists. Below-gate cells are dashed and
+  dimmed, so a real observation that cannot support a recommendation looks
+  different from one that can.
+- **Confidence is now stated, not implied.** `commandCenterConfidence()` tiers
+  the recommendation from sample size (`low` 3–4, `early` 5–7, `good` 8+) and
+  drops it exactly one step when the slot does not clear a 15% lift over the
+  workspace baseline. With 42 cells and a typical new workspace's post count, the
+  top slot is usually three posts that merely top the grid — the panel now says
+  _"Low confidence — a hypothesis to test · +35% vs your average"_ instead of
+  presenting it as a finding.
+- **Empty cells stopped claiming a threshold problem.** Both an empty cell and a
+  below-gate cell rendered _"At least three posts in the same time slot are
+  needed before a timing recommendation can be shown."_ across thirty-odd cells.
+  Empty cells now read `No posts`; only cells that actually have too few posts
+  read `Too few posts to recommend`.
+- **The timezone is on the pill.** `workspaces.timezone` defaults to `UTC`, so an
+  unqualified `Tue 15:00` is two hours off for a European audience with nothing to
+  say so. The pill now reads `Tue 15:00 UTC`, the grid states its bucketing, and a
+  UTC workspace gets a one-line hint pointing at workspace settings.
+
+**Contract change for MCP.** `laratik_planner_get_command_center` serialises
+these objects directly, so `strongest_accounts` rows now carry `rate` instead of
+flat `interactions`/`views`, and `best_time_to_post.best` gains `liftRatio` and
+`confidence`. The tool and the page share one read path, so an operator sees what
+the browser shows.
+
 ### Fixed — a shared workspace link could open the wrong tenant's workspace
 
 `/app/w/food-game` did not mean _that_ workspace. A workspace's identity is
