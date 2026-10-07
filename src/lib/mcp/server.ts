@@ -655,6 +655,79 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
   );
 
   server.registerTool(
+    "laratik_planner_get_command_center",
+    {
+      title: "Get the workspace Command Center",
+      description:
+        "Read the Command Center exactly as the Overview page renders it: data health per connected account, the follower/reach/views/engagement KPIs and their window, the follower trend series, channel performance, Top content, the Observed content inventory, the best-time-to-post heatmap, and video-length bands. Use this when a reported number on the Overview looks wrong — it returns the same rows the UI used, plus observationStats (rows vs distinctPosts, and how many rows are missing a thumbnail or caption), so a duplicate or missing-media problem is visible without reading the DOM.",
+      inputSchema: z.object({
+        workspace_id: workspaceId,
+        analysis_window: z.union([z.literal(30), z.literal(90)]).default(30),
+        response_format: responseFormat,
+      }),
+      outputSchema: z.object({ result: z.unknown() }),
+      annotations: { readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ workspace_id, analysis_window, response_format }) => {
+      try {
+        requireScope(context, "content:read");
+        const { getCommandCenterSnapshot } = await import("@/lib/social/command-center-snapshot");
+        const workspace = await requireWorkspace(context, workspace_id);
+        const { summary, observationStats } = await getCommandCenterSnapshot(
+          db,
+          workspace.id,
+          workspace.timezone,
+          new Date(),
+          analysis_window,
+        );
+        const payload = {
+          workspace: { id: workspace.id, slug: workspace.slug, timezone: workspace.timezone },
+          analysis_window,
+          channels: {
+            connected: summary.channelCount,
+            with_data: summary.channelsWithData,
+            last_synced_at: summary.lastSyncedAt,
+          },
+          account_health: summary.accountHealth,
+          health_counts: summary.health,
+          kpis: {
+            followers: summary.currentFollowers,
+            reach: summary.currentReach,
+            views: summary.currentViews,
+            interactions: summary.currentInteractions,
+            engagement_rate: summary.engagementRate.percent,
+            follower_growth: summary.followerGrowth,
+          },
+          trend: summary.trend.map((point) => ({
+            date: point.metricDate,
+            followers: point.followerCount,
+            reach: point.reach,
+            views: point.views,
+          })),
+          channel_performance: summary.channelPerformance,
+          strongest_accounts: summary.leaders,
+          top_content: summary.content.topPosts,
+          observed_content: summary.content.posts,
+          best_time_to_post: {
+            best: summary.content.bestTime,
+            average_views: summary.content.averageViews,
+            slots: summary.content.timeSlots,
+            sample_size: summary.content.timeSlots.reduce(
+              (total, slot) => total + slot.sampleSize,
+              0,
+            ),
+          },
+          video_length_bands: summary.content.lengthBands,
+          observation_stats: observationStats,
+        };
+        return result(payload, response_format);
+      } catch (error) {
+        return errorResult(error);
+      }
+    },
+  );
+
+  server.registerTool(
     "laratik_planner_get_workspace_settings",
     {
       title: "Get workspace settings",

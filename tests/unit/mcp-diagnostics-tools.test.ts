@@ -117,9 +117,18 @@ describe("diagnostics tool registration", () => {
   it("keeps the content and diagnostics tools plus the research shelf", async () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
-    // 15 content/brand tools + 5 diagnostics + 1 read-only research tool.
-    expect(tools).toHaveLength(21);
+    // 15 content/brand tools + 5 diagnostics + 1 read-only research tool
+    // + 1 read-only Command Center reader.
+    expect(tools).toHaveLength(22);
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
+    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_get_command_center");
+  });
+
+  it("exposes the Command Center reader as read-only", async () => {
+    const client = await connect([READ]);
+    const { tools } = await client.listTools();
+    const commandCenter = tools.find((tool) => tool.name === "laratik_planner_get_command_center");
+    expect(commandCenter?.annotations?.readOnlyHint).toBe(true);
   });
 });
 

@@ -71,6 +71,52 @@ minors. Both were confirmed to resolve on 1.32.1 and the 44 MCP unit tests pass.
 The runbook now distinguishes the two cases up front, since reaching for an
 override first is the easy mistake.
 
+### Fixed — Top content and Observed content repeated the same post
+
+Three symptoms, one cause. `social_post_observation` stores **one row per post
+per sync day** — its unique index is (channel, provider, post id,
+observation_date), which is the snapshot history the trending work reads. That
+is correct as designed. The read path was not: `querySocialPostObservations`
+applied `limit(200)` to those raw rows and handed them on as if each were a
+distinct post. A workspace with 36 real posts returned 324 rows, so ranking by
+views could put the SAME post in the top five five times.
+
+That produced exactly what was reported:
+
+- **every "Open source" opened the same link** — the five rows were one post's
+  five daily snapshots;
+- **no image visible** — the repeated rows were mostly older snapshots written
+  before `thumbnail_url` existed, and each post's placeholder repeated too;
+- **"statistics updated as a new record"** — correct, and those snapshots are
+  what made the duplication visible.
+
+`querySocialPostObservations` now collapses to one row per post, keeping the
+**newest** snapshot so the numbers shown are current. Measured on the local
+database: **324 rows → 36 posts, and the top five now carry five distinct
+permalinks** (was one).
+
+The Overview page and a new MCP tool now read through the same
+`getCommandCenterSnapshot` service, so what an operator sees in the browser is
+what a debugging agent reads. They previously mapped the rows independently,
+which is how a page bug can hide behind a tool that reports healthy numbers.
+
+### Added — `laratik_planner_get_command_center` MCP tool
+
+There was no way to inspect Command Center data over MCP, so this class of bug
+could only be diagnosed through SQL. The tool returns the same rows the UI used
+plus `observation_stats` (rows vs distinctPosts, and how many rows are missing a
+thumbnail or caption), so a duplicate or missing-media problem is visible
+without opening the DOM.
+
+### Added — bounded thumbnail backfill
+
+`backfillMissingThumbnails` re-fetches preview images for posts that lack one,
+scoped deliberately: it selects only `thumbnail_url IS NULL` rows, works on
+distinct posts rather than snapshots, is bounded by an explicit limit, and never
+overwrites a post that already has an image. `fetchMetaPostMediaFields` issues
+one `/{media-id}` request per post instead of pulling a whole page, so provider
+cost stays proportional to what is actually missing.
+
 ### Added — official coloured Instagram and Facebook marks
 
 Instagram rendered as a generic lucide **Camera** icon and Facebook as

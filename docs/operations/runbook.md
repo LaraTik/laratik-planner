@@ -694,6 +694,45 @@ reauthorization recovery.
 
 Read-only, provider-neutral social profile analytics for Meta and TikTok. This section is the operator reference; the architecture decision is in [`docs/decisions/0004-social-profile-analytics.md`](../decisions/0004-social-profile-analytics.md) and the per-task spec is in [`docs/superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md`](../superpowers/plans/2026-08-24-meta-tiktok-social-analytics.md).
 
+### Post observations are snapshots — never read the table raw
+
+`social_post_observation` holds **one row per post per sync day**. The unique
+index is `(social_channel_id, external_provider, external_post_id,
+observation_date)`, so a post synced for 9 days has 9 rows. That history is what
+the trending work reads and it is correct as designed — do not "fix" it by
+deleting rows.
+
+The trap is reading the table without collapsing it. Ranking raw rows by views
+makes Top content show the _same post_ several times, which looks like every
+"Open source" link being identical and every thumbnail being a repeat. Always go
+through `querySocialPostObservations`, which returns one row per post with the
+newest snapshot, or through `getCommandCenterSnapshot`, which wraps it.
+
+To inspect Command Center data without SQL, call the
+`laratik_planner_get_command_center` MCP tool. It returns the same rows the
+Overview page renders plus `observation_stats` (`rows` vs `distinctPosts`, and
+how many rows are missing a thumbnail or caption) — enough to spot a duplicate
+or a missing-media problem immediately.
+
+### Backfilling missing post thumbnails
+
+Posts synced before the `thumbnail_url` column existed have no preview image and
+render the branded placeholder. They fill in naturally on their next sync.
+`backfillMissingThumbnails(db, workspaceId, accessToken, { limit })` re-fetches
+them sooner and is deliberately narrow:
+
+- it selects only rows where `thumbnail_url IS NULL`, so a post that already has
+  an image is never re-fetched and never overwritten;
+- it works on **distinct posts**, not observation rows, so nine snapshots of one
+  post cost one API call;
+- it is bounded by an explicit `limit` (default 25, capped at 100), so a large
+  workspace cannot produce an unbounded burst of provider traffic.
+
+`countPostsMissingThumbnails(db, workspaceId)` reports the size of the backlog
+without fetching anything. TikTok rows are reported as
+`provider_unsupported` rather than called — no TikTok post-observation path
+exists in this codebase.
+
 ### Environment variables (server-only)
 
 | Name                          | Default | Purpose                                                                                                                                                 |

@@ -112,14 +112,14 @@ const ANALYTICS_TASKS = new Set([
 type MetaGraphVersion = `v${number}.${number}`;
 const DEFAULT_GRAPH_VERSION: MetaGraphVersion = "v25.0";
 
-function resolveGraphVersion(override: string | null | undefined): MetaGraphVersion {
+export function resolveGraphVersion(override: string | null | undefined): MetaGraphVersion {
   if (override && /^v\d+\.\d+$/.test(override)) {
     return override as MetaGraphVersion;
   }
   return DEFAULT_GRAPH_VERSION;
 }
 
-function graphBaseUrl(version?: string | null): string {
+export function graphBaseUrl(version?: string | null): string {
   return `https://graph.facebook.com/${resolveGraphVersion(version)}`;
 }
 

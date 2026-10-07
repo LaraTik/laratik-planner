@@ -77,8 +77,29 @@ export async function querySocialAnalytics(
 }
 
 /**
- * Workspace-scoped post observations for the Command Center. The provider
- * sync owns collection; this query owns authorization scope and lookback.
+ * How many raw rows to fetch before collapsing snapshots.
+ *
+ * `social_post_observation` stores one row per post PER SYNC DAY (the unique
+ * index is channel + provider + post id + observation_date), which is the
+ * snapshot history the trending work reads. A workspace with ~36 real posts
+ * therefore returns ~324 rows. The previous version applied `limit(200)` to
+ * those raw rows and returned them as if each were a distinct post, so the
+ * Command Center's "top 5" could literally be the same post on five different
+ * sync days — every "Open source" link identical, every thumbnail a repeat.
+ *
+ * This window is deliberately larger so collapsing still yields a full set of
+ * distinct posts; it is a read-side fetch budget, not a retention policy.
+ */
+const POST_OBSERVATION_RAW_ROW_LIMIT = 1_200;
+
+/**
+ * Workspace-scoped post observations for the Command Center, COLLAPSED TO ONE
+ * ROW PER POST.
+ *
+ * The provider sync owns collection; this query owns authorization scope,
+ * lookback, and de-duplication. Consumers get each post's most recent
+ * snapshot, so ranking by views compares distinct posts rather than the same
+ * post sampled repeatedly.
  */
 export async function querySocialPostObservations(
   database: Db,
@@ -88,7 +109,7 @@ export async function querySocialPostObservations(
   lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
 ): Promise<SocialPostObservationQueryRow[]> {
   const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
-  return database
+  const rows = await database
     .select({ observation: socialPostObservations, channel: socialChannels })
     .from(socialPostObservations)
     .innerJoin(socialChannels, eq(socialChannels.id, socialPostObservations.socialChannelId))
@@ -103,8 +124,25 @@ export async function querySocialPostObservations(
         ),
       ),
     )
-    .orderBy(desc(socialPostObservations.publishedAt), desc(socialPostObservations.observedAt))
-    .limit(200);
+    // Newest snapshot first within each post, so the first row seen for a
+    // given post key is the one we keep.
+    .orderBy(
+      desc(socialPostObservations.observedAt),
+      desc(socialPostObservations.id),
+      desc(socialPostObservations.publishedAt),
+    )
+    .limit(POST_OBSERVATION_RAW_ROW_LIMIT);
+
+  const seen = new Set<string>();
+  const distinct: SocialPostObservationQueryRow[] = [];
+  for (const row of rows) {
+    const { observation } = row;
+    const key = `${observation.socialChannelId}|${observation.externalProvider}|${observation.externalPostId}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    distinct.push(row);
+  }
+  return distinct;
 }
 
 /** Resolve one post observation for a workspace-scoped research handoff. */

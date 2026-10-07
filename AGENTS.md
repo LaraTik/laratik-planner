@@ -835,6 +835,29 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-07 — Command Center observations collapse to one row per post
+
+`social_post_observation` holds **one row per post per sync day** (the unique
+index is channel + provider + post id + observation_date). That is the snapshot
+history and is correct as designed — do not "fix" it by deleting rows. The bug
+was in the read path, which returned those raw rows as if each were a distinct
+post, so Top content ranked one post five times and every "Open source" link
+was identical.
+
+Two invariants to preserve:
+
+- `querySocialPostObservations` returns **one row per post**, keeping the
+  newest snapshot. Any new consumer of that table must not skip the collapse —
+  ranking, averaging or paging over raw snapshots reintroduces the bug.
+- The Overview page and `laratik_planner_get_command_center` read through the
+  same `getCommandCenterSnapshot` service. Do not map those rows a second time;
+  a page and a tool that map independently drift, and the bug hides.
+
+`backfillMissingThumbnails` only ever selects `thumbnail_url IS NULL` rows, works
+on distinct posts, is bounded, and never overwrites an existing image. If you
+extend it, keep all four properties — an unbounded backfill turns a missing
+thumbnail into a provider bill.
+
 ### 2026-10-06 — Official brand marks, and post thumbnails + captions
 
 Two related additions to the Command Center's content surfaces.

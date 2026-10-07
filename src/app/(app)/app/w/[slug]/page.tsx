@@ -29,9 +29,7 @@ import { calculateOverviewDashboardMetrics } from "@/lib/dashboard/kpis";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
-import { querySocialAnalytics, querySocialPostObservations } from "@/lib/social/analytics-query";
-import { buildCommandCenterSummary } from "@/lib/social/command-center";
-import type { SocialSourceMetadata } from "@/lib/social/metrics";
+import { getCommandCenterSnapshot } from "@/lib/social/command-center-snapshot";
 
 /**
  * Workspace Overview — refactored dashboard (ADR-0007).
@@ -120,85 +118,75 @@ export default async function WorkspaceOverviewPage({
   // settings (for the monthly target). The list-safe rollup
   // operates on whatever rows the SQL returns — no N+1 readiness
   // call per item.
-  const [
-    monthlyItems,
-    settings,
-    ownerRows,
-    approvalRows,
-    socialAnalytics,
-    socialPostObservations,
-    researchBookmarkRows,
-    watchlistRows,
-  ] = await Promise.all([
-    db
-      .select({
-        id: contentItems.id,
-        title: contentItems.title,
-        status: contentItems.status,
-        format: contentItems.format,
-        plannedPublishAt: contentItems.plannedPublishAt,
-        // P3.1 — the "Recently updated" panel now sorts by
-        // `updatedAt` instead of `plannedPublishAt`. The old
-        // sort made the panel's name a lie.
-        updatedAt: contentItems.updatedAt,
-        contentOwnerId: contentItems.contentOwnerId,
-      })
-      .from(contentItems)
-      .where(
-        and(
-          eq(contentItems.workspaceId, ws.id),
-          isNull(contentItems.archivedAt),
-          gte(contentItems.plannedPublishAt, monthStart),
-          lt(contentItems.plannedPublishAt, monthEnd),
+  const [monthlyItems, settings, ownerRows, approvalRows, researchBookmarkRows, watchlistRows] =
+    await Promise.all([
+      db
+        .select({
+          id: contentItems.id,
+          title: contentItems.title,
+          status: contentItems.status,
+          format: contentItems.format,
+          plannedPublishAt: contentItems.plannedPublishAt,
+          // P3.1 — the "Recently updated" panel now sorts by
+          // `updatedAt` instead of `plannedPublishAt`. The old
+          // sort made the panel's name a lie.
+          updatedAt: contentItems.updatedAt,
+          contentOwnerId: contentItems.contentOwnerId,
+        })
+        .from(contentItems)
+        .where(
+          and(
+            eq(contentItems.workspaceId, ws.id),
+            isNull(contentItems.archivedAt),
+            gte(contentItems.plannedPublishAt, monthStart),
+            lt(contentItems.plannedPublishAt, monthEnd),
+          ),
         ),
-      ),
-    db.select().from(workspaceSettings).where(eq(workspaceSettings.workspaceId, ws.id)).limit(1),
-    db
-      .select({ id: users.id, displayName: users.displayName })
-      .from(users)
-      .innerJoin(workspaceMemberships, eq(workspaceMemberships.userId, users.id))
-      .where(eq(workspaceMemberships.workspaceId, ws.id))
-      .orderBy(asc(users.displayName)),
-    // Content-review approvals waiting for the current reviewer. The
-    // status guard keeps resolved items out of the attention banner;
-    // the banner links to the dedicated /reviews surface.
-    db
-      .select({ id: contentItems.id })
-      .from(contentItems)
-      .where(
-        and(
-          eq(contentItems.workspaceId, ws.id),
-          isNull(contentItems.archivedAt),
-          eq(contentItems.status, "content_review"),
-          eq(contentItems.contentReviewerId, session.user.id),
-        ),
-      )
-      .limit(50),
-    querySocialAnalytics(db, ws.id, ws.timezone, now, socialWindowDays),
-    querySocialPostObservations(db, ws.id, ws.timezone, now, socialWindowDays),
-    db
-      .select({ observationId: researchBookmarks.socialPostObservationId })
-      .from(researchBookmarks)
-      .where(eq(researchBookmarks.workspaceId, ws.id)),
-    db
-      .select({
-        id: researchWatchlistAccounts.id,
-        platform: researchWatchlistAccounts.platform,
-        handle: researchWatchlistAccounts.handle,
-        displayName: researchWatchlistAccounts.displayName,
-        sourceUrl: researchWatchlistAccounts.sourceUrl,
-        providerStatus: researchWatchlistAccounts.providerStatus,
-      })
-      .from(researchWatchlistAccounts)
-      .where(
-        and(
-          eq(researchWatchlistAccounts.workspaceId, ws.id),
-          isNull(researchWatchlistAccounts.archivedAt),
-        ),
-      )
-      .orderBy(asc(researchWatchlistAccounts.createdAt))
-      .limit(6),
-  ]);
+      db.select().from(workspaceSettings).where(eq(workspaceSettings.workspaceId, ws.id)).limit(1),
+      db
+        .select({ id: users.id, displayName: users.displayName })
+        .from(users)
+        .innerJoin(workspaceMemberships, eq(workspaceMemberships.userId, users.id))
+        .where(eq(workspaceMemberships.workspaceId, ws.id))
+        .orderBy(asc(users.displayName)),
+      // Content-review approvals waiting for the current reviewer. The
+      // status guard keeps resolved items out of the attention banner;
+      // the banner links to the dedicated /reviews surface.
+      db
+        .select({ id: contentItems.id })
+        .from(contentItems)
+        .where(
+          and(
+            eq(contentItems.workspaceId, ws.id),
+            isNull(contentItems.archivedAt),
+            eq(contentItems.status, "content_review"),
+            eq(contentItems.contentReviewerId, session.user.id),
+          ),
+        )
+        .limit(50),
+      db
+        .select({ observationId: researchBookmarks.socialPostObservationId })
+        .from(researchBookmarks)
+        .where(eq(researchBookmarks.workspaceId, ws.id)),
+      db
+        .select({
+          id: researchWatchlistAccounts.id,
+          platform: researchWatchlistAccounts.platform,
+          handle: researchWatchlistAccounts.handle,
+          displayName: researchWatchlistAccounts.displayName,
+          sourceUrl: researchWatchlistAccounts.sourceUrl,
+          providerStatus: researchWatchlistAccounts.providerStatus,
+        })
+        .from(researchWatchlistAccounts)
+        .where(
+          and(
+            eq(researchWatchlistAccounts.workspaceId, ws.id),
+            isNull(researchWatchlistAccounts.archivedAt),
+          ),
+        )
+        .orderBy(asc(researchWatchlistAccounts.createdAt))
+        .limit(6),
+    ]);
 
   const ownerById = new Map(ownerRows.map((o) => [o.id, o.displayName]));
 
@@ -230,52 +218,11 @@ export default async function WorkspaceOverviewPage({
     items: dashboardItems,
   });
 
-  const commandCenter = buildCommandCenterSummary(
-    socialAnalytics.map(({ channel, metrics }) => ({
-      id: channel.id,
-      platform: channel.platform as "facebook" | "instagram" | "tiktok",
-      accountName: channel.accountName,
-      lastSyncedAt: channel.lastSyncedAt,
-      lastSyncErrorCode: channel.lastSyncErrorCode,
-      latestProviderErrorCode:
-        (metrics[metrics.length - 1]?.sourceMetadata as SocialSourceMetadata | null)
-          ?.providerErrorCode ?? null,
-      series: metrics.map((row) => {
-        const metadata = row.sourceMetadata as SocialSourceMetadata | null;
-        return {
-          metricDate: row.metricDate,
-          followerCount: row.followerCount,
-          reach: row.reach,
-          views: row.views,
-          engagedAccounts: row.engagedAccounts,
-          interactions: row.interactions,
-          ...(metadata?.partial === true ? { partial: true } : {}),
-          ...(metadata?.metricStatuses ? { metricStatuses: metadata.metricStatuses } : {}),
-        };
-      }),
-    })),
-    now,
-    socialPostObservations.map(({ observation, channel }) => ({
-      id: observation.id,
-      channelId: channel.id,
-      platform: channel.platform as "facebook" | "instagram" | "tiktok",
-      accountName: channel.accountName,
-      permalink: observation.permalink,
-      thumbnailUrl: observation.thumbnailUrl,
-      caption: observation.caption,
-      publishedAt: observation.publishedAt,
-      mediaType: observation.mediaType as
-        "image" | "video" | "carousel" | "reel" | "story" | "unknown",
-      views: observation.views,
-      reach: observation.reach,
-      likes: observation.likes,
-      comments: observation.comments,
-      saved: observation.saved,
-      shares: observation.shares,
-      interactions: observation.interactions,
-      durationSeconds: observation.durationSeconds,
-    })),
+  const { summary: commandCenter } = await getCommandCenterSnapshot(
+    db,
+    ws.id,
     ws.timezone,
+    now,
     socialWindowDays,
   );
 
