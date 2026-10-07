@@ -1,6 +1,11 @@
 import "server-only";
 
-import { querySocialAnalytics, querySocialPostObservations } from "@/lib/social/analytics-query";
+import {
+  querySocialAnalytics,
+  querySocialPostObservations,
+  SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+  type SocialAnalyticsRange,
+} from "@/lib/social/analytics-query";
 import { buildCommandCenterSummary } from "@/lib/social/command-center";
 import { countPostsMissingThumbnails } from "@/lib/social/thumbnail-backfill";
 import { db as appDb } from "@/lib/db";
@@ -36,10 +41,33 @@ export async function getCommandCenterSnapshot(
   timezone: string,
   now: Date = new Date(),
   windowDays: 30 | 90 = 30,
+  range?: SocialAnalyticsRange,
 ): Promise<CommandCenterSnapshot> {
+  // When a calendar range is supplied the window length is DERIVED from it
+  // rather than taken from the 30/90 toggle. Those are different questions: a
+  // toggle answers "the last N days", a month answers "the days in this
+  // month" — which is 28, 29, 30 or 31 and never a round 30.
+  const effectiveWindowDays = range
+    ? Math.max(1, Math.round((range.end.getTime() - range.start.getTime()) / 86_400_000))
+    : windowDays;
+
   const [analytics, observations] = await Promise.all([
-    querySocialAnalytics(database, workspaceId, timezone, now),
-    querySocialPostObservations(database, workspaceId, timezone, now),
+    querySocialAnalytics(
+      database,
+      workspaceId,
+      timezone,
+      now,
+      SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+      range,
+    ),
+    querySocialPostObservations(
+      database,
+      workspaceId,
+      timezone,
+      now,
+      SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+      range,
+    ),
   ]);
 
   const summary = buildCommandCenterSummary(
@@ -88,7 +116,7 @@ export async function getCommandCenterSnapshot(
       durationSeconds: observation.durationSeconds,
     })),
     timezone,
-    windowDays,
+    effectiveWindowDays,
   );
 
   return {

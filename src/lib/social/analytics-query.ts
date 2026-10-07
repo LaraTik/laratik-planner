@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, lt, or } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   researchWatchlistAccounts,
@@ -29,9 +29,22 @@ export type ResearchPostObservationQueryRow = {
 };
 
 /**
+ * A closed calendar range. `start` is inclusive, `end` is EXCLUSIVE — the
+ * same half-open convention the Overview's month window uses, so a month can
+ * be passed straight through without an off-by-one day.
+ */
+export type SocialAnalyticsRange = { start: Date; end: Date };
+
+/**
  * Canonical authorized analytics read model. The query owns the connected,
  * non-archived scope and the workspace-local 90-day cutoff so pages and API
  * surfaces cannot drift into different definitions of the dashboard data.
+ *
+ * `range` exists because a trailing-window lookup and a calendar-month lookup
+ * are different questions. Without an upper bound the only expressible window
+ * is "the last N days ending at `now`" — which is why the Overview's Command
+ * Center used to keep showing today-relative data while the page header
+ * claimed a different month. Pass `range` to pin both edges.
  */
 export async function querySocialAnalytics(
   database: Db,
@@ -39,6 +52,7 @@ export async function querySocialAnalytics(
   workspaceTimezone: string,
   now: Date = new Date(),
   lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+  range?: SocialAnalyticsRange,
 ): Promise<SocialAnalyticsQueryChannel[]> {
   const channels = await database
     .select()
@@ -54,6 +68,10 @@ export async function querySocialAnalytics(
   if (channels.length === 0) return [];
 
   const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
+  // When a range is supplied it REPLACES the trailing cutoff: the lower edge
+  // becomes the range start, and an upper bound is added. Without the upper
+  // bound the query would happily return every future-dated metric row.
+  const lowerBound = range ? range.start : cutoff;
   const metricRows = await database
     .select()
     .from(socialProfileDailyMetrics)
@@ -63,7 +81,18 @@ export async function querySocialAnalytics(
           socialProfileDailyMetrics.socialChannelId,
           channels.map((channel) => channel.id),
         ),
-        gte(socialProfileDailyMetrics.metricDate, metricDateInTimeZone(cutoff, workspaceTimezone)),
+        gte(
+          socialProfileDailyMetrics.metricDate,
+          metricDateInTimeZone(lowerBound, workspaceTimezone),
+        ),
+        ...(range
+          ? [
+              lt(
+                socialProfileDailyMetrics.metricDate,
+                metricDateInTimeZone(range.end, workspaceTimezone),
+              ),
+            ]
+          : []),
       ),
     )
     .orderBy(asc(socialProfileDailyMetrics.metricDate));
@@ -107,8 +136,10 @@ export async function querySocialPostObservations(
   workspaceTimezone: string,
   now: Date = new Date(),
   lookbackDays = SOCIAL_ANALYTICS_LOOKBACK_DAYS,
+  range?: SocialAnalyticsRange,
 ): Promise<SocialPostObservationQueryRow[]> {
   const cutoff = new Date(now.getTime() - lookbackDays * 86_400_000);
+  const lowerBound = range ? range.start : cutoff;
   const rows = await database
     .select({ observation: socialPostObservations, channel: socialChannels })
     .from(socialPostObservations)
@@ -120,8 +151,19 @@ export async function querySocialPostObservations(
         isNull(socialChannels.archivedAt),
         gte(
           socialPostObservations.observationDate,
-          metricDateInTimeZone(cutoff, workspaceTimezone),
+          metricDateInTimeZone(lowerBound, workspaceTimezone),
         ),
+        // Same half-open convention as `querySocialAnalytics`: without an
+        // upper bound a calendar-month caller would still pull in posts
+        // observed after the month ended.
+        ...(range
+          ? [
+              lt(
+                socialPostObservations.observationDate,
+                metricDateInTimeZone(range.end, workspaceTimezone),
+              ),
+            ]
+          : []),
       ),
     )
     // Newest snapshot first within each post, so the first row seen for a

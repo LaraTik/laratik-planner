@@ -107,12 +107,29 @@ const COMPLETED_STATUSES: KpiContentStatus[] = [
   "published",
 ];
 
+/**
+ * Statuses that are never "at risk".
+ *
+ * `draft` belongs here per ADR-0006, which is unambiguous about the formula:
+ *
+ *   At risk = plannedPublishAt < now AND status NOT IN
+ *             {ready_to_publish, partially_published, published,
+ *              cancelled, blocked, draft}
+ *
+ * It was previously MISSING, so every slipped draft inflated the Overview's
+ * at-risk count — reproducing the exact "at risk 23 / total 27" back-of-drafts
+ * reading that ADR-0006 was written to kill, on a surface ADR-0006 names
+ * explicitly ("workspace overview KPI tile"), while `lib/dashboard/health.ts`
+ * filtered drafts out. The Planning list and the Overview disagreed about the
+ * same month. Drafts are surfaced through `notStarted` instead.
+ */
 const NOT_AT_RISK_STATUSES: KpiContentStatus[] = [
   "ready_to_publish",
   "partially_published",
   "published",
   "cancelled",
   "blocked",
+  "draft",
 ];
 
 export function calculateWorkspaceKpis(input: {
@@ -403,6 +420,14 @@ export interface OverviewDashboardMetrics {
    *  doesn't have to thread a separate clock through. */
   now: Date;
 
+  /**
+   * Where the viewed month sits relative to `now`. Consumers use it to pick
+   * honest wording — "Missed" for a closed month, "At risk" for the live one,
+   * and to suppress the health percentage entirely for a month that has not
+   * started (where 100% on-track would be a vacuous claim, not a measurement).
+   */
+  monthPhase: MonthPhase;
+
   /** Counts that drive the executive summary strip. */
   total: number;
   notStarted: number;
@@ -435,12 +460,21 @@ export interface OverviewDashboardMetrics {
   /**
    * The stacked-health-bar segments. They sum to `total` (every
    * actionable item is in exactly one bucket: on-track, at-risk,
-   * or blocked). The dashboard renders them as a horizontal
-   * bar with a legend underneath.
+   * blocked, or not-started). The dashboard renders them as a
+   * horizontal bar with a legend underneath.
    */
   onTrackPercent: number;
   atRiskPercent: number;
   blockedPercent: number;
+  /**
+   * Share of the month still sitting in `draft`.
+   *
+   * A fourth stacked-bar segment, added with ADR-0006 parity in mind: drafts
+   * are excluded from `atRiskPercent`, so without a visible home they would
+   * otherwise read as "on track". The four percentages sum to 100 (or 0 for an
+   * empty month).
+   */
+  notStartedPercent: number;
 
   /** Workflow-stage distribution (4 stages, not 11 statuses). */
   workflowStages: WorkflowStageCount[];
@@ -461,10 +495,45 @@ export interface OverviewDashboardMetrics {
 const MAX_NEEDS_ATTENTION = 5;
 const MAX_RECENTLY_UPDATED = 6;
 
+/**
+ * Where the viewed month sits relative to the real clock.
+ *
+ * The Overview anchors every metric to `?month=YYYY-MM`, but "at risk" has
+ * historically been computed against `now` alone (`plannedPublishAt < now`).
+ * That makes the same number mean three different things:
+ *
+ *   future — the month has not started, so nothing can be late yet and the
+ *            health bar reads a vacuous "100% on track".
+ *   current — the only case where "at risk" is genuinely actionable.
+ *   past   — every unpublished item is past-due, so "at risk" spikes toward
+ *            100% for items nobody can act on any more. The arithmetic is
+ *            correct; the *implication* ("fix this") is wrong.
+ *
+ * The counts themselves stay calendar-agnostic and correct — for a month in
+ * the past every item already satisfies `plannedPublishAt < now`, so changing
+ * the anchor would be a no-op. What has to change is the WORDING, and that is
+ * what this phase drives. Callers pick labels from it; `kpis.ts` stays pure.
+ *
+ * `monthEnd` is EXCLUSIVE (it is the first instant of the following month),
+ * which is why a month counts as past on `monthEnd <= now` rather than `<`.
+ */
+export type MonthPhase = "past" | "current" | "future";
+
+export function monthPhaseFor(input: { monthStart: Date; monthEnd: Date; now: Date }): MonthPhase {
+  if (input.monthStart.getTime() > input.now.getTime()) return "future";
+  if (input.monthEnd.getTime() <= input.now.getTime()) return "past";
+  return "current";
+}
+
 export function calculateOverviewDashboardMetrics(input: {
   now: Date;
   monthlyTarget: number | null;
   items: DashboardItem[];
+  /**
+   * Defaults to `"current"` so existing callers (and the planning list, which
+   * shares this function) keep today's behaviour unchanged.
+   */
+  monthPhase?: MonthPhase;
 }): OverviewDashboardMetrics {
   const actionable = input.items.filter((it) => it.status !== "cancelled");
   const total = actionable.length;
@@ -475,11 +544,16 @@ export function calculateOverviewDashboardMetrics(input: {
     (NOT_AT_RISK_STATUSES as readonly KpiContentStatus[]).includes(s);
 
   const blocked = actionable.filter((it) => it.status === "blocked").length;
+  const notStarted = actionable.filter((it) => it.status === "draft").length;
   const atRisk = actionable.filter(
     (it) => it.plannedPublishAt.getTime() < input.now.getTime() && !isNotAtRisk(it.status),
   ).length;
-  const onTrack = Math.max(0, total - atRisk - blocked);
-  const notStarted = actionable.filter((it) => it.status === "draft").length;
+  // Four mutually-exclusive buckets that must sum to `total`: on-track,
+  // at-risk, blocked and not-started. `notStarted` has to be subtracted
+  // explicitly — excluding drafts from `atRisk` (ADR-0006) without doing so
+  // would quietly relabel every slipped draft as "on track", which trades one
+  // false reading for another instead of removing the falsehood.
+  const onTrack = Math.max(0, total - atRisk - blocked - notStarted);
   const needsReview = actionable.filter((it) =>
     (
       ["content_review", "creative_review", "changes_requested"] as readonly KpiContentStatus[]
@@ -498,6 +572,7 @@ export function calculateOverviewDashboardMetrics(input: {
   const onTrackPercent = total ? Math.round((onTrack / total) * 100) : 0;
   const atRiskPercent = total ? Math.round((atRisk / total) * 100) : 0;
   const blockedPercent = total ? Math.round((blocked / total) * 100) : 0;
+  const notStartedPercent = total ? Math.round((notStarted / total) * 100) : 0;
 
   const workflowStages: WorkflowStageCount[] = WORKFLOW_STAGES.map((stage) => ({
     stage,
@@ -597,6 +672,7 @@ export function calculateOverviewDashboardMetrics(input: {
 
   return {
     now: input.now,
+    monthPhase: input.monthPhase ?? "current",
     total,
     notStarted,
     onTrack,
@@ -611,6 +687,7 @@ export function calculateOverviewDashboardMetrics(input: {
     onTrackPercent,
     atRiskPercent,
     blockedPercent,
+    notStartedPercent,
     workflowStages,
     riskReasonCounts,
     formatBreakdown,

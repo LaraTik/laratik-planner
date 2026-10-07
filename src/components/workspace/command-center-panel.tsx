@@ -225,6 +225,7 @@ export function CommandCenterPanel({
   windowDays,
   window30Href,
   window90Href,
+  windowCaption,
 }: {
   summary: CommandCenterSummary;
   locale: string;
@@ -242,6 +243,17 @@ export function CommandCenterPanel({
   windowDays: 30 | 90;
   window30Href: string;
   window90Href: string;
+  /**
+   * When set, the 30/90 toggle is replaced by this static caption and the
+   * panel is pinned to the calendar month the Overview is showing.
+   *
+   * The two controls answer different questions. A trailing "last 30 days"
+   * window is a rolling performance view; a calendar month is a planning
+   * period of 28–31 days. Offering both while the page header names a month
+   * is how the panel came to contradict the page, so in month mode the
+   * toggle is suppressed and the month is stated plainly instead.
+   */
+  windowCaption?: string;
 }) {
   const hasData = summary.channelsWithData > 0;
   const now = new Date();
@@ -323,29 +335,41 @@ export function CommandCenterPanel({
       {/* Analysis window + section nav share one tab row, as in the reference. */}
       {summary.channelCount > 0 && hasData ? (
         <div className="border-border mt-4 flex flex-wrap items-center gap-2 border-t pt-3">
-          <div
-            className="border-border bg-surface-subtle flex items-center gap-1 rounded-[var(--radius-control)] border p-1"
-            aria-label={labels.analysisWindow}
-            data-testid="command-center-window"
-          >
-            <span className="text-label text-fg-muted px-2 font-semibold">
-              {labels.analysisWindow}
-            </span>
-            <Link
-              href={window30Href}
-              aria-current={windowDays === 30 ? "page" : undefined}
-              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 30 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+          {windowCaption ? (
+            <div
+              className="border-border bg-surface-subtle text-fg-primary flex items-center gap-1 rounded-[var(--radius-control)] border px-2.5 py-1.5"
+              data-testid="command-center-window-caption"
             >
-              {labels.last30Days}
-            </Link>
-            <Link
-              href={window90Href}
-              aria-current={windowDays === 90 ? "page" : undefined}
-              className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 90 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+              <span className="text-label text-fg-muted font-semibold">
+                {labels.analysisWindow}
+              </span>
+              <span className="text-label font-semibold">{windowCaption}</span>
+            </div>
+          ) : (
+            <div
+              className="border-border bg-surface-subtle flex items-center gap-1 rounded-[var(--radius-control)] border p-1"
+              aria-label={labels.analysisWindow}
+              data-testid="command-center-window"
             >
-              {labels.last90Days}
-            </Link>
-          </div>
+              <span className="text-label text-fg-muted px-2 font-semibold">
+                {labels.analysisWindow}
+              </span>
+              <Link
+                href={window30Href}
+                aria-current={windowDays === 30 ? "page" : undefined}
+                className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 30 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+              >
+                {labels.last30Days}
+              </Link>
+              <Link
+                href={window90Href}
+                aria-current={windowDays === 90 ? "page" : undefined}
+                className={`text-label rounded-[calc(var(--radius-control)-2px)] px-2.5 py-1 font-semibold transition-colors focus-visible:ring-2 focus-visible:outline-none ${windowDays === 90 ? "border-primary bg-primary-subtle text-primary" : "text-fg-secondary hover:bg-surface hover:text-fg-primary"}`}
+              >
+                {labels.last90Days}
+              </Link>
+            </div>
+          )}
           <CommandCenterSectionNav
             title={labels.title}
             items={[

@@ -1,6 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
-import { CheckCircle2, ShieldAlert, CircleSlash } from "lucide-react";
+import { CheckCircle2, ShieldAlert, CircleSlash, FilePenLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DashboardPanel } from "./dashboard-panel";
 
@@ -30,6 +30,10 @@ export interface DeliveryHealthCardProps {
   atRiskPercent: number;
   blockedCount: number;
   blockedPercent: number;
+  /** Items still sitting in `draft`. ADR-0006 keeps these OUT of the at-risk
+   *  count, so the bar needs a fourth segment or they would be invisible. */
+  notStartedCount?: number;
+  notStartedPercent?: number;
   /** Optional "Why at risk" breakdown — labels + counts. Rendered
    *  below the stacked bar when at-least-one item is at risk. */
   riskReasons: { label: string; count: number; href: string }[];
@@ -39,8 +43,25 @@ export interface DeliveryHealthCardProps {
   onTrackHref: string;
   /** Optional URL for the blocked count row's "open" action. */
   blockedHref: string;
+  /** Where the "Not started" bucket drills down. Defaults to `onTrackHref`. */
+  notStartedHref?: string;
   /** Optional URL for "View all" in the footer. */
   viewAllHref: string;
+  /**
+   * Where the viewed month sits relative to the real clock. Defaults to
+   * `"current"`.
+   *
+   * This drives the WORDING only — the counts and percentages are unchanged,
+   * because for a month in the past every item already satisfies
+   * `plannedPublishAt < now`, so re-anchoring the arithmetic would be a no-op.
+   * What changes is whether the number is a measurement or a claim:
+   *
+   *   past   — "At risk" implies "fix this", but a closed month is a record.
+   *            Relabelled to "Missed" and annotated as non-actionable.
+   *   future — nothing can be late yet, so "100% on track" is vacuous. The
+   *            percentage is suppressed in favour of an honest statement.
+   */
+  monthPhase?: "past" | "current" | "future";
   /**
    * Optional translator. When provided, the panel renders
    * `workspaceOverviewDashboard.deliveryHealth.*`; when omitted,
@@ -57,27 +78,46 @@ export function DeliveryHealthCard({
   atRiskPercent,
   blockedCount,
   blockedPercent,
+  notStartedCount = 0,
+  notStartedPercent = 0,
   riskReasons,
   atRiskHref,
   onTrackHref,
   blockedHref,
+  notStartedHref,
   viewAllHref,
+  monthPhase = "current",
   t,
 }: DeliveryHealthCardProps) {
   // The stacked-bar segments sum to 100 (or 0 when the workspace
   // has no items). We render the bar with three flex children; the
   // flex-basis is the segment's percent.
   const hasAny = total > 0;
+  const isFuture = monthPhase === "future";
+  const isPast = monthPhase === "past";
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
+
+  // A future month cannot have anything late, so a headline percentage would
+  // always read "100% on track" no matter what the operator planned. Saying so
+  // is more useful than printing a number that cannot vary. Note this is NOT
+  // gated on `hasAny`: an empty workspace still renders "0%" today, and that
+  // contract is pinned by an existing test.
+  const headlinePercent = isFuture ? null : onTrackPercent;
 
   return (
     <DashboardPanel
       title={tr("workspaceOverviewDashboard.deliveryHealth.title", "Delivery health")}
-      eyebrow={tr(
-        "workspaceOverviewDashboard.deliveryHealth.eyebrow",
-        "Are items on track to ship",
-      )}
+      eyebrow={
+        isFuture
+          ? tr("workspaceOverviewDashboard.monthPhase.future.healthEyebrow", "Nothing is late yet")
+          : isPast
+            ? tr(
+                "workspaceOverviewDashboard.monthPhase.past.healthEyebrow",
+                "What shipped, and what was missed",
+              )
+            : tr("workspaceOverviewDashboard.deliveryHealth.eyebrow", "Are items on track to ship")
+      }
       data-testid="delivery-health"
     >
       <div className="space-y-5">
@@ -87,25 +127,32 @@ export function DeliveryHealthCard({
             is `onTrackPercent` (the dominant "is this OK?" signal)
             and the legend below spells out the breakdown. */}
         <div className="flex items-baseline gap-2">
-          <span
-            className={cn(
-              "text-title-page text-fg-primary text-4xl leading-none font-bold tabular-nums",
-              atRiskPercent > 50 && "text-warning",
-              blockedPercent > 0 && atRiskPercent <= 50 && "text-danger",
-            )}
-            aria-label={tr(
-              "workspaceOverviewDashboard.deliveryHealth.percentAria",
-              `${onTrackPercent} percent on track`,
-              { percent: onTrackPercent },
-            )}
-          >
-            {onTrackPercent}%
-          </span>
+          {headlinePercent !== null ? (
+            <span
+              className={cn(
+                "text-title-page text-fg-primary text-4xl leading-none font-bold tabular-nums",
+                atRiskPercent > 50 && "text-warning",
+                blockedPercent > 0 && atRiskPercent <= 50 && "text-danger",
+              )}
+              aria-label={tr(
+                "workspaceOverviewDashboard.deliveryHealth.percentAria",
+                `${onTrackPercent} percent on track`,
+                { percent: onTrackPercent },
+              )}
+            >
+              {onTrackPercent}%
+            </span>
+          ) : null}
           <span className="text-body text-fg-secondary font-medium">
-            {tr(
-              "workspaceOverviewDashboard.deliveryHealth.onTrackThisMonth",
-              "on track this month",
-            )}
+            {headlinePercent !== null
+              ? tr(
+                  "workspaceOverviewDashboard.deliveryHealth.onTrackThisMonth",
+                  "on track this month",
+                )
+              : tr(
+                  "workspaceOverviewDashboard.monthPhase.future.notStarted",
+                  "This month has not started. Health becomes meaningful once it does — plan coverage is the number to watch.",
+                )}
           </span>
         </div>
 
@@ -115,8 +162,14 @@ export function DeliveryHealthCard({
           role="img"
           aria-label={tr(
             "workspaceOverviewDashboard.deliveryHealth.percentOnTrackAria",
-            `On track ${onTrackCount} of ${total}, at risk ${atRiskCount}, blocked ${blockedCount}`,
-            { onTrack: onTrackCount, total, atRisk: atRiskCount, blocked: blockedCount },
+            `On track ${onTrackCount} of ${total}, at risk ${atRiskCount}, blocked ${blockedCount}, not started ${notStartedCount}`,
+            {
+              onTrack: onTrackCount,
+              total,
+              atRisk: atRiskCount,
+              blocked: blockedCount,
+              notStarted: notStartedCount,
+            },
           )}
         >
           {!hasAny ? (
@@ -144,12 +197,19 @@ export function DeliveryHealthCard({
                   aria-hidden="true"
                 />
               ) : null}
+              {notStartedPercent > 0 ? (
+                <div
+                  className="bg-surface-variant h-full"
+                  style={{ width: `${notStartedPercent}%` }}
+                  aria-hidden="true"
+                />
+              ) : null}
             </>
           )}
         </div>
 
         {/* Per-bucket counts (clickable drill-downs) */}
-        <ul className="grid grid-cols-3 gap-2">
+        <ul className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           <HealthBucket
             tone="success"
             icon={CheckCircle2}
@@ -161,7 +221,11 @@ export function DeliveryHealthCard({
           <HealthBucket
             tone="warning"
             icon={ShieldAlert}
-            label={tr("workspaceOverviewDashboard.deliveryHealth.atRiskBucket", "At risk")}
+            label={
+              isPast
+                ? tr("workspaceOverviewDashboard.monthPhase.past.atRiskLabel", "Missed")
+                : tr("workspaceOverviewDashboard.deliveryHealth.atRiskBucket", "At risk")
+            }
             count={atRiskCount}
             href={atRiskHref}
             {...(t ? { t } : {})}
@@ -174,7 +238,30 @@ export function DeliveryHealthCard({
             href={blockedHref}
             {...(t ? { t } : {})}
           />
+          {/* Fourth bucket. Drafts are deliberately excluded from at-risk by
+              ADR-0006, so without this tile a month's drafts would silently
+              vanish from the breakdown rather than being reported as a
+              distinct, fixable state. */}
+          <HealthBucket
+            tone="muted"
+            icon={FilePenLine}
+            label={tr("workspaceOverviewDashboard.deliveryHealth.notStartedBucket", "Not started")}
+            count={notStartedCount}
+            href={notStartedHref ?? onTrackHref}
+            {...(t ? { t } : {})}
+          />
         </ul>
+
+        {/* A closed month is a record, not a to-do list. Saying so stops the
+            amber "Missed" bar from reading as work still to be picked up. */}
+        {isPast ? (
+          <p className="text-label text-fg-muted" data-testid="delivery-health-closed-month-note">
+            {tr(
+              "workspaceOverviewDashboard.monthPhase.past.notActionable",
+              "This month is closed — these are a record, not a to-do list.",
+            )}
+          </p>
+        ) : null}
 
         {/* Why items are at risk (only when at least one is at risk) */}
         {atRiskCount > 0 ? (
@@ -228,7 +315,7 @@ function HealthBucket({
   href,
   t,
 }: {
-  tone: "success" | "warning" | "danger";
+  tone: "success" | "warning" | "danger" | "muted";
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   count: number;
@@ -241,6 +328,7 @@ function HealthBucket({
     success: "border-success/30 bg-success-subtle text-success",
     warning: "border-warning/30 bg-warning-subtle text-warning",
     danger: "border-danger/30 bg-danger-subtle text-danger",
+    muted: "border-border bg-surface-subtle text-fg-secondary",
   }[tone];
   return (
     <li>

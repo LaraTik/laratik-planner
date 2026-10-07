@@ -1,4 +1,24 @@
 {
+  "emptyMonth": {
+    "title": "Nothing planned for {month}",
+    "regionLabel": "Empty month",
+    "noTarget": "Nothing is scheduled for {month} yet.",
+    "noTargetPast": "Nothing was ever scheduled for {month}.",
+    "withTarget": "Your monthly target is {target} items — {gap} still to plan for {month}.",
+    "createCta": "Plan this month",
+    "setTargetCta": "Set a monthly target"
+  },
+  "monthPhase": {
+    "past": {
+      "atRiskLabel": "Missed",
+      "healthEyebrow": "What shipped, and what was missed",
+      "notActionable": "This month is closed — these are a record, not a to-do list."
+    },
+    "future": {
+      "healthEyebrow": "Nothing is late yet",
+      "notStarted": "This month has not started. Health becomes meaningful once it does — plan coverage is the number to watch."
+    }
+  },
   "commandCenter": {
     "eyebrow": "Performance cockpit",
     "title": "Command Center",
@@ -177,7 +197,8 @@
     "bucketAria": "{label}: {count} items, click to view",
     "bucketOnTrackAria": "On track: {count}",
     "bucketAtRiskAria": "At risk: {count}",
-    "bucketBlockedAria": "Blocked: {count}"
+    "bucketBlockedAria": "Blocked: {count}",
+    "notStartedBucket": "Not started"
   },
   "planCoverage": {
     "title": "Plan coverage",

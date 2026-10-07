@@ -25,7 +25,8 @@ import { RecentlyUpdatedList } from "@/components/workspace/recently-updated-lis
 import { AttentionBanner } from "@/components/workspace/attention-banner";
 import { OverviewKpiStrip, OVERVIEW_KPI_ICONS } from "@/components/workspace/overview-kpi-strip";
 import { CommandCenterPanel } from "@/components/workspace/command-center-panel";
-import { calculateOverviewDashboardMetrics } from "@/lib/dashboard/kpis";
+import { OverviewEmptyMonth } from "@/components/workspace/overview-empty-month";
+import { calculateOverviewDashboardMetrics, monthPhaseFor } from "@/lib/dashboard/kpis";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
@@ -113,6 +114,11 @@ export default async function WorkspaceOverviewPage({
   const monthLabel = formatDate(activeMonth, code, { month: "long", year: "numeric" });
   const now = new Date();
 
+  // Whether the viewed month is behind us, running, or still ahead. This is
+  // what lets the page say something honest about an empty or closed month
+  // instead of printing a health number that cannot mean anything.
+  const monthPhase = monthPhaseFor({ monthStart, monthEnd, now });
+
   // Single SQL: pull the dashboard items + the workspace owner's
   // display name (for the needs-attention list) + workspace
   // settings (for the monthly target). The list-safe rollup
@@ -152,6 +158,11 @@ export default async function WorkspaceOverviewPage({
       // Content-review approvals waiting for the current reviewer. The
       // status guard keeps resolved items out of the attention banner;
       // the banner links to the dedicated /reviews surface.
+      //
+      // Month-scoped like every other count on this page (ADR-0017). An
+      // unmetered banner meant a page headed "November 2026" could still
+      // advertise October's pending reviews. The full queue is one click away
+      // at /reviews, so scoping this costs the operator nothing.
       db
         .select({ id: contentItems.id })
         .from(contentItems)
@@ -161,6 +172,8 @@ export default async function WorkspaceOverviewPage({
             isNull(contentItems.archivedAt),
             eq(contentItems.status, "content_review"),
             eq(contentItems.contentReviewerId, session.user.id),
+            gte(contentItems.plannedPublishAt, monthStart),
+            lt(contentItems.plannedPublishAt, monthEnd),
           ),
         )
         .limit(50),
@@ -216,14 +229,20 @@ export default async function WorkspaceOverviewPage({
     now,
     monthlyTarget,
     items: dashboardItems,
+    monthPhase,
   });
 
+  // The Command Center used to be built from `now` + a trailing 30/90-day
+  // window regardless of `?month`, so the header claimed November while the
+  // panel below showed the last 30 days. It now takes the SAME half-open
+  // window as the planning metrics: [monthStart, monthEnd).
   const { summary: commandCenter } = await getCommandCenterSnapshot(
     db,
     ws.id,
     ws.timezone,
     now,
     socialWindowDays,
+    { start: monthStart, end: monthEnd },
   );
 
   // Drill-down URL builders. The planning list supports
@@ -587,104 +606,128 @@ export default async function WorkspaceOverviewPage({
         windowDays={socialWindowDays}
         window30Href={commandCenterWindowHref(30)}
         window90Href={commandCenterWindowHref(90)}
+        windowCaption={monthLabel}
       />
 
-      {/* Planning & workflow — matches the reference section header that
-          groups plan coverage, delivery health and the workflow pipeline. */}
-      <section aria-labelledby="planning-and-workflow-title" className="space-y-4">
-        <div className="flex flex-wrap items-end justify-between gap-3">
-          <div className="min-w-0">
-            <h2
-              id="planning-and-workflow-title"
-              className="text-title-card text-fg-primary font-semibold"
-            >
-              {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflow")}
-            </h2>
-            <p className="text-label text-fg-secondary mt-1">
-              {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflowDescription")}
-            </p>
-          </div>
-          <Link
-            href={`/app/w/${slug}/planning`}
-            className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
-          >
-            {t("workspaceOverviewDashboard.commandCenter.goToPlanning")}
-            <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
-        </div>
-
-        {/* Planning execution summary follows the decision layer. */}
-        <OverviewKpiStrip tiles={kpiTiles} t={t} />
-
-        {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-          <div className="lg:col-span-7">
-            <PlanCoverageCard
-              total={dashboard.total}
-              monthlyTarget={dashboard.monthlyTarget}
-              coveragePercent={dashboard.coveragePercent}
-              formatBreakdown={dashboard.formatBreakdown.map((entry) => ({
-                ...entry,
-                label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
-              }))}
-              buildFormatHref={formatHref}
-              settingsHref={`/app/w/${slug}/settings`}
-              t={t}
-            />
-          </div>
-          <div className="lg:col-span-5">
-            <DeliveryHealthCard
-              total={dashboard.total}
-              onTrackCount={dashboard.onTrack}
-              onTrackPercent={dashboard.onTrackPercent}
-              atRiskCount={dashboard.atRisk}
-              atRiskPercent={dashboard.atRiskPercent}
-              blockedCount={dashboard.blocked}
-              blockedPercent={dashboard.blockedPercent}
-              riskReasons={riskReasons}
-              atRiskHref={buildPlanningHref({ risk: "at_risk" })}
-              onTrackHref={buildPlanningHref({ status: null, risk: null })}
-              blockedHref={buildPlanningHref({ status: "blocked" })}
-              viewAllHref={buildPlanningHref({ risk: "at_risk" })}
-              t={t}
-            />
-          </div>
-        </div>
-
-        {/* Workflow pipeline (master prompt §10-13) */}
-        <WorkflowPipeline
-          stages={dashboard.workflowStages.map((s) => ({
-            stage: s.stage,
-            label: t(`workspaceOverviewDashboard.workflowStages.${s.stage}`),
-            count: s.count,
-          }))}
-          buildHref={stageHref}
+      {/* An empty month used to render as a page of hard zeros — five KPI
+          tiles at 0, an empty pipeline, empty lists. Every number was
+          correct and the page still read as broken, and because a FUTURE
+          month is empty by construction, flipping between this month and
+          next produced a pixel-identical screen. Say it in words instead. */}
+      {dashboard.total === 0 ? (
+        <OverviewEmptyMonth
+          monthLabel={monthLabel}
+          monthPhase={monthPhase}
+          total={dashboard.total}
+          monthlyTarget={dashboard.monthlyTarget}
+          createHref={`/app/w/${slug}/planning/new`}
+          settingsHref={`/app/w/${slug}/settings`}
           t={t}
         />
-      </section>
+      ) : (
+        <>
+          {/* Planning & workflow — matches the reference section header that
+          groups plan coverage, delivery health and the workflow pipeline. */}
+          <section aria-labelledby="planning-and-workflow-title" className="space-y-4">
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div className="min-w-0">
+                <h2
+                  id="planning-and-workflow-title"
+                  className="text-title-card text-fg-primary font-semibold"
+                >
+                  {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflow")}
+                </h2>
+                <p className="text-label text-fg-secondary mt-1">
+                  {t("workspaceOverviewDashboard.commandCenter.planningAndWorkflowDescription")}
+                </p>
+              </div>
+              <Link
+                href={`/app/w/${slug}/planning`}
+                className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
+              >
+                {t("workspaceOverviewDashboard.commandCenter.goToPlanning")}
+                <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
 
-      {/* Needs attention + Recently updated (master prompt §14-16) */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
-        <div className="lg:col-span-8">
-          <NeedsAttentionList
-            items={dashboard.needsAttention}
-            workspaceSlug={slug}
-            now={now}
-            viewAllHref={buildPlanningHref({ risk: "at_risk" })}
-            t={t}
-          />
-        </div>
-        <div className="lg:col-span-4">
-          <RecentlyUpdatedList
-            items={dashboard.recentlyUpdated}
-            workspaceSlug={slug}
-            viewAllHref={buildPlanningHref({ status: null, risk: null })}
-            createHref={`/app/w/${slug}/planning/new`}
-            t={t}
-            locale={code}
-          />
-        </div>
-      </div>
+            {/* Planning execution summary follows the decision layer. */}
+            <OverviewKpiStrip tiles={kpiTiles} t={t} />
+
+            {/* Plan Coverage + Delivery Health — 7-col / 5-col on desktop */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+              <div className="lg:col-span-7">
+                <PlanCoverageCard
+                  total={dashboard.total}
+                  monthlyTarget={dashboard.monthlyTarget}
+                  coveragePercent={dashboard.coveragePercent}
+                  formatBreakdown={dashboard.formatBreakdown.map((entry) => ({
+                    ...entry,
+                    label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
+                  }))}
+                  buildFormatHref={formatHref}
+                  settingsHref={`/app/w/${slug}/settings`}
+                  t={t}
+                />
+              </div>
+              <div className="lg:col-span-5">
+                <DeliveryHealthCard
+                  total={dashboard.total}
+                  monthPhase={monthPhase}
+                  onTrackCount={dashboard.onTrack}
+                  onTrackPercent={dashboard.onTrackPercent}
+                  atRiskCount={dashboard.atRisk}
+                  atRiskPercent={dashboard.atRiskPercent}
+                  blockedCount={dashboard.blocked}
+                  blockedPercent={dashboard.blockedPercent}
+                  notStartedCount={dashboard.notStarted}
+                  notStartedPercent={dashboard.notStartedPercent}
+                  riskReasons={riskReasons}
+                  atRiskHref={buildPlanningHref({ risk: "at_risk" })}
+                  onTrackHref={buildPlanningHref({ status: null, risk: null })}
+                  notStartedHref={buildPlanningHref({ status: "draft" })}
+                  blockedHref={buildPlanningHref({ status: "blocked" })}
+                  viewAllHref={buildPlanningHref({ risk: "at_risk" })}
+                  t={t}
+                />
+              </div>
+            </div>
+
+            {/* Workflow pipeline (master prompt §10-13) */}
+            <WorkflowPipeline
+              stages={dashboard.workflowStages.map((s) => ({
+                stage: s.stage,
+                label: t(`workspaceOverviewDashboard.workflowStages.${s.stage}`),
+                count: s.count,
+              }))}
+              buildHref={stageHref}
+              t={t}
+            />
+          </section>
+
+          {/* Needs attention + Recently updated (master prompt §14-16) */}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
+            <div className="lg:col-span-8">
+              <NeedsAttentionList
+                items={dashboard.needsAttention}
+                workspaceSlug={slug}
+                now={now}
+                viewAllHref={buildPlanningHref({ risk: "at_risk" })}
+                t={t}
+              />
+            </div>
+            <div className="lg:col-span-4">
+              <RecentlyUpdatedList
+                items={dashboard.recentlyUpdated}
+                workspaceSlug={slug}
+                viewAllHref={buildPlanningHref({ status: null, risk: null })}
+                createHref={`/app/w/${slug}/planning/new`}
+                t={t}
+                locale={code}
+              />
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

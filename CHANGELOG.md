@@ -12,6 +12,73 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the Overview month switcher appeared to do nothing
+
+Changing `?month=YYYY-MM` on the workspace Overview left the page looking
+essentially unchanged. Three separate defects, not one:
+
+| Defect                                 | Cause                                                                                                                                                          | Fix                                                                                                                                                                                            |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Command Center ignored the month       | Built from `now` + a trailing 30/90-day window, so the header said "November 2026" above October data                                                          | `querySocialAnalytics` / `querySocialPostObservations` accept an optional half-open `range`; the Overview passes `[monthStart, monthEnd)` and the toggle is replaced by a static month caption |
+| Empty month rendered as hard zeros     | Five KPI tiles at 0, empty pipeline, empty lists — and a _future_ month is empty by construction, so this month and next looked pixel-identical                | New `OverviewEmptyMonth` state names the month and shows the coverage gap when a target is set                                                                                                 |
+| "At risk" meant three different things | `plannedPublishAt < now` against the real clock: future months read a vacuous "100% on track", past months spiked to ~100% at risk for items nobody can act on | New `monthPhaseFor()` → `past \| current \| future`; wording changes, **counts do not**                                                                                                        |
+
+The at-risk arithmetic is deliberately unchanged. For a closed month every item
+already satisfies `plannedPublishAt < now`, so re-anchoring the maths per phase
+would be a no-op — the defect was that one number carried three incompatible
+implications. A future month now suppresses the headline percentage instead of
+printing a claim it cannot back up.
+
+Scope: `monthPhase` is optional on `calculateOverviewDashboardMetrics` and
+`range` is optional on the social queries, so the Planning list and the
+`laratik_planner_get_command_center` MCP tool (a debugging surface that wants a
+trailing window) are both unchanged. The banner's pending-approval count is
+month-scoped as well — its full queue stays one click away at `/reviews`. No
+schema change, no migration.
+
+### Fixed — the Overview counted every slipped draft as "at risk", contradicting the Planning list
+
+Found while scoping the month switcher. `lib/dashboard/kpis.ts` violated a
+contract it had carried since ADR-0006, on a surface ADR-0006 names explicitly
+("workspace overview KPI tile"):
+
+```
+At risk = plannedPublishAt < now AND status NOT IN
+          {ready_to_publish, partially_published, published,
+           cancelled, blocked, draft}     ← kpis.ts omitted `draft`
+```
+
+`lib/dashboard/health.ts` honoured the formula. `kpis.ts` did not, so **the same
+month produced two different at-risk numbers** — the Overview counted slipped
+drafts, the Planning list filtered them out — on two screens the product tells
+the operator to trust together. On the audit fixture ("23 past-due drafts")
+the Overview reported `atRisk: 23`; the contract says `0`.
+
+The correction needs an honest home for the drafts it no longer counts, or they
+would simply be relabelled **on track** — trading one false reading for
+another. The Delivery Health bar grew a fourth segment:
+
+| Bucket          | Meaning                                      | Was                   |
+| --------------- | -------------------------------------------- | --------------------- |
+| On track        | Future-dated or progressing, not late        | ✓                     |
+| At risk         | Past-due and still in flight — never a draft | ✓ (was over-counting) |
+| Blocked         | Explicitly parked                            | ✓                     |
+| **Not started** | Still in `draft` — the ADR-0006 bucket       | **new**               |
+
+All four are mutually exclusive and sum to `total`; `onTrack` is computed as
+`total - atRisk - blocked - notStarted` so the bar can never quietly absorb
+drafts it stopped counting as at risk.
+
+Scope: fixed in **all three** KPI functions in `kpis.ts`, which shared the one
+defective exclusion set — not just the surface that exposed it. Eight
+pre-existing assertions in `tests/unit/workspace-kpis.test.ts` encoded the old
+reading; each was updated by fixing its _fixture_ (a `draft` standing in for a
+genuinely past-due, in-flight item) rather than by weakening what it tested.
+The audit-screenshot test's 4% completion-rate assertion is unchanged — that
+part of ADR-0007 is orthogonal and still holds.
+
+See [ADR 0017](docs/decisions/0017-overview-month-scoping.md).
+
 ### Fixed — the deploy gate was blocked by four newly published advisories
 
 CI failed on the brand-mark/media push and `Deploy` was skipped behind it. The

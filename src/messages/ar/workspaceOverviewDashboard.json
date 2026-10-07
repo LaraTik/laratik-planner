@@ -1,4 +1,24 @@
 {
+  "emptyMonth": {
+    "title": "لا شيء مخطط له في {month}",
+    "regionLabel": "شهر فارغ",
+    "noTarget": "لا يوجد شيء مجدول في {month} بعد.",
+    "noTargetPast": "لم يتم جدولة أي شيء في {month} على الإطلاق.",
+    "withTarget": "هدفك الشهري {target} عنصرًا — تبقى {gap} لتخطيطها في {month}.",
+    "createCta": "خطط لهذا الشهر",
+    "setTargetCta": "حدّد هدفًا شهريًا"
+  },
+  "monthPhase": {
+    "past": {
+      "atRiskLabel": "فات موعده",
+      "healthEyebrow": "ما نُشر وما فات موعده",
+      "notActionable": "هذا الشهر مغلق — هذه سجلات وليست قائمة مهام."
+    },
+    "future": {
+      "healthEyebrow": "لا شيء متأخر بعد",
+      "notStarted": "لم يبدأ هذا الشهر بعد. تصبح مؤشرات الصحة ذات معنى عند بدايته — تغطية الخطة هي الرقم الذي يجب متابعته."
+    }
+  },
   "commandCenter": {
     "eyebrow": "لوحة الأداء",
     "title": "مركز القيادة",
@@ -177,7 +197,8 @@
     "bucketAria": "{label}: {count} عنصر، انقر للعرض",
     "bucketOnTrackAria": "في المسار: {count}",
     "bucketAtRiskAria": "في خطر: {count}",
-    "bucketBlockedAria": "محظور: {count}"
+    "bucketBlockedAria": "محظور: {count}",
+    "notStartedBucket": "لم يبدأ"
   },
   "planCoverage": {
     "title": "تغطية الخطة",
