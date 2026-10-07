@@ -13,7 +13,8 @@ const labels = {
   less: "Less",
   more: "More",
   bestSlot: "Best slot",
-  notEnoughData: "Not enough data",
+  notEnoughData: "Too few posts to recommend",
+  noPosts: "No posts",
 };
 
 function slot(over: Partial<CommandCenterTimeSlot> = {}): CommandCenterTimeSlot {
@@ -23,6 +24,8 @@ function slot(over: Partial<CommandCenterTimeSlot> = {}): CommandCenterTimeSlot 
     sampleSize: 4,
     averageViews: 900,
     reliable: true,
+    liftRatio: 1.5,
+    confidence: "good",
     ...over,
   };
 }
@@ -40,33 +43,101 @@ describe("BestTimeHeatmap", () => {
     expect(cell).toHaveAccessibleName(/Tue 09:00/);
   });
 
-  it("marks the strongest slot as best and leaves empty slots unfilled", () => {
+  it("rings the slot the panel actually recommends, not the loudest cell", () => {
+    // The regression this pins: the grid used to pick its own winner as the
+    // highest average across ALL slots, while the header pill took the highest
+    // among RELIABLE ones. On real data the pill read "Tue 15:00" (382 views,
+    // 3 posts) while the ring landed on a 502-view cell backed by ONE post —
+    // the panel recommended Tuesday and highlighted Friday.
+    const noisy = slot({
+      dayOfWeek: 5,
+      hour: 12,
+      averageViews: 502,
+      sampleSize: 1,
+      reliable: false,
+    });
+    const recommended = slot({ dayOfWeek: 2, hour: 15, averageViews: 382, sampleSize: 3 });
+
+    render(
+      <BestTimeHeatmap
+        slots={[noisy, recommended]}
+        locale="en"
+        timezone="Europe/Berlin"
+        labels={labels}
+        bestTime={recommended}
+      />,
+    );
+
+    expect(screen.getByTestId("command-center-heatmap-cell-2-15")).toHaveAttribute(
+      "data-best",
+      "true",
+    );
+    expect(screen.getByTestId("command-center-heatmap-cell-5-12")).toHaveAttribute(
+      "data-best",
+      "false",
+    );
+  });
+
+  it("rings nothing when there is no recommendation, even if a cell is loud", () => {
     render(
       <BestTimeHeatmap
         slots={[
-          slot({ dayOfWeek: 2, hour: 9, averageViews: 200 }),
-          slot({ dayOfWeek: 5, hour: 18, averageViews: 1500 }),
+          slot({ dayOfWeek: 5, hour: 18, averageViews: 1500, sampleSize: 2, reliable: false }),
         ]}
+        locale="en"
+        timezone="Europe/Berlin"
+        labels={labels}
+        bestTime={null}
+      />,
+    );
+
+    expect(screen.getByTestId("command-center-heatmap-cell-5-18")).toHaveAttribute(
+      "data-best",
+      "false",
+    );
+  });
+
+  it("leaves empty slots unfilled and keeps them visibly distinct", () => {
+    render(
+      <BestTimeHeatmap
+        slots={[slot({ dayOfWeek: 2, hour: 9, averageViews: 200 })]}
+        locale="en"
+        timezone="Europe/Berlin"
+        labels={labels}
+        bestTime={slot({ dayOfWeek: 2, hour: 9, averageViews: 200 })}
+      />,
+    );
+
+    expect(screen.getByTestId("command-center-heatmap-cell-2-9")).toHaveAttribute(
+      "data-best",
+      "true",
+    );
+    // A day/hour with no observation must stay visibly empty rather than
+    // inheriting the strongest slot's intensity.
+    const empty = screen.getByTestId("command-center-heatmap-cell-0-6");
+    expect(empty).toHaveAttribute("data-has-data", "false");
+    expect(empty).toHaveAttribute("data-reliable", "false");
+  });
+
+  it("says 'no posts' in an empty cell instead of the below-threshold copy", () => {
+    // Both states previously rendered the same "at least three posts"
+    // sentence, repeated across thirty-odd cells of the grid.
+    render(
+      <BestTimeHeatmap
+        slots={[slot({ dayOfWeek: 2, hour: 9, sampleSize: 1, reliable: false })]}
         locale="en"
         timezone="Europe/Berlin"
         labels={labels}
       />,
     );
 
-    expect(screen.getByTestId("command-center-heatmap-cell-5-18")).toHaveAttribute(
-      "data-best",
-      "true",
-    );
-    expect(screen.getByTestId("command-center-heatmap-cell-2-9")).toHaveAttribute(
-      "data-best",
-      "false",
-    );
-    // A day/hour with no observation must stay visibly empty rather than
-    // inheriting the strongest slot's intensity.
-    expect(screen.getByTestId("command-center-heatmap-cell-0-6")).toHaveAttribute(
-      "data-has-data",
-      "false",
-    );
+    const empty = screen.getByTestId("command-center-heatmap-cell-0-6");
+    expect(empty).toHaveTextContent("No posts");
+    expect(empty).not.toHaveTextContent("Too few posts to recommend");
+
+    const belowGate = screen.getByTestId("command-center-heatmap-cell-2-9");
+    expect(belowGate).toHaveTextContent("Too few posts to recommend");
+    expect(belowGate).toHaveAttribute("data-reliable", "false");
   });
 
   it("renders all six band rows and seven day columns", () => {
@@ -91,6 +162,44 @@ describe("BestTimeHeatmap", () => {
     ).toBeTruthy();
   });
 
+  it("renders a real dim on below-threshold cells, not a dead utility class", () => {
+    // The cell sets `opacity` as an inline style, which always beats a class —
+    // so an `opacity-60` utility on this element renders nothing at all. The
+    // dim has to be folded into the computed value or the distinction silently
+    // does not exist.
+    const reliable = slot({ dayOfWeek: 2, hour: 9, averageViews: 900, reliable: true });
+    const thin = slot({
+      dayOfWeek: 2,
+      hour: 15,
+      averageViews: 900,
+      reliable: false,
+      sampleSize: 1,
+    });
+    render(
+      <BestTimeHeatmap
+        slots={[reliable, thin]}
+        locale="en"
+        timezone="Europe/Berlin"
+        labels={labels}
+        bestTime={reliable}
+      />,
+    );
+
+    const read = (id: string) =>
+      Number(
+        screen
+          .getByTestId(id)
+          .getAttribute("style")
+          ?.match(/opacity:\s*([\d.]+)/)?.[1],
+      );
+    const reliableOpacity = read("command-center-heatmap-cell-2-9");
+    const thinOpacity = read("command-center-heatmap-cell-2-15");
+
+    expect(reliableOpacity).toBeGreaterThan(0);
+    // Same average views, different support -> the thin one must render dimmer.
+    expect(thinOpacity).toBeLessThan(reliableOpacity);
+  });
+
   it("flags a low-sample slot so a weak signal is never read as a recommendation", () => {
     render(
       <BestTimeHeatmap
@@ -102,7 +211,7 @@ describe("BestTimeHeatmap", () => {
     );
 
     expect(screen.getByTestId("command-center-heatmap-cell-2-9")).toHaveAccessibleName(
-      /Not enough data/,
+      /Too few posts to recommend/,
     );
   });
 });

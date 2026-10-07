@@ -31,6 +31,7 @@ import {
 import { ResearchBookmarkButton } from "@/components/workspace/research-bookmark-button";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import type {
+  CommandCenterConfidence,
   CommandCenterLengthBandKey,
   CommandCenterPost,
   CommandCenterSummary,
@@ -97,6 +98,15 @@ export type CommandCenterLabels = {
   bestTime: string;
   bestTimeDescription: string;
   noBestTimeData: string;
+  noPosts: string;
+  versusAverage: string;
+  confidenceLow: string;
+  confidenceEarly: string;
+  confidenceGood: string;
+  timezoneHint: string;
+  utcDefaultHint: string;
+  rankedBy: string;
+  windowThrough: string;
   sampleSize: string;
   averageViews: string;
   bestVideoLength: string;
@@ -488,8 +498,13 @@ export function CommandCenterPanel({
                 description={labels.strongestAccountsDescription}
                 viewsAllHref={channelsHref}
                 viewAllLabel={labels.viewAllChannels}
-                interactionsLabel={labels.interactions}
+                denominatorLabels={{
+                  reach: labels.reach.toLowerCase(),
+                  followers: labels.followers.toLowerCase(),
+                }}
                 noData={labels.noAccountData}
+                basisLabel={labels.rankedBy}
+                windowLabel={labels.windowThrough}
               />
             </div>
             <div className="lg:col-span-4">
@@ -511,6 +526,15 @@ export function CommandCenterPanel({
                   more: labels.heatMapMore,
                   bestSlot: labels.bestSlot,
                   notEnoughData: labels.notEnoughData,
+                  noPosts: labels.noPosts,
+                  versusAverage: labels.versusAverage,
+                  confidence: {
+                    low: labels.confidenceLow,
+                    early: labels.confidenceEarly,
+                    good: labels.confidenceGood,
+                  },
+                  timezoneHint: labels.timezoneHint,
+                  utcDefaultHint: labels.utcDefaultHint,
                 }}
                 bestTimeDay={bestTimeDay}
                 bestTimeHour={bestTimeHour}
@@ -1314,6 +1338,18 @@ function FollowerTrendCard({
 }
 
 /** StrongestAccountsCard — the reference ranked account list. */
+/**
+ * StrongestAccountsCard — one declared basis, stated in words.
+ *
+ * The row is ranked by engagement rate and prints that same rate. The raw
+ * numerator and denominator sit underneath so the rate can be checked by eye,
+ * and the denominator in use is named — "10.6% of reach" and "10.6% of
+ * followers" are different claims and the panel must not imply one of them.
+ *
+ * It previously printed `leader.interactions ?? leader.views` under a
+ * description promising "interaction or view signal", so the unit was
+ * unknowable and the ranking used the opposite precedence to the number shown.
+ */
 function StrongestAccountsCard({
   leaders,
   locale,
@@ -1321,8 +1357,10 @@ function StrongestAccountsCard({
   description,
   viewsAllHref,
   viewAllLabel,
-  interactionsLabel,
+  denominatorLabels,
   noData,
+  basisLabel,
+  windowLabel,
 }: {
   leaders: CommandCenterSummary["leaders"];
   locale: string;
@@ -1331,8 +1369,10 @@ function StrongestAccountsCard({
   description: string;
   viewsAllHref: string;
   viewAllLabel: string;
-  interactionsLabel: string;
+  denominatorLabels: { reach: string; followers: string };
   noData: string;
+  basisLabel: string;
+  windowLabel: string;
 }) {
   return (
     <DashboardPanel
@@ -1351,26 +1391,55 @@ function StrongestAccountsCard({
       }
     >
       {leaders.length > 0 ? (
-        <ol className="divide-border divide-y">
-          {leaders.map((leader) => (
-            <li key={leader.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
-              <PlatformIcon platform={leader.platform} tile />
-              <div className="min-w-0 flex-1">
-                <p className="text-label text-fg-primary truncate font-semibold">
-                  <bdi>{leader.accountName}</bdi>
-                </p>
-                <p className="text-label text-fg-muted capitalize">{leader.platform}</p>
-              </div>
-              <span className="text-body text-fg-primary tabular-nums">
-                {formatNumber(leader.interactions ?? leader.views, locale)}
-              </span>
-            </li>
-          ))}
-        </ol>
+        <>
+          <p className="text-label text-fg-muted mb-1">{basisLabel}</p>
+          <ol className="divide-border divide-y">
+            {leaders.map((leader) => {
+              const { rate } = leader;
+              const denominatorName = rate.denominator ?? "reach";
+              const denominatorLabel =
+                denominatorName === "followers"
+                  ? denominatorLabels.followers
+                  : denominatorLabels.reach;
+              const percent = rate.percent === null ? "—" : `${rate.percent.toFixed(1)}%`;
+              return (
+                <li
+                  key={leader.id}
+                  className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0"
+                  data-testid={`command-center-leader-${leader.id}`}
+                  data-rate-percent={rate.percent ?? ""}
+                >
+                  <PlatformIcon platform={leader.platform} tile />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-label text-fg-primary truncate font-semibold">
+                      <bdi>{leader.accountName}</bdi>
+                    </p>
+                    <p className="text-label text-fg-muted truncate">
+                      <span className="capitalize">{leader.platform}</span>
+                      {rate.denominatorValue !== null && rate.interactions !== null ? (
+                        <>
+                          {" · "}
+                          {formatNumber(rate.interactions, locale)} /{" "}
+                          {formatNumber(rate.denominatorValue, locale)} {denominatorLabel}
+                        </>
+                      ) : null}
+                      {rate.metricDate ? (
+                        <>
+                          {" · "}
+                          {windowLabel} {rate.metricDate}
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
+                  <span className="text-body text-fg-primary tabular-nums">{percent}</span>
+                </li>
+              );
+            })}
+          </ol>
+        </>
       ) : (
         <p className="text-body text-fg-muted">{noData}</p>
       )}
-      <span className="sr-only">{interactionsLabel}</span>
     </DashboardPanel>
   );
 }
@@ -1382,6 +1451,16 @@ function StrongestAccountsCard({
  * The heatmap is always rendered when any slot exists, so a workspace
  * with sparse history still sees where its posts landed instead of an
  * empty grid.
+ */
+/**
+ * BestTimeCard — the recommendation, with the evidence attached to it.
+ *
+ * The pill names the timezone because the workspace timezone defaults to UTC
+ * (`workspaces.timezone`), so an unqualified "Tue 15:00" is two hours off for a
+ * European audience with no way to tell. The confidence chip and the lift
+ * against the workspace baseline are what separate a recommendation from a
+ * ranking: on a young workspace the best slot is often three posts that merely
+ * happen to top the grid.
  */
 function BestTimeCard({
   slots,
@@ -1410,6 +1489,11 @@ function BestTimeCard({
     more: string;
     bestSlot: string;
     notEnoughData: string;
+    noPosts: string;
+    versusAverage: string;
+    confidence: Record<CommandCenterConfidence, string>;
+    timezoneHint: string;
+    utcDefaultHint: string;
   };
   bestTimeDay: string | null;
   bestTimeHour: string | null;
@@ -1419,6 +1503,9 @@ function BestTimeCard({
       new Date(Date.UTC(2024, 0, 7 + day)),
     ),
   );
+  const isUtc = timezone === "UTC";
+  const liftPercent =
+    bestTime?.liftRatio != null ? `${(bestTime.liftRatio * 100 - 100).toFixed(0)}%` : null;
   return (
     <DashboardPanel
       id="command-center-recommendations"
@@ -1427,10 +1514,13 @@ function BestTimeCard({
       data-testid="command-center-recommendations"
       headerAction={
         bestTime && bestTimeDay && bestTimeHour ? (
-          <span className="border-border bg-surface-subtle text-label text-fg-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold whitespace-nowrap">
+          <span
+            className="border-border bg-surface-subtle text-label text-fg-primary inline-flex items-center gap-1 rounded-full border px-2.5 py-1 font-semibold whitespace-nowrap"
+            data-testid="command-center-best-time-pill"
+          >
             <CalendarClock className="text-primary h-3.5 w-3.5" aria-hidden="true" />
             <bdi>
-              {bestTimeDay} · {bestTimeHour}
+              {bestTimeDay} · {bestTimeHour} {timezone}
             </bdi>
           </span>
         ) : null
@@ -1442,10 +1532,44 @@ function BestTimeCard({
         </p>
       ) : null}
       {bestTime && bestTimeDay && bestTimeHour ? (
-        <p className="text-label text-fg-muted mt-1">
-          {labels.bestSlot}: <bdi>{formatNumber(bestTime.averageViews, locale)}</bdi>{" "}
-          {labels.averageViews} · {bestTime.sampleSize} {labels.sampleSize}
-        </p>
+        <>
+          <p className="text-label text-fg-muted mt-1">
+            {labels.bestSlot}: <bdi>{formatNumber(bestTime.averageViews, locale)}</bdi>{" "}
+            {labels.averageViews} · {bestTime.sampleSize} {labels.sampleSize}
+            {liftPercent !== null && averageViews !== null && averageViews > 0 ? (
+              <>
+                {" · "}
+                <span data-testid="command-center-best-time-lift">
+                  +{liftPercent} {labels.versusAverage}
+                </span>
+              </>
+            ) : null}
+          </p>
+          {bestTime.confidence ? (
+            <p className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <span
+                className={[
+                  "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                  bestTime.confidence === "good"
+                    ? "border-primary/30 bg-primary-subtle text-primary"
+                    : bestTime.confidence === "early"
+                      ? "border-border bg-surface-subtle text-fg-secondary"
+                      : "border-border bg-surface-subtle text-fg-muted",
+                ].join(" ")}
+                data-testid="command-center-best-time-confidence"
+                data-confidence={bestTime.confidence}
+              >
+                {bestTime.confidence === "low" ? (
+                  <TriangleAlert className="h-3 w-3" aria-hidden="true" />
+                ) : null}
+                {labels.confidence[bestTime.confidence]}
+              </span>
+              <span className="text-label text-fg-muted">
+                {bestTime.sampleSize} {labels.sampleSize}
+              </span>
+            </p>
+          ) : null}
+        </>
       ) : null}
       <div className="mt-3">
         {slots.length > 0 ? (
@@ -1453,6 +1577,7 @@ function BestTimeCard({
             slots={slots}
             locale={locale}
             timezone={timezone}
+            bestTime={bestTime}
             labels={{
               days: dayLabels,
               averageViews: labels.averageViews,
@@ -1463,12 +1588,20 @@ function BestTimeCard({
               more: labels.more,
               bestSlot: labels.bestSlot,
               notEnoughData: labels.notEnoughData,
+              noPosts: labels.noPosts,
             }}
           />
         ) : (
           <p className="text-body text-fg-muted">{labels.noData}</p>
         )}
       </div>
+      <p className="text-label text-fg-muted mt-2">{labels.timezoneHint}</p>
+      {isUtc ? (
+        <p className="text-label text-fg-muted mt-1 flex items-start gap-1.5">
+          <TriangleAlert className="mt-0.5 h-3 w-3 shrink-0" aria-hidden="true" />
+          <span data-testid="command-center-utc-hint">{labels.utcDefaultHint}</span>
+        </p>
+      ) : null}
     </DashboardPanel>
   );
 }

@@ -32,17 +32,54 @@ export type CommandCenterTrendPoint = {
   partial: boolean;
 };
 
+/** Which denominator an account's engagement rate was computed from. */
+export type CommandCenterRateDenominator = "reach" | "followers";
+
+/**
+ * One account's engagement rate over the analysis window.
+ *
+ * The rate is the ONLY basis "Strongest accounts" ranks and displays. An
+ * earlier version ranked on `views ?? interactions ?? reach` per row while
+ * rendering `interactions ?? views`, so the row order and the printed number
+ * were computed in opposite precedence: an account with views=100 and
+ * interactions=2 outranked one with views=null and interactions=50 and then
+ * printed 2 above 50. Comparing Instagram (which reports views) against a
+ * Facebook Page (which does not) mixed two different quantities in one column.
+ *
+ * `denominator` is carried so the UI can name the basis it actually used
+ * instead of implying a single fixed one.
+ */
+export type CommandCenterAccountRate = {
+  /** interactions ÷ denominator as a percentage, or null when not computable. */
+  percent: number | null;
+  denominator: CommandCenterRateDenominator | null;
+  /** Interactions summed across the window — the numerator. */
+  interactions: number | null;
+  /** The summed denominator the rate divided by. */
+  denominatorValue: number | null;
+  /** Metric days that contributed to the sums. */
+  daysObserved: number;
+  /** Last metric date that contributed, so the UI can state the window. */
+  metricDate: string | null;
+};
+
 export type CommandCenterLeader = {
   id: string;
   platform: CommandCenterChannel["platform"];
   accountName: string;
-  interactions: number | null;
-  views: number | null;
+  /** The single ranking AND display basis for the row. */
+  rate: CommandCenterAccountRate;
 };
 
-export type CommandCenterChannelPerformance = CommandCenterLeader & {
+export type CommandCenterChannelPerformance = {
+  id: string;
+  platform: CommandCenterChannel["platform"];
+  accountName: string;
   followers: number | null;
   reach: number | null;
+  views: number | null;
+  interactions: number | null;
+  rate: CommandCenterAccountRate;
 };
 
 export type CommandCenterAccountHealth = {
@@ -79,12 +116,30 @@ export type CommandCenterPost = {
   durationSeconds: number | null;
 };
 
+/**
+ * How much weight a recommendation can carry.
+ *
+ * `low`   — at or just above the three-post gate; a hypothesis to test.
+ * `early` — enough posts to see a pattern.
+ * `good`  — enough posts to act on without hedging.
+ */
+export type CommandCenterConfidence = "low" | "early" | "good";
+
 export type CommandCenterBestTime = {
   dayOfWeek: number;
   hour: number;
   sampleSize: number;
   averageViews: number;
   reliable: boolean;
+  /**
+   * `averageViews ÷ overall averageViews`, or null when the workspace has no
+   * baseline. This is what separates a real recommendation from a slot that
+   * merely has the highest number — a slot 2% above average is not actionable
+   * however many posts it has.
+   */
+  liftRatio: number | null;
+  /** Sample-size tier, downgraded when the lift is marginal. */
+  confidence: CommandCenterConfidence | null;
 };
 
 export type CommandCenterTimeSlot = CommandCenterBestTime;
@@ -153,6 +208,21 @@ export const COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE = 3;
 export const COMMAND_CENTER_TIME_BAND_HOURS = [6, 9, 12, 15, 18, 21] as const;
 
 /**
+ * Sample sizes at which a timing recommendation earns the next confidence
+ * tier. Deliberately high relative to the three-post gate: with seven days and
+ * six bands there are 42 cells, so a young workspace will live at `low` for a
+ * while. That is the honest state, and the UI now says so instead of
+ * presenting three posts as a finding.
+ */
+export const COMMAND_CENTER_CONFIDENCE_SAMPLE_THRESHOLDS = { good: 8, early: 5 } as const;
+
+/**
+ * How far above the workspace average a slot must sit to count as signal
+ * rather than noise. Below this the tier drops one step regardless of n.
+ */
+export const COMMAND_CENTER_MIN_SIGNALING_LIFT = 1.15;
+
+/**
  * Map an exact hour to its heatmap band start hour. Hours before the
  * first band (00:00–05:59) fold into the 06:00 band rather than being
  * dropped, so no observation is silently discarded.
@@ -187,6 +257,76 @@ function latestValue(series: MetricSeriesPoint[], field: keyof MetricSeriesPoint
 function sumKnown(values: Array<number | null>): number | null {
   const known = values.filter((value): value is number => typeof value === "number");
   return known.length > 0 ? known.reduce((sum, value) => sum + value, 0) : null;
+}
+
+/**
+ * Aggregate one account's series over the analysis window.
+ *
+ * Followers are a STOCK and must not be summed — adding five daily snapshots
+ * inflates the number fivefold. Reach, views and interactions are FLOWS, so
+ * they sum. `latestValue` previously fed the "Strongest accounts" panel a
+ * single day's figures while the panel header named a month, which is the same
+ * page/panel contradiction ADR 0017 was written to remove.
+ */
+function windowAggregate(series: MetricSeriesPoint[]): {
+  followers: number | null;
+  reach: number | null;
+  views: number | null;
+  interactions: number | null;
+  daysObserved: number;
+  metricDate: string | null;
+} {
+  return {
+    followers: latestValue(series, "followerCount"),
+    reach: sumKnown(series.map((point) => point.reach)),
+    views: sumKnown(series.map((point) => point.views)),
+    interactions: sumKnown(series.map((point) => point.interactions)),
+    daysObserved: series.length,
+    metricDate: series.at(-1)?.metricDate ?? null,
+  };
+}
+
+/**
+ * Engagement rate for one account over the window. Reach is the preferred
+ * denominator (the people actually exposed); followers is the fallback that
+ * keeps Facebook and TikTok meaningful. A zero denominator yields null rather
+ * than Infinity or 0, matching `calculateEngagementRate`.
+ */
+function accountEngagementRate(
+  aggregate: ReturnType<typeof windowAggregate>,
+): CommandCenterAccountRate {
+  const { interactions } = aggregate;
+  const denominator =
+    aggregate.reach !== null && aggregate.reach > 0
+      ? { name: "reach" as const, value: aggregate.reach }
+      : aggregate.followers !== null && aggregate.followers > 0
+        ? { name: "followers" as const, value: aggregate.followers }
+        : null;
+  return {
+    percent: interactions !== null && denominator ? (interactions / denominator.value) * 100 : null,
+    denominator: denominator?.name ?? null,
+    interactions,
+    denominatorValue: denominator?.value ?? null,
+    daysObserved: aggregate.daysObserved,
+    metricDate: aggregate.metricDate,
+  };
+}
+
+/**
+ * Sample-size tier for a recommendation, downgraded one step when the slot
+ * does not clear `COMMAND_CENTER_MIN_SIGNALING_LIFT`. Never goes below "low".
+ */
+export function commandCenterConfidence(
+  sampleSize: number,
+  liftRatio: number | null,
+): CommandCenterConfidence {
+  const { good, early } = COMMAND_CENTER_CONFIDENCE_SAMPLE_THRESHOLDS;
+  const tier: CommandCenterConfidence =
+    sampleSize >= good ? "good" : sampleSize >= early ? "early" : "low";
+  if (liftRatio !== null && liftRatio < COMMAND_CENTER_MIN_SIGNALING_LIFT) {
+    return tier === "good" ? "early" : "low";
+  }
+  return tier;
 }
 
 function median(values: number[]): number {
@@ -259,15 +399,30 @@ function buildCommandCenterContent(
     bucket.views.push(post.views);
     timeBuckets.set(key, bucket);
   }
-  const timeSlots = [...timeBuckets.values()]
-    .map((bucket) => ({
-      dayOfWeek: bucket.dayOfWeek,
-      hour: bucket.hour,
-      sampleSize: bucket.views.length,
-      averageViews: bucket.views.reduce((sum, value) => sum + value, 0) / bucket.views.length,
-      reliable: bucket.views.length >= COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE,
-    }))
+  const timeSlots: CommandCenterTimeSlot[] = [...timeBuckets.values()]
+    .map((bucket) => {
+      const slotAverageViews =
+        bucket.views.reduce((sum, value) => sum + value, 0) / bucket.views.length;
+      // Lift is relative to the workspace baseline across ALL posts with views,
+      // not just the well-supported ones. Without it the top cell is only a
+      // ranking, not a recommendation: a slot 2% above average is not worth
+      // acting on however many posts it has.
+      const liftRatio =
+        averageViews !== null && averageViews > 0 ? slotAverageViews / averageViews : null;
+      return {
+        dayOfWeek: bucket.dayOfWeek,
+        hour: bucket.hour,
+        sampleSize: bucket.views.length,
+        averageViews: slotAverageViews,
+        reliable: bucket.views.length >= COMMAND_CENTER_MIN_SIGNAL_SAMPLE_SIZE,
+        liftRatio,
+        confidence: commandCenterConfidence(bucket.views.length, liftRatio),
+      };
+    })
     .sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.hour - b.hour);
+  // The recommendation is the highest-average slot that clears the sample gate.
+  // Its lift and tier are already computed above, so the pill and the grid
+  // cannot disagree about which cell won or how much weight it carries.
   const bestTime =
     [...timeSlots]
       .filter((bucket) => bucket.reliable)
@@ -345,15 +500,22 @@ export function buildCommandCenterSummary(
     ...point,
     engagedAccounts: null,
   }));
-  const channelPerformance = channels
-    .map((channel) => ({
+  // Every per-account number is aggregated over the SAME window the trend
+  // uses, so the two panels cannot disagree about which days they describe.
+  const windowed = channels.map((channel) => {
+    const aggregate = windowAggregate(channel.series.slice(-Math.max(1, Math.floor(windowDays))));
+    return { channel, aggregate, rate: accountEngagementRate(aggregate) };
+  });
+  const channelPerformance = windowed
+    .map(({ channel, aggregate, rate }) => ({
       id: channel.id,
       platform: channel.platform,
       accountName: channel.accountName,
-      followers: latestValue(channel.series, "followerCount"),
-      reach: latestValue(channel.series, "reach"),
-      interactions: latestValue(channel.series, "interactions"),
-      views: latestValue(channel.series, "views"),
+      followers: aggregate.followers,
+      reach: aggregate.reach,
+      views: aggregate.views,
+      interactions: aggregate.interactions,
+      rate,
     }))
     .filter(
       (channel) =>
@@ -362,9 +524,28 @@ export function buildCommandCenterSummary(
         channel.interactions !== null ||
         channel.views !== null,
     )
+    // Ordered by VIEWS, which is the bar length this panel draws, with
+    // accounts that report no views last rather than on top. It was previously
+    // sorted by the shared `leaders` basis, so re-ranking the strongest
+    // accounts silently reordered the channel-performance readout too.
+    .sort((a, b) => (b.views ?? -1) - (a.views ?? -1) || b.interactions! - a.interactions!);
+  /**
+   * "Strongest accounts" ranks on engagement rate ONLY, and shows the same
+   * number it ranked on. Accounts whose rate cannot be computed (no reach and
+   * no followers) are excluded rather than shown with an invented zero.
+   */
+  const leaders = windowed
+    .filter(({ rate }) => rate.percent !== null)
+    .map(({ channel, rate }) => ({
+      id: channel.id,
+      platform: channel.platform,
+      accountName: channel.accountName,
+      rate,
+    }))
     .sort(
       (a, b) =>
-        (b.views ?? b.interactions ?? b.reach ?? -1) - (a.views ?? a.interactions ?? a.reach ?? -1),
+        (b.rate.percent ?? -1) - (a.rate.percent ?? -1) ||
+        (b.rate.interactions ?? -1) - (a.rate.interactions ?? -1),
     );
   const accountHealth = channels.map((channel) => ({
     id: channel.id,
@@ -400,7 +581,7 @@ export function buildCommandCenterSummary(
     health,
     partial: trend.some((point) => point.partial) || health.degraded > 0 || health.stalled > 0,
     trend,
-    leaders: channelPerformance.slice(0, 5),
+    leaders: leaders.slice(0, 5),
     channelPerformance: channelPerformance.slice(0, 5),
     accountHealth,
     content: buildCommandCenterContent(postObservations, timezone),
