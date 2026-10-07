@@ -208,8 +208,15 @@ export default async function WorkspacesPage() {
           />
         </Card>
       ) : (
+        // No `overflow-x-auto` wrapper here. `DataTable` already provides a
+        // single horizontal scroll container of its own, and wrapping it in a
+        // second one nests two scroll regions. CSS compounds the problem: an
+        // explicit `overflow-x` forces `overflow-y` to compute to `auto`, so
+        // each container scrolls in BOTH axes, and on iOS the inner momentum
+        // scroller swallows vertical page drags — the page then reads as
+        // "scrolling doesn't work". One container, one axis.
         <Card padding="none" className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div>
             <DataTable
               data-testid="workspaces-table"
               getRowKey={(ws) => ws.id}

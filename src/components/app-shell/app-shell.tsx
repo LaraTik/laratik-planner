@@ -132,7 +132,10 @@ export function AppShell({
   const sidebarWidth = sidebarCollapsed ? "w-[64px]" : "xl:w-[248px] w-[72px]";
   const mainOffset = sidebarCollapsed ? "md:ms-[64px] xl:ms-[64px]" : "md:ms-[72px] xl:ms-[248px]";
   return (
-    <div className="bg-canvas flex min-h-screen flex-col">
+    // min-h-dvh, not min-h-screen: on mobile 100vh is the viewport with the
+    // browser chrome RETRACTED, which is taller than what the user can see. A
+    // shell sized to that leaves the bottom of every page below the fold.
+    <div className="bg-canvas flex min-h-dvh flex-col">
       <RouteScrollReset />
       <a
         href="#main-content"
