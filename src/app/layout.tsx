@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Arabic } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "@/components/ui/sonner";
 import { SessionProvider } from "next-auth/react";
 import { auth } from "@/lib/auth/config";
@@ -10,23 +10,29 @@ import { explicitThemeAttribute } from "@/lib/theme/preferences";
 import { getThemePreference } from "@/lib/theme/server";
 import "./globals.css";
 
-const inter = Inter({
+// Both faces are VENDORED (see src/app/fonts/README.md). `next/font/google`
+// fetched them from fonts.googleapis.com at BUILD time, which made the Docker
+// build depend on outbound network access to Google — it failed there on
+// 2026-10-07 with a `nextFontGoogleFontLoader` webpack error and blocked an
+// unrelated deploy. These are the same faces and the same subsets, served
+// locally: variable weight axis, latin for Inter, arabic for Noto.
+const inter = localFont({
   variable: "--font-inter",
-  subsets: ["latin"],
   display: "swap",
+  src: [{ path: "./fonts/inter-latin.woff2", weight: "100 900", style: "normal" }],
+  fallback: ["system-ui", "Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
 });
 
 // Noto Sans Arabic — the canonical Arabic face for the
-// product. Loaded with weights 400/500/600/700 to cover the
-// StudioFlow type scale. `display: "swap"` so the Latin face
-// stays painted during the font fetch (no FOIT for the
-// landing page). The body element switches to this face
-// when the document is `dir="rtl"` (see `globals.css`).
-const notoArabic = Noto_Sans_Arabic({
+// product. Covers the StudioFlow type scale. `display: "swap"` so the Latin
+// face stays painted during the font load (no FOIT on the landing page). The
+// body element switches to this face when the document is `dir="rtl"`
+// (see `globals.css`).
+const notoArabic = localFont({
   variable: "--font-noto-arabic",
-  subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
   display: "swap",
+  src: [{ path: "./fonts/noto-sans-arabic.woff2", weight: "100 900", style: "normal" }],
+  fallback: ["system-ui", "Segoe UI", "Tahoma", "Arial", "sans-serif"],
 });
 
 export const metadata: Metadata = {

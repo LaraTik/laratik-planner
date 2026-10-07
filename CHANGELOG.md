@@ -71,6 +71,28 @@ minors. Both were confirmed to resolve on 1.32.1 and the 44 MCP unit tests pass.
 The runbook now distinguishes the two cases up front, since reaching for an
 override first is the easy mistake.
 
+### Fixed — the Docker build failed fetching Google Fonts, blocking an unrelated deploy
+
+CI failed on the previous commit and Deploy was skipped. The failing step was
+`Build Docker image (app)`, and the whole stack was `nextFontGoogleFontLoader` →
+webpack: `next/font/google` downloads each family from fonts.googleapis.com at
+**build** time, so the Docker build depends on outbound access to Google. It
+failed with `Build failed because of webpack errors` despite the same commit
+building locally and `2feec9f1` deploying cleanly forty minutes earlier — the
+signature of a transient network dependency, not of application code.
+
+Inter (latin) and Noto Sans Arabic (arabic) are now vendored under
+`src/app/fonts/` and loaded with `next/font/local`. Same faces, same subsets,
+same variable weight axis; the build no longer reaches the network.
+
+This follows a remedy the codebase already chose and documented: when the
+brand-kit font catalogue moved fourteen families off `next/font/google`, it
+recorded that fetching Google Fonts at build time "made deploys depend on a
+third-party response format and caused otherwise healthy builds to fail". The
+same reasoning applies to the two layout faces, which had been left behind.
+Both are OFL 1.1 and the licence travels with the files; `src/app/fonts/README.md`
+records how to refresh them.
+
 ### Fixed — the backfill was unreachable, and `distinctPosts` reported the wrong number
 
 Two defects in the de-duplication work shipped immediately before this one.
