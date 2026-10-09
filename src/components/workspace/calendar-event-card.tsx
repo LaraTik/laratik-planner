@@ -9,6 +9,7 @@ import {
   type ContentStatus,
 } from "@/lib/content/status";
 import { taskBadgeVariant, priorityBadgeVariant } from "@/lib/tasks/status-badge";
+import { workspaceSeriesVar } from "@/lib/planning/workspace-color";
 import type { TaskPriority } from "@/lib/tasks/service";
 import type { TaskStatus } from "@/lib/tasks/workflow";
 import { cn } from "@/lib/utils";
@@ -66,6 +67,13 @@ export type CalendarEventCardProps = {
   priorityLabel?: string | undefined;
   /** Workspace name (agency-overview only). */
   workspaceName?: string | null | undefined;
+  /**
+   * Colour slot for this card's workspace, from
+   * `assignWorkspaceSeries` (see `lib/planning/workspace-color.ts`).
+   * `null`/omitted renders no dot — an event with no workspace must
+   * not borrow another workspace's colour.
+   */
+  workspaceSeries?: number | null | undefined;
   /** Assignee display name (agency-overview, tasks only). */
   assigneeName?: string | null | undefined;
   /** Locale-resolved "no workspace" label (agency-overview only). */
@@ -114,6 +122,7 @@ export function CalendarEventCard({
   priority,
   priorityLabel,
   workspaceName,
+  workspaceSeries,
   assigneeName,
   noWorkspaceLabel,
   kindLabel,
@@ -151,9 +160,13 @@ export function CalendarEventCard({
         >
           {title}
         </span>
-        <span className="text-label text-fg-muted mt-1 block truncate">
-          {workspaceName ?? noWorkspaceLabel ?? "—"}
-        </span>
+        <WorkspaceIdentity
+          id={id}
+          workspaceName={workspaceName}
+          noWorkspaceLabel={noWorkspaceLabel}
+          workspaceSeries={workspaceSeries}
+          className="text-label text-fg-muted mt-1"
+        />
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <Badge variant={badgeVariant} className="text-[10px]">
             {resolvedStatusLabel}
@@ -195,6 +208,18 @@ export function CalendarEventCard({
         "border-s-4",
       )}
     >
+      {/* Workspace identity sits ABOVE the title on the global calendar:
+       * the left border already encodes status, so workspace gets its
+       * own row (dot + name) rather than a second coloured border. On
+       * the single-workspace calendar all three props are absent and
+       * this renders nothing. */}
+      <WorkspaceIdentity
+        id={id}
+        workspaceName={workspaceName}
+        noWorkspaceLabel={noWorkspaceLabel}
+        workspaceSeries={workspaceSeries}
+        className="text-label text-fg-muted mb-1"
+      />
       <p className="text-label text-fg-primary truncate font-semibold" dir="auto">
         {title}
       </p>
@@ -228,6 +253,48 @@ function priorityBadgeText(priority: string): string {
 function humanTaskPriority(p: string): string {
   if (!p) return p;
   return p.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Workspace identity row — the coloured dot + workspace name.
+ *
+ * Two rules make this accessible rather than decorative:
+ *   1. The dot is `aria-hidden`; the workspace NAME is the text that
+ *      carries the meaning, so the row is fully legible without colour
+ *      (WCAG 1.4.1). The colour is a redundant second cue.
+ *   2. The dot is omitted entirely when there is no workspace, rather
+ *      than defaulting to slot 0 — an unassigned task must not be
+ *      painted in another client's colour.
+ */
+function WorkspaceIdentity({
+  workspaceName,
+  noWorkspaceLabel,
+  workspaceSeries,
+  id,
+  className,
+}: {
+  workspaceName: string | null | undefined;
+  noWorkspaceLabel: string | undefined;
+  workspaceSeries: number | null | undefined;
+  id: string;
+  className?: string;
+}) {
+  const label = workspaceName ?? noWorkspaceLabel ?? "—";
+  const hasDot = workspaceSeries !== null && workspaceSeries !== undefined;
+  if (!hasDot && !workspaceName && !noWorkspaceLabel) return null;
+  return (
+    <span className={cn("flex min-w-0 items-center gap-1.5", className)}>
+      {hasDot ? (
+        <span
+          aria-hidden="true"
+          data-testid={`calendar-event-${id}-workspace-dot`}
+          style={{ backgroundColor: workspaceSeriesVar(workspaceSeries) }}
+          className="inline-block size-2 shrink-0 rounded-full"
+        />
+      ) : null}
+      <span className="truncate">{label}</span>
+    </span>
+  );
 }
 
 // Silence unused-type-only-import lint: the type aliases are used in

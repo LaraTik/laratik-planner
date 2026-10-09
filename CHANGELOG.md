@@ -12,6 +12,139 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Next.js SSRF in image optimization (high severity, CI security gate)
+
+`pnpm audit --prod --audit-level high` — the final step of the `Quality,
+integration, audit` CI job — failed on **Next.js <16.3.8**:
+[GHSA-cjq9-62q9-8jv4](https://github.com/advisories/GHSA-cjq9-62q9-8jv4),
+Server-Side Request Forgery in Image Optimization.
+
+This is **not** introduced by any change in this cycle. The `workspace`
+table, the calendar work and every other commit here leave `package.json`
+untouched; the pin was already `16.3.6`, and `main` was **already red** —
+the last two `Advisory quality` runs on `9a7ec2e9` failed the same way
+before this branch existed. The advisory simply landed after the last
+successful deploy, and it blocks any merge to `main`, which is the only
+branch CI builds and deploys from.
+
+Bumped to **16.3.8** — the minimal patched release, staying on the 16.3.x
+line rather than jumping to 16.4.0, so the upgrade carries no minor-version
+behaviour change. `pnpm audit --prod --audit-level high` now reports _No
+known vulnerabilities found_ (the four moderate and one low findings were
+transitive and cleared with it).
+
+### Added — the global calendar now shows which workspace each plan belongs to
+
+The agency-wide calendar (`/app/calendar`) renders plans and tasks from **every**
+workspace into one month grid, but the compact day-cell card accepted a
+`workspaceName` prop and then ignored it. Two cards from two different clients
+sat in the same cell looking identical, so the only way to tell which workspace
+a plan belonged to was to open it. The mobile agenda and the unscheduled rail
+showed the name as plain grey text with no way to act on it, and the only way to
+isolate a client was the workspace dropdown.
+
+- **Cards carry their workspace.** The compact and default variants both render a
+  coloured dot beside the workspace name, on the day cell, the mobile agenda,
+  the workload view, the unscheduled rail and the workload right-rail lists.
+  Status keeps the left border and badge, so workspace identity gets its own
+  row rather than a second coloured border competing for the same channel.
+- **A legend decodes the colours and doubles as the filter.** Each workspace chip
+  links to the same calendar filtered to that workspace, preserving the month,
+  assignee, task status, show-flags and current view. The legend previously
+  could not have been decorative, because a colour with no key is not an
+  identity — clicking a client is now the primary way to scope the view.
+- **Colour is derived from the existing `--chart-series-1..6` tokens**, assigned
+  deterministically from the agency's full workspace list sorted by name, so
+  neighbouring workspaces get neighbouring hues. No migration, no schema change,
+  and the colours are already light/dark aware. `workspace` has no colour column
+  and no admin picker exists; if real brand colours are wanted later this is a
+  one-file change to `src/lib/planning/workspace-color.ts`.
+- **Colour is never the only signal.** The workspace name is always rendered as
+  text beside the dot and the dot is `aria-hidden`, so identity survives
+  colour-blindness, dark mode and a screen reader (WCAG 1.4.1). An event with no
+  workspace renders **no** dot rather than defaulting to the first workspace's
+  hue, which would have been a wrong attribution that reads as correct.
+- **Single-workspace calendars are unchanged.** `/app/w/[slug]/calendar` renders
+  the same card with no workspace metadata, so no workspace row appears there —
+  that page is already inside the workspace.
+
+Also fixed a pre-existing test defect found while adding the above:
+`global-calendar-filter-feedback.spec.ts` pinned `month=2026-09` and relied on
+fixtures "accumulated by previous test runs". Once those aged out, the two
+filtered cases failed against an empty month. It now derives the current month,
+the same way the new spec does.
+
+### Fixed — "Strongest accounts" ranked on one metric and displayed another, and "Best time to post" recommended Tuesday while highlighting Friday
+
+Two Command Center panels on the Workspace Overview read as confident
+recommendations that were neither comparable nor self-consistent. On the
+workspace that reported it, the "strongest account" column showed `8` and `0`
+with no unit, and the timing panel recommended `Tue · 15:00` while its grid
+ringed a different cell entirely.
+
+**`Strongest accounts` sorted and printed different quantities.** The row order
+came from `b.views ?? b.interactions ?? b.reach` and the printed number from
+`leader.interactions ?? leader.views` — opposite precedence. An account with
+`views=100, interactions=2` therefore outranked one with `views=null,
+interactions=50` and then displayed **2 above 50**. Meta reports views for
+Instagram but not for a Facebook Page, so every Instagram-vs-Facebook workspace
+hit this: two accounts ranked by two different metrics, then printed two other
+metrics, under the caption _"interaction or view signal"_.
+
+- **One declared basis, and it is the one displayed.** `leaders` is now ranked
+  on **engagement rate** over the analysis window — `interactions ÷ reach`,
+  falling back to `÷ followers` — and prints that same rate. Rate is the only
+  cross-platform comparable number, so a 2k account beating a 10k account at
+  identical quality is finally visible. `rate.denominator` is carried so the UI
+  can name the basis it actually used instead of implying a single fixed one.
+- **Accounts are now aggregated over the window, not read from its last day.**
+  `latestValue()` fed the panel a single metric day while the panel header named
+  a calendar month — the same page/panel contradiction ADR 0017 was written to
+  remove. Flows (`reach`, `views`, `interactions`) sum; `followerCount` is a
+  stock and is read from the last known day.
+- **An account whose rate cannot be computed is excluded**, not shown with an
+  invented zero.
+- **`channelPerformance` no longer shares that ranking.** `leaders` used to be
+  `channelPerformance.slice(0, 5)`, so re-ranking the strongest accounts
+  silently reordered the channel-performance readout. The two are now ranked
+  independently — that panel's bars are views, so it orders by views.
+
+**`Best time to post` pointed its own highlight at the wrong cell.** The grid
+derived its winner as the highest average across _all_ slots while the header
+pill took the highest average among _reliable_ (≥3 post) ones. On the reported
+data the pill read `Tue 15:00` (382 average views, 3 posts) and the ring landed
+on a **502-average cell backed by a single post** — the panel recommended
+Tuesday and highlighted Friday. That same one-post cell set `maxAverage`, so the
+whole colour scale was anchored to it and every well-supported cell washed out.
+
+- **`BestTimeHeatmap` now takes `bestTime` as a prop** and rings what the panel
+  recommends, so the grid cannot restate the winner. The colour scale anchors on
+  the strongest _reliable_ cell when one exists. Below-gate cells are dashed and
+  dimmed, so a real observation that cannot support a recommendation looks
+  different from one that can.
+- **Confidence is now stated, not implied.** `commandCenterConfidence()` tiers
+  the recommendation from sample size (`low` 3–4, `early` 5–7, `good` 8+) and
+  drops it exactly one step when the slot does not clear a 15% lift over the
+  workspace baseline. With 42 cells and a typical new workspace's post count, the
+  top slot is usually three posts that merely top the grid — the panel now says
+  _"Low confidence — a hypothesis to test · +35% vs your average"_ instead of
+  presenting it as a finding.
+- **Empty cells stopped claiming a threshold problem.** Both an empty cell and a
+  below-gate cell rendered _"At least three posts in the same time slot are
+  needed before a timing recommendation can be shown."_ across thirty-odd cells.
+  Empty cells now read `No posts`; only cells that actually have too few posts
+  read `Too few posts to recommend`.
+- **The timezone is on the pill.** `workspaces.timezone` defaults to `UTC`, so an
+  unqualified `Tue 15:00` is two hours off for a European audience with nothing to
+  say so. The pill now reads `Tue 15:00 UTC`, the grid states its bucketing, and a
+  UTC workspace gets a one-line hint pointing at workspace settings.
+
+**Contract change for MCP.** `laratik_planner_get_command_center` serialises
+these objects directly, so `strongest_accounts` rows now carry `rate` instead of
+flat `interactions`/`views`, and `best_time_to_post.best` gains `liftRatio` and
+`confidence`. The tool and the page share one read path, so an operator sees what
+the browser shows.
+
 ### Fixed — a shared workspace link could open the wrong tenant's workspace
 
 `/app/w/food-game` did not mean _that_ workspace. A workspace's identity is

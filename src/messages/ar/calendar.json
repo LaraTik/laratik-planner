@@ -20,6 +20,7 @@
   "globalWorkspaceFilter": "مساحة العمل",
   "globalAssigneeFilter": "مسند مهام التقويم",
   "globalAnyWorkspace": "كل مساحات العمل",
+  "globalWorkspaceLegendAriaLabel": "تصفية التقويم حسب مساحة العمل",
   "globalAnyAssignee": "كل مسندي المهام",
   "globalAssigneeNote": "تنطبق فلاتر المسند والحالة على المهام. تبقى الخطط ظاهرة ما لم تُخفَ يدويًا.",
   "globalTaskStatusFilter": "حالة المهمة",

@@ -898,6 +898,59 @@ tested. If storing post text turns out to matter for a data-minimisation or
 legal reason, revert `caption` in the feed request and the observation mapping;
 the thumbnail work is independent.
 
+### 2026-10-07 — a ranked list must print the number it ranked on, and a view must not restate its domain's winner
+
+**Rule 1 — if a panel ranks rows, the printed value IS the ranking key.** The
+Command Center's "Strongest accounts" sorted on
+`b.views ?? b.interactions ?? b.reach` and printed
+`leader.interactions ?? leader.views`. Opposite precedence, so an account with
+`views=100, interactions=2` outranked one with `views=null, interactions=50` and
+then displayed **2 above 50**. Meta reports views for Instagram but not for a
+Facebook Page, so this was the normal path, not a corner case — the caption
+even admitted it (_"interaction or view signal"_) while printing a bare number
+with no unit.
+
+- **Cross-platform comparisons rank on a normalised rate**, not a raw count, and
+  carry the denominator it used (`rate.denominator`). An account with no
+  computable rate is excluded, never shown with an invented zero.
+- **The sort key and the rendered value must be asserted to be the same
+  quantity.** The old test only asserted
+  `leaders.map(accountName)` — the _order_, never the value — and its fixture
+  supplied both metrics on every channel, so the two precedence orders agreed
+  and the inversion was structurally untestable.
+- **Aggregate over the window the panel names.** `latestValue()` fed this panel a
+  single metric day while its header named a calendar month — the same
+  page/panel contradiction ADR 0017 removed. Flows sum; `followerCount` is a
+  **stock** and must be read from the last known day, never summed.
+
+**Rule 2 — a component may not recompute a domain decision it is given.** The
+best-time grid derived its own winner as the max average across _all_ slots
+while the pill took the max among _reliable_ ones, so the panel recommended
+`Tue 15:00` (382 views, 3 posts) and ringed a 502-average cell backed by **one
+post** — and that one-post cell set `maxAverage`, so the entire colour scale was
+anchored to it. `BestTimeHeatmap` now takes `bestTime` as a prop. Extends the
+2026-10-05 rule: when a view's row set and its data's key space can drift,
+define the row set in the domain and render from it — the same applies to a
+view's _winner_.
+
+- **A colour scale must be anchored on trustworthy cells**, not the loudest one.
+- **A recommendation carries its evidence**: `liftRatio` against the workspace
+  baseline and a `commandCenterConfidence()` tier from sample size, dropped one
+  step when the slot does not clear a 15% lift. 42 cells and a typical young
+  workspace means the top slot is usually three posts that merely top the grid;
+  the UI says _"Low confidence — a hypothesis to test"_ rather than implying a
+  finding.
+- **Empty and below-threshold are different states.** Both rendered the same
+  _"At least three posts…"_ sentence across thirty-odd cells.
+
+**Also:** `leaders` was `channelPerformance.slice(0, 5)`, so the two panels
+shared one sort and re-ranking one silently reordered the other. They are ranked
+independently now — that panel's bars are views, so it orders by views.
+
+And `workspaces.timezone` defaults to `UTC`, so an unqualified `Tue 15:00` was
+silently two hours off for a European audience. The pill now carries the
+timezone and a UTC workspace gets a setup hint.
+
 ### 2026-10-05 — Command Center rebuilt to the reference screen; the best-time heatmap now shows data
 
 The Workspace Overview Command Center was rebuilt to match the reference

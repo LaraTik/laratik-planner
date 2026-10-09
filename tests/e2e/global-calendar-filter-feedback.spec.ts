@@ -25,8 +25,18 @@ import { bootstrapTestSession } from "./_helpers";
  * view but still surfaces the plan-only breakdown; and the
  * `cancelled` status (valid enum value, no seed tasks) triggers
  * the no-tasks hint.
+ *
+ * The month is DERIVED rather than hard-coded: this suite used to pin
+ * `2026-09` and depend on fixtures accumulated by earlier runs. Once
+ * those aged out the two filtered cases silently broke — the month held
+ * no plans, so the breakdown read "Showing 0 events" and the plan-only
+ * assertions could never match. Deriving the current month keeps the
+ * assertions pointed at data the seed actually creates.
  */
-const TARGET_MONTH = "2026-09";
+const TARGET_MONTH = (() => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+})();
 
 test.describe("Global calendar filter feedback", () => {
   test("unfiltered calendar shows plan/task breakdown", async ({ page }) => {
