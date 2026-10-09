@@ -12,6 +12,27 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — Next.js SSRF in image optimization (high severity, CI security gate)
+
+`pnpm audit --prod --audit-level high` — the final step of the `Quality,
+integration, audit` CI job — failed on **Next.js <16.3.8**:
+[GHSA-cjq9-62q9-8jv4](https://github.com/advisories/GHSA-cjq9-62q9-8jv4),
+Server-Side Request Forgery in Image Optimization.
+
+This is **not** introduced by any change in this cycle. The `workspace`
+table, the calendar work and every other commit here leave `package.json`
+untouched; the pin was already `16.3.6`, and `main` was **already red** —
+the last two `Advisory quality` runs on `9a7ec2e9` failed the same way
+before this branch existed. The advisory simply landed after the last
+successful deploy, and it blocks any merge to `main`, which is the only
+branch CI builds and deploys from.
+
+Bumped to **16.3.8** — the minimal patched release, staying on the 16.3.x
+line rather than jumping to 16.4.0, so the upgrade carries no minor-version
+behaviour change. `pnpm audit --prod --audit-level high` now reports _No
+known vulnerabilities found_ (the four moderate and one low findings were
+transitive and cleared with it).
+
 ### Added — the global calendar now shows which workspace each plan belongs to
 
 The agency-wide calendar (`/app/calendar`) renders plans and tasks from **every**
