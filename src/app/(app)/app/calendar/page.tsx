@@ -22,6 +22,12 @@ import type { LocaleCode } from "@/lib/i18n/locales";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";
+import { WorkspaceLegend } from "@/components/workspace/workspace-legend";
+import {
+  assignWorkspaceSeries,
+  workspaceSeriesSlot,
+  workspaceSeriesVar,
+} from "@/lib/planning/workspace-color";
 import { FormField } from "@/components/forms/form-field";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -216,6 +222,7 @@ function WorkloadView({
   todayDay,
   members,
   assigneeId,
+  workspaceSeries,
   t,
 }: {
   workload: UserWorkload | null;
@@ -230,8 +237,17 @@ function WorkloadView({
   todayDay: number;
   members: { id: string; name: string }[];
   assigneeId: string | undefined;
+  /**
+   * Workspace id → colour slot, computed once on the page from the full
+   * agency list. Passed in (rather than recomputed per plan) so a
+   * workspace keeps the SAME colour in the grid and in the right rail —
+   * two independent computations would be free to disagree.
+   */
+  workspaceSeries: ReadonlyMap<string, number>;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const seriesFor = (workspaceId: string | null) =>
+    workspaceSeriesSlot(workspaceSeries, workspaceId);
   // "Pick a person" empty state — user toggled workload but hasn't
   // chosen an assignee yet.
   if (!assigneeId) {
@@ -411,6 +427,7 @@ function WorkloadView({
                         priority={event.priority}
                         priorityLabel={eventPriorityLabel(event, t) ?? undefined}
                         workspaceName={event.workspaceName}
+                        workspaceSeries={seriesFor(event.workspaceId)}
                         assigneeName={event.assigneeName ?? null}
                         noWorkspaceLabel={t("calendar.globalNoWorkspace")}
                         kindLabel={
@@ -438,8 +455,13 @@ function WorkloadView({
          * work without a deadline.
          */}
         <aside className="space-y-4" data-testid="workload-rail">
-          <WorkloadTasksList tasks={workload.tasks} unscheduled={workload.unscheduledTasks} t={t} />
-          <WorkloadPlansList plans={workload.plans} t={t} />
+          <WorkloadTasksList
+            tasks={workload.tasks}
+            unscheduled={workload.unscheduledTasks}
+            workspaceSeries={workspaceSeries}
+            t={t}
+          />
+          <WorkloadPlansList plans={workload.plans} workspaceSeries={workspaceSeries} t={t} />
         </aside>
       </div>
 
@@ -476,6 +498,7 @@ function WorkloadView({
                 priority={event.priority}
                 priorityLabel={eventPriorityLabel(event, t) ?? undefined}
                 workspaceName={event.workspaceName}
+                workspaceSeries={seriesFor(event.workspaceId)}
                 assigneeName={event.assigneeName ?? null}
                 noWorkspaceLabel={t("calendar.globalNoWorkspace")}
                 kindLabel={
@@ -517,15 +540,39 @@ function SummaryChip({
   );
 }
 
+/**
+ * WorkspaceDot — the coloured marker paired with a workspace name.
+ *
+ * `aria-hidden` on purpose: the workspace NAME is always rendered as
+ * text right beside it, so the dot is a redundant cue rather than the
+ * only carrier of identity (WCAG 1.4.1). A null series renders nothing
+ * at all, so an event with no workspace is never painted in another
+ * client's colour.
+ */
+function WorkspaceDot({ series, className }: { series: number | null; className?: string }) {
+  if (series === null) return null;
+  return (
+    <span
+      aria-hidden="true"
+      style={{ backgroundColor: workspaceSeriesVar(series) }}
+      className={cn("inline-block size-2 shrink-0 rounded-full", className)}
+    />
+  );
+}
+
 function WorkloadTasksList({
   tasks,
   unscheduled,
+  workspaceSeries,
   t,
 }: {
   tasks: WorkloadTask[];
   unscheduled: WorkloadTask[];
+  workspaceSeries: ReadonlyMap<string, number>;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const seriesFor = (workspaceId: string | null) =>
+    workspaceSeriesSlot(workspaceSeries, workspaceId);
   if (tasks.length === 0 && unscheduled.length === 0) {
     return (
       <section
@@ -563,9 +610,12 @@ function WorkloadTasksList({
               <span className="text-body text-fg-primary mt-1 block font-semibold wrap-break-word">
                 {task.title}
               </span>
-              <span className="text-label text-fg-muted mt-1 block">
-                {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
-                {t(`tasks.status.${task.status}`)}
+              <span className="text-label text-fg-muted mt-1 flex min-w-0 items-center gap-1.5">
+                <WorkspaceDot series={seriesFor(task.workspaceId)} />
+                <span className="truncate">
+                  {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
+                  {t(`tasks.status.${task.status}`)}
+                </span>
               </span>
             </Link>
           </li>
@@ -586,9 +636,12 @@ function WorkloadTasksList({
                   <span className="text-body text-fg-primary block font-semibold wrap-break-word">
                     {task.title}
                   </span>
-                  <span className="text-label text-fg-muted mt-1 block">
-                    {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
-                    {t(`tasks.status.${task.status}`)}
+                  <span className="text-label text-fg-muted mt-1 flex min-w-0 items-center gap-1.5">
+                    <WorkspaceDot series={seriesFor(task.workspaceId)} />
+                    <span className="truncate">
+                      {task.workspaceName ?? t("calendar.globalNoWorkspace")} ·{" "}
+                      {t(`tasks.status.${task.status}`)}
+                    </span>
                   </span>
                 </Link>
               </li>
@@ -602,11 +655,15 @@ function WorkloadTasksList({
 
 function WorkloadPlansList({
   plans,
+  workspaceSeries,
   t,
 }: {
   plans: WorkloadPlan[];
+  workspaceSeries: ReadonlyMap<string, number>;
   t: (key: string, params?: Record<string, string | number>) => string;
 }) {
+  const seriesFor = (workspaceId: string | null) =>
+    workspaceSeriesSlot(workspaceSeries, workspaceId);
   if (plans.length === 0) {
     return (
       <section
@@ -646,12 +703,15 @@ function WorkloadPlansList({
                   {t(`calendar.workloadRole.${plan.role}`)}
                 </span>
               </div>
-              <span className="text-label text-fg-muted mt-1 block">
-                {formatDate(plan.startsAt, "en", {
-                  month: "short",
-                  day: "numeric",
-                })}{" "}
-                · {plan.workspaceName} · {t(`planningFilters.statusLabels.${plan.status}`)}
+              <span className="text-label text-fg-muted mt-1 flex min-w-0 items-center gap-1.5">
+                <WorkspaceDot series={seriesFor(plan.workspaceId)} />
+                <span className="truncate">
+                  {formatDate(plan.startsAt, "en", {
+                    month: "short",
+                    day: "numeric",
+                  })}{" "}
+                  · {plan.workspaceName} · {t(`planningFilters.statusLabels.${plan.status}`)}
+                </span>
               </span>
             </Link>
           </li>
@@ -738,6 +798,16 @@ export default async function GlobalCalendarPage({
     listAgencyMembers(context.agencyId),
     listAgencyWorkspaces(context.agencyId),
   ]);
+  /**
+   * Deterministic colour per workspace, computed ONCE from the full
+   * agency list rather than per-event. Assigning from the whole list is
+   * what guarantees neighbouring workspaces get neighbouring hues —
+   * a per-event hash would let two visible workspaces collide while a
+   * third colour sat unused.
+   */
+  const workspaceSeries = assignWorkspaceSeries(workspaces);
+  const seriesFor = (workspaceId: string | null) =>
+    workspaceSeriesSlot(workspaceSeries, workspaceId);
   const now = new Date();
   const zonedNow = toZonedTime(now, agencyTimezone);
   const year = valid ? Number(valid[1]) : zonedNow.getFullYear();
@@ -782,6 +852,23 @@ export default async function GlobalCalendarPage({
   // the URL (workspaceId / assigneeId / taskStatus / showPlans /
   // showTasks), making the link functionally a refresh.
   const monthOnlyHref = `?month=${selectedMonth}`;
+  /**
+   * Workspace legend href builder. Preserves every OTHER active filter
+   * (month, assignee, status, show flags, view) so clicking a client in
+   * the legend isolates that workspace without discarding the rest of
+   * the user's context — the same round-trip guarantee `queryFor` makes
+   * for the month arrows. Passing `null` clears the workspace filter.
+   */
+  const hrefForWorkspace = (targetWorkspaceId: string | null) => {
+    const params = new URLSearchParams({ month: selectedMonth });
+    if (targetWorkspaceId) params.set("workspaceId", targetWorkspaceId);
+    if (assigneeId) params.set("assigneeId", assigneeId);
+    if (taskStatus) params.set("taskStatus", taskStatus);
+    if (!showPlans) params.set("showPlans", "false");
+    if (!showTasks) params.set("showTasks", "false");
+    if (view === "workload") params.set("view", "workload");
+    return `?${params.toString()}`;
+  };
   const monthHref = (offset: number) => {
     const date = new Date(year, month + offset, 1);
     return queryFor(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`);
@@ -1041,6 +1128,24 @@ export default async function GlobalCalendarPage({
         hasTaskFilter={Boolean(assigneeId || taskStatus)}
         t={t}
       />
+      {/*
+        Workspace legend — the key that decodes the coloured dots on
+        every card below, and the fastest way to isolate one client.
+        Each chip is a link that preserves the month, assignee, status,
+        show flags and current view, so switching workspace never drops
+        the rest of the user's filters.
+      */}
+      <WorkspaceLegend
+        workspaces={workspaces.map((workspace) => ({
+          id: workspace.id,
+          name: workspace.name,
+          series: seriesFor(workspace.id) ?? 0,
+        }))}
+        activeWorkspaceId={workspaceId ?? null}
+        buildHref={hrefForWorkspace}
+        label={t("calendar.globalWorkspaceLegendAriaLabel")}
+        allLabel={t("calendar.globalAnyWorkspace")}
+      />
       {/* Workload view body (round-of-2026-09-27). Replaces the
        * calendar grid + unscheduled section when the user toggles
        * the Workload tab. The filters above remain visible so the
@@ -1060,6 +1165,7 @@ export default async function GlobalCalendarPage({
           todayDay={todayDay}
           members={members}
           assigneeId={assigneeId}
+          workspaceSeries={workspaceSeries}
           t={t}
         />
       ) : null}
@@ -1099,6 +1205,7 @@ export default async function GlobalCalendarPage({
                     priority={event.priority}
                     priorityLabel={eventPriorityLabel(event, t) ?? undefined}
                     workspaceName={event.workspaceName}
+                    workspaceSeries={seriesFor(event.workspaceId)}
                     assigneeName={event.assigneeName ?? null}
                     noWorkspaceLabel={t("calendar.globalNoWorkspace")}
                     kindLabel={
@@ -1165,6 +1272,7 @@ export default async function GlobalCalendarPage({
                           priority={event.priority}
                           priorityLabel={eventPriorityLabel(event, t) ?? undefined}
                           workspaceName={event.workspaceName}
+                          workspaceSeries={seriesFor(event.workspaceId)}
                           assigneeName={event.assigneeName ?? null}
                           noWorkspaceLabel={t("calendar.globalNoWorkspace")}
                           kindLabel={
@@ -1220,8 +1328,11 @@ export default async function GlobalCalendarPage({
                       <span className="text-body text-fg-primary block font-semibold wrap-break-word">
                         {task.title}
                       </span>
-                      <span className="text-label text-fg-muted mt-1 block truncate">
-                        {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                      <span className="text-label text-fg-muted mt-1 flex min-w-0 items-center gap-1.5">
+                        <WorkspaceDot series={seriesFor(task.workspaceId)} />
+                        <span className="truncate">
+                          {task.workspaceName ?? t("calendar.globalNoWorkspace")}
+                        </span>
                       </span>
                     </Link>
                   </li>

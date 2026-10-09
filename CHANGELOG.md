@@ -12,6 +12,47 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Added — the global calendar now shows which workspace each plan belongs to
+
+The agency-wide calendar (`/app/calendar`) renders plans and tasks from **every**
+workspace into one month grid, but the compact day-cell card accepted a
+`workspaceName` prop and then ignored it. Two cards from two different clients
+sat in the same cell looking identical, so the only way to tell which workspace
+a plan belonged to was to open it. The mobile agenda and the unscheduled rail
+showed the name as plain grey text with no way to act on it, and the only way to
+isolate a client was the workspace dropdown.
+
+- **Cards carry their workspace.** The compact and default variants both render a
+  coloured dot beside the workspace name, on the day cell, the mobile agenda,
+  the workload view, the unscheduled rail and the workload right-rail lists.
+  Status keeps the left border and badge, so workspace identity gets its own
+  row rather than a second coloured border competing for the same channel.
+- **A legend decodes the colours and doubles as the filter.** Each workspace chip
+  links to the same calendar filtered to that workspace, preserving the month,
+  assignee, task status, show-flags and current view. The legend previously
+  could not have been decorative, because a colour with no key is not an
+  identity — clicking a client is now the primary way to scope the view.
+- **Colour is derived from the existing `--chart-series-1..6` tokens**, assigned
+  deterministically from the agency's full workspace list sorted by name, so
+  neighbouring workspaces get neighbouring hues. No migration, no schema change,
+  and the colours are already light/dark aware. `workspace` has no colour column
+  and no admin picker exists; if real brand colours are wanted later this is a
+  one-file change to `src/lib/planning/workspace-color.ts`.
+- **Colour is never the only signal.** The workspace name is always rendered as
+  text beside the dot and the dot is `aria-hidden`, so identity survives
+  colour-blindness, dark mode and a screen reader (WCAG 1.4.1). An event with no
+  workspace renders **no** dot rather than defaulting to the first workspace's
+  hue, which would have been a wrong attribution that reads as correct.
+- **Single-workspace calendars are unchanged.** `/app/w/[slug]/calendar` renders
+  the same card with no workspace metadata, so no workspace row appears there —
+  that page is already inside the workspace.
+
+Also fixed a pre-existing test defect found while adding the above:
+`global-calendar-filter-feedback.spec.ts` pinned `month=2026-09` and relied on
+fixtures "accumulated by previous test runs". Once those aged out, the two
+filtered cases failed against an empty month. It now derives the current month,
+the same way the new spec does.
+
 ### Fixed — "Strongest accounts" ranked on one metric and displayed another, and "Best time to post" recommended Tuesday while highlighting Friday
 
 Two Command Center panels on the Workspace Overview read as confident

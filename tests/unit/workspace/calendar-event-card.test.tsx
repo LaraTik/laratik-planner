@@ -263,4 +263,105 @@ describe("CalendarEventCard", () => {
     expect(screen.getByText("Acme")).toBeInTheDocument();
     expect(screen.queryByText("Should not show")).toBeNull();
   });
+
+  // ─── Workspace identity (global calendar) ───────────────────────────
+  // THE REGRESSION THIS PINS: the compact variant is what the
+  // agency-wide month grid renders, and it used to accept
+  // `workspaceName` and then ignore it entirely — so two cards from two
+  // different clients in the same day cell were indistinguishable. These
+  // tests assert the workspace is named in BOTH variants.
+
+  it("compact variant names the workspace (it used to silently drop it)", () => {
+    renderCard({
+      id: "c-ws",
+      variant: "compact",
+      workspaceName: "Acme HQ",
+      workspaceSeries: 0,
+    });
+    const card = screen.getByTestId("calendar-event-c-ws");
+    expect(within(card).getByText("Acme HQ")).toBeInTheDocument();
+  });
+
+  it("compact variant renders the workspace dot with the assigned series colour", () => {
+    renderCard({
+      id: "c-dot",
+      variant: "compact",
+      workspaceName: "Acme HQ",
+      workspaceSeries: 2,
+    });
+    const dot = screen.getByTestId("calendar-event-c-dot-workspace-dot");
+    expect(dot.style.backgroundColor).toBe("var(--chart-series-3)");
+  });
+
+  it("hides the workspace dot from assistive tech — the name carries the meaning", () => {
+    renderCard({
+      id: "c-aria",
+      variant: "compact",
+      workspaceName: "Acme HQ",
+      workspaceSeries: 0,
+    });
+    expect(screen.getByTestId("calendar-event-c-aria-workspace-dot")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
+  });
+
+  it("gives two different workspaces two different colours on the same card shape", () => {
+    renderCard({ id: "c-a", variant: "compact", workspaceName: "Acme", workspaceSeries: 0 });
+    renderCard({ id: "c-b", variant: "compact", workspaceName: "Brightwell", workspaceSeries: 1 });
+    expect(screen.getByTestId("calendar-event-c-a-workspace-dot").style.backgroundColor).not.toBe(
+      screen.getByTestId("calendar-event-c-b-workspace-dot").style.backgroundColor,
+    );
+  });
+
+  it("omits the dot when there is no workspace rather than borrowing slot 0's colour", () => {
+    renderCard({
+      id: "c-none",
+      variant: "compact",
+      workspaceName: null,
+      workspaceSeries: null,
+      noWorkspaceLabel: "Agency-wide",
+    });
+    // A defaulting-to-0 dot would visually place this card inside
+    // whichever workspace happens to sort first.
+    expect(screen.queryByTestId("calendar-event-c-none-workspace-dot")).toBeNull();
+    expect(screen.getByText("Agency-wide")).toBeInTheDocument();
+  });
+
+  it("renders the workspace row inside the link so the whole card stays clickable", () => {
+    renderCard({
+      id: "c-link",
+      variant: "compact",
+      workspaceName: "Acme HQ",
+      workspaceSeries: 0,
+    });
+    const link = screen.getByRole("link", { name: /summer launch teaser/i });
+    expect(within(link).getByText("Acme HQ")).toBeInTheDocument();
+  });
+
+  it("leaves the single-workspace calendar unchanged (no workspace props = no row)", () => {
+    // The per-workspace calendar renders this card with no workspace
+    // metadata at all. Naming "there is no workspace" there would be
+    // wrong — the page is already inside the workspace.
+    renderCard({ id: "c-single", variant: "compact" });
+    const card = screen.getByTestId("calendar-event-c-single");
+    expect(within(card).queryByText("—")).toBeNull();
+    expect(screen.queryByTestId("calendar-event-c-single-workspace-dot")).toBeNull();
+  });
+
+  it("still encodes status on the left border alongside the workspace dot", () => {
+    // Two independent channels: status = border + badge, workspace = dot +
+    // name. Neither may be dropped when the other is added.
+    renderCard({
+      id: "c-both",
+      variant: "compact",
+      status: "blocked",
+      workspaceName: "Acme HQ",
+      workspaceSeries: 0,
+    });
+    const card = screen.getByTestId("calendar-event-c-both");
+    expect(card.className).toMatch(/border-s-danger/);
+    expect(within(card).getByText(/blocked/i)).toBeInTheDocument();
+    expect(screen.getByTestId("calendar-event-c-both-workspace-dot")).toBeInTheDocument();
+  });
 });

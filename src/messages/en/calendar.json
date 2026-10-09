@@ -20,6 +20,7 @@
   "globalWorkspaceFilter": "Workspace",
   "globalAssigneeFilter": "Task assignee",
   "globalAnyWorkspace": "All workspaces",
+  "globalWorkspaceLegendAriaLabel": "Filter the calendar by workspace",
   "globalAnyAssignee": "All task assignees",
   "globalAssigneeNote": "Assignee and status filters apply to tasks. Plans stay visible unless you turn them off.",
   "globalTaskStatusFilter": "Task status",

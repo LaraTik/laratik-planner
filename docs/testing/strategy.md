@@ -71,6 +71,14 @@ workflow tests, disposable-Postgres integration tests, authenticated a11y
 journeys, and the visual suite; no test may point at the normal or production
 database.
 
+The global calendar must additionally prove **workspace identity**: that a card
+names the workspace it belongs to (not merely colours it), that the workspace
+legend lists every workspace and preserves the month/assignee/status/show-flags
+when a chip filters the calendar, and that a card with no workspace renders no
+dot rather than borrowing another workspace's hue. The colour assignment is
+unit-tested for the property that actually matters — two workspaces an admin can
+see at the same time never share a hue while a palette slot sits unused.
+
 | Layer         | Command                                              | Contract                                                                                                                                                                                       |
 | ------------- | ---------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Unit/domain   | `pnpm test:unit`                                     | Pure schemas, workflow rules, KPI calculations, security helpers, and UI behavior. Never connects to PostgreSQL.                                                                               |
