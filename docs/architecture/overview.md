@@ -49,6 +49,7 @@ and is threaded explicitly into every agency-scoped helper. See
 - Agency plans resolve from a plan template plus per-agency replacement overrides. Live counters are separate from policy and are reserved transactionally with per-resource advisory locks.
 - Agency lifecycle is soft and recoverable. Suspended/archived agencies are excluded by the central agency-context resolver; platform-only operators can still reach the platform console.
 - Production configuration validates complete provider combinations before serving traffic.
+- The authenticated app shell renders on every navigation, so its query cost is a constant budget rather than a per-workspace multiple. Resolve set questions ("what can this actor see across all their workspaces?") with set-based helpers, never a per-workspace loop. See [`app-shell-performance.md`](app-shell-performance.md).
 
 ## Workflow source of truth
 

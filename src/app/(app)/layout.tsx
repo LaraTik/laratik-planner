@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import {
-  canAccessClientWorkspace,
-  canAccessInternalWorkspace,
+  getActorWorkspaceRoleIndex,
+  INTERNAL_WORKSPACE_ROLES,
   isAgencyAdmin,
 } from "@/lib/auth/policy";
 import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
@@ -25,7 +25,7 @@ import {
 import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import { createBuildInfo } from "@/lib/build-info";
 import { serverEnv } from "@/lib/validation/env";
-import { getWorkspaceBadges, getGlobalBadges } from "@/lib/nav/badges";
+import { getGlobalBadges, getWorkspaceBadgesForActor } from "@/lib/nav/badges";
 import { loadEnabledCapabilities } from "@/lib/ai/governance";
 import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
 import { tForActive } from "@/lib/i18n/t-for-active";
@@ -118,20 +118,31 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     listActorAgencies(actor),
     getThemePreference(actor.id),
   ]);
-  const workspaceAccess = Object.fromEntries(
-    await Promise.all(
-      switcher.options.map(async (workspace) => {
-        if (await canAccessInternalWorkspace(actor, workspace.id)) {
-          return [workspace.id, "internal"] as const;
-        }
-        if (await canAccessClientWorkspace(actor, workspace.id)) {
-          return [workspace.id, "client"] as const;
-        }
-        return [workspace.id, "none"] as const;
-      }),
-    ),
-  );
+  // Resolve roles and badge counts for every switchable workspace in ONE
+  // batched pass each. This used to fan out per workspace:
+  //   `switcher.options.map(...)` × canAccessInternal/ClientWorkspace and
+  //   × getWorkspaceBadges
+  // which issued ~3 queries per workspace for roles and ~2 more for badge
+  // counts — and because every workspace in one agency resolves the same
+  // agency id, the `isAgencyAdmin` lookup repeated byte-identically (measured:
+  // 131 queries / 6 unique for a member of an agency with 8 workspaces).
+  // The batched helpers return the same values in a fixed 3 + 2 queries.
   const workspaceIds = switcher.options.map((workspace) => workspace.id);
+  // Badges need the role index to apply their permission gates, so the role
+  // index resolves first and the two count queries follow it.
+  const roleIndex = await getActorWorkspaceRoleIndex(actor, workspaceIds);
+  const badgesByWorkspace = await getWorkspaceBadgesForActor(workspaceIds, roleIndex);
+
+  const workspaceAccess = Object.fromEntries(
+    workspaceIds.map((workspaceId) => {
+      const roles = roleIndex.rolesByWorkspaceId.get(workspaceId);
+      if (roles && INTERNAL_WORKSPACE_ROLES.some((role) => roles.has(role))) {
+        return [workspaceId, "internal"] as const;
+      }
+      if (roles?.has("client_reviewer")) return [workspaceId, "client"] as const;
+      return [workspaceId, "none"] as const;
+    }),
+  );
   const contentCreatorRows =
     !isAdmin && workspaceIds.length > 0
       ? await db
@@ -207,20 +218,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   // Compute per-workspace sidebar badge counts in parallel with the
-  // global badge set. The badge service is permission-aware — a
-  // user without internal access gets 0 for that workspace.
-  const [sidebarCollapsed, globalBadges, workspaceBadges] = await Promise.all([
+  // global badge set. The per-workspace counts were already batched above
+  // (one pair of grouped queries for the whole switcher); the badge service
+  // stays permission-aware — a user without internal access gets 0 for
+  // that workspace.
+  const [sidebarCollapsed, globalBadges] = await Promise.all([
     readSidebarCollapsed(),
     getGlobalBadges(actor, platformAdmin),
-    Promise.all(
-      switcher.options.map(async (ws) => {
-        const badges = await getWorkspaceBadges(actor, ws.id);
-        return [ws.id, badges] as const;
-      }),
-    ),
   ]);
   const workspaceBadgesMap: Record<string, { approvals: number; designQueue: number }> =
-    Object.fromEntries(workspaceBadges);
+    Object.fromEntries(badgesByWorkspace);
 
   // Resolved chrome copy. Every label the user sees in the
   // notifications bell, the user menu, the mobile topbar, and

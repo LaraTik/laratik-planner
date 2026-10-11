@@ -12,6 +12,76 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — tenant and workspace selection was paying a discarded full app-shell render plus a 131-query N+1
+
+Reported as "lagging when selecting tenant and workspace". Two independent
+defects compounded on that path, both now fixed and both covered by
+regression tests.
+
+**1. The app shell resolved roles and badges one workspace at a time.**
+`src/app/(app)/layout.tsx` runs on **every** authenticated navigation — it is
+what renders the sidebar, the workspace/agency switchers, and the badge
+counts. It fanned out per workspace:
+
+```ts
+switcher.options.map(async (ws) => getWorkspaceBadges(actor, ws.id))
+switcher.options.map(async (ws) => canAccessInternalWorkspace(...))
+```
+
+Each workspace cost ~3 queries for roles (workspace→agency, `isAgencyAdmin`,
+membership roles) plus ~2 for badge counts. Because every workspace in one
+agency resolves the **same** agency id, the `isAgencyAdmin` lookup repeated
+byte-identically on every iteration.
+
+Measured against a real Postgres (`pool.query` instrumented, 1 agency, 1
+member, 8 workspaces): **131 SQL round-trips for one navigation, of which only
+6 were unique.** 125 were exact repeats; the worst single statement ran **41
+times with identical parameters**.
+
+Replaced with two batched, set-based helpers:
+
+- `getActorWorkspaceRoleIndex(actor, workspaceIds)` in `lib/auth/policy.ts` —
+  3 queries total: workspace→agency for all ids, admin flags for all
+  **distinct** agencies, and membership roles for all ids.
+- `getWorkspaceBadgesForActor(actor, workspaceIds, roleIndex)` in
+  `lib/nav/badges.ts` — 2 grouped count queries total, counting by workspace
+  (and by gate for approvals).
+
+**Result: 131 → 7 queries, and now flat in the number of workspaces.**
+Measured at 1, 8, 25 and 60 workspaces: 7 queries every time, 0 redundant
+repeats. The old path was linear, so a large agency was paying roughly
+`5 × N` round-trips per navigation.
+
+No authorization semantics changed. The batch reproduces `getWorkspaceRoles`
+exactly — agency admins still get every `INTERNAL_WORKSPACE_ROLES` for each of
+their workspaces, `client_reviewer` is still **not** granted to admins, an
+unknown workspace id still yields an empty role set. Badge permission gates
+are still evaluated against that role index, never re-decided by the counter.
+The one subtlety the batching introduced — approvals are counted across the
+union of every workspace's gates, so each workspace's rows are filtered back
+down to its own gates — is what the `groupBy(workspaceId, gate)` plus the
+in-memory gate filter exist for, and it is asserted directly.
+
+**2. A tenant switch rendered the whole shell once just to throw it away.**
+`switchAgencyContext` returned the legacy `/app/w/<slug>` shape. That route
+lives inside the `(app)` route group, so Next.js rendered the **entire**
+authenticated app shell — sidebar, switchers, badges, workspace list — only
+for the page to immediately `redirect()`, after which the browser re-requests
+the real URL and pays the whole shell cost a second time.
+
+The switch already knows which agency it is switching to, so it now emits the
+canonical `/app/a/<agencySlug>/w/<slug>` directly and the hop disappears. The
+legacy route stays for existing bookmarks and already-shared links; the app
+simply stops generating those URLs. If the agency slug cannot be read, the
+switch degrades to the legacy shape rather than emitting `/app/a/undefined/…`,
+and that still resolves.
+
+Tests: `tests/integration/app-shell-batched-access.test.ts` is written as a
+**differential** suite — for the same fixtures it asserts the batched result
+is identical to the per-workspace result, so a future change that makes the
+batch faster but wrong fails instead of drifting silently. The query-count
+assertions are real (counted through the actual pool), not mocked.
+
 ### Fixed — Next.js SSRF in image optimization (high severity, CI security gate)
 
 `pnpm audit --prod --audit-level high` — the final step of the `Quality,

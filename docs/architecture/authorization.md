@@ -57,6 +57,18 @@ Platform implementation:
   `canAccessInternalWorkspace(actor, workspaceId)`,
   `canAccessClientWorkspace(actor, workspaceId)`. All are **agency-aware** and
   parameterized by `agencyId` — they never infer agency from a global.
+- `src/lib/auth/policy.ts` — `getWorkspaceRoles(actor, workspaceId)` resolves
+  one workspace's roles in a single query (agency-admin shortcut applied), and
+  `getActorWorkspaceRoleIndex(actor, workspaceIds)` resolves **many** in a
+  fixed three queries. The batched variant exists because the app shell needs
+  roles for every switchable workspace on every navigation, and the
+  per-workspace helper makes the cost linear in the number of workspaces while
+  repeating an identical `isAgencyAdmin` lookup each time. The two are
+  equivalent by construction — the batch reproduces the per-workspace
+  semantics exactly, including the agency-admin shortcut, `client_reviewer`
+  **not** being granted to admins, and an empty role set for an unknown
+  workspace id. Prefer the batch whenever the question is a set question; see
+  [`app-shell-performance.md`](app-shell-performance.md).
 
 The asymmetry: an actor with **no** platform role and **no** agency
 membership can still sign in (the NextAuth flow runs before any tenant

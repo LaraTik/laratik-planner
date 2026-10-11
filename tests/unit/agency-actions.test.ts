@@ -5,16 +5,28 @@ const mocks = vi.hoisted(() => ({
   setActiveAgencyCookie: vi.fn(),
   isActiveMember: vi.fn(),
   isAgencyAdmin: vi.fn(),
-  rows: [] as { slug: string }[],
+  // Rows for the agency-slug lookup, then rows for the workspace lookup.
+  // `switchAgencyContext` issues both concurrently via `Promise.all`, so the
+  // agency chain is CONSTRUCTED first and its `.limit(1)` runs first. Sharing
+  // one row set between the two made the agency lookup return a workspace slug
+  // and produced a nonsense destination.
+  agencyRows: [] as { slug: string }[],
+  workspaceRows: [] as { slug: string }[],
+  // Which `limit()` call we are on: 0 = agency slug, 1 = workspace.
+  queryIndex: 0,
 }));
 
 // `db` is a drizzle client. The action calls
-// `db.select(...).from(...).innerJoin(...).where(...).orderBy(...).limit(1)`.
-// We build a single chain whose `limit` reads the current value of
-// `mocks.rows` at call time, so each test can supply its own result
-// without re-mocking the module.
+// `db.select(...).from(...).innerJoin(...).where(...).orderBy(...).limit(1)`
+// for the workspace, and `db.select(...).from(...).where(...).limit(1)` for
+// the agency. We build a chain whose `limit` consumes `workspaceRows` first
+// and `agencyRows` second, so each test can supply its own results without
+// re-mocking the module.
 function buildDrizzleChain() {
-  const limit = vi.fn(() => Promise.resolve(mocks.rows));
+  const limit = vi.fn(() => {
+    const rows = mocks.queryIndex++ === 0 ? mocks.agencyRows : mocks.workspaceRows;
+    return Promise.resolve(rows);
+  });
   const orderBy = vi.fn().mockReturnValue({ limit });
   const where = vi.fn().mockReturnValue({ orderBy, limit });
   const innerJoin = vi.fn().mockReturnValue({ where });
@@ -22,6 +34,13 @@ function buildDrizzleChain() {
   const select = vi.fn().mockReturnValue({ from });
   return { select, from, innerJoin, where, orderBy, limit };
 }
+
+// `queryIndex` is a plain counter, not mock state, so `vi.clearAllMocks()`
+// does not reset it. Without this the second test in the file consumed the
+// first test's row slot and read the wrong fixture.
+beforeEach(() => {
+  mocks.queryIndex = 0;
+});
 
 vi.mock("@/lib/auth/config", () => ({ auth: mocks.auth }));
 vi.mock("next/navigation", () => ({
@@ -118,12 +137,32 @@ describe("switchActiveAgencyAndRedirect", () => {
     });
   });
 
-  it("redirects to the first accessible workspace in the new agency", async () => {
+  it("redirects to the CANONICAL workspace URL in the new agency", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.rows = [{ slug: "food-game" }];
+    mocks.workspaceRows = [{ slug: "food-game" }];
+    mocks.agencyRows = [{ slug: "acme" }];
 
+    // Canonical `/app/a/<agencySlug>/w/<slug>` — NOT the legacy
+    // `/app/w/<slug>`. The legacy path lives inside the `(app)` route group,
+    // so routing to it renders the entire authenticated app shell just to
+    // answer `redirect()`, then the browser re-requests the real URL and
+    // pays the whole shell cost a second time.
+    await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
+      "NEXT_REDIRECT:/app/a/acme/w/food-game",
+    );
+  });
+
+  it("falls back to the legacy path when the agency slug cannot be read", async () => {
+    mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
+    mocks.isActiveMember.mockResolvedValue(true);
+    mocks.setActiveAgencyCookie.mockResolvedValue(true);
+    mocks.workspaceRows = [{ slug: "food-game" }];
+    mocks.agencyRows = [];
+
+    // Degrades to the old shape rather than emitting `/app/a/undefined/...`.
+    // The legacy route still resolves it, so the switch still lands.
     await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
       "NEXT_REDIRECT:/app/w/food-game",
     );
@@ -133,7 +172,8 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.rows = [];
+    mocks.workspaceRows = [];
+    mocks.agencyRows = [];
 
     await expect(switchActiveAgencyAndRedirect("agency-2")).rejects.toThrow("NEXT_REDIRECT:/app");
   });
@@ -143,10 +183,11 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.isAgencyAdmin.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.rows = [{ slug: "admin-only-workspace" }];
+    mocks.workspaceRows = [{ slug: "admin-only-workspace" }];
+    mocks.agencyRows = [{ slug: "acme" }];
 
     await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
-      "NEXT_REDIRECT:/app/w/admin-only-workspace",
+      "NEXT_REDIRECT:/app/a/acme/w/admin-only-workspace",
     );
   });
 });
