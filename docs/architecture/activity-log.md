@@ -6,7 +6,7 @@
 The activity log is the project's lifecycle / audit surface.
 It is rendered identically in two places:
 
-1. **Workspace-wide feed** at `/app/w/[slug]/activity` — the
+1. **Workspace-wide feed** at `/app/a/[agencySlug]/w/[slug]/activity` — the
    full team-wide history.
 2. **Per-item timeline** on the planning detail page — the
    lifecycle of a single content item.

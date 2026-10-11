@@ -2,7 +2,13 @@ import "server-only";
 import { and, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { approvalRequests, contentItems } from "@/lib/db/schema";
-import { canAccessInternalWorkspace, hasWorkspaceRole, type Actor } from "@/lib/auth/policy";
+import {
+  INTERNAL_WORKSPACE_ROLES,
+  canAccessInternalWorkspace,
+  hasWorkspaceRole,
+  type Actor,
+  type ActorWorkspaceRoleIndex,
+} from "@/lib/auth/policy";
 
 /**
  * Actionable sidebar badge counts.
@@ -131,6 +137,124 @@ export async function countUnassignedDesignItems(
 
 function cap(n: number): number {
   return Math.max(0, Math.min(BADGE_CAP, n));
+}
+
+/** `review_gate` enum — the `approvalRequests.gate` column type. */
+type ReviewGate = "content" | "creative_internal" | "creative_client";
+
+/**
+ * Aggregate badge counts for many workspaces in a fixed number of queries.
+ *
+ * The app-shell layout needs a badge set for EVERY workspace the actor can
+ * switch to, and it needs it on every authenticated navigation — including
+ * every tenant/workspace switch. Calling `getWorkspaceBadges` per workspace
+ * costs ~2 count queries each; batching the counts by workspace keeps the
+ * cost at 2 queries total regardless of how many workspaces the actor has.
+ *
+ * The permission gates are IDENTICAL to the per-workspace path and are
+ * evaluated against the caller's `roleIndex`, which reproduces
+ * `getWorkspaceRoles` semantics (including the agency-admin shortcut). This
+ * helper therefore only re-batches the counting; it does not re-decide who
+ * may see a badge.
+ *
+ * Note there is no `actor` parameter: authorization context arrives wholly
+ * through `roleIndex`, which the caller has already resolved. Accepting an
+ * `actor` it cannot use would invite a future caller to believe it is
+ * re-checking permissions when it is only counting.
+ *
+ * Counting is grouped by workspace AND, for approvals, by gate. Grouping by
+ * gate matters: a client reviewer's allowed gates are a strict subset of an
+ * internal reviewer's, so a single `IN (...)` over the union of every
+ * workspace's gates would leak counts between roles. The per-workspace gate
+ * filter is applied in memory from the grouped rows instead.
+ */
+export async function getWorkspaceBadgesForActor(
+  workspaceIds: readonly string[],
+  roleIndex: ActorWorkspaceRoleIndex,
+): Promise<Map<string, WorkspaceBadges>> {
+  const result = new Map<string, WorkspaceBadges>();
+  const ids = [...new Set(workspaceIds)];
+  for (const id of ids) result.set(id, { approvals: 0, designQueue: 0 });
+  if (ids.length === 0) return result;
+
+  const approvalGatesById = new Map<string, ReviewGate[]>();
+  const designQueueIds: string[] = [];
+
+  for (const id of ids) {
+    const roles = roleIndex.rolesByWorkspaceId.get(id);
+    if (!roles) continue;
+    // Matches `getWorkspaceBadges`: no internal access ⇒ both counts are 0.
+    const hasInternalRole = INTERNAL_WORKSPACE_ROLES.some((r) => roles.has(r));
+    if (!hasInternalRole) continue;
+
+    // `countPendingApprovals` gates.
+    const gates: ReviewGate[] = [];
+    if (roles.has("internal_reviewer")) gates.push("content", "creative_internal");
+    if (roles.has("client_reviewer")) gates.push("creative_client");
+    if (gates.length > 0) approvalGatesById.set(id, gates);
+
+    // `countUnassignedDesignItems` gate.
+    const canWorkQueue = [
+      "workspace_manager",
+      "content_planner",
+      "designer",
+      "internal_reviewer",
+      "publisher",
+    ].some((r) => roles.has(r));
+    if (canWorkQueue) designQueueIds.push(id);
+  }
+
+  const anyGate = [...new Set([...approvalGatesById.values()].flat())];
+  const [approvalRows, designQueueRows] = await Promise.all([
+    approvalGatesById.size === 0
+      ? Promise.resolve([] as { workspaceId: string; gate: ReviewGate; count: number }[])
+      : db
+          .select({
+            workspaceId: contentItems.workspaceId,
+            gate: approvalRequests.gate,
+            count: sql<number>`count(*)::int`,
+          })
+          .from(approvalRequests)
+          .innerJoin(contentItems, eq(contentItems.id, approvalRequests.contentItemId))
+          .where(
+            and(
+              inArray(contentItems.workspaceId, [...approvalGatesById.keys()]),
+              eq(approvalRequests.status, "pending"),
+              inArray(approvalRequests.gate, anyGate),
+              isNull(contentItems.archivedAt),
+            ),
+          )
+          .groupBy(contentItems.workspaceId, approvalRequests.gate),
+    designQueueIds.length === 0
+      ? Promise.resolve([] as { workspaceId: string; count: number }[])
+      : db
+          .select({ workspaceId: contentItems.workspaceId, count: sql<number>`count(*)::int` })
+          .from(contentItems)
+          .where(
+            and(
+              inArray(contentItems.workspaceId, designQueueIds),
+              isNull(contentItems.archivedAt),
+              isNull(contentItems.designerId),
+              eq(contentItems.status, "approved_for_design"),
+            ),
+          )
+          .groupBy(contentItems.workspaceId),
+  ]);
+
+  for (const row of approvalRows) {
+    const allowed = approvalGatesById.get(row.workspaceId);
+    if (!allowed || !allowed.includes(row.gate)) continue;
+    const entry = result.get(row.workspaceId);
+    if (!entry) continue;
+    entry.approvals = cap(entry.approvals + row.count);
+  }
+  for (const row of designQueueRows) {
+    const entry = result.get(row.workspaceId);
+    if (!entry) continue;
+    entry.designQueue = cap(row.count);
+  }
+
+  return result;
 }
 
 /**
