@@ -11,6 +11,7 @@ import { MediaBreadcrumb } from "./media-breadcrumb";
 import { MediaBulkToolbar } from "./media-bulk-toolbar";
 import { MediaBulkHeader } from "./media-bulk-header";
 import { MediaSelectionProvider } from "@/lib/media/selection-store";
+import { workspaceBasePath } from "@/lib/urls";
 import { MediaLibraryActions } from "./media-library-actions";
 import { MediaStorageSummary } from "./media-storage-summary";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
@@ -674,7 +675,7 @@ function RelatedPosts({
         {related.slice(0, 3).map((post) => (
           <Link
             key={post.contentItemId}
-            href={`/app/w/${post.workspaceSlug}/planning/${post.contentItemId}#delivery`}
+            href={`${workspaceBasePath(post.workspaceAgencySlug, post.workspaceSlug)}/planning/${post.contentItemId}#delivery`}
             className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-8 items-center justify-between gap-2 rounded-[var(--radius-control)] font-semibold hover:underline focus:outline-none focus-visible:ring-2"
           >
             <span className="min-w-0 truncate" dir="auto">

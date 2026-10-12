@@ -3,7 +3,14 @@ import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { Folder, Lightbulb, Plus, Send, AlertTriangle, Building } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { contentItems, socialChannels, workspaces, workspaceMemberships } from "@/lib/db/schema";
+import {
+  agencies,
+  contentItems,
+  socialChannels,
+  workspaces,
+  workspaceMemberships,
+} from "@/lib/db/schema";
+import { workspaceBasePath } from "@/lib/urls";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -57,6 +64,10 @@ export default async function WorkspacesPage() {
       id: workspaces.id,
       name: workspaces.name,
       slug: workspaces.slug,
+      // This list is already scoped to the active agency, but the row links
+      // still need the agency's SLUG: the canonical URL carries it, and a
+      // workspace slug alone is only unique per agency.
+      agencySlug: agencies.slug,
       status: workspaces.status,
       updatedAt: workspaces.updatedAt,
     })
@@ -71,10 +82,14 @@ export default async function WorkspacesPage() {
           id: workspaces.id,
           name: workspaces.name,
           slug: workspaces.slug,
+          // Mirrors the admin branch above; both must project the agency slug
+          // because `rows` is consumed by `getRowHref` either way.
+          agencySlug: agencies.slug,
           status: workspaces.status,
           updatedAt: workspaces.updatedAt,
         })
         .from(workspaces)
+        .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
         .innerJoin(
           workspaceMemberships,
           and(
@@ -214,7 +229,7 @@ export default async function WorkspacesPage() {
               data-testid="workspaces-table"
               getRowKey={(ws) => ws.id}
               getRowTestId={(ws) => `workspaces-row-${ws.id}`}
-              getRowHref={(ws) => `/app/w/${ws.slug}`}
+              getRowHref={(ws) => workspaceBasePath(ws.agencySlug, ws.slug)}
               rows={rows}
               columns={workspacesColumns({
                 channelCounts,

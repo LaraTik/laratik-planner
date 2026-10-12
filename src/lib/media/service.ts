@@ -3,6 +3,7 @@ import { cache } from "react";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
+  agencies,
   contentItems,
   deliveryVersions,
   mediaAssets,
@@ -272,6 +273,7 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       },
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      workspaceAgencySlug: agencies.slug,
       folder: {
         id: mediaFolders.id,
         name: mediaFolders.name,
@@ -280,6 +282,7 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
     .from(mediaAssets)
     .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
     .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .leftJoin(mediaFolders, eq(mediaFolders.id, mediaAssets.folderId))
     .where(and(...conditions))
     .orderBy(...orderBy)
@@ -296,10 +299,15 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       format: contentItems.format,
       plannedPublishAt: contentItems.plannedPublishAt,
       workspaceSlug: workspaces.slug,
+      // Related items can sit in a different workspace — and therefore a
+      // different agency — from the asset being viewed, so the link's agency
+      // has to travel with the row rather than be assumed from the caller.
+      workspaceAgencySlug: agencies.slug,
     })
     .from(mediaAssetLinks)
     .innerJoin(contentItems, eq(contentItems.id, mediaAssetLinks.targetId))
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(
       and(
         eq(mediaAssetLinks.agencyId, input.agencyId),
@@ -322,11 +330,13 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       format: contentItems.format,
       plannedPublishAt: contentItems.plannedPublishAt,
       workspaceSlug: workspaces.slug,
+      workspaceAgencySlug: agencies.slug,
     })
     .from(mediaAssetLinks)
     .innerJoin(deliveryVersions, eq(deliveryVersions.id, mediaAssetLinks.targetId))
     .innerJoin(contentItems, eq(contentItems.id, deliveryVersions.contentItemId))
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(
       and(
         eq(mediaAssetLinks.agencyId, input.agencyId),

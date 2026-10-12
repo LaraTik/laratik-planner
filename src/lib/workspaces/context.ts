@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, getTableColumns, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { agencyMemberships, agencies, workspaceMemberships, workspaces } from "@/lib/db/schema";
 import {
@@ -48,8 +48,16 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
  */
 async function lookupWorkspace(agencyId: string, slug: string) {
   const [workspace] = await db
-    .select()
+    // `getTableColumns` keeps the projection FLAT (as `select()` was), so
+    // every existing caller keeps seeing the same row shape — adding the
+    // agency slug must not reshape what they destructure.
+    .select({ ...getTableColumns(workspaces), agencySlug: agencies.slug })
     .from(workspaces)
+    // Carries the agency's SLUG alongside the workspace columns. Callers that
+    // redirect after a mutation need it to build a canonical URL — the
+    // workspace slug alone is unique only within an agency. A join, so it
+    // costs nothing extra.
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.slug, slug)))
     .limit(1);
   return workspace ?? null;

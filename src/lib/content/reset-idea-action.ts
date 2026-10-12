@@ -5,6 +5,7 @@ import {} from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import { contentItems, securityAuditEvents, activityEvents } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
@@ -172,7 +173,8 @@ export async function resetIdeaAction(
   // idea inside the workspace the operator just navigated from. A
   // tampered formData could try to reset an idea in another
   // workspace; this check refuses.
-  if (idea.workspaceId !== (await getWorkspaceIdForSlug(workspaceSlug, actor.id))) {
+  const redirectWorkspace = await getAccessibleWorkspace({ id: actor.id }, workspaceSlug);
+  if (idea.workspaceId !== (redirectWorkspace?.id ?? null)) {
     logWarn("reset_idea.cross_tenant_attempt", {
       actorId: actor.id,
       contentItemId: parsed.data.contentItemId,
@@ -300,7 +302,11 @@ export async function resetIdeaAction(
   // Refresh the planning list and bounce the operator back. The
   // `redirect` throws so the rest of the action never runs; that's
   // fine — there's nothing to return.
-  redirect(`/app/w/${workspaceSlug}/planning?reset=1`);
+  // The canonical URL needs the agency slug. The cross-tenant guard above
+  // already resolved the workspace, so reuse that row rather than issuing a
+  // second lookup — and rather than adding a failure mode this action did
+  // not previously have.
+  redirect(`${workspaceBasePath(redirectWorkspace!.agencySlug, workspaceSlug)}/planning?reset=1`);
 }
 
 /**
@@ -308,7 +314,3 @@ export async function resetIdeaAction(
  * route slug, scoped to the operator's agency membership. The
  * destructive action uses this to refuse tampered formData.
  */
-async function getWorkspaceIdForSlug(slug: string, actorId: string): Promise<string | null> {
-  const ws = await getAccessibleWorkspace({ id: actorId }, slug);
-  return ws?.id ?? null;
-}
