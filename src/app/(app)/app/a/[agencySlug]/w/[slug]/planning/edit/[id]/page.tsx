@@ -13,6 +13,7 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { EditIdeaForm } from "./edit-form";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata({
   params,
@@ -59,7 +60,7 @@ export default async function EditIdeaPage({
           description={t("planning.editAccessDeniedDescription")}
         />
         <Button asChild variant="ghost">
-          <Link href={`/app/w/${slug}/planning/${id}`}>
+          <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/${id}`}>
             <DirAwareArrowLeft className="h-3.5 w-3.5" />
             {t("contentDetail.copy.backToPlanning")}
           </Link>

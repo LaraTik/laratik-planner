@@ -325,7 +325,7 @@ export default async function PlanningPage({
     return `?${params.toString()}`;
   };
   const planningViewLinks = {
-    list: `/app/w/${slug}/planning${buildPageHref(1)}`,
+    list: `${workspaceBasePath(agencySlug, slug)}/planning${buildPageHref(1)}`,
     board: (() => {
       const params = new URLSearchParams();
       if (selectedStatus) params.set("status", selectedStatus);
@@ -337,9 +337,11 @@ export default async function PlanningPage({
       if (parsedFilters.risk) params.set("risk", parsedFilters.risk);
       if (searchTerm) params.set("search", searchTerm);
       const query = params.toString();
-      return query ? `/app/w/${slug}/board?${query}` : `/app/w/${slug}/board`;
+      return query
+        ? `${workspaceBasePath(agencySlug, slug)}/board?${query}`
+        : `${workspaceBasePath(agencySlug, slug)}/board`;
     })(),
-    calendar: `/app/w/${slug}/calendar?month=${monthParam(0)}`,
+    calendar: `${workspaceBasePath(agencySlug, slug)}/calendar?month=${monthParam(0)}`,
   } as const;
 
   return (
@@ -395,13 +397,13 @@ export default async function PlanningPage({
             {canCreate ? (
               <>
                 <Button variant="outline" asChild>
-                  <Link href={`/app/w/${slug}/planning/batch`}>
+                  <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/batch`}>
                     <Files className="h-4 w-4" />
                     {t("planning.batchAdd")}
                   </Link>
                 </Button>
                 <Button asChild>
-                  <Link href={`/app/w/${slug}/planning/new`}>
+                  <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/new`}>
                     <Plus className="h-4 w-4" aria-hidden="true" />
                     {t("planning.quickCreate")}
                   </Link>
@@ -435,7 +437,7 @@ export default async function PlanningPage({
         needsReview={kpis.needsReview}
         ready={kpis.ready}
         notStarted={healthRollup.notStarted}
-        baseHref={`/app/w/${slug}/planning`}
+        baseHref={`${workspaceBasePath(agencySlug, slug)}/planning`}
         currentQuery={
           new URLSearchParams(
             Object.entries({
@@ -461,7 +463,7 @@ export default async function PlanningPage({
         </div>
         <div className="pt-3">
           <PlanningFiltersBar
-            basePath={`/app/w/${slug}/planning`}
+            basePath={`${workspaceBasePath(agencySlug, slug)}/planning`}
             monthParam={monthParam(0)}
             members={memberRows.map((m) => ({
               id: m.id,
@@ -503,7 +505,7 @@ export default async function PlanningPage({
             hasFilter ? (
               <Button variant="outline" asChild>
                 <Link
-                  href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
+                  href={`${workspaceBasePath(agencySlug, slug)}/planning?month=${monthParam(0)}`}
                   data-testid="planning-empty-clear-filters"
                 >
                   {t("planning.clearFilters")}
@@ -511,7 +513,7 @@ export default async function PlanningPage({
               </Button>
             ) : canCreate ? (
               <Button asChild>
-                <Link href={`/app/w/${slug}/planning/new`}>
+                <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/new`}>
                   <Plus className="h-4 w-4" aria-hidden="true" />
                   {t("planning.quickCreate")}
                 </Link>
@@ -557,7 +559,7 @@ export default async function PlanningPage({
           action={
             <Button variant="outline" asChild>
               <Link
-                href={`/app/w/${slug}/planning?month=${monthParam(0)}`}
+                href={`${workspaceBasePath(agencySlug, slug)}/planning?month=${monthParam(0)}`}
                 data-testid="planning-empty-clear-filters"
               >
                 {t("planning.clearFilters")}
@@ -610,3 +612,4 @@ export default async function PlanningPage({
 // import block at the top of the file would surface it in every
 // other test, so the lazy-require pattern keeps the diff scoped.
 import { Card } from "@/components/ui/card";
+import { workspaceBasePath } from "@/lib/urls";

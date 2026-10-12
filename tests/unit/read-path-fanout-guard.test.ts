@@ -75,6 +75,79 @@ describe("read-path fan-out guard", () => {
   });
 });
 
+describe("canonical workspace URL guard", () => {
+  /**
+   * `src/lib/urls.ts` documents the legacy `/app/w/<slug>` shape as inbound
+   * only: "Never link to this form". The legacy route exists so bookmarks and
+   * previously-shared links keep resolving, so this rule deliberately allows
+   * the one file that IS the redirector.
+   *
+   * SCOPE: this currently guards the surfaces converted so far — the
+   * workspace sub-pages whose `agencySlug` was already in scope. It is NOT
+   * yet a whole-tree rule; the remaining components need `agencySlug` threaded
+   * as a required prop, which is tracked separately. Widening it before that
+   * work lands would just encode the remaining work as a permanent failure.
+   */
+  const CONVERTED = [
+    "app/(app)/app/a/[agencySlug]/w/[slug]/activity/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/board/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/activity/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/calendar/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/client/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/design-queue/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/media/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/batch/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/monthly/actions.ts",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/monthly/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/new/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/planning/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/research/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/approvals-form.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/defaults-form.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/_components/settings-health.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/approvals/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/defaults/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/lead-times/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/lifecycle/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/settings/trends/page.tsx",
+    "app/(app)/app/a/[agencySlug]/w/[slug]/team/page.tsx",
+    "components/app-shell/sidebar.tsx",
+  ];
+
+  it("converted surfaces never navigate to the legacy shape", () => {
+    const offenders: string[] = [];
+    for (const rel of CONVERTED) {
+      const abs = join(SRC, rel);
+      // Entries are a mix of single files and directories.
+      const files = /\.tsx?$/.test(abs) ? [abs] : walk(abs);
+      for (const file of files) {
+        if (!file.endsWith(".ts") && !file.endsWith(".tsx")) continue;
+        const name = file.slice(SRC.length + 1);
+        const lines = readFileSync(file, "utf8").split("\n");
+        lines.forEach((line, i) => {
+          const trimmed = line.trimStart();
+          if (trimmed.startsWith("//") || trimmed.startsWith("*")) return;
+          if (line.includes("revalidatePath")) return;
+          const isNavigation =
+            /redirect\(/.test(line) || /href=/.test(line) || /getRowHref/.test(line);
+          if (isNavigation && /\/app\/w\//.test(line)) {
+            offenders.push(`${name}:${i + 1} ${line.trim()}`);
+          }
+        });
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 function walk(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

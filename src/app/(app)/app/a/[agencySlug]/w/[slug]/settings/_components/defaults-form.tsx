@@ -8,6 +8,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { updateDefaultsSettingsAction, type SettingsActionState } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { workspaceBasePath } from "@/lib/urls";
 
 type PersonOption = { id: string; label: string };
 
@@ -60,6 +61,7 @@ export function DefaultsForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <PersonField
             slug={slug}
+            agencySlug={agencySlug}
             id="settings-default-designer"
             name="defaultDesignerId"
             label={t("settings.defaults.designerLabel")}
@@ -71,6 +73,7 @@ export function DefaultsForm({
           />
           <PersonField
             slug={slug}
+            agencySlug={agencySlug}
             id="settings-default-content-reviewer"
             name="defaultContentReviewerId"
             label={t("settings.defaults.contentReviewerLabel")}
@@ -82,6 +85,7 @@ export function DefaultsForm({
           />
           <PersonField
             slug={slug}
+            agencySlug={agencySlug}
             id="settings-default-internal-creative"
             name="defaultInternalCreativeReviewerId"
             label={t("settings.defaults.internalCreativeLabel")}
@@ -93,6 +97,7 @@ export function DefaultsForm({
           />
           <PersonField
             slug={slug}
+            agencySlug={agencySlug}
             id="settings-default-client-reviewer"
             name="defaultClientReviewerId"
             label={t("settings.defaults.clientReviewerLabel")}
@@ -134,6 +139,7 @@ export function DefaultsForm({
 
 function PersonField({
   slug,
+  agencySlug,
   id,
   name,
   label,
@@ -144,6 +150,7 @@ function PersonField({
   t,
 }: {
   slug: string;
+  agencySlug: string;
   id: string;
   name: string;
   label: string;
@@ -193,7 +200,7 @@ function PersonField({
           <AlertCircle className="text-warning h-3 w-3" aria-hidden="true" />
           {t("settings.defaults.emptyHint", { role: label.toLowerCase() })}{" "}
           <Link
-            href={`/app/w/${slug}/team?role=${roleSlug}`}
+            href={`${workspaceBasePath(agencySlug, slug)}/team?role=${roleSlug}`}
             className="text-primary font-semibold hover:underline"
           >
             {t("settings.defaults.addOneLink")}

@@ -14,6 +14,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { querySocialPostObservation } from "@/lib/social/analytics-query";
 import { z } from "zod";
 import { ResearchTeardownSchema } from "@/lib/research/teardown";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata({
   params,
@@ -57,7 +58,9 @@ export default async function QuickCreatePage({
           description={t("quickCreate.deniedDescription")}
         />
         <Button asChild variant="ghost">
-          <Link href={`/app/w/${slug}/planning`}>{t("quickCreate.backToPlanning")}</Link>
+          <Link href={`${workspaceBasePath(agencySlug, slug)}/planning`}>
+            {t("quickCreate.backToPlanning")}
+          </Link>
         </Button>
       </div>
     );

@@ -94,6 +94,7 @@ import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/plan
 import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
 import { getActiveScenario } from "@/lib/content/workflow";
 import type { ContentStatus } from "@/lib/content/status";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata({
   params,
@@ -683,7 +684,7 @@ export default async function ContentDetailPage({
   // The compact header is intentionally identity-only. Editing is
   // discoverable from the Overview details surface so it does not
   // compete with lifecycle ownership in the workflow rail.
-  const editHref = `/app/w/${slug}/planning/edit/${item.id}`;
+  const editHref = `${workspaceBasePath(agencySlug, slug)}/planning/edit/${item.id}`;
 
   // ── Workspace tabs — order matters; counts feed the badges.
   // The icon for each tab is resolved inside the Client
@@ -1200,7 +1201,7 @@ export default async function ContentDetailPage({
                       ) : null}
                       {canEdit ? (
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/app/w/${slug}/ai-settings`}>
+                          <Link href={`${workspaceBasePath(agencySlug, slug)}/ai-settings`}>
                             <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
                             {t("contentDetail.aiSettings")}
                           </Link>

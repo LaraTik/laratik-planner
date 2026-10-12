@@ -13,6 +13,7 @@ import {
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
+import { workspaceBasePath } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -126,7 +127,7 @@ export default async function WorkspaceMediaPage({
       workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
       agencyWorkspaces={[]}
       rows={rowsWithSignedUrl}
-      basePath={`/app/w/${workspace.slug}/media`}
+      basePath={`${workspaceBasePath(agencySlug, workspace.slug)}/media`}
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}
       preserveParams={{

@@ -30,6 +30,7 @@ import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
 import { MemberEditTrigger } from "./member-edit-trigger";
 import { roleKey } from "@/lib/auth/role-labels";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -317,7 +318,7 @@ export default async function WorkspaceTeamPage({
   }
 
   const filterActive = hasActiveFilters(filters);
-  const basePath = `/app/w/${workspace.slug}/team`;
+  const basePath = `${workspaceBasePath(agencySlug, workspace.slug)}/team`;
   const prevHref =
     filters.page > 1
       ? buildListHref({

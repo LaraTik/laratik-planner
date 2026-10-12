@@ -212,13 +212,13 @@ describe("Brand Kit overview (Phase 7)", () => {
     }
     // Each KPI card is an anchor that points to the matching per-section route.
     expect(screen.getByTestId("brand-kit-kpi-logos").getAttribute("href")).toBe(
-      `/app/w/${slug}/brand-kit/logos`,
+      `/app/a/acme/w/${slug}/brand-kit/logos`,
     );
     expect(screen.getByTestId("brand-kit-kpi-voice").getAttribute("href")).toBe(
-      `/app/w/${slug}/brand-kit/voice`,
+      `/app/a/acme/w/${slug}/brand-kit/voice`,
     );
     expect(screen.getByTestId("brand-kit-kpi-activity").getAttribute("href")).toBe(
-      `/app/w/${slug}/brand-kit/activity`,
+      `/app/a/acme/w/${slug}/brand-kit/activity`,
     );
   });
 
@@ -236,7 +236,7 @@ describe("Brand Kit overview (Phase 7)", () => {
     expect(section).toBeInTheDocument();
     expect(section).toHaveTextContent(/Recent updates/);
     const link = screen.getByTestId("brand-kit-recent-section-link");
-    expect(link.getAttribute("href")).toBe(`/app/w/${slug}/brand-kit/activity`);
+    expect(link.getAttribute("href")).toBe(`/app/a/acme/w/${slug}/brand-kit/activity`);
   });
 
   it("renders the Download ZIP CTA enabled when the workspace has any asset", async () => {

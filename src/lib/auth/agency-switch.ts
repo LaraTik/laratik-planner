@@ -70,6 +70,10 @@ export async function switchAgencyContext(
   const agency = agencyRows[0];
   return {
     ok: true,
-    destination: agency?.slug ? workspaceHref(agency.slug, first.slug) : `/app/w/${first.slug}`,
+    destination: agency?.slug
+      ? workspaceHref(agency.slug, first.slug)
+      : // Degrade to the legacy shape rather than emitting `/app/a/undefined/…`.
+        // The legacy route still resolves it, so the switch still lands.
+        `/app/w/${first.slug}`,
   };
 }

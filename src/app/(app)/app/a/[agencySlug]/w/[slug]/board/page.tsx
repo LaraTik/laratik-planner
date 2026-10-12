@@ -29,6 +29,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { getActiveScenario, type WorkflowScenarioStage } from "@/lib/content/workflow";
 import { PLANNING_WORKFLOW_STAGES } from "@/lib/planning/presentation";
 import type { ContentStatus } from "@/lib/content/status";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -218,7 +219,9 @@ export default async function WorkflowBoardPage({
     if (ownerFilter) params.set("owner", ownerFilter);
     if (searchTerm) params.set("search", searchTerm);
     const qs = params.toString();
-    return qs ? `/app/w/${slug}/planning?${qs}` : `/app/w/${slug}/planning`;
+    return qs
+      ? `${workspaceBasePath(agencySlug, slug)}/planning?${qs}`
+      : `${workspaceBasePath(agencySlug, slug)}/planning`;
   })();
 
   return (
@@ -241,8 +244,8 @@ export default async function WorkflowBoardPage({
               active="board"
               links={{
                 list: listHref,
-                board: `/app/w/${slug}/board`,
-                calendar: `/app/w/${slug}/calendar`,
+                board: `${workspaceBasePath(agencySlug, slug)}/board`,
+                calendar: `${workspaceBasePath(agencySlug, slug)}/calendar`,
               }}
               t={t}
             />
@@ -252,7 +255,7 @@ export default async function WorkflowBoardPage({
 
       <div className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <PlanningFilters
-          targetPath={`/app/w/${slug}/board`}
+          targetPath={`${workspaceBasePath(agencySlug, slug)}/board`}
           monthParam={new Date().toISOString().slice(0, 7)}
           selectedStatus={selectedStatus}
           selectedFormat={selectedFormat}
@@ -295,13 +298,18 @@ export default async function WorkflowBoardPage({
           action={
             hasFilter ? (
               <Button variant="outline" asChild>
-                <Link href={`/app/w/${slug}/board`} data-testid="board-empty-clear-filters">
+                <Link
+                  href={`${workspaceBasePath(agencySlug, slug)}/board`}
+                  data-testid="board-empty-clear-filters"
+                >
                   {t("board.clearFilters")}
                 </Link>
               </Button>
             ) : canCreate ? (
               <Button asChild>
-                <Link href={`/app/w/${slug}/planning/new`}>{t("board.quickCreate")}</Link>
+                <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/new`}>
+                  {t("board.quickCreate")}
+                </Link>
               </Button>
             ) : undefined
           }

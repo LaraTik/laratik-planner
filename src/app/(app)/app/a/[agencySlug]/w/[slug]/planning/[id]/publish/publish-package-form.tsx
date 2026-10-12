@@ -103,6 +103,7 @@ import {
   MetaPublishingReadinessCard,
   type MetaPublishingReadinessCopy,
 } from "@/components/workspace/meta-publishing-readiness-card";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * M4 — Publish package form (client component).
@@ -1053,7 +1054,7 @@ export function PublishPackageForm({
             type="button"
             variant="ghost"
             className="min-h-11 border-dashed"
-            onClick={() => router.push(`/app/w/${workspaceSlug}/channels`)}
+            onClick={() => router.push(`${workspaceBasePath(agencySlug, workspaceSlug)}/channels`)}
             data-testid="publish-add-channel"
           >
             <Plus className="me-1 h-4 w-4" aria-hidden="true" />

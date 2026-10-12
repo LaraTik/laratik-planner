@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * One-line redirect shim. The Activity feed moved out of brand-kit
@@ -14,6 +15,6 @@ export default async function BrandKitActivityRedirect({
 }: {
   params: Promise<{ agencySlug: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  redirect(`/app/w/${slug}/activity`);
+  const { agencySlug, slug } = await params;
+  redirect(`${workspaceBasePath(agencySlug, slug)}/activity`);
 }

@@ -23,6 +23,7 @@ import { SocialHealthBanner } from "./social-health-banner";
 import { SocialSyncDiagnostics } from "./social-sync-diagnostics";
 import { SocialHealthyStatus } from "./social-healthy-status";
 import { SocialAnalyticsDashboard, type DashboardLabels } from "./social-analytics-dashboard";
+import { workspaceBasePath } from "@/lib/urls";
 
 const METRIC_LABEL_KEYS: Record<SocialMetric, string> = {
   followerCount: "analytics.metricFollowers",
@@ -234,7 +235,7 @@ export default async function SocialAnalyticsPage({
             description={t("analytics.emptyNoChannelsDescription")}
             action={
               <a
-                href={`/app/w/${slug}/channels`}
+                href={`${workspaceBasePath(agencySlug, slug)}/channels`}
                 className="border-border bg-surface text-fg-primary text-body rounded-md border px-4 py-2"
               >
                 {t("analytics.goToChannels")}

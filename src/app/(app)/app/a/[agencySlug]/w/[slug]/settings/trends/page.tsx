@@ -22,6 +22,7 @@ import { TrendsSettingsClient } from "./_components/trends-settings-client";
 import { DeleteTrendDataSection } from "./delete-trend-data-section";
 import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
 import { loadEnabledCapabilities } from "@/lib/ai/governance";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Workspace settings → Trends.
@@ -59,14 +60,14 @@ export default async function TrendsSettingsPage({
     .from(aiFeatureSettings)
     .where(eq(aiFeatureSettings.agencyId, agencyId))
     .limit(1);
-  if (!feature?.enabled) redirect(`/app/w/${slug}/settings`);
+  if (!feature?.enabled) redirect(`${workspaceBasePath(agencySlug, slug)}/settings`);
   if (!(await loadEnabledCapabilities(agencyId)).has("trend_radar"))
-    redirect(`/app/w/${slug}/settings`);
+    redirect(`${workspaceBasePath(agencySlug, slug)}/settings`);
 
   const ws = await getAccessibleWorkspaceAtPath(actor, agencySlug, slug);
   if (!ws) redirect("/app");
   const canManage = await hasWorkspaceRole(actor, ws.id, ["workspace_manager"]);
-  if (!canManage) redirect(`/app/w/${slug}/settings`);
+  if (!canManage) redirect(`${workspaceBasePath(agencySlug, slug)}/settings`);
 
   const { t } = await tForActive();
 

@@ -33,6 +33,7 @@ import { buildActivityContext } from "@/lib/activity/resolve";
 import { formatActivityEvent } from "@/lib/activity/format";
 import { ActivityFeedCard } from "@/components/activity";
 import type { ActivityRenderSpec } from "@/lib/activity/types";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -305,7 +306,7 @@ export default async function WorkspaceActivityPage({
   const prevHref =
     filters.page > 1
       ? buildActivityHref({
-          basePath: `/app/w/${workspace.slug}/activity`,
+          basePath: `${workspaceBasePath(agencySlug, workspace.slug)}/activity`,
           current: currentHrefFilters,
           next: { page: filters.page - 1 },
         })
@@ -313,7 +314,7 @@ export default async function WorkspaceActivityPage({
   const nextHref =
     filters.page < totalPages
       ? buildActivityHref({
-          basePath: `/app/w/${workspace.slug}/activity`,
+          basePath: `${workspaceBasePath(agencySlug, workspace.slug)}/activity`,
           current: currentHrefFilters,
           next: { page: filters.page + 1 },
         })
@@ -367,7 +368,7 @@ export default async function WorkspaceActivityPage({
             ...(validScope !== "all" ? { role: validScope } : {}),
           }}
           clearHref={buildActivityHref({
-            basePath: `/app/w/${workspace.slug}/activity`,
+            basePath: `${workspaceBasePath(agencySlug, workspace.slug)}/activity`,
             current: currentHrefFilters,
             next: {
               q: "",

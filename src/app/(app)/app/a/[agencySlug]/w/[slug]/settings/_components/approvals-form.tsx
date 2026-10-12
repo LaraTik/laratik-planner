@@ -10,6 +10,7 @@ import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { cn } from "@/lib/utils";
 import { updateApprovalsSettingsAction, type SettingsActionState } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * ApprovalsForm — per-section form for the Settings → Approval
@@ -195,7 +196,7 @@ export function ApprovalsForm(props: ApprovalsFormProps) {
               </ul>
             )}
             <Link
-              href={`/app/w/${slug}/settings#lead-times`}
+              href={`${workspaceBasePath(agencySlug, slug)}/settings#lead-times`}
               className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
               data-testid="approvals-impact-lead-times-link"
             >
