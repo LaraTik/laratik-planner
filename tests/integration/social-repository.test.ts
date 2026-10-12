@@ -244,7 +244,7 @@ describe("M4 — repository", () => {
         provider: "meta",
         workspaceId,
         actorId: userId,
-        returnPath: `/app/w/${workspaceId.slice(0, 8)}-x/channels`,
+        returnPath: `/app/a/acme/w/${workspaceId.slice(0, 8)}-x/channels`,
         expiresAt: new Date(Date.now() + 600_000),
       });
       const first = await consumeOauthState(db, "d1");
@@ -258,7 +258,7 @@ describe("M4 — repository", () => {
         provider: "meta",
         workspaceId,
         actorId: userId,
-        returnPath: "/app/w/main/channels",
+        returnPath: "/app/a/acme/w/main/channels",
         expiresAt: new Date(Date.now() - 60_000),
       });
       const result = await consumeOauthState(db, "d2", new Date());
