@@ -1,6 +1,7 @@
 import "server-only";
 import { and, desc, eq, ilike, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import {
   activityEvents,
   contentItems,
@@ -140,12 +141,14 @@ function kindToScope(kind: string): ActivityScope {
  * `null` when the link would be misleading (e.g. deleted target).
  */
 function buildActivityHref(args: {
+  /** Canonical agency segment — activity links must be self-describing. */
+  agencySlug: string;
   workspaceSlug: string;
   contentItemId: string | null;
   kind: string;
   summary: string;
 }): string | null {
-  const { workspaceSlug, contentItemId, kind } = args;
+  const { agencySlug, workspaceSlug, contentItemId, kind } = args;
   if (!contentItemId) return null;
   // We default the most-common locations. New kinds slot in here as the
   // kind vocabulary grows.
@@ -153,21 +156,21 @@ function buildActivityHref(args: {
     case "review":
     case "approval":
     case "changes_requested":
-      return `/app/w/${workspaceSlug}/reviews/${contentItemId}`;
+      return `${workspaceBasePath(agencySlug, workspaceSlug)}/reviews/${contentItemId}`;
     case "publication":
     case "delivery":
-      return `/app/w/${workspaceSlug}/calendar?item=${contentItemId}`;
+      return `${workspaceBasePath(agencySlug, workspaceSlug)}/calendar?item=${contentItemId}`;
     case "comment":
-      return `/app/w/${workspaceSlug}/planning/${contentItemId}#discussion`;
+      return `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}#discussion`;
     case "ai_assistance":
-      return `/app/w/${workspaceSlug}/planning/${contentItemId}?tab=ai`;
+      return `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}?tab=ai`;
     default:
-      return `/app/w/${workspaceSlug}/planning/${contentItemId}`;
+      return `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}`;
   }
 }
 
 export async function listWorkspaceActivity(
-  workspace: { id: string; slug: string },
+  workspace: { id: string; slug: string; agencySlug: string },
   filters: ListWorkspaceActivityFilters = {},
 ): Promise<ListWorkspaceActivityResult> {
   const limit = Math.max(1, Math.min(filters.limit ?? DEFAULT_LIMIT, 200));
@@ -265,6 +268,7 @@ export async function listWorkspaceActivity(
     targetLabel: row.contentItemTitle ?? "(deleted item)",
     targetId: row.contentItemId,
     href: buildActivityHref({
+      agencySlug: workspace.agencySlug,
       workspaceSlug: workspace.slug,
       contentItemId: row.contentItemId,
       kind: row.kind,
@@ -323,7 +327,7 @@ export interface ActivityScopeCounts {
 }
 
 export async function listWorkspaceActivityCounts(
-  workspace: { id: string; slug: string },
+  workspace: { id: string; slug: string; agencySlug: string },
   filters: { actorId?: string; after?: Date; before?: Date; query?: string } = {},
 ): Promise<ActivityScopeCounts> {
   // Reuse the aggregate with a generous limit. The merge runs once,

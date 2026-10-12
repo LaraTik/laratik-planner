@@ -505,6 +505,13 @@
       "when": 1791800640806,
       "tag": "0071_canonical_notification_action_urls",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1791846303366,
+      "tag": "0072_canonical_oauth_return_path",
+      "breakpoints": true
     }
   ]
 }

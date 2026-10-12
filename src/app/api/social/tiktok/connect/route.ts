@@ -6,6 +6,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import { agencies } from "@/lib/db/schema";
 import { buildTikTokAuthorizationUrl, TIKTOK_SCOPES } from "@/lib/social/providers/tiktok";
 import { createOauthState } from "@/lib/social/repository";
@@ -33,7 +34,7 @@ import { eq } from "drizzle-orm";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const CHANNELS_PATH = /^\/app\/w\/[a-z0-9-]+\/channels$/;
+const CHANNELS_PATH = /^\/app\/a\/[a-z0-9-]+\/w\/[a-z0-9-]+\/channels$/;
 const STATE_TTL_MS = 10 * 60_000;
 const SETUP_URL = "/app/agency-settings/social/providers";
 
@@ -98,9 +99,20 @@ export async function POST(req: NextRequest) {
     );
   }
 
+  const [agency] = await db
+    .select({ slug: agencies.slug })
+    .from(agencies)
+    .where(eq(agencies.id, context.agencyId))
+    .limit(1);
+  if (!agency) {
+    return NextResponse.json(
+      { error: "Agency not found." },
+      { status: 500, headers: mutatingApiHeaders() },
+    );
+  }
   const state = randomBytes(32).toString("hex");
   const stateDigest = createHash("sha256").update(state).digest("hex");
-  const returnPath = `/app/w/${workspace.slug}/channels`;
+  const returnPath = `${workspaceBasePath(agency.slug, workspace.slug)}/channels`;
   if (!CHANNELS_PATH.test(returnPath)) {
     return NextResponse.json(
       { error: "Invalid return path." },
@@ -121,17 +133,6 @@ export async function POST(req: NextRequest) {
   // at `/api/social/tiktok/callback/[agencySlug]` resolves the
   // agency from the URL and asserts the state's workspaceId
   // belongs to that agency.
-  const [agency] = await db
-    .select({ slug: agencies.slug })
-    .from(agencies)
-    .where(eq(agencies.id, context.agencyId))
-    .limit(1);
-  if (!agency) {
-    return NextResponse.json(
-      { error: "Agency not found." },
-      { status: 500, headers: mutatingApiHeaders() },
-    );
-  }
   const callbackUrl = buildPerAgencyCallbackUrl("tiktok", agency.slug);
 
   const url = buildTikTokAuthorizationUrl({

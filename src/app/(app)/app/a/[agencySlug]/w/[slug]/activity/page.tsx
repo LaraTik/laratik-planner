@@ -206,8 +206,11 @@ export default async function WorkspaceActivityPage({
   );
 
   const [feed, counts] = await Promise.all([
-    listWorkspaceActivity({ id: workspace.id, slug: workspace.slug }, serviceFilters),
-    listWorkspaceActivityCounts({ id: workspace.id, slug: workspace.slug }, countFilters),
+    listWorkspaceActivity({ id: workspace.id, slug: workspace.slug, agencySlug }, serviceFilters),
+    listWorkspaceActivityCounts(
+      { id: workspace.id, slug: workspace.slug, agencySlug },
+      countFilters,
+    ),
   ]);
 
   const rows = feed.rows;
