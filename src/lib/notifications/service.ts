@@ -3,6 +3,7 @@ import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
 import { db } from "@/lib/db";
 import {
+  agencies,
   notifications,
   notificationPreferences,
   notificationEmailDeliveries,
@@ -12,6 +13,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import { type Actor } from "@/lib/auth/policy";
+import { workspaceBasePath } from "@/lib/urls";
 import { sendEmail } from "@/lib/email";
 import { tFor } from "@/messages";
 import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
@@ -820,7 +822,7 @@ function defaultBodyFor(kind: NotificationKind): string {
  * bell click lands the user on the planning detail page (or the
  * `#hash` anchor when provided).
  *
- *   /app/w/<slug>/planning/<contentItemId>[#hash]
+ *   /app/a/<agencySlug>/w/<slug>/planning/<contentItemId>[#hash]
  *
  * `workspaceIdentifier` may be either the workspace UUID or the
  * workspace slug — most call sites pass the UUID they already have
@@ -854,16 +856,28 @@ export async function buildActionUrlForContentItem(
   const workspaceWhere = isUuid(workspaceIdentifier)
     ? eq(workspaces.id, workspaceIdentifier)
     : eq(workspaces.slug, workspaceIdentifier);
+  // Join the owning agency so the URL can carry the agency segment. The
+  // canonical `/app/a/<agencySlug>/w/<slug>` shape is the only one that is
+  // self-describing: a workspace slug is unique per agency, not globally, so
+  // the legacy `/app/w/<slug>` form meant "whichever agency the reader
+  // currently has active" — the cross-tenant ambiguity documented in
+  // `src/lib/urls.ts`. This is a join, not an extra round-trip, which matters
+  // because some callers run inside a transaction.
   const [row] = await runner
-    .select({ id: workspaces.id, slug: workspaces.slug })
+    .select({
+      id: workspaces.id,
+      slug: workspaces.slug,
+      agencySlug: agencies.slug,
+    })
     .from(workspaces)
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(workspaceWhere)
     .limit(1);
   if (!row) {
     return "/app";
   }
   const fragment = hash ? `#${hash}` : "";
-  return `/app/w/${row.slug}/planning/${contentItemId}${fragment}`;
+  return `${workspaceBasePath(row.agencySlug, row.slug)}/planning/${contentItemId}${fragment}`;
 }
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;

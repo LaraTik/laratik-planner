@@ -16,7 +16,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
  *
  * The fix introduced `buildActionUrlForContentItem` in
  * `src/lib/notifications/service.ts` so the bell click lands the
- * user on `/app/w/<slug>/planning/<id>` (the real App Router
+ * user on `/app/a/<agencySlug>/w/<slug>/planning/<id>` (the real App Router
  * segment) instead of the broken `/app/planning/<id>` literal that
  * caused the React #441 error boundary in
  * `src/app/(app)/error.tsx` to surface.
@@ -134,7 +134,7 @@ async function seedWorkspaceAndContentItem() {
     })
     .returning();
   if (!mediaAsset) throw new Error("media asset seed failed");
-  return { workspace, contentItem, manager, mediaAsset };
+  return { workspace, contentItem, manager, mediaAsset, agencySlug: agency.slug };
 }
 
 describe("buildActionUrlForContentItem (helper URL shape)", () => {
@@ -155,36 +155,40 @@ describe("buildActionUrlForContentItem (helper URL shape)", () => {
     `);
   });
 
-  it("returns /app/w/<slug>/planning/<id> when the workspace exists (UUID lookup)", async () => {
-    const { workspace, contentItem } = await seedWorkspaceAndContentItem();
+  it("returns the canonical agency-qualified URL when the workspace exists (UUID lookup)", async () => {
+    const { workspace, contentItem, agencySlug } = await seedWorkspaceAndContentItem();
     const url = await service.buildActionUrlForContentItem(workspace.id, contentItem.id, null);
-    expect(url).toBe(`/app/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`);
+    expect(url).toBe(`/app/a/${agencySlug}/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`);
   });
 
   it("accepts a slug in place of a UUID and resolves the same row", async () => {
-    const { contentItem } = await seedWorkspaceAndContentItem();
+    const { contentItem, agencySlug } = await seedWorkspaceAndContentItem();
     const url = await service.buildActionUrlForContentItem(WORKSPACE_SLUG, contentItem.id, null);
-    expect(url).toBe(`/app/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`);
+    expect(url).toBe(`/app/a/${agencySlug}/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`);
   });
 
   it("appends the #publishing hash when hash is 'publishing'", async () => {
-    const { workspace, contentItem } = await seedWorkspaceAndContentItem();
+    const { workspace, contentItem, agencySlug } = await seedWorkspaceAndContentItem();
     const url = await service.buildActionUrlForContentItem(
       workspace.id,
       contentItem.id,
       "publishing",
     );
-    expect(url).toBe(`/app/w/${WORKSPACE_SLUG}/planning/${contentItem.id}#publishing`);
+    expect(url).toBe(
+      `/app/a/${agencySlug}/w/${WORKSPACE_SLUG}/planning/${contentItem.id}#publishing`,
+    );
   });
 
   it("appends the #discussion hash when hash is 'discussion'", async () => {
-    const { workspace, contentItem } = await seedWorkspaceAndContentItem();
+    const { workspace, contentItem, agencySlug } = await seedWorkspaceAndContentItem();
     const url = await service.buildActionUrlForContentItem(
       workspace.id,
       contentItem.id,
       "discussion",
     );
-    expect(url).toBe(`/app/w/${WORKSPACE_SLUG}/planning/${contentItem.id}#discussion`);
+    expect(url).toBe(
+      `/app/a/${agencySlug}/w/${WORKSPACE_SLUG}/planning/${contentItem.id}#discussion`,
+    );
   });
 
   it("returns /app when the workspace row is missing", async () => {
@@ -259,14 +263,15 @@ describe("notification actionUrl writers — fix regression", () => {
     expect(offenders).toEqual([]);
   });
 
-  it("the delivery fan-out stores a /app/w/<slug>/planning/<id> URL on the inserted notification row", async () => {
+  it("the delivery fan-out stores a canonical agency-qualified URL on the inserted notification row", async () => {
     // The delivery service is the bug's smoking gun: it called
     // enqueueDeliveryNotification without actionUrl, so the row
     // always picked up the broken /app/planning/<id> fallback.
     // The fix threads a slug-based URL through. We assert the
     // resulting notification row by reading the outbox payload
     // (the enqueue → dispatch path runs out-of-band).
-    const { workspace, contentItem, manager, mediaAsset } = await seedWorkspaceAndContentItem();
+    const { workspace, contentItem, manager, mediaAsset, agencySlug } =
+      await seedWorkspaceAndContentItem();
     // Make the manager a designer in the workspace so the policy
     // gate inside `submitDelivery` allows the call.
     const [membership] = await db
@@ -304,6 +309,8 @@ describe("notification actionUrl writers — fix regression", () => {
       .where(sql`${schema.outboxEvents.eventType} = 'delivery'`)
       .limit(1);
     const payload = outbox[0]?.payload as Record<string, unknown> | undefined;
-    expect(payload?.actionUrl).toBe(`/app/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`);
+    expect(payload?.actionUrl).toBe(
+      `/app/a/${agencySlug}/w/${WORKSPACE_SLUG}/planning/${contentItem.id}`,
+    );
   });
 });

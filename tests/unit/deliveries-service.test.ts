@@ -415,7 +415,9 @@ describe("submitDelivery", () => {
         internalCreativeReviewerId: "reviewer-1",
       },
     ]); // notification metadata
-    dbMock.state.selectResults.push([{ id: "workspace-1", slug: "acme" }]); // action URL
+    dbMock.state.selectResults.push([
+      { id: "workspace-1", slug: "acme", agencySlug: "acme-agency" },
+    ]); // action URL
     dbMock.state.insertReturningIds.push({ id: "v-1" }, { id: "outbox-1" }, { id: "outbox-2" });
 
     const result = await submitDelivery(actor, input);
@@ -430,7 +432,7 @@ describe("submitDelivery", () => {
       deliveryNotifications.every(
         (call) =>
           (call.values as { payload?: { actionUrl?: string } }).payload?.actionUrl ===
-          `/app/w/acme/planning/${contentItemId}`,
+          `/app/a/acme-agency/w/acme/planning/${contentItemId}`,
       ),
     ).toBe(true);
   });
