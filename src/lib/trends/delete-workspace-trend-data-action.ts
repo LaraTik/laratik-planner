@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import {
   securityAuditEvents,
   trendBoards,
@@ -299,5 +300,7 @@ export async function deleteWorkspaceTrendDataAction(
   }
 
   revalidatePath("/app");
-  redirect(`/app/w/${workspaceSlug}/settings?trend_data_deleted=1`);
+  redirect(
+    `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/settings?trend_data_deleted=1`,
+  );
 }

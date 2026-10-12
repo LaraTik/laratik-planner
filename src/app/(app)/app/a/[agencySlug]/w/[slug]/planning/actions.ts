@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { PermissionDeniedError } from "@/lib/auth/policy";
 import { getAccessibleWorkspace, getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
+import { workspaceBasePath } from "@/lib/urls";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import {
@@ -189,7 +190,7 @@ export async function quickCreateAction(
   } catch (error) {
     return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
   }
-  redirect(`/app/w/${workspaceSlug}/planning/${id}?created=1`);
+  redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1`);
 }
 
 // ─── Update content item ──────────────────────────────────────────────
@@ -199,7 +200,7 @@ export async function updateContentItemAction(
   _prev: unknown,
   formData: FormData,
 ): Promise<ActionState<UpdateContentFields>> {
-  const { actor } = await requireWorkspaceContext(workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   const channelIdsRaw = formData.getAll("channelIds").map(String);
   const parsed = UpdateContentSchema.safeParse({
     title: formData.get("title"),
@@ -223,7 +224,7 @@ export async function updateContentItemAction(
   } catch (error) {
     return actionFailure<UpdateContentFields>(error, "The idea could not be saved.");
   }
-  redirect(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
+  redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${contentItemId}`);
 }
 
 // ─── Apply AI draft ───────────────────────────────────────────────────
@@ -396,7 +397,9 @@ export async function batchCreateAction(
   } catch (error) {
     return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
   }
-  redirect(`/app/w/${workspaceSlug}/planning?batchCreated=${parsed.data.items.length}`);
+  redirect(
+    `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning?batchCreated=${parsed.data.items.length}`,
+  );
 }
 
 // ─── Workflow transition ──────────────────────────────────────────────

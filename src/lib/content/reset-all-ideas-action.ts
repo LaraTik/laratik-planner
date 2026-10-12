@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import { contentItems, securityAuditEvents, activityEvents } from "@/lib/db/schema";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
@@ -312,7 +313,7 @@ export async function resetAllIdeasAction(
 
   // Refresh everything that depends on the workspace's idea count.
   revalidatePath(`/app`);
-  redirect(`/app/w/${workspaceSlug}/planning?reset=bulk`);
+  redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning?reset=bulk`);
 }
 
 class NoOpSentinel extends Error {

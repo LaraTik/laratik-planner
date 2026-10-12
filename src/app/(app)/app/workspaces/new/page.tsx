@@ -5,6 +5,7 @@ import { isAgencyAdmin, PermissionDeniedError } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import {
   agencies,
   users,
@@ -73,7 +74,7 @@ async function createWorkspaceAction(formData: FormData) {
     await reserveCapacity(tx, agencyId, [{ resource: "workspaces", increase: 1 }]);
     // Ensure the current user is agency member + admin
     const [agency] = await tx
-      .select({ id: agencies.id })
+      .select({ id: agencies.id, slug: agencies.slug })
       .from(agencies)
       .where(eq(agencies.id, agencyId))
       .limit(1);
@@ -107,12 +108,19 @@ async function createWorkspaceAction(formData: FormData) {
       role: "workspace_manager",
     });
 
-    return { workspaceId: created!.id, slug: created!.slug };
+    // The agency SLUG comes from this transaction's own read of the agency
+    // row, not from the active-agency context outside it — so the redirect
+    // below is built from the agency the workspace was actually created in.
+    return {
+      workspaceId: created!.id,
+      slug: created!.slug,
+      agencySlug: agency!.slug,
+    };
   });
 
   revalidatePath("/app/workspaces");
 
-  redirect(`/app/w/${result.slug}`);
+  redirect(workspaceBasePath(result.agencySlug, result.slug));
 }
 
 export default async function NewWorkspacePage() {

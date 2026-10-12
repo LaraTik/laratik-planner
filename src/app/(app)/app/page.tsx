@@ -13,7 +13,8 @@ import {
 import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { contentItems, workspaces } from "@/lib/db/schema";
+import { workspaceBasePath } from "@/lib/urls";
+import { agencies, contentItems, workspaces } from "@/lib/db/schema";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -87,6 +88,10 @@ export default async function MyWorkPage() {
       plannedPublishAt: contentItems.plannedPublishAt,
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      // The My Work list spans workspaces that may belong to DIFFERENT
+      // agencies, so the agency cannot come from a surrounding scope — it is
+      // per-row data. Without it every link here would be tenant-ambiguous.
+      workspaceAgencySlug: agencies.slug,
       workspaceTimezone: workspaces.timezone,
       ownerId: contentItems.contentOwnerId,
       designerId: contentItems.designerId,
@@ -96,6 +101,7 @@ export default async function MyWorkPage() {
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(
       and(
         eq(workspaces.agencyId, activeAgencyId),
@@ -269,7 +275,7 @@ export default async function MyWorkPage() {
                 {needsAttention.map((item) => (
                   <ListItem
                     key={item.id}
-                    href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+                    href={`${workspaceBasePath(item.workspaceAgencySlug, item.workspaceSlug)}/planning/${item.id}`}
                     leading={<FileText className="text-fg-muted h-4 w-4" aria-hidden="true" />}
                     title={item.title}
                     meta={
@@ -303,7 +309,7 @@ export default async function MyWorkPage() {
                 {upcoming.map((item) => (
                   <ListItem
                     key={item.id}
-                    href={`/app/w/${item.workspaceSlug}/planning/${item.id}`}
+                    href={`${workspaceBasePath(item.workspaceAgencySlug, item.workspaceSlug)}/planning/${item.id}`}
                     density="compact"
                     title={item.title}
                     meta={
