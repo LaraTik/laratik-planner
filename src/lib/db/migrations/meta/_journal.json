@@ -498,6 +498,13 @@
       "when": 1791293825680,
       "tag": "0070_happy_talon",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1791800640806,
+      "tag": "0071_canonical_notification_action_urls",
+      "breakpoints": true
     }
   ]
 }

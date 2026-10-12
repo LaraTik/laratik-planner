@@ -241,7 +241,6 @@ async function updateAgencyIdentity(
 
     revalidatePath("/app/agency-settings");
     revalidatePath(`/app/platform/agencies/${agencyId}`);
-    revalidatePath(`/app/w/[slug]/settings`, "page");
     return { agencyId, changedFields };
   });
 }

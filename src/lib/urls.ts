@@ -134,6 +134,13 @@ export function parseLegacyWorkspacePath(pathname: string): ParsedLegacyWorkspac
  *
  * The ONLY sanctioned use of the legacy shape: the redirect that keeps old
  * bookmarks and previously-shared links working. Never link to this form.
+ *
+ * This is enforced, not merely conventional: `workspaceBasePath` is the only
+ * sanctioned way to build a workspace URL, and
+ * `tests/unit/read-path-fanout-guard.test.ts` fails if a navigation context in
+ * the converted surfaces emits `/app/w/` again. The legacy shape was also
+ * being persisted — into `notification.action_url` — which is why migration
+ * 0071 exists to rewrite those rows.
  */
 export function legacyToCanonicalHref(
   legacyPathname: string,

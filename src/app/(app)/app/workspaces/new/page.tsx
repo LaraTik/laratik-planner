@@ -111,7 +111,6 @@ async function createWorkspaceAction(formData: FormData) {
   });
 
   revalidatePath("/app/workspaces");
-  revalidatePath(`/app/w/${result.slug}`);
 
   redirect(`/app/w/${result.slug}`);
 }

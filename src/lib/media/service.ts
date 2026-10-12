@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
@@ -75,6 +76,50 @@ type ListInput = {
   pageSize?: number;
   limit?: number;
 };
+
+/**
+ * The one accessible-folder read, shared by `listMediaFolders` and
+ * `listMediaFoldersTree`.
+ *
+ * WHY THIS EXISTS
+ *
+ * Both public helpers take the same `{ agencyId, workspaceId }` and issued a
+ * byte-identical `select … from media_folders` with the same filter and
+ * ordering — but each ran it independently, and each re-ran the uncached
+ * `accessibleWorkspaceIds` check (itself ~3 queries) first. Two media pages
+ * call both helpers for the same workspace, so a single page render paid
+ * roughly double.
+ *
+ * `cache()` makes the second caller free within a request. It is request-
+ * scoped, not cross-request, so this cannot serve stale folders — the same
+ * guarantee `getWorkspaceRoles` in `lib/auth/policy.ts` already relies on.
+ *
+ * The projection is `select()` (all columns) on purpose: the folders API
+ * route returns these rows straight to the client as JSON, so narrowing the
+ * shared projection would silently change that response shape. The tree
+ * builder simply reads the four columns it needs out of the wider row.
+ *
+ * Returns `null` when the actor cannot access the workspace — distinct from
+ * an accessible workspace that happens to have no folders (empty array), so
+ * callers keep their existing "return []" behaviour.
+ */
+const fetchAccessibleMediaFolders = cache(
+  async (actor: Actor, agencyId: string, workspaceId: string) => {
+    const accessible = await accessibleWorkspaceIds(actor, agencyId);
+    if (!accessible.includes(workspaceId)) return null;
+    return db
+      .select()
+      .from(mediaFolders)
+      .where(
+        and(
+          eq(mediaFolders.agencyId, agencyId),
+          eq(mediaFolders.workspaceId, workspaceId),
+          isNull(mediaFolders.archivedAt),
+        ),
+      )
+      .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
+  },
+);
 
 async function accessibleWorkspaceIds(actor: Actor, agencyId: string): Promise<string[]> {
   if (await isAgencyAdmin(actor, agencyId)) {
@@ -1079,19 +1124,7 @@ export async function listMediaFolders(
   actor: Actor,
   input: { agencyId: string; workspaceId: string },
 ) {
-  const accessible = await accessibleWorkspaceIds(actor, input.agencyId);
-  if (!accessible.includes(input.workspaceId)) return [];
-  return db
-    .select()
-    .from(mediaFolders)
-    .where(
-      and(
-        eq(mediaFolders.agencyId, input.agencyId),
-        eq(mediaFolders.workspaceId, input.workspaceId),
-        isNull(mediaFolders.archivedAt),
-      ),
-    )
-    .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
+  return (await fetchAccessibleMediaFolders(actor, input.agencyId, input.workspaceId)) ?? [];
 }
 
 export async function createMediaFolder(
@@ -1753,34 +1786,34 @@ export async function ensureBrandMediaFolderPath(input: {
  * `{Format}`, `{YYYY}`, `{MM}`) so the tree can render them with a
  * subtle shield badge and the info-audit panel.
  */
+/**
+ * `preloadedFolders` lets a caller that ALREADY has the workspace's folder
+ * rows (e.g. it called `listMediaFolders` moments earlier to build a filter
+ * list) hand them over instead of paying for the read twice.
+ *
+ * This exists because `cache()` alone is not sufficient to guarantee it:
+ * React's request-scoped cache only memoises inside an active Next.js
+ * request scope, so the dedupe silently evaporates in a plain Node caller
+ * and is unobservable from a test. Passing the rows makes the saving
+ * explicit and verifiable instead of framework-dependent.
+ *
+ * Both "no folders" and "no access" collapse to `[]`, which is what this
+ * function returns for each of those cases anyway.
+ */
 export async function listMediaFoldersTree(
   actor: Actor,
   input: { agencyId: string; workspaceId: string },
+  preloadedFolders?: Awaited<ReturnType<typeof fetchAccessibleMediaFolders>>,
 ): Promise<MediaFolderTreeRow[]> {
-  const accessible = await accessibleWorkspaceIds(actor, input.agencyId);
-  if (!accessible.includes(input.workspaceId)) return [];
-
   // Pull every non-archived folder in one round-trip; classify kind
   // on the application side because Drizzle's pg-core doesn't model
-  // recursive trees.
-  const folders = await db
-    .select({
-      id: mediaFolders.id,
-      name: mediaFolders.name,
-      parentId: mediaFolders.parentId,
-      sortOrder: mediaFolders.sortOrder,
-    })
-    .from(mediaFolders)
-    .where(
-      and(
-        eq(mediaFolders.agencyId, input.agencyId),
-        eq(mediaFolders.workspaceId, input.workspaceId),
-        isNull(mediaFolders.archivedAt),
-      ),
-    )
-    .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
-
-  if (folders.length === 0) return [];
+  // recursive trees. Shares `fetchAccessibleMediaFolders` with
+  // `listMediaFolders`, so the access check and this read run once per
+  // workspace per request rather than once per caller.
+  const folders =
+    preloadedFolders ??
+    (await fetchAccessibleMediaFolders(actor, input.agencyId, input.workspaceId));
+  if (!folders || folders.length === 0) return [];
 
   // Build a child map for descendant traversal.
   const byParent = new Map<string | null, typeof folders>();

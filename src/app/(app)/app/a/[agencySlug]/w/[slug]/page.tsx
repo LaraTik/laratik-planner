@@ -31,6 +31,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { getCommandCenterSnapshot } from "@/lib/social/command-center-snapshot";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Workspace Overview — refactored dashboard (ADR-0007).
@@ -258,7 +259,7 @@ export default async function WorkspaceOverviewPage({
   // so drilling into the planning list shows the same period.
   const monthQuery = `${year}-${String(month + 1).padStart(2, "0")}`;
   const commandCenterWindowHref = (days: 30 | 90) =>
-    `/app/w/${slug}?month=${monthQuery}&socialWindow=${days}`;
+    `${workspaceBasePath(agencySlug, slug)}?month=${monthQuery}&socialWindow=${days}`;
   const buildPlanningHref = (overrides: Record<string, string | null>) => {
     const params = new URLSearchParams();
     params.set("month", monthQuery);
@@ -266,7 +267,7 @@ export default async function WorkspaceOverviewPage({
       if (v === null) params.delete(k);
       else params.set(k, v);
     }
-    return `/app/w/${slug}/planning?${params.toString()}`;
+    return `${workspaceBasePath(agencySlug, slug)}/planning?${params.toString()}`;
   };
 
   const kpiTiles = [
@@ -343,7 +344,7 @@ export default async function WorkspaceOverviewPage({
     const target = new Date(year, month + offset, 1);
     const y = target.getFullYear();
     const m = String(target.getMonth() + 1).padStart(2, "0");
-    return `/app/w/${slug}?month=${y}-${m}`;
+    return `${workspaceBasePath(agencySlug, slug)}?month=${y}-${m}`;
   };
   const isCurrentMonth = year === zonedNow.getFullYear() && month === zonedNow.getMonth();
   const previousMonthLabel = formatDate(new Date(year, month - 1, 1), code, {
@@ -401,20 +402,20 @@ export default async function WorkspaceOverviewPage({
             </Link>
             {!isCurrentMonth ? (
               <Link
-                href={`/app/w/${slug}`}
+                href={`${workspaceBasePath(agencySlug, slug)}`}
                 className="text-label text-primary inline-flex min-h-9 items-center rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
               >
                 {t("workspaceOverview.today")}
               </Link>
             ) : null}
             <Button variant="outline" asChild>
-              <Link href={`/app/w/${slug}/planning/batch`}>
+              <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/batch`}>
                 <ListChecks className="h-4 w-4" aria-hidden="true" />
                 {t("workspaceOverview.batchAdd")}
               </Link>
             </Button>
             <Button asChild>
-              <Link href={`/app/w/${slug}/planning/new`}>
+              <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/new`}>
                 <Plus className="h-4 w-4" aria-hidden="true" />
                 {t("workspaceOverview.createContent")}
               </Link>
@@ -429,7 +430,7 @@ export default async function WorkspaceOverviewPage({
         approachingCount={approachingCount}
         approvalsCount={approvalRows.length}
         reviewHref={buildPlanningHref({ risk: "at_risk" })}
-        approvalsHref={`/app/w/${slug}/reviews`}
+        approvalsHref={`${workspaceBasePath(agencySlug, slug)}/reviews`}
         t={t}
       />
 
@@ -438,10 +439,10 @@ export default async function WorkspaceOverviewPage({
         summary={commandCenter}
         locale={code}
         timezone={ws.timezone}
-        analyticsHref={`/app/w/${slug}/analytics/social`}
-        researchHref={`/app/w/${slug}/research`}
-        channelsHref={`/app/w/${slug}/channels`}
-        planningHref={`/app/w/${slug}/planning`}
+        analyticsHref={`${workspaceBasePath(agencySlug, slug)}/analytics/social`}
+        researchHref={`${workspaceBasePath(agencySlug, slug)}/research`}
+        channelsHref={`${workspaceBasePath(agencySlug, slug)}/channels`}
+        planningHref={`${workspaceBasePath(agencySlug, slug)}/planning`}
         workspaceSlug={slug}
         canRefresh={canRefreshSocial}
         savedResearchObservationIds={new Set(researchBookmarkRows.map((row) => row.observationId))}
@@ -633,8 +634,8 @@ export default async function WorkspaceOverviewPage({
           monthPhase={monthPhase}
           total={dashboard.total}
           monthlyTarget={dashboard.monthlyTarget}
-          createHref={`/app/w/${slug}/planning/new`}
-          settingsHref={`/app/w/${slug}/settings`}
+          createHref={`${workspaceBasePath(agencySlug, slug)}/planning/new`}
+          settingsHref={`${workspaceBasePath(agencySlug, slug)}/settings`}
           t={t}
         />
       ) : (
@@ -655,7 +656,7 @@ export default async function WorkspaceOverviewPage({
                 </p>
               </div>
               <Link
-                href={`/app/w/${slug}/planning`}
+                href={`${workspaceBasePath(agencySlug, slug)}/planning`}
                 className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
               >
                 {t("workspaceOverviewDashboard.commandCenter.goToPlanning")}
@@ -678,7 +679,7 @@ export default async function WorkspaceOverviewPage({
                     label: t(`workspaceOverviewDashboard.formatLabels.${entry.format}`),
                   }))}
                   buildFormatHref={formatHref}
-                  settingsHref={`/app/w/${slug}/settings`}
+                  settingsHref={`${workspaceBasePath(agencySlug, slug)}/settings`}
                   t={t}
                 />
               </div>
@@ -733,7 +734,7 @@ export default async function WorkspaceOverviewPage({
                 items={dashboard.recentlyUpdated}
                 workspaceSlug={slug}
                 viewAllHref={buildPlanningHref({ status: null, risk: null })}
-                createHref={`/app/w/${slug}/planning/new`}
+                createHref={`${workspaceBasePath(agencySlug, slug)}/planning/new`}
                 t={t}
                 locale={code}
               />

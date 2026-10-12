@@ -106,7 +106,6 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
     revalidatePath(
       `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
     );
-    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
     return { ok: true as const, payload: result };
   } catch (e) {
     if (e instanceof PlatformPayloadError) {
@@ -194,7 +193,6 @@ export async function savePublishPackageBatchAction(input: z.input<typeof BatchP
     revalidatePath(
       `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
     );
-    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
     return result.ok
       ? ({
           ok: true as const,
@@ -321,7 +319,6 @@ export async function acknowledgeOverdueScheduleAction(input: z.input<typeof Rea
       summary: "Overdue planned date acknowledged",
       metadata: { acknowledgement: "keep_past_date" },
     });
-    revalidatePath(`/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}`);
     return { ok: true as const };
   } catch {
     return failure("recordNoteFailed");

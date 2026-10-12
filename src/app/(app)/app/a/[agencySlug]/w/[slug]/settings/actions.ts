@@ -80,8 +80,6 @@ export async function updateWorkspaceSettingsAction(
   } catch {
     return { error: "Settings could not be saved. Check your access and selected roles." };
   }
-  revalidatePath(`/app/w/${slug}`);
-  revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
 }
 
@@ -112,9 +110,6 @@ export async function updateMetaPublishingSettingsAction(
   } catch {
     return { error: "save_failed" };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/channels`);
-  revalidatePath(`/app/w/${slug}/planning`);
   return { saved: true };
 }
 
@@ -183,7 +178,6 @@ export async function updateLifecycleSettingsAction(
   } catch {
     return { error: "Settings could not be saved." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
 }
 
@@ -210,7 +204,6 @@ export async function updateLeadTimesSettingsAction(
   } catch {
     return { error: "Settings could not be saved." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
 }
 
@@ -239,7 +232,6 @@ export async function updateDefaultsSettingsAction(
   } catch {
     return { error: "Settings could not be saved." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
 }
 
@@ -264,7 +256,6 @@ export async function updateApprovalsSettingsAction(
   } catch {
     return { error: "Settings could not be saved." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { saved: true };
 }
 

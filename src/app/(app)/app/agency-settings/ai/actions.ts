@@ -68,7 +68,6 @@ export async function saveAiSettingsAction(
     }
     await updateAiFeatureSettings(actor, parsed.data);
     revalidatePath("/app/agency-settings/ai");
-    revalidatePath(`/app/w/[slug]/ai-settings`, "page");
     return { saved: "AI settings saved." };
   } catch (e) {
     return { error: (e as Error).message };

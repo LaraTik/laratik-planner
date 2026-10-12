@@ -1,7 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { redirect } from "next/navigation";
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -300,8 +300,6 @@ export async function resetIdeaAction(
   // Refresh the planning list and bounce the operator back. The
   // `redirect` throws so the rest of the action never runs; that's
   // fine — there's nothing to return.
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${workspaceSlug}`);
   redirect(`/app/w/${workspaceSlug}/planning?reset=1`);
 }
 

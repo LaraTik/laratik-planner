@@ -31,6 +31,7 @@ import { DefaultsForm } from "./_components/defaults-form";
 import { ApprovalsForm } from "./_components/approvals-form";
 import { MetaPublishingForm } from "./_components/meta-publishing-form";
 import { currentActor } from "@/lib/auth/current-actor";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -126,7 +127,7 @@ export default async function WorkspaceSettingsPage({
     values.defaultClientReviewerId,
   ].filter(Boolean).length;
 
-  const wsBase = `/app/w/${slug}/settings`;
+  const wsBase = `${workspaceBasePath(agencySlug, slug)}/settings`;
   const approvalModeLabel =
     values.approvalMode === "simple"
       ? t("settings.approvals.modeSimple.label")
@@ -234,7 +235,7 @@ export default async function WorkspaceSettingsPage({
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Link
-              href={`/app/w/${slug}/settings/templates`}
+              href={`${workspaceBasePath(agencySlug, slug)}/settings/templates`}
               data-testid="settings-browse-presets"
               className="border-border bg-surface hover:bg-surface-subtle text-body text-fg-primary inline-flex items-center gap-2 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
             >

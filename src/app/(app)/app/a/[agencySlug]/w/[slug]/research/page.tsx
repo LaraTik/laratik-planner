@@ -26,6 +26,7 @@ import { ResearchWatchlist } from "@/components/workspace/research-watchlist";
 import { ResearchWatchlists } from "@/components/workspace/research-watchlists";
 import { ResearchTeardownPanel } from "@/components/workspace/research-teardown-panel";
 import { ResearchCollections } from "@/components/workspace/research-collections";
+import { workspaceBasePath } from "@/lib/urls";
 
 function formatNumber(value: number | null, locale: string) {
   return value === null
@@ -230,7 +231,7 @@ export default async function ResearchPage({
         description={t("research.description")}
         action={
           <Button variant="outline" asChild>
-            <Link href={`/app/w/${slug}`}>
+            <Link href={`${workspaceBasePath(agencySlug, slug)}`}>
               {t("workspaceOverviewDashboard.commandCenter.title")}
             </Link>
           </Button>

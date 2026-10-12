@@ -32,6 +32,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { BrandIdentityHero } from "./brand-identity-hero";
 import { RecentUpdatesTable } from "./recent-updates-table";
 import { getBrandProfile } from "@/lib/brand/profile";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Brand Kit overview — the workspace landing for `/app/w/[slug]/brand-kit`.
@@ -124,7 +125,7 @@ export default async function BrandKitPage({
   const totalAssetCount =
     assetsByKind.logo.length + assetsByKind.color.length + assetsByKind.font.length;
 
-  const wsBase = `/app/w/${slug}/brand-kit`;
+  const wsBase = `${workspaceBasePath(agencySlug, slug)}/brand-kit`;
 
   return (
     <div className="space-y-6" data-testid="brand-kit-overview">
@@ -155,7 +156,7 @@ export default async function BrandKitPage({
             </Button>
             <Button variant="outline" asChild>
               <a
-                href={`/app/w/${slug}/brand-kit/templates`}
+                href={`${workspaceBasePath(agencySlug, slug)}/brand-kit/templates`}
                 data-testid="brand-kit-browse-templates"
               >
                 <Sparkles className="h-4 w-4" aria-hidden="true" />

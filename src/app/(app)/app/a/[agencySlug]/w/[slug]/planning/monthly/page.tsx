@@ -13,6 +13,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { createMonthlySessionAction } from "./actions";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -69,7 +70,7 @@ export default async function MonthlyPlanningPage({
         description={t("monthlyPlanning.description")}
         action={
           <Button asChild>
-            <Link href={`/app/w/${slug}/planning/batch`}>
+            <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/batch`}>
               <Plus className="h-4 w-4" aria-hidden="true" />
               {t("monthlyPlanning.openBatch")}
             </Link>
@@ -114,7 +115,7 @@ export default async function MonthlyPlanningPage({
             sessions.map((item) => (
               <Link
                 key={item.id}
-                href={`/app/w/${slug}/planning/monthly/${item.id}`}
+                href={`${workspaceBasePath(agencySlug, slug)}/planning/monthly/${item.id}`}
                 className="hover:bg-surface-subtle focus-visible:ring-focus-ring flex min-h-14 cursor-pointer items-center justify-between gap-3 px-5 py-3 focus:outline-none focus-visible:ring-2"
               >
                 <span>

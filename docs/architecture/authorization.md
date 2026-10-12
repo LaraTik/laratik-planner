@@ -70,6 +70,16 @@ Platform implementation:
   workspace id. Prefer the batch whenever the question is a set question; see
   [`app-shell-performance.md`](app-shell-performance.md).
 
+  **This is a requirement, not a preference.** Any UI that filters a _list_ of
+  workspaces by role must read the batched index, not call
+  `canAccessInternalWorkspace` / `canAccessClientWorkspace` /
+  `hasWorkspaceRole` once per row: each call is ~3 queries and the cost grows
+  with the agency's workspace count. Calling them once for a single workspace
+  is fine — that is not a fan-out. `tests/unit/read-path-fanout-guard.test.ts`
+  enforces the distinction by looking for the helper inside a `.map(async …)`
+  body, and allowlists `lib/content/service.ts` with its reason (six fixed
+  workflow roles against one workspace).
+
 The asymmetry: an actor with **no** platform role and **no** agency
 membership can still sign in (the NextAuth flow runs before any tenant
 check), but every request that hits an authorized route returns `404` (for

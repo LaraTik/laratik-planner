@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { and, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
@@ -50,7 +50,6 @@ export async function createChannelAction(slug: string, _previous: unknown, form
     if (error instanceof LimitExceededError) return { error: error.message };
     throw error;
   }
-  revalidatePath(`/app/w/${slug}/channels`);
   return { success: true };
 }
 
@@ -89,7 +88,6 @@ export async function archiveChannelAction(
       `social_profiles:${channel.platform}`,
     ]);
   });
-  revalidatePath(`/app/w/${slug}/channels`);
   return {};
 }
 
@@ -141,7 +139,6 @@ export async function updateChannelAction(
       updatedAt: new Date(),
     })
     .where(and(eq(socialChannels.id, channelId), eq(socialChannels.workspaceId, workspace.id)));
-  revalidatePath(`/app/w/${slug}/channels`);
   return { success: true };
 }
 
@@ -248,7 +245,6 @@ export async function finalizeMetaSelectionAction(
           .where(eq(socialChannels.id, childChannelId));
       }
       await setConnectionStatus(tx, parsed.data.connectionId, "active");
-      revalidatePath(`/app/w/${slug}/channels`);
       return { success: true as const, linked };
     });
   } catch (err) {
@@ -275,7 +271,6 @@ export async function disconnectChannelAction(slug: string, channelId: string) {
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return { error: "Workspace manager access is required." };
   await disconnectProfile(db, workspace.id, channelId);
-  revalidatePath(`/app/w/${slug}/channels`);
   return { success: true };
 }
 
@@ -316,7 +311,6 @@ export async function testChannelConnectionAction(slug: string, channelId: strin
 
   const result = await runChannelTest(channelId);
   if (result.ok) {
-    revalidatePath(`/app/w/${slug}/channels`);
     // 2026-08-28: also revalidate the analytics path. The cron's
     // markSyncSuccess clears `lastSyncErrorCode` to null on success
     // — without this revalidation, the analytics page would keep
@@ -325,7 +319,6 @@ export async function testChannelConnectionAction(slug: string, channelId: strin
     // but "last sync failed: ..." on the banner, because the two
     // fields live on the same row but the analytics page was
     // serving a stale render).
-    revalidatePath(`/app/w/${slug}/analytics/social`);
     return { success: true, lastSyncedAt: result.lastSyncedAt.toISOString() } as const;
   }
   return { errorCode: result.errorCode } as const;
@@ -368,9 +361,6 @@ export async function refreshWorkspaceSocialDataAction(slug: string) {
     else failed += 1;
   }
 
-  revalidatePath(`/app/w/${slug}`);
-  revalidatePath(`/app/w/${slug}/analytics/social`);
-  revalidatePath(`/app/w/${slug}/channels`);
   return { success: failed === 0, synced, failed } as const;
 }
 
@@ -389,6 +379,5 @@ export async function revokeConnectionAction(slug: string, connectionId: string)
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return { error: "Workspace manager access is required." };
   await revokeConnectionAndDetach(db, workspace.id, connectionId);
-  revalidatePath(`/app/w/${slug}/channels`);
   return { success: true };
 }

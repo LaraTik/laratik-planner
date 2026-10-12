@@ -118,7 +118,7 @@ describe("planning page empty-state structure (UX-04)", () => {
 
   it("links the Clear filters button to the unfiltered month URL", () => {
     expect(source).toMatch(
-      /href=\{`\/app\/w\/\$\{slug\}\/planning\?month=\$\{monthParam\(0\)\}`\}[\s\S]*?data-testid="planning-empty-clear-filters"/,
+      /href=\{`\$\{workspaceBasePath\(agencySlug, slug\)\}\/planning\?month=\$\{monthParam\(0\)\}`\}[\s\S]*?data-testid="planning-empty-clear-filters"/,
     );
   });
 });

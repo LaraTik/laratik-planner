@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { createMonthlyPlanningSession } from "@/lib/ai/monthly-planning";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function createMonthlySessionAction(
   agencySlug: string,
@@ -16,5 +17,5 @@ export async function createMonthlySessionAction(
   if (!workspace) redirect("/app");
   const month = String(formData.get("month") ?? "");
   const created = await createMonthlyPlanningSession({ id: session.user.id }, workspace.id, month);
-  redirect(`/app/w/${slug}/planning/monthly/${created.id}`);
+  redirect(`${workspaceBasePath(agencySlug, slug)}/planning/monthly/${created.id}`);
 }

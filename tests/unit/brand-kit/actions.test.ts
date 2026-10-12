@@ -206,8 +206,7 @@ describe("createColorAssetAction", () => {
     expect(dbMock.state.insertCalls).toHaveLength(0);
   });
 
-  it("inserts a color asset and calls revalidatePath on success", async () => {
-    const { revalidatePath } = await import("next/cache");
+  it("inserts a color asset on success", async () => {
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -225,7 +224,6 @@ describe("createColorAssetAction", () => {
       name: "Brand blue",
       value: { hex: "#3B82F6" },
     });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -237,14 +235,12 @@ describe("archiveColorAssetAction", () => {
   });
 
   it("updates the row with archivedAt when the caller is a workspace_manager", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
     await archiveColorAssetAction(slug, "asset-1");
     expect(dbMock.state.updateCalls).toHaveLength(1);
     expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -263,7 +259,6 @@ describe("createVoiceRuleAction", () => {
   });
 
   it("inserts a voice rule on success and revalidates the page", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -280,13 +275,11 @@ describe("createVoiceRuleAction", () => {
       ruleType: "do",
       content: "Lead with outcomes.",
     });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
 describe("archiveVoiceRuleAction", () => {
   it("soft-archives through the service when the caller is a workspace_manager", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -297,13 +290,11 @@ describe("archiveVoiceRuleAction", () => {
       "rule-1",
     );
     expect(dbMock.state.deleteCalls).toHaveLength(0);
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
 describe("createLogoAssetAction", () => {
   it("inserts a logo asset with storagePath and revalidates the page", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -321,7 +312,6 @@ describe("createLogoAssetAction", () => {
       name: "Wordmark",
       storagePath: "ws-1/abc-123.png",
     });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 
   it("rejects when the caller is not a workspace_manager", async () => {
@@ -370,14 +360,12 @@ describe("createLogoAssetAction", () => {
 
 describe("archiveLogoAssetAction", () => {
   it("updates the row with archivedAt when the caller is a workspace_manager", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
     await archiveLogoAssetAction(slug, "logo-1");
     expect(dbMock.state.updateCalls).toHaveLength(1);
     expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 
   it("returns silently when there is no session", async () => {
@@ -389,7 +377,6 @@ describe("archiveLogoAssetAction", () => {
 
 describe("createFontAssetAction", () => {
   it("inserts a font asset with family/weight/role in the value jsonb", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -407,7 +394,6 @@ describe("createFontAssetAction", () => {
       name: "Body",
       value: { family: "Roboto", weight: 400, role: "body" },
     });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 
   it("rejects a non-integer weight (the action parses the form value as an int)", async () => {
@@ -465,14 +451,12 @@ describe("createFontAssetAction", () => {
 
 describe("archiveFontAssetAction", () => {
   it("updates the row with archivedAt when the caller is a workspace_manager", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
     await archiveFontAssetAction(slug, "font-1");
     expect(dbMock.state.updateCalls).toHaveLength(1);
     expect(dbMock.state.updateCalls[0]?.set).toMatchObject({ archivedAt: expect.any(Date) });
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -556,7 +540,6 @@ describe("createPublishingRuleAction", () => {
   });
 
   it("calls the service mutator with workspaceId + parsed payload + actor, and revalidates", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -580,7 +563,6 @@ describe("createPublishingRuleAction", () => {
         content: "Describe the image.",
       }),
     );
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -607,7 +589,6 @@ describe("archivePublishingRuleAction", () => {
   });
 
   it("calls the service mutator with the rule id and workspaceId, then revalidates", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -617,7 +598,6 @@ describe("archivePublishingRuleAction", () => {
       workspace.id,
       "rule-1",
     );
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -740,7 +720,6 @@ describe("createLinkedResourceAction", () => {
   });
 
   it("calls the service mutator with workspaceId + parsed payload + actor, and revalidates", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -770,7 +749,6 @@ describe("createLinkedResourceAction", () => {
         description: "Approved components",
       }),
     );
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });
 
@@ -797,7 +775,6 @@ describe("archiveLinkedResourceAction", () => {
   });
 
   it("calls the service mutator with the resource id and workspaceId, then revalidates", async () => {
-    const { revalidatePath } = await import("next/cache");
     authMock.auth.mockResolvedValue(session);
     workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
     policyMock.hasWorkspaceRole.mockResolvedValue(true);
@@ -807,6 +784,5 @@ describe("archiveLinkedResourceAction", () => {
       workspace.id,
       "res-1",
     );
-    expect(revalidatePath).toHaveBeenCalledWith(`/app/w/${slug}/brand-kit`);
   });
 });

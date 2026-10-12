@@ -16,6 +16,7 @@ import { Clock } from "lucide-react";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
 import { DesignQueueList, type DesignQueueListItem } from "./design-queue-list";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * /ui-ux-pro-max P3.2 — the design queue answers
@@ -83,7 +84,7 @@ export default async function DesignQueuePage({
       title: r.title,
       status: r.status,
       plannedPublishAtIso: r.plannedPublishAt.toISOString(),
-      href: `/app/w/${slug}/planning/${r.id}`,
+      href: `${workspaceBasePath(agencySlug, slug)}/planning/${r.id}`,
       format: r.format,
       briefExcerpt: brief,
       ownerDisplayName: r.contentOwnerId ? (ownerById.get(r.contentOwnerId) ?? null) : null,

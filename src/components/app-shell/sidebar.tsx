@@ -97,7 +97,7 @@ export function Sidebar({
   // Detect workspace context from the URL. The canonical shape is
   // `/app/a/<agencySlug>/w/<workspaceSlug>/*` — both segments are required,
   // because a workspace slug is unique only WITHIN an agency. Building the base
-  // from the parsed path (rather than `/app/w/${slug}`) is what keeps sidebar
+  // from the parsed path (rather than `${workspaceBasePath(agencySlug, slug)}`) is what keeps sidebar
   // navigation on canonical URLs instead of bouncing every click through the
   // legacy redirect. See `src/lib/urls.ts`.
   const parsedWorkspacePath = parseWorkspacePath(pathname);

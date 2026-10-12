@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, gte, inArray, isNull, lte } from "drizzle-orm";
+import { and, desc, eq, getTableColumns, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import {
@@ -701,6 +701,81 @@ export async function listRequestsForAgency(
     .orderBy(desc(supportAccessRequests.createdAt))
     .limit(limit);
   return rows.map((row) => SupportAccessRequestRow.parse(row));
+}
+
+/**
+ * Recent support-access requests for MANY agencies in one query, grouped by
+ * agency.
+ *
+ * WHY THIS EXISTS
+ *
+ * `listRequestsForAgency` is single-agency by contract, which is correct for
+ * the agency-facing surfaces. The platform security overview, though, needs
+ * every agency at once and looped the single-agency helper across them —
+ * one query per agency, i.e. O(number of agencies on the platform). That is a
+ * worse growth axis than the per-workspace fan-outs beside it: it is bounded
+ * by the customer base rather than by one customer's team, and the loop's own
+ * comment ("the list is bounded") described the *result* while the *work*
+ * was not.
+ *
+ * WHY A WINDOW FUNCTION AND NOT A PLAIN `LIMIT`
+ *
+ * A single `ORDER BY created_at DESC LIMIT n` would return the n newest
+ * requests across ALL agencies, starving whichever agencies happen to have
+ * the oldest ones — a silent behaviour change that only shows up once a
+ * second agency has traffic. `row_number() OVER (PARTITION BY target_agency_id
+ * ORDER BY created_at DESC)` applies the cap per agency, inside the database,
+ * which is exactly what looping the single-agency helper produced.
+ *
+ * Agencies with no requests are simply absent from the map, matching the
+ * `filter(row => row.requests.length > 0)` the caller applied. The same
+ * zod validation runs per row, so a malformed row still rejects.
+ */
+export async function listRecentRequestsByAgency(
+  agencyIds: readonly string[],
+  opts: { perAgencyLimit?: number } = {},
+): Promise<Map<string, SupportAccessRequestRow[]>> {
+  const perAgencyLimit = Math.min(Math.max(opts.perAgencyLimit ?? 10, 1), 100);
+  const ids = [...new Set(agencyIds)];
+  const grouped = new Map<string, SupportAccessRequestRow[]>();
+  if (ids.length === 0) return grouped;
+
+  const ranked = db
+    .select({
+      // `getTableColumns` rather than a hand-written list: the zod row schema
+      // requires every column, and an enumeration silently goes stale when a
+      // column is added (it already bit once, on `decisionReason`).
+      ...getTableColumns(supportAccessRequests),
+      rn: sql<number>`row_number() over (partition by ${supportAccessRequests.targetAgencyId} order by ${supportAccessRequests.createdAt} desc)`.as(
+        "rn",
+      ),
+    })
+    .from(supportAccessRequests)
+    .as("ranked_requests");
+
+  const rows = await db
+    .select()
+    .from(ranked)
+    .where(and(inArray(ranked.targetAgencyId, ids), lte(ranked.rn, perAgencyLimit)));
+
+  for (const row of rows) {
+    // Drop the window column before parsing. Done by deleting the key rather
+    // than by destructuring into an unused binding, which lint rightly
+    // rejects — and the zod schema would reject the extra key anyway.
+    const request: Record<string, unknown> = { ...row };
+    delete request.rn;
+    const parsed = SupportAccessRequestRow.parse(request);
+    const existing = grouped.get(parsed.targetAgencyId);
+    if (existing) existing.push(parsed);
+    else grouped.set(parsed.targetAgencyId, [parsed]);
+  }
+  // `row_number()` already caps each partition, but the map is built by
+  // appending, so assert the cap here too rather than trusting the database
+  // expression to stay untouched.
+  for (const requests of grouped.values()) {
+    if (requests.length > perAgencyLimit) requests.length = perAgencyLimit;
+  }
+  return grouped;
 }
 
 export async function listRequestsByPlatformAdmin(

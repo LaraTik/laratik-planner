@@ -25,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
 import { ClientReviewCard } from "./client-review-card";
+import { workspaceBasePath } from "@/lib/urls";
 
 export default async function ClientReviewPortalPage({
   params,
@@ -116,7 +117,7 @@ export default async function ClientReviewPortalPage({
         }
         action={
           <Link
-            href={`/app/w/${slug}/client/calendar`}
+            href={`${workspaceBasePath(agencySlug, slug)}/client/calendar`}
             className="border-border bg-surface text-body hover:bg-surface-subtle inline-flex min-h-11 items-center gap-1 rounded-[var(--radius-control)] border px-3 py-2 font-semibold transition-colors"
           >
             <Calendar className="h-4 w-4" aria-hidden="true" />

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Phase 7 of the planning-detail refactor (2026-08-30):
@@ -44,7 +45,7 @@ export default async function PublishPackageRedirectPage({
           {t("contentDetail.publish.redirectFallbackMessage")}
         </p>
         <Link
-          href={`/app/w/${slug}/planning/${id}`}
+          href={`${workspaceBasePath(agencySlug, slug)}/planning/${id}`}
           className="text-primary underline-offset-4 hover:underline"
         >
           {t("contentDetail.publish.redirectFallbackBack")}
@@ -53,5 +54,5 @@ export default async function PublishPackageRedirectPage({
     );
   }
 
-  redirect(`/app/w/${slug}/planning/${id}#publishing`);
+  redirect(`${workspaceBasePath(agencySlug, slug)}/planning/${id}#publishing`);
 }

@@ -35,6 +35,24 @@ The budget is **a constant, not a per-workspace multiple**. A change that
 introduces a `switcher.options.map(...)` with a query inside it is a
 regression even when it looks correct and passes every behavioural test.
 
+## The same rule applies beyond the shell
+
+The rule is not shell-specific; it is about answering a _set_ question without
+looping. Two other surfaces had the same shape and are now covered:
+
+| Surface                                     | Before                                                    | After   |
+| ------------------------------------------- | --------------------------------------------------------- | ------- |
+| `app/media/page.tsx` role filters           | ~3N (two loops, the second redundant)                     | 3       |
+| `listMediaFolders` + `listMediaFoldersTree` | ~8 per workspace (access check + the same `select` twice) | 4       |
+| Platform security overview                  | 1 per **agency**, platform-wide                           | 1 total |
+
+The platform case is the one worth remembering: its growth axis is the
+**customer base**, not one customer's team. It also carried a comment
+justifying itself as cheap because "every agency has at most a handful of
+recent requests" — which bounded the _result_, while the _work_ stayed linear.
+When a comment explains why something is cheap, check whether it is describing
+the output or the cost.
+
 ## Rules
 
 1. **Never loop a query over `switcher.options`.** Use a set-based helper:
@@ -51,8 +69,15 @@ regression even when it looks correct and passes every behavioural test.
    map was built from.
 4. **Don't generate legacy URLs.** `/app/w/<slug>` is a redirect-only page
    inside the `(app)` route group: routing to it renders the entire shell and
-   discards it. Emit `/app/a/<agencySlug>/w/<slug>` directly. The legacy route
-   exists for inbound bookmarks only.
+   discards it. Emit `/app/a/<agencySlug>/w/<slug>` via `workspaceBasePath`.
+   The legacy route exists for inbound bookmarks only, and `revalidatePath`
+   naming it could never invalidate anything — those calls were removed.
+5. **Don't rely on `cache()` alone for a dedupe that has to be true.** React's
+   `cache()` memoises only inside an active Next request scope; outside one it
+   silently does not cache. A saving that depends on it is therefore both
+   unobservable at runtime and untestable. If a duplicate read must actually be
+   avoided, pass the rows — `listMediaFoldersTree` takes `preloadedFolders`
+   for exactly this.
 
 ## Reproducing the measurement
 
@@ -80,6 +105,13 @@ per-workspace cost. Assert on the real count through the pool, and use the
 unique-pair view only to locate redundant work.
 
 ## Corollaries
+
+- **A "cheap" comment may be describing the result, not the cost.** The
+  platform security fan-out was justified as cheap because each agency had
+  few requests — true of the output, false of the queries.
+- **A dead call can hide a live binding.** Removing a `revalidatePath` orphaned
+  two `const result =` assignments it had been the only consumer of. Lint
+  caught it; a behavioural test never would have.
 
 - **A fan-out is invisible to behavioural tests.** Every count and access
   decision in the batched path can be correct while the query count explodes.

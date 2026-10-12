@@ -4,6 +4,7 @@ import { CheckCircle2, AlertCircle, Info, Sparkles } from "lucide-react";
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * SettingsHealth — per-section coverage card on every settings
@@ -286,7 +287,7 @@ export interface SettingsHealthProps {
   t?: Translator;
 }
 
-export function SettingsHealth({ section, slug, metrics, t }: SettingsHealthProps) {
+export function SettingsHealth({ section, slug, agencySlug, metrics, t }: SettingsHealthProps) {
   const suggestions = suggestionsFor(section, metrics, t);
   const status = coverStatus(section, metrics);
   const { label: coverLabel, icon: CoverIcon } = COVER_LABEL[status];
@@ -327,7 +328,7 @@ export function SettingsHealth({ section, slug, metrics, t }: SettingsHealthProp
             {localizedCoverLabel}
           </span>
           <Link
-            href={`/app/w/${slug}/settings`}
+            href={`${workspaceBasePath(agencySlug, slug)}/settings`}
             className="text-label text-primary ms-auto inline-flex items-center gap-1 font-semibold hover:underline"
           >
             {copy(t, "settings.health.overviewLink", "Settings overview")}

@@ -27,6 +27,7 @@ export {
   revokeSupportAccessGrant,
   expireStaleSupportAccessGrants,
   findActiveSupportAccessGrant,
+  listRecentRequestsByAgency,
   listRequestsForAgency,
   listRequestsByPlatformAdmin,
   listActiveGrantsForActor,

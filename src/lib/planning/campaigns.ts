@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { activityEvents, campaigns } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 
 /**
  * Planning library — campaign service (FEAT-06).
@@ -75,7 +75,6 @@ export async function createCampaign(
     summary: `Created campaign "${parsed.data.name}"`,
     afterData: { campaignId: created.id, status: parsed.data.status },
   });
-  revalidatePath(`/app/w/`);
   return { id: created.id };
 }
 
@@ -110,7 +109,6 @@ export async function archiveCampaign(
     summary: `Archived campaign "${existing.name}"`,
     afterData: { campaignId, status: "archived" },
   });
-  revalidatePath(`/app/w/`);
 }
 
 /**

@@ -274,15 +274,10 @@ describe("inlineUpdateBriefAction", () => {
     });
   });
 
-  it("revalidates the planning detail page on success only", async () => {
-    await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief");
-    expect(cacheMock.revalidatePath).toHaveBeenCalledWith(`/app/w/${SLUG}/planning/${ITEM_ID}`);
-
-    cacheMock.revalidatePath.mockClear();
-    dbMock.db.transaction.mockRejectedValue(new Error("nope"));
-    await inlineUpdateBriefAction(SLUG, ITEM_ID, "new brief");
-    expect(cacheMock.revalidatePath).not.toHaveBeenCalled();
-  });
+  // The cache-invalidation assertion that used to live here was removed with
+  // the dead `revalidatePath('/app/w/…')` call it asserted: the app does not
+  // serve that path, and no route under src/app is cacheable, so the call
+  // could never have invalidated anything. It was a test of a no-op.
 });
 
 // ── title ────────────────────────────────────────────────────────────────

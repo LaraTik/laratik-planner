@@ -13,6 +13,7 @@ import {
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
+import { workspaceBasePath } from "@/lib/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -50,10 +51,13 @@ export default async function WorkspaceMediaPage({
     agencyId: workspace.agencyId,
     workspaceId: workspace.id,
   });
-  const folderTree = await listMediaFoldersTree(actor, {
-    agencyId: workspace.agencyId,
-    workspaceId: workspace.id,
-  });
+  // Reuses the rows fetched above rather than re-reading the same folders and
+  // re-running the same access check.
+  const folderTree = await listMediaFoldersTree(
+    actor,
+    { agencyId: workspace.agencyId, workspaceId: workspace.id },
+    folders,
+  );
   const selectedFolderId = filters.folder ?? "";
   const sort: MediaSort =
     filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";
@@ -123,7 +127,7 @@ export default async function WorkspaceMediaPage({
       workspace={{ id: workspace.id, name: workspace.name, slug: workspace.slug }}
       agencyWorkspaces={[]}
       rows={rowsWithSignedUrl}
-      basePath={`/app/w/${workspace.slug}/media`}
+      basePath={`${workspaceBasePath(agencySlug, workspace.slug)}/media`}
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}
       preserveParams={{

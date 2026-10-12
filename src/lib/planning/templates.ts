@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { activityEvents, contentFormatEnum, contentTemplates } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 
 /**
  * Planning library — content template service (FEAT-06).
@@ -80,7 +80,6 @@ export async function createTemplate(
       summary: `Created template "${parsed.data.name}"`,
       afterData: { templateId: created.id, format: parsed.data.format },
     });
-    revalidatePath(`/app/w/`);
     return { id: created.id };
   } catch (err) {
     if (isUniqueViolation(err)) {
@@ -121,7 +120,6 @@ export async function archiveTemplate(
     summary: `Archived template "${existing.name}"`,
     afterData: { templateId, archived: true },
   });
-  revalidatePath(`/app/w/`);
 }
 
 export async function listActiveTemplates(workspaceId: string) {

@@ -14,6 +14,7 @@ import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switc
 import { cn } from "@/lib/utils";
 import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -97,9 +98,9 @@ export default async function EditorialCalendarPage({
             <PlanningViewSwitcher
               active="calendar"
               links={{
-                list: `/app/w/${slug}/planning?month=${monthParam(0)}`,
-                board: `/app/w/${slug}/board`,
-                calendar: `/app/w/${slug}/calendar?month=${monthParam(0)}`,
+                list: `${workspaceBasePath(agencySlug, slug)}/planning?month=${monthParam(0)}`,
+                board: `${workspaceBasePath(agencySlug, slug)}/board`,
+                calendar: `${workspaceBasePath(agencySlug, slug)}/calendar?month=${monthParam(0)}`,
               }}
               t={t}
             />
@@ -140,7 +141,7 @@ export default async function EditorialCalendarPage({
                 </time>
                 <CalendarEventCard
                   id={item.id}
-                  href={`/app/w/${slug}/planning/${item.id}`}
+                  href={`${workspaceBasePath(agencySlug, slug)}/planning/${item.id}`}
                   title={item.title}
                   status={item.status}
                   statusLabel={t(`planningFilters.statusLabels.${item.status}`)}
@@ -230,7 +231,7 @@ export default async function EditorialCalendarPage({
                     <CalendarEventCard
                       key={item.id}
                       id={item.id}
-                      href={`/app/w/${slug}/planning/${item.id}`}
+                      href={`${workspaceBasePath(agencySlug, slug)}/planning/${item.id}`}
                       title={item.title}
                       status={item.status}
                       statusLabel={t(`planningFilters.statusLabels.${item.status}`)}

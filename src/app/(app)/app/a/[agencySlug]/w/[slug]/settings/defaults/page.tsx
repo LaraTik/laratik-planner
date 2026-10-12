@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Legacy deep-link compatibility route. The canonical settings
@@ -10,6 +11,6 @@ export default async function SettingsDefaultsPage({
 }: {
   params: Promise<{ agencySlug: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  redirect(`/app/w/${slug}/settings#defaults`);
+  const { agencySlug, slug } = await params;
+  redirect(`${workspaceBasePath(agencySlug, slug)}/settings#defaults`);
 }

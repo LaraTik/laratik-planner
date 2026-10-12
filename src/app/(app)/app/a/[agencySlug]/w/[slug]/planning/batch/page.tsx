@@ -16,6 +16,7 @@ import { workspaceSettings } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { workspaceBasePath } from "@/lib/urls";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -71,7 +72,9 @@ export default async function BatchAddPage({
         }
         action={
           <Button variant="secondary" asChild>
-            <Link href={`/app/w/${slug}/planning/monthly`}>{t("monthlyPlanning.openSession")}</Link>
+            <Link href={`${workspaceBasePath(agencySlug, slug)}/planning/monthly`}>
+              {t("monthlyPlanning.openSession")}
+            </Link>
           </Button>
         }
       />

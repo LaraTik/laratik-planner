@@ -311,9 +311,6 @@ export async function resetAllIdeasAction(
   }
 
   // Refresh everything that depends on the workspace's idea count.
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${workspaceSlug}`);
-  revalidatePath(`/app/w/${workspaceSlug}/settings`);
   revalidatePath(`/app`);
   redirect(`/app/w/${workspaceSlug}/planning?reset=bulk`);
 }

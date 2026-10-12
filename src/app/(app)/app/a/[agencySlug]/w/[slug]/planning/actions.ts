@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -133,15 +133,11 @@ async function requireWorkspaceContext(workspaceSlug: string, agencySlug?: strin
 export async function archiveContentItemAction(workspaceSlug: string, contentItemId: string) {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   await archiveContentItem(actor, { workspaceId: workspace.id, contentItemId });
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
 export async function restoreContentItemAction(workspaceSlug: string, contentItemId: string) {
   const { actor, workspace } = await requireWorkspaceContext(workspaceSlug);
   await restoreContentItem(actor, { workspaceId: workspace.id, contentItemId });
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
 export async function changeContentOwnerAction(input: {
@@ -162,8 +158,6 @@ export async function changeContentOwnerAction(input: {
   } catch (error) {
     return actionFailure<AssignContentOwnerFields>(error, "The owner could not be changed.");
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return { ok: true };
 }
 
@@ -195,7 +189,6 @@ export async function quickCreateAction(
   } catch (error) {
     return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning/${id}?created=1`);
 }
 
@@ -230,8 +223,6 @@ export async function updateContentItemAction(
   } catch (error) {
     return actionFailure<UpdateContentFields>(error, "The idea could not be saved.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   redirect(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
 }
 
@@ -290,7 +281,6 @@ export async function applyAiDraftAction(input: {
   } catch (error) {
     return actionFailure<ApplyAiDraftFields>(error, "The AI draft could not be applied.");
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return { ok: true, brief: newBrief };
 }
 
@@ -406,7 +396,6 @@ export async function batchCreateAction(
   } catch (error) {
     return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning`);
   redirect(`/app/w/${workspaceSlug}/planning?batchCreated=${parsed.data.items.length}`);
 }
 
@@ -457,7 +446,6 @@ export async function claimAction(input: {
   } catch (error) {
     return actionFailure(error, "The claim action failed.");
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return { ok: true };
 }
 
@@ -523,7 +511,6 @@ export async function assignDesignerAction(input: {
       return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
     }
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/${input.contentItemId}`);
   return { ok: true };
 }
 
@@ -554,7 +541,6 @@ export async function submitDeliveryAction(
   } catch (error) {
     return actionFailure<SubmitDeliveryFields>(error, "The delivery could not be submitted.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }
 
@@ -610,7 +596,6 @@ export async function setMediaRequiredAction(
       errorCode: error instanceof PermissionDeniedError ? "forbidden" : "updateFailed",
     };
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }
 
@@ -635,12 +620,10 @@ export async function decideApprovalAction(input: {
   } catch (error) {
     return actionFailure<DecideApprovalFields>(error, "The approval action failed.");
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
   // Publication outcomes change the workflow status rendered by the
   // planning detail page as well as the list. Revalidate the dynamic
   // detail route so a publisher's next visit cannot see a stale
   // ready-to-publish snapshot.
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/[id]`, "page");
   return { ok: true };
 }
 
@@ -675,7 +658,6 @@ export async function recordPublicationAction(input: {
   } catch (error) {
     return actionFailure<RecordPublicationFields>(error, "The publication action failed.");
   }
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
   return { ok: true };
 }
 
@@ -748,9 +730,10 @@ export async function linkMetaPublicationAction(input: {
 }): Promise<{ ok: true } | MetaPublicationActionFailure> {
   const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
-    const result = await linkMetaPublication(actor, { ...input, workspaceId: workspace.id });
-    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
-    revalidatePath(`/app/w/${input.workspaceSlug}/planning`);
+    // The return value was consumed only by the removed `revalidatePath`
+    // calls; the action has always returned `{ ok: true }` regardless. The
+    // call still runs for its side effects.
+    await linkMetaPublication(actor, { ...input, workspaceId: workspace.id });
     return { ok: true };
   } catch (error) {
     return metaPublicationFailure(error);
@@ -768,7 +751,6 @@ export async function refreshMetaPublicationAction(input: {
       workspace.id,
       input.contentItemChannelId,
     );
-    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
     return {
       ok: true,
       ...("unavailable" in result && result.unavailable ? { unavailable: true } : {}),
@@ -784,8 +766,8 @@ export async function unlinkMetaPublicationAction(input: {
 }): Promise<{ ok: true } | MetaPublicationActionFailure> {
   const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
-    const result = await unlinkMetaPublication(actor, workspace.id, input.contentItemChannelId);
-    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${result.contentItemId}`);
+    // As above: the value only fed the removed `revalidatePath` calls.
+    await unlinkMetaPublication(actor, workspace.id, input.contentItemChannelId);
     return { ok: true };
   } catch (error) {
     return metaPublicationFailure(error);
@@ -834,7 +816,6 @@ export async function createCommentAction(
     }
   }
   await createComment(actor, parsed.data, structuredMentionIds);
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${formData.get("contentItemId")}`);
   void workspace;
   return { ok: true, mentionedUserIds: structuredMentionIds };
 }
@@ -853,7 +834,6 @@ export async function resolveCommentAction(input: {
     return fieldErrorsFromZod<ResolveCommentFields>(parsed.error);
   }
   await resolveComment(actor, parsed.data);
-  revalidatePath(`/app/w/${input.workspaceSlug}/planning/`);
   return { ok: true };
 }
 
@@ -923,7 +903,6 @@ export async function updateFormatPayloadAction(
   } catch (e) {
     return actionFailure<UpdateFormatPayloadFields>(e, "The format payload could not be saved.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };
 }
 
@@ -945,7 +924,6 @@ export async function applyResearchTeardownAction(input: {
       contentItemId: parsed.data.contentItemId,
       researchTeardownId: parsed.data.researchTeardownId,
     });
-    revalidatePath(`/app/w/${input.workspaceSlug}/planning/${parsed.data.contentItemId}`);
     return { ok: true, appliedFields };
   } catch (error) {
     return actionFailure<ApplyResearchTeardownFields>(
@@ -982,7 +960,6 @@ export async function updateAudienceCopyAction(
   } catch (e) {
     return actionFailure<UpdateAudienceCopyFields>(e, "The copy could not be saved.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };
 }
 
@@ -1044,6 +1021,5 @@ export async function patchAudienceCopyAction(
   } catch (e) {
     return actionFailure<PatchAudienceCopyFields>(e, "The copy could not be saved.");
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${parsed.data.contentItemId}`);
   return { ok: true };
 }
