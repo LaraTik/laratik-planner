@@ -249,8 +249,8 @@ export async function getAgencyCalendarView(
       workspaceTimezone: workspaces.timezone,
     })
     .from(contentItems)
-    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
-    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId));
+    .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId));
   const scopedPlans = admin
     ? planQuery.where(
         and(
