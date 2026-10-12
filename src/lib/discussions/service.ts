@@ -1,7 +1,9 @@
 import "server-only";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import {
+  agencies,
   commentMentions,
   comments,
   contentItems,
@@ -126,15 +128,20 @@ export async function createComment(
 
   // Resolve workspaceId + slug via the content item. The slug
   // is needed for the notification click-through (the route
-  // is /app/w/{slug}/planning/{id}); see the outbox payload
+  // is /app/a/{agencySlug}/w/{slug}/planning/{id}); see the outbox payload
   // below.
   const [item] = await db
     .select({
       workspaceId: contentItems.workspaceId,
       workspaceSlug: workspaces.slug,
+      // Canonical notification links must carry the agency: a workspace slug
+      // is unique per agency, not globally, so the legacy `/app/w/{slug}`
+      // shape meant "whichever agency the reader currently has active".
+      workspaceAgencySlug: agencies.slug,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(eq(contentItems.id, data.contentItemId))
     .limit(1);
   if (!item) throw new Error("Content item not found");
@@ -242,11 +249,11 @@ export async function createComment(
         workspaceId: item.workspaceId,
         // The actionUrl uses the workspace slug (not UUID) so the
         // notification's click-through lands on the real
-        // /app/w/{slug}/planning/{id} route. Without this, the
+        // canonical route. Without this, the
         // default actionUrl fallback in the notifications
         // dispatcher produces a 404 — the click-through was
         // broken before this fix.
-        actionUrl: `/app/w/${item.workspaceSlug}/planning/${data.contentItemId}#discussion`,
+        actionUrl: `${workspaceBasePath(item.workspaceAgencySlug, item.workspaceSlug)}/planning/${data.contentItemId}#discussion`,
       },
     });
 
@@ -257,7 +264,10 @@ export async function createComment(
     // Both go through the outbox + dispatcher so the i18n
     // rendering, email surface, and per-kind preference lookup
     // all stay consistent with the existing kinds.
-    const discussionActionUrl = `/app/w/${item.workspaceSlug}/planning/${data.contentItemId}#discussion`;
+    const discussionActionUrl = `${workspaceBasePath(
+      item.workspaceAgencySlug,
+      item.workspaceSlug,
+    )}/planning/${data.contentItemId}#discussion`;
 
     if (data.parentCommentId) {
       const [parent] = await tx
@@ -370,14 +380,16 @@ export async function resolveComment(actor: Actor, input: ResolveCommentInput) {
   // #discussion anchor.
   if (!resolved && commentRow?.label === "question" && mentionedUserIds.length > 0) {
     // The slug was not loaded in the initial select to keep the
-    // join tight; pull the workspace slug now to build the URL.
+    // join tight; pull the workspace slug AND its agency now to build
+    // the canonical URL.
     const [ws] = await db
-      .select({ slug: workspaces.slug })
+      .select({ slug: workspaces.slug, agencySlug: agencies.slug })
       .from(workspaces)
+      .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
       .where(eq(workspaces.id, row.workspaceId))
       .limit(1);
     if (ws) {
-      const actionUrl = `/app/w/${ws.slug}/planning/${row.contentItemId}#discussion`;
+      const actionUrl = `${workspaceBasePath(ws.agencySlug, ws.slug)}/planning/${row.contentItemId}#discussion`;
       for (const userId of mentionedUserIds) {
         if (userId === actor.id) continue;
         await enqueueUnresolvedQuestionNotification({

@@ -1,5 +1,6 @@
 import "server-only";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import {
   agencyMemberships,
   agencyTasks,
@@ -244,9 +245,11 @@ export async function getAgencyCalendarView(
       workspaceId: workspaces.id,
       workspaceName: workspaces.name,
       workspaceSlug: workspaces.slug,
+      workspaceAgencySlug: agencies.slug,
       workspaceTimezone: workspaces.timezone,
     })
     .from(contentItems)
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId));
   const scopedPlans = admin
     ? planQuery.where(
@@ -293,11 +296,13 @@ export async function getAgencyCalendarView(
         workspaceId: workspaces.id,
         workspaceName: workspaces.name,
         workspaceSlug: workspaces.slug,
+        workspaceAgencySlug: agencies.slug,
         workspaceTimezone: workspaces.timezone,
         assigneeName: users.displayName,
       })
       .from(agencyTasks)
       .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
+      .leftJoin(agencies, eq(agencies.id, workspaces.agencyId))
       .leftJoin(users, eq(users.id, agencyTasks.assigneeId))
       .where(
         and(...taskFilters, gte(agencyTasks.dueAt, monthStart), lt(agencyTasks.dueAt, monthEnd)),
@@ -336,7 +341,7 @@ export async function getAgencyCalendarView(
         ...plan,
         kind: "plan" as const,
         workspaceId: plan.workspaceId,
-        href: `/app/w/${plan.workspaceSlug}/planning/${plan.id}`,
+        href: `${workspaceBasePath(plan.workspaceAgencySlug, plan.workspaceSlug)}/planning/${plan.id}`,
       })),
       ...tasks
         .filter((task): task is typeof task & { startsAt: Date } => task.startsAt !== null)
@@ -477,6 +482,7 @@ export async function getUserWorkload(
         workspaceId: workspaces.id,
         workspaceName: workspaces.name,
         workspaceSlug: workspaces.slug,
+        workspaceAgencySlug: agencies.slug,
         role: sql<WorkloadRole>`CASE
           WHEN ${contentItems.contentOwnerId} = ${userId} THEN 'owner'
           WHEN ${contentItems.designerId} = ${userId} THEN 'designer'
@@ -485,6 +491,7 @@ export async function getUserWorkload(
       })
       .from(contentItems)
       .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
+      .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
       .where(
         and(
           eq(workspaces.agencyId, agencyId),
@@ -523,7 +530,7 @@ export async function getUserWorkload(
     workspaceId: p.workspaceId,
     workspaceName: p.workspaceName,
     role: p.role,
-    href: `/app/w/${p.workspaceSlug}/planning/${p.id}`,
+    href: `${workspaceBasePath(p.workspaceAgencySlug, p.workspaceSlug)}/planning/${p.id}`,
   }));
 
   const now = new Date();

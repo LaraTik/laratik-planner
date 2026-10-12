@@ -123,7 +123,10 @@ export const socialOauthStates = pgTable(
     check("social_oauth_state_provider_valid", sql`${t.provider} IN ('meta', 'tiktok')`),
     check(
       "social_oauth_state_return_path_safe",
-      sql`${t.returnPath} ~ '^/app/w/[a-z0-9-]+/channels$'`,
+      // Canonical workspace paths: a workspace slug is unique only WITHIN an
+      // agency, so a return path that omits the agency is ambiguous on
+      // read-back. See migration 0072 for the CHECK swap.
+      sql`${t.returnPath} ~ '^/app/a/[a-z0-9-]+/w/[a-z0-9-]+/channels$'`,
     ),
   ],
 );

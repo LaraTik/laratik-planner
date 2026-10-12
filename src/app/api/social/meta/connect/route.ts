@@ -6,6 +6,7 @@ import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
+import { workspaceBasePath } from "@/lib/urls";
 import { agencies } from "@/lib/db/schema";
 import { buildMetaAuthorizationUrl } from "@/lib/social/providers/meta";
 import { createOauthState } from "@/lib/social/repository";
@@ -48,11 +49,13 @@ export const runtime = "nodejs";
 const STATE_TTL_MS = 10 * 60 * 1000;
 const SETUP_URL = "/app/agency-settings/social/providers";
 
-function buildReturnPath(slug: string): string {
-  if (!/^[a-z0-9-]+$/.test(slug)) {
-    throw new Error("Invalid workspace slug");
+function buildReturnPath(agencySlug: string, workspaceSlug: string): string {
+  if (!/^[a-z0-9-]+$/.test(agencySlug) || !/^[a-z0-9-]+$/.test(workspaceSlug)) {
+    throw new Error("Invalid agency or workspace slug");
   }
-  return `/app/w/${slug}/channels`;
+  // Canonical: the workspace slug is unique only WITHIN an agency, so the
+  // return path must carry both or it is ambiguous on read-back.
+  return `${workspaceBasePath(agencySlug, workspaceSlug)}/channels`;
 }
 
 export async function POST(req: NextRequest) {
@@ -144,21 +147,6 @@ export async function POST(req: NextRequest) {
 
   const state = randomBytes(32).toString("hex");
   const stateDigest = createHash("sha256").update(state).digest("hex");
-  const expiresAt = new Date(Date.now() + STATE_TTL_MS);
-  await createOauthState(db, {
-    stateDigest,
-    provider: "meta",
-    workspaceId: workspace.id,
-    actorId: actor.id,
-    returnPath: buildReturnPath(workspace.slug),
-    expiresAt,
-  });
-  // Per-agency callback URL — the agency admin pastes this exact
-  // string into their Meta app's "Valid OAuth Redirect URIs". The
-  // route at `/api/social/meta/callback/[agencySlug]` resolves the
-  // agency from the URL and asserts the state's workspaceId
-  // belongs to that agency (defense in depth on top of the
-  // single-use state token).
   const [agency] = await db
     .select({ slug: agencies.slug })
     .from(agencies)
@@ -170,6 +158,21 @@ export async function POST(req: NextRequest) {
       { status: 500, headers: mutatingApiHeaders() },
     );
   }
+  const expiresAt = new Date(Date.now() + STATE_TTL_MS);
+  await createOauthState(db, {
+    stateDigest,
+    provider: "meta",
+    workspaceId: workspace.id,
+    actorId: actor.id,
+    returnPath: buildReturnPath(agency.slug, workspace.slug),
+    expiresAt,
+  });
+  // Per-agency callback URL — the agency admin pastes this exact
+  // string into their Meta app's "Valid OAuth Redirect URIs". The
+  // route at `/api/social/meta/callback/[agencySlug]` resolves the
+  // agency from the URL and asserts the state's workspaceId
+  // belongs to that agency (defense in depth on top of the
+  // single-use state token).
   const callbackUrl = buildPerAgencyCallbackUrl("meta", agency.slug);
   const authUrl = buildMetaAuthorizationUrl({
     appId: config.appId,

@@ -1,5 +1,6 @@
 import "server-only";
 import { cache } from "react";
+import { workspaceBasePath } from "@/lib/urls";
 import { and, asc, desc, eq, gt, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
@@ -1967,12 +1968,16 @@ export async function linkedTargetsForMediaAsset(
       workspaceId: mediaAssetLinks.workspaceId,
       contentItemTitle: contentItems.title,
       contentItemWorkspaceSlug: workspaces.slug,
+      // Canonical URLs carry the agency; a workspace slug alone is unique
+      // only within an agency.
+      contentItemWorkspaceAgencySlug: agencies.slug,
       deliveryVersionNumber: deliveryVersions.versionNumber,
     })
     .from(mediaAssetLinks)
     .leftJoin(contentItems, eq(contentItems.id, mediaAssetLinks.targetId))
     .leftJoin(deliveryVersions, eq(deliveryVersions.id, mediaAssetLinks.targetId))
     .leftJoin(workspaces, eq(workspaces.id, mediaAssetLinks.workspaceId))
+    .leftJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(eq(mediaAssetLinks.mediaAssetId, input.assetId));
 
   const readableByAgency = await isAgencyMember(actor, input.agencyId);
@@ -1995,22 +2000,34 @@ export async function linkedTargetsForMediaAsset(
           // the user can still reach the planner. The legacy broken
           // shape that joins "planning" directly under "/app" has
           // never been routed; never write it.
-          return row.contentItemWorkspaceSlug
-            ? `/app/w/${row.contentItemWorkspaceSlug}/planning/${row.targetId}`
+          return row.contentItemWorkspaceSlug && row.contentItemWorkspaceAgencySlug
+            ? `${workspaceBasePath(
+                row.contentItemWorkspaceAgencySlug,
+                row.contentItemWorkspaceSlug,
+              )}/planning/${row.targetId}`
             : `/app`;
         }
         if (row.targetType === "delivery") {
-          return row.contentItemWorkspaceSlug
-            ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
+          return row.contentItemWorkspaceSlug && row.contentItemWorkspaceAgencySlug
+            ? `${workspaceBasePath(
+                row.contentItemWorkspaceAgencySlug,
+                row.contentItemWorkspaceSlug,
+              )}/planning`
             : `/app`;
         }
         if (row.targetType === "comment") {
-          return row.contentItemWorkspaceSlug
-            ? `/app/w/${row.contentItemWorkspaceSlug}/planning`
+          return row.contentItemWorkspaceSlug && row.contentItemWorkspaceAgencySlug
+            ? `${workspaceBasePath(
+                row.contentItemWorkspaceAgencySlug,
+                row.contentItemWorkspaceSlug,
+              )}/planning`
             : `/app`;
         }
-        return row.contentItemWorkspaceSlug
-          ? `/app/w/${row.contentItemWorkspaceSlug}/brand-kit`
+        return row.contentItemWorkspaceSlug && row.contentItemWorkspaceAgencySlug
+          ? `${workspaceBasePath(
+              row.contentItemWorkspaceAgencySlug,
+              row.contentItemWorkspaceSlug,
+            )}/brand-kit`
           : `/app/brand-kit`;
       })();
       const label =

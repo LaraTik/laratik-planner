@@ -161,7 +161,9 @@ describe("POST /api/social/meta/connect — body parsing", () => {
     const call = createOauthStateMock.mock.calls[0]![1];
     expect(call.provider).toBe("meta");
     expect(call.workspaceId).toBe("ws-1");
-    expect(call.returnPath).toBe("/app/w/acme/channels");
+    // Canonical: the agency slug is required — a workspace slug alone is
+    // unique only within an agency.
+    expect(call.returnPath).toBe("/app/a/acme-agency/w/acme/channels");
   });
 
   it("reads slug from a JSON body (future fetch-based callers)", async () => {
