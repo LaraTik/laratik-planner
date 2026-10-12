@@ -15,7 +15,7 @@ import {
   enqueueReplyNotification,
   enqueueUnresolvedQuestionNotification,
 } from "@/lib/notifications/service";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { z } from "zod";
 
 /**
@@ -306,7 +306,6 @@ export async function createComment(
     return { id: created.id, createdAt: created.createdAt, mentionedUserIds };
   });
 
-  revalidatePath(`/app/w/`);
   return result;
 }
 
@@ -395,8 +394,6 @@ export async function resolveComment(actor: Actor, input: ResolveCommentInput) {
       }
     }
   }
-
-  revalidatePath(`/app/w/`);
 }
 
 // ─── Read helpers ───────────────────────────────────────────────────────

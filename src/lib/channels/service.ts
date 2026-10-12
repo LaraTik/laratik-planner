@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { ChannelCommandSchema } from "@/lib/channels/command";
 
 /**
@@ -55,7 +55,6 @@ export async function createChannel(actor: Actor, workspaceId: string, input: Cr
         .values({ workspaceId, ...parsed.data })
         .returning({ id: socialChannels.id });
       if (!created) throw new Error("Failed to create channel");
-      revalidatePath(`/app/w/`);
       return { id: created.id };
     });
   } catch (err) {
@@ -101,7 +100,6 @@ export async function updateChannel(actor: Actor, workspaceId: string, input: Up
     .where(
       and(eq(socialChannels.id, input.channelId), eq(socialChannels.workspaceId, workspaceId)),
     );
-  revalidatePath(`/app/w/`);
 }
 
 // ─── archiveChannel ────────────────────────────────────────────────────────
@@ -133,7 +131,6 @@ export async function archiveChannel(actor: Actor, workspaceId: string, channelI
       `social_profiles:${channel.platform}`,
     ]);
   });
-  revalidatePath(`/app/w/`);
 }
 
 // ─── restoreChannel (FEAT-07) ──────────────────────────────────────────────
@@ -171,7 +168,6 @@ export async function restoreChannel(actor: Actor, workspaceId: string, channelI
     if (err instanceof LimitExceededError) throw err;
     throw err;
   }
-  revalidatePath(`/app/w/`);
 }
 
 // ─── Read helpers ──────────────────────────────────────────────────────────

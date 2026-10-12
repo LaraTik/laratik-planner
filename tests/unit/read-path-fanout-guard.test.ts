@@ -148,6 +148,55 @@ describe("canonical workspace URL guard", () => {
   });
 });
 
+describe("cache-invalidation guard", () => {
+  /**
+   * `revalidatePath('/app/w/…')` was removed from 27 files.
+   *
+   * Those calls were no-ops for two independent reasons, and it is worth
+   * recording both because either one alone would not justify deletion:
+   *
+   *   1. **Wrong path.** The app serves `/app/a/<agencySlug>/w/<slug>/…`;
+   *      `/app/w/[slug]/…` is the inbound-only legacy catch-all. A
+   *      `revalidatePath` naming a path the app does not serve cannot
+   *      invalidate anything.
+   *   2. **Nothing cached to invalidate.** No route under `src/app` exports
+   *      `revalidate`, and `next.config.ts` sets no `staleTimes`, so these
+   *      pages render dynamically on every request. `revalidatePath` exists
+   *      to purge the Full Route Cache (static) and the Router Cache
+   *      (`staleTimes.dynamic` defaults to 0, so dynamic routes are never
+   *      reused). Neither holds here.
+   *
+   * The second test below re-asserts premise (2), because that is the one
+   * that would stop being true first. If someone ever makes a workspace
+   * route cacheable, this file should make them re-add invalidation rather
+   * than leave them silently unprotected.
+   */
+  it("no source file revalidates the legacy workspace path", () => {
+    const offenders: string[] = [];
+    for (const file of walk(SRC)) {
+      const text = readFileSync(file, "utf8");
+      if (text.includes("revalidatePath(`/app/w/")) {
+        offenders.push(file.slice(SRC.length + 1));
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  it("no route exports a revalidate window, which is what kept these calls dead", () => {
+    const offenders: string[] = [];
+    for (const file of walk(join(SRC, "app"))) {
+      const text = readFileSync(file, "utf8");
+      if (/export const revalidate\b/.test(text)) {
+        offenders.push(file.slice(SRC.length + 1));
+      }
+    }
+    // Not a permanent ban — a guard that outlives its reason is noise. If
+    // this goes red, someone made a route cacheable and the corresponding
+    // `revalidatePath` calls need real, canonical targets.
+    expect(offenders).toEqual([]);
+  });
+});
+
 function walk(dir: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {

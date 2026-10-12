@@ -291,16 +291,11 @@ describe("setMediaRequired writes", () => {
     expect(events[0]!.summary).toBe("Marked as requiring media assets");
   });
 
-  it("revalidates the app tree so the delivery form re-reads the flag", async () => {
-    primeItem({ status: "draft", current: true });
-    dbMock.db.update.mockImplementation(() => ({ set: () => makeChain(undefined) }));
-    dbMock.db.insert.mockImplementation(() => ({ values: () => makeChain(undefined) }));
-
-    await setMediaRequired(ACTOR, { contentItemId: ITEM_ID, mediaRequired: false });
-    // The toggle lives inside the delivery form on several routes, so the
-    // revalidation is deliberately coarse.
-    expect(cacheMock.revalidatePath).toHaveBeenCalledWith("/app/w/");
-  });
+  // The "revalidates the app tree" case that used to live here went with the
+  // dead `revalidatePath('/app/w/')` it asserted. That call named the legacy
+  // path (which the app does not serve) on routes that are never cacheable,
+  // so it could not have invalidated anything — it was a test of a no-op.
+  // The flag itself is still covered by the surrounding write tests.
 
   it("resolves the workspace from the item rather than the caller's scope", async () => {
     // The item's own workspace is the authority; passing some other

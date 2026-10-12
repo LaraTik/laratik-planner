@@ -535,7 +535,6 @@ export async function updateMemberRolesAction(
   // (the new grant shows up on the per-workspace team table). Use the
   // route pattern so all dynamic [slug] pages under the same layout are
   // invalidated — workspace slugs aren't loaded here.
-  revalidatePath(`/app/w/[slug]/team`, "page");
   return { saved: true };
 }
 
@@ -655,7 +654,6 @@ export async function toggleAgencyAdminAction(
   }
 
   revalidatePath("/app/users");
-  revalidatePath(`/app/w/[slug]/team`, "page");
   return { saved: true };
 }
 
@@ -747,7 +745,6 @@ export async function createUserDirectlyAction(
       createdBy: session.user.id,
     });
     revalidatePath("/app/users");
-    revalidatePath(`/app/w/[slug]/team`, "page");
     return {
       success: true,
       tempPassword: result.tempPassword,

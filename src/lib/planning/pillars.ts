@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { activityEvents, contentPillars } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 
 /**
  * Planning library — content pillar service (FEAT-06).
@@ -59,7 +59,6 @@ export async function createPillar(
       summary: `Created pillar "${parsed.data.name}"`,
       afterData: { pillarId: created.id },
     });
-    revalidatePath(`/app/w/`);
     return { id: created.id };
   } catch (err) {
     // The partial-unique index on lower(name) WHERE archived_at IS NULL
@@ -102,7 +101,6 @@ export async function archivePillar(
     summary: `Archived pillar "${existing.name}"`,
     afterData: { pillarId, archived: true },
   });
-  revalidatePath(`/app/w/`);
 }
 
 /**
@@ -142,7 +140,6 @@ export async function restorePillar(
     summary: `Restored pillar "${existing.name}"`,
     afterData: { pillarId, archived: false },
   });
-  revalidatePath(`/app/w/`);
 }
 
 export async function listActivePillars(workspaceId: string) {

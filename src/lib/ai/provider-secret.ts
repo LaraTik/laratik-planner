@@ -183,7 +183,6 @@ export async function setManagedAiSecret(
   });
 
   revalidatePath("/app/agency-settings/ai");
-  revalidatePath(`/app/w/[slug]/ai-settings`, "page");
   return { lastFour: encrypted.lastFour };
 }
 
@@ -223,7 +222,6 @@ export async function clearManagedAiSecret(
   });
 
   revalidatePath("/app/agency-settings/ai");
-  revalidatePath(`/app/w/[slug]/ai-settings`, "page");
 }
 
 /**

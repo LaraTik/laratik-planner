@@ -91,7 +91,6 @@ export async function setProviderConfigAction(
       actorId: session.user.id,
     });
     revalidatePath("/app/agency-settings/social/providers");
-    revalidatePath(`/app/w/[slug]/channels`, "page");
     return { success: true };
   } catch (err) {
     return {
@@ -112,7 +111,6 @@ export async function removeProviderConfigAction(
   try {
     await removeAgencyProviderConfig(db, ctx, provider);
     revalidatePath("/app/agency-settings/social/providers");
-    revalidatePath(`/app/w/[slug]/channels`, "page");
     return { success: true };
   } catch (err) {
     return {

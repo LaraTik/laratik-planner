@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { contentItems, activityEvents } from "@/lib/db/schema";
@@ -187,7 +187,6 @@ export async function inlineUpdateBriefAction(
           : "Brief saved and approval history remains unchanged.",
     };
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }
 
@@ -255,7 +254,6 @@ export async function inlineUpdateTitleAction(
           : "Title saved and approval history remains unchanged.",
     };
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }
 
@@ -328,7 +326,6 @@ export async function inlineUpdateDateAction(
           : "Date saved and approval history remains unchanged.",
     };
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }
 
@@ -397,6 +394,5 @@ export async function inlineUpdateProductionNotesAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not save production notes." };
   }
-  revalidatePath(`/app/w/${workspaceSlug}/planning/${contentItemId}`);
   return { ok: true };
 }

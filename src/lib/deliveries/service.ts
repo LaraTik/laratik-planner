@@ -17,7 +17,7 @@ import {
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { deriveCreativeApprovalOutcome } from "@/lib/deliveries/approval-workflow";
 import {
   enqueueApprovalNotification,
@@ -279,7 +279,6 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       }
     }
 
-    revalidatePath(`/app/w/`);
     return { deliveryVersionId: created!.id, versionNumber: nextVersion };
   });
 }
@@ -501,7 +500,6 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       }
     }
 
-    revalidatePath(`/app/w/`);
     return { ok: true };
   });
 }
@@ -965,6 +963,5 @@ export async function setMediaRequired(actor: Actor, input: SetMediaRequiredInpu
     afterData: { mediaRequired: input.mediaRequired },
   });
 
-  revalidatePath(`/app/w/`);
   return { mediaRequired: input.mediaRequired };
 }

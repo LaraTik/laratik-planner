@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { BrandProfileSchema, saveBrandProfile } from "@/lib/brand/profile";
@@ -45,8 +45,6 @@ export async function saveBrandProfileAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the profile." };
   try {
     const result = await saveBrandProfile({ id: session.user.id }, workspace.id, parsed.data);
-    revalidatePath(`/app/w/${slug}/brand-kit`);
-    revalidatePath(`/app/w/${slug}/brand-kit/profile`);
     return { success: true, revision: result.revision };
   } catch (error) {
     return { error: error instanceof Error ? error.message : "The profile could not be saved." };

@@ -1,7 +1,7 @@
 "use server";
 
 import { eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -66,7 +66,6 @@ export async function applyLeadTimeTemplateAction(
   } catch {
     return { ok: false, error: "Could not apply preset." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { ok: true, applied: 1 };
 }
 
@@ -87,7 +86,6 @@ export async function applyApprovalTemplateAction(
   } catch {
     return { ok: false, error: "Could not apply preset." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { ok: true, applied: 1 };
 }
 
@@ -108,7 +106,6 @@ export async function applyMonthlyTargetTemplateAction(
   } catch {
     return { ok: false, error: "Could not apply preset." };
   }
-  revalidatePath(`/app/w/${slug}/settings`);
   return { ok: true, applied: 1 };
 }
 
@@ -173,10 +170,6 @@ export async function applyWorkflowScenarioAction(
   }
   // Revalidate every surface that renders the scenario: planning
   // list/detail, board, settings.
-  revalidatePath(`/app/w/${slug}/settings`);
-  revalidatePath(`/app/w/${slug}/settings/templates`);
-  revalidatePath(`/app/w/${slug}/planning`);
-  revalidatePath(`/app/w/${slug}/board`);
   return {
     ok: true,
     applied: 1,

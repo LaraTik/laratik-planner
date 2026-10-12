@@ -12,6 +12,72 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Performance — the remaining read-path N+1s (media library, platform support)
+
+Second pass over the fan-out rule in `docs/architecture/app-shell-performance.md`.
+The app shell was no longer the only place that looped per item.
+
+- **`app/media/page.tsx`** looped twice over the agency workspace list —
+  `canWriteToWorkspace`, then `hasWorkspaceRole` — at ~3 queries each. Both
+  predicates are pure functions of the workspace role set, so both now read
+  from the already-shipped `getActorWorkspaceRoleIndex`: a constant 3 queries
+  instead of ~3N. `options` order is preserved, so the picker does not reorder.
+- **`listMediaFolders` / `listMediaFoldersTree`** each ran the same access
+  check and the same `media_folder` select, and both media pages call them back
+  to back. They now share one fetch and the pages pass the rows to the tree
+  explicitly. The explicit hand-off is deliberate: React's request-scoped
+  `cache()` only memoises inside an active Next request scope, so relying on it
+  alone made the saving unobservable and unverifiable. The shared projection
+  stays all-columns because the folders API route returns those rows straight
+  to clients as JSON.
+- **Platform security overview** looped `listRequestsForAgency` once per
+  agency — one query per agency, i.e. O(number of agencies on the platform).
+  That is a worse growth axis than the per-workspace loops, being bounded by the
+  customer base rather than one customer's team, and the comment rationalising
+  it described the bounded _result_ while the _work_ stayed linear. New
+  `listRecentRequestsByAgency` applies the per-agency cap with
+  `row_number() OVER (PARTITION BY target_agency_id …)` so the cap is enforced
+  in the database; a plain `LIMIT` would have returned the newest N across all
+  agencies and starved the rest.
+
+Measured before/after by counting round-trips through the real pool.
+
+### Changed — canonical workspace URLs, in two parts
+
+`src/lib/urls.ts` documents the legacy `/app/w/<slug>` shape as inbound only
+("Never link to this form"), but 38 navigations still produced it. Each lands on
+the legacy catch-all inside the `(app)` route group, so the navigation completes
+in two server round-trips: resolve, redirect, ask again.
+
+- **31 workspace surfaces** (the pages where `agencySlug` was already in scope)
+  now emit `/app/a/<agencySlug>/w/<slug>/…` via `workspaceBasePath`.
+- **Notification action URLs** — `buildActionUrlForContentItem` _persisted_ the
+  legacy shape into `notification.action_url`, so every row ever written carries
+  a link whose target depends on who clicks it: a workspace slug is unique per
+  agency, not globally, so that shape means "whichever agency the reader
+  currently has active". The builder now joins `agency` alongside `workspace`
+  (a join, not an extra round-trip — several callers run inside a transaction).
+- **Migration 0071** rewrites the stored rows, joining on
+  `notification.workspace_id` rather than re-parsing the slug, so the FK
+  disambiguates the agency even when two agencies own the same workspace slug.
+  Idempotent; rows with a null `workspace_id` keep resolving via the legacy
+  route. Its `_journal.json` entry is included — omitting it would make the
+  migration silently never run, which a test now asserts against.
+
+The legacy route itself is unchanged and still serves bookmarks and
+previously-shared links.
+
+### Removed — 154 `revalidatePath('/app/w/…')` calls that could not invalidate anything
+
+No-ops for two independent reasons: the path is one the app does not serve, and
+nothing was cached at it — no route under `src/app` exports `revalidate` and
+`next.config.ts` sets no `staleTimes`, so these pages render dynamically on
+every request. Converting them instead of deleting would have required plumbing
+`agencySlug` through the public signatures of ~20 service files to keep dead
+lines alive. Two tests guard this: one asserts none exist, and one re-asserts
+the "no route is cacheable" premise so a future cacheable route cannot quietly
+lose its invalidation.
+
 ### Fixed — tenant and workspace selection was paying a discarded full app-shell render plus a 131-query N+1
 
 Reported as "lagging when selecting tenant and workspace". Two independent

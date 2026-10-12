@@ -37,7 +37,7 @@ import {
 } from "@/lib/content/workflow";
 import { humanStatus as humanizeForSummary } from "@/lib/content/status";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
 import {
@@ -280,7 +280,6 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
       active: true,
     });
 
-    revalidatePath(`/app/w/`);
     return created!.id;
   });
 }
@@ -422,8 +421,6 @@ export async function updateContentItem(
       // is set.
     }
   }
-
-  revalidatePath(`/app/w/`);
 }
 
 /**
@@ -542,9 +539,6 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
       afterData: { formatPayloadKeys: Object.keys(stored as object).sort() },
     });
   });
-
-  revalidatePath(`/app/w/`);
-  revalidatePath(`/app/w/`, "layout");
 }
 
 export const ApplyResearchTeardownSchema = z.object({
@@ -681,8 +675,6 @@ export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopy
     afterValue: { changedKeys },
     reasonCode: "audience_copy.update",
   });
-  revalidatePath(`/app/w/`);
-  revalidatePath(`/app/w/`, "layout");
   return { revision: materiality.revision, changedKeys };
 }
 
@@ -1286,7 +1278,6 @@ export async function bulkArchiveContentItems(actor: Actor, input: BulkArchiveIn
       summary: `Bulk-archived ${archivedIds.length} content item${archivedIds.length === 1 ? "" : "s"}`,
       metadata: { contentItemIds: archivedIds },
     });
-    revalidatePath(`/app/w/`);
     return { archivedIds, skippedIds: contentItemIds.filter((id) => !archivedSet.has(id)) };
   });
 }
@@ -1630,7 +1621,6 @@ export async function transitionContent(
     // process any future `deadline` events the moment they are
     // inserted.
 
-    revalidatePath(`/app/w/`);
     return { from: item.status, to: transition.to };
   });
 }
@@ -1686,7 +1676,6 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
       );
     }
   });
-  revalidatePath(`/app/w/`);
 }
 
 // ─── FEAT-07 — §14 required commands (GAP-FULL-REVIEW-2026-08-25) ──────────
@@ -1788,7 +1777,6 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
       );
     }
   });
-  revalidatePath(`/app/w/`);
 }
 
 /**
@@ -1902,7 +1890,6 @@ export async function assignContentOwner(actor: Actor, input: AssignContentOwner
       );
     }
   });
-  revalidatePath(`/app/w/`);
 }
 
 /**
@@ -1996,7 +1983,6 @@ export async function releaseDesignTask(actor: Actor, input: ReleaseDesignTaskIn
       );
     }
   });
-  revalidatePath(`/app/w/`);
 }
 
 /**
@@ -2074,7 +2060,6 @@ export async function rescheduleContentItem(actor: Actor, input: RescheduleConte
   } catch {
     // Best-effort; planner sees a non-blocking banner.
   }
-  revalidatePath(`/app/w/`);
 }
 
 // ─── FEAT-18 (GAP-FULL-REVIEW-2026-08-25) — deadline sweep ──────────────

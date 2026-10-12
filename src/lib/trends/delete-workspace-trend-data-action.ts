@@ -298,9 +298,6 @@ export async function deleteWorkspaceTrendDataAction(
     };
   }
 
-  revalidatePath(`/app/w/${workspaceSlug}`);
-  revalidatePath(`/app/w/${workspaceSlug}/settings`);
-  revalidatePath(`/app/w/${workspaceSlug}/trends`);
   revalidatePath("/app");
   redirect(`/app/w/${workspaceSlug}/settings?trend_data_deleted=1`);
 }

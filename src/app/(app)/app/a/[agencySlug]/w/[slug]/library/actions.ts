@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
@@ -123,7 +123,6 @@ export async function createCampaignAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not create campaign" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -138,7 +137,6 @@ export async function archiveCampaignAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not archive campaign" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -180,7 +178,6 @@ export async function createPillarAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not create pillar" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -195,7 +192,6 @@ export async function archivePillarAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not archive pillar" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -243,7 +239,6 @@ export async function createTemplateAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not create template" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -258,7 +253,6 @@ export async function archiveTemplateAction(
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not archive template" };
   }
-  revalidatePath(`/app/w/${slug}/library`);
   return { success: true };
 }
 
@@ -282,7 +276,6 @@ export async function duplicateContentItemAction(
       sourceContentItemId,
       parsedFormat?.success ? { format: parsedFormat.data } : undefined,
     );
-    revalidatePath(`/app/w/${slug}/library`);
     return { success: true, newId: out.id };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Could not duplicate content item" };

@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { contentItemChannels, contentItems } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
 
@@ -123,7 +123,6 @@ export async function duplicateContentItem(
         })),
       );
     }
-    revalidatePath(`/app/w/`);
     return { id: clone.id };
   });
 }

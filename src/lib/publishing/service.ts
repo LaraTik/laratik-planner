@@ -11,7 +11,7 @@ import {
 } from "@/lib/db/schema";
 import { canAccessWorkspace, hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
+import {} from "next/cache";
 import { derivePublicationAggregate } from "@/lib/publishing/aggregate";
 
 /**
@@ -276,8 +276,6 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
         },
       });
     }
-
-    revalidatePath(`/app/w/`);
   });
 
   return { ok: true };
