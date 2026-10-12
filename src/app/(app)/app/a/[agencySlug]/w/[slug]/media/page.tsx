@@ -50,10 +50,13 @@ export default async function WorkspaceMediaPage({
     agencyId: workspace.agencyId,
     workspaceId: workspace.id,
   });
-  const folderTree = await listMediaFoldersTree(actor, {
-    agencyId: workspace.agencyId,
-    workspaceId: workspace.id,
-  });
+  // Reuses the rows fetched above rather than re-reading the same folders and
+  // re-running the same access check.
+  const folderTree = await listMediaFoldersTree(
+    actor,
+    { agencyId: workspace.agencyId, workspaceId: workspace.id },
+    folders,
+  );
   const selectedFolderId = filters.folder ?? "";
   const sort: MediaSort =
     filters.sort === "uploadedAt" || filters.sort === "updatedAt" ? filters.sort : "name";

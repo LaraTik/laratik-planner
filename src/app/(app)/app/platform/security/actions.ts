@@ -13,9 +13,10 @@ import {
   listActiveGrantsForActor,
   listRecentAuditForActor,
   listRecentSupportAuditAsPlatform,
-  listRequestsForAgency,
+  listRecentRequestsByAgency,
   revokeSupportAccessGrant,
   SupportAccessError,
+  type SupportAccessRequestRow,
 } from "@/lib/support";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { getPlatformPrincipal } from "@/lib/auth/platform-access";
@@ -179,8 +180,6 @@ export async function loadPlatformSecurityOverview(actor: { id: string }) {
   //   - the platform admin's own active grants
   //   - the platform admin's own recent audit log entries
   //   - per-agency open requests (across the platform)
-  // The agency-id scan is cheap: every agency has at most a
-  // handful of recent requests, and the list is bounded.
   const [activeGrants, recentAudit, allAgencies] = await Promise.all([
     canRequestSupport ? listActiveGrantsForActor(actor) : [],
     canAudit ? listRecentSupportAuditAsPlatform(actor) : listRecentAuditForActor(actor),
@@ -188,18 +187,30 @@ export async function loadPlatformSecurityOverview(actor: { id: string }) {
       ? db.select({ id: agencies.id, name: agencies.name, slug: agencies.slug }).from(agencies)
       : [],
   ]);
-  const requestsByAgency = await Promise.all(
-    allAgencies.map(async (a) => {
-      const reqs = await listRequestsForAgency(a.id, { limit: 10 });
-      return { agency: a, requests: reqs };
-    }),
-  );
+  const requestsByAgencyMap = canRequestSupport
+    ? await listRecentRequestsByAgency(
+        allAgencies.map((agency) => agency.id),
+        { perAgencyLimit: 10 },
+      )
+    : new Map<string, SupportAccessRequestRow[]>();
+  // Per-agency open requests, across the whole platform. This used to loop
+  // `listRequestsForAgency` once per agency — one query per agency, i.e.
+  // O(number of agencies). The old comment claimed the scan was "cheap"
+  // because every agency has few requests; that bounded the RESULT while the
+  // WORK stayed linear in the customer base. One ranked query now applies the
+  // per-agency cap inside the database (see `listRecentRequestsByAgency`).
+  const requestsByAgency = canRequestSupport
+    ? allAgencies.flatMap((agency) => {
+        const requests = requestsByAgencyMap.get(agency.id) ?? [];
+        return requests.length > 0 ? [{ agency, requests }] : [];
+      })
+    : [];
   return {
     canAudit,
     canRequestSupport,
     activeGrants,
     recentAudit,
-    requestsByAgency: requestsByAgency.filter((row) => row.requests.length > 0),
+    requestsByAgency,
   };
 }
 
