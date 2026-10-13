@@ -24,7 +24,7 @@ describe("AiAssistancePanel", () => {
   it("renders the dialog chrome from the active Arabic catalog", () => {
     render(
       <LocaleProvider locale="ar">
-        <AiAssistancePanel {...baseProps} />
+        <AiAssistancePanel agencySlug="acme" {...baseProps} />
       </LocaleProvider>,
     );
 

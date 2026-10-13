@@ -163,6 +163,7 @@ describe("WorkspaceShell — initial hash handoff", () => {
 
     render(
       <WorkspaceShell
+        agencySlug="acme"
         workspaceSlug="acme"
         contentItemId="content-1"
         ideaTitle="Summer launch"
@@ -214,6 +215,7 @@ describe("WorkspaceShell — initial hash handoff", () => {
 
     render(
       <WorkspaceShell
+        agencySlug="acme"
         workspaceSlug="acme"
         contentItemId="content-1"
         ideaTitle="Summer launch"

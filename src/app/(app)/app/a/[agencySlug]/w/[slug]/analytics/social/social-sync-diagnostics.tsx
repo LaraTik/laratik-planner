@@ -1,6 +1,7 @@
 import { Activity, AlertTriangle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { type socialChannels } from "@/lib/db/schema/channels";
+import { workspaceBasePath } from "@/lib/urls";
 
 type ChannelLike = Pick<
   typeof socialChannels.$inferSelect,
@@ -75,10 +76,13 @@ const STALE_THRESHOLD_MS = 25 * 60 * 60 * 1000;
 export function SocialSyncDiagnostics({
   channels,
   slug,
+  agencySlug,
   now,
   t,
 }: {
   channels: ChannelLike[];
+  agencySlug: string;
+  /** Canonical agency segment. */
   slug: string;
   now?: Date;
   t?: (key: string, params?: Record<string, string | number>) => string;
@@ -182,7 +186,7 @@ export function SocialSyncDiagnostics({
       {(state.counts.degraded > 0 || state.counts.stalled > 0) && (
         <div className="flex justify-end pt-1">
           <Link
-            href={`/app/w/${slug}/channels`}
+            href={`${workspaceBasePath(agencySlug, slug)}/channels`}
             data-testid="social-sync-diagnostics-retry"
             className="border-border bg-surface text-fg-primary hover:bg-surface-subtle inline-flex min-h-11 items-center gap-2 rounded-md border px-3 py-2 text-sm font-semibold transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"
           >

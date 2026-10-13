@@ -53,6 +53,7 @@ import { BatchFormatPayloadFields } from "@/components/forms/batch-format-payloa
 import { platformLabel } from "@/components/workspace/platform-icon";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import type { LocaleCode } from "@/lib/i18n/locales";
+import { workspaceBasePath } from "@/lib/urls";
 
 export interface BatchChannel {
   id: string;
@@ -281,6 +282,7 @@ function DefaultChannelPicker({
 
 export function BatchForm({
   slug,
+  agencySlug,
   workspaceTimezone = "UTC",
   channels = [],
   campaigns = [],
@@ -289,6 +291,8 @@ export function BatchForm({
   defaults = {},
   ownerOptions = [],
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   slug: string;
   workspaceTimezone?: string;
   channels?: BatchChannel[];
@@ -947,7 +951,9 @@ export function BatchForm({
       ) : null}
       <div className="border-border flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
         <Button type="button" variant="ghost" asChild>
-          <Link href={`/app/w/${slug}/planning`}>{t("batchAdd.form.cancel")}</Link>
+          <Link href={`${workspaceBasePath(agencySlug, slug)}/planning`}>
+            {t("batchAdd.form.cancel")}
+          </Link>
         </Button>
         <SaveButton
           disabled={rows.length === 0 || errorCount > 0 || batchOverflow}

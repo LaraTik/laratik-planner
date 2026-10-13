@@ -38,6 +38,8 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * variant preview.
  */
 export interface AiAssistancePanelProps {
+  /** Canonical agency segment. */
+  agencySlug: string;
   workspaceSlug: string;
   contentItemId: string;
   contentStatus: string;
@@ -56,6 +58,7 @@ export interface AiAssistancePanelProps {
 }
 
 export function AiAssistancePanel({
+  agencySlug,
   workspaceSlug,
   contentItemId,
   contentStatus,
@@ -121,6 +124,7 @@ export function AiAssistancePanel({
         </DialogHeader>
         <div className="h-[calc(100dvh-4.5rem)] overflow-y-auto px-4 py-4 sm:h-auto sm:max-h-[calc(85vh-4.5rem)]">
           <AiAssistanceSection
+            agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             contentItemId={contentItemId}
             contentStatus={contentStatus}

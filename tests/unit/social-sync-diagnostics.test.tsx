@@ -46,6 +46,7 @@ describe("SocialSyncDiagnostics", () => {
   it("renders nothing when every channel is healthy", () => {
     const { container } = render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a" }), channel({ id: "b" })]}
@@ -57,6 +58,7 @@ describe("SocialSyncDiagnostics", () => {
   it("renders the bento when at least one channel is degraded", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a" }), channel({ id: "b", lastSyncErrorCode: "rate_limited" })]}
@@ -82,6 +84,7 @@ describe("SocialSyncDiagnostics", () => {
   it("classifies a channel with needs_reauth as stalled", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a", connectionStatus: "needs_reauth", lastSyncedAt: null })]}
@@ -94,6 +97,7 @@ describe("SocialSyncDiagnostics", () => {
   it("classifies a never-synced channel as stalled", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a", lastSyncedAt: null })]}
@@ -107,6 +111,7 @@ describe("SocialSyncDiagnostics", () => {
     const dayAgo = new Date(NOW.getTime() - 26 * 60 * 60 * 1000);
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a", lastSyncedAt: dayAgo })]}
@@ -119,6 +124,7 @@ describe("SocialSyncDiagnostics", () => {
   it("classifies a provider-error-only row as degraded (not stalled)", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[
@@ -133,6 +139,7 @@ describe("SocialSyncDiagnostics", () => {
   it("shows the Re-test CTA when at least one channel is degraded or stalled", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a", lastSyncedAt: null })]}
@@ -140,12 +147,17 @@ describe("SocialSyncDiagnostics", () => {
     );
     const cta = screen.getByTestId("social-sync-diagnostics-retry");
     expect(cta).toBeInTheDocument();
-    expect(cta).toHaveAttribute("href", "/app/w/acme/channels");
+    expect(cta).toHaveAttribute("href", "/app/a/acme/w/acme/channels");
   });
 
   it("does not show the Re-test CTA when only synced channels exist (it returns null entirely)", () => {
     const { queryByTestId } = render(
-      <SocialSyncDiagnostics slug="acme" now={NOW} channels={[channel({ id: "a" })]} />,
+      <SocialSyncDiagnostics
+        agencySlug="acme"
+        slug="acme"
+        now={NOW}
+        channels={[channel({ id: "a" })]}
+      />,
     );
     expect(queryByTestId("social-sync-diagnostics-retry")).toBeNull();
   });
@@ -153,6 +165,7 @@ describe("SocialSyncDiagnostics", () => {
   it("renders oldest-unsynced and next-attempt info cells with the next 03:15 UTC slot", () => {
     render(
       <SocialSyncDiagnostics
+        agencySlug="acme"
         slug="acme"
         now={NOW}
         channels={[channel({ id: "a", accountName: "Acme Main", lastSyncedAt: null })]}

@@ -45,6 +45,7 @@ import {
 import { CONTENT_FORMAT_DEFINITIONS } from "@/lib/content/format-catalog";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import { getErrorMessage } from "@/lib/utils/error";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * WorkspaceShell — the client-side shell that:
@@ -78,6 +79,8 @@ import { getErrorMessage } from "@/lib/utils/error";
  */
 export interface WorkspaceShellProps {
   workspaceSlug: string;
+  /** Canonical agency segment. */
+  agencySlug: string;
   contentItemId: string;
   ideaTitle: string;
   comments: CommentRecord[];
@@ -125,6 +128,7 @@ export interface WorkspaceShellProps {
 
 export function WorkspaceShell({
   workspaceSlug,
+  agencySlug,
   contentItemId,
   ideaTitle,
   comments,
@@ -371,7 +375,9 @@ export function WorkspaceShell({
     setActionError(null);
     const result = await duplicateContentItemAction(workspaceSlug, contentItemId);
     if (result.newId) {
-      router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+      router.push(
+        `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${result.newId}#overview`,
+      );
       return;
     }
     setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));
@@ -394,7 +400,9 @@ export function WorkspaceShell({
               try {
                 await restoreContentItemAction(workspaceSlug, contentItemId);
                 toast.success(t("contentDetail.navigation.archiveRestored", { name: ideaTitle }));
-                router.push(`/app/w/${workspaceSlug}/planning/${contentItemId}#overview`);
+                router.push(
+                  `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}#overview`,
+                );
               } catch (error) {
                 toast.error(t("contentDetail.navigation.archiveCouldNotRestore"), {
                   description: getErrorMessage(error),
@@ -404,7 +412,7 @@ export function WorkspaceShell({
           },
         },
       });
-      router.push(`/app/w/${workspaceSlug}/planning`);
+      router.push(`${workspaceBasePath(agencySlug, workspaceSlug)}/planning`);
     } catch (error) {
       setActionError(getErrorMessage(error));
       setActionPending(false);
@@ -421,7 +429,9 @@ export function WorkspaceShell({
       replacementFormat,
     );
     if (result.newId) {
-      router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+      router.push(
+        `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${result.newId}#overview`,
+      );
       return;
     }
     setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));

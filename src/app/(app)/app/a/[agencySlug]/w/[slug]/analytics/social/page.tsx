@@ -212,13 +212,14 @@ export default async function SocialAnalyticsPage({
           </>
         }
       />
-      <SocialSyncDiagnostics channels={healthChannels} slug={slug} t={t} />
+      <SocialSyncDiagnostics agencySlug={agencySlug} channels={healthChannels} slug={slug} t={t} />
       {mostRecentSync ? (
         <p className="text-label text-fg-muted -mt-3" data-testid="social-analytics-as-of">
           {t("analytics.asOf", { date: formatRelativeDate(mostRecentSync, now, code) })}
         </p>
       ) : null}
       <SocialHealthBanner
+        agencySlug={agencySlug}
         channels={healthChannels}
         slug={slug}
         t={t}

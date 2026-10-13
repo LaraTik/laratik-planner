@@ -14,6 +14,7 @@ import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { formatDateInTimeZoneForInput } from "@/lib/utils/date";
 import { updateContentItemAction } from "../../actions";
+import { workspaceBasePath } from "@/lib/urls";
 
 export interface EditIdeaFormInitial {
   title: string;
@@ -41,12 +42,15 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
  */
 export function EditIdeaForm({
   workspaceSlug,
+  agencySlug,
   contentItemId,
   workspaceTimezone,
   channels,
   initial: initialValues,
   mode = "all",
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   contentItemId: string;
   workspaceTimezone: string;
@@ -275,7 +279,7 @@ export function EditIdeaForm({
           size="lg"
         />
         <Button variant="ghost" asChild>
-          <a href={`/app/w/${workspaceSlug}/planning/${contentItemId}`}>
+          <a href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}`}>
             {t("planning.editForm.cancel")}
           </a>
         </Button>

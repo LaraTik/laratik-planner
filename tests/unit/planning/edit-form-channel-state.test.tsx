@@ -59,6 +59,7 @@ describe("EditIdeaForm — channel state contract", () => {
     // longer in the active set.
     render(
       <EditIdeaForm
+        agencySlug="acme"
         workspaceSlug="food-game"
         contentItemId="content-1"
         workspaceTimezone="Europe/Berlin"
@@ -95,6 +96,7 @@ describe("EditIdeaForm — channel state contract", () => {
   it("leaves an unselected active channel unchecked", () => {
     render(
       <EditIdeaForm
+        agencySlug="acme"
         workspaceSlug="food-game"
         contentItemId="content-1"
         workspaceTimezone="Europe/Berlin"

@@ -1,6 +1,7 @@
 import { AlertTriangle, Clock, PlugZap } from "lucide-react";
 import Link from "next/link";
 import { type socialChannels } from "@/lib/db/schema/channels";
+import { workspaceBasePath } from "@/lib/urls";
 
 type ChannelLike = Pick<
   typeof socialChannels.$inferSelect,
@@ -168,11 +169,14 @@ function signalTone(kind: BannerSignal["kind"]) {
 export function SocialHealthBanner({
   channels,
   slug,
+  agencySlug,
   now,
   t,
   canManageProvider = false,
 }: {
   channels: ChannelLike[];
+  agencySlug: string;
+  /** Canonical agency segment. */
   slug: string;
   now?: Date;
   t?: Translator;
@@ -211,7 +215,7 @@ export function SocialHealthBanner({
             <Link
               href={
                 s.kind === "reauth"
-                  ? `/app/w/${slug}/channels`
+                  ? `${workspaceBasePath(agencySlug, slug)}/channels`
                   : "/app/agency-settings/social/providers"
               }
               className="text-body rounded-[var(--radius-control)] border border-current px-2.5 py-1 font-semibold hover:opacity-90 focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none"

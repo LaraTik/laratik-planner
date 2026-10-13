@@ -79,6 +79,7 @@ export default async function BatchAddPage({
         }
       />
       <BatchForm
+        agencySlug={agencySlug}
         slug={slug}
         workspaceTimezone={workspace.timezone}
         channels={channels.map((channel) => ({

@@ -119,6 +119,7 @@ export function EditDetailsDrawer({
           </DialogDescription>
         </DialogHeader>
         <EditIdeaForm
+          agencySlug={agencySlug}
           workspaceSlug={workspaceSlug}
           contentItemId={contentItemId}
           workspaceTimezone={workspaceTimezone}
