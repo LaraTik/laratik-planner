@@ -137,10 +137,14 @@ export function parseLegacyWorkspacePath(pathname: string): ParsedLegacyWorkspac
  *
  * This is enforced, not merely conventional: `workspaceBasePath` is the only
  * sanctioned way to build a workspace URL, and
- * `tests/unit/read-path-fanout-guard.test.ts` fails if a navigation context in
- * the converted surfaces emits `/app/w/` again. The legacy shape was also
- * being persisted — into `notification.action_url` — which is why migration
- * 0071 exists to rewrite those rows.
+ * `tests/unit/read-path-fanout-guard.test.ts` fails if ANY navigation
+ * anywhere under `src/` emits `/app/w/` again — `href=`, `redirect(`, a
+ * `router.push`, or a bare returned URL. Three producers are allowlisted
+ * with their reasons: this catch-all, `workspace-switcher-path` (defers to
+ * the redirect when the tenant is unknowable) and `agency-switch` (degrades
+ * when the agency slug cannot be read). The legacy shape was also being
+ * persisted — into `notification.action_url` — which is why migration 0071
+ * exists to rewrite those rows.
  */
 export function legacyToCanonicalHref(
   legacyPathname: string,

@@ -1,7 +1,6 @@
 "use server";
 
 import { z } from "zod";
-import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
@@ -103,9 +102,6 @@ export async function savePublishPackageAction(input: z.input<typeof SavePayload
       payload: payload.data,
       expectedUpdatedAt: parsed.data.expectedUpdatedAt ?? null,
     });
-    revalidatePath(
-      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
-    );
     return { ok: true as const, payload: result };
   } catch (e) {
     if (e instanceof PlatformPayloadError) {
@@ -190,9 +186,6 @@ export async function savePublishPackageBatchAction(input: z.input<typeof BatchP
       contentItemId: parsed.data.contentItemId,
       entries,
     });
-    revalidatePath(
-      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
-    );
     return result.ok
       ? ({
           ok: true as const,
@@ -250,9 +243,6 @@ export async function recordInternalNoteAction(input: z.input<typeof NonMaterial
       resource: parsed.data.resource,
       summary: parsed.data.summary,
     });
-    revalidatePath(
-      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
-    );
     return { ok: true as const };
   } catch {
     return failure("recordNoteFailed");
@@ -280,9 +270,6 @@ export async function setFinalCopyApprovalAction(input: z.input<typeof ApprovalF
     );
     if (!workspace) return failure("workspaceNotFound");
     const payload = await setFinalCopyApproval(actor, workspace.id, parsed.data);
-    revalidatePath(
-      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
-    );
     return { ok: true as const, payload };
   } catch (error) {
     if (error instanceof PlatformPayloadError) {
@@ -341,9 +328,6 @@ export async function confirmPublishReadinessAction(input: z.input<typeof Readin
       workspaceId: workspace.id,
       contentItemId: parsed.data.contentItemId,
     });
-    revalidatePath(
-      `/app/w/${parsed.data.workspaceSlug}/planning/${parsed.data.contentItemId}/publish`,
-    );
     return { ok: true as const, report };
   } catch (error) {
     if (error instanceof ReadinessError) {

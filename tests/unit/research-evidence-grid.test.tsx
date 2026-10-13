@@ -112,6 +112,7 @@ describe("ResearchEvidenceGrid", () => {
     const user = userEvent.setup();
     render(
       <ResearchEvidenceGrid
+        agencySlug="acme"
         workspaceSlug="acme"
         slug="acme"
         rows={rows}
@@ -136,6 +137,7 @@ describe("ResearchEvidenceGrid", () => {
     const user = userEvent.setup();
     render(
       <ResearchEvidenceGrid
+        agencySlug="acme"
         workspaceSlug="acme"
         slug="acme"
         rows={rows}
@@ -157,6 +159,7 @@ describe("ResearchEvidenceGrid", () => {
     const user = userEvent.setup();
     render(
       <ResearchEvidenceGrid
+        agencySlug="acme"
         workspaceSlug="acme"
         slug="acme"
         rows={rows}
@@ -183,6 +186,7 @@ describe("ResearchEvidenceGrid", () => {
     const user = userEvent.setup();
     render(
       <ResearchEvidenceGrid
+        agencySlug="acme"
         workspaceSlug="acme"
         slug="acme"
         rows={rows}

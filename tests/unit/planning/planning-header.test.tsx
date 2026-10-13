@@ -18,6 +18,7 @@ describe("PlanningHeader", () => {
   it("renders the title, format, channels, planned date, and status badge", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -33,7 +34,7 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("Spring drop teaser")).toBeInTheDocument();
@@ -46,6 +47,7 @@ describe("PlanningHeader", () => {
   it("shows 'No channels' when the channel list is empty", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -58,7 +60,7 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("No channels")).toBeInTheDocument();
@@ -67,6 +69,7 @@ describe("PlanningHeader", () => {
   it("uses page-resolved labels for localized detail headers", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -82,7 +85,7 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByText("منشور ثابت")).toBeInTheDocument();
@@ -93,6 +96,7 @@ describe("PlanningHeader", () => {
   it("keeps lifecycle actions out of the compact header", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -105,7 +109,7 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.queryByRole("link", { name: "Edit" })).toBeNull();
@@ -115,6 +119,7 @@ describe("PlanningHeader", () => {
   it("links the breadcrumb back to the workspace's planning list", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -127,16 +132,17 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     const breadcrumb = screen.getByTestId("planning-header-breadcrumb");
-    expect(breadcrumb).toHaveAttribute("href", "/app/w/acme/planning");
+    expect(breadcrumb).toHaveAttribute("href", "/app/a/acme/w/acme/planning");
   });
 
   it("accepts a locale-resolved breadcrumb label", () => {
     render(
       <PlanningHeader
+        agencySlug="acme"
         workspaceSlug="acme"
         workspaceName="Acme"
         workspaceTimezone="Europe/Berlin"
@@ -150,7 +156,7 @@ describe("PlanningHeader", () => {
         plannedPublishAtIso="2026-09-01T09:00:00.000Z"
         canEdit={true}
         canTrash={false}
-        editHref="/app/w/acme/planning/ci-1/edit"
+        editHref="/app/a/acme/w/acme/planning/ci-1/edit"
       />,
     );
     expect(screen.getByTestId("planning-header-breadcrumb")).toHaveTextContent(

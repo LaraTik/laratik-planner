@@ -43,6 +43,8 @@ import {
  * the list is a complete starting point for the common lifecycle moves.
  */
 export interface PlanningListActionsProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   itemId: string;
   itemTitle: string;
@@ -67,6 +69,7 @@ export interface PlanningListActionsProps {
 
 export function PlanningListActions({
   workspaceSlug,
+  agencySlug,
   itemId,
   itemTitle,
   status,
@@ -86,7 +89,7 @@ export function PlanningListActions({
   const [ownerDialogOpen, setOwnerDialogOpen] = React.useState(false);
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t(key, params) === key ? fallback : t(key, params);
-  const detailHref = `/app/w/${workspaceSlug}/planning/${itemId}`;
+  const detailHref = `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${itemId}`;
   const isDraft = status === "draft";
   const isChangesRequested = status === "changes_requested";
   const isSubmittable = isDraft || isChangesRequested;
@@ -130,7 +133,9 @@ export function PlanningListActions({
     startDuplicateTransition(async () => {
       const result = await duplicateContentItemAction(workspaceSlug, itemId);
       if (result.newId) {
-        router.push(`/app/w/${workspaceSlug}/planning/${result.newId}#overview`);
+        router.push(
+          `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${result.newId}#overview`,
+        );
         return;
       }
       toast.error(tr("common.rowActionDuplicateFailed", "Could not duplicate this item"), {
@@ -169,7 +174,7 @@ export function PlanningListActions({
           {canEdit ? (
             <DropdownMenuItem asChild>
               <Link
-                href={`/app/w/${workspaceSlug}/planning/edit/${itemId}`}
+                href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/edit/${itemId}`}
                 data-testid="row-action-edit"
               >
                 <Edit3 className="h-3.5 w-3.5" aria-hidden="true" />
@@ -239,3 +244,5 @@ export function PlanningListActions({
     </>
   );
 }
+
+import { workspaceBasePath } from "@/lib/urls";

@@ -722,6 +722,7 @@ export default async function WorkspaceOverviewPage({
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-12">
             <div className="lg:col-span-8">
               <NeedsAttentionList
+                agencySlug={agencySlug}
                 items={dashboard.needsAttention}
                 workspaceSlug={slug}
                 now={now}
@@ -731,6 +732,7 @@ export default async function WorkspaceOverviewPage({
             </div>
             <div className="lg:col-span-4">
               <RecentlyUpdatedList
+                agencySlug={agencySlug}
                 items={dashboard.recentlyUpdated}
                 workspaceSlug={slug}
                 viewAllHref={buildPlanningHref({ status: null, risk: null })}

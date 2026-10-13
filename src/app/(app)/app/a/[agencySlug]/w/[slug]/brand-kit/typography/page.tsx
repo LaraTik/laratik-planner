@@ -81,7 +81,13 @@ export default async function BrandKitTypographyPage({
         title={t("brandKit.typographyTitle")}
         description={t("brandKit.typographyDescription")}
       />
-      <BrandKitHealth section="typography" slug={slug} count={fonts.length} breakdown={breakdown} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="typography"
+        slug={slug}
+        count={fonts.length}
+        breakdown={breakdown}
+      />
 
       <SectionCard
         id="typography"

@@ -570,6 +570,7 @@ export default async function PlanningPage({
       ) : (
         <>
           <PlanningListGrouped
+            agencySlug={agencySlug}
             items={visibleItems}
             workspaceSlug={slug}
             workspaceTimezone={ws.timezone}
@@ -580,6 +581,7 @@ export default async function PlanningPage({
             locale={code}
             actions={(it) => (
               <PlanningListActions
+                agencySlug={agencySlug}
                 workspaceSlug={slug}
                 itemId={it.id}
                 itemTitle={it.title}

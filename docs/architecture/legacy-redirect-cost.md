@@ -75,6 +75,14 @@ performance fix**, not only a correctness one — alongside the tenant-ambiguity
 argument, which stands independently: a workspace slug is unique per agency, so
 a legacy link resolves to "whichever agency the reader currently has active".
 
+**Status: the sweep is complete.** Every `/app/w/<slug>` navigation the app
+generated now emits the canonical form. Three producers remain, all
+deliberate: the legacy catch-all itself, `workspace-switcher-path` (off a
+non-canonical URL the tenant is unknowable, so it defers to the redirect), and
+`agency-switch` (degrades when the agency slug cannot be read). Each is
+allowlisted with its reason in `tests/unit/read-path-fanout-guard.test.ts`,
+which now covers the whole tree rather than a list of converted files.
+
 Priority therefore goes to the highest-traffic generators first: the
 planning-detail links rendered from lists (`needs-attention-list`,
 `recently-updated-list`, `review-row`, `calendar-event-card`).

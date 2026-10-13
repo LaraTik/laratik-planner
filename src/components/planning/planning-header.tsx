@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
 import { humanFormat, humanStatus, statusBadgeVariant } from "@/lib/content/status";
 import { PlanningHeaderActions } from "./planning-header-actions";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * PlanningHeader — the compact, sticky, at-a-glance summary of
@@ -20,6 +21,8 @@ import { PlanningHeaderActions } from "./planning-header-actions";
  */
 
 export interface PlanningHeaderProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   workspaceName: string;
   workspaceTimezone: string;
@@ -51,6 +54,7 @@ export interface PlanningHeaderProps {
 
 export function PlanningHeader({
   workspaceSlug,
+  agencySlug,
   workspaceName,
   workspaceTimezone,
   contentItemId,
@@ -79,7 +83,7 @@ export function PlanningHeader({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 flex-1">
           <Link
-            href={`/app/w/${workspaceSlug}/planning`}
+            href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning`}
             className="text-label text-fg-muted hover:text-fg-secondary focus-visible:ring-focus-ring inline-flex min-h-9 cursor-pointer items-center gap-1 rounded-[var(--radius-control)] px-1 focus:outline-none focus-visible:ring-2"
             data-testid="planning-header-breadcrumb"
           >

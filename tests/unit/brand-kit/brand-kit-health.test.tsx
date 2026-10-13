@@ -13,29 +13,29 @@ const slug = "acme";
 describe("BrandKitHealth", () => {
   describe("AI context state badges", () => {
     it("shows 'AI uses this' for voice and pillars (already in loadAiContext)", () => {
-      render(<BrandKitHealth section="voice" slug={slug} count={3} />);
+      render(<BrandKitHealth agencySlug="acme" section="voice" slug={slug} count={3} />);
       expect(screen.getByTestId("brand-kit-health-voice-ai-state")).toHaveTextContent(
         /ai uses this/i,
       );
     });
 
     it("shows 'AI uses this' for colors, typography, and publishing (Phase 8 expansion)", () => {
-      render(<BrandKitHealth section="colors" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="colors" slug={slug} count={0} />);
       expect(screen.getByTestId("brand-kit-health-colors-ai-state")).toHaveTextContent(
         /ai uses this/i,
       );
-      render(<BrandKitHealth section="typography" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="typography" slug={slug} count={0} />);
       expect(screen.getByTestId("brand-kit-health-typography-ai-state")).toHaveTextContent(
         /ai uses this/i,
       );
-      render(<BrandKitHealth section="publishing" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="publishing" slug={slug} count={0} />);
       expect(screen.getByTestId("brand-kit-health-publishing-ai-state")).toHaveTextContent(
         /ai uses this/i,
       );
     });
 
     it("shows 'Not fed to AI' for logos and linked resources (intentionally not loaded)", () => {
-      render(<BrandKitHealth section="logos" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="logos" slug={slug} count={0} />);
       expect(screen.getByTestId("brand-kit-health-logos-ai-state")).toHaveTextContent(
         /not fed to ai/i,
       );
@@ -46,6 +46,7 @@ describe("BrandKitHealth", () => {
     it("voice: missing tone rule surfaces as the first suggestion", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="voice"
           slug={slug}
           count={5}
@@ -59,6 +60,7 @@ describe("BrandKitHealth", () => {
     it("voice: missing don't rules surface as the first suggestion when tone is present", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="voice"
           slug={slug}
           count={6}
@@ -72,6 +74,7 @@ describe("BrandKitHealth", () => {
     it("voice: full coverage is healthy", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="voice"
           slug={slug}
           count={9}
@@ -84,6 +87,7 @@ describe("BrandKitHealth", () => {
     it("typography: missing headline role is called out", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="typography"
           slug={slug}
           count={2}
@@ -95,7 +99,7 @@ describe("BrandKitHealth", () => {
     });
 
     it("colors: empty workspace is told to add a Primary color first", () => {
-      render(<BrandKitHealth section="colors" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="colors" slug={slug} count={0} />);
       const first = screen.getByTestId("brand-kit-health-colors-suggestion-0");
       expect(first).toHaveTextContent(/primary/i);
     });
@@ -103,6 +107,7 @@ describe("BrandKitHealth", () => {
     it("colors: full role coverage with 5+ colors is healthy", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="colors"
           slug={slug}
           count={6}
@@ -116,6 +121,7 @@ describe("BrandKitHealth", () => {
     it("colors: missing roles are called out by name", () => {
       render(
         <BrandKitHealth
+          agencySlug="acme"
           section="colors"
           slug={slug}
           count={2}
@@ -127,13 +133,13 @@ describe("BrandKitHealth", () => {
     });
 
     it("pillars: more than 5 is flagged as a dilution risk", () => {
-      render(<BrandKitHealth section="pillars" slug={slug} count={7} />);
+      render(<BrandKitHealth agencySlug="acme" section="pillars" slug={slug} count={7} />);
       const first = screen.getByTestId("brand-kit-health-pillars-suggestion-0");
       expect(first).toHaveTextContent(/dilute/i);
     });
 
     it("voice: zero rules shows the onboarding copy", () => {
-      render(<BrandKitHealth section="voice" slug={slug} count={0} />);
+      render(<BrandKitHealth agencySlug="acme" section="voice" slug={slug} count={0} />);
       const first = screen.getByTestId("brand-kit-health-voice-suggestion-0");
       expect(first).toHaveTextContent(/1 tone rule/i);
     });
@@ -141,15 +147,17 @@ describe("BrandKitHealth", () => {
 
   describe("chrome", () => {
     it("renders the section-specific aria-label and testid", () => {
-      render(<BrandKitHealth section="logos" slug={slug} count={2} />);
+      render(<BrandKitHealth agencySlug="acme" section="logos" slug={slug} count={2} />);
       const card = screen.getByTestId("brand-kit-health-logos");
       expect(card).toHaveAttribute("aria-label", "Logos health");
     });
 
     it("renders the count in a human-readable way (singular vs plural)", () => {
-      const { rerender } = render(<BrandKitHealth section="logos" slug={slug} count={1} />);
+      const { rerender } = render(
+        <BrandKitHealth agencySlug="acme" section="logos" slug={slug} count={1} />,
+      );
       expect(screen.getByTestId("brand-kit-health-logos")).toHaveTextContent(/1 entry\b/);
-      rerender(<BrandKitHealth section="logos" slug={slug} count={3} />);
+      rerender(<BrandKitHealth agencySlug="acme" section="logos" slug={slug} count={3} />);
       expect(screen.getByTestId("brand-kit-health-logos")).toHaveTextContent(/3 entries\b/);
     });
   });

@@ -11,7 +11,7 @@ describe("WorkspaceRowActions", () => {
 
     render(
       <LocaleProvider locale="ar">
-        <WorkspaceRowActions slug="acme" name="Acme" canArchive canDuplicate />
+        <WorkspaceRowActions agencySlug="acme" slug="acme" name="Acme" canArchive canDuplicate />
       </LocaleProvider>,
     );
 

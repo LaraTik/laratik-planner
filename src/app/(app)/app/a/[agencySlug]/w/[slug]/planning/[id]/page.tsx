@@ -821,6 +821,7 @@ export default async function ContentDetailPage({
                 so the user can see the lifecycle at a glance
                 even on the smallest viewport. */}
             <PlanningHeader
+              agencySlug={agencySlug}
               workspaceSlug={slug}
               workspaceName={ws.name}
               workspaceTimezone={ws.timezone}
@@ -875,6 +876,7 @@ export default async function ContentDetailPage({
           scenario: activeScenario,
         }}
         workspace={{
+          agencySlug,
           workspaceSlug: slug,
           contentItemId: item.id,
           ideaTitle: item.title,
@@ -958,6 +960,7 @@ export default async function ContentDetailPage({
                   collapsible
                 >
                   <EditIdeaForm
+                    agencySlug={agencySlug}
                     workspaceSlug={slug}
                     contentItemId={item.id}
                     workspaceTimezone={ws.timezone}
@@ -1177,6 +1180,7 @@ export default async function ContentDetailPage({
                     <div className="flex items-center gap-2">
                       {canEdit ? (
                         <AiAssistancePanel
+                          agencySlug={agencySlug}
                           workspaceSlug={slug}
                           contentItemId={item.id}
                           contentStatus={item.status}
@@ -1338,6 +1342,7 @@ export default async function ContentDetailPage({
                 data-testid="workspace-tab-panel-copy"
               >
                 <MessagesPanel
+                  agencySlug={agencySlug}
                   workspaceSlug={slug}
                   contentItemId={item.id}
                   format={item.format as ContentFormat}

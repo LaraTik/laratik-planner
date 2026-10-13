@@ -23,6 +23,7 @@ import { channelCopyStatus, isAudienceCopyKey } from "@/lib/content/audience-cop
 import { type ContentFormat } from "@/lib/format-payload/schemas";
 import { type ActionState } from "@/lib/validation/action-state";
 import { platformLabel } from "@/components/workspace/platform-icon";
+import { workspaceBasePath } from "@/lib/urls";
 
 const initial: ActionState<"contentItemId" | "format" | "formatPayload"> = {};
 
@@ -37,6 +38,8 @@ type Channel = {
 };
 
 export interface MessagesPanelProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   contentItemId: string;
   format: ContentFormat;
@@ -53,6 +56,7 @@ export interface MessagesPanelProps {
  * now called Copy. */
 export function AudienceCopyPanel({
   workspaceSlug,
+  agencySlug,
   contentItemId,
   format,
   initialPayload,
@@ -612,7 +616,9 @@ export function AudienceCopyPanel({
           </div>
           {channels.length > 0 ? (
             <Button asChild size="sm" variant="outline">
-              <Link href={`/app/w/${workspaceSlug}/planning/${contentItemId}/publish`}>
+              <Link
+                href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${contentItemId}/publish`}
+              >
                 {tr("contentDetail.copy.openPublishing", "Review in Publishing")}
               </Link>
             </Button>

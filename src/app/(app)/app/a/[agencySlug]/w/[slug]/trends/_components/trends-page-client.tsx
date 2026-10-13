@@ -15,6 +15,7 @@ import { TrendsBriefsTab } from "./briefs-tab";
 import { TrendSourceTosModal } from "@/components/ai/trend-source-tos-modal";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { SourceDefinition } from "@/lib/trends/source-catalog";
+import { workspaceBasePath } from "@/lib/urls";
 
 function ReadOnlyTrendSetup() {
   const t = useLocaleT();
@@ -84,6 +85,7 @@ type Optout = {
  */
 export function TrendsPageClient({
   workspaceSlug,
+  agencySlug,
   workspaceTimezone,
   isAdmin,
   enabledKeys,
@@ -94,6 +96,8 @@ export function TrendsPageClient({
   showReadOnlySetup,
 }: {
   workspaceSlug: string;
+  /** Canonical agency segment. */
+  agencySlug: string;
   workspaceTimezone: string;
   isAdmin: boolean;
   enabledKeys: string[];
@@ -132,10 +136,10 @@ export function TrendsPageClient({
   const handleUseInBrief = React.useCallback(
     (trend: TrendSignal) => {
       router.push(
-        `/app/w/${encodeURIComponent(workspaceSlug)}/planning/new?trendSignalId=${encodeURIComponent(trend.id)}`,
+        `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/new?trendSignalId=${encodeURIComponent(trend.id)}`,
       );
     },
-    [router, workspaceSlug],
+    [agencySlug, router, workspaceSlug],
   );
 
   return (
@@ -207,6 +211,7 @@ export function TrendsPageClient({
             <ReadOnlyTrendSetup />
           ) : (
             <TrendFeed
+              agencySlug={agencySlug}
               workspaceSlug={workspaceSlug}
               signals={signals}
               vertical={vertical}
@@ -227,10 +232,18 @@ export function TrendsPageClient({
           />
         </TabsContent>
         <TabsContent value="boards">
-          <TrendsBoardsTab workspaceSlug={workspaceSlug} onBoardsChange={setBoards} />
+          <TrendsBoardsTab
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            onBoardsChange={setBoards}
+          />
         </TabsContent>
         <TabsContent value="briefs">
-          <TrendsBriefsTab workspaceSlug={workspaceSlug} workspaceTimezone={workspaceTimezone} />
+          <TrendsBriefsTab
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            workspaceTimezone={workspaceTimezone}
+          />
         </TabsContent>
       </Tabs>
 

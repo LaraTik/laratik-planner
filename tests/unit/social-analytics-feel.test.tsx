@@ -45,7 +45,9 @@ function makeSeries(values: Array<number | null>): MetricSeriesPoint[] {
 
 describe("SocialHealthBanner", () => {
   it("renders nothing when no channels are passed (regression: don't ship an empty banner)", () => {
-    const { container } = render(<SocialHealthBanner channels={[]} slug="acme" />);
+    const { container } = render(
+      <SocialHealthBanner agencySlug="acme" channels={[]} slug="acme" />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -62,7 +64,9 @@ describe("SocialHealthBanner", () => {
         latestProviderErrorCode: null,
       },
     ];
-    const { container } = render(<SocialHealthBanner channels={channels} slug="acme" now={now} />);
+    const { container } = render(
+      <SocialHealthBanner agencySlug="acme" channels={channels} slug="acme" now={now} />,
+    );
     expect(container.firstChild).toBeNull();
   });
 
@@ -78,7 +82,7 @@ describe("SocialHealthBanner", () => {
         latestProviderErrorCode: null,
       },
     ];
-    render(<SocialHealthBanner channels={channels} slug="acme" />);
+    render(<SocialHealthBanner agencySlug="acme" channels={channels} slug="acme" />);
     const banner = screen.getByTestId("social-health-banner");
     expect(banner).toBeInTheDocument();
     const reauthRow = screen.getByTestId("social-health-banner-reauth");
@@ -101,7 +105,7 @@ describe("SocialHealthBanner", () => {
         latestProviderErrorCode: null,
       },
     ];
-    render(<SocialHealthBanner channels={channels} slug="acme" now={now} />);
+    render(<SocialHealthBanner agencySlug="acme" channels={channels} slug="acme" now={now} />);
     const stale = screen.getByTestId("social-health-banner-stale");
     expect(stale).toBeInTheDocument();
     expect(stale.textContent).toContain("Food Game");
@@ -119,7 +123,7 @@ describe("SocialHealthBanner", () => {
         latestProviderErrorCode: null,
       },
     ];
-    render(<SocialHealthBanner channels={channels} slug="acme" />);
+    render(<SocialHealthBanner agencySlug="acme" channels={channels} slug="acme" />);
     const err = screen.getByTestId("social-health-banner-error");
     expect(err.textContent).toContain("rate_limited");
   });
@@ -143,7 +147,7 @@ describe("SocialHealthBanner", () => {
         latestProviderErrorCode: "permission_denied",
       },
     ];
-    render(<SocialHealthBanner channels={channels} slug="acme" />);
+    render(<SocialHealthBanner agencySlug="acme" channels={channels} slug="acme" />);
     const err = screen.getByTestId("social-health-banner-error");
     expect(err.textContent).toContain("Just Halal tr");
     expect(err.textContent).toContain("permission_denied");

@@ -5,9 +5,10 @@ import * as Sentry from "@sentry/nextjs";
 import { useParams } from "next/navigation";
 import { RouteErrorState } from "@/components/feedback/route-error-state";
 import { getClientT } from "@/lib/i18n/client-locale";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
- * Per-route error boundary for /app/w/[slug]/brand-kit/*.
+ * Per-route error boundary for /app/a/[agencySlug]/w/[slug]/brand-kit/*.
  *
  * Re-uses the (app) error UI (Try again, Back to My Work, sign out)
  * and adds a section-specific "Back to Brand Kit" link so a user
@@ -29,8 +30,10 @@ export default function BrandKitError({
   // on the client it resolves to the visitor's most recent
   // preference.
   const t = getClientT();
-  const params = useParams<{ slug: string }>();
-  const brandKitHref = params?.slug ? `/app/w/${params.slug}/brand-kit` : "/app";
+  const params = useParams<{ agencySlug: string; slug: string }>();
+  const brandKitHref = params?.slug
+    ? `${workspaceBasePath(params.agencySlug, params.slug)}/brand-kit`
+    : "/app";
 
   React.useEffect(() => {
     Sentry.captureException(error, { tags: { section: "brand-kit" } });

@@ -9,6 +9,7 @@ import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * RecentlyUpdatedList — the refactored "Recently updated" panel on
@@ -46,6 +47,8 @@ export interface RecentlyUpdatedItem {
 
 export interface RecentlyUpdatedListProps {
   items: RecentlyUpdatedItem[];
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   viewAllHref: string;
   createHref?: string;
@@ -61,6 +64,7 @@ export interface RecentlyUpdatedListProps {
 export function RecentlyUpdatedList({
   items,
   workspaceSlug,
+  agencySlug,
   viewAllHref,
   createHref,
   t,
@@ -125,7 +129,7 @@ export function RecentlyUpdatedList({
             return (
               <li key={it.id} className="py-2.5 first:pt-0 last:pb-0">
                 <Link
-                  href={`/app/w/${workspaceSlug}/planning/${it.id}`}
+                  href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${it.id}`}
                   className="hover:bg-surface-subtle -mx-2 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-[var(--radius-control)] px-2 py-1 transition-colors"
                 >
                   <span className="text-label text-fg-muted shrink-0 font-semibold tracking-wide uppercase">

@@ -20,6 +20,8 @@ export type PlanningDetailShellWorkflowProps = WorkflowRailBodyProps;
  * discussion drawer + operator overflow). Serialised to the client.
  */
 export interface PlanningDetailShellWorkspaceProps {
+  /** Canonical agency segment, forwarded to WorkspaceShell. */
+  agencySlug: string;
   workspaceSlug: string;
   contentItemId: string;
   ideaTitle: string;

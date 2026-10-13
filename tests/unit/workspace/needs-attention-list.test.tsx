@@ -38,10 +38,11 @@ describe("NeedsAttentionList", () => {
   it("renders a row per item with title, format, and severity icon", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     expect(screen.getByText("Critical blocked item")).toBeInTheDocument();
@@ -53,10 +54,11 @@ describe("NeedsAttentionList", () => {
   it("shows relative deadline language (X days overdue · MMM d)", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     expect(screen.getAllByText(/4 days overdue/).length).toBeGreaterThan(0);
@@ -77,10 +79,11 @@ describe("NeedsAttentionList", () => {
     ];
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={upcoming}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     expect(screen.getAllByText(/due today/i).length).toBeGreaterThan(0);
@@ -89,23 +92,25 @@ describe("NeedsAttentionList", () => {
   it("shows a 'View all attention items' footer link", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     const link = screen.getByRole("link", { name: /view all attention items/i });
-    expect(link).toHaveAttribute("href", "/app/w/acme/planning?risk=at_risk");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning?risk=at_risk");
   });
 
   it("shows the empty-state copy when there are no items", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={[]}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     expect(screen.getByText(/everything is on track/i)).toBeInTheDocument();
@@ -114,28 +119,30 @@ describe("NeedsAttentionList", () => {
   it("links each row to the planning detail page (multiple links per row allowed)", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     // The first row has both a title link and an "Open →" link
     // pointing at the same URL. We assert that at least one link
     // with the right href exists.
     const links = screen.getAllByRole("link", { name: /Critical blocked item/i });
-    expect(links.some((l) => l.getAttribute("href") === "/app/w/acme/planning/blocked-1")).toBe(
-      true,
-    );
+    expect(
+      links.some((l) => l.getAttribute("href") === "/app/a/acme/w/acme/planning/blocked-1"),
+    ).toBe(true);
   });
 
   it("renders the owner name when present, 'Unassigned' when null", () => {
     render(
       <NeedsAttentionList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
         now={now}
-        viewAllHref="/app/w/acme/planning?risk=at_risk"
+        viewAllHref="/app/a/acme/w/acme/planning?risk=at_risk"
       />,
     );
     expect(screen.getByText("Alice")).toBeInTheDocument();

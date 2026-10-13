@@ -76,6 +76,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -107,6 +108,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -132,6 +134,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -152,6 +155,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -178,6 +182,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -195,6 +200,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -204,10 +210,12 @@ describe("PlanningListItem", () => {
     );
     const comments = screen.getAllByTestId("row-comment-count");
     comments.forEach((c) =>
-      expect(c).toHaveAttribute("href", "/app/w/acme/planning/item-1#activity"),
+      expect(c).toHaveAttribute("href", "/app/a/acme/w/acme/planning/item-1#activity"),
     );
     const assets = screen.getAllByTestId("row-asset-count");
-    assets.forEach((a) => expect(a).toHaveAttribute("href", "/app/w/acme/planning/item-1#content"));
+    assets.forEach((a) =>
+      expect(a).toHaveAttribute("href", "/app/a/acme/w/acme/planning/item-1#content"),
+    );
   });
 
   it("renders the blocked state distinctly from at-risk", () => {
@@ -219,6 +227,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -240,6 +249,7 @@ describe("PlanningListItem", () => {
     render(
       <ul>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -289,6 +299,7 @@ describe("PlanningListItem — RSC #441 regression guard", () => {
     const { container } = render(
       <PlanningListItemList>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"
@@ -322,6 +333,7 @@ describe("PlanningListItem — RSC #441 regression guard", () => {
     const { container } = render(
       <PlanningListItemList>
         <PlanningListItem
+          agencySlug="acme"
           item={item}
           workspaceSlug="acme"
           workspaceTimezone="Europe/Berlin"

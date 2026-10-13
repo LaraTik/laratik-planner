@@ -25,7 +25,7 @@ describe("AiAssistanceSection", () => {
   it("renders the disabled and context states from the active Arabic catalog", () => {
     render(
       <LocaleProvider locale="ar">
-        <AiAssistanceSection {...baseProps} />
+        <AiAssistanceSection agencySlug="acme" {...baseProps} />
       </LocaleProvider>,
     );
 

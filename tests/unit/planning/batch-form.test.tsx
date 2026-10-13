@@ -13,6 +13,7 @@ describe("BatchForm", () => {
     render(
       <LocaleProvider locale="ar">
         <BatchForm
+          agencySlug="acme"
           slug="food-game"
           workspaceTimezone="Europe/Berlin"
           channels={[
@@ -40,7 +41,7 @@ describe("BatchForm", () => {
   it("imports tab-separated rows into editable grid rows", () => {
     render(
       <LocaleProvider locale="en">
-        <BatchForm slug="food-game" channels={[]} />
+        <BatchForm agencySlug="acme" slug="food-game" channels={[]} />
       </LocaleProvider>,
     );
     expect(screen.getByTestId("batch-grid-scroll")).toBeInTheDocument();

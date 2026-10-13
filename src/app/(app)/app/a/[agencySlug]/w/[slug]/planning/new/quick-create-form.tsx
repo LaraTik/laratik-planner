@@ -13,6 +13,7 @@ import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { formatDateInTimeZoneForInput } from "@/lib/utils/date";
 import { quickCreateAction } from "../actions";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Per-form human label map for the top-of-form summary card.
@@ -24,11 +25,14 @@ const initial: { error?: string; fieldErrors?: Record<string, string> } = {};
 
 export function QuickCreateForm({
   workspaceSlug,
+  agencySlug,
   workspaceTimezone,
   trendSignal,
   researchPost,
   researchTeardown,
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   workspaceTimezone: string;
   trendSignal?: { id: string; label: string };
@@ -307,7 +311,9 @@ export function QuickCreateForm({
           size="lg"
         />
         <Button variant="ghost" asChild>
-          <a href={`/app/w/${workspaceSlug}/planning`}>{t("quickCreate.form.cancel")}</a>
+          <a href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning`}>
+            {t("quickCreate.form.cancel")}
+          </a>
         </Button>
       </div>
     </form>

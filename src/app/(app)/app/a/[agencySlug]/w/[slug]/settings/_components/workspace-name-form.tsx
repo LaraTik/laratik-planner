@@ -9,6 +9,7 @@ import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 import { renameWorkspaceAction, type RenameWorkspaceActionState } from "../actions";
 import { WORKSPACE_NAME_MAX_LENGTH } from "@/lib/workspaces/rename-command";
+import { workspaceBasePath } from "@/lib/urls";
 
 export type RenameWorkspaceCopy = {
   title: string;
@@ -159,7 +160,7 @@ function WorkspaceNameFormFields({
               className="border-border bg-surface-subtle text-body text-fg-secondary flex h-10 items-center gap-2 overflow-hidden rounded-[var(--radius-control)] border px-3"
             >
               <Link2 className="text-fg-muted h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              <span className="truncate">/app/w/{slug}</span>
+              <span className="truncate">{workspaceBasePath(agencySlug, slug)}</span>
             </p>
             <p id="settings-workspace-url-hint" className="text-label text-fg-muted">
               {copy.urlHint}

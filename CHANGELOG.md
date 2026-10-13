@@ -12,6 +12,41 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Changed — canonical workspace URLs: the sweep is complete
+
+Every `/app/w/<slug>` navigation the app generated is now
+`/app/a/<agencySlug>/w/<slug>/…`. Only three producers remain, all
+deliberate and all allowlisted in `read-path-fanout-guard`: the legacy
+catch-all itself, `workspace-switcher-path` (off a non-canonical URL the
+tenant is unknowable, so it defers to the redirect), and `agency-switch`
+(degrades when the agency slug cannot be read).
+
+**Measured reason this matters:** the legacy hop costs **+21 SQL statements
+and ~1.5–2× the wall-clock** of the canonical URL, because the app shell
+re-renders inside the `(app)` route group before the redirect. See
+`docs/architecture/legacy-redirect-cost.md`.
+
+Three kinds of change, done as separate passes:
+
+- **Query joins.** Where a list spans workspaces — My Work, the workspaces
+  table, the calendar, media related-items — the agency is per-row data and
+  rides on the projection. Getting it wrong would point a user at another
+  tenant's planning page.
+- **Server actions.** Redirects gained `agencySlug`; `workspaces/new` reads
+  it from inside its own transaction rather than assuming the active agency.
+- **Components.** ~19 components took a required `agencySlug` prop, threaded
+  from their pages. Required with no default, so TypeScript enumerates every
+  caller rather than a silent fallback re-introducing the legacy shape.
+
+Two findings worth recording:
+
+- **`revalidatePath` calls survived the earlier sweep because they were
+  multi-line.** The Phase D removal was single-line; five remained in
+  `publish/actions.ts`. They were dead for the same reasons as the 154
+  already removed and are gone.
+- **The workspace URL shown to users in settings was still legacy**, so the
+  form displayed an ambiguous path. It now shows the canonical one.
+
 ### Performance — the remaining read-path N+1s (media library, platform support)
 
 Second pass over the fan-out rule in `docs/architecture/app-shell-performance.md`.

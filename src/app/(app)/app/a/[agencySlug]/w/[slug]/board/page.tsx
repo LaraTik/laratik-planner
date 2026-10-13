@@ -316,6 +316,7 @@ export default async function WorkflowBoardPage({
         />
       ) : (
         <WorkflowBoard
+          agencySlug={agencySlug}
           items={items}
           columns={columns}
           workspaceSlug={slug}

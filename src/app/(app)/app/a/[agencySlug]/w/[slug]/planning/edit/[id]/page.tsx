@@ -130,6 +130,7 @@ export default async function EditIdeaPage({
         }
       />
       <EditIdeaForm
+        agencySlug={agencySlug}
         mode="all"
         workspaceSlug={slug}
         contentItemId={item.id}

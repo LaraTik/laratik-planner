@@ -5,9 +5,10 @@ import * as Sentry from "@sentry/nextjs";
 import { useParams } from "next/navigation";
 import { RouteErrorState } from "@/components/feedback/route-error-state";
 import { getClientT } from "@/lib/i18n/client-locale";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
- * Per-route error boundary for /app/w/[slug]/planning/*.
+ * Per-route error boundary for /app/a/[agencySlug]/w/[slug]/planning/*.
  *
  * Re-uses the (app) error UI (Try again, Back to My Work, sign out)
  * and adds a section-specific "Back to Planning" link so a user
@@ -29,8 +30,10 @@ export default function PlanningError({
   // on the client it resolves to the visitor's most recent
   // preference.
   const t = getClientT();
-  const params = useParams<{ slug: string }>();
-  const planningHref = params?.slug ? `/app/w/${params.slug}/planning` : "/app";
+  const params = useParams<{ agencySlug: string; slug: string }>();
+  const planningHref = params?.slug
+    ? `${workspaceBasePath(params.agencySlug, params.slug)}/planning`
+    : "/app";
 
   React.useEffect(() => {
     Sentry.captureException(error, { tags: { section: "planning" } });

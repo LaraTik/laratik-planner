@@ -27,6 +27,7 @@ import {
 } from "@/lib/ai/capabilities";
 import { DiffPreview } from "@/components/ai/diff-preview";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * AI assistance entry points on the content detail page.
@@ -156,6 +157,7 @@ interface DraftState {
 
 export function AiAssistanceSection({
   workspaceSlug,
+  agencySlug,
   contentItemId,
   contentStatus,
   isManager,
@@ -166,6 +168,8 @@ export function AiAssistanceSection({
   currentBrief,
   trendContext,
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   contentItemId: string;
   contentStatus: string;
@@ -358,7 +362,7 @@ export function AiAssistanceSection({
             for operators only. */}
         {isManager ? (
           <a
-            href={`/app/w/${workspaceSlug}/ai-settings`}
+            href={`${workspaceBasePath(agencySlug, workspaceSlug)}/ai-settings`}
             className="text-label text-primary focus-visible:ring-focus-ring inline-flex items-center gap-1 rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"
             data-testid="ai-open-workspace-settings"
           >

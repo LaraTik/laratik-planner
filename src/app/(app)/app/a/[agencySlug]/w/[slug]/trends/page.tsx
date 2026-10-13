@@ -134,6 +134,7 @@ export default async function TrendsPage({
         }
       />
       <TrendsPageClient
+        agencySlug={agencySlug}
         workspaceSlug={ws.slug}
         workspaceTimezone={ws.timezone}
         isAdmin={isAdmin}

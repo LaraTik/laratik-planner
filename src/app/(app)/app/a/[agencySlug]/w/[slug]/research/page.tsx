@@ -333,6 +333,7 @@ export default async function ResearchPage({
       />
 
       <ResearchTeardownPanel
+        agencySlug={agencySlug}
         workspaceSlug={slug}
         locale={code}
         canManage={canManage}
@@ -388,6 +389,7 @@ export default async function ResearchPage({
       />
 
       <ResearchEvidenceGrid
+        agencySlug={agencySlug}
         workspaceSlug={slug}
         slug={slug}
         canManage={canManage}

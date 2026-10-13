@@ -53,7 +53,12 @@ export default async function BrandKitPublishingPage({
         title={t("brandKit.publishingTitle")}
         description={t("brandKit.publishingDescription")}
       />
-      <BrandKitHealth section="publishing" slug={slug} count={rules.length} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="publishing"
+        slug={slug}
+        count={rules.length}
+      />
 
       <SectionCard
         id="publishing"

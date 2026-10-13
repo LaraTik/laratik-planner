@@ -63,6 +63,7 @@ describe("PlanningListGrouped", () => {
     ];
     render(
       <PlanningListGrouped
+        agencySlug="acme"
         items={items}
         workspaceSlug="acme"
         workspaceTimezone="Europe/Berlin"
@@ -84,6 +85,7 @@ describe("PlanningListGrouped", () => {
     ];
     render(
       <PlanningListGrouped
+        agencySlug="acme"
         items={items}
         workspaceSlug="acme"
         workspaceTimezone="Europe/Berlin"
@@ -103,6 +105,7 @@ describe("PlanningListGrouped", () => {
     const items = [makeItem("overdue-1", new Date("2026-08-13T09:00:00.000Z"))];
     render(
       <PlanningListGrouped
+        agencySlug="acme"
         items={items}
         workspaceSlug="acme"
         workspaceTimezone="Europe/Berlin"

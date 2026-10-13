@@ -22,6 +22,7 @@ function renderRow(
   return render(
     <ul>
       <ReviewRow
+        agencySlug="acme"
         item={{ ...baseItem, ...overrides }}
         workspaceSlug="acme"
         nowMs={nowMs}
@@ -57,7 +58,7 @@ describe("ReviewRow", () => {
   it("builds the row href from the workspace slug and contentId", () => {
     renderRow();
     const link = screen.getByRole("link", { name: /Q3 launch teaser/i });
-    expect(link).toHaveAttribute("href", "/app/w/acme/planning/c-1");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning/c-1");
   });
 
   it("uses the data-testid with the request id", () => {
@@ -116,6 +117,7 @@ describe("ReviewRow", () => {
     const { container } = render(
       <ul>
         <ReviewRow
+          agencySlug="acme"
           item={baseItem}
           workspaceSlug="acme"
           nowMs={nowMs}
