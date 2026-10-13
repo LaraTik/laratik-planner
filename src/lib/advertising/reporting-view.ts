@@ -59,6 +59,7 @@ export type AdvertisingReportView = {
   adSets: AdvertisingAdSetSummary[];
   ads: AdvertisingAdSummary[];
   adCount: number;
+  activeAdCount: number | null;
   promotedPosts?: AdvertisingPromotedPostSummary[];
 };
 
@@ -170,6 +171,7 @@ export function buildAdvertisingReportView(
       };
     })
     .sort((left, right) => right.spend - left.spend || left.adId.localeCompare(right.adId));
+  const adObjects = objects.filter((object) => object.objectType === "ad");
   const adToPost = new Map(
     objects
       .filter((object) => object.objectType === "ad" && object.promotedPostId)
@@ -187,6 +189,10 @@ export function buildAdvertisingReportView(
     adSets,
     ads,
     adCount: adIds.size,
+    activeAdCount:
+      adObjects.length > 0
+        ? adObjects.filter((object) => object.status?.toUpperCase() === "ACTIVE").length
+        : null,
     ...(objects.length > 0
       ? {
           promotedPosts: [...promotedPosts.entries()]

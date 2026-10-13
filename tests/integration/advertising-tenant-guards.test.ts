@@ -40,7 +40,10 @@ import {
   failAdvertisingSync,
   runAdvertisingSyncTick,
 } from "@/lib/advertising/sync-worker";
-import { AdvertisingLeaseLostError } from "@/lib/advertising/ingestion-service";
+import {
+  AdvertisingLeaseLostError,
+  ingestAdvertisingSpend,
+} from "@/lib/advertising/ingestion-service";
 import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
 import { persistAdvertisingProviderObjects } from "@/lib/advertising/connection-service";
 import type { MetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
@@ -217,6 +220,67 @@ describe("advertising tenant ownership guards", () => {
     expect(state).toBeDefined();
   });
 
+  it("deduplicates the same provider fact observed through multiple credentials", async () => {
+    const { agencyA, connectionA, accountA, actor } = await seed();
+    const [connectionB] = await db
+      .insert(advertisingConnections)
+      .values({
+        agencyId: agencyA.id,
+        provider: "meta",
+        displayName: "Connection A replacement",
+        credentialRef: "advertising:test:a-replacement",
+        createdBy: actor.id,
+      })
+      .returning();
+    if (!connectionB) throw new Error("failed to seed replacement connection");
+
+    await db
+      .update(advertisingConnections)
+      .set({ status: "active" })
+      .where(eq(advertisingConnections.id, connectionA.id));
+    await db
+      .update(advertisingConnections)
+      .set({ status: "active" })
+      .where(eq(advertisingConnections.id, connectionB.id));
+    await db.insert(advertisingConnectionAccounts).values([
+      { connectionId: connectionA.id, accountId: accountA.id },
+      { connectionId: connectionB.id, accountId: accountA.id },
+    ]);
+
+    const observation = {
+      externalAdId: "ad_multi_credential",
+      externalCampaignId: "campaign_multi_credential",
+      externalAdSetId: "adset_multi_credential",
+      reportDate: "2026-10-01",
+      currency: "EUR",
+      spend: "12.50",
+      impressions: 100,
+      clicks: 5,
+      attributionWindow: "account",
+      actionReportTime: "impression",
+    } as const;
+    await ingestAdvertisingSpend(db, {
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      observations: [observation],
+    });
+    await ingestAdvertisingSpend(db, {
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionB.id,
+      observations: [observation],
+    });
+
+    const observations = await db
+      .select({
+        connectionId: advertisingSpendObservations.connectionId,
+        spend: advertisingSpendObservations.spend,
+      })
+      .from(advertisingSpendObservations);
+    expect(observations).toEqual([{ connectionId: connectionB.id, spend: "12.500000" }]);
+  });
+
   it("allows only one concurrent claim and fences stale run-history creation", async () => {
     const { connectionA, accountA } = await seed();
     await db.update(advertisingConnections).set({ status: "active" });
@@ -345,6 +409,16 @@ describe("advertising tenant ownership guards", () => {
           failFirstAccountRead = false;
           throw Object.assign(new Error("provider temporarily unavailable"), { status: 503 });
         }
+        if (context.grain === "account_day") {
+          return {
+            data: [
+              {
+                date_start: context.dateRange.since,
+                spend: "27.50",
+              },
+            ],
+          };
+        }
         return {
           data: [
             {
@@ -355,6 +429,15 @@ describe("advertising tenant ownership guards", () => {
               spend: "12.50",
               impressions: "1000",
               clicks: "25",
+            },
+            {
+              ad_id: "ad_replay_unassigned",
+              adset_id: "adset_replay_unassigned",
+              campaign_id: "campaign_replay_unassigned",
+              date_start: context.dateRange.since,
+              spend: "15.00",
+              impressions: "500",
+              clicks: "10",
             },
           ],
         };
@@ -391,17 +474,19 @@ describe("advertising tenant ownership guards", () => {
         id: advertisingSpendReconciliations.id,
         workspaceAttributedSpend: advertisingSpendReconciliations.workspaceAttributedSpend,
         unallocatedSpend: advertisingSpendReconciliations.unallocatedSpend,
+        discrepancy: advertisingSpendReconciliations.discrepancy,
       })
       .from(advertisingSpendReconciliations);
     const runs = await db
       .select({ status: advertisingSyncRuns.status })
       .from(advertisingSyncRuns)
       .where(eq(advertisingSyncRuns.syncStateId, state.id));
-    expect(observations).toHaveLength(1);
+    expect(observations).toHaveLength(2);
     expect(reconciliations).toEqual([
       expect.objectContaining({
         workspaceAttributedSpend: "12.500000",
-        unallocatedSpend: "0.000000",
+        unallocatedSpend: "15.000000",
+        discrepancy: "0.000000",
       }),
     ]);
     expect(runs.map((run) => run.status).sort()).toEqual(["failed", "succeeded"]);
@@ -521,6 +606,21 @@ describe("advertising tenant ownership guards", () => {
         attributionWindow: "account",
         actionReportTime: "impression",
       },
+      {
+        agencyId: agencyA.id,
+        accountId: accountA.id,
+        connectionId: connectionA.id,
+        externalAdId: "ad_workspace_unassigned",
+        externalCampaignId: "campaign_workspace_unassigned",
+        externalAdSetId: "adset_workspace_unassigned",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "15.00",
+        impressions: 150,
+        clicks: 15,
+        attributionWindow: "account",
+        actionReportTime: "impression",
+      },
     ]);
 
     const grantA1 = await grantAdvertisingVisibility(db, {
@@ -578,6 +678,8 @@ describe("advertising tenant ownership guards", () => {
     expect(reportA2.report.rows.map((row) => row.campaignId)).toEqual(["campaign_workspace_a2"]);
     expect(reportA1.report.totals.spend).toBe(10);
     expect(reportA2.report.totals.spend).toBe(90);
+    expect(reportA1.report.rows.some((row) => row.adId === "ad_workspace_unassigned")).toBe(false);
+    expect(reportA2.report.rows.some((row) => row.adId === "ad_workspace_unassigned")).toBe(false);
     expect(reportA1.report.cacheKey).not.toBe(reportA2.report.cacheKey);
 
     await revokeAdvertisingVisibility(db, {
@@ -595,6 +697,16 @@ describe("advertising tenant ownership guards", () => {
       surface: "workspace_dashboard",
     });
     expect(revokedReport).toEqual({ kind: "forbidden" });
+    const revokedExport = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "csv_export",
+    });
+    expect(revokedExport).toEqual({ kind: "forbidden" });
     expect(
       await listAdvertisingReportAccounts(db, {
         actor: { id: actor.id },

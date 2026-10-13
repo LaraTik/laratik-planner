@@ -40,6 +40,7 @@ describe("advertising reporting view", () => {
       { date: "2026-10-02", spend: 90 },
     ]);
     expect(view.adCount).toBe(2);
+    expect(view.activeAdCount).toBeNull();
     expect(view.campaigns[0]).toMatchObject({
       campaignId: "campaign-b",
       spend: 60,
@@ -71,6 +72,7 @@ describe("advertising reporting view", () => {
       adSets: [],
       ads: [],
       adCount: 0,
+      activeAdCount: null,
     });
   });
 
@@ -126,5 +128,6 @@ describe("advertising reporting view", () => {
     expect(view.promotedPosts).toEqual([
       expect.objectContaining({ postId: "post-1", adCount: 2, spend: 30, impressions: 300 }),
     ]);
+    expect(view.activeAdCount).toBe(2);
   });
 });

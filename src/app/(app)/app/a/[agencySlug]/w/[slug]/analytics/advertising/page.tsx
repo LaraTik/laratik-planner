@@ -270,7 +270,7 @@ export default async function AdvertisingAnalyticsPage({
                 {t("advertising.reporting.summaryDescription", { account: selectedAccount.name })}
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
               <MetricCard
                 label={t("advertising.reporting.spend")}
                 value={money(result.report.totals.spend, selectedAccount.currency, code)}
@@ -290,6 +290,15 @@ export default async function AdvertisingAnalyticsPage({
                     ? t("advertising.reporting.notAvailable")
                     : number(result.report.totals.results, code)
                 }
+              />
+              <MetricCard
+                label={t("advertising.reporting.activeAds")}
+                value={
+                  view.activeAdCount === null
+                    ? t("advertising.reporting.notAvailable")
+                    : number(view.activeAdCount, code)
+                }
+                testId="advertising-reporting-active-ads"
               />
               <MetricCard
                 label={t("advertising.reporting.ctr")}
@@ -898,9 +907,9 @@ function ReportState({
   return <EmptyState icon={icon} title={title} description={description} action={action} />;
 }
 
-function MetricCard({ label, value }: { label: string; value: string }) {
+function MetricCard({ label, value, testId }: { label: string; value: string; testId?: string }) {
   return (
-    <Card padding="sm">
+    <Card padding="sm" data-testid={testId}>
       <p className="text-label text-fg-muted">{label}</p>
       <p className="text-title-card text-fg-primary mt-1 font-semibold" dir="ltr">
         {value}

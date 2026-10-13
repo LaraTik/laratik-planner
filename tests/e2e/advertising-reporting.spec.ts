@@ -45,6 +45,8 @@ test.describe("synthetic advertising reporting", () => {
       "e2e-instagram-0",
     );
     await expect(page.getByTestId("advertising-reporting-daily-spend")).toContainText("€");
+    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText("Active ads");
+    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText("1");
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
     await expectNoSeriousAccessibilityViolations(page);
@@ -82,6 +84,9 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-ads")).toContainText("e2e-ad-spring");
     await expect(page.getByTestId("advertising-reporting-promoted-posts")).toContainText(
       "e2e-instagram-0",
+    );
+    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText(
+      "الإعلانات النشطة",
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
