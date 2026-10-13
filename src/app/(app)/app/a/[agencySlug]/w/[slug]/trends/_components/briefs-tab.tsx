@@ -5,12 +5,16 @@ import Link from "next/link";
 import { FileText } from "lucide-react";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { formatDate } from "@/lib/i18n/format-locale";
+import { workspaceBasePath } from "@/lib/urls";
 
 export function TrendsBriefsTab({
   workspaceSlug: _workspaceSlug,
+  agencySlug,
   workspaceTimezone,
 }: {
   workspaceSlug: string;
+  /** Canonical agency segment. */
+  agencySlug: string;
   workspaceTimezone: string;
 }) {
   const t = useLocaleT();
@@ -54,7 +58,7 @@ export function TrendsBriefsTab({
             >
               <Link
                 className="text-title-card text-fg-primary font-semibold hover:underline"
-                href={`/app/w/${_workspaceSlug}/planning/${brief.contentItemId}`}
+                href={`${workspaceBasePath(agencySlug, _workspaceSlug)}/planning/${brief.contentItemId}`}
               >
                 <bdi dir="auto">{brief.title}</bdi>
               </Link>

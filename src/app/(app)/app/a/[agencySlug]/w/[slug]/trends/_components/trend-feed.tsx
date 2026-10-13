@@ -6,6 +6,7 @@ import { FileText, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TrendCard } from "./trend-card";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { workspaceBasePath } from "@/lib/urls";
 
 type TrendSignal = {
   id: string;
@@ -33,6 +34,7 @@ type Optout = {
  */
 export function TrendFeed({
   workspaceSlug,
+  agencySlug,
   signals,
   optouts,
   onUseInBrief,
@@ -42,6 +44,8 @@ export function TrendFeed({
   boards = [],
 }: {
   workspaceSlug: string;
+  /** Canonical agency segment. */
+  agencySlug: string;
   signals: TrendSignal[];
   optouts: Optout[];
   onUseInBrief: (trend: TrendSignal) => void;
@@ -93,7 +97,7 @@ export function TrendFeed({
               </Link>
             </Button>
             <Button asChild data-testid="trends-empty-create">
-              <Link href={`/app/w/${workspaceSlug}/planning/new`}>
+              <Link href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/new`}>
                 <FileText className="h-4 w-4" aria-hidden="true" />
                 {t("trends.empty.createBrief") || "Start a brief"}
               </Link>

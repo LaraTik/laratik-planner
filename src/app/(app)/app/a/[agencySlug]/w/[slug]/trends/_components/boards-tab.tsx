@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { workspaceBasePath } from "@/lib/urls";
 
 type Board = { id: string; name: string; description: string | null };
 type BoardItem = {
@@ -15,9 +16,12 @@ type BoardItem = {
 
 export function TrendsBoardsTab({
   workspaceSlug: _workspaceSlug,
+  agencySlug,
   onBoardsChange,
 }: {
   workspaceSlug: string;
+  /** Canonical agency segment. */
+  agencySlug: string;
   onBoardsChange?: (boards: Board[]) => void;
 }) {
   const t = useLocaleT();
@@ -142,7 +146,7 @@ export function TrendsBoardsTab({
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" className="min-h-11">
                       <Link
-                        href={`/app/w/${_workspaceSlug}/planning/new?trendSignalId=${encodeURIComponent(item.signal.id)}`}
+                        href={`${workspaceBasePath(agencySlug, _workspaceSlug)}/planning/new?trendSignalId=${encodeURIComponent(item.signal.id)}`}
                       >
                         <FileText className="h-4 w-4" aria-hidden="true" />
                         {t("trends.boards.createBrief") || "Create brief"}
