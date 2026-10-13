@@ -84,8 +84,11 @@ export async function GET(request: NextRequest) {
   } catch {
     return errorResponse("advertising_report_failed", 500);
   }
-  if (result.kind === "not_found") return errorResponse("advertising_report_not_found", 404);
-  if (result.kind === "forbidden") return errorResponse("advertising_report_forbidden", 403);
+  // Do not let callers probe whether a guessed account exists. Both an
+  // unknown account and a known-but-hidden account use the same response.
+  if (result.kind === "not_found" || result.kind === "forbidden") {
+    return errorResponse("advertising_report_not_found", 404);
+  }
 
   if (parsed.data.surface === "csv_export") {
     const csv = advertisingCsvFromReport(result.report);

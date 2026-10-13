@@ -96,10 +96,19 @@ describe("GET /api/advertising/report", () => {
     );
   });
 
-  it("does not serialize denied report rows or cache data", async () => {
+  it("does not serialize denied report rows or reveal whether the account exists", async () => {
     mocks.load.mockResolvedValue({ kind: "forbidden" });
     const response = await GET(request("workspace_dashboard", false));
-    expect(response.status).toBe(403);
-    expect(await response.text()).not.toContain("campaign");
+    expect(response.status).toBe(404);
+    const body = await response.text();
+    expect(JSON.parse(body)).toEqual({ error: "advertising_report_not_found" });
+    expect(body).not.toContain("campaign");
+  });
+
+  it("uses the same hidden-resource response for an unknown account", async () => {
+    mocks.load.mockResolvedValue({ kind: "not_found" });
+    const response = await GET(request("workspace_dashboard", false));
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "advertising_report_not_found" });
   });
 });
