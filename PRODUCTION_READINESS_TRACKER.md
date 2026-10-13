@@ -1,5 +1,16 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 current release validation checkpoint** — Exact clean code
+> commit `15eadbf` keeps empty Meta account and Instagram probes explicitly
+> `partial` in durable validation history instead of recording a false pass.
+> The disposable PostgreSQL migration drill passes 5/5 with 79/79 ledger rows,
+> including from-zero, repair, upgrade, backup/restore, and failed-migration
+> abort; the full integration suite also passes after replaying migrations.
+> No production deployment or external Meta mutation was performed. This
+> remains **Tested**, not **Verified**: live Meta credentials and read-only
+> UAT, real ad-level reconciliation, workspace reporting UI evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 Meta discovery diagnostics checkpoint** — Exact clean code
 > commit `beddbe4` persists sanitized Facebook Page and Instagram identities
 > from the bounded read-only probe, displays those identities in the Global
