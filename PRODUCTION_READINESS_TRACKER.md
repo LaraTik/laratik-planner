@@ -13,6 +13,15 @@
 > reconciliation, workspace reporting UI evidence, independent review, and
 > production deployment remain open.
 
+> **2026-10-13 Trend Radar HMAC review checkpoint** — Exact clean code commit
+> `9f4be71` extends the service-auth regression suite to cover maximum timestamp
+> skew, signed method/path/body binding, previous-key acceptance during rotation,
+> and trusted-service identity rejection. The full sidecar suite passes 126/126
+> and Ruff passes for the touched test module. No credentials or production
+> state were used. This remains **Tested**, not **Verified**: controlled live
+> Meta UAT, real ad-level reconciliation, workspace reporting UI evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 advertising replay-safety checkpoint** — Exact clean code
 > commit `3a12930` adds an injectable provider boundary for the worker’s
 > recovery harness and proves an at-least-once replay: the first run persists
