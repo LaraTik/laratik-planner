@@ -46,6 +46,8 @@ export interface MetaAdvertisingProvider {
     account: AdvertisingAccount,
     context: AdvertisingReportContext,
   ): Promise<unknown>;
+  readPages(connection: AdvertisingConnection): Promise<unknown>;
+  readInstagramAccounts(connection: AdvertisingConnection, pageId: string): Promise<unknown>;
 }
 export function classifyMetaError(status: number, code?: number): MetaAdvertisingErrorKind {
   if (status === 401 || status === 403 || code === 10 || code === 200 || code === 190)
@@ -63,15 +65,40 @@ export function createMetaAdvertisingProvider(
 ): MetaAdvertisingProvider {
   const clientFor = async (connection: AdvertisingConnection) =>
     clientFactory(await resolver.resolve(connection.credentialRef));
+  const collectionData = (value: unknown): readonly Record<string, unknown>[] => {
+    if (Array.isArray(value)) return value.filter(isRecord);
+    if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
+    return [];
+  };
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    Boolean(value && typeof value === "object" && !Array.isArray(value));
   return {
     provider: "meta",
     async validateConnection(connection) {
       await (await clientFor(connection)).get("me", {});
     },
     async discoverAccounts(connection) {
-      return (await clientFor(connection)).get("me/adaccounts", {
+      const response = await (
+        await clientFor(connection)
+      ).get("me/adaccounts", {
         fields: "id,name,currency,timezone_name",
-      }) as Promise<readonly AdvertisingAccount[]>;
+      });
+      return collectionData(response).flatMap((account) => {
+        if (typeof account.id !== "string" || typeof account.name !== "string") return [];
+        return [
+          {
+            id: account.id,
+            provider: "meta" as const,
+            externalAccountId: account.id,
+            agencyId: connection.agencyId,
+            name: account.name,
+            currency: typeof account.currency === "string" ? account.currency : "",
+            timezone: typeof account.timezone_name === "string" ? account.timezone_name : "",
+            connectionId: connection.id,
+            status: connection.status,
+          } satisfies AdvertisingAccount,
+        ];
+      });
     },
     async readCampaigns(connection, account) {
       return (await clientFor(connection)).get(`${account.externalAccountId}/campaigns`, {
@@ -103,6 +130,16 @@ export function createMetaAdvertisingProvider(
     },
     async readBreakdowns(connection, account, context) {
       return this.readDailyInsights(connection, account, context);
+    },
+    async readPages(connection) {
+      return (await clientFor(connection)).get("me/accounts", {
+        fields: "id,name,instagram_business_account",
+      });
+    },
+    async readInstagramAccounts(connection, pageId) {
+      return (await clientFor(connection)).get(pageId, {
+        fields: "instagram_business_account",
+      });
     },
   };
 }

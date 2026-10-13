@@ -697,6 +697,15 @@ export function buildAgencyNavigation(input: AgencyNavigationInput): {
             },
             {
               kind: "link",
+              key: "agency-settings-advertising",
+              href: "/app/agency-settings/advertising",
+              label: "Advertising",
+              labelKey: "sidebar.settingsAdvertising",
+              icon: BarChart3,
+              exact: true,
+            },
+            {
+              kind: "link",
               key: "agency-settings-reports",
               href: "/app/agency-settings/reports",
               label: "Reports",

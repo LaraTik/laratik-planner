@@ -65,7 +65,17 @@ function providerFailure(error: unknown): {
 async function recordFailure(
   db: Db,
   connectionId: string,
-  operation: "diagnostics" | "account_discovery" | "campaign_read",
+  operation:
+    | "diagnostics"
+    | "account_discovery"
+    | "campaign_read"
+    | "adset_read"
+    | "ad_read"
+    | "creative_read"
+    | "daily_insights_read"
+    | "breakdown_read"
+    | "page_read"
+    | "instagram_read",
   error: unknown,
 ): Promise<MetaDiagnostic> {
   const failure = providerFailure(error);
@@ -121,6 +131,23 @@ export async function runMetaConfigurationWorkflow(
     return { status: "partial" as const, diagnostics, accounts: [] as const };
   }
 
+  let pageProbe: unknown = null;
+  let pageProbePassed = false;
+  try {
+    pageProbe = await args.provider.readPages(args.connection);
+    pageProbePassed = true;
+    await recordAdvertisingValidation(db, {
+      connectionId: args.connection.id,
+      operation: "page_read",
+      status: "passed",
+      sanitizedCode: "meta_page_read_available",
+      metadata: { state: "valid" },
+    });
+    diagnostics.push({ operation: "page_read", state: "valid", retryable: false });
+  } catch (error) {
+    diagnostics.push(await recordFailure(db, args.connection.id, "page_read", error));
+  }
+
   const accounts: Array<{ id: string; externalAccountId: string }> = [];
   for (const account of discovered.slice(0, 50)) {
     const persisted = await persistDiscoveredAdvertisingAccount(db, {
@@ -134,8 +161,15 @@ export async function runMetaConfigurationWorkflow(
     });
     accounts.push({ id: persisted.id, externalAccountId: persisted.externalAccountId });
     const accountView = { ...account, id: persisted.id };
+    let operation:
+      | "campaign_read"
+      | "adset_read"
+      | "ad_read"
+      | "creative_read"
+      | "daily_insights_read"
+      | "breakdown_read" = "campaign_read";
     try {
-      await args.provider.readCampaigns(args.connection, accountView);
+      const campaigns = await args.provider.readCampaigns(args.connection, accountView);
       const validation = await recordAdvertisingValidation(db, {
         connectionId: args.connection.id,
         accountId: persisted.id,
@@ -152,8 +186,135 @@ export async function runMetaConfigurationWorkflow(
         validationResultId: validation.id,
       });
       diagnostics.push({ operation: "campaign_read", state: "valid", retryable: false });
+
+      const campaignId = firstCollectionId(campaigns);
+      if (campaignId) {
+        operation = "adset_read";
+        const adSets = await args.provider.readAdSets(args.connection, campaignId);
+        const adsetValidation = await recordAdvertisingValidation(db, {
+          connectionId: args.connection.id,
+          accountId: persisted.id,
+          operation: "adset_read",
+          status: "passed",
+          sanitizedCode: "meta_adset_read_available",
+          metadata: { state: "valid" },
+        });
+        await setAdvertisingCapability(db, {
+          connectionId: args.connection.id,
+          accountId: persisted.id,
+          capability: "read_adsets",
+          status: "available",
+          validationResultId: adsetValidation.id,
+        });
+        diagnostics.push({ operation: "adset_read", state: "valid", retryable: false });
+        const adSetId = firstCollectionId(adSets);
+        if (adSetId) {
+          operation = "ad_read";
+          const ads = await args.provider.readAds(args.connection, adSetId);
+          const adValidation = await recordAdvertisingValidation(db, {
+            connectionId: args.connection.id,
+            accountId: persisted.id,
+            operation: "ad_read",
+            status: "passed",
+            sanitizedCode: "meta_ad_read_available",
+            metadata: { state: "valid" },
+          });
+          await setAdvertisingCapability(db, {
+            connectionId: args.connection.id,
+            accountId: persisted.id,
+            capability: "read_ads",
+            status: "available",
+            validationResultId: adValidation.id,
+          });
+          diagnostics.push({ operation: "ad_read", state: "valid", retryable: false });
+          const adId = firstCollectionId(ads);
+          if (adId) {
+            operation = "creative_read";
+            await args.provider.readCreatives(args.connection, adId);
+            const creativeValidation = await recordAdvertisingValidation(db, {
+              connectionId: args.connection.id,
+              accountId: persisted.id,
+              operation: "creative_read",
+              status: "passed",
+              sanitizedCode: "meta_creative_read_available",
+              metadata: { state: "valid" },
+            });
+            await setAdvertisingCapability(db, {
+              connectionId: args.connection.id,
+              accountId: persisted.id,
+              capability: "read_creatives",
+              status: "available",
+              validationResultId: creativeValidation.id,
+            });
+            diagnostics.push({ operation: "creative_read", state: "valid", retryable: false });
+          }
+        }
+      }
+
+      const context = {
+        definitionVersion: "meta-read-v1",
+        provider: "meta" as const,
+        accountId: account.externalAccountId,
+        currency: account.currency,
+        timezone: account.timezone,
+        dateRange: recentDateRange(),
+        attributionWindow: null,
+        actionReportTime: "impression",
+        breakdowns: [],
+        grain: "account_day" as const,
+      };
+      operation = "daily_insights_read";
+      await args.provider.readDailyInsights(args.connection, accountView, context);
+      const insightsValidation = await recordAdvertisingValidation(db, {
+        connectionId: args.connection.id,
+        accountId: persisted.id,
+        operation: "daily_insights_read",
+        status: "passed",
+        sanitizedCode: "meta_daily_insights_available",
+        metadata: { state: "valid" },
+      });
+      await setAdvertisingCapability(db, {
+        connectionId: args.connection.id,
+        accountId: persisted.id,
+        capability: "read_reports",
+        status: "available",
+        validationResultId: insightsValidation.id,
+      });
+      diagnostics.push({ operation: "daily_insights_read", state: "valid", retryable: false });
+      operation = "breakdown_read";
+      await args.provider.readBreakdowns(args.connection, accountView, context);
+      await recordAdvertisingValidation(db, {
+        connectionId: args.connection.id,
+        accountId: persisted.id,
+        operation: "breakdown_read",
+        status: "passed",
+        sanitizedCode: "meta_breakdown_read_available",
+        metadata: { state: "valid" },
+      });
+      diagnostics.push({ operation: "breakdown_read", state: "valid", retryable: false });
     } catch (error) {
-      diagnostics.push(await recordFailure(db, args.connection.id, "campaign_read", error));
+      diagnostics.push(await recordFailure(db, args.connection.id, operation, error));
+    }
+  }
+
+  if (pageProbePassed) {
+    try {
+      const pageId = firstCollectionId(pageProbe);
+      if (pageId) await args.provider.readInstagramAccounts(args.connection, pageId);
+      await recordAdvertisingValidation(db, {
+        connectionId: args.connection.id,
+        operation: "instagram_read",
+        status: "passed",
+        sanitizedCode: pageId ? "meta_instagram_read_available" : "meta_no_instagram_asset",
+        metadata: { state: pageId ? "valid" : "no_data" },
+      });
+      diagnostics.push({
+        operation: "instagram_read",
+        state: pageId ? "valid" : "no_data",
+        retryable: false,
+      });
+    } catch (error) {
+      diagnostics.push(await recordFailure(db, args.connection.id, "instagram_read", error));
     }
   }
   await recordAdvertisingValidation(db, {
@@ -163,7 +324,31 @@ export async function runMetaConfigurationWorkflow(
     sanitizedCode: accounts.length ? "meta_accounts_discovered" : "meta_no_accounts",
     metadata: { count: accounts.length, state: accounts.length ? "valid" : "no_data" },
   });
-  return { status: "passed" as const, diagnostics, accounts };
+  const status = diagnostics.some((diagnostic) => diagnostic.state !== "valid")
+    ? ("partial" as const)
+    : ("passed" as const);
+  return { status, diagnostics, accounts };
+}
+
+function firstCollectionId(value: unknown): string | null {
+  const rows = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { data?: unknown }).data)
+      ? (value as { data: unknown[] }).data
+      : [];
+  const first = rows[0];
+  return first && typeof first === "object" && typeof (first as { id?: unknown }).id === "string"
+    ? (first as { id: string }).id
+    : null;
+}
+
+function recentDateRange() {
+  const until = new Date();
+  const since = new Date(until.getTime() - 7 * 24 * 60 * 60 * 1000);
+  return {
+    since: since.toISOString().slice(0, 10),
+    until: until.toISOString().slice(0, 10),
+  };
 }
 
 export { providerFailure as classifyMetaDiagnostic };

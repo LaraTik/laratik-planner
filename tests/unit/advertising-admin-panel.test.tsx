@@ -1,0 +1,43 @@
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { AdvertisingAdminPanel } from "@/app/(app)/app/agency-settings/advertising/advertising-admin-panel";
+
+vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
+  createAdvertisingConnectionAction: vi.fn(async () => ({})),
+  revokeAdvertisingConnectionAction: vi.fn(async () => ({})),
+  storeAdvertisingCredentialAction: vi.fn(async () => ({})),
+  validateAdvertisingConnectionAction: vi.fn(async () => ({})),
+}));
+
+const connection = {
+  id: "00000000-0000-4000-8000-000000000101",
+  displayName: "Agency Meta",
+  provider: "meta",
+  status: "invalid",
+  currentCredentialVersion: 0,
+  lastValidatedAt: null,
+  lastValidationStatus: null,
+  lastValidationCode: null,
+  graphApiVersion: "v25.0",
+  createdAt: "2026-10-13T00:00:00.000Z",
+} as const;
+
+describe("AdvertisingAdminPanel", () => {
+  it("renders the platform-owned credential workflow without exposing a stored token", () => {
+    render(<AdvertisingAdminPanel connections={[connection]} />);
+
+    expect(screen.getByTestId("advertising-create-form")).toBeInTheDocument();
+    expect(screen.getByText("Agency Meta")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save credential" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Validate and discover" })).toBeDisabled();
+    expect(screen.queryByText("secret-token")).not.toBeInTheDocument();
+  });
+
+  it("renders the empty state when no connection exists", () => {
+    render(<AdvertisingAdminPanel connections={[]} />);
+
+    expect(screen.getByTestId("advertising-empty")).toHaveTextContent(
+      "No Meta advertising connections have been configured.",
+    );
+  });
+});

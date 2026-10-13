@@ -1,6 +1,7 @@
 import account from "./account.json";
 import activity from "./activity.json";
 import agencyAi from "./agencyAi.json";
+import advertising from "./advertising.json";
 import agencyPlan from "./agencyPlan.json";
 import agencyProviders from "./agencyProviders.json";
 import agencySettings from "./agencySettings.json";
@@ -49,6 +50,7 @@ export default {
   account,
   activity,
   agencyAi,
+  advertising,
   agencyPlan,
   agencyProviders,
   agencySettings,
