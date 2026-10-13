@@ -540,6 +540,20 @@
       "when": 1791887915370,
       "tag": "0076_tiny_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1791893905371,
+      "tag": "0077_perfect_crystal",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1791894038358,
+      "tag": "0078_nervous_roughhouse",
+      "breakpoints": true
     }
   ]
 }

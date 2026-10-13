@@ -734,10 +734,11 @@ exists in this codebase.
 
 ### Environment variables (server-only)
 
-| Name                          | Default | Purpose                                                                                                                                                 |
-| ----------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`.  |
-| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials are configured per agency in the admin UI. |
+| Name                          | Default | Purpose                                                                                                                                                                             |
+| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`.                              |
+| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials are configured per agency in the admin UI.                             |
+| `ADVERTISING_SYNC_ENABLED`    | `false` | Master switch for read-only Meta advertising ingestion. Keep disabled until controlled UAT and reconciliation evidence are approved; per-account sync activation is still required. |
 
 None of these may be exposed as `NEXT_PUBLIC_*`. Meta/TikTok app credentials
 and the Graph API version are stored per agency at
@@ -773,6 +774,14 @@ sudo CRON_SECRET=$(sudo cat /opt/laratik-planner/.env | grep ^CRON_SECRET= | cut
 ```
 
 The expected response shape is `{ "claimed": <int>, "succeeded": <int>, "failed": <int>, "needsReauth": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or `SOCIAL_SYNC_ENABLED` is `false`.
+
+Advertising ingestion uses the same authenticated 15-minute cron installation via
+`scripts/vps/advertising-sync.sh` and `/api/cron/advertising-sync`. It returns
+`{ claimed, succeeded, partial, failed, skipped, durationMs }`; when
+`ADVERTISING_SYNC_ENABLED=false`, it returns `{ skipped: "flag-off" }` without
+claiming rows or contacting Meta. Enable the global flag only after the Meta
+read-only UAT, canonical ad-level spend reconciliation, and independent review
+gates in `PRODUCTION_READINESS_TRACKER.md` are complete.
 
 ### Cron routes and the proxy bypass list
 

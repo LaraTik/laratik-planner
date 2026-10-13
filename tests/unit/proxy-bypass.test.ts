@@ -50,6 +50,7 @@ const PUBLIC_PATHS: ReadonlyArray<{ name: string; pathname: string }> = [
   // bypass the session gate or every VPS cron tick 307s to /signin
   // before the route handler can run. See the regression test below.
   { name: "cron social-metrics (Bearer-auth, VPS)", pathname: "/api/cron/social-metrics" },
+  { name: "cron advertising-sync (Bearer-auth, VPS)", pathname: "/api/cron/advertising-sync" },
   { name: "cron outbox (Bearer-auth, VPS)", pathname: "/api/cron/outbox" },
   { name: "cron email-dispatch (Bearer-auth, VPS)", pathname: "/api/cron/email-dispatch" },
   { name: "remote MCP (bearer-authenticated)", pathname: "/api/mcp" },

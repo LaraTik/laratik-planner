@@ -92,7 +92,7 @@ export async function proxy(req: NextRequest) {
     pathname === "/api/health" ||
     pathname.startsWith("/api/health/") ||
     // Cron routes authenticate via `Authorization: Bearer $CRON_SECRET`
-    // (see /api/cron/social-metrics/route.ts et al). The proxy has no
+    // (see /api/cron/*/route.ts). The proxy has no
     // way to validate the secret — that's the route handler's job —
     // so we MUST bypass the session-cookie gate for /api/cron/*. Without
     // this, the VPS-side `social-metrics-sync.sh` (which sends only the

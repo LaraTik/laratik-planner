@@ -287,7 +287,7 @@ export const advertisingValidationResults = pgTable(
     index("advertising_validation_account_checked_idx").on(t.accountId, sql`${t.checkedAt} DESC`),
     check(
       "advertising_validation_operation_valid",
-      sql`${t.operation} IN ('account_discovery', 'campaign_read', 'adset_read', 'ad_read', 'creative_read', 'report_read', 'financial_read', 'diagnostics')`,
+      sql`${t.operation} IN ('account_discovery', 'campaign_read', 'adset_read', 'ad_read', 'creative_read', 'daily_insights_read', 'breakdown_read', 'page_read', 'instagram_read', 'report_read', 'financial_read', 'diagnostics')`,
     ),
     check(
       "advertising_validation_status_valid",
@@ -411,6 +411,10 @@ export const advertisingSyncStates = pgTable(
     nextRunAt: timestamp("next_run_at", { withTimezone: true, mode: "date" }),
     lastErrorCode: text("last_error_code"),
     lastErrorAt: timestamp("last_error_at", { withTimezone: true, mode: "date" }),
+    leaseOwner: text("lease_owner"),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true, mode: "date" }),
+    attempt: integer("attempt").notNull().default(0),
     ...timestamps,
   },
   (t) => [

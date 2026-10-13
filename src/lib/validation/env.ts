@@ -194,6 +194,13 @@ const serverSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  // Advertising sync is deliberately off until the Meta read-only UAT and
+  // reconciliation evidence are signed. Per-agency sync states still retain
+  // their explicit activate/pause control independently of this global gate.
+  ADVERTISING_SYNC_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
   // Future Meta direct publishing kill switch. It is intentionally
   // false by default and cannot enable publishing by itself: the
   // agency/workspace/provider capability gates must also pass.

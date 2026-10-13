@@ -58,6 +58,66 @@ export function classifyMetaError(status: number, code?: number): MetaAdvertisin
   if (status >= 400) return "invalid_request";
   return "unknown";
 }
+
+const MAX_COLLECTION_PAGES = 3;
+
+/** Read at most three provider pages and never follow an untrusted host. */
+export async function readMetaCollection(
+  client: MetaReadClient,
+  path: string,
+  params: Readonly<Record<string, string>>,
+): Promise<{ data: readonly Record<string, unknown>[] }> {
+  const rows: Record<string, unknown>[] = [];
+  let currentPath = path;
+  let currentParams: Readonly<Record<string, string>> = params;
+  let response = await client.get(path, params);
+  for (let page = 0; page < MAX_COLLECTION_PAGES; page += 1) {
+    rows.push(...collectionData(response));
+    const next = nextPage(response, currentPath, currentParams);
+    if (!next || page === MAX_COLLECTION_PAGES - 1) break;
+    response = await client.get(next.path, next.params);
+    currentPath = next.path;
+    currentParams = next.params;
+  }
+  return { data: rows };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function collectionData(value: unknown): readonly Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter(isRecord);
+  if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
+  return [];
+}
+
+function nextPage(
+  value: unknown,
+  currentPath: string,
+  currentParams: Readonly<Record<string, string>>,
+): { path: string; params: Readonly<Record<string, string>> } | null {
+  if (!isRecord(value) || !isRecord(value.paging)) return null;
+  const next = value.paging.next;
+  if (isRecord(next) && typeof next.after === "string" && next.after.length > 0)
+    return { path: currentPath, params: { ...currentParams, after: next.after } };
+  if (typeof next !== "string") return null;
+  let url: URL;
+  try {
+    url = new URL(next);
+  } catch {
+    return null;
+  }
+  if (url.hostname !== "graph.facebook.com") return null;
+  const match = url.pathname.match(/^\/v\d+\.\d+\/(.+)$/);
+  if (!match?.[1]) return null;
+  const nextParams: Record<string, string> = {};
+  url.searchParams.forEach((entry, key) => {
+    if (key !== "access_token" && key !== "appsecret_proof") nextParams[key] = entry;
+  });
+  return { path: match[1], params: nextParams };
+}
+
 /** Read-only adapter. Secrets are resolved by reference at execution time and never enter a job payload. */
 export function createMetaAdvertisingProvider(
   resolver: MetaCredentialResolver,
@@ -65,22 +125,13 @@ export function createMetaAdvertisingProvider(
 ): MetaAdvertisingProvider {
   const clientFor = async (connection: AdvertisingConnection) =>
     clientFactory(await resolver.resolve(connection.credentialRef));
-  const collectionData = (value: unknown): readonly Record<string, unknown>[] => {
-    if (Array.isArray(value)) return value.filter(isRecord);
-    if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
-    return [];
-  };
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    Boolean(value && typeof value === "object" && !Array.isArray(value));
   return {
     provider: "meta",
     async validateConnection(connection) {
       await (await clientFor(connection)).get("me", {});
     },
     async discoverAccounts(connection) {
-      const response = await (
-        await clientFor(connection)
-      ).get("me/adaccounts", {
+      const response = await readMetaCollection(await clientFor(connection), "me/adaccounts", {
         fields: "id,name,currency,timezone_name",
       });
       return collectionData(response).flatMap((account) => {
@@ -101,17 +152,21 @@ export function createMetaAdvertisingProvider(
       });
     },
     async readCampaigns(connection, account) {
-      return (await clientFor(connection)).get(`${account.externalAccountId}/campaigns`, {
-        fields: "id,name,status,objective",
-      });
+      return readMetaCollection(
+        await clientFor(connection),
+        `${account.externalAccountId}/campaigns`,
+        {
+          fields: "id,name,status,objective",
+        },
+      );
     },
     async readAdSets(connection, campaignId) {
-      return (await clientFor(connection)).get(`${campaignId}/adsets`, {
+      return readMetaCollection(await clientFor(connection), `${campaignId}/adsets`, {
         fields: "id,name,status,campaign_id",
       });
     },
     async readAds(connection, adSetId) {
-      return (await clientFor(connection)).get(`${adSetId}/ads`, {
+      return readMetaCollection(await clientFor(connection), `${adSetId}/ads`, {
         fields: "id,name,status,adset_id,creative",
       });
     },
@@ -121,18 +176,31 @@ export function createMetaAdvertisingProvider(
       });
     },
     async readDailyInsights(connection, account, context) {
-      return (await clientFor(connection)).get(`${account.externalAccountId}/insights`, {
-        fields: "spend,impressions,clicks,reach,actions,ctr,cpc,cpm",
-        time_range: JSON.stringify(context.dateRange),
-        time_increment: "1",
-        ...(context.breakdowns.length ? { breakdowns: context.breakdowns.join(",") } : {}),
-      });
+      return readMetaCollection(
+        await clientFor(connection),
+        `${account.externalAccountId}/insights`,
+        {
+          fields:
+            "ad_id,adset_id,campaign_id,date_start,spend,impressions,clicks,reach,actions,ctr,cpc,cpm",
+          time_range: JSON.stringify(context.dateRange),
+          time_increment: "1",
+          level:
+            context.grain === "ad_day"
+              ? "ad"
+              : context.grain === "adset_day"
+                ? "adset"
+                : context.grain === "campaign_day"
+                  ? "campaign"
+                  : "account",
+          ...(context.breakdowns.length ? { breakdowns: context.breakdowns.join(",") } : {}),
+        },
+      );
     },
     async readBreakdowns(connection, account, context) {
       return this.readDailyInsights(connection, account, context);
     },
     async readPages(connection) {
-      return (await clientFor(connection)).get("me/accounts", {
+      return readMetaCollection(await clientFor(connection), "me/accounts", {
         fields: "id,name,instagram_business_account",
       });
     },
