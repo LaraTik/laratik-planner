@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
   usePathname,
 }));
 
-const workspaces = [{ id: "workspace-1", slug: "acme", name: "Acme" }];
+const workspaces = [{ id: "workspace-1", slug: "acme", name: "Acme", agencySlug: "acme" }];
 
 describe("MobileContextHeader", () => {
   beforeEach(() => {

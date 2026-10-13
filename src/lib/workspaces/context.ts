@@ -205,7 +205,16 @@ export async function findAgencySlugById(agencyId: string): Promise<string | nul
   return agency?.slug ?? null;
 }
 
-export type SwitcherWorkspace = { id: string; name: string; slug: string };
+export type SwitcherWorkspace = {
+  id: string;
+  name: string;
+  slug: string;
+  /**
+   * The owning agency's slug. A workspace slug is unique only WITHIN an
+   * agency, so any URL built for this workspace has to carry this.
+   */
+  agencySlug: string;
+};
 
 /**
  * Every agency in which `actor` can reach a workspace with this slug.
@@ -263,9 +272,19 @@ export async function listSwitcherWorkspaces(
   // from every agency they had a membership in (a cross-tenant
   // UI leak). The agency admin path below was already correct.
   const memberRows = await db
-    .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      slug: workspaces.slug,
+      // The switcher builds a URL for the workspace it is switching TO, so it
+      // needs THAT workspace's agency. Deriving it from the current pathname
+      // is what forced the legacy fallback whenever the user sat on a
+      // non-canonical URL.
+      agencySlug: agencies.slug,
+    })
     .from(workspaceMemberships)
     .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(
       and(
         eq(workspaceMemberships.userId, actor.id),
@@ -282,8 +301,14 @@ export async function listSwitcherWorkspaces(
   }
 
   const all = await db
-    .select({ id: workspaces.id, name: workspaces.name, slug: workspaces.slug })
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      slug: workspaces.slug,
+      agencySlug: agencies.slug,
+    })
     .from(workspaces)
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(and(eq(workspaces.agencyId, agencyId), eq(workspaces.status, "active")))
     .orderBy(asc(workspaces.name))
     .limit(50);

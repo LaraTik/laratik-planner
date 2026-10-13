@@ -15,11 +15,23 @@ copied from `git log <prev>..<tag>` at tag time.
 ### Changed — canonical workspace URLs: the sweep is complete
 
 Every `/app/w/<slug>` navigation the app generated is now
-`/app/a/<agencySlug>/w/<slug>/…`. Only three producers remain, all
-deliberate and all allowlisted in `read-path-fanout-guard`: the legacy
-catch-all itself, `workspace-switcher-path` (off a non-canonical URL the
-tenant is unknowable, so it defers to the redirect), and `agency-switch`
-(degrades when the agency slug cannot be read).
+`/app/a/<agencySlug>/w/<slug>/…`. The legacy catch-all is the only
+remaining producer of that shape, and `read-path-fanout-guard` allowlists
+exactly that one route.
+
+The last two holdouts were removed by giving the code the tenant it was
+missing, not by swapping the string:
+
+- **Workspace switcher** was deriving the tenant from whatever URL the user
+  happened to be on, so a switch from a non-canonical page could not name an
+  agency and fell back to the legacy shape. Each switcher option now carries
+  its own `agencySlug` and the destination is built from THAT — which is also
+  more correct: switching from an agency-one workspace into an agency-two
+  one now lands in agency-two instead of inheriting the previous page's
+  tenant.
+- **Tenant switch** fetched the agency slug in a separate query and tolerated
+  an empty result, which was the only path to its fallback. The agency is now
+  JOINED onto the landing workspace, so that branch no longer exists.
 
 **Measured reason this matters:** the legacy hop costs **+21 SQL statements
 and ~1.5–2× the wall-clock** of the canonical URL, because the app shell

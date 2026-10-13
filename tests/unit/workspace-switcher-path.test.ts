@@ -5,21 +5,22 @@ describe("getWorkspaceSwitchPath", () => {
   const target = "new-workspace";
 
   /**
-   * A canonical workspace URL names the tenant, so a switch preserves it and
-   * only swaps the workspace slug. Off-canonical input cannot be resolved to a
-   * tenant at all — returning the legacy shape is deliberate: the
-   * `/app/w/[...legacy]` redirect resolves it, rather than this function
-   * inventing a tenant.
+   * The tenant comes from the DESTINATION workspace, which the caller knows,
+   * and is passed in explicitly. The current pathname only decides which
+   * sub-route to preserve — it is never the source of the tenant.
+   *
+   * This is what lets a switch from a non-canonical page still produce a
+   * canonical URL. It used to fall back to the legacy shape there, which
+   * cost a full app-shell re-render inside the redirect (measured: +21 SQL
+   * statements and ~1.5-2x the wall-clock per navigation).
    */
   it.each([
-    ["/app", `/app/w/${target}`],
-    ["/app/w/old", `/app/w/${target}`],
-  ])(
-    "cannot determine a tenant for %s, so it defers to the legacy redirect",
-    (pathname, expected) => {
-      expect(getWorkspaceSwitchPath(pathname, target)).toBe(expected);
-    },
-  );
+    ["/app", `/app/a/acme/w/${target}`],
+    ["/app/w/old", `/app/a/acme/w/${target}`],
+    ["/app/workspaces", `/app/a/acme/w/${target}`],
+  ])("resolves a canonical destination from a non-canonical pathname %s", (pathname, expected) => {
+    expect(getWorkspaceSwitchPath(pathname, target, "acme")).toBe(expected);
+  });
 
   it.each([
     ["/app/a/acme/w/old", `/app/a/acme/w/${target}`],
@@ -31,18 +32,25 @@ describe("getWorkspaceSwitchPath", () => {
     ["/app/a/acme/w/old/planning/record-123/publish", `/app/a/acme/w/${target}/planning`],
     ["/app/a/acme/w/old/settings/lifecycle", `/app/a/acme/w/${target}/settings/lifecycle`],
     ["/app/a/acme/w/old/unknown/record-123", `/app/a/acme/w/${target}`],
-  ])("maps %s to a safe destination, preserving the tenant", (pathname, expected) => {
-    expect(getWorkspaceSwitchPath(pathname, target)).toBe(expected);
+  ])("maps %s to a safe destination, preserving the sub-route", (pathname, expected) => {
+    expect(getWorkspaceSwitchPath(pathname, target, "acme")).toBe(expected);
   });
 
-  it("does not leak the previous workspace's tenant when the slug is shared across agencies", () => {
-    // `old` exists in two agencies; the URL names which one, and the switch
-    // stays inside it rather than inheriting a stale or default tenant.
-    expect(getWorkspaceSwitchPath("/app/a/agency-one/w/old/planning", "shared")).toBe(
-      "/app/a/agency-one/w/shared/planning",
-    );
-    expect(getWorkspaceSwitchPath("/app/a/agency-two/w/old/planning", "shared")).toBe(
+  it("takes the tenant from the destination, not from where the user happens to be", () => {
+    // Switching from agency-one's workspace into a workspace that belongs to
+    // agency-two must land in agency-two — the previous page's tenant must
+    // not be inherited.
+    expect(getWorkspaceSwitchPath("/app/a/agency-one/w/old/planning", "shared", "agency-two")).toBe(
       "/app/a/agency-two/w/shared/planning",
     );
+    expect(getWorkspaceSwitchPath("/app/a/agency-one/w/old/planning", "shared", "agency-one")).toBe(
+      "/app/a/agency-one/w/shared/planning",
+    );
+  });
+
+  it("never emits the legacy /app/w/ shape, even for an unparseable pathname", () => {
+    for (const pathname of ["/", "/signin", "/app/w/legacy", "/totally/unknown"]) {
+      expect(getWorkspaceSwitchPath(pathname, target, "acme")).not.toContain("/app/w/");
+    }
   });
 });

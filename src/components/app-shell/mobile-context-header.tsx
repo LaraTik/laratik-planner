@@ -4,8 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
-type Workspace = { id: string; name: string; slug: string };
+type Workspace = SwitcherWorkspace;
 
 /**
  * Mobile context identity. Desktop keeps context in the persistent

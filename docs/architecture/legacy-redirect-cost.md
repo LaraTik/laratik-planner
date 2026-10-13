@@ -75,13 +75,25 @@ performance fix**, not only a correctness one — alongside the tenant-ambiguity
 argument, which stands independently: a workspace slug is unique per agency, so
 a legacy link resolves to "whichever agency the reader currently has active".
 
-**Status: the sweep is complete.** Every `/app/w/<slug>` navigation the app
-generated now emits the canonical form. Three producers remain, all
-deliberate: the legacy catch-all itself, `workspace-switcher-path` (off a
-non-canonical URL the tenant is unknowable, so it defers to the redirect), and
-`agency-switch` (degrades when the agency slug cannot be read). Each is
-allowlisted with its reason in `tests/unit/read-path-fanout-guard.test.ts`,
-which now covers the whole tree rather than a list of converted files.
+**Status: the sweep is complete, including the two holdouts.** Every
+`/app/w/<slug>` navigation the app generated now emits the canonical form.
+The legacy catch-all is the only remaining producer of that shape, and it is
+the one thing `tests/unit/read-path-fanout-guard.test.ts` allowlists.
+
+The last two producers were not fixed by swapping a string. Both said "we
+cannot know the tenant here", and both were given the tenant instead:
+
+- the workspace switcher was deriving it from whatever URL the user was
+  currently on, so a switch from a non-canonical page had nothing to work
+  with. Each switcher option now carries its own agency slug.
+- the tenant switch fetched it in a separate query and tolerated an empty
+  result. It now joins the agency onto the landing workspace, so there is
+  no branch that can fall back.
+
+Worth noting that the first of those was also a latent correctness bug, not
+just a performance one: switching from an agency-one workspace into an
+agency-two workspace inherited agency-one from the URL. That is the exact
+cross-tenant ambiguity canonical URLs exist to prevent.
 
 Priority therefore goes to the highest-traffic generators first: the
 planning-detail links rendered from lists (`needs-attention-list`,
