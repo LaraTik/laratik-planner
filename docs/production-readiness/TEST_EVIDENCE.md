@@ -3,6 +3,24 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Persistent advertising account dedupe — 2026-10-13, code SHA `2a3ca19da275b9dadbb0788760efb79927761e52`
+
+The advertising lifecycle integration now proves that repeated discovery of the
+same provider account across two active connections reuses one canonical
+agency-owned account, refreshes its safe metadata, and links both connections.
+The assertion also passes token-like metadata through discovery and verifies it
+does not become persisted account data.
+
+| Check                                                                                                     | Result                                                                                       |
+| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts` | **Pass** — 1 file / 3 tests (rotation, revocation, canonical-account dedupe)                 |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                                                | **Pass** — 5/5 from-zero, repair, upgrade, backup/restore, and failed-migration-abort checks |
+| `pnpm verify`                                                                                             | **Pass** — formatting, lint, typecheck, 507 unit files / 4,711 tests, production build       |
+
+No live Meta credentials, external provider request, production deployment, or
+external Meta mutation was used. Controlled live read-only Meta UAT and real
+ad-level reconciliation remain open.
+
 ## Populated advertising reporting + privacy — 2026-10-13, exact clean SHA `0d64693648c85cddece91415de2763efa4985095`
 
 The isolated browser runner now has an explicit, synthetic reporting fixture.

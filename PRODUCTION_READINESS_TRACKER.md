@@ -1,5 +1,17 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 persistent advertising account dedupe checkpoint** — Code commit
+> `2a3ca19da275b9dadbb0788760efb79927761e52` adds an integration regression for
+> one canonical Meta provider account linked from two active connections. The
+> test proves discovery refreshes the canonical row, creates both connection
+> links, and does not persist token-like metadata. The focused advertising
+> lifecycle suite passes 3/3. The migration drill passes 5/5, and the exact
+> verification gate passes formatting, lint, typecheck, 507 unit files / 4,711
+> tests, and the production build. No live Meta request, production deployment,
+> or external Meta mutation was performed. This remains **Tested**, not
+> **Verified**: controlled live Meta credentials/UAT, provider reconciliation,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 populated advertising reporting + privacy checkpoint** — Exact
 > clean code commit `0d64693648c85cddece91415de2763efa4985095` adds a
 > test-only synthetic canonical advertising fixture that exercises encrypted
