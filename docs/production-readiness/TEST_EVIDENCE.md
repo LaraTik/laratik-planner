@@ -3,7 +3,7 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
-## Complete Meta Ads reporting surfaces — 2026-10-13, exact clean code SHA `381dedc1cae0080d67682cc3a18fdc6107fe0c34`
+## Complete Meta Ads reporting surfaces — 2026-10-13, exact clean code SHA `d9f59b824df89212c45a537a7845aa4d6a1d2a72`
 
 This pass completes the local read-only Meta Ads foundation without enabling
 provider writes. Admin history now includes reconciliation snapshots alongside
@@ -11,13 +11,17 @@ validation and sync history. Workspace reporting exposes authorized campaigns,
 ad sets, ads, configured targeting, provider-returned audience delivery, exact
 promoted-post joins, paid/organic/additive combined views, and server-rendered
 pagination while preserving the existing agency/workspace grant boundary.
+The summary also exposes an active-ad count derived only from provider status.
 The deterministic fixture covers two ads promoting one exact post, so the
-post rollup is tested for aggregation without duplicate post rows.
+post rollup is tested for aggregation without duplicate post rows. Integration
+coverage also proves duplicate credentials upsert one canonical fact, leaves
+unassigned spend outside workspace reports, and closes report/export access
+immediately after revocation.
 
 | Check                                                                                                                       | Result                                                                                                                                   |
 | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
 | `pnpm verify`                                                                                                               | **Pass** — formatting, lint, strict typecheck, 507 unit files / 4,716 tests, and Next.js production build                                |
-| `TEST_DATABASE_URL=… pnpm test:integration`                                                                                 | **Pass** — complete disposable-Postgres integration runner; advertising lifecycle 3/3 and tenant-guard 11/11 passed                      |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                                                                 | **Pass** — complete disposable-Postgres integration runner; advertising lifecycle 3/3 and tenant-guard 12/12 passed                      |
 | `TEST_DATABASE_URL=… pnpm migration-drill`                                                                                  | **Pass** — 5/5 drills; 84/84 Drizzle ledger rows, including migration 0083                                                               |
 | `TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-admin.spec.ts tests/e2e/advertising-reporting.spec.ts` | **Pass** — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari; EN/LTR + AR/RTL; serious/critical axe checks absent |
 | `git diff --check`                                                                                                          | **Pass**                                                                                                                                 |
