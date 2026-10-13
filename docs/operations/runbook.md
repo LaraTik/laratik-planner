@@ -734,11 +734,12 @@ exists in this codebase.
 
 ### Environment variables (server-only)
 
-| Name                          | Default | Purpose                                                                                                                                                                             |
-| ----------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SOCIAL_TOKEN_ENCRYPTION_KEY` | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`.                              |
-| `SOCIAL_SYNC_ENABLED`         | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials are configured per agency in the admin UI.                             |
-| `ADVERTISING_SYNC_ENABLED`    | `false` | Master switch for read-only Meta advertising ingestion. Keep disabled until controlled UAT and reconciliation evidence are approved; per-account sync activation is still required. |
+| Name                            | Default | Purpose                                                                                                                                                                             |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SOCIAL_TOKEN_ENCRYPTION_KEY`   | empty   | Base64-encoded 32-byte key for the AES-256-GCM credential envelope. Generate with `openssl rand -base64 32`. Required when `SOCIAL_SYNC_ENABLED=true`.                              |
+| `SOCIAL_SYNC_ENABLED`           | `false` | Master switch for the cron worker. When `false`, `/api/cron/social-metrics` is a no-op. Provider credentials are configured per agency in the admin UI.                             |
+| `ADVERTISING_SYNC_ENABLED`      | `false` | Master switch for read-only Meta advertising ingestion. Keep disabled until controlled UAT and reconciliation evidence are approved; per-account sync activation is still required. |
+| `ADVERTISING_REPORTING_ENABLED` | `false` | Gate for persisted advertising report reads, CSV exports, and AI context. Keep disabled until canonical facts and tenant/workspace authorization have passed UAT.                   |
 
 None of these may be exposed as `NEXT_PUBLIC_*`. Meta/TikTok app credentials
 and the Graph API version are stored per agency at

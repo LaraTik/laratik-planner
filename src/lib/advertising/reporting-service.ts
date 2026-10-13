@@ -110,7 +110,7 @@ export function advertisingReportCacheKey(args: {
   accountId: string;
   since: string;
   until: string;
-  grantRevision: number;
+  grantRevision: string | number;
 }): string {
   return [
     args.agencyId,

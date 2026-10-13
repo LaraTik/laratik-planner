@@ -282,7 +282,12 @@ export async function runMetaConfigurationWorkflow(
       });
       diagnostics.push({ operation: "daily_insights_read", state: "valid", retryable: false });
       operation = "breakdown_read";
-      await args.provider.readBreakdowns(args.connection, accountView, context);
+      // Probe one explicitly bounded, supported audience-breakdown request;
+      // the canonical spend ingestion path remains breakdown-free.
+      await args.provider.readBreakdowns(args.connection, accountView, {
+        ...context,
+        breakdowns: ["age", "gender"],
+      });
       await recordAdvertisingValidation(db, {
         connectionId: args.connection.id,
         accountId: persisted.id,
@@ -317,12 +322,18 @@ export async function runMetaConfigurationWorkflow(
       diagnostics.push(await recordFailure(db, args.connection.id, "instagram_read", error));
     }
   }
+  const accountDiscoveryState = accounts.length ? "valid" : "no_data";
   await recordAdvertisingValidation(db, {
     connectionId: args.connection.id,
     operation: "account_discovery",
     status: "passed",
     sanitizedCode: accounts.length ? "meta_accounts_discovered" : "meta_no_accounts",
-    metadata: { count: accounts.length, state: accounts.length ? "valid" : "no_data" },
+    metadata: { count: accounts.length, state: accountDiscoveryState },
+  });
+  diagnostics.push({
+    operation: "account_discovery",
+    state: accountDiscoveryState,
+    retryable: false,
   });
   const status = diagnostics.some((diagnostic) => diagnostic.state !== "valid")
     ? ("partial" as const)

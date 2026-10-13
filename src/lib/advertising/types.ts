@@ -108,6 +108,7 @@ export interface AdvertisingAuthorizationDecision {
     | "missing_principal"
     | "missing_account"
     | "missing_connection"
+    | "connection_account_mismatch"
     | "connection_not_active"
     | "agency_mismatch"
     | "workspace_mismatch"

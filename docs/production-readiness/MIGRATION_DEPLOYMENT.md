@@ -1,5 +1,41 @@
 # Migration and deployment evidence
 
+## Migrations 0077–0078 — advertising validation compatibility and sync leases
+
+`0077_perfect_crystal.sql` widens the existing advertising validation
+operation constraint to cover the read-only daily Insights, breakdown, Page,
+and Instagram probes already emitted by the Meta workflow. It changes only the
+allow-list and is guarded so a repair can replay it safely.
+
+`0078_nervous_roughhouse.sql` adds the advertising sync lease owner, fencing
+token, lease expiry, and retry-attempt columns. The worker claims due rows with
+`FOR UPDATE SKIP LOCKED`, clears state only with the fencing token, and leaves
+the additive columns in place on application rollback. Both migrations are
+forward-only; a schema rollback requires a reviewed forward fix or an
+approval-gated restore of the verified pre-migration backup.
+
+Files and SHA-256:
+
+- `src/lib/db/migrations/0077_perfect_crystal.sql` —
+  `62d141f3f2d7cf2da08b60d0e09cc46db34e274a0be3f183d1e03f72f20d446f`
+- `src/lib/db/migrations/0078_nervous_roughhouse.sql` —
+  `849e09b4c17f545a10b88ce15dbe014af03dc1ceacbe2026c7e194cc70893041`
+
+Evidence on disposable PostgreSQL 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=development TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  124 tables; Drizzle ledger 79/79
+2. skipped migration repair PASS  guarded migration DDL replayed successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 79 before / 79 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+The exact clean implementation commit was `7ce7bd72`; tracker documentation
+was recorded in `231eacac`. No production deployment was performed.
+
 ## Migration 0076 — canonical ad-day spend and reconciliation
 
 `0076_tiny_queen_noir.sql` adds canonical ad-day observations and independent

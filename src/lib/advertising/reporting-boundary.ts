@@ -54,7 +54,7 @@ export function buildAdvertisingSurfaceReport(args: {
         workspaceId: string;
         since: string;
         until: string;
-        grantRevision: number;
+        grantRevision: string | number;
       }
     | undefined;
   now?: string | undefined;

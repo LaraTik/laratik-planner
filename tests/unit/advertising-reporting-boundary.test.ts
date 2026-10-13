@@ -94,6 +94,39 @@ describe("advertising reporting boundary", () => {
     expect(JSON.stringify(csv)).not.toContain("secret-ad");
   });
 
+  it("does not expose spend to AI context without financial authority", () => {
+    const fixture = createAdvertisingIsolationFixture();
+    const report = buildAdvertisingSurfaceReport(
+      baseArgs({
+        surface: "ai_context",
+        scope: {
+          principal: fixture.principals[0]!,
+          account: fixture.accounts[0]!,
+          connection: fixture.connections[0]!,
+          visibilityGrants: [
+            {
+              ...fixture.grants[0]!,
+              capability: "use_ai_context",
+            },
+          ],
+          financialAuthorities: [],
+        },
+        facts: [
+          {
+            accountId: "shared-account",
+            campaignId: "campaign-a",
+            date: "2026-10-01",
+            spend: 10,
+            impressions: 100,
+            clicks: 5,
+          },
+        ],
+      }),
+    );
+    expect(report.authorized).toBe(false);
+    expect(advertisingAiContextFromReport(report)).toBeNull();
+  });
+
   it("requires financial authority for financial surfaces and invalidates cache on grant revision", () => {
     const fixture = createAdvertisingIsolationFixture();
     const scope = {

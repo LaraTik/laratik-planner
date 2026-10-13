@@ -201,6 +201,12 @@ const serverSchema = z.object({
     .string()
     .optional()
     .transform((v) => v === "true" || v === "1"),
+  // Reporting remains separately gated until the persisted canonical facts
+  // have passed controlled Meta UAT and independent review.
+  ADVERTISING_REPORTING_ENABLED: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
   // Future Meta direct publishing kill switch. It is intentionally
   // false by default and cannot enable publishing by itself: the
   // agency/workspace/provider capability gates must also pass.

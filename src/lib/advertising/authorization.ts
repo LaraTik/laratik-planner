@@ -19,7 +19,13 @@ const OPERATION_CAPABILITY: Record<AdvertisingOperation, AdvertisingCapability> 
   ai_context: "use_ai_context",
   export: "export_reports",
 };
-const FINANCIAL_OPERATIONS = new Set<AdvertisingOperation>(["financial_read", "export"]);
+// Every current export/AI projection includes spend. Keep financial authority
+// separate from visibility even when the surface is not labelled financial.
+const FINANCIAL_OPERATIONS = new Set<AdvertisingOperation>([
+  "financial_read",
+  "export",
+  "ai_context",
+]);
 function isActive(
   start: string,
   end: string | null,
@@ -75,6 +81,8 @@ export function authorizeAdvertising(
   if (!account) return { allowed: false, reason: "missing_account" };
   if (account.agencyId !== principal.agencyId || account.status !== "active")
     return { allowed: false, reason: "agency_mismatch" };
+  if (account.connectionId !== connection.id)
+    return { allowed: false, reason: "connection_account_mismatch" };
   const now = Date.parse(input.now ?? new Date().toISOString());
   if (!input.visibilityGrants.some((grant) => grantMatches(grant, input, now)))
     return { allowed: false, reason: "visibility_grant_missing" };

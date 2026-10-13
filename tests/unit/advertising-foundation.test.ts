@@ -53,6 +53,16 @@ describe("advertising authorization boundary", () => {
       }),
     ).toMatchObject({ allowed: false, reason: "agency_mismatch" });
   });
+  it("requires the connection to be linked to the account", () => {
+    expect(
+      authorizeAdvertising({
+        ...base,
+        connection: { ...connection, id: "connection-not-linked" },
+        principal: fixture.principals[0]!,
+        operation: "report_read",
+      }),
+    ).toMatchObject({ allowed: false, reason: "connection_account_mismatch" });
+  });
   it("requires separate financial authority", () => {
     expect(
       authorizeAdvertising({
