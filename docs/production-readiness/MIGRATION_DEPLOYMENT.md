@@ -1,5 +1,41 @@
 # Migration and deployment evidence
 
+## Migration 0080 — advertising sync dead-letter state
+
+`0080_advertising_sync_dead_letter.sql` widens the advertising sync-state
+constraint with the explicit `dead_letter` terminal state. The worker now
+allows four total attempts (initial execution plus three bounded retries),
+clears scheduling after the final failure, and requires an agency-admin
+re-enable to reset the attempt counter. The migration changes no identifiers
+or existing rows and is safe to replay because it drops and recreates only
+the named check constraint.
+
+Filename: `src/lib/db/migrations/0080_advertising_sync_dead_letter.sql`  
+Journal tag: `0080_advertising_sync_dead_letter`  
+Journal `when`: `1791901000000`  
+SHA-256:
+`de43d6f37529bf36f2f60a9c0f832528f19b8325f2901b255895ebb37eae43da`
+
+Compatibility: older application images do not claim `dead_letter` rows; the
+new image still accepts all previous sync states. A normal application
+rollback leaves the widened check constraint in place. Schema rollback is
+forward-only or an approval-gated restore of the verified backup.
+
+Evidence on disposable PostgreSQL 16 (`planner_test`, 2026-10-13), using
+`TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  124 tables; Drizzle ledger 81/81
+2. skipped migration repair PASS  guarded migration DDL replayed successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 81 before / 81 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+`tests/integration/advertising-tenant-guards.test.ts` passes 5/5, including
+concurrent claim fencing and the four-attempt dead-letter/re-enable flow.
+
 ## Migration 0079 — advertising tenant ownership guards
 
 `0079_advertising_tenant_guards.sql` adds a narrow, replay-safe database
@@ -35,10 +71,9 @@ Evidence on disposable PostgreSQL 16 (`planner_test`, 2026-10-13), using
 total: 5/5 PASS
 ```
 
-`tests/integration/advertising-tenant-guards.test.ts` passes 3/3, covering a
-cross-agency connection/account link denial, cross-agency grant denial, and a
-valid same-agency link plus sync state. No production deployment or external
-Meta mutation was performed.
+The same integration file also covers the cross-agency connection/account link
+denial, cross-agency grant denial, and valid same-agency link plus sync state.
+No production deployment or external Meta mutation was performed.
 
 ## Migrations 0077–0078 — advertising validation compatibility and sync leases
 

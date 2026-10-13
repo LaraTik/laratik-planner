@@ -10,7 +10,8 @@ import {
 
 type Db = typeof appDb;
 
-export type AdvertisingSyncStatus = "idle" | "running" | "partial" | "failed" | "paused";
+export type AdvertisingSyncStatus =
+  "idle" | "running" | "partial" | "failed" | "dead_letter" | "paused";
 
 export class AdvertisingSyncInputError extends Error {
   constructor(message: string) {
@@ -113,6 +114,7 @@ export async function setAdvertisingSyncState(
       status,
       nextRunAt: args.enabled ? now : null,
       ...(args.enabled ? { lastErrorCode: null } : {}),
+      ...(args.enabled && existing?.status === "dead_letter" ? { attempt: 0 } : {}),
       updatedAt: now,
     };
     const [state] = existing

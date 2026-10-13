@@ -39,6 +39,7 @@
     "running": "Running",
     "partial": "Partial result",
     "failed": "Failed; retry available",
+    "dead_letter": "Stopped after repeated failures; re-enable to retry",
     "paused": "Disabled"
   },
   "accountsTitle": "Discovered ad accounts",

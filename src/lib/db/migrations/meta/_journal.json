@@ -561,6 +561,13 @@
       "when": 1791900000000,
       "tag": "0079_advertising_tenant_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1791901000000,
+      "tag": "0080_advertising_sync_dead_letter",
+      "breakpoints": true
     }
   ]
 }

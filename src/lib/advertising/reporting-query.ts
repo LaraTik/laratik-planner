@@ -10,6 +10,7 @@ import {
   advertisingGrantRevisions,
   advertisingSpendObservations,
   advertisingSyncRuns,
+  advertisingSyncStates,
   advertisingVisibilityGrants,
   workspaces,
 } from "@/lib/db/schema";
@@ -64,7 +65,7 @@ export type AdvertisingReportQueryResult =
       report: ScopedAdvertisingSurfaceReport;
       account: Pick<AdvertisingAccount, "id" | "name" | "currency" | "timezone">;
       lastSuccessfulSyncAt: string | null;
-      syncStatus: "succeeded" | "partial" | "failed" | "running" | null;
+      syncStatus: "succeeded" | "partial" | "failed" | "dead_letter" | "running" | null;
       partial: boolean;
       freshness: "fresh" | "stale" | "unknown";
     };
@@ -273,10 +274,12 @@ export async function loadAdvertisingReport(
   const syncRows = await db
     .select({
       status: advertisingSyncRuns.status,
+      syncStateStatus: advertisingSyncStates.status,
       partial: advertisingSyncRuns.partial,
       completedAt: advertisingSyncRuns.completedAt,
     })
     .from(advertisingSyncRuns)
+    .innerJoin(advertisingSyncStates, eq(advertisingSyncStates.id, advertisingSyncRuns.syncStateId))
     .where(
       and(
         eq(advertisingSyncRuns.connectionId, accountRow.connection.id),
@@ -288,12 +291,15 @@ export async function loadAdvertisingReport(
   const latestSync = syncRows[0];
   const lastSuccessfulSyncAt =
     syncRows.find((row) => row.status === "succeeded")?.completedAt?.toISOString() ?? null;
+  const latestStatus =
+    latestSync?.syncStateStatus === "dead_letter" ? "dead_letter" : latestSync?.status;
   const syncStatus =
-    latestSync?.status === "succeeded" ||
-    latestSync?.status === "partial" ||
-    latestSync?.status === "failed" ||
-    latestSync?.status === "running"
-      ? latestSync.status
+    latestStatus === "succeeded" ||
+    latestStatus === "partial" ||
+    latestStatus === "failed" ||
+    latestStatus === "dead_letter" ||
+    latestStatus === "running"
+      ? latestStatus
       : null;
   const clockMs = args.now ? Date.parse(args.now) : Date.now();
   const freshness = lastSuccessfulSyncAt

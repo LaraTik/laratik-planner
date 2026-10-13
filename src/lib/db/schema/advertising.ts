@@ -422,7 +422,7 @@ export const advertisingSyncStates = pgTable(
     index("advertising_sync_state_due_idx").on(t.status, t.nextRunAt),
     check(
       "advertising_sync_state_status_valid",
-      sql`${t.status} IN ('idle', 'running', 'partial', 'failed', 'paused')`,
+      sql`${t.status} IN ('idle', 'running', 'partial', 'failed', 'dead_letter', 'paused')`,
     ),
   ],
 );

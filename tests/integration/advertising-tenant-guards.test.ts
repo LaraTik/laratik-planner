@@ -21,8 +21,10 @@ import {
 import {
   claimAdvertisingSyncStates,
   createAdvertisingSyncRun,
+  failAdvertisingSync,
 } from "@/lib/advertising/sync-worker";
 import { AdvertisingLeaseLostError } from "@/lib/advertising/ingestion-service";
+import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -234,5 +236,53 @@ describe("advertising tenant ownership guards", () => {
       .from(advertisingSyncRuns)
       .where(eq(advertisingSyncRuns.syncStateId, state.id));
     expect(run).toBeUndefined();
+  });
+
+  it("dead-letters after four failed attempts and resets on explicit re-enable", async () => {
+    const { agencyA, connectionA, accountA, actor } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const [state] = await db
+      .insert(advertisingSyncStates)
+      .values({ status: "idle", connectionId: connectionA.id, accountId: accountA.id })
+      .returning();
+    if (!state) throw new Error("failed to seed sync state");
+
+    let lastStatus: string | undefined;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      await db
+        .update(advertisingSyncStates)
+        .set({ status: attempt === 0 ? "idle" : "failed", nextRunAt: new Date() })
+        .where(eq(advertisingSyncStates.id, state.id));
+      const [claimed] = await claimAdvertisingSyncStates(db, {
+        owner: `retry-worker-${attempt}`,
+        now: new Date(),
+        limit: 1,
+      });
+      if (!claimed) throw new Error(`attempt ${attempt + 1} was not claimed`);
+      lastStatus = await failAdvertisingSync(db, claimed, new Date(), "meta_provider_unavailable");
+    }
+    expect(lastStatus).toBe("dead_letter");
+    const [deadLettered] = await db
+      .select({ status: advertisingSyncStates.status, attempt: advertisingSyncStates.attempt })
+      .from(advertisingSyncStates)
+      .where(eq(advertisingSyncStates.id, state.id));
+    expect(deadLettered).toEqual({ status: "dead_letter", attempt: 4 });
+
+    await setAdvertisingSyncState(db, {
+      agencyId: agencyA.id,
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+      enabled: true,
+      actorId: actor.id,
+    });
+    const [reopened] = await db
+      .select({ status: advertisingSyncStates.status, attempt: advertisingSyncStates.attempt })
+      .from(advertisingSyncStates)
+      .where(eq(advertisingSyncStates.id, state.id));
+    expect(reopened).toEqual({ status: "idle", attempt: 0 });
   });
 });

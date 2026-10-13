@@ -231,7 +231,9 @@ completeness separate. No workspace ownership is inferred from campaign names;
 live reporting remains gated on controlled Meta read-only UAT. Migration 0079
 adds database-level tenant-ownership guards so these links cannot combine a
 connection, account, workspace, or agency from different tenants even when a
-caller bypasses the application services.
+caller bypasses the application services. Advertising sync retries are bounded
+and move to an explicit `dead_letter` state after repeated failures; an
+agency-admin re-enable is required before another attempt budget is issued.
 
 ### AI (`ai.ts`)
 

@@ -31,6 +31,7 @@ type Db = typeof appDb;
 const BATCH_LIMIT = 10;
 const LEASE_MS = 50_000;
 const RETRY_DELAYS_MINUTES = [15, 60, 360] as const;
+export const ADVERTISING_SYNC_MAX_ATTEMPTS = RETRY_DELAYS_MINUTES.length + 1;
 
 type ClaimedSync = {
   stateId: string;
@@ -46,12 +47,17 @@ export type AdvertisingSyncTickResult = {
   succeeded: number;
   partial: number;
   failed: number;
+  dead_letter: number;
   skipped: number;
 };
 
 export function nextAdvertisingRetryAt(now: Date, attempt: number): Date {
   const index = Math.min(Math.max(attempt - 1, 0), RETRY_DELAYS_MINUTES.length - 1);
   return addMinutes(now, RETRY_DELAYS_MINUTES[index] ?? RETRY_DELAYS_MINUTES[0]);
+}
+
+export function advertisingSyncFailureStatus(attempt: number): "failed" | "dead_letter" {
+  return attempt >= ADVERTISING_SYNC_MAX_ATTEMPTS ? "dead_letter" : "failed";
 }
 
 /** Claim due states with row locks and a fencing token before any provider call. */
@@ -179,6 +185,7 @@ export async function runAdvertisingSyncTick(
     succeeded: 0,
     partial: 0,
     failed: 0,
+    dead_letter: 0,
     skipped: 0,
   };
   for (const target of claimed) {
@@ -280,8 +287,8 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
       .update(advertisingSyncRuns)
       .set({ status: "failed", errorCode, completedAt: now })
       .where(eq(advertisingSyncRuns.id, syncRun.id));
-    await failAdvertisingSync(db, target, now, errorCode);
-    return "failed" as const;
+    const failureStatus = await failAdvertisingSync(db, target, now, errorCode);
+    return failureStatus;
   }
 }
 
@@ -372,13 +379,19 @@ async function finishAdvertisingSync(
   return Boolean(updated);
 }
 
-async function failAdvertisingSync(db: Db, target: ClaimedSync, now: Date, errorCode: string) {
+export async function failAdvertisingSync(
+  db: Db,
+  target: ClaimedSync,
+  now: Date,
+  errorCode: string,
+) {
   const leaseNow = new Date();
+  const status = advertisingSyncFailureStatus(target.attempt);
   await db
     .update(advertisingSyncStates)
     .set({
-      status: "failed",
-      nextRunAt: nextAdvertisingRetryAt(now, target.attempt),
+      status,
+      nextRunAt: status === "dead_letter" ? null : nextAdvertisingRetryAt(now, target.attempt),
       lastErrorCode: errorCode,
       lastErrorAt: now,
       leaseOwner: null,
@@ -393,6 +406,7 @@ async function failAdvertisingSync(db: Db, target: ClaimedSync, now: Date, error
         gt(advertisingSyncStates.leaseExpiresAt, leaseNow),
       ),
     );
+  return status;
 }
 
 async function markSyncRunLeaseLost(db: Db, syncRunId: string, now: Date) {

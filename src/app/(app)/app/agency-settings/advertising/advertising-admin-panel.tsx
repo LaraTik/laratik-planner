@@ -567,7 +567,8 @@ function ConnectionCard({
           <div className="space-y-2">
             {connectionAccounts.map((link) => {
               const state = syncStates.find((candidate) => candidate.accountId === link.accountId);
-              const paused = state?.status === "paused" || !state;
+              const paused =
+                state?.status === "paused" || state?.status === "dead_letter" || !state;
               return (
                 <div
                   key={link.accountId}
