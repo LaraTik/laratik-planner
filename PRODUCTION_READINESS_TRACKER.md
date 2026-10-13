@@ -1,5 +1,17 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 Meta discovery diagnostics checkpoint** — Exact clean code
+> commit `beddbe4` persists sanitized Facebook Page and Instagram identities
+> from the bounded read-only probe, displays those identities in the Global
+> Admin advertising workflow, records account-level capability outcomes for
+> successful and failed probes, and keeps the capability review bilingual.
+> Focused advertising tests pass 7/7; the clean verification passes
+> formatting, lint, typecheck, 506 unit files / 4,705 tests, and the
+> production build. No migration or production state changed. This remains
+> **Tested**, not **Verified**: controlled live Meta UAT, ad-level
+> reconciliation against a real account, workspace reporting UI evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 scoped advertising reporting checkpoint** — Exact clean code
 > commit `b833946e` wires the persisted advertising observations through a
 > server-only scoped reporting query and the default-off
