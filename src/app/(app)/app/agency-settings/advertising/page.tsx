@@ -53,6 +53,8 @@ export default async function AdvertisingSettingsPage() {
           nextRunAt: state.nextRunAt?.toISOString() ?? null,
         }))}
         connectionAccounts={resources.connectionAccounts}
+        socialIdentities={resources.socialIdentities}
+        capabilities={resources.capabilities}
       />
     </div>
   );

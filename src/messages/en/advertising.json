@@ -25,6 +25,13 @@
   "syncTitle": "Advertising sync",
   "syncDescription": "Choose which discovered accounts are scheduled for read-only background synchronization. Activation does not publish or change campaigns.",
   "noLinkedAccounts": "Validate the connection to discover accounts before enabling sync.",
+  "socialIdentitiesTitle": "Connected social identities",
+  "socialIdentitiesDescription": "Sanitized Facebook Page and Instagram identities found during the read-only probe.",
+  "noSocialIdentities": "No Facebook Page or Instagram identities have been discovered yet.",
+  "socialIdentityType": {
+    "facebook_page": "Facebook Page",
+    "instagram_business": "Instagram professional account"
+  },
   "activateSync": "Activate sync",
   "disableSync": "Disable sync",
   "syncStatus": {
@@ -47,6 +54,15 @@
   "grantFinancial": "Grant financial authority",
   "grantingFinancial": "Granting…",
   "financialDescription": "Financial authority is separate from report visibility and should be granted only for approved spend workflows.",
+  "capabilitiesTitle": "Capability checks",
+  "capabilitiesDescription": "The latest sanitized result for each account-level read capability.",
+  "noCapabilities": "Run validation to record account capability results.",
+  "capabilityStatus": {
+    "available": "Available",
+    "unavailable": "Unavailable",
+    "partial": "Partial",
+    "unknown": "Unknown"
+  },
   "capabilityLabels": {
     "read_reports": "Read reports",
     "read_campaigns": "Read campaigns",

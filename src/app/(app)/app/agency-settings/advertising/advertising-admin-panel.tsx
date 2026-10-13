@@ -62,6 +62,24 @@ type ConnectionAccount = {
   externalAccountId: string;
   status: string;
 };
+type SocialIdentity = {
+  id: string;
+  connectionId: string;
+  accountId: string | null;
+  identityType: string;
+  externalIdentityId: string;
+  displayName: string | null;
+  username: string | null;
+  status: string;
+};
+type Capability = {
+  id: string;
+  connectionId: string;
+  accountId: string;
+  capability: string;
+  status: string;
+  checkedAt: Date;
+};
 
 const initial: AdvertisingActionState = {};
 
@@ -76,12 +94,16 @@ export function AdvertisingAdminPanel({
   workspaces,
   syncStates,
   connectionAccounts,
+  socialIdentities,
+  capabilities,
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
   workspaces: readonly Workspace[];
   syncStates: readonly SyncState[];
   connectionAccounts: readonly ConnectionAccount[];
+  socialIdentities: readonly SocialIdentity[];
+  capabilities: readonly Capability[];
 }) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
@@ -140,6 +162,12 @@ export function AdvertisingAdminPanel({
             syncStates={syncStates.filter((state) => state.connectionId === connection.id)}
             connectionAccounts={connectionAccounts.filter(
               (link) => link.connectionId === connection.id,
+            )}
+            socialIdentities={socialIdentities.filter(
+              (identity) => identity.connectionId === connection.id,
+            )}
+            capabilities={capabilities.filter(
+              (capability) => capability.connectionId === connection.id,
             )}
           />
         ))
@@ -298,10 +326,14 @@ function ConnectionCard({
   connection,
   syncStates,
   connectionAccounts,
+  socialIdentities,
+  capabilities,
 }: {
   connection: Connection;
   syncStates: readonly SyncState[];
   connectionAccounts: readonly ConnectionAccount[];
+  socialIdentities: readonly SocialIdentity[];
+  capabilities: readonly Capability[];
 }) {
   const t = useLocaleT();
   const [credentialState, credentialAction] = useActionState(
@@ -429,6 +461,85 @@ function ConnectionCard({
             </p>
           ))}
         </div>
+      </div>
+      <div
+        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        data-testid={`advertising-capabilities-${connection.id}`}
+      >
+        <div>
+          <h3 className="text-body text-fg-primary font-semibold">
+            {t("advertising.capabilitiesTitle")}
+          </h3>
+          <p className="text-label text-fg-muted">{t("advertising.capabilitiesDescription")}</p>
+        </div>
+        {capabilities.length === 0 ? (
+          <p className="text-label text-fg-secondary">{t("advertising.noCapabilities")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {capabilities.map((capability) => (
+              <li
+                key={capability.id}
+                className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+              >
+                <span className="text-body text-fg-primary">
+                  {t(`advertising.capabilityLabels.${capability.capability}`)}
+                </span>
+                <Badge
+                  variant={
+                    capability.status === "available"
+                      ? "success"
+                      : capability.status === "unavailable"
+                        ? "danger"
+                        : "outline"
+                  }
+                >
+                  {t(`advertising.capabilityStatus.${capability.status}`)}
+                </Badge>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div
+        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        data-testid={`advertising-identities-${connection.id}`}
+      >
+        <div>
+          <h3 className="text-body text-fg-primary font-semibold">
+            {t("advertising.socialIdentitiesTitle")}
+          </h3>
+          <p className="text-label text-fg-muted">{t("advertising.socialIdentitiesDescription")}</p>
+        </div>
+        {socialIdentities.length === 0 ? (
+          <p className="text-label text-fg-secondary">{t("advertising.noSocialIdentities")}</p>
+        ) : (
+          <ul className="space-y-2">
+            {socialIdentities.map((identity) => (
+              <li
+                key={identity.id}
+                className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+              >
+                <div>
+                  <p className="text-body text-fg-primary font-medium">
+                    {identity.displayName ?? identity.username ?? identity.externalIdentityId}
+                  </p>
+                  <p className="text-label text-fg-muted">
+                    {t(`advertising.socialIdentityType.${identity.identityType}`)}
+                    {identity.username ? (
+                      <>
+                        {" · "}
+                        <bdi dir="ltr">@{identity.username}</bdi>
+                      </>
+                    ) : null}
+                  </p>
+                </div>
+                <bdi className="text-label text-fg-muted" dir="ltr">
+                  {identity.externalIdentityId}
+                </bdi>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div
         className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"

@@ -25,6 +25,13 @@
   "syncTitle": "مزامنة الإعلانات",
   "syncDescription": "اختر الحسابات المكتشفة التي ستتم مزامنتها في الخلفية للقراءة فقط. لا يؤدي التفعيل إلى نشر الحملات أو تغييرها.",
   "noLinkedAccounts": "تحقق من الاتصال لاكتشاف الحسابات قبل تفعيل المزامنة.",
+  "socialIdentitiesTitle": "الهويات الاجتماعية المتصلة",
+  "socialIdentitiesDescription": "هويات صفحات Facebook وحسابات Instagram المنقحة التي اكتشفها فحص القراءة فقط.",
+  "noSocialIdentities": "لم يتم اكتشاف أي صفحة Facebook أو حساب Instagram بعد.",
+  "socialIdentityType": {
+    "facebook_page": "صفحة Facebook",
+    "instagram_business": "حساب Instagram احترافي"
+  },
   "activateSync": "تفعيل المزامنة",
   "disableSync": "تعطيل المزامنة",
   "syncStatus": {
@@ -47,6 +54,15 @@
   "grantFinancial": "منح الصلاحية المالية",
   "grantingFinancial": "جارٍ منح الصلاحية…",
   "financialDescription": "الصلاحية المالية منفصلة عن ظهور التقارير ويجب منحها فقط لمسارات الإنفاق المعتمدة.",
+  "capabilitiesTitle": "فحوصات الصلاحيات",
+  "capabilitiesDescription": "أحدث نتيجة منقحة لكل صلاحية قراءة على مستوى الحساب.",
+  "noCapabilities": "نفّذ التحقق لتسجيل نتائج صلاحيات الحساب.",
+  "capabilityStatus": {
+    "available": "متاحة",
+    "unavailable": "غير متاحة",
+    "partial": "جزئية",
+    "unknown": "غير معروفة"
+  },
   "capabilityLabels": {
     "read_reports": "قراءة التقارير",
     "read_campaigns": "قراءة الحملات",

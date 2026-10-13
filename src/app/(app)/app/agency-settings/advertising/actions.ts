@@ -10,8 +10,10 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { db } from "@/lib/db";
 import {
   advertisingAccounts,
+  advertisingCapabilities,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingSocialIdentities,
   advertisingSyncStates,
   workspaces,
 } from "@/lib/db/schema";
@@ -337,7 +339,14 @@ export async function listAdvertisingConnectionsForAdmin() {
 
 export async function listAdvertisingResourcesForAdmin() {
   const { agencyId } = await requireAdmin();
-  const [accounts, agencyWorkspaces, syncStates, connectionAccounts] = await Promise.all([
+  const [
+    accounts,
+    agencyWorkspaces,
+    syncStates,
+    connectionAccounts,
+    socialIdentities,
+    capabilities,
+  ] = await Promise.all([
     db
       .select({
         id: advertisingAccounts.id,
@@ -398,6 +407,54 @@ export async function listAdvertisingResourcesForAdmin() {
         eq(advertisingAccounts.id, advertisingConnectionAccounts.accountId),
       )
       .orderBy(desc(advertisingConnectionAccounts.updatedAt)),
+    db
+      .select({
+        id: advertisingSocialIdentities.id,
+        connectionId: advertisingSocialIdentities.connectionId,
+        accountId: advertisingSocialIdentities.accountId,
+        identityType: advertisingSocialIdentities.identityType,
+        externalIdentityId: advertisingSocialIdentities.externalIdentityId,
+        displayName: advertisingSocialIdentities.displayName,
+        username: advertisingSocialIdentities.username,
+        status: advertisingSocialIdentities.status,
+      })
+      .from(advertisingSocialIdentities)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingSocialIdentities.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .where(eq(advertisingSocialIdentities.agencyId, agencyId))
+      .orderBy(desc(advertisingSocialIdentities.updatedAt)),
+    db
+      .select({
+        id: advertisingCapabilities.id,
+        connectionId: advertisingCapabilities.connectionId,
+        accountId: advertisingCapabilities.accountId,
+        capability: advertisingCapabilities.capability,
+        status: advertisingCapabilities.status,
+        checkedAt: advertisingCapabilities.checkedAt,
+      })
+      .from(advertisingCapabilities)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingCapabilities.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .innerJoin(advertisingAccounts, eq(advertisingAccounts.id, advertisingCapabilities.accountId))
+      .where(eq(advertisingAccounts.agencyId, agencyId))
+      .orderBy(desc(advertisingCapabilities.checkedAt)),
   ]);
-  return { accounts, workspaces: agencyWorkspaces, syncStates, connectionAccounts };
+  return {
+    accounts,
+    workspaces: agencyWorkspaces,
+    syncStates,
+    connectionAccounts,
+    socialIdentities,
+    capabilities,
+  };
 }

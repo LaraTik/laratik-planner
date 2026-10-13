@@ -34,6 +34,8 @@ describe("AdvertisingAdminPanel", () => {
         workspaces={[]}
         syncStates={[]}
         connectionAccounts={[]}
+        socialIdentities={[]}
+        capabilities={[]}
       />,
     );
 
@@ -52,6 +54,8 @@ describe("AdvertisingAdminPanel", () => {
         workspaces={[]}
         syncStates={[]}
         connectionAccounts={[]}
+        socialIdentities={[]}
+        capabilities={[]}
       />,
     );
 
@@ -85,6 +89,28 @@ describe("AdvertisingAdminPanel", () => {
             status: "active",
           },
         ]}
+        socialIdentities={[
+          {
+            id: "00000000-0000-4000-8000-000000000303",
+            connectionId: connection.id,
+            accountId: null,
+            identityType: "facebook_page",
+            externalIdentityId: "page_303",
+            displayName: "Food Game Page",
+            username: null,
+            status: "active",
+          },
+        ]}
+        capabilities={[
+          {
+            id: "00000000-0000-4000-8000-000000000404",
+            connectionId: connection.id,
+            accountId: "00000000-0000-4000-8000-000000000202",
+            capability: "read_reports",
+            status: "available",
+            checkedAt: new Date("2026-10-13T00:00:00.000Z"),
+          },
+        ]}
       />,
     );
 
@@ -92,5 +118,11 @@ describe("AdvertisingAdminPanel", () => {
       "Advertising sync",
     );
     expect(screen.getByRole("button", { name: "Activate sync" })).toBeEnabled();
+    expect(screen.getByTestId(`advertising-identities-${connection.id}`)).toHaveTextContent(
+      "Food Game Page",
+    );
+    expect(screen.getByTestId(`advertising-capabilities-${connection.id}`)).toHaveTextContent(
+      "Read reports",
+    );
   });
 });

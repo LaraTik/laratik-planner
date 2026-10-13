@@ -6,6 +6,7 @@ import {
   advertisingCapabilities,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingSocialIdentities,
   advertisingValidationResults,
 } from "@/lib/db/schema";
 import type { AdvertisingCapability, AdvertisingProvider } from "./types";
@@ -239,6 +240,80 @@ export async function setAdvertisingCapability(
     .returning({ id: advertisingCapabilities.id });
   if (!row) throw new Error("Advertising capability was not persisted");
   return row;
+}
+
+export type AdvertisingSocialIdentityType = "facebook_page" | "instagram_business";
+
+/**
+ * Persist only the stable, sanitized identity fields returned by a Meta
+ * read-only probe. Provider payloads and page/Instagram access tokens never
+ * cross this boundary.
+ */
+export async function persistDiscoveredAdvertisingSocialIdentity(
+  db: Db,
+  args: {
+    agencyId: string;
+    connectionId: string;
+    accountId?: string | null | undefined;
+    identityType: AdvertisingSocialIdentityType;
+    externalIdentityId: string;
+    displayName?: string | null | undefined;
+    username?: string | null | undefined;
+    parentExternalIdentityId?: string | null | undefined;
+    metadata?: unknown;
+  },
+) {
+  const [connection] = await db
+    .select({ id: advertisingConnections.id, provider: advertisingConnections.provider })
+    .from(advertisingConnections)
+    .where(
+      and(
+        eq(advertisingConnections.id, args.connectionId),
+        eq(advertisingConnections.agencyId, args.agencyId),
+        eq(advertisingConnections.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (!connection) throw new AdvertisingConnectionInputError("advertising_connection_not_active");
+
+  const [identity] = await db
+    .insert(advertisingSocialIdentities)
+    .values({
+      agencyId: args.agencyId,
+      connectionId: args.connectionId,
+      accountId: args.accountId ?? null,
+      provider: connection.provider,
+      identityType: args.identityType,
+      externalIdentityId: args.externalIdentityId.trim().slice(0, 200),
+      displayName: args.displayName?.trim().slice(0, 200) || null,
+      username: args.username?.trim().slice(0, 200) || null,
+      parentExternalIdentityId: args.parentExternalIdentityId?.trim().slice(0, 200) || null,
+      status: "active",
+      metadata: sanitizeAdvertisingMetadata(args.metadata),
+      lastSeenAt: new Date(),
+    })
+    .onConflictDoUpdate({
+      target: [
+        advertisingSocialIdentities.agencyId,
+        advertisingSocialIdentities.provider,
+        advertisingSocialIdentities.identityType,
+        advertisingSocialIdentities.externalIdentityId,
+      ],
+      set: {
+        connectionId: args.connectionId,
+        accountId: args.accountId ?? null,
+        displayName: args.displayName?.trim().slice(0, 200) || null,
+        username: args.username?.trim().slice(0, 200) || null,
+        parentExternalIdentityId: args.parentExternalIdentityId?.trim().slice(0, 200) || null,
+        status: "active",
+        metadata: sanitizeAdvertisingMetadata(args.metadata),
+        lastSeenAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    .returning({ id: advertisingSocialIdentities.id });
+  if (!identity) throw new Error("Advertising social identity was not persisted");
+  return identity;
 }
 
 /** Activate only after the credential identity probe has passed. */

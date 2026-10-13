@@ -2,6 +2,7 @@ import type { db as appDb } from "@/lib/db";
 import {
   activateAdvertisingConnection,
   persistDiscoveredAdvertisingAccount,
+  persistDiscoveredAdvertisingSocialIdentity,
   recordAdvertisingValidation,
   setAdvertisingCapability,
 } from "./connection-service";
@@ -77,17 +78,24 @@ async function recordFailure(
     | "page_read"
     | "instagram_read",
   error: unknown,
-): Promise<MetaDiagnostic> {
+  accountId?: string,
+): Promise<MetaDiagnostic & { validationResultId: string }> {
   const failure = providerFailure(error);
-  await recordAdvertisingValidation(db, {
+  const validation = await recordAdvertisingValidation(db, {
     connectionId,
+    ...(accountId ? { accountId } : {}),
     operation,
     status: failure.retryable ? "unavailable" : "failed",
     sanitizedCode: failure.code,
     retryable: failure.retryable,
     metadata: { state: failure.state },
   });
-  return { operation, state: failure.state, retryable: failure.retryable };
+  return {
+    operation,
+    state: failure.state,
+    retryable: failure.retryable,
+    validationResultId: validation.id,
+  };
 }
 
 /**
@@ -119,7 +127,12 @@ export async function runMetaConfigurationWorkflow(
       connectionId: args.connection.id,
     });
   } catch (error) {
-    diagnostics.push(await recordFailure(db, args.connection.id, "diagnostics", error));
+    const failure = await recordFailure(db, args.connection.id, "diagnostics", error);
+    diagnostics.push({
+      operation: failure.operation,
+      state: failure.state,
+      retryable: failure.retryable,
+    });
     return { status: "failed" as const, diagnostics, accounts: [] as const };
   }
 
@@ -127,7 +140,12 @@ export async function runMetaConfigurationWorkflow(
   try {
     discovered = await args.provider.discoverAccounts(args.connection);
   } catch (error) {
-    diagnostics.push(await recordFailure(db, args.connection.id, "account_discovery", error));
+    const failure = await recordFailure(db, args.connection.id, "account_discovery", error);
+    diagnostics.push({
+      operation: failure.operation,
+      state: failure.state,
+      retryable: failure.retryable,
+    });
     return { status: "partial" as const, diagnostics, accounts: [] as const };
   }
 
@@ -136,6 +154,18 @@ export async function runMetaConfigurationWorkflow(
   try {
     pageProbe = await args.provider.readPages(args.connection);
     pageProbePassed = true;
+    for (const identity of extractMetaSocialIdentities(pageProbe)) {
+      await persistDiscoveredAdvertisingSocialIdentity(db, {
+        agencyId: args.agencyId,
+        connectionId: args.connection.id,
+        identityType: identity.identityType,
+        externalIdentityId: identity.externalIdentityId,
+        displayName: identity.displayName,
+        username: identity.username,
+        parentExternalIdentityId: identity.parentExternalIdentityId,
+        metadata: { source: "meta_read_only_probe" },
+      });
+    }
     await recordAdvertisingValidation(db, {
       connectionId: args.connection.id,
       operation: "page_read",
@@ -145,7 +175,12 @@ export async function runMetaConfigurationWorkflow(
     });
     diagnostics.push({ operation: "page_read", state: "valid", retryable: false });
   } catch (error) {
-    diagnostics.push(await recordFailure(db, args.connection.id, "page_read", error));
+    const failure = await recordFailure(db, args.connection.id, "page_read", error);
+    diagnostics.push({
+      operation: failure.operation,
+      state: failure.state,
+      retryable: failure.retryable,
+    });
   }
 
   const accounts: Array<{ id: string; externalAccountId: string }> = [];
@@ -298,7 +333,22 @@ export async function runMetaConfigurationWorkflow(
       });
       diagnostics.push({ operation: "breakdown_read", state: "valid", retryable: false });
     } catch (error) {
-      diagnostics.push(await recordFailure(db, args.connection.id, operation, error));
+      const failure = await recordFailure(db, args.connection.id, operation, error, persisted.id);
+      const capability = capabilityForOperation(operation);
+      if (capability) {
+        await setAdvertisingCapability(db, {
+          connectionId: args.connection.id,
+          accountId: persisted.id,
+          capability,
+          status: failure.retryable ? "unknown" : "unavailable",
+          validationResultId: failure.validationResultId,
+        });
+      }
+      diagnostics.push({
+        operation: failure.operation,
+        state: failure.state,
+        retryable: failure.retryable,
+      });
     }
   }
 
@@ -319,7 +369,12 @@ export async function runMetaConfigurationWorkflow(
         retryable: false,
       });
     } catch (error) {
-      diagnostics.push(await recordFailure(db, args.connection.id, "instagram_read", error));
+      const failure = await recordFailure(db, args.connection.id, "instagram_read", error);
+      diagnostics.push({
+        operation: failure.operation,
+        state: failure.state,
+        retryable: failure.retryable,
+      });
     }
   }
   const accountDiscoveryState = accounts.length ? "valid" : "no_data";
@@ -351,6 +406,77 @@ function firstCollectionId(value: unknown): string | null {
   return first && typeof first === "object" && typeof (first as { id?: unknown }).id === "string"
     ? (first as { id: string }).id
     : null;
+}
+
+function capabilityForOperation(
+  operation:
+    | "campaign_read"
+    | "adset_read"
+    | "ad_read"
+    | "creative_read"
+    | "daily_insights_read"
+    | "breakdown_read",
+) {
+  const capabilities = {
+    campaign_read: "read_campaigns",
+    adset_read: "read_adsets",
+    ad_read: "read_ads",
+    creative_read: "read_creatives",
+    daily_insights_read: "read_reports",
+    breakdown_read: "read_reports",
+  } as const;
+  return capabilities[operation];
+}
+
+type DiscoveredMetaSocialIdentity = {
+  identityType: "facebook_page" | "instagram_business";
+  externalIdentityId: string;
+  displayName: string | null;
+  username: string | null;
+  parentExternalIdentityId: string | null;
+};
+
+/** Extract only stable identity fields from the bounded Page probe response. */
+export function extractMetaSocialIdentities(value: unknown): DiscoveredMetaSocialIdentity[] {
+  const rows = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { data?: unknown }).data)
+      ? (value as { data: unknown[] }).data
+      : [];
+  const identities: DiscoveredMetaSocialIdentity[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== "object" || Array.isArray(row)) continue;
+    const page = row as {
+      id?: unknown;
+      name?: unknown;
+      instagram_business_account?: unknown;
+    };
+    if (typeof page.id !== "string" || page.id.length === 0) continue;
+    identities.push({
+      identityType: "facebook_page",
+      externalIdentityId: page.id,
+      displayName: typeof page.name === "string" ? page.name : null,
+      username: null,
+      parentExternalIdentityId: null,
+    });
+    const instagram = page.instagram_business_account;
+    if (!instagram || typeof instagram !== "object" || Array.isArray(instagram)) continue;
+    const profile = instagram as { id?: unknown; name?: unknown; username?: unknown };
+    if (typeof profile.id !== "string" || profile.id.length === 0) continue;
+    identities.push({
+      identityType: "instagram_business",
+      externalIdentityId: profile.id,
+      displayName:
+        typeof profile.name === "string"
+          ? profile.name
+          : typeof profile.username === "string"
+            ? profile.username
+            : null,
+      username: typeof profile.username === "string" ? profile.username : null,
+      parentExternalIdentityId: page.id,
+    });
+  }
+  return identities;
 }
 
 function recentDateRange() {
