@@ -6,6 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import {
   agencies,
   advertisingAccounts,
+  advertisingConnectionAccounts,
   advertisingConnections,
   advertisingCredentialVersions,
   advertisingSyncStates,
@@ -16,6 +17,7 @@ import { enableAgencyDek } from "@/lib/social/key-management";
 import {
   activateAdvertisingConnection,
   createAdvertisingConnection,
+  persistDiscoveredAdvertisingAccount,
 } from "@/lib/advertising/connection-service";
 import {
   AdvertisingConnectionNotFoundError,
@@ -222,5 +224,72 @@ describe("advertising credential lifecycle", () => {
         actorId: user.id,
       }),
     ).rejects.toBeInstanceOf(AdvertisingConnectionRevokedError);
+  });
+
+  it("reuses one canonical provider account across multiple active connections", async () => {
+    const { agency, user, connection } = await seed();
+    await storeAdvertisingCredential(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      credentials: { accessToken: "meta-token-primary" },
+      actorId: user.id,
+    });
+    await activateAdvertisingConnection(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+    });
+
+    const secondConnection = await createAdvertisingConnection(db, {
+      agencyId: agency.id,
+      provider: "meta",
+      displayName: "Lifecycle Meta Connection (secondary)",
+      actorId: user.id,
+    });
+    await storeAdvertisingCredential(db, {
+      agencyId: agency.id,
+      connectionId: secondConnection.id,
+      credentials: { accessToken: "meta-token-secondary" },
+      actorId: user.id,
+    });
+    await activateAdvertisingConnection(db, {
+      agencyId: agency.id,
+      connectionId: secondConnection.id,
+    });
+
+    const firstDiscovery = await persistDiscoveredAdvertisingAccount(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      externalAccountId: "act_shared_lifecycle",
+      name: "Shared Lifecycle Account",
+      currency: "EUR",
+      timezone: "Europe/Berlin",
+      metadata: { source: "primary", access_token: "must-not-persist" },
+    });
+    const secondDiscovery = await persistDiscoveredAdvertisingAccount(db, {
+      agencyId: agency.id,
+      connectionId: secondConnection.id,
+      externalAccountId: "act_shared_lifecycle",
+      name: "Shared Lifecycle Account (refreshed)",
+      currency: "EUR",
+      timezone: "Europe/Berlin",
+      metadata: { source: "secondary" },
+    });
+
+    expect(secondDiscovery.id).toBe(firstDiscovery.id);
+    const accounts = await db
+      .select({ id: advertisingAccounts.id, name: advertisingAccounts.name })
+      .from(advertisingAccounts)
+      .where(eq(advertisingAccounts.externalAccountId, "act_shared_lifecycle"));
+    expect(accounts).toEqual([
+      { id: firstDiscovery.id, name: "Shared Lifecycle Account (refreshed)" },
+    ]);
+
+    const links = await db
+      .select({ connectionId: advertisingConnectionAccounts.connectionId })
+      .from(advertisingConnectionAccounts)
+      .where(eq(advertisingConnectionAccounts.accountId, firstDiscovery.id));
+    expect(links.map((link) => link.connectionId).sort()).toEqual(
+      [connection.id, secondConnection.id].sort(),
+    );
   });
 });
