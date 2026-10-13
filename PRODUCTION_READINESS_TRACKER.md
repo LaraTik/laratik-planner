@@ -1,19 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-13 advertising foundation + Trend Radar hardening checkpoint** —
-> Exact clean commit `b394ee34` adds distributed HMAC replay protection,
-> credential rotation/revocation, sanitized Meta diagnostics/discovery,
-> tenant/workspace grant revisions, pre-aggregation reporting authorization,
-> and canonical ad-day spend/reconciliation storage. Migrations 0074–0076 are
-> additive and replay-safe; the latest disposable PostgreSQL drill passes 5/5
-> with 77/77 ledger rows, including backup/restore and failed-migration abort.
-> `pnpm verify` passes: 498 unit files / 4,672 tests, formatting, lint,
-> typecheck, and production build; the Trend Radar sidecar passes 122 tests.
-> This is **Tested**, not **Verified**: live Meta credential/account UAT,
-> paginated/rate-aware provider execution, report/export/AI route wiring,
-> configuration UI, bilingual browser evidence, independent review, and
-> production deployment remain open. No external provider or production state
-> was changed.
+> **2026-10-13 advertising foundation + admin workflow checkpoint** — Exact
+> clean implementation commit `598d561` adds distributed HMAC replay
+> protection, credential rotation/revocation, sanitized Meta
+> diagnostics/discovery, tenant/workspace grant revisions, pre-aggregation
+> reporting authorization, canonical ad-day spend/reconciliation storage, and
+> the bilingual Global Admin → Integrations → Advertising → Meta Ads workflow.
+> Migrations 0074–0076 are additive and replay-safe; the latest disposable
+> PostgreSQL drill passes 5/5 with 77/77 ledger rows, including backup/restore
+> and failed-migration abort. `pnpm verify` passes: 501 unit files / 4,679
+> tests, formatting, lint, typecheck, and production build; the Trend Radar
+> sidecar passes 122 tests. This is **Tested**, not **Verified**: no live Meta
+> credential/account UAT or production state was used. Paginated/rate-aware
+> provider execution against real credentials, report/export/AI route wiring,
+> bilingual browser evidence, independent review, and production deployment
+> remain open.
 
 ## Planned next product arc — Meedro-informed Command Center and theme refactor
 
