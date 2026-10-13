@@ -3,6 +3,27 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Populated advertising reporting + privacy — 2026-10-13, exact clean SHA `0d64693648c85cddece91415de2763efa4985095`
+
+The isolated browser runner now has an explicit, synthetic reporting fixture.
+It exercises the encrypted advertising credential lifecycle, active account
+linkage, workspace-scoped `read_reports` grant, successful sync freshness, and
+canonical ad-day facts through the production services. The fixture is only
+reachable through the non-production dev seed route and uses no provider
+request. The same code also keeps unknown and forbidden report-account
+responses indistinguishable at the route boundary (404), preventing account
+enumeration.
+
+| Check                                                                                                      | Result                                                                                      |
+| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-reporting.spec.ts --project=chromium` | **Pass** — 2/2 populated English/LTR and Arabic/RTL; serious/critical axe violations absent |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts`  | **Pass** — 1 file / 2 tests                                                                 |
+| `pnpm verify`                                                                                              | **Pass** — formatting, lint, typecheck, 507 unit files / 4,711 tests, production build      |
+
+No live Meta credentials, external provider request, production deployment, or
+external Meta mutation was used. Controlled live read-only Meta UAT and real
+ad-level reconciliation remain open.
+
 ## Advertising credential lifecycle hardening — 2026-10-13, exact clean SHA `6727445b`
 
 The activation boundary now requires a non-revoked connection with a stored

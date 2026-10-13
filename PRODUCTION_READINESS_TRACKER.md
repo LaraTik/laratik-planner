@@ -1,5 +1,22 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 populated advertising reporting + privacy checkpoint** — Exact
+> clean code commit `0d64693648c85cddece91415de2763efa4985095` adds a
+> test-only synthetic canonical advertising fixture that exercises encrypted
+> credential storage, active connection/account linkage, workspace-scoped
+> `read_reports` visibility, sync freshness, and idempotent ad-day ingestion
+> through the production services. The populated reporting browser contract
+> passes 2/2 in Chromium for English/LTR and Arabic/RTL with serious/critical
+> axe violations absent. The same commit also normalizes unknown and forbidden
+> advertising report responses to the same 404 shape, preventing account
+> existence probing. Exact-clean verification passes formatting, lint,
+> typecheck, 507 unit files / 4,711 tests, and the production build; the
+> credential lifecycle integration passes 2/2. The fixture is synthetic and
+> test-only: no live Meta request, production deployment, or external Meta
+> mutation was performed. This remains **Tested**, not **Verified**: controlled
+> live Meta credentials/UAT, real ad-level reconciliation, independent review,
+> and production deployment remain open.
+
 > **2026-10-13 advertising credential lifecycle hardening checkpoint** — Exact
 > clean code commit `6727445b` prevents activation after revocation and requires
 > a stored credential version before a connection can become active. The new
