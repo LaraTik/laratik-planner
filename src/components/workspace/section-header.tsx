@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  */
 export interface SectionHeaderProps {
   title: React.ReactNode;
-  /** Action link target, e.g. "/app/w/acme/planning". */
+  /** Action link target, e.g. "/app/a/acme/w/demo/planning". */
   actionHref?: string;
   /** Label for the action link, e.g. "View all". */
   actionLabel?: string;

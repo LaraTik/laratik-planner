@@ -28,7 +28,7 @@ export interface PlanCoverageCardProps {
   monthlyTarget: number | null;
   coveragePercent: number | null;
   formatBreakdown: FormatDistributionBar[];
-  /** Returns a URL for a given format (e.g. `/app/w/.../planning?format=story`). */
+  /** Returns a URL for a given format (e.g. `/app/a/<agency>/w/<slug>/planning?format=story`). */
   buildFormatHref: (format: KpiContentFormat) => string;
   /** Where "Set target" / "Edit target" points. */
   settingsHref: string;

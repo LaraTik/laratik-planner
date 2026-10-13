@@ -19,7 +19,7 @@ import type { NextAction } from "@/lib/content/next-action";
  */
 export interface NextActionChipProps {
   action: NextAction;
-  /** Detail-page href (e.g. /app/w/{slug}/planning/{id}). */
+  /** Detail-page href (e.g. /app/a/{agency}/w/{slug}/planning/{id}). */
   detailHref: string;
   className?: string;
   t?: (key: string, params?: Record<string, string | number>) => string;

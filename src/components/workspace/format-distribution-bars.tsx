@@ -28,7 +28,7 @@ export interface FormatDistributionBar {
 
 export interface FormatDistributionBarsProps {
   bars: FormatDistributionBar[];
-  /** Returns a URL for a given format (e.g. `/app/w/.../planning?format=story`). */
+  /** Returns a URL for a given format (e.g. `/app/a/<agency>/w/<slug>/planning?format=story`). */
   buildHref: (format: KpiContentFormat) => string;
   /** Optional total — used to compute percentages. Defaults to sum of counts. */
   total?: number;

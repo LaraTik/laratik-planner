@@ -156,7 +156,7 @@ export const appErrorEvents = pgTable(
      * `source` column also records but at a coarser grain.
      */
     routeType: text("route_type"),
-    /** The filesystem route file, e.g. `/app/w/[slug]/planning/[id]`. */
+    /** The filesystem route file, e.g. `/app/a/[agencySlug]/w/[slug]/planning/[id]`. */
     routePath: text("route_path"),
     createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
       .notNull()

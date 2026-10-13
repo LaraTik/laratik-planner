@@ -66,7 +66,7 @@ describe("WorkspaceNameForm", () => {
   it("shows the URL as read-only and explains it does not follow the rename", () => {
     renderForm();
     const url = screen.getByTestId("workspace-name-slug");
-    expect(url).toHaveTextContent("/app/w/acme");
+    expect(url).toHaveTextContent("/app/a/acme/w/acme");
     // The slug is presented as a static paragraph, never an input —
     // a manager must not be able to edit the URL identity here.
     expect(screen.queryByLabelText(/workspace url/i)?.tagName).not.toBe("INPUT");
