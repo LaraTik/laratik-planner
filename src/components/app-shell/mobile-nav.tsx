@@ -46,8 +46,9 @@ import {
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { AgencySwitcher, agencySwitcherCopy, type AgencyRow } from "./agency-switcher";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
-type Workspace = { id: string; name: string; slug: string };
+type Workspace = SwitcherWorkspace;
 
 type MobileNavProps = {
   user: { isAdmin: boolean };

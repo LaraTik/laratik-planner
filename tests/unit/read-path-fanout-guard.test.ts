@@ -86,20 +86,18 @@ describe("canonical workspace URL guard", () => {
    * reason it is legitimate, so a new legacy URL fails loudly.
    */
   /**
-   * Every remaining `/app/w/` producer, with the reason it is legitimate.
+   * Only the legacy catch-all itself may name `/app/w/`, and only as its own
+   * redirect destination. Every producer the app controls emits the canonical
+   * shape.
    *
-   *  - the legacy catch-all itself, which is the inbound-only route
-   *  - `workspace-switcher-path`: when the caller is NOT on a canonical
-   *    workspace URL the tenant is unknowable here, so it defers to the
-   *    redirect rather than guessing
-   *  - `agency-switch`: degrades to the legacy shape when the agency slug
-   *    cannot be read, and the legacy route still resolves it
+   * This allowlist started with three entries — the catch-all plus two
+   * "we cannot know the tenant here" fallbacks. Both fallbacks were removed by
+   * giving the code the tenant it was missing rather than by swapping the
+   * string out: the workspace switcher now carries each option's agency slug,
+   * and the tenant switch joins the agency onto the landing workspace instead
+   * of fetching it separately and tolerating an empty result.
    */
-  const ALLOWED_LEGACY_PRODUCERS = new Set([
-    "app/(app)/app/w/[...legacy]/page.tsx",
-    "components/app-shell/workspace-switcher-path.ts",
-    "lib/auth/agency-switch.ts",
-  ]);
+  const ALLOWED_LEGACY_PRODUCERS = new Set(["app/(app)/app/w/[...legacy]/page.tsx"]);
 
   it("no component emits a navigation to the legacy workspace shape", () => {
     const offenders: string[] = [];

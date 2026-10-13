@@ -139,10 +139,11 @@ export function parseLegacyWorkspacePath(pathname: string): ParsedLegacyWorkspac
  * sanctioned way to build a workspace URL, and
  * `tests/unit/read-path-fanout-guard.test.ts` fails if ANY navigation
  * anywhere under `src/` emits `/app/w/` again — `href=`, `redirect(`, a
- * `router.push`, or a bare returned URL. Three producers are allowlisted
- * with their reasons: this catch-all, `workspace-switcher-path` (defers to
- * the redirect when the tenant is unknowable) and `agency-switch` (degrades
- * when the agency slug cannot be read). The legacy shape was also being
+ * `router.push`, or a bare returned URL. Only the catch-all itself is allowlisted;
+ * every producer the app controls emits the canonical shape. Two earlier
+ * fallbacks were removed by supplying the tenant rather than by swapping the
+ * string: the workspace switcher now carries each option's agency slug, and
+ * the tenant switch joins the agency onto the landing workspace. The legacy shape was also being
  * persisted — into `notification.action_url` — which is why migration 0071
  * exists to rewrite those rows.
  */

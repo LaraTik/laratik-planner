@@ -12,6 +12,7 @@ import type { BuildInfo } from "@/lib/build-info";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import type { ThemePreference } from "@/lib/theme/preferences";
 import { cn } from "@/lib/utils";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
 /**
  * The chrome copy bundle AppShell forwards to its client
@@ -89,7 +90,7 @@ export function AppShell({
     isPlatformAdmin?: boolean;
   };
   buildInfo: BuildInfo;
-  workspaces: { id: string; slug: string; name: string }[];
+  workspaces: SwitcherWorkspace[];
   workspaceAccess: Record<string, "internal" | "client" | "none">;
   workspaceCanCreateContent: Record<string, boolean>;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };

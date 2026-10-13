@@ -10,6 +10,7 @@ import { WorkspaceSwitcher } from "./workspace-switcher";
 import type { BuildInfo } from "@/lib/build-info";
 import type { ThemePreference } from "@/lib/theme/preferences";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
 /**
  * Compact shell bar — tenant context, notifications, theme, and user menu.
@@ -56,7 +57,7 @@ export function Topbar({
   }[];
   unreadCount: number;
   agencySwitcher: { active: AgencyRow | null; options: AgencyRow[] };
-  workspaces: { id: string; name: string; slug: string }[];
+  workspaces: SwitcherWorkspace[];
   canCreateWorkspace: boolean;
   platformAccess: PlatformNavigationAccess;
   labels: Record<string, string>;

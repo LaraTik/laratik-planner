@@ -7,8 +7,9 @@ import { Briefcase, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getWorkspaceSwitchPath } from "./workspace-switcher-path";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
-type Workspace = { id: string; name: string; slug: string };
+type Workspace = SwitcherWorkspace;
 
 export type WorkspaceSwitcherCopy = {
   activeAria: string;
@@ -101,7 +102,7 @@ export function WorkspaceSwitcher({
 
   const choose = (w: Workspace) => {
     setOpen(false);
-    router.push(getWorkspaceSwitchPath(pathname, w.slug));
+    router.push(getWorkspaceSwitchPath(pathname, w.slug, w.agencySlug));
   };
 
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {

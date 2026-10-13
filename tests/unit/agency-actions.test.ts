@@ -7,40 +7,29 @@ const mocks = vi.hoisted(() => ({
   isAgencyAdmin: vi.fn(),
   // Rows for the agency-slug lookup, then rows for the workspace lookup.
   // `switchAgencyContext` issues both concurrently via `Promise.all`, so the
-  // agency chain is CONSTRUCTED first and its `.limit(1)` runs first. Sharing
-  // one row set between the two made the agency lookup return a workspace slug
-  // and produced a nonsense destination.
-  agencyRows: [] as { slug: string }[],
-  workspaceRows: [] as { slug: string }[],
-  // Which `limit()` call we are on: 0 = agency slug, 1 = workspace.
-  queryIndex: 0,
+  // A single joined query for the landing workspace + its agency.
+  // The landing workspace is now resolved in ONE query that joins the agency,
+  // so the row carries both slugs. Previously this mock modelled two separate
+  // queries and had to track which `limit()` call it was on.
+  landingRows: [] as { slug: string; agencySlug: string }[],
 }));
 
-// `db` is a drizzle client. The action calls
-// `db.select(...).from(...).innerJoin(...).where(...).orderBy(...).limit(1)`
-// for the workspace, and `db.select(...).from(...).where(...).limit(1)` for
-// the agency. We build a chain whose `limit` consumes `workspaceRows` first
-// and `agencyRows` second, so each test can supply its own results without
-// re-mocking the module.
+// `db` is a drizzle client. The action now issues ONE query — the landing
+// workspace joined to its agency — so the chain's `limit()` just returns
+// `landingRows`.
 function buildDrizzleChain() {
-  const limit = vi.fn(() => {
-    const rows = mocks.queryIndex++ === 0 ? mocks.agencyRows : mocks.workspaceRows;
-    return Promise.resolve(rows);
-  });
+  const chain: Record<string, unknown> = {};
+  const limit = vi.fn(() => Promise.resolve(mocks.landingRows));
   const orderBy = vi.fn().mockReturnValue({ limit });
   const where = vi.fn().mockReturnValue({ orderBy, limit });
-  const innerJoin = vi.fn().mockReturnValue({ where });
-  const from = vi.fn().mockReturnValue({ innerJoin, where });
+  // The member path joins workspaceMemberships -> workspaces -> agencies, so
+  // `innerJoin` must be callable on its own return value, repeatedly.
+  const innerJoin = vi.fn(() => chain);
+  const from = vi.fn().mockReturnValue(chain);
   const select = vi.fn().mockReturnValue({ from });
-  return { select, from, innerJoin, where, orderBy, limit };
+  Object.assign(chain, { select, from, innerJoin, where, orderBy, limit });
+  return chain;
 }
-
-// `queryIndex` is a plain counter, not mock state, so `vi.clearAllMocks()`
-// does not reset it. Without this the second test in the file consumed the
-// first test's row slot and read the wrong fixture.
-beforeEach(() => {
-  mocks.queryIndex = 0;
-});
 
 vi.mock("@/lib/auth/config", () => ({ auth: mocks.auth }));
 vi.mock("next/navigation", () => ({
@@ -141,8 +130,7 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.workspaceRows = [{ slug: "food-game" }];
-    mocks.agencyRows = [{ slug: "acme" }];
+    mocks.landingRows = [{ slug: "food-game", agencySlug: "acme" }];
 
     // Canonical `/app/a/<agencySlug>/w/<slug>` — NOT the legacy
     // `/app/w/<slug>`. The legacy path lives inside the `(app)` route group,
@@ -154,17 +142,19 @@ describe("switchActiveAgencyAndRedirect", () => {
     );
   });
 
-  it("falls back to the legacy path when the agency slug cannot be read", async () => {
+  it("never emits the legacy shape — the agency slug rides on the workspace row", async () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.workspaceRows = [{ slug: "food-game" }];
-    mocks.agencyRows = [];
+    mocks.landingRows = [{ slug: "food-game", agencySlug: "acme" }];
 
-    // Degrades to the old shape rather than emitting `/app/a/undefined/...`.
-    // The legacy route still resolves it, so the switch still lands.
+    // This used to degrade to `/app/w/<slug>` when the agency slug could not
+    // be read from a SEPARATE query, costing a full app-shell re-render
+    // inside the redirect (measured: +21 SQL statements, ~1.5-2x). The agency
+    // is now JOINED onto the landing workspace, so there is no longer a
+    // branch that can fall back.
     await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
-      "NEXT_REDIRECT:/app/w/food-game",
+      "NEXT_REDIRECT:/app/a/acme/w/food-game",
     );
   });
 
@@ -172,8 +162,7 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.auth.mockResolvedValue({ user: { id: "user-1" } });
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.workspaceRows = [];
-    mocks.agencyRows = [];
+    mocks.landingRows = [];
 
     await expect(switchActiveAgencyAndRedirect("agency-2")).rejects.toThrow("NEXT_REDIRECT:/app");
   });
@@ -183,8 +172,7 @@ describe("switchActiveAgencyAndRedirect", () => {
     mocks.isActiveMember.mockResolvedValue(true);
     mocks.isAgencyAdmin.mockResolvedValue(true);
     mocks.setActiveAgencyCookie.mockResolvedValue(true);
-    mocks.workspaceRows = [{ slug: "admin-only-workspace" }];
-    mocks.agencyRows = [{ slug: "acme" }];
+    mocks.landingRows = [{ slug: "admin-only-workspace", agencySlug: "acme" }];
 
     await expect(switchActiveAgencyAndRedirect("agency-1")).rejects.toThrow(
       "NEXT_REDIRECT:/app/a/acme/w/admin-only-workspace",

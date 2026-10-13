@@ -35,8 +35,8 @@ vi.mock("next/link", () => ({
 const baseProps = {
   user: { name: "Lara", isAdmin: false },
   workspaces: [
-    { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
-    { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
+    { id: "ws-1", name: "Northstar Coffee", slug: "northstar", agencySlug: "acme" },
+    { id: "ws-2", name: "Autumn Blend", slug: "autumn", agencySlug: "acme" },
   ],
   workspaceCanCreateContent: { "ws-1": true, "ws-2": true },
   platformAccess: {

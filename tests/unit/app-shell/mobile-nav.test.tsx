@@ -39,8 +39,8 @@ vi.mock("@/lib/auth/agency-actions", () => ({
 const baseProps = {
   user: { isAdmin: true },
   workspaces: [
-    { id: "ws-1", name: "Northstar Coffee", slug: "northstar" },
-    { id: "ws-2", name: "Autumn Blend", slug: "autumn" },
+    { id: "ws-1", name: "Northstar Coffee", slug: "northstar", agencySlug: "acme" },
+    { id: "ws-2", name: "Autumn Blend", slug: "autumn", agencySlug: "acme" },
   ],
   workspaceAccess: { "ws-1": "internal", "ws-2": "client" } as const,
   workspaceCanCreateContent: { "ws-1": true, "ws-2": false },
