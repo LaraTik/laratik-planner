@@ -13,6 +13,7 @@ import {
   advertisingConnections,
   advertisingFinancialAuthorities,
   advertisingSpendObservations,
+  advertisingAudienceObservations,
   advertisingSpendReconciliations,
   advertisingProviderObjects,
   advertisingSyncRuns,
@@ -307,11 +308,19 @@ describe("advertising tenant ownership guards", () => {
   });
 
   it("replays a post-ingestion failure without duplicating canonical spend", async () => {
-    const { connectionA, accountA } = await seed();
+    const { agencyA, workspaceA, connectionA, accountA, actor } = await seed();
     await db.update(advertisingConnections).set({ status: "active" });
     await db.insert(advertisingConnectionAccounts).values({
       connectionId: connectionA.id,
       accountId: accountA.id,
+    });
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      campaignIds: ["campaign_replay_1"],
+      grantedBy: actor.id,
     });
     const [state] = await db
       .insert(advertisingSyncStates)
@@ -378,14 +387,23 @@ describe("advertising tenant ownership guards", () => {
       .select({ id: advertisingSpendObservations.id })
       .from(advertisingSpendObservations);
     const reconciliations = await db
-      .select({ id: advertisingSpendReconciliations.id })
+      .select({
+        id: advertisingSpendReconciliations.id,
+        workspaceAttributedSpend: advertisingSpendReconciliations.workspaceAttributedSpend,
+        unallocatedSpend: advertisingSpendReconciliations.unallocatedSpend,
+      })
       .from(advertisingSpendReconciliations);
     const runs = await db
       .select({ status: advertisingSyncRuns.status })
       .from(advertisingSyncRuns)
       .where(eq(advertisingSyncRuns.syncStateId, state.id));
     expect(observations).toHaveLength(1);
-    expect(reconciliations).toHaveLength(1);
+    expect(reconciliations).toEqual([
+      expect.objectContaining({
+        workspaceAttributedSpend: "12.500000",
+        unallocatedSpend: "0.000000",
+      }),
+    ]);
     expect(runs.map((run) => run.status).sort()).toEqual(["failed", "succeeded"]);
   });
 
@@ -686,6 +704,96 @@ describe("advertising tenant ownership guards", () => {
     expect(reportB.report.totals.spend).toBe(90);
     expect(reportA.report.rows[0]?.accountId).toBe(accountA.id);
     expect(reportB.report.rows[0]?.accountId).toBe(accountB.id);
+  });
+
+  it("does not expose account-level audience rows through a campaign-scoped grant", async () => {
+    const { agencyA, workspaceA, accountA, connectionA, actor } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    await db.insert(agencyMemberships).values({
+      agencyId: agencyA.id,
+      userId: actor.id,
+      status: "active",
+      isAgencyAdmin: false,
+    });
+    await db.insert(workspaceMemberships).values({
+      workspaceId: workspaceA.id,
+      userId: actor.id,
+      status: "active",
+    });
+    await db.insert(advertisingSpendObservations).values({
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      externalAdId: "audience-ad",
+      externalCampaignId: "audience-campaign",
+      externalAdSetId: "audience-adset",
+      reportDate: "2026-10-01",
+      currency: "EUR",
+      spend: "10",
+      impressions: 100,
+      clicks: 5,
+      attributionWindow: "account",
+      actionReportTime: "impression",
+    });
+    await db.insert(advertisingAudienceObservations).values({
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      reportDate: "2026-10-01",
+      breakdown: "age",
+      dimensionValue: "25-34",
+      currency: "EUR",
+      spend: "10",
+      impressions: 100,
+      clicks: 5,
+      reach: 80,
+      attributionWindow: "account",
+      actionReportTime: "impression",
+    });
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      campaignIds: ["audience-campaign"],
+      grantedBy: actor.id,
+    });
+    const campaignScoped = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "workspace_dashboard",
+    });
+    expect(campaignScoped.kind).toBe("ok");
+    if (campaignScoped.kind !== "ok") return;
+    expect(campaignScoped.audience).toEqual([]);
+
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      grantedBy: actor.id,
+    });
+    const accountWide = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "workspace_dashboard",
+    });
+    expect(accountWide.kind).toBe("ok");
+    if (accountWide.kind !== "ok") return;
+    expect(accountWide.audience).toHaveLength(1);
   });
 
   it("revokes financial authority in place and records an audit event", async () => {

@@ -19,6 +19,7 @@ import {
   advertisingSocialIdentities,
   advertisingSyncRuns,
   advertisingSyncStates,
+  advertisingSpendReconciliations,
   workspaces,
 } from "@/lib/db/schema";
 import {
@@ -441,6 +442,7 @@ export async function listAdvertisingResourcesForAdmin() {
     visibilityGrants,
     financialAuthorities,
     validationResults,
+    reconciliations,
     syncRuns,
   ] = await Promise.all([
     db
@@ -609,6 +611,29 @@ export async function listAdvertisingResourcesForAdmin() {
       .limit(100),
     db
       .select({
+        id: advertisingSpendReconciliations.id,
+        accountId: advertisingSpendReconciliations.accountId,
+        accountName: advertisingAccounts.name,
+        reportDate: advertisingSpendReconciliations.reportDate,
+        currency: advertisingSpendReconciliations.currency,
+        providerAccountSpend: advertisingSpendReconciliations.providerAccountSpend,
+        canonicalAdSpend: advertisingSpendReconciliations.canonicalAdSpend,
+        workspaceAttributedSpend: advertisingSpendReconciliations.workspaceAttributedSpend,
+        unallocatedSpend: advertisingSpendReconciliations.unallocatedSpend,
+        discrepancy: advertisingSpendReconciliations.discrepancy,
+        completeness: advertisingSpendReconciliations.completeness,
+        checkedAt: advertisingSpendReconciliations.checkedAt,
+      })
+      .from(advertisingSpendReconciliations)
+      .innerJoin(
+        advertisingAccounts,
+        eq(advertisingAccounts.id, advertisingSpendReconciliations.accountId),
+      )
+      .where(eq(advertisingSpendReconciliations.agencyId, agencyId))
+      .orderBy(desc(advertisingSpendReconciliations.checkedAt))
+      .limit(100),
+    db
+      .select({
         id: advertisingSyncRuns.id,
         connectionId: advertisingSyncRuns.connectionId,
         accountId: advertisingSyncRuns.accountId,
@@ -644,5 +669,6 @@ export async function listAdvertisingResourcesForAdmin() {
     financialAuthorities,
     validationResults,
     syncRuns,
+    reconciliations,
   };
 }

@@ -74,6 +74,8 @@ describe("GET /api/advertising/report", () => {
         ],
         totals: { spend: 10, impressions: 100, clicks: 5, ctr: 0.05, cpc: 2, cpm: 100 },
       },
+      objects: [{ objectType: "ad", externalObjectId: "ad-visible" }],
+      audience: [{ breakdown: "age", dimensionValue: "25-34" }],
       lastSuccessfulSyncAt: "2026-10-02T00:00:00.000Z",
       syncStatus: "succeeded",
       partial: false,
@@ -84,6 +86,8 @@ describe("GET /api/advertising/report", () => {
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({
       report: { rows: [{ campaignId: "campaign-visible" }], totals: { spend: 10 } },
+      objects: [{ externalObjectId: "ad-visible" }],
+      audience: [{ dimensionValue: "25-34" }],
       partial: false,
     });
     expect(mocks.load).toHaveBeenCalledWith(

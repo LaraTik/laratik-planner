@@ -3,6 +3,7 @@ import type { AdvertisingFact } from "./reporting-service";
 type AdvertisingReportObject = {
   objectType: "campaign" | "adset" | "ad" | "creative";
   externalObjectId: string;
+  parentExternalObjectId?: string | null;
   name: string | null;
   status: string | null;
   objective: string | null;
@@ -34,9 +35,29 @@ export type AdvertisingCampaignSummary = AdvertisingMetricTotals & {
   lifetimeBudget?: string | null;
 };
 
+export type AdvertisingAdSetSummary = AdvertisingMetricTotals & {
+  adSetId: string;
+  campaignId: string | null;
+  adCount: number;
+  name?: string | null;
+  status?: string | null;
+  dailyBudget?: string | null;
+  lifetimeBudget?: string | null;
+};
+
+export type AdvertisingAdSummary = AdvertisingMetricTotals & {
+  adId: string;
+  adSetId: string | null;
+  campaignId: string | null;
+  name?: string | null;
+  status?: string | null;
+};
+
 export type AdvertisingReportView = {
   dailySpend: AdvertisingDailySpend[];
   campaigns: AdvertisingCampaignSummary[];
+  adSets: AdvertisingAdSetSummary[];
+  ads: AdvertisingAdSummary[];
   adCount: number;
   promotedPosts?: AdvertisingPromotedPostSummary[];
 };
@@ -72,10 +93,14 @@ export function buildAdvertisingReportView(
 ): AdvertisingReportView {
   const daily = new Map<string, AdvertisingFact[]>();
   const campaignRows = new Map<string, AdvertisingFact[]>();
+  const adSetRows = new Map<string, AdvertisingFact[]>();
+  const adRows = new Map<string, AdvertisingFact[]>();
   const adIds = new Set<string>();
   for (const row of rows) {
     daily.set(row.date, [...(daily.get(row.date) ?? []), row]);
     campaignRows.set(row.campaignId, [...(campaignRows.get(row.campaignId) ?? []), row]);
+    if (row.adSetId) adSetRows.set(row.adSetId, [...(adSetRows.get(row.adSetId) ?? []), row]);
+    if (row.adId) adRows.set(row.adId, [...(adRows.get(row.adId) ?? []), row]);
     if (row.adId) adIds.add(row.adId);
   }
   const campaigns = [...campaignRows.entries()]
@@ -103,6 +128,48 @@ export function buildAdvertisingReportView(
       (left, right) => right.spend - left.spend || left.campaignId.localeCompare(right.campaignId),
     );
   const promotedPosts = new Map<string, AdvertisingFact[]>();
+  const adSets = [...adSetRows.entries()]
+    .map(([adSetId, adSetFacts]) => {
+      const object = objects.find(
+        (candidate) => candidate.objectType === "adset" && candidate.externalObjectId === adSetId,
+      );
+      return {
+        adSetId,
+        campaignId: object?.parentExternalObjectId ?? adSetFacts[0]?.campaignId ?? null,
+        ...totals(adSetFacts),
+        adCount: new Set(adSetFacts.flatMap((row) => (row.adId ? [row.adId] : []))).size,
+        ...(object
+          ? {
+              name: object.name,
+              status: object.status,
+              dailyBudget: object.dailyBudget,
+              lifetimeBudget: object.lifetimeBudget,
+            }
+          : {}),
+      };
+    })
+    .sort((left, right) => right.spend - left.spend || left.adSetId.localeCompare(right.adSetId));
+  const ads = [...adRows.entries()]
+    .map(([adId, adFacts]) => {
+      const object = objects.find(
+        (candidate) => candidate.objectType === "ad" && candidate.externalObjectId === adId,
+      );
+      const adSetId = object?.parentExternalObjectId ?? adFacts[0]?.adSetId ?? null;
+      const adSet = adSetId
+        ? objects.find(
+            (candidate) =>
+              candidate.objectType === "adset" && candidate.externalObjectId === adSetId,
+          )
+        : undefined;
+      return {
+        adId,
+        adSetId,
+        campaignId: adSet?.parentExternalObjectId ?? adFacts[0]?.campaignId ?? null,
+        ...totals(adFacts),
+        ...(object ? { name: object.name, status: object.status } : {}),
+      };
+    })
+    .sort((left, right) => right.spend - left.spend || left.adId.localeCompare(right.adId));
   const adToPost = new Map(
     objects
       .filter((object) => object.objectType === "ad" && object.promotedPostId)
@@ -117,6 +184,8 @@ export function buildAdvertisingReportView(
       .map(([date, facts]) => ({ date, spend: totals(facts).spend }))
       .sort((left, right) => left.date.localeCompare(right.date)),
     campaigns,
+    adSets,
+    ads,
     adCount: adIds.size,
     ...(objects.length > 0
       ? {

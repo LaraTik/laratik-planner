@@ -9,6 +9,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Input } from "@/components/ui/input";
 import { PageHeader } from "@/components/workspace/page-header";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole, INTERNAL_WORKSPACE_ROLES } from "@/lib/auth/policy";
 import { currentActor } from "@/lib/auth/current-actor";
@@ -23,6 +24,7 @@ import {
   loadAdvertisingReport,
 } from "@/lib/advertising/reporting-query";
 import { buildAdvertisingReportView } from "@/lib/advertising/reporting-view";
+import { querySocialPostObservations } from "@/lib/social/analytics-query";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -33,6 +35,10 @@ type SearchParams = {
   accountId?: string | string[];
   since?: string | string[];
   until?: string | string[];
+  campaignPage?: string | string[];
+  adSetPage?: string | string[];
+  adPage?: string | string[];
+  audiencePage?: string | string[];
 };
 
 export default async function AdvertisingAnalyticsPage({
@@ -65,6 +71,10 @@ export default async function AdvertisingAnalyticsPage({
     ? firstQueryValue(query.since)!
     : shiftDate(until, -29);
   const requestedAccountId = firstQueryValue(query.accountId);
+  const rangeIsValid =
+    since <= until &&
+    new Date(`${until}T00:00:00Z`).getTime() - new Date(`${since}T00:00:00Z`).getTime() <=
+      93 * 24 * 60 * 60 * 1000;
 
   const heading = (
     <PageHeader
@@ -89,6 +99,18 @@ export default async function AdvertisingAnalyticsPage({
           icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
           title={t("advertising.reporting.disabledTitle")}
           description={t("advertising.reporting.disabledDescription")}
+        />
+      </div>
+    );
+  }
+  if (!rangeIsValid) {
+    return (
+      <div className="space-y-6" data-testid="advertising-reporting-invalid-range">
+        {heading}
+        <ReportState
+          icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
+          title={t("advertising.reporting.invalidRangeTitle")}
+          description={t("advertising.reporting.invalidRangeDescription")}
         />
       </div>
     );
@@ -147,11 +169,22 @@ export default async function AdvertisingAnalyticsPage({
   }
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
+  const organicByPostId = await loadOrganicPromotedPosts({
+    postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
+    workspaceId: workspace.id,
+    timezone: workspace.timezone,
+    since,
+    until,
+  });
   const maxDailySpend = Math.max(...view.dailySpend.map((day) => day.spend), 0);
   const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
   const syncLabel = result.syncStatus
     ? t(`advertising.syncStatus.${result.syncStatus}`)
     : t("advertising.reporting.notAvailable");
+  const campaignPage = paginate(view.campaigns, firstQueryValue(query.campaignPage));
+  const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
+  const adPage = paginate(view.ads, firstQueryValue(query.adPage));
+  const audiencePage = paginate(result.audience, firstQueryValue(query.audiencePage));
 
   return (
     <div className="space-y-6" data-testid="advertising-reporting-page">
@@ -390,7 +423,7 @@ export default async function AdvertisingAnalyticsPage({
                   </tr>
                 </thead>
                 <tbody className="divide-border divide-y">
-                  {view.campaigns.map((campaign) => (
+                  {campaignPage.items.map((campaign) => (
                     <tr key={campaign.campaignId}>
                       <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="row">
                         <span className="block">{campaign.name ?? campaign.campaignId}</span>
@@ -434,6 +467,192 @@ export default async function AdvertisingAnalyticsPage({
                 </tbody>
               </table>
             </div>
+            <ReportPagination
+              page={campaignPage.page}
+              totalPages={campaignPage.totalPages}
+              total={campaignPage.total}
+              from={campaignPage.from}
+              to={campaignPage.to}
+              testId="advertising-reporting-campaigns-pagination"
+              pageParam="campaignPage"
+              basePath={basePath}
+              accountId={selectedAccount.id}
+              since={since}
+              until={until}
+              t={t}
+            />
+          </Card>
+          <Card data-testid="advertising-reporting-adsets">
+            <CardHeader>
+              <CardTitle>{t("advertising.reporting.adSetsTitle")}</CardTitle>
+              <CardDescription>{t("advertising.reporting.adSetsDescription")}</CardDescription>
+            </CardHeader>
+            {view.adSets.length === 0 ? (
+              <p className="text-label text-fg-secondary px-4 pb-4">
+                {t("advertising.reporting.notAvailable")}
+              </p>
+            ) : (
+              <div
+                className="overflow-x-auto"
+                role="region"
+                tabIndex={0}
+                aria-label={t("advertising.reporting.adSetsTableLabel")}
+              >
+                <table className="text-body w-full min-w-[760px] text-start">
+                  <caption className="sr-only">
+                    {t("advertising.reporting.adSetsTableLabel")}
+                  </caption>
+                  <thead className="bg-surface-subtle text-label text-fg-muted">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.adSet")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.ads")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.spend")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.impressions")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.clicks")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.results")}
+                      </th>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.status")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {adSetPage.items.map((adSet) => (
+                      <tr key={adSet.adSetId}>
+                        <th className="px-4 py-3 text-start font-semibold" scope="row">
+                          <span className="block">{adSet.name ?? adSet.adSetId}</span>
+                          <bdi className="text-label text-fg-muted" dir="ltr">
+                            {adSet.adSetId}
+                          </bdi>
+                        </th>
+                        <td className="px-4 py-3 text-end">{number(adSet.adCount, code)}</td>
+                        <td className="px-4 py-3 text-end">
+                          {money(adSet.spend, selectedAccount.currency, code)}
+                        </td>
+                        <td className="px-4 py-3 text-end">{number(adSet.impressions, code)}</td>
+                        <td className="px-4 py-3 text-end">{number(adSet.clicks, code)}</td>
+                        <td className="px-4 py-3 text-end">
+                          {adSet.results === null
+                            ? t("advertising.reporting.notAvailable")
+                            : number(adSet.results, code)}
+                        </td>
+                        <td className="px-4 py-3 text-start">
+                          {adSet.status ?? t("advertising.reporting.notAvailable")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <ReportPagination
+              page={adSetPage.page}
+              totalPages={adSetPage.totalPages}
+              total={adSetPage.total}
+              from={adSetPage.from}
+              to={adSetPage.to}
+              testId="advertising-reporting-adsets-pagination"
+              pageParam="adSetPage"
+              basePath={basePath}
+              accountId={selectedAccount.id}
+              since={since}
+              until={until}
+              t={t}
+            />
+          </Card>
+          <Card data-testid="advertising-reporting-ads">
+            <CardHeader>
+              <CardTitle>{t("advertising.reporting.adsTitle")}</CardTitle>
+              <CardDescription>{t("advertising.reporting.adsDescription")}</CardDescription>
+            </CardHeader>
+            {view.ads.length === 0 ? (
+              <p className="text-label text-fg-secondary px-4 pb-4">
+                {t("advertising.reporting.notAvailable")}
+              </p>
+            ) : (
+              <div
+                className="overflow-x-auto"
+                role="region"
+                tabIndex={0}
+                aria-label={t("advertising.reporting.adsTableLabel")}
+              >
+                <table className="text-body w-full min-w-[760px] text-start">
+                  <caption className="sr-only">{t("advertising.reporting.adsTableLabel")}</caption>
+                  <thead className="bg-surface-subtle text-label text-fg-muted">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.ad")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.spend")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.impressions")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.clicks")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.results")}
+                      </th>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.status")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {adPage.items.map((ad) => (
+                      <tr key={ad.adId}>
+                        <th className="px-4 py-3 text-start font-semibold" scope="row">
+                          <span className="block">{ad.name ?? ad.adId}</span>
+                          <bdi className="text-label text-fg-muted" dir="ltr">
+                            {ad.adId}
+                          </bdi>
+                        </th>
+                        <td className="px-4 py-3 text-end">
+                          {money(ad.spend, selectedAccount.currency, code)}
+                        </td>
+                        <td className="px-4 py-3 text-end">{number(ad.impressions, code)}</td>
+                        <td className="px-4 py-3 text-end">{number(ad.clicks, code)}</td>
+                        <td className="px-4 py-3 text-end">
+                          {ad.results === null
+                            ? t("advertising.reporting.notAvailable")
+                            : number(ad.results, code)}
+                        </td>
+                        <td className="px-4 py-3 text-start">
+                          {ad.status ?? t("advertising.reporting.notAvailable")}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <ReportPagination
+              page={adPage.page}
+              totalPages={adPage.totalPages}
+              total={adPage.total}
+              from={adPage.from}
+              to={adPage.to}
+              testId="advertising-reporting-ads-pagination"
+              pageParam="adPage"
+              basePath={basePath}
+              accountId={selectedAccount.id}
+              since={since}
+              until={until}
+              t={t}
+            />
           </Card>
           {result.objects.some(
             (object) => object.objectType === "adset" && object.metadata?.targeting,
@@ -495,7 +714,7 @@ export default async function AdvertisingAnalyticsPage({
                     {t("advertising.reporting.promotedPostsDescription")}
                   </CardDescription>
                 </div>
-                <Badge variant="outline">{t("advertising.reporting.paidOnly")}</Badge>
+                <Badge variant="outline">{t("advertising.reporting.paidOrganicCombined")}</Badge>
               </CardHeader>
               <div
                 aria-label={t("advertising.reporting.promotedPostsTableLabel")}
@@ -521,6 +740,12 @@ export default async function AdvertisingAnalyticsPage({
                       <th className="px-4 py-3 text-end font-semibold" scope="col">
                         {t("advertising.reporting.impressions")}
                       </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.organicViews")}
+                      </th>
+                      <th className="px-4 py-3 text-end font-semibold" scope="col">
+                        {t("advertising.reporting.combinedViews")}
+                      </th>
                     </tr>
                   </thead>
                   <tbody className="divide-border divide-y">
@@ -534,6 +759,26 @@ export default async function AdvertisingAnalyticsPage({
                           {money(post.spend, selectedAccount.currency, code)}
                         </td>
                         <td className="px-4 py-3 text-end">{number(post.impressions, code)}</td>
+                        <td className="px-4 py-3 text-end">
+                          {organicByPostId.get(post.postId)?.views === null ||
+                          !organicByPostId.get(post.postId)
+                            ? t("advertising.reporting.notAvailable")
+                            : number(organicByPostId.get(post.postId)?.views ?? 0, code)}
+                        </td>
+                        <td className="px-4 py-3 text-end">
+                          {combinedMetric(
+                            post.impressions,
+                            organicByPostId.get(post.postId)?.views,
+                          ) === null
+                            ? t("advertising.reporting.notAvailable")
+                            : number(
+                                combinedMetric(
+                                  post.impressions,
+                                  organicByPostId.get(post.postId)?.views,
+                                )!,
+                                code,
+                              )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -583,7 +828,7 @@ export default async function AdvertisingAnalyticsPage({
                     </tr>
                   </thead>
                   <tbody className="divide-border divide-y">
-                    {result.audience.map((row) => (
+                    {audiencePage.items.map((row) => (
                       <tr key={`${row.reportDate}-${row.breakdown}-${row.dimensionValue}`}>
                         <th className="px-4 py-3 text-start font-semibold" scope="row">
                           {row.breakdown}
@@ -608,6 +853,20 @@ export default async function AdvertisingAnalyticsPage({
                 </table>
               </div>
             )}
+            <ReportPagination
+              page={audiencePage.page}
+              totalPages={audiencePage.totalPages}
+              total={audiencePage.total}
+              from={audiencePage.from}
+              to={audiencePage.to}
+              testId="advertising-reporting-audience-pagination"
+              pageParam="audiencePage"
+              basePath={basePath}
+              accountId={selectedAccount.id}
+              since={since}
+              until={until}
+              t={t}
+            />
           </Card>
         </>
       )}
@@ -656,6 +915,117 @@ function formatTargeting(value: unknown): string {
     .slice(0, 8)
     .map(([key, entry]) => `${key}: ${typeof entry === "string" ? entry : JSON.stringify(entry)}`)
     .join(" · ");
+}
+
+type OrganicPromotedPost = {
+  views: number | null;
+};
+
+const REPORT_PAGE_SIZE = 50;
+
+function paginate<T>(items: readonly T[], requestedPage: string | undefined) {
+  const parsed = requestedPage ? Number.parseInt(requestedPage, 10) : 1;
+  const totalPages = Math.max(1, Math.ceil(items.length / REPORT_PAGE_SIZE));
+  const page = Number.isFinite(parsed) ? Math.min(Math.max(parsed, 1), totalPages) : 1;
+  const start = (page - 1) * REPORT_PAGE_SIZE;
+  return {
+    items: items.slice(start, start + REPORT_PAGE_SIZE),
+    page,
+    totalPages,
+    total: items.length,
+    from: items.length === 0 ? 0 : start + 1,
+    to: Math.min(start + REPORT_PAGE_SIZE, items.length),
+  };
+}
+
+function ReportPagination({
+  page,
+  totalPages,
+  total,
+  from,
+  to,
+  testId,
+  pageParam,
+  basePath,
+  accountId,
+  since,
+  until,
+  t,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  from: number;
+  to: number;
+  testId: string;
+  pageParam: string;
+  basePath: string;
+  accountId: string;
+  since: string;
+  until: string;
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  if (totalPages <= 1) return null;
+  const hrefFor = (nextPage: number) => {
+    const params = new URLSearchParams({ accountId, since, until, [pageParam]: String(nextPage) });
+    return `${basePath}?${params.toString()}`;
+  };
+  return (
+    <ListPagination
+      page={page}
+      totalPages={totalPages}
+      total={total}
+      from={from}
+      to={to}
+      prevHref={page > 1 ? hrefFor(page - 1) : null}
+      nextHref={page < totalPages ? hrefFor(page + 1) : null}
+      counterLabel={t("advertising.reporting.paginationAll", { from, to, total })}
+      ariaLabel={t("advertising.reporting.paginationAria")}
+      prevLabel={t("advertising.reporting.paginationPrev")}
+      nextLabel={t("advertising.reporting.paginationNext")}
+      pageIndicator={t("advertising.reporting.paginationPageOf", {
+        page,
+        total: totalPages,
+      })}
+      testId={testId}
+    />
+  );
+}
+
+async function loadOrganicPromotedPosts(args: {
+  postIds: ReadonlySet<string>;
+  workspaceId: string;
+  timezone: string;
+  since: string;
+  until: string;
+}): Promise<Map<string, OrganicPromotedPost>> {
+  if (args.postIds.size === 0) return new Map();
+  const rows = await querySocialPostObservations(
+    db,
+    args.workspaceId,
+    args.timezone,
+    new Date(`${args.until}T23:59:59.999Z`),
+    90,
+    {
+      start: new Date(`${args.since}T00:00:00.000Z`),
+      end: new Date(`${shiftDate(args.until, 1)}T00:00:00.000Z`),
+    },
+  );
+  const result = new Map<string, OrganicPromotedPost>();
+  for (const row of rows) {
+    if (
+      row.observation.externalProvider !== "meta" ||
+      !args.postIds.has(row.observation.externalPostId) ||
+      result.has(row.observation.externalPostId)
+    )
+      continue;
+    result.set(row.observation.externalPostId, { views: row.observation.views });
+  }
+  return result;
+}
+
+function combinedMetric(paid: number, organic: number | null | undefined): number | null {
+  return organic === null || organic === undefined ? null : paid + organic;
 }
 
 function firstQueryValue(value: string | string[] | undefined): string | undefined {

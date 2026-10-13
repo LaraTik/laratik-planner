@@ -257,6 +257,7 @@ export async function bootstrapTestSession(
     workspaceRoles?: Exclude<FixtureRole, "agency_admin">[];
     platformRole?: PlatformRole;
     authRole?: "agency_admin" | "user";
+    socialAnalyticsFixture?: boolean;
     enableTrendRadar?: boolean;
     visualFixture?: boolean;
     advertisingReportingFixture?: boolean;

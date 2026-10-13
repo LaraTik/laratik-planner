@@ -119,6 +119,8 @@ export async function GET(request: NextRequest) {
         rows: result.report.rows,
         cacheKey: result.report.cacheKey,
       },
+      objects: result.objects,
+      audience: result.audience,
       ...(aiContext ? { aiContext } : {}),
       lastSuccessfulSyncAt: result.lastSuccessfulSyncAt,
       syncStatus: result.syncStatus,

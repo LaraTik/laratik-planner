@@ -139,6 +139,20 @@ type SyncRun = {
   startedAt: string;
   completedAt: string | null;
 };
+type Reconciliation = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  reportDate: string;
+  currency: string;
+  providerAccountSpend: string;
+  canonicalAdSpend: string;
+  workspaceAttributedSpend: string;
+  unallocatedSpend: string;
+  discrepancy: string;
+  completeness: string;
+  checkedAt: string;
+};
 
 const initial: AdvertisingActionState = {};
 
@@ -159,6 +173,7 @@ export function AdvertisingAdminPanel({
   financialAuthorities = [],
   validationResults = [],
   syncRuns = [],
+  reconciliations = [],
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
@@ -171,6 +186,7 @@ export function AdvertisingAdminPanel({
   financialAuthorities?: readonly FinancialAuthority[];
   validationResults?: readonly ValidationResult[];
   syncRuns?: readonly SyncRun[];
+  reconciliations?: readonly Reconciliation[];
 }) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
@@ -249,6 +265,7 @@ export function AdvertisingAdminPanel({
         validationResults={validationResults}
         syncRuns={syncRuns}
         connections={connections}
+        reconciliations={reconciliations}
       />
     </div>
   );
@@ -512,10 +529,12 @@ function AdvertisingHistoryCard({
   validationResults,
   syncRuns,
   connections,
+  reconciliations,
 }: {
   validationResults: readonly ValidationResult[];
   syncRuns: readonly SyncRun[];
   connections: readonly Connection[];
+  reconciliations: readonly Reconciliation[];
 }) {
   const t = useLocaleT();
   const connectionName = new Map(
@@ -530,7 +549,7 @@ function AdvertisingHistoryCard({
           <CardDescription>{t("advertising.historyDescription")}</CardDescription>
         </div>
       </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <section aria-labelledby="advertising-validation-history">
           <h3
             id="advertising-validation-history"
@@ -590,6 +609,47 @@ function AdvertisingHistoryCard({
                   <p className="text-label text-fg-muted mt-1">
                     {t("advertising.rowsSummary", { read: run.rowsRead, written: run.rowsWritten })}
                     {run.errorCode ? ` · ${run.errorCode}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section aria-labelledby="advertising-reconciliation-history">
+          <h3
+            id="advertising-reconciliation-history"
+            className="text-body text-fg-primary font-semibold"
+          >
+            {t("advertising.reconciliationTitle")}
+          </h3>
+          {reconciliations.length === 0 ? (
+            <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {reconciliations.slice(0, 20).map((row) => (
+                <li
+                  key={row.id}
+                  className="border-border rounded-[var(--radius-control)] border p-3"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-body text-fg-primary font-medium">{row.accountName}</span>
+                    <Badge variant={row.completeness === "complete" ? "success" : "warning"}>
+                      {t(`advertising.historyStatus.${row.completeness}`)}
+                    </Badge>
+                  </div>
+                  <p className="text-label text-fg-muted mt-1">
+                    <bdi dir="ltr">{row.reportDate}</bdi> · {t("advertising.providerSpend")}:{" "}
+                    {row.providerAccountSpend} {row.currency}
+                  </p>
+                  <p className="text-label text-fg-muted">
+                    {t("advertising.unallocatedSpend")}:{" "}
+                    <bdi dir="ltr">
+                      {row.unallocatedSpend} {row.currency}
+                    </bdi>{" "}
+                    · {t("advertising.discrepancy")}:{" "}
+                    <bdi dir="ltr">
+                      {row.discrepancy} {row.currency}
+                    </bdi>
                   </p>
                 </li>
               ))}

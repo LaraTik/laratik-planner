@@ -4,6 +4,7 @@ import { isCronAuthorized } from "@/lib/cron/auth";
 import { runAdvertisingSyncTick } from "@/lib/advertising/sync-worker";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
+import { normalizeAdvertisingSyncDateRange } from "@/lib/advertising/sync-worker";
 
 /**
  * Authenticated read-only Meta advertising ingestion tick.
@@ -31,7 +32,16 @@ async function handle(req: NextRequest): Promise<NextResponse> {
 
   const startedAt = Date.now();
   try {
-    const result = await runAdvertisingSyncTick(db);
+    const requestedSince = req.nextUrl.searchParams.get("since");
+    const requestedUntil = req.nextUrl.searchParams.get("until");
+    const dateRange =
+      requestedSince || requestedUntil
+        ? normalizeAdvertisingSyncDateRange({
+            since: requestedSince ?? "",
+            until: requestedUntil ?? "",
+          })
+        : undefined;
+    const result = await runAdvertisingSyncTick(db, dateRange ? { dateRange } : undefined);
     const durationMs = Date.now() - startedAt;
     return NextResponse.json(
       { ...result, ...(durationMs > MAX_RUNTIME_MS ? { deadlineExceeded: true } : {}), durationMs },

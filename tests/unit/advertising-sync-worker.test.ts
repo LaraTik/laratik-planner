@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   attributedSpendForDate,
   buildAdContext,
+  normalizeAdvertisingSyncDateRange,
   advertisingSyncFailureStatus,
   ADVERTISING_SYNC_MAX_ATTEMPTS,
   nextAdvertisingRetryAt,
@@ -79,5 +80,17 @@ describe("advertising sync worker retry policy", () => {
         "2026-01-01",
       ),
     ).toBe("10");
+  });
+
+  it("bounds operational backfills to a valid 366-day window", () => {
+    expect(normalizeAdvertisingSyncDateRange({ since: "2026-01-01", until: "2026-12-31" })).toEqual(
+      { since: "2026-01-01", until: "2026-12-31" },
+    );
+    expect(() =>
+      normalizeAdvertisingSyncDateRange({ since: "2026-01-02", until: "2026-01-01" }),
+    ).toThrow("advertising_sync_date_range_invalid");
+    expect(() =>
+      normalizeAdvertisingSyncDateRange({ since: "2025-01-01", until: "2026-01-03" }),
+    ).toThrow("advertising_sync_date_range_invalid");
   });
 });

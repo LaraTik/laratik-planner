@@ -76,6 +76,21 @@ export function nextAdvertisingRetryAt(now: Date, attempt: number): Date {
   return addMinutes(now, RETRY_DELAYS_MINUTES[index] ?? RETRY_DELAYS_MINUTES[0]);
 }
 
+export function normalizeAdvertisingSyncDateRange(dateRange?: {
+  since: string;
+  until: string;
+}): { since: string; until: string } | undefined {
+  if (!dateRange) return undefined;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateRange.since) || !/^\d{4}-\d{2}-\d{2}$/.test(dateRange.until))
+    throw new Error("advertising_sync_date_range_invalid");
+  const since = new Date(`${dateRange.since}T00:00:00Z`);
+  const until = new Date(`${dateRange.until}T00:00:00Z`);
+  const days = (until.getTime() - since.getTime()) / 86_400_000;
+  if (!Number.isFinite(days) || days < 0 || days > 366)
+    throw new Error("advertising_sync_date_range_invalid");
+  return dateRange;
+}
+
 export function advertisingSyncFailureStatus(attempt: number): "failed" | "dead_letter" {
   return attempt >= ADVERTISING_SYNC_MAX_ATTEMPTS ? "dead_letter" : "failed";
 }
@@ -201,6 +216,7 @@ export async function runAdvertisingSyncTick(
     dateRange?: { since: string; until: string };
   } = {},
 ): Promise<AdvertisingSyncTickResult> {
+  const dateRange = normalizeAdvertisingSyncDateRange(args.dateRange);
   const claimed = await claimAdvertisingSyncStates(db, {
     owner: args.owner ?? `advertising:${randomUUID()}`,
     ...(args.now ? { now: args.now } : {}),
@@ -220,7 +236,7 @@ export async function runAdvertisingSyncTick(
       target,
       args.now ?? new Date(),
       args.providerFactory,
-      args.dateRange,
+      dateRange,
     );
     result[outcome] += 1;
   }

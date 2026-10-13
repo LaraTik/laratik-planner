@@ -7,6 +7,7 @@ describe("advertising reporting view", () => {
       {
         accountId: "account",
         campaignId: "campaign-a",
+        adSetId: "adset-a",
         adId: "ad-a",
         date: "2026-10-01",
         spend: 10,
@@ -16,6 +17,7 @@ describe("advertising reporting view", () => {
       {
         accountId: "account",
         campaignId: "campaign-a",
+        adSetId: "adset-a",
         adId: "ad-a",
         date: "2026-10-02",
         spend: 30,
@@ -25,6 +27,7 @@ describe("advertising reporting view", () => {
       {
         accountId: "account",
         campaignId: "campaign-b",
+        adSetId: "adset-b",
         adId: "ad-b",
         date: "2026-10-02",
         spend: 60,
@@ -57,13 +60,71 @@ describe("advertising reporting view", () => {
       cpm: 40,
       adCount: 1,
     });
+    expect(view.adSets).toHaveLength(2);
+    expect(view.ads).toHaveLength(2);
   });
 
   it("keeps empty and zero-denominator metrics explicit", () => {
     expect(buildAdvertisingReportView([])).toEqual({
       dailySpend: [],
       campaigns: [],
+      adSets: [],
+      ads: [],
       adCount: 0,
     });
+  });
+
+  it("deduplicates multiple ads that promote the same exact post", () => {
+    const view = buildAdvertisingReportView(
+      [
+        {
+          accountId: "account",
+          campaignId: "campaign",
+          adSetId: "adset",
+          adId: "ad-a",
+          date: "2026-10-01",
+          spend: 10,
+          impressions: 100,
+          clicks: 5,
+        },
+        {
+          accountId: "account",
+          campaignId: "campaign",
+          adSetId: "adset",
+          adId: "ad-b",
+          date: "2026-10-01",
+          spend: 20,
+          impressions: 200,
+          clicks: 10,
+        },
+      ],
+      [
+        {
+          objectType: "ad",
+          externalObjectId: "ad-a",
+          parentExternalObjectId: "adset",
+          name: null,
+          status: "ACTIVE",
+          objective: null,
+          dailyBudget: null,
+          lifetimeBudget: null,
+          promotedPostId: "post-1",
+        },
+        {
+          objectType: "ad",
+          externalObjectId: "ad-b",
+          parentExternalObjectId: "adset",
+          name: null,
+          status: "ACTIVE",
+          objective: null,
+          dailyBudget: null,
+          lifetimeBudget: null,
+          promotedPostId: "post-1",
+        },
+      ],
+    );
+    expect(view.promotedPosts).toEqual([
+      expect.objectContaining({ postId: "post-1", adCount: 2, spend: 30, impressions: 300 }),
+    ]);
   });
 });

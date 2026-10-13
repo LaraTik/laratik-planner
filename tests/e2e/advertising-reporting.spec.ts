@@ -22,6 +22,7 @@ test.describe("synthetic advertising reporting", () => {
       workspaceName: "E2E Advertising Reporting Workspace",
       workspaceSlug,
       advertisingReportingFixture: true,
+      socialAnalyticsFixture: true,
     });
 
     await page.goto(
@@ -34,6 +35,14 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-retargeting",
+    );
+    await expect(page.getByTestId("advertising-reporting-adsets")).toContainText(
+      "e2e-adset-spring",
+    );
+    await expect(page.getByTestId("advertising-reporting-ads")).toContainText("e2e-ad-spring");
+    await expect(page.getByTestId("advertising-reporting-targeting")).toContainText("DE");
+    await expect(page.getByTestId("advertising-reporting-promoted-posts")).toContainText(
+      "e2e-instagram-0",
     );
     await expect(page.getByTestId("advertising-reporting-daily-spend")).toContainText("€");
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
@@ -52,6 +61,7 @@ test.describe("synthetic advertising reporting", () => {
       workspaceSlug,
       locale: "ar",
       advertisingReportingFixture: true,
+      socialAnalyticsFixture: true,
     });
 
     await page.goto(
@@ -65,6 +75,13 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-retargeting",
+    );
+    await expect(page.getByTestId("advertising-reporting-adsets")).toContainText(
+      "e2e-adset-spring",
+    );
+    await expect(page.getByTestId("advertising-reporting-ads")).toContainText("e2e-ad-spring");
+    await expect(page.getByTestId("advertising-reporting-promoted-posts")).toContainText(
+      "e2e-instagram-0",
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);

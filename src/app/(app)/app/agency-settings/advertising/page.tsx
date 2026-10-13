@@ -76,6 +76,10 @@ export default async function AdvertisingSettingsPage() {
           startedAt: run.startedAt.toISOString(),
           completedAt: run.completedAt?.toISOString() ?? null,
         }))}
+        reconciliations={resources.reconciliations.map((row) => ({
+          ...row,
+          checkedAt: row.checkedAt.toISOString(),
+        }))}
       />
     </div>
   );
