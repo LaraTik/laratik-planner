@@ -1,5 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 persisted reporting-scope checkpoint** — Code commit
+> `a38fabc` adds an integration regression through the real membership, grant,
+> observation, account-list, and reporting-query paths. It proves one shared
+> canonical account can be granted to two workspaces without duplicating
+> provider spend, each workspace sees only its campaign-scoped rows, and
+> revoking one grant immediately removes the account from both report and
+> account-discovery results. At exact clean HEAD
+> `a142256861803b2aa1df09c5e0143c2f4ecc1957`, the focused tenant-guard suite
+> passes 7/7, the credential lifecycle suite passes 3/3, the migration drill
+> passes 5/5, and `pnpm verify` passes formatting, lint, typecheck, 507 unit
+> files / 4,711 tests, and the production build. No live Meta request,
+> production deployment, or external Meta mutation was performed. This remains
+> **Tested**, not **Verified**: controlled live Meta credentials/UAT, provider
+> reconciliation, independent review, and production deployment remain open.
+
 > **2026-10-13 persistent advertising account dedupe checkpoint** — Code commit
 > `2a3ca19da275b9dadbb0788760efb79927761e52` adds an integration regression for
 > one canonical Meta provider account linked from two active connections. The

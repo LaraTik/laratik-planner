@@ -3,6 +3,25 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Persisted reporting scope — 2026-10-13, exact clean SHA `a142256861803b2aa1df09c5e0143c2f4ecc1957`
+
+The integration suite now exercises the persisted authorization path rather
+than only the pure isolation fixture. One canonical account is granted to two
+workspaces, each workspace receives a different campaign scope, and the
+reporting query returns only that workspace's rows and spend. Revoking one
+grant removes the account from both the report and the report-account selector
+immediately.
+
+| Check                                                                                                     | Result                                                                                        |
+| --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-tenant-guards.test.ts`        | **Pass** — 1 file / 7 tests, including persisted two-workspace scope and immediate revocation |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts` | **Pass** — 1 file / 3 tests, including rotation, revocation, and canonical-account dedupe     |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                                                | **Pass** — 5/5 migration, repair, backup/restore, and abort checks                            |
+| `pnpm verify`                                                                                             | **Pass** — formatting, lint, typecheck, 507 unit files / 4,711 tests, production build        |
+
+No live Meta credentials, external provider request, production deployment, or
+external Meta mutation was used.
+
 ## Persistent advertising account dedupe — 2026-10-13, code SHA `2a3ca19da275b9dadbb0788760efb79927761e52`
 
 The advertising lifecycle integration now proves that repeated discovery of the
