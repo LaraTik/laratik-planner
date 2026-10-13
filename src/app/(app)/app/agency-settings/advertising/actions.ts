@@ -8,7 +8,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { db } from "@/lib/db";
-import { advertisingConnections } from "@/lib/db/schema";
+import { advertisingAccounts, advertisingConnections, workspaces } from "@/lib/db/schema";
 import {
   AdvertisingConnectionInputError,
   createAdvertisingConnection,
@@ -23,6 +23,11 @@ import { resolveAdvertisingCredential } from "@/lib/advertising/credential-servi
 import { createMetaReadClient } from "@/lib/advertising/meta-http";
 import { createMetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
 import { runMetaConfigurationWorkflow } from "@/lib/advertising/meta-workflow";
+import {
+  grantAdvertisingFinancialAuthority,
+  grantAdvertisingVisibility,
+} from "@/lib/advertising/grant-service";
+import { AdvertisingGrantInputError } from "@/lib/advertising/grant-service";
 
 const ConnectionSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -38,12 +43,31 @@ const CredentialSchema = z.object({
   accessToken: z.string().min(1).max(8_000),
 });
 const ConnectionIdSchema = z.object({ connectionId: z.string().uuid() });
+const GrantSchema = z.object({
+  accountId: z.string().uuid(),
+  workspaceId: z.string().uuid().optional(),
+  capability: z.enum([
+    "read_campaigns",
+    "read_adsets",
+    "read_ads",
+    "read_creatives",
+    "read_reports",
+    "export_reports",
+    "use_ai_context",
+  ]),
+});
+const FinancialAuthoritySchema = z.object({
+  accountId: z.string().uuid(),
+  workspaceId: z.string().uuid().optional(),
+});
 
 export type AdvertisingActionState = {
   ok?: boolean;
   code?: string;
   connectionId?: string;
   version?: number;
+  grantId?: string;
+  authorityId?: string;
   diagnostics?: readonly { operation: string; state: string; retryable: boolean }[];
 };
 
@@ -60,6 +84,7 @@ async function requireAdmin() {
 
 function errorState(error: unknown): AdvertisingActionState {
   if (error instanceof AdvertisingConnectionInputError) return { code: error.message };
+  if (error instanceof AdvertisingGrantInputError) return { code: error.message };
   if (error instanceof AdvertisingConnectionNotFoundError)
     return { code: "advertising_connection_not_found" };
   if (error instanceof AdvertisingConnectionRevokedError)
@@ -73,6 +98,10 @@ function errorState(error: unknown): AdvertisingActionState {
     "advertising_connection_not_active",
     "advertising_connection_account_not_active",
     "advertising_connection_revoked",
+    "advertising_account_not_in_agency",
+    "workspace_not_in_agency",
+    "unsupported_advertising_capability",
+    "advertising_grant_range_invalid",
   ]);
   return { code: safeCodes.has(code) ? code : "advertising_action_failed" };
 }
@@ -194,6 +223,56 @@ export async function validateAdvertisingConnectionAction(
   }
 }
 
+export async function grantAdvertisingVisibilityAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = GrantSchema.safeParse({
+      accountId: formData.get("accountId"),
+      workspaceId: formData.get("workspaceId") || undefined,
+      capability: formData.get("capability"),
+    });
+    if (!parsed.success) return { code: "invalid_grant" };
+    const grant = await grantAdvertisingVisibility(db, {
+      agencyId,
+      accountId: parsed.data.accountId,
+      workspaceId: parsed.data.workspaceId,
+      capability: parsed.data.capability,
+      grantedBy: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "grant_created", grantId: grant.id };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
+export async function grantAdvertisingFinancialAuthorityAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = FinancialAuthoritySchema.safeParse({
+      accountId: formData.get("accountId"),
+      workspaceId: formData.get("workspaceId") || undefined,
+    });
+    if (!parsed.success) return { code: "invalid_financial_authority" };
+    const authority = await grantAdvertisingFinancialAuthority(db, {
+      agencyId,
+      accountId: parsed.data.accountId,
+      workspaceId: parsed.data.workspaceId,
+      grantedBy: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "financial_authority_created", authorityId: authority.id };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
 export async function listAdvertisingConnectionsForAdmin() {
   const { agencyId } = await requireAdmin();
   return db
@@ -212,4 +291,28 @@ export async function listAdvertisingConnectionsForAdmin() {
     .from(advertisingConnections)
     .where(eq(advertisingConnections.agencyId, agencyId))
     .orderBy(desc(advertisingConnections.createdAt));
+}
+
+export async function listAdvertisingResourcesForAdmin() {
+  const { agencyId } = await requireAdmin();
+  const [accounts, agencyWorkspaces] = await Promise.all([
+    db
+      .select({
+        id: advertisingAccounts.id,
+        name: advertisingAccounts.name,
+        externalAccountId: advertisingAccounts.externalAccountId,
+        currency: advertisingAccounts.currency,
+        timezone: advertisingAccounts.timezone,
+        status: advertisingAccounts.status,
+      })
+      .from(advertisingAccounts)
+      .where(eq(advertisingAccounts.agencyId, agencyId))
+      .orderBy(desc(advertisingAccounts.name)),
+    db
+      .select({ id: workspaces.id, name: workspaces.name })
+      .from(workspaces)
+      .where(eq(workspaces.agencyId, agencyId))
+      .orderBy(desc(workspaces.name)),
+  ]);
+  return { accounts, workspaces: agencyWorkspaces };
 }

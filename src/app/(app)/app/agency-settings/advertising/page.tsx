@@ -6,7 +6,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { AdvertisingAdminPanel } from "./advertising-admin-panel";
-import { listAdvertisingConnectionsForAdmin } from "./actions";
+import { listAdvertisingConnectionsForAdmin, listAdvertisingResourcesForAdmin } from "./actions";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -28,7 +28,10 @@ export default async function AdvertisingSettingsPage() {
       </div>
     );
   }
-  const connections = await listAdvertisingConnectionsForAdmin();
+  const [connections, resources] = await Promise.all([
+    listAdvertisingConnectionsForAdmin(),
+    listAdvertisingResourcesForAdmin(),
+  ]);
   return (
     <div className="space-y-6" data-testid="advertising-settings">
       <PageHeader
@@ -42,6 +45,8 @@ export default async function AdvertisingSettingsPage() {
           lastValidatedAt: connection.lastValidatedAt?.toISOString() ?? null,
           createdAt: connection.createdAt.toISOString(),
         }))}
+        accounts={resources.accounts}
+        workspaces={resources.workspaces}
       />
     </div>
   );

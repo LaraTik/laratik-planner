@@ -6,6 +6,7 @@ import { KeyRound, Plus, ShieldAlert, ShieldCheck, XCircle } from "lucide-react"
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PasswordInput } from "@/components/forms/password-input";
+import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   createAdvertisingConnectionAction,
+  grantAdvertisingFinancialAuthorityAction,
+  grantAdvertisingVisibilityAction,
   revokeAdvertisingConnectionAction,
   storeAdvertisingCredentialAction,
   validateAdvertisingConnectionAction,
@@ -31,6 +34,15 @@ type Connection = {
   graphApiVersion: string | null;
   createdAt: string;
 };
+type AdvertisingAccount = {
+  id: string;
+  name: string;
+  externalAccountId: string;
+  currency: string | null;
+  timezone: string | null;
+  status: string;
+};
+type Workspace = { id: string; name: string };
 
 const initial: AdvertisingActionState = {};
 
@@ -39,7 +51,15 @@ function stateText(t: (key: string) => string, state: AdvertisingActionState) {
   return t(`advertising.codes.${state.code}`) || t("advertising.codes.advertising_action_failed");
 }
 
-export function AdvertisingAdminPanel({ connections }: { connections: readonly Connection[] }) {
+export function AdvertisingAdminPanel({
+  connections,
+  accounts,
+  workspaces,
+}: {
+  connections: readonly Connection[];
+  accounts: readonly AdvertisingAccount[];
+  workspaces: readonly Workspace[];
+}) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
   return (
@@ -94,7 +114,153 @@ export function AdvertisingAdminPanel({ connections }: { connections: readonly C
           <ConnectionCard key={connection.id} connection={connection} />
         ))
       )}
+      <GrantAccessCard accounts={accounts} workspaces={workspaces} />
     </div>
+  );
+}
+
+const grantCapabilities = [
+  "read_reports",
+  "read_campaigns",
+  "read_adsets",
+  "read_ads",
+  "read_creatives",
+  "export_reports",
+  "use_ai_context",
+] as const;
+
+function GrantAccessCard({
+  accounts,
+  workspaces,
+}: {
+  accounts: readonly AdvertisingAccount[];
+  workspaces: readonly Workspace[];
+}) {
+  const t = useLocaleT();
+  const [grantState, grantAction] = useActionState(grantAdvertisingVisibilityAction, initial);
+  const [financialState, financialAction] = useActionState(
+    grantAdvertisingFinancialAuthorityAction,
+    initial,
+  );
+  const [accountId, setAccountId] = React.useState(accounts[0]?.id ?? "");
+  const [workspaceId, setWorkspaceId] = React.useState("");
+  const [capability, setCapability] =
+    React.useState<(typeof grantCapabilities)[number]>("read_reports");
+  const [financialAccountId, setFinancialAccountId] = React.useState(accounts[0]?.id ?? "");
+  const [financialWorkspaceId, setFinancialWorkspaceId] = React.useState("");
+  const accountOptions = accounts.map((account) => ({
+    value: account.id,
+    label: t("advertising.accountOption", {
+      name: account.name,
+      externalId: account.externalAccountId,
+    }),
+  }));
+  const workspaceOptions = [
+    { value: "", label: t("advertising.scopeAgency") },
+    ...workspaces.map((workspace) => ({ value: workspace.id, label: workspace.name })),
+  ];
+
+  return (
+    <Card data-testid="advertising-grants-card">
+      <CardTitle>{t("advertising.accountsTitle")}</CardTitle>
+      <CardDescription>{t("advertising.accountsDescription")}</CardDescription>
+      {accounts.length === 0 ? (
+        <p className="text-body text-fg-secondary mt-4">{t("advertising.noAccounts")}</p>
+      ) : (
+        <div className="mt-5 space-y-5">
+          <form action={grantAction} className="grid gap-4 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-account">{t("advertising.accountsTitle")}</Label>
+              <Combobox
+                id="advertising-grant-account"
+                name="accountId"
+                value={accountId}
+                onChange={setAccountId}
+                options={accountOptions}
+                placeholder={t("advertising.displayName")}
+                ariaLabel={t("advertising.accountsTitle")}
+                required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-workspace">{t("advertising.scopeWorkspace")}</Label>
+              <Combobox
+                id="advertising-grant-workspace"
+                name="workspaceId"
+                value={workspaceId}
+                onChange={setWorkspaceId}
+                options={workspaceOptions}
+                placeholder={t("advertising.scopeAgency")}
+                ariaLabel={t("advertising.scopeWorkspace")}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-capability">{t("advertising.capability")}</Label>
+              <Combobox
+                id="advertising-grant-capability"
+                name="capability"
+                value={capability}
+                onChange={(next) => {
+                  if (grantCapabilities.includes(next as (typeof grantCapabilities)[number]))
+                    setCapability(next as (typeof grantCapabilities)[number]);
+                }}
+                options={grantCapabilities.map((value) => ({
+                  value,
+                  label: t(`advertising.capabilityLabels.${value}`),
+                }))}
+                ariaLabel={t("advertising.capability")}
+                allowCustom={false}
+                required
+              />
+            </div>
+            <div className="flex items-end">
+              <FormSubmitButton
+                label={t("advertising.grantVisibility")}
+                pendingLabel={t("advertising.grantingVisibility")}
+                size="sm"
+              />
+            </div>
+            {grantState.code ? <ActionMessage state={grantState} compact /> : null}
+          </form>
+          <form
+            action={financialAction}
+            className="border-border space-y-3 rounded-[var(--radius-control)] border p-4"
+          >
+            <div>
+              <h3 className="text-body text-fg-primary font-semibold">
+                {t("advertising.grantFinancial")}
+              </h3>
+              <p className="text-label text-fg-muted">{t("advertising.financialDescription")}</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Combobox
+                name="accountId"
+                value={financialAccountId}
+                onChange={setFinancialAccountId}
+                options={accountOptions}
+                placeholder={t("advertising.displayName")}
+                ariaLabel={t("advertising.accountsTitle")}
+                required
+              />
+              <Combobox
+                name="workspaceId"
+                value={financialWorkspaceId}
+                onChange={setFinancialWorkspaceId}
+                options={workspaceOptions}
+                placeholder={t("advertising.scopeAgency")}
+                ariaLabel={t("advertising.scopeWorkspace")}
+              />
+              <FormSubmitButton
+                label={t("advertising.grantFinancial")}
+                pendingLabel={t("advertising.grantingFinancial")}
+                size="sm"
+              />
+            </div>
+            {financialState.code ? <ActionMessage state={financialState} compact /> : null}
+          </form>
+        </div>
+      )}
+    </Card>
   );
 }
 

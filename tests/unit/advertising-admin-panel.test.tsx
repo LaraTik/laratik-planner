@@ -4,6 +4,8 @@ import { AdvertisingAdminPanel } from "@/app/(app)/app/agency-settings/advertisi
 
 vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
   createAdvertisingConnectionAction: vi.fn(async () => ({})),
+  grantAdvertisingFinancialAuthorityAction: vi.fn(async () => ({})),
+  grantAdvertisingVisibilityAction: vi.fn(async () => ({})),
   revokeAdvertisingConnectionAction: vi.fn(async () => ({})),
   storeAdvertisingCredentialAction: vi.fn(async () => ({})),
   validateAdvertisingConnectionAction: vi.fn(async () => ({})),
@@ -24,7 +26,7 @@ const connection = {
 
 describe("AdvertisingAdminPanel", () => {
   it("renders the platform-owned credential workflow without exposing a stored token", () => {
-    render(<AdvertisingAdminPanel connections={[connection]} />);
+    render(<AdvertisingAdminPanel connections={[connection]} accounts={[]} workspaces={[]} />);
 
     expect(screen.getByTestId("advertising-create-form")).toBeInTheDocument();
     expect(screen.getByText("Agency Meta")).toBeInTheDocument();
@@ -34,7 +36,7 @@ describe("AdvertisingAdminPanel", () => {
   });
 
   it("renders the empty state when no connection exists", () => {
-    render(<AdvertisingAdminPanel connections={[]} />);
+    render(<AdvertisingAdminPanel connections={[]} accounts={[]} workspaces={[]} />);
 
     expect(screen.getByTestId("advertising-empty")).toHaveTextContent(
       "No Meta advertising connections have been configured.",
