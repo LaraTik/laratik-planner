@@ -33,8 +33,9 @@ Evidence on disposable PostgreSQL 16 (`planner_test`, 2026-10-13), using
 total: 5/5 PASS
 ```
 
-The exact clean implementation commit was `7ce7bd72`; tracker documentation
-was recorded in `231eacac`. No production deployment was performed.
+The exact clean implementation commit for this migration evidence was
+`b833946e`; the scoped reporting checkpoint was recorded after the clean code
+verification. No production deployment was performed.
 
 ## Migration 0076 — canonical ad-day spend and reconciliation
 

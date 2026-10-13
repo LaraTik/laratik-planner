@@ -1,5 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 scoped advertising reporting checkpoint** — Exact clean code
+> commit `b833946e` wires the persisted advertising observations through a
+> server-only scoped reporting query and the default-off
+> `ADVERTISING_REPORTING_ENABLED` route. The route validates bounded date
+> ranges, resolves active agency/workspace access before aggregation, hides
+> account and freshness metadata on denial, supports the shared JSON/CSV/AI
+> projections, and requires financial authority for financial and AI surfaces.
+> Grant revisions are included in authorized cache keys; cross-agency,
+> workspace, connection/account, and hidden-row paths are covered by tests.
+> The clean verification passes formatting, lint, typecheck, 506 unit files /
+> 4,704 tests, and the production build. The migration drill remains 5/5
+> with 79/79 ledger rows. This remains **Tested**, not **Verified**: live
+> Meta credential/account UAT, report UI wiring, bilingual browser evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 bounded advertising ingestion checkpoint** — Exact clean
 > implementation commit `7ce7bd72` adds replay-safe migrations `0077` and
 > `0078`, bounded Meta collection pagination, explicit ad-level Insights
