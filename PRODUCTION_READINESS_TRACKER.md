@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising tenant-integrity checkpoint** — Exact clean code
+> commit `c4e97e2` adds replay-safe migration `0079` with
+> database guards for cross-agency connection/account links, capabilities,
+> sync state/history, identities, validation results, observations,
+> reconciliations, visibility grants, and financial authorities. The
+> disposable migration drill passes 5/5 with 80/80 ledger rows, and the new
+> integration coverage passes 3/3. This remains **Tested**, not **Verified**:
+> controlled live Meta UAT, real ad-level reconciliation, workspace reporting
+> UI evidence, independent review, and production deployment remain open.
+
 > **2026-10-13 advertising lease-fencing checkpoint** — Exact clean code
 > commit `035d99b` closes the stale-worker write path in the bounded Meta
 > sync. Provider ad-day facts and reconciliation rows are now persisted only
