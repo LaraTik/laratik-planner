@@ -3,6 +3,26 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Scoped advertising reporting UI — 2026-10-13, exact clean SHA `c479ba62`
+
+This slice adds the first workspace-scoped, read-only advertising reporting
+surface. The page obtains its account selector only from active workspace
+visibility grants, then calls the existing server-only `loadAdvertisingReport`
+boundary before the view builds totals or rollups. It remains behind
+`ADVERTISING_REPORTING_ENABLED`; no provider credential or external Meta write
+was used.
+
+| Check                                                                                                                                                                                                                                                             | Result                                                                                 |
+| ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                                                                                                                                                                     | **Pass** — formatting, lint, typecheck, 507 unit files / 4,710 tests, production build |
+| `pnpm exec vitest run tests/unit/advertising-reporting-view.test.ts tests/unit/app-shell/navigation-model.test.ts tests/unit/advertising-reporting-service.test.ts tests/unit/advertising-reporting-boundary.test.ts tests/unit/advertising-report-route.test.ts` | **Pass** — 5 files / 24 tests                                                          |
+| `TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/a11y-routes.spec.ts --project=chromium --grep 'analytics/advertising'`                                                                                                                                   | **Pass** — 2/2: English/LTR and Arabic/RTL; no horizontal overflow                     |
+| `pnpm db:migrate` within the isolated browser runner                                                                                                                                                                                                              | **Pass** — existing migration ledger applied without a new migration                   |
+
+The populated-data reporting workflow and real Meta capability/reconciliation
+remain unverified until controlled credentials and an explicitly authorized
+read-only UAT account are available.
+
 ## Publish-tab cockpit pass — 2026-10-05
 
 Target: match the reference Publish-tab design, and fix what rendering it exposed.

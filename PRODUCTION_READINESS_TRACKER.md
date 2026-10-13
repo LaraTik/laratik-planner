@@ -1,5 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 scoped advertising reporting UI checkpoint** — Exact clean code
+> commit `c479ba62` adds the first read-only workspace reporting surface at
+> `/app/a/[agencySlug]/w/[slug]/analytics/advertising`, backed by the existing
+> pre-aggregation authorization seam. It includes explicit authorized account
+> discovery, date-range filtering, spend/impression/click totals, CTR/CPC/CPM,
+> daily spend, campaign rollups, freshness/partial-data states, loading/empty/
+> error states, desktop/mobile navigation, and EN/AR catalog copy. The full
+> `pnpm verify` gate passes formatting, lint, typecheck, 507 unit files / 4,710
+> tests, and production build; the exact-clean Chromium accessibility checks
+> pass 2/2 for English/LTR and Arabic/RTL with no horizontal overflow. No
+> migration, production deployment, or external Meta mutation was performed.
+> This remains **Tested**, not **Verified**: live Meta credentials, controlled
+> read-only UAT, real ad-level reconciliation, populated-data browser evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 Trend Radar durable-job fencing checkpoint** — Exact clean code
 > commit `9be3a6bf` prevents an expired worker from renewing its lease, clears
 > lease ownership on completion/requeue/dead-letter transitions, and adds
