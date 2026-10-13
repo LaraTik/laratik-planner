@@ -1,6 +1,7 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { AdvertisingAdminPanel } from "@/app/(app)/app/agency-settings/advertising/advertising-admin-panel";
+import { validateAdvertisingConnectionAction } from "@/app/(app)/app/agency-settings/advertising/actions";
 
 vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
   createAdvertisingConnectionAction: vi.fn(async () => ({})),
@@ -61,6 +62,41 @@ describe("AdvertisingAdminPanel", () => {
 
     expect(screen.getByTestId("advertising-empty")).toHaveTextContent(
       "No Meta advertising connections have been configured.",
+    );
+  });
+
+  it("shows an explanation and recommended action for each failed diagnostic", async () => {
+    vi.mocked(validateAdvertisingConnectionAction).mockResolvedValueOnce({
+      code: "workflow_partial",
+      diagnostics: [
+        {
+          operation: "campaign_read",
+          state: "missing_permission",
+          retryable: false,
+        },
+      ],
+    });
+    render(
+      <AdvertisingAdminPanel
+        connections={[{ ...connection, status: "active", currentCredentialVersion: 1 }]}
+        accounts={[]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[]}
+        socialIdentities={[]}
+        capabilities={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Validate and discover" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("advertising-diagnostic-campaign_read")).toHaveTextContent(
+        "Confirm the Meta app has the required read permissions",
+      );
+    });
+    expect(screen.getByTestId("advertising-diagnostic-campaign_read")).toHaveTextContent(
+      "Campaign read",
     );
   });
 

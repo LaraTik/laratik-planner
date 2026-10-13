@@ -453,12 +453,24 @@ function ConnectionCard({
             </p>
           ) : null}
           {validationState.diagnostics?.map((diagnostic) => (
-            <p
+            <div
               key={`${diagnostic.operation}-${diagnostic.state}`}
-              className="text-label text-fg-secondary"
+              className="border-border bg-surface-subtle space-y-1 rounded-[var(--radius-control)] border p-3"
+              data-testid={`advertising-diagnostic-${diagnostic.operation}`}
             >
-              {t(`advertising.diagnostics.${diagnostic.state}`)}
-            </p>
+              <p className="text-label text-fg-primary font-semibold">
+                {t(`advertising.diagnosticOperations.${diagnostic.operation}`)}
+              </p>
+              <p className="text-label text-fg-secondary">
+                {t(`advertising.diagnostics.${diagnostic.state}`)}
+              </p>
+              {diagnostic.state !== "valid" ? (
+                <p className="text-label text-fg-muted" data-testid="advertising-diagnostic-fix">
+                  <span className="font-semibold">{t("advertising.diagnosticToFix")}</span>{" "}
+                  {t(`advertising.diagnosticFixes.${diagnostic.state}`)}
+                </p>
+              ) : null}
+            </div>
           ))}
         </div>
       </div>

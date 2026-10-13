@@ -119,5 +119,30 @@
     "rate_limited": "The provider rate-limited this request. Try again later.",
     "provider_temporarily_unavailable": "The provider is temporarily unavailable.",
     "no_data": "The provider returned no accessible data."
+  },
+  "diagnosticToFix": "Recommended action:",
+  "diagnosticOperations": {
+    "diagnostics": "Identity check",
+    "account_discovery": "Ad account discovery",
+    "page_read": "Facebook Page read",
+    "instagram_read": "Instagram account read",
+    "campaign_read": "Campaign read",
+    "adset_read": "Ad set read",
+    "ad_read": "Ad read",
+    "creative_read": "Creative read",
+    "daily_insights_read": "Daily insights read",
+    "breakdown_read": "Breakdown read"
+  },
+  "diagnosticFixes": {
+    "valid": "No action is required.",
+    "missing_permission": "Confirm the Meta app has the required read permissions, then save a refreshed credential and validate again.",
+    "missing_asset_assignment": "Assign the requested Page or ad account to the system user, then validate again.",
+    "expired_or_revoked": "Replace the credential with a current Meta system-user token, then validate again.",
+    "wrong_app_or_account": "Check that the credential belongs to the configured Meta app and intended business, then replace it if needed.",
+    "access_tier_restricted": "Ask Meta to approve the required access tier or use an account with the approved tier, then validate again.",
+    "unsupported_field": "Review the configured Graph API version and requested read fields, then validate again.",
+    "rate_limited": "Wait for the provider limit to clear and retry; reduce concurrent validation or sync activity if it persists.",
+    "provider_temporarily_unavailable": "Retry after the provider recovers. Do not replace credentials unless the failure changes to an authentication error.",
+    "no_data": "Confirm the business has an assigned, active asset with readable data, then validate again."
   }
 }
