@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.models import TrendSignal
-from app.service_auth import get_service_scope
+from app.service_auth import get_service_scope, require_actor_scope
 
 router = APIRouter(prefix="/v1/feed", tags=["feed"])
 
@@ -129,6 +129,12 @@ async def list_feed(
         belongs = await session.execute(text("SELECT 1 FROM workspace WHERE id = :workspace_id AND agency_id = :agency_id AND archived_at IS NULL"), {"workspace_id": scope_id, "agency_id": scope.agency_id})
         if belongs.first() is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    await require_actor_scope(
+        session,
+        scope,
+        agency_id=scope.agency_id or scope_id,
+        workspace_id=scope_id,
+    )
     allowed_sort_columns = {"score", "velocity", "fetched_at", "label"}
     if sortBy not in allowed_sort_columns:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_sort")
@@ -210,6 +216,12 @@ async def get_signal(
         belongs = await session.execute(text("SELECT 1 FROM workspace WHERE id = :workspace_id AND agency_id = :agency_id AND archived_at IS NULL"), {"workspace_id": scope_id, "agency_id": scope.agency_id})
         if belongs.first() is None:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    await require_actor_scope(
+        session,
+        scope,
+        agency_id=scope.agency_id or scope_id,
+        workspace_id=scope_id,
+    )
     stmt = select(TrendSignal).where(
         TrendSignal.id == signal_id,
         TrendSignal.workspace_id == scope_id,

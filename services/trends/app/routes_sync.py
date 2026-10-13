@@ -19,7 +19,7 @@ from app.db import get_session
 from app.jobs import enqueue_job
 from app.models import TrendFetchJob
 from app.observability import FEED_QUERIES_TOTAL, get_logger
-from app.service_auth import get_service_scope
+from app.service_auth import get_service_scope, require_actor_scope
 
 logger = get_logger("routes_sync")
 
@@ -70,17 +70,24 @@ async def queue_sync(
     scope = get_service_scope(request)
     if scope.agency_id is not None and scope.agency_id != body.agencyId:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
-    workspace_row = (
-        await session.execute(
-            text("SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL LIMIT 1"),
-            {"agency_id": body.agencyId},
-        )
-    ).first()
+    workspace_query = "SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL"
+    workspace_params: dict[str, object] = {"agency_id": body.agencyId}
+    if scope.workspace_id is not None:
+        workspace_query += " AND id = :workspace_id"
+        workspace_params["workspace_id"] = scope.workspace_id
+    workspace_query += " LIMIT 1"
+    workspace_row = (await session.execute(text(workspace_query), workspace_params)).first()
     if workspace_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agency_has_no_workspace")
     workspace_id = workspace_row[0]
     if scope.workspace_id is not None and scope.workspace_id != workspace_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    await require_actor_scope(
+        session,
+        scope,
+        agency_id=body.agencyId,
+        workspace_id=workspace_id,
+    )
     dedupe_key = f"trend_sync:{body.agencyId}:{workspace_id}:{body.sourceKey or '__all__'}"
     try:
         job_id = await enqueue_job(
@@ -120,6 +127,15 @@ async def get_sync_status(
         owner = (await session.execute(text("SELECT agency_id FROM workspace WHERE id = :workspace_id"), {"workspace_id": job.workspace_id})).scalar_one_or_none()
         if owner != scope.agency_id:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
+    owner = (await session.execute(text("SELECT agency_id FROM workspace WHERE id = :workspace_id"), {"workspace_id": job.workspace_id})).scalar_one_or_none()
+    if owner is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="workspace_not_found")
+    await require_actor_scope(
+        session,
+        scope,
+        agency_id=owner,
+        workspace_id=job.workspace_id,
+    )
     FEED_QUERIES_TOTAL.labels(sort_by="sync_status").inc()
     return SyncStatusResponse(
         jobId=job.id,

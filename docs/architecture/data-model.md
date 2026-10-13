@@ -205,6 +205,27 @@ schema file named in each row.
 | `agency_social_provider_config` | The per-agency provider config (M4.6 hard cutover from env). Sealed app secret plus Meta publishing approval gates.                                     | `id`, `agencyId`, `provider` (meta/tiktok), `appId`, `appSecretCiphertext`, `appSecretIv`, `appSecretTag`, `appSecretKeyVersion`, `loginConfigId?`, `graphApiVersion?`, `enabled`, `publishingEnabled`, `appReviewStatus`, `businessVerificationStatus`, `configuredBy`, `lastTestedAt?`, `lastTestedOk?`, `lastTestErrorCode?`, `lastTestErrorAt?`         | `agencies`, `users` (configuredBy)             | `(agencyId, provider)` unique, `(agencyId)`; CHECK on `provider`, approval, verification, and key version                                                                      | `provider-config.ts`   |
 | `social_connection_capability`  | Normalized per-destination operation health for analytics and future publishing. Evidence is sanitized and contains no tokens or raw provider payloads. | `id`, `socialConnectionId`, `socialChannelId`, `operation` (analytics_read/facebook_page_publish/instagram_content_publish), `status`, `evidence`, `lastCheckedAt?`, `grantedAt?`, `revokedAt?`, `lastErrorCode?`, `lastErrorAt?`                                                                                                                           | `social_connections`, `social_channels`        | `(socialChannelId, operation)` unique, `(socialConnectionId, status)`, CHECK on operation/status                                                                               | `social-publishing.ts` |
 
+### Advertising foundation (`advertising.ts`)
+
+The advertising model is separate from social publishing and social-profile
+analytics. `advertising_connection` is the agency-scoped provider connection;
+`advertising_credential_version` stores only the versioned AES-GCM envelope
+sealed with the agency DEK. `advertising_account` is the canonical Meta ad
+account identity within an agency, and `advertising_connection_account` allows
+several connections to discover or access that account without duplicating it.
+Facebook Page and Instagram professional identities are retained in
+`advertising_social_identity` as sanitized metadata only.
+
+Access is split deliberately: current capability and probe evidence live in
+`advertising_capability` / `advertising_validation_result`; workspace-scoped
+visibility is in `advertising_visibility_grant`; financial access is a separate
+`advertising_financial_authority`; and immutable grant history is in
+`advertising_grant_revision`. `advertising_sync_state` and
+`advertising_sync_run` hold only bounded progress, counts, provider request
+IDs, and sanitized error codes. No table is a source of financial truth yet:
+live reporting remains gated on controlled Meta read-only UAT and the later
+canonical ad-level spend ingestion contract.
+
 ### AI (`ai.ts`)
 
 | Table                   | Purpose                                                                                                       | Key columns                                                                                                                                                                                | FKs                                                | Indexes                                                                                   | Schema file                                                                   |

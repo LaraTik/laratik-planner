@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.models import TrendSourceActivity, TrendSourceHealth
 from app.observability import get_logger
-from app.service_auth import get_service_scope
+from app.service_auth import get_service_scope, require_actor_scope
 
 logger = get_logger("routes_sources")
 
@@ -72,6 +72,8 @@ async def list_source_health(
     if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
     agencyId = agencyId or scope.agency_id
+    if agencyId is not None:
+        await require_actor_scope(session, scope, agency_id=agencyId)
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
 
     health_stmt = select(TrendSourceHealth)
@@ -119,6 +121,7 @@ async def test_source(
     source_key: str,
     request: Request,
     agencyId: Optional[uuid.UUID] = None,
+    session: AsyncSession = Depends(get_session),
 ) -> SourceTestResponse:
     """Run a 1-call sample fetch for `source_key`. The body is empty
     (source_key comes from the path); agency_id comes from the query string.
@@ -127,6 +130,10 @@ async def test_source(
     if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
     agencyId = agencyId or scope.agency_id
+    if scope.identity is not None and agencyId is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="agency_id_required")
+    if agencyId is not None:
+        await require_actor_scope(session, scope, agency_id=agencyId)
     # Resolve the registered extractor for this source key. We scan the
     # full registry to find the (platform, source_key) pair.
     from app.extractor.base import all_sources
@@ -148,7 +155,7 @@ async def test_source(
         from types import SimpleNamespace
         fake_source = SimpleNamespace(
             id=uuid.uuid4(),
-            agency_id=agencyId or uuid.uuid4(),
+            agency_id=agencyId,
             source_key=source_key,
             platform=extractor_cls.platform,
             config={},

@@ -32,15 +32,20 @@ export interface MetaAdvertisingProvider {
   readonly provider: "meta";
   validateConnection(connection: AdvertisingConnection): Promise<void>;
   discoverAccounts(connection: AdvertisingConnection): Promise<readonly AdvertisingAccount[]>;
-  readCampaigns(account: AdvertisingAccount): Promise<unknown>;
+  readCampaigns(connection: AdvertisingConnection, account: AdvertisingAccount): Promise<unknown>;
   readAdSets(connection: AdvertisingConnection, campaignId: string): Promise<unknown>;
   readAds(connection: AdvertisingConnection, adSetId: string): Promise<unknown>;
   readCreatives(connection: AdvertisingConnection, adId: string): Promise<unknown>;
   readDailyInsights(
+    connection: AdvertisingConnection,
     account: AdvertisingAccount,
     context: AdvertisingReportContext,
   ): Promise<unknown>;
-  readBreakdowns(account: AdvertisingAccount, context: AdvertisingReportContext): Promise<unknown>;
+  readBreakdowns(
+    connection: AdvertisingConnection,
+    account: AdvertisingAccount,
+    context: AdvertisingReportContext,
+  ): Promise<unknown>;
 }
 export function classifyMetaError(status: number, code?: number): MetaAdvertisingErrorKind {
   if (status === 401 || status === 403 || code === 10 || code === 200 || code === 190)
@@ -68,10 +73,10 @@ export function createMetaAdvertisingProvider(
         fields: "id,name,currency,timezone_name",
       }) as Promise<readonly AdvertisingAccount[]>;
     },
-    async readCampaigns(account) {
-      return (
-        await clientFor({ credentialRef: account.connectionId } as AdvertisingConnection)
-      ).get(`${account.externalAccountId}/campaigns`, { fields: "id,name,status,objective" });
+    async readCampaigns(connection, account) {
+      return (await clientFor(connection)).get(`${account.externalAccountId}/campaigns`, {
+        fields: "id,name,status,objective",
+      });
     },
     async readAdSets(connection, campaignId) {
       return (await clientFor(connection)).get(`${campaignId}/adsets`, {
@@ -88,18 +93,16 @@ export function createMetaAdvertisingProvider(
         fields: "id,name,object_story_spec",
       });
     },
-    async readDailyInsights(account, context) {
-      return (
-        await clientFor({ credentialRef: account.connectionId } as AdvertisingConnection)
-      ).get(`${account.externalAccountId}/insights`, {
+    async readDailyInsights(connection, account, context) {
+      return (await clientFor(connection)).get(`${account.externalAccountId}/insights`, {
         fields: "spend,impressions,clicks,reach,actions,ctr,cpc,cpm",
         time_range: JSON.stringify(context.dateRange),
         time_increment: "1",
         ...(context.breakdowns.length ? { breakdowns: context.breakdowns.join(",") } : {}),
       });
     },
-    async readBreakdowns(account, context) {
-      return this.readDailyInsights(account, context);
+    async readBreakdowns(connection, account, context) {
+      return this.readDailyInsights(connection, account, context);
     },
   };
 }

@@ -4,23 +4,23 @@
 > checks. The destructive downgrade/rollback drill remains intentionally
 > separate because the project uses forward-only corrective migrations.
 >
-> Latest capture: 2026-10-04 on local Postgres 16
+> Latest capture: 2026-10-13 on local Postgres 16
 > (`127.0.0.1:5432`, database `planner_test`), after migration
-> `0069_opposite_boomerang` was registered.
+> `0074_uneven_titanium_man` was registered.
 > Result: **5/5 PASS** — from-zero and restored databases applied the complete
-> 70-entry Drizzle ledger; backup/restore and failed-migration abort preserved
-> the MCP token scope constraint and the source-neutral observation schema.
-> The migration widens an existing check only; destructive downgrade is not
-> supported, so rollback is application-level retention followed by a reviewed
-> forward-fix migration after backup.
+> 75-entry Drizzle ledger; the skipped-migration repair safely reapplied the
+> advertising foundation DDL, backup/restore preserved the ledger, and failed-migration
+> abort left the schema unchanged. The migration is additive and forward-only;
+> destructive downgrade is not supported, so rollback is application-level
+> retention followed by a reviewed forward-fix migration after backup.
 
 ```text
-1. from-zero                PASS  108 public tables; Drizzle ledger 70/70
-2. skipped migration repair PASS  message columns restored; 0025 ledger rows=1
+1. from-zero                PASS  121 public tables; Drizzle ledger 75/75
+2. skipped migration repair PASS  guarded 0074 DDL reapplied successfully
 3. in-place upgrade         PASS  marker add/drop cycle
-4. backup + restore         PASS  ledger 70 before / 70 after; restore verified
-5. failed-migration abort   PASS  109 tables before / after; missing=0; added=0
-total: 6.5s
+4. backup + restore         PASS  ledger 75 before / 75 after; restore verified
+5. failed-migration abort   PASS  122 tables before / after; schema unchanged
+total: 5/5 PASS
 ```
 
 The prior capture remains below as historical evidence.

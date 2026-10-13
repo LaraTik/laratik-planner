@@ -117,9 +117,9 @@ def _register_job(
     if scheduler.get_job(job_id) is not None:
         scheduler.remove_job(job_id)
     scheduler.add_job(
-        func=_run_sync_cycle,
+        func=_enqueue_scheduled_sync,
         trigger=IntervalTrigger(minutes=cadence_minutes),
-        args=[source_key, agency_id, None],
+        args=[source_key, agency_id],
         id=job_id,
         replace_existing=True,
         coalesce=True,
@@ -132,6 +132,36 @@ def _register_job(
         agency_id=str(agency_id) if agency_id else None,
         cadence_minutes=cadence_minutes,
     )
+
+
+async def _enqueue_scheduled_sync(source_key: str, agency_id: Optional[UUID]) -> None:
+    """Persist a scheduled sync before the worker is allowed to execute it."""
+    if agency_id is None:
+        logger.warning("scheduler.job.skipped_without_agency", source_key=source_key)
+        return
+    from app.db import get_session_factory
+    from app.jobs import enqueue_job
+
+    async with get_session_factory()() as session:
+        workspace_id = (
+            await session.execute(
+                text("SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL LIMIT 1"),
+                {"agency_id": agency_id},
+            )
+        ).scalar_one_or_none()
+        if workspace_id is None:
+            logger.info("scheduler.job.skipped_no_workspaces", source_key=source_key, agency_id=str(agency_id))
+            return
+        await enqueue_job(
+            session,
+            agency_id=agency_id,
+            workspace_id=workspace_id,
+            source_key=source_key,
+            dedupe_key=f"trend_schedule:{agency_id}:{source_key}",
+            payload={"trigger": "schedule"},
+        )
+        await session.commit()
+        logger.info("scheduler.job.enqueued", source_key=source_key, agency_id=str(agency_id))
 
 
 # ─── Job function ────────────────────────────────────────────────────────────
@@ -354,4 +384,8 @@ async def trigger_now(
     # Use the same path as the cron job, but with a pre-allocated job id
     # so we can return it synchronously.
     await _run_sync_cycle(source_key, agency_id, job_id)
+    async with factory() as session:
+        job = (await session.execute(select(TrendFetchJob).where(TrendFetchJob.id == job_id))).scalar_one_or_none()
+    if job is not None and job.status in {"error", "degraded"}:
+        raise RuntimeError(job.error_message or f"sync_failed:{source_key}")
     return job_id

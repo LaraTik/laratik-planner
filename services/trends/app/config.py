@@ -52,6 +52,10 @@ class Settings(BaseSettings):
         description="Master switch for the sidecar scheduler and trend writes.",
     )
     TRENDS_SERVICE_SECRET: Optional[str] = Field(default=None, description="HMAC secret shared only by trusted server callers of /v1.")
+    TRENDS_SERVICE_SECRET_PREVIOUS: Optional[str] = Field(default=None, description="Previous HMAC secret retained during rotation.")
+    TRENDS_SERVICE_KEY_ID: str = Field("active", description="Key identifier for the active service secret.")
+    TRENDS_SERVICE_PREVIOUS_KEY_ID: str = Field("previous", description="Key identifier for the previous service secret.")
+    TRENDS_TRUSTED_SERVICE_IDENTITIES: str = Field("planner-api", description="Comma-separated service identities permitted to call /v1.")
     TRENDS_SERVICE_AUTH_REQUIRED: bool = Field(True, description="Require signed service context for internal /v1 routes.")
 
     # ─── Circuit breaker ───────────────────────────────────────────────────

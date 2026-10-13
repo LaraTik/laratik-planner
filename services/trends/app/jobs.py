@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from sqlalchemy import and_, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import TrendFetchJob, TrendJobExecution
@@ -53,9 +54,16 @@ async def enqueue_job(
     if workspace_id is None:
         raise ValueError("trend_fetch_job_requires_workspace")
     job_id = uuid.uuid4()
-    session.add(TrendFetchJob(id=job_id, workspace_id=workspace_id, source_key=source_key or "__all__", status="queued"))
-    session.add(TrendJobExecution(id=job_id, job_kind=job_kind, agency_id=agency_id, workspace_id=workspace_id, source_key=source_key, payload=payload, dedupe_key=dedupe_key, status="queued", max_attempts=MAX_ATTEMPTS))
-    await session.flush()
+    try:
+        async with session.begin_nested():
+            session.add(TrendFetchJob(id=job_id, workspace_id=workspace_id, source_key=source_key or "__all__", status="queued"))
+            session.add(TrendJobExecution(id=job_id, job_kind=job_kind, agency_id=agency_id, workspace_id=workspace_id, source_key=source_key, payload=payload, dedupe_key=dedupe_key, status="queued", max_attempts=MAX_ATTEMPTS))
+            await session.flush()
+    except IntegrityError:
+        existing = (await session.execute(select(TrendJobExecution).where(TrendJobExecution.dedupe_key == dedupe_key, TrendJobExecution.status.in_(("queued", "running"))))).scalar_one_or_none()
+        if existing is not None:
+            return existing.id
+        raise
     return job_id
 
 
@@ -91,11 +99,6 @@ async def claim_next_job(session: AsyncSession, *, worker_id: str, now: Optional
 async def renew_lease(session: AsyncSession, *, job_id: uuid.UUID, worker_id: str, lease_token: uuid.UUID, now: Optional[datetime] = None, lease_seconds: int = LEASE_SECONDS) -> bool:
     now = now or _now()
     result = await session.execute(update(TrendJobExecution).where(TrendJobExecution.id == job_id, TrendJobExecution.status == "running", TrendJobExecution.lease_owner == worker_id, TrendJobExecution.lease_token == lease_token).values(lease_expires_at=now + timedelta(seconds=lease_seconds), updated_at=now))
-    if result.rowcount == 1:
-        log = await session.get(TrendFetchJob, job_id)
-        if log is not None:
-            log.status = "success"
-            log.completed_at = now
     return result.rowcount == 1
 
 

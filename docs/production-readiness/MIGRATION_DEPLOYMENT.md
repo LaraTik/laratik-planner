@@ -1,5 +1,106 @@
 # Migration and deployment evidence
 
+## Migration 0074 — advertising foundation storage
+
+`0074_uneven_titanium_man.sql` is an additive, replay-safe migration for the
+first advertising foundation slice. It creates canonical agency-scoped Meta
+connections and ad accounts, connection-specific credential-version envelopes,
+Facebook Page / Instagram identity records, capability and sanitized
+validation results, visibility grants, separate financial authorities, grant
+revision history, and sync state/run history. Credential columns contain only
+AES-GCM envelope components; provider tokens never appear in the schema's
+response types, audit snapshots, job payloads, or diagnostics fields.
+
+The migration uses `IF NOT EXISTS` for tables and indexes and a guarded
+constraint block so the deployment repair can safely replay it when the
+advertising tables already exist. The application remains platform-credential
+first; agency-owned OAuth is represented by `owner_type` but is not enabled by
+this slice.
+
+Filename: `src/lib/db/migrations/0074_uneven_titanium_man.sql`  
+Journal tag: `0074_uneven_titanium_man`  
+Journal `when`: `1791886711262`  
+SHA-256 (after the replay-safety repair):
+`bd448a7818dfaa4c413449cca2d1cd39c03b4ca81d3a24a7e02f81a2e670a1b0`
+
+Compatibility: older application images ignore the new advertising tables.
+Existing social analytics and publishing tables are untouched. The new code
+can be rolled back at the image level while the additive tables remain in
+place; no existing tenant or provider identity is rewritten.
+
+Backup + rollback: take the normal verified Postgres backup before deployment.
+The migration has no down path. A normal application rollback retains these
+tables. A schema rollback requires a reviewed forward-fix or a destructive
+restore of the verified pre-migration `pg_dump`, approval-gated because it
+removes advertising connection, grant, and sync history created after backup.
+
+Evidence on disposable Postgres 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  121 tables; Drizzle ledger 75/75
+2. skipped migration repair PASS  guarded 0074 DDL reapplied successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 75 before / 75 after; restore verified
+5. failed-migration abort   PASS  122 tables before / after; schema unchanged
+total: 5/5 PASS
+```
+
+The unit coverage for the credential envelope is
+`tests/unit/advertising-crypto.test.ts`; the provider-neutral authorization
+contract remains covered by `tests/unit/advertising-foundation.test.ts`.
+
+## Migration 0073 — durable Trend Radar job execution
+
+`0073_durable_trend_job_execution.sql` is an additive, replay-safe migration.
+It creates `trend_job_execution`, the durable queue and lease state used by
+the Trend Radar worker, with foreign keys to the existing agency, workspace,
+and fetch-job records. It adds claim/lease and agency-scope indexes plus a
+partial unique dedupe index for queued and running work. The DDL uses guarded
+creation for the table, constraints, and indexes so a deployment repair can
+re-run it safely after an interrupted migration. No credential material is
+stored in job payloads; the application rejects token-like payload keys before
+enqueue.
+
+Filename: `src/lib/db/migrations/0073_durable_trend_job_execution.sql`  
+Journal tag: `0073_durable_trend_job_execution`  
+Journal `when`: `1791883695745`  
+SHA-256 (after the replay-safety repair):
+`f908263c70aa1e370bc297e341d7ab7585804f13e6a29d9412a958d5790846a5`
+
+Compatibility: older application images ignore the additive table and retain
+their existing fetch-job behavior. The new image writes durable queue rows and
+the scheduler persists scheduled work before the worker executes it. The
+schema is independent of existing tenant identifiers and does not rewrite
+historical fetch jobs. If an older image is retained temporarily, the new
+table remains unused and safe; the durable worker path is enabled only by the
+new application code.
+
+Backup + rollback: take the normal verified Postgres backup before deployment.
+The migration is forward-only. A normal application rollback pins the previous
+image and leaves this additive table in place. If the schema itself must be
+reverted, stop the rollout and use a reviewed forward-fix migration; restoring
+the verified pre-migration `pg_dump` is the destructive rollback path and is
+approval-gated because it removes any queue history created after the backup.
+Never edit an applied migration.
+
+Evidence on disposable Postgres 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  109 tables; Drizzle ledger 74/74
+2. skipped migration repair PASS  guarded 0073 DDL reapplied successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 74 before / 74 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+The same drill provides the failed-migration recovery and backup/restore
+evidence. `tests/unit/migration-journal-order.test.ts` remains the journal and
+snapshot ancestry guard; the exact clean commit SHA must be recorded again
+after this work is committed.
+
 ## Migration 0069 — MCP diagnostics scope compatibility
 
 `0069_opposite_boomerang.sql` replaces the `mcp_access_token_scopes_valid`
