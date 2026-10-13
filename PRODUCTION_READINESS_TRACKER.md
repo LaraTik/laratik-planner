@@ -1,5 +1,18 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising admin browser checkpoint** — Exact clean code
+> commit `85b5e25` fixes the Graph API version input pattern so the default
+> `v25.0` value is accepted, adds a Chromium browser contract for creating a
+> platform-owned Meta connection and storing a local fixture credential without
+> rendering the token, and adds the advertising settings route to the
+> authenticated axe matrix. The focused unit suite passes 4/4; the focused
+> browser workflow passes 1/1; the focused advertising accessibility check
+> passes 1/1. The isolated runner now supplies a deterministic test-only
+> platform KEK so this credential-envelope path is exercised offline. This
+> remains **Tested**, not **Verified**: controlled live Meta UAT, real ad-level
+> reconciliation, workspace reporting UI evidence, independent review, and
+> production deployment remain open.
+
 > **2026-10-13 advertising replay-safety checkpoint** — Exact clean code
 > commit `3a12930` adds an injectable provider boundary for the worker’s
 > recovery harness and proves an at-least-once replay: the first run persists
