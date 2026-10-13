@@ -1,5 +1,19 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 bounded advertising ingestion checkpoint** — Exact clean
+> implementation commit `7ce7bd72` adds replay-safe migrations `0077` and
+> `0078`, bounded Meta collection pagination, explicit ad-level Insights
+> normalization, fixed-point spend reconciliation, fenced advertising sync
+> leases with retry backoff, the default-off `ADVERTISING_SYNC_ENABLED` cron
+> route, and its VPS caller. The worker resolves encrypted credentials only at
+> execution time, ingests only explicit ad-level facts, preserves partial-data
+> state, and never allocates account totals to inferred workspace resources.
+> The migration drill passes 5/5 with 79/79 ledger rows, and `pnpm verify`
+> passes with 505 unit files / 4,699 tests, formatting, lint, typecheck, and
+> production build. This remains **Tested**, not **Verified**: live Meta
+> credential/account UAT, report/export/AI route wiring, bilingual browser
+> evidence, independent review, and production deployment remain open.
+
 > **2026-10-13 advertising foundation + admin workflow checkpoint** — Exact
 > clean implementation commits `598d561`, `eace698`, `dbcb56e`, and
 > `07971ba` add
