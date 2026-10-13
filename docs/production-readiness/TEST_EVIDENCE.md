@@ -3,6 +3,33 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Advertising SaaS hardening and result metrics — 2026-10-13, implementation SHA `06b41d8f`
+
+This milestone closes the next advertising-readiness gaps without enabling
+provider writes. Canonical ad-day observations now retain reach and explicit or
+action-derived result metrics through migration `0083`. Meta object reads
+request campaign/ad-set budgets and ad-set targeting, while reporting exposes
+results and an authorized configured-targeting view. Account-level audience
+rows require a current account-wide report grant; campaign-scoped grants cannot
+read them. Sync supports an explicit date window, isolates supported audience
+breakdowns so one unsupported dimension does not erase the others, and
+reconciles workspace-attributed spend from active grant scopes. Admins can
+grant provider-object scopes and revoke one linked ad account without revoking
+the whole connection.
+
+| Check                                                                                                                                                         | Result                                                                                                                           |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm migration-drill`                                                                                                                                        | **Pass** — 5/5; 84/84 Drizzle ledger rows, including migration 0083                                                              |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts tests/integration/advertising-tenant-guards.test.ts` | **Pass** — 13/13 advertising lifecycle and tenant-guard tests                                                                    |
+| `pnpm verify`                                                                                                                                                 | **Pass** — formatting, lint, typecheck, 507 unit files / 4,714 tests, production build                                           |
+| `TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-admin.spec.ts tests/e2e/advertising-reporting.spec.ts`                                   | **Pass** — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, and mobile Safari; English/LTR and Arabic/RTL reporting passed |
+| `git diff --check`                                                                                                                                            | **Pass**                                                                                                                         |
+
+No live Meta credential was present. No external Meta request, production
+deployment, or provider mutation was performed. Live permission, rate-limit,
+real-account reconciliation, and independent-review evidence remain open; this
+milestone is **Tested**, not **Verified**.
+
 ## Meta Ads integration foundation — 2026-10-13, exact clean code SHA `ca9da4c`
 
 This milestone completes the read-only control-plane and reporting foundation

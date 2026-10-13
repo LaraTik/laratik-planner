@@ -1,5 +1,18 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 SaaS-hardening checkpoint** — Implementation commit
+> `06b41d8f` adds migration 0083 for reach/results, explicit provider-object
+> scopes, per-account revocation, account-wide audience authorization, complete
+> supported-breakdown retries, configurable sync windows, grant-based spend
+> attribution, and bilingual targeting/results reporting. Migration drill is
+> 5/5 with 84/84 ledger rows; advertising lifecycle and tenant-guard integration
+> tests pass 13/13; `pnpm verify` passes 507 unit files / 4,714 tests and the
+> production build; the focused advertising E2E matrix passes 15/15 across five
+> browser projects in English/LTR and Arabic/RTL. No live Meta request,
+> production deployment, or provider mutation was performed. This remains
+> **Tested**, not **Verified** pending controlled credentialed Meta UAT,
+> real-account reconciliation, and independent review.
+
 > **2026-10-13 Meta Ads integration foundation checkpoint** — Exact clean code
 > commit `ca9da4c` completes the read-only advertising control-plane and
 > reporting foundation. Global Admin can review and revoke workspace visibility

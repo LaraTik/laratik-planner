@@ -165,7 +165,11 @@ only through the process environment and never print them.
 8. Verify audience breakdowns only for dimensions returned by the provider
    (for example age, gender, placement, device, or geography). Preserve the
    requested date range, account currency, account timezone, attribution
-   window, pagination state, partial-data state, and rate-limit outcome.
+   window, pagination state, partial-data state, and rate-limit outcome. A
+   campaign-scoped grant must not expose account-level audience rows; verify
+   that only an account-wide report grant unlocks those dimensions. Confirm
+   reach/results are marked unavailable when Meta omits them rather than being
+   inferred.
 9. Run the sanitized local substitute when live credentials are unavailable:
 
    ```bash
