@@ -23,6 +23,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -43,6 +44,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -60,6 +62,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -77,6 +80,7 @@ describe("AudienceCopyPanel — Copy tab header", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"

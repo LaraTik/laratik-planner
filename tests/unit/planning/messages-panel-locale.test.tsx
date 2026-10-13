@@ -13,6 +13,7 @@ describe("AudienceCopyPanel localization", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -48,7 +49,7 @@ describe("AudienceCopyPanel localization", () => {
     expect(screen.getByText(/حالة النسخ لكل قناة/i)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "مراجعة النشر" })).toHaveAttribute(
       "href",
-      "/app/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",
+      "/app/a/acme/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",
     );
   });
 
@@ -56,6 +57,7 @@ describe("AudienceCopyPanel localization", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -78,6 +80,7 @@ describe("AudienceCopyPanel localization", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"

@@ -45,6 +45,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -68,6 +69,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -97,6 +99,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -119,6 +122,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -137,6 +141,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -156,6 +161,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
           format="static_post"
@@ -168,7 +174,7 @@ describe("AudienceCopyPanel — Channel Readiness card", () => {
     );
     expect(screen.getByRole("link", { name: /Review in Publishing/i })).toHaveAttribute(
       "href",
-      "/app/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",
+      "/app/a/acme/w/acme/planning/11111111-1111-4111-8111-111111111111/publish",
     );
   });
 });

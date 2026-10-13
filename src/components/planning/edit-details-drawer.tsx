@@ -47,6 +47,8 @@ import {
  *   - Focus is restored to the trigger on close (Radix).
  */
 export interface EditDetailsDrawerProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   contentItemId: string;
   /**
@@ -71,6 +73,7 @@ export interface EditDetailsDrawerProps {
 
 export function EditDetailsDrawer({
   workspaceSlug,
+  agencySlug,
   contentItemId,
   workspaceTimezone,
   channels,
@@ -106,7 +109,7 @@ export function EditDetailsDrawer({
           <DialogDescription>
             {t("contentDetail.overview.editDrawerDescription")}{" "}
             <Link
-              href={`/app/w/${workspaceSlug}/planning/edit/${contentItemId}`}
+              href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/edit/${contentItemId}`}
               className="text-primary inline-flex items-center gap-1 underline-offset-4 hover:underline"
               data-testid="edit-details-drawer-full-editor"
             >
@@ -126,3 +129,5 @@ export function EditDetailsDrawer({
     </Dialog>
   );
 }
+
+import { workspaceBasePath } from "@/lib/urls";

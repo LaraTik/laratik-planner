@@ -821,6 +821,7 @@ export default async function ContentDetailPage({
                 so the user can see the lifecycle at a glance
                 even on the smallest viewport. */}
             <PlanningHeader
+              agencySlug={agencySlug}
               workspaceSlug={slug}
               workspaceName={ws.name}
               workspaceTimezone={ws.timezone}
@@ -1338,6 +1339,7 @@ export default async function ContentDetailPage({
                 data-testid="workspace-tab-panel-copy"
               >
                 <MessagesPanel
+                  agencySlug={agencySlug}
                   workspaceSlug={slug}
                   contentItemId={item.id}
                   format={item.format as ContentFormat}
