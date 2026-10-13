@@ -22,6 +22,7 @@ const testArgs = requestedTests.some((arg) => arg.startsWith("--workers"))
   : [...requestedTests, "--workers=1"];
 const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
 const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
+const testOnlySocialKek = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
 
 async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -72,6 +73,10 @@ async function main() {
     // script or inherits these values.
     AUTH_SECRET: process.env.AUTH_SECRET ?? testOnlyAuthSecret,
     AGENCY_COOKIE_SECRET: process.env.AGENCY_COOKIE_SECRET ?? testOnlyAgencyCookieSecret,
+    // Advertising credential writes use the same per-agency DEK envelope as
+    // social credentials. Keep the isolated browser contract self-contained
+    // while making the test-only key unmistakable and non-production.
+    SOCIAL_TOKEN_ENCRYPTION_KEY: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY ?? testOnlySocialKek,
     // Trend Radar is intentionally off by default in production. Isolated E2E
     // runs opt into the capability so the gated Trend Radar journeys are
     // exercised without changing the production configuration.

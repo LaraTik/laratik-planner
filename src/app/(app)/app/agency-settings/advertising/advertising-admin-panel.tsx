@@ -136,7 +136,7 @@ export function AdvertisingAdminPanel({
               id="advertising-graph-version"
               name="graphApiVersion"
               defaultValue="v25.0"
-              pattern="v\\d+\\.\\d+"
+              pattern="v\d+\.\d+"
               maxLength={20}
             />
           </div>
