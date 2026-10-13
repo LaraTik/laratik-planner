@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising retry/dead-letter checkpoint** — Exact clean code
+> commit `eb08990` adds the replay-safe migration `0080`, bounded four-attempt
+> advertising sync retries, explicit `dead_letter` state, admin re-enable
+> reset, and scoped reporting freshness for dead-lettered syncs. Migration
+> drill passes 5/5 with 81/81 ledger rows; worker/transition integration passes
+> 5/5 and focused worker tests pass 10/10. This remains **Tested**, not
+> **Verified**: controlled live Meta UAT, real ad-level reconciliation,
+> workspace reporting UI evidence, independent review, and production
+> deployment remain open.
+
 > **2026-10-13 advertising sync-history fencing checkpoint** — Exact clean
 > code commit `76d6ef0` fences creation of `advertising_sync_run` history
 > behind the current sync lease token. A stale worker can no longer create a
