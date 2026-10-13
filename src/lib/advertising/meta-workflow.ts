@@ -359,7 +359,7 @@ export async function runMetaConfigurationWorkflow(
       await recordAdvertisingValidation(db, {
         connectionId: args.connection.id,
         operation: "instagram_read",
-        status: "passed",
+        status: pageId ? "passed" : "partial",
         sanitizedCode: pageId ? "meta_instagram_read_available" : "meta_no_instagram_asset",
         metadata: { state: pageId ? "valid" : "no_data" },
       });
@@ -381,7 +381,7 @@ export async function runMetaConfigurationWorkflow(
   await recordAdvertisingValidation(db, {
     connectionId: args.connection.id,
     operation: "account_discovery",
-    status: "passed",
+    status: accounts.length ? "passed" : "partial",
     sanitizedCode: accounts.length ? "meta_accounts_discovered" : "meta_no_accounts",
     metadata: { count: accounts.length, state: accountDiscoveryState },
   });
