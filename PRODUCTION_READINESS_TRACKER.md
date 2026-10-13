@@ -1,5 +1,26 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 Meta Ads integration foundation checkpoint** — Exact clean code
+> commit `ca9da4c` completes the read-only advertising control-plane and
+> reporting foundation. Global Admin can review and revoke workspace visibility
+> grants and financial authority, inspect sanitized validation/sync history, and
+> run bounded account discovery. Sync now persists idempotent, tenant-guarded
+> campaign/ad-set/ad/creative snapshots, exact promoted-post IDs, and provider-
+> returned audience dimensions without inferring unsupported metrics. Reporting
+> exposes lifecycle fields, objectives, budgets, paid promoted posts, and
+> audience delivery only after the existing account/grant authorization seam.
+> The same milestone adds bilingual copy, keyboard-focusable mobile table
+> regions, cross-agency isolation coverage, grant/authority revocation audit
+> coverage, and the executable blocked-live Meta UAT checklist. Migration drill
+> passes 5/5 with 83/83 ledger rows; full integration passes; full unit passes
+> 507 files / 4,712 tests; formatting, lint, typecheck, and production build
+> pass; the focused advertising browser matrix passes 15/15 across Chromium,
+> Firefox, WebKit, mobile Chrome, and mobile Safari in English/LTR and Arabic/
+> RTL. No live Meta request, production deployment, or external Meta mutation
+> was performed. This remains **Tested**, not **Verified**: controlled
+> credentialed read-only Meta UAT, real ad-level reconciliation, independent
+> review, and production deployment remain open.
+
 > **2026-10-13 persisted reporting-scope checkpoint** — Code commit
 > `a38fabc` adds an integration regression through the real membership, grant,
 > observation, account-list, and reporting-query paths. It proves one shared

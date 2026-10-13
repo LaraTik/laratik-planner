@@ -3,6 +3,33 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Meta Ads integration foundation — 2026-10-13, exact clean code SHA `ca9da4c`
+
+This milestone completes the read-only control-plane and reporting foundation
+without claiming live provider readiness. Admin surfaces now list and revoke
+workspace visibility grants and financial authorities, retain sanitized
+validation/sync history, and keep all reads and writes agency-scoped. Bounded
+sync persists idempotent campaign/ad-set/ad/creative snapshots, exact promoted
+post IDs, and only audience dimensions returned by the provider. Reporting
+reads those snapshots through the existing authorization boundary and renders
+status, objective, budgets, paid promoted posts, and audience delivery. The
+blocked-live runbook in `EXTERNAL_SERVICES_UAT.md` is executable when approved
+Meta credentials become available.
+
+| Check                                                                                                                       | Result                                                                                                 |
+| --------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                                                                  | **Pass** — 5/5 migration, repair, upgrade, backup/restore, and abort checks; 83/83 ledger rows         |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                                                                 | **Pass** — complete integration suite, including advertising tenant and lifecycle coverage             |
+| `pnpm test:unit`                                                                                                            | **Pass** — 507 files / 4,712 tests                                                                     |
+| `pnpm format:check`, `pnpm lint`, `pnpm exec tsc --noEmit`, `pnpm build`                                                    | **Pass**                                                                                               |
+| `TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-admin.spec.ts tests/e2e/advertising-reporting.spec.ts` | **Pass** — 15/15 across five browser projects; EN/LTR + AR/RTL; serious/critical axe violations absent |
+| `rtk git diff --check`                                                                                                      | **Pass**                                                                                               |
+
+No live Meta credentials were present, so no external Meta request, production
+deployment, or external Meta mutation was performed. Controlled credentialed
+read-only Meta UAT, real ad-level reconciliation, independent review, and
+production deployment remain open.
+
 ## Persisted reporting scope — 2026-10-13, exact clean SHA `a142256861803b2aa1df09c5e0143c2f4ecc1957`
 
 The integration suite now exercises the persisted authorization path rather
