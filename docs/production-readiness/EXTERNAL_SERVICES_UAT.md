@@ -122,6 +122,15 @@ agency/workspace-granted report projections. No campaign, ad, budget, bid, or
 creative write is enabled. The local synthetic fixture is not a substitute for
 the controlled Meta UAT below.
 
+The current local reporting surface also includes campaign, ad-set, and ad
+rollups; configured targeting is shown only from provider object metadata;
+audience delivery is shown only from provider-returned breakdown rows; exact
+promoted-post IDs are joined to the existing workspace social observation
+read model; and paid/organic/combined post views are explicitly additive rather
+than inferred unique reach. Large report tables use URL-preserving server
+pagination. Admin history shows validation, sync, and reconciliation snapshots
+without exposing credentials.
+
 | #   | Service                 | Auto-check: code path exists                                                                                                                                                            | Auto-check: unit/integration test covers                                                                                                                                                                             | Auto-check: local-fake mode works                                                                                                                            | Check                                                                                                                                                                                                                                                                            | Owner | Environment                      | Date | Result                        | Evidence link                                                                                  |
 | --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------- | ---- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
 | 1   | Meta Ads connection     | PASS (global-admin connection workflow persists an agency-owned provider connection; credentials are encrypted in versioned rows and activation requires a current non-revoked version) | PASS (`tests/unit/advertising-connection-service.test.ts`; `tests/integration/advertising-credential-lifecycle.test.ts` covers rotation, old-version revocation, current-only resolution, and explicit revocation)   | PASS (the advertising test helpers use synthetic credentials and the local agency DEK; no provider secret is required)                                       | Create, rotate, activate, revoke, and re-enable a Meta Ads connection without exposing or reusing revoked credentials                                                                                                                                                            | Owner | local synthetic / production     |      | PENDING live UAT              | [credential lifecycle tests](../../tests/integration/advertising-credential-lifecycle.test.ts) |
@@ -152,16 +161,21 @@ only through the process environment and never print them.
    text.
 5. Select one discovered account for sync and verify a bounded historical
    window, an incremental daily run, a recent refresh window, interrupted-run
-   recovery, idempotent replay, and account-level reconciliation. Verify that
-   repeated credentials for the same agency/account do not duplicate spend.
+   recovery, idempotent replay, and account-level reconciliation. The cron route
+   accepts an explicit `since`/`until` window for controlled backfill checks;
+   verify that repeated credentials for the same agency/account do not
+   duplicate spend and that the admin reconciliation history records provider,
+   attributed, unallocated, discrepancy, and completeness values.
 6. Create explicit agency and workspace grants, including campaign-scoped
    grants. Verify that the workspace sees only authorized campaign facts,
    that revoked grants invalidate the report immediately, and that export/AI
    paths are denied without their separate capability.
 7. Verify exact promoted post IDs from creative metadata when Meta returns
-   them. Keep paid, organic, and combined post views separate; if Meta does
-   not return a reliable association, record `unallocated`/`unsupported`
-   rather than inferring one.
+   them. Keep paid, organic, and additive combined post views separate; several
+   ads may point at one post but must produce one post row with aggregated paid
+   delivery. If Meta does not return a reliable association, record
+   `unallocated`/`unsupported` rather than inferring one. Combined views are
+   not a unique-reach claim.
 8. Verify audience breakdowns only for dimensions returned by the provider
    (for example age, gender, placement, device, or geography). Preserve the
    requested date range, account currency, account timezone, attribution

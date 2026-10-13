@@ -1,5 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 complete Meta Ads reporting checkpoint** — Exact clean code
+> commit `381dedc1cae0080d67682cc3a18fdc6107fe0c34` completes the local
+> read-only reporting surfaces: admin reconciliation history; campaign, ad-set,
+> and ad tables; configured targeting; provider-returned audience delivery;
+> exact paid/organic promoted-post joins; additive combined views; and
+> server-rendered pagination. The synthetic fixture proves two ads can point to
+> one exact promoted post without duplicate post rows. `pnpm verify` passes 507
+> unit files / 4,716 tests and the production build; the complete integration
+> runner passes; the migration drill passes 5/5 with 84/84 ledger rows; and the
+> focused advertising browser matrix passes 15/15 across five browser projects
+> in English/LTR and Arabic/RTL. No live Meta request, production deployment,
+> or provider mutation was performed. This remains **Tested**, not **Verified**:
+> controlled credentialed Meta UAT, real-account reconciliation, and independent
+> review remain open.
+
 > **2026-10-13 SaaS-hardening checkpoint** — Implementation commit
 > `06b41d8f` adds migration 0083 for reach/results, explicit provider-object
 > scopes, per-account revocation, account-wide audience authorization, complete
