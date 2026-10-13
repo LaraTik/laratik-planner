@@ -395,6 +395,12 @@ export function MobileNav({
                   active={isActivePath(`${wsBase}/analytics/social`, pathname, { exact: true })}
                 />
                 <MobileMenuLink
+                  href={`${wsBase}/analytics/advertising`}
+                  icon={<Gauge />}
+                  label={labelFor("advertising", "Advertising")}
+                  active={isActivePath(`${wsBase}/analytics/advertising`, pathname)}
+                />
+                <MobileMenuLink
                   href={`${wsBase}/brand-kit`}
                   icon={<Package />}
                   label={labelFor("brand-kit", "Brand kit")}

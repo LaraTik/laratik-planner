@@ -246,6 +246,23 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean("/app/w/acme/analytics/social", page);
   });
 
+  test("@a11y /app/w/[slug]/analytics/advertising has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/w/acme/analytics/advertising");
+    await expectClean("/app/w/acme/analytics/advertising", page);
+  });
+
+  test("@a11y /app/w/[slug]/analytics/advertising renders Arabic RTL", async ({ page }) => {
+    await bootstrapTestSession(page, { locale: "ar" });
+    await page.goto("/app/w/acme/analytics/advertising");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expectClean("/app/w/[slug]/analytics/advertising [ar]", page);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+  });
+
   test("@a11y /app/w/[slug]/research has no critical violations", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.goto("/app/w/acme/research");

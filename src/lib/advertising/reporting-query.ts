@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, asc, desc, eq, gte, inArray, isNull, lte, max, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, max, or } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
@@ -69,6 +69,81 @@ export type AdvertisingReportQueryResult =
       partial: boolean;
       freshness: "fresh" | "stale" | "unknown";
     };
+
+export type AdvertisingReportAccount = {
+  id: string;
+  name: string;
+  currency: string | null;
+  timezone: string | null;
+};
+
+/**
+ * Return only accounts that the current workspace can actually report on.
+ * This is deliberately narrower than the admin resource list: account names
+ * and currencies are still tenant data and must not be disclosed before an
+ * active report grant is present.
+ */
+export async function listAdvertisingReportAccounts(
+  db: Db,
+  args: { actor: Actor; agencyId: string; workspaceId: string },
+): Promise<AdvertisingReportAccount[]> {
+  if (!(await isActiveMember(args.actor, args.agencyId))) return [];
+  const [workspace] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(and(eq(workspaces.id, args.workspaceId), eq(workspaces.agencyId, args.agencyId)))
+    .limit(1);
+  if (!workspace || !(await canAccessWorkspace(args.actor, args.workspaceId))) {
+    return [];
+  }
+  const now = new Date();
+  const rows = await db
+    .select({
+      id: advertisingAccounts.id,
+      name: advertisingAccounts.name,
+      currency: advertisingAccounts.currency,
+      timezone: advertisingAccounts.timezone,
+    })
+    .from(advertisingAccounts)
+    .innerJoin(
+      advertisingConnectionAccounts,
+      and(
+        eq(advertisingConnectionAccounts.accountId, advertisingAccounts.id),
+        eq(advertisingConnectionAccounts.status, "active"),
+      ),
+    )
+    .innerJoin(
+      advertisingConnections,
+      and(
+        eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
+        eq(advertisingConnections.agencyId, args.agencyId),
+        eq(advertisingConnections.status, "active"),
+      ),
+    )
+    .innerJoin(
+      advertisingVisibilityGrants,
+      and(
+        eq(advertisingVisibilityGrants.accountId, advertisingAccounts.id),
+        eq(advertisingVisibilityGrants.agencyId, args.agencyId),
+        eq(advertisingVisibilityGrants.capability, "read_reports"),
+        or(
+          isNull(advertisingVisibilityGrants.workspaceId),
+          eq(advertisingVisibilityGrants.workspaceId, args.workspaceId),
+        ),
+        lte(advertisingVisibilityGrants.startsAt, now),
+        or(isNull(advertisingVisibilityGrants.endsAt), gt(advertisingVisibilityGrants.endsAt, now)),
+        isNull(advertisingVisibilityGrants.revokedAt),
+      ),
+    )
+    .where(
+      and(
+        eq(advertisingAccounts.agencyId, args.agencyId),
+        eq(advertisingAccounts.status, "active"),
+      ),
+    )
+    .orderBy(asc(advertisingAccounts.name), asc(advertisingAccounts.id));
+  return [...new Map(rows.map((row) => [row.id, row])).values()];
+}
 
 /**
  * Load canonical persisted facts and resolve the complete authorization scope

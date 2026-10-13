@@ -115,6 +115,7 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/media`);
     expect(allHrefs).toContain(`${wsBase}/channels`);
     expect(allHrefs).toContain(`${wsBase}/analytics/social`);
+    expect(allHrefs).toContain(`${wsBase}/analytics/advertising`);
   });
 
   it("uses one Planning destination for list, board, and calendar views", () => {

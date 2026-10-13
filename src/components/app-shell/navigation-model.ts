@@ -237,6 +237,14 @@ export function buildWorkspaceNavigation(input: {
         },
         {
           kind: "link",
+          key: "advertising",
+          href: `${wsBase}/analytics/advertising`,
+          label: "Advertising",
+          labelKey: "sidebar.advertising",
+          icon: Gauge,
+        },
+        {
+          kind: "link",
           key: "channels",
           href: `${wsBase}/channels`,
           label: "Channels",

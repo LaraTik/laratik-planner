@@ -334,6 +334,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       performance: t("sidebar.performance"),
       channels: t("sidebar.channels"),
       analytics: t("sidebar.analytics"),
+      advertising: t("sidebar.advertising"),
       brand: t("sidebar.brand"),
       "brand-kit": t("sidebar.brandKit"),
       "brand-overview": t("sidebar.brandOverview"),
