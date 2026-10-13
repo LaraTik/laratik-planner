@@ -141,6 +141,7 @@ class TestRunWithFallback:
             primary_source_key="tiktok_tamnd",
             primary_fn=primary,
             primary_args={},
+            workspace_id=cached_row.workspace_id,
         )
 
         assert calls == ["primary", "fb1", "fb2"]
@@ -177,3 +178,20 @@ class TestRunWithFallback:
         assert len(attempts) == 3
         assert attempts[-1]["source_key"] == "cache:last_good"
         assert attempts[-1]["outcome"] == "skipped"
+
+    @pytest.mark.asyncio
+    async def test_cache_requires_workspace_scope(self) -> None:
+        """An unscoped fallback must never return a tenant's cached rows."""
+        from app.fallback import _last_good_cache
+
+        session = _session_returning([object()])
+        rows = await _last_good_cache(
+            session,
+            platform="tiktok",
+            max_age_hours=24,
+            agency_id=uuid.uuid4(),
+            workspace_id=None,
+        )
+
+        assert rows == []
+        session.execute.assert_not_awaited()

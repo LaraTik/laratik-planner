@@ -1,9 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { isCronAuthorized } from "@/lib/cron/auth";
 import { pruneAppErrorRetention } from "@/lib/observability/app-errors";
 import { logError } from "@/lib/observability/logger";
 import { mutatingApiHeaders } from "@/lib/security/headers";
-import { serverEnv } from "@/lib/validation/env";
 
 /**
  * GET|POST /api/cron/error-retention
@@ -41,16 +40,8 @@ export const runtime = "nodejs";
 const EVENT_RETENTION_DAYS = 30;
 const GROUP_RETENTION_DAYS = 90;
 
-function authorized(req: NextRequest): boolean {
-  const header = req.headers.get("authorization");
-  if (!header?.startsWith("Bearer ") || !serverEnv.CRON_SECRET) return false;
-  const supplied = Buffer.from(header.slice(7).trim());
-  const expected = Buffer.from(serverEnv.CRON_SECRET);
-  return supplied.length === expected.length && timingSafeEqual(supplied, expected);
-}
-
 async function handle(req: NextRequest) {
-  if (!authorized(req)) {
+  if (!isCronAuthorized(req.headers)) {
     return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
   }
   const startedAt = Date.now();

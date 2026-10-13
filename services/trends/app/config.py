@@ -51,6 +51,8 @@ class Settings(BaseSettings):
         True,
         description="Master switch for the sidecar scheduler and trend writes.",
     )
+    TRENDS_SERVICE_SECRET: Optional[str] = Field(default=None, description="HMAC secret shared only by trusted server callers of /v1.")
+    TRENDS_SERVICE_AUTH_REQUIRED: bool = Field(True, description="Require signed service context for internal /v1 routes.")
 
     # ─── Circuit breaker ───────────────────────────────────────────────────
     CIRCUIT_BREAKER_THRESHOLD: int = Field(

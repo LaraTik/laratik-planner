@@ -10,15 +10,16 @@ import uuid
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db import get_session, get_session_factory
-from app.models import TrendFetchJob, TrendSource
+from app.db import get_session
+from app.jobs import enqueue_job
+from app.models import TrendFetchJob
 from app.observability import FEED_QUERIES_TOTAL, get_logger
-from app.scheduler import trigger_now
+from app.service_auth import get_service_scope
 
 logger = get_logger("routes_sync")
 
@@ -60,12 +61,15 @@ class SyncStatusResponse(BaseModel):
 @router.post("", response_model=SyncQueuedResponse, status_code=status.HTTP_202_ACCEPTED)
 async def queue_sync(
     body: SyncRequest,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> SyncQueuedResponse:
     """Queue a manual sync. Returns the jobId immediately; the actual work
     runs in the scheduler. Poll `GET /v1/sync/{jobId}` for status.
     """
-    job_id = uuid.uuid4()
+    scope = get_service_scope(request)
+    if scope.agency_id is not None and scope.agency_id != body.agencyId:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
     workspace_row = (
         await session.execute(
             text("SELECT id FROM workspace WHERE agency_id = :agency_id AND archived_at IS NULL LIMIT 1"),
@@ -74,14 +78,21 @@ async def queue_sync(
     ).first()
     if workspace_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="agency_has_no_workspace")
-    job = TrendFetchJob(
-        id=job_id,
-        workspace_id=workspace_row[0],
-        source_key=body.sourceKey or "__all__",
-        status="queued",
-    )
-    session.add(job)
-    await session.flush()
+    workspace_id = workspace_row[0]
+    if scope.workspace_id is not None and scope.workspace_id != workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    dedupe_key = f"trend_sync:{body.agencyId}:{workspace_id}:{body.sourceKey or '__all__'}"
+    try:
+        job_id = await enqueue_job(
+            session,
+            agency_id=body.agencyId,
+            workspace_id=workspace_id,
+            source_key=body.sourceKey,
+            dedupe_key=dedupe_key,
+            payload={"full_sync": body.fullSync},
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     logger.info(
         "sync.queued",
         job_id=str(job_id),
@@ -89,36 +100,26 @@ async def queue_sync(
         source_key=body.sourceKey,
         full_sync=body.fullSync,
     )
-    # Fire-and-forget the actual sync. The scheduler writes back the
-    # status / signalsAdded / error fields when the job finishes.
-    import asyncio
-    asyncio.create_task(_run_job(job_id, body.agencyId, body.sourceKey))
-    return SyncQueuedResponse(jobId=job_id, queuedAt=job.created_at or datetime.utcnow())
-
-
-async def _run_job(job_id: uuid.UUID, agency_id: uuid.UUID, source_key: Optional[str]) -> None:
-    """Background task — call the scheduler and let it write the outcome."""
-    try:
-        if source_key:
-            await trigger_now(source_key, agency_id=agency_id, job_id=job_id)
-        else:
-            async with get_session_factory()() as session:
-                keys = list((await session.execute(select(TrendSource.source_key).where(TrendSource.agency_id == agency_id, TrendSource.enabled.is_(True)))).scalars().all())
-            for key in keys:
-                await trigger_now(key, agency_id=agency_id, job_id=job_id)
-    except Exception as exc:  # noqa: BLE001 — recorded by the scheduler
-        logger.warning("sync.background.error", job_id=str(job_id), error=str(exc))
+    return SyncQueuedResponse(jobId=job_id, queuedAt=datetime.now().astimezone())
 
 
 @router.get("/{job_id}", response_model=SyncStatusResponse)
 async def get_sync_status(
     job_id: uuid.UUID,
+    request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> SyncStatusResponse:
     stmt = select(TrendFetchJob).where(TrendFetchJob.id == job_id)
     job = (await session.execute(stmt)).scalar_one_or_none()
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job_not_found")
+    scope = get_service_scope(request)
+    if scope.workspace_id is not None and scope.workspace_id != job.workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    if scope.agency_id is not None:
+        owner = (await session.execute(text("SELECT agency_id FROM workspace WHERE id = :workspace_id"), {"workspace_id": job.workspace_id})).scalar_one_or_none()
+        if owner != scope.agency_id:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
     FEED_QUERIES_TOTAL.labels(sort_by="sync_status").inc()
     return SyncStatusResponse(
         jobId=job.id,

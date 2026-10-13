@@ -14,7 +14,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.models import TrendSourceActivity, TrendSourceHealth
 from app.observability import get_logger
+from app.service_auth import get_service_scope
 
 logger = get_logger("routes_sources")
 
@@ -58,6 +59,7 @@ class SourceTestResponse(BaseModel):
 # ─── Routes ─────────────────────────────────────────────────────────────────
 @router.get("/health", response_model=SourceHealthResponse)
 async def list_source_health(
+    request: Request,
     agencyId: Optional[uuid.UUID] = None,
     session: AsyncSession = Depends(get_session),
 ) -> SourceHealthResponse:
@@ -66,6 +68,10 @@ async def list_source_health(
     Aggregates `trend_source_health` (circuit state) with the last-24h
     rollup from `trend_source_activity`.
     """
+    scope = get_service_scope(request)
+    if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
+    agencyId = agencyId or scope.agency_id
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
 
     health_stmt = select(TrendSourceHealth)
@@ -111,11 +117,16 @@ async def list_source_health(
 @router.post("/{source_key}/test", response_model=SourceTestResponse)
 async def test_source(
     source_key: str,
+    request: Request,
     agencyId: Optional[uuid.UUID] = None,
 ) -> SourceTestResponse:
     """Run a 1-call sample fetch for `source_key`. The body is empty
     (source_key comes from the path); agency_id comes from the query string.
     """
+    scope = get_service_scope(request)
+    if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
+    agencyId = agencyId or scope.agency_id
     # Resolve the registered extractor for this source key. We scan the
     # full registry to find the (platform, source_key) pair.
     from app.extractor.base import all_sources

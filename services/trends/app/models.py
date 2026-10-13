@@ -135,6 +135,32 @@ class TrendFetchJob(Base):
     __table_args__ = (Index("trend_fetch_job_workspace_source_created_idx", "workspace_id", "source_key", "created_at"), Index("trend_fetch_job_status_created_idx", "status", "created_at"))
 
 
+class TrendJobExecution(Base):
+    """Durable worker state. The lease token is the fencing token."""
+
+    __tablename__ = "trend_job_execution"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("trend_fetch_job.id", ondelete="cascade"), primary_key=True)
+    job_kind: Mapped[str] = mapped_column(Text, nullable=False, default="trend_sync")
+    agency_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("agency.id", ondelete="restrict"), nullable=False)
+    workspace_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("workspace.id", ondelete="cascade"), nullable=True)
+    source_key: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, server_default=text("'{}'::jsonb"))
+    dedupe_key: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="queued")
+    attempt_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    max_attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    available_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    lease_owner: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    lease_token: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    lease_expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error_code: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    last_error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    __table_args__ = (Index("trend_job_execution_claim_idx", "status", "available_at", "created_at"), Index("trend_job_execution_scope_idx", "agency_id", "workspace_id", "created_at"))
+
+
 class TrendSourceHealth(Base):
     __tablename__ = "trend_source_health"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))

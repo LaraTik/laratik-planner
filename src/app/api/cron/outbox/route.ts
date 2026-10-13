@@ -1,8 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { timingSafeEqual } from "node:crypto";
+import { isCronAuthorized } from "@/lib/cron/auth";
 import { dispatchOutboxOnce } from "@/lib/notifications/service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
-import { serverEnv } from "@/lib/validation/env";
 
 /**
  * GET/POST /api/cron/outbox
@@ -32,32 +31,12 @@ export const runtime = "nodejs";
 
 const MAX_RUNTIME_MS = 50_000; // leave a 10s cushion under the 60s VPS timeout
 
-function safeEqual(a: string, b: string): boolean {
-  const aBuf = Buffer.from(a, "utf8");
-  const bBuf = Buffer.from(b, "utf8");
-  if (aBuf.length !== bBuf.length) {
-    // Run a constant-time comparison anyway to keep the timing side-channel
-    // from leaking the expected length.
-    timingSafeEqual(aBuf, aBuf);
-    return false;
-  }
-  return timingSafeEqual(aBuf, bBuf);
-}
-
 function unauthorized(): NextResponse {
   return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
 }
 
-function isAuthorized(req: NextRequest): boolean {
-  const auth = req.headers.get("authorization");
-  if (!auth || !auth.startsWith("Bearer ")) return false;
-  const presented = auth.slice("Bearer ".length).trim();
-  if (!serverEnv.CRON_SECRET) return false;
-  return safeEqual(presented, serverEnv.CRON_SECRET);
-}
-
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (!isAuthorized(req)) return unauthorized();
+  if (!isCronAuthorized(req.headers)) return unauthorized();
 
   const start = Date.now();
   let result: Awaited<ReturnType<typeof dispatchOutboxOnce>>;

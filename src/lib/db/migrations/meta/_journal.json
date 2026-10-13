@@ -512,6 +512,13 @@
       "when": 1791846303366,
       "tag": "0072_canonical_oauth_return_path",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1791883695745,
+      "tag": "0073_durable_trend_job_execution",
+      "breakpoints": true
     }
   ]
 }

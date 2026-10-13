@@ -150,6 +150,8 @@ services:
       # The sidecar never publishes trends without explicit
       # enablement in the agency admin surface. Off by default.
       TRENDS_RADAR_ENABLED: ${TRENDS_RADAR_ENABLED:-false}
+      TRENDS_SERVICE_SECRET: ${TRENDS_SERVICE_SECRET}
+      TRENDS_SERVICE_AUTH_REQUIRED: ${TRENDS_SERVICE_AUTH_REQUIRED:-true}
     depends_on:
       postgres:
         condition: service_healthy

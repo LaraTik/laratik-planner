@@ -113,6 +113,7 @@ async def run_with_fallback(
         platform=platform,
         max_age_hours=cache_max_age_hours,
         agency_id=agency_id,
+        workspace_id=workspace_id,
     )
     if cached:
         attempts.append({"source_key": "cache:last_good", "outcome": "success", "count": len(cached)})
@@ -127,15 +128,29 @@ async def _last_good_cache(
     platform: str,
     max_age_hours: int,
     agency_id: Optional[UUID],
+    workspace_id: Optional[UUID],
 ) -> list[RawSignal]:
     """Return the most-recent successful signals for `platform` as raw
     RawSignal stubs (re-using only the public columns). Intended to keep
     the feed alive when every extractor is failing.
     """
+    # A fallback row is copied into the current scope by the caller. Without
+    # an explicit workspace scope, returning any row would be a cross-tenant
+    # data leak; agency_id alone cannot safely constrain TrendSignal because
+    # the fact table stores workspace_id as its tenant key.
+    if workspace_id is None:
+        logger.warning(
+            "fallback.cache_scope_missing",
+            platform=platform,
+            agency_id=str(agency_id) if agency_id else None,
+        )
+        return []
+
     cutoff = datetime.now(timezone.utc) - timedelta(hours=max_age_hours)
     stmt = (
         select(TrendSignal)
         .where(TrendSignal.platform == platform)
+        .where(TrendSignal.workspace_id == workspace_id)
         .where(TrendSignal.fetched_at >= cutoff)
         .order_by(TrendSignal.fetched_at.desc())
         .limit(50)

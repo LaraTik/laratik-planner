@@ -33,6 +33,12 @@ yarn-error.log*
 .env.development
 .env.production
 .env.*.local
+services/trends/.venv/
+services/trends/.pytest_cache/
+**/.pytest_cache/
+services/trends/.mypy_cache/
+services/trends/**/__pycache__/
+services/trends/*.egg-info/
 
 # worktrees
 /.worktrees/

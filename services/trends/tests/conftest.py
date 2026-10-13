@@ -44,6 +44,7 @@ def _env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DATABASE_URL", "postgresql+asyncpg://test:test@localhost:5432/test")
     monkeypatch.setenv("LOG_LEVEL", "warning")
     monkeypatch.setenv("MODEL_CACHE_DIR", "/tmp/laratik-trends-test-models")
+    monkeypatch.setenv("TRENDS_SERVICE_AUTH_REQUIRED", "false")
     # Per-source keys left unset (the sidecar boots without them).
 
 

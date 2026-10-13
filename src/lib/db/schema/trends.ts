@@ -11,6 +11,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 import { idColumn, timestamps } from "./_helpers";
@@ -21,7 +22,7 @@ import { contentItems } from "./content";
 /**
  * Trend Radar — STUDIOFLOW_MASTER_PROMPT.md §13–§20.
  *
- * 12 additive tables for the trend discovery, curation, closed-loop
+ * 13 additive tables for the trend discovery, curation, closed-loop
  * brief measurement, source health, audit, and per-workspace opt-out
  * subsystems:
  *
@@ -37,6 +38,7 @@ import { contentItems } from "./content";
  *  10. trend_feedback         — user feedback for Fit score training
  *  11. saved_filter           — saved Trends filters (§14.2)
  *  12. workspace_source_optout — per-workspace source opt-out (§13.8)
+ *  13. trend_job_execution — durable worker leases and retries
  *
  * Additive: these tables are net-new. No existing column is altered.
  *
@@ -300,6 +302,61 @@ export const trendFetchJobs = pgTable(
   ],
 );
 
+// Durable execution state for Trend Radar. `trend_fetch_job` remains the
+// user-visible result; this table owns retries, leases, fencing, and dedupe.
+export const trendJobExecutions = pgTable(
+  "trend_job_execution",
+  {
+    id: uuid("id")
+      .primaryKey()
+      .references(() => trendFetchJobs.id, { onDelete: "cascade" }),
+    jobKind: text("job_kind").notNull().default("trend_sync"),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "restrict" }),
+    workspaceId: uuid("workspace_id").references(() => workspaces.id, { onDelete: "cascade" }),
+    sourceKey: text("source_key"),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    dedupeKey: text("dedupe_key").notNull(),
+    status: text("status").notNull().default("queued"),
+    attemptCount: integer("attempt_count").notNull().default(0),
+    maxAttempts: integer("max_attempts").notNull().default(5),
+    availableAt: timestamp("available_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    leaseOwner: text("lease_owner"),
+    leaseToken: uuid("lease_token"),
+    leaseExpiresAt: timestamp("lease_expires_at", { withTimezone: true, mode: "date" }),
+    lastErrorCode: text("last_error_code"),
+    lastErrorMessage: text("last_error_message"),
+    completedAt: timestamp("completed_at", { withTimezone: true, mode: "date" }),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    updatedAt: timestamp("updated_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+  },
+  (t) => [
+    index("trend_job_execution_claim_idx").on(t.status, t.availableAt, t.createdAt),
+    index("trend_job_execution_scope_idx").on(t.agencyId, t.workspaceId, t.createdAt),
+    uniqueIndex("trend_job_execution_dedupe_active_unique")
+      .on(t.dedupeKey)
+      .where(sql`${t.status} IN ('queued', 'running')`),
+    check(
+      "trend_job_execution_status_valid",
+      sql`${t.status} IN ('queued', 'running', 'succeeded', 'failed', 'dead_letter', 'cancelled')`,
+    ),
+    check(
+      "trend_job_execution_attempts_valid",
+      sql`${t.attemptCount} >= 0 AND ${t.maxAttempts} BETWEEN 1 AND 20`,
+    ),
+  ],
+);
+
 // ─── 7. trend_source_health ───────────────────────────────────────────────
 // Per-source health snapshot, refreshed on every fetch (§13.5). One
 // row per (agencyId, sourceKey); the latest `checked_at` is the
@@ -520,6 +577,8 @@ export type TrendBrief = typeof trendBriefs.$inferSelect;
 export type NewTrendBrief = typeof trendBriefs.$inferInsert;
 export type TrendFetchJob = typeof trendFetchJobs.$inferSelect;
 export type NewTrendFetchJob = typeof trendFetchJobs.$inferInsert;
+export type TrendJobExecution = typeof trendJobExecutions.$inferSelect;
+export type NewTrendJobExecution = typeof trendJobExecutions.$inferInsert;
 export type TrendSourceHealth = typeof trendSourceHealth.$inferSelect;
 export type NewTrendSourceHealth = typeof trendSourceHealth.$inferInsert;
 export type TrendSourceAudit = typeof trendSourceAudits.$inferSelect;

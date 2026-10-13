@@ -20,6 +20,13 @@ const eslintConfig = defineConfig([
     // Visual-regression snapshots are generated artifacts (absolute-path
     // filenames, OS-specific suffixes). Not source.
     "tests/e2e/visual-regression.spec.ts-snapshots/**",
+    // Python virtualenvs and test caches are generated third-party artifacts;
+    // keep services/trends/app and services/trends/tests linted.
+    "**/.venv/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/__pycache__/**",
+    "**/*.egg-info/**",
   ]),
 ]);
 

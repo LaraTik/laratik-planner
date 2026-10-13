@@ -38,6 +38,7 @@ from app.observability import (
 )
 from app.routes import router as api_router
 from app.scheduler import get_scheduler, start_scheduler, stop_scheduler
+from app.worker import start_worker, stop_worker
 
 
 logger = get_logger("main")
@@ -72,6 +73,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if settings.TRENDS_RADAR_ENABLED:
         try:
             await start_scheduler(get_session_factory())
+            await start_worker(get_session_factory())
         except Exception as exc:  # noqa: BLE001
             logger.error("scheduler.start.failed", error=str(exc))
     else:
@@ -87,6 +89,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         await stop_scheduler()
+        await stop_worker()
         await dispose_engine()
         logger.info("sidecar.shutdown.complete")
 

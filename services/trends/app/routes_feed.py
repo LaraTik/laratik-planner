@@ -14,13 +14,14 @@ import uuid
 from datetime import datetime, timezone
 from typing import Annotated, Any, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
-from sqlalchemy import and_, desc, select
+from sqlalchemy import and_, desc, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db import get_session
 from app.models import TrendSignal
+from app.service_auth import get_service_scope
 
 router = APIRouter(prefix="/v1/feed", tags=["feed"])
 
@@ -101,6 +102,7 @@ def _decode_cursor(cursor: str) -> dict[str, Any]:
 # ─── Routes ─────────────────────────────────────────────────────────────────
 @router.get("", response_model=FeedResponse)
 async def list_feed(
+    request: Request,
     workspaceId: Optional[uuid.UUID] = Query(None, description="Workspace id for tenancy scoping."),
     agencyId: Optional[uuid.UUID] = Query(None, description="Deprecated alias for workspaceId."),
     platform: Optional[str] = Query(None, description="Comma-separated platform list."),
@@ -115,9 +117,18 @@ async def list_feed(
 ) -> FeedResponse:
     """Paginated feed. A workspace id is required; `agencyId` remains a
     backwards-compatible alias for existing internal callers."""
-    scope_id = workspaceId or agencyId
+    scope = get_service_scope(request)
+    if scope.workspace_id is not None and workspaceId is not None and workspaceId != scope.workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
+    scope_id = workspaceId or agencyId or scope.workspace_id or scope.agency_id
     if scope_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_id_required")
+    if scope.agency_id is not None and scope.workspace_id is None:
+        belongs = await session.execute(text("SELECT 1 FROM workspace WHERE id = :workspace_id AND agency_id = :agency_id AND archived_at IS NULL"), {"workspace_id": scope_id, "agency_id": scope.agency_id})
+        if belongs.first() is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
     allowed_sort_columns = {"score", "velocity", "fetched_at", "label"}
     if sortBy not in allowed_sort_columns:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="invalid_sort")
@@ -181,15 +192,27 @@ async def list_feed(
 @router.get("/{signal_id}", response_model=WhyPayload)
 async def get_signal(
     signal_id: uuid.UUID,
-    agencyId: uuid.UUID = Query(..., description="Agency ID for tenancy scoping."),
+    request: Request,
+    workspaceId: Optional[uuid.UUID] = Query(None, description="Workspace id for tenancy scoping."),
+    agencyId: Optional[uuid.UUID] = Query(None, description="Deprecated alias for workspaceId."),
     session: AsyncSession = Depends(get_session),
 ) -> WhyPayload:
     """Return a single signal + the 'why' drawer payload."""
-    if workspaceId is None and agencyId is None:
+    scope = get_service_scope(request)
+    if scope.workspace_id is not None and workspaceId is not None and workspaceId != scope.workspace_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
+    if scope.agency_id is not None and agencyId is not None and agencyId != scope.agency_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="agency_scope_mismatch")
+    scope_id = workspaceId or agencyId or scope.workspace_id or scope.agency_id
+    if scope_id is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="workspace_id_required")
+    if scope.agency_id is not None and scope.workspace_id is None:
+        belongs = await session.execute(text("SELECT 1 FROM workspace WHERE id = :workspace_id AND agency_id = :agency_id AND archived_at IS NULL"), {"workspace_id": scope_id, "agency_id": scope.agency_id})
+        if belongs.first() is None:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="workspace_scope_mismatch")
     stmt = select(TrendSignal).where(
         TrendSignal.id == signal_id,
-        TrendSignal.workspace_id == (workspaceId or agencyId),
+        TrendSignal.workspace_id == scope_id,
         TrendSignal.expires_at > datetime.now(timezone.utc),
     )
     signal = (await session.execute(stmt)).scalar_one_or_none()

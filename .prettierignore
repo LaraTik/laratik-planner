@@ -17,6 +17,12 @@ src/lib/db/migrations/meta/*.json
 # visual-diff harness that compares against the raw Stitch output.
 designs/stitch/
 designs/stitch-current/
+services/trends/.venv/
+services/trends/.pytest_cache/
+**/.pytest_cache/
+services/trends/.mypy_cache/
+services/trends/**/__pycache__/
+services/trends/*.egg-info/
 
 # pnpm lockfile is auto-generated and shouldn't be hand-formatted
 pnpm-lock.yaml
