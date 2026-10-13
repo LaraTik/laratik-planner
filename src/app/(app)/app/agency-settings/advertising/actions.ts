@@ -8,7 +8,13 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { db } from "@/lib/db";
-import { advertisingAccounts, advertisingConnections, workspaces } from "@/lib/db/schema";
+import {
+  advertisingAccounts,
+  advertisingConnectionAccounts,
+  advertisingConnections,
+  advertisingSyncStates,
+  workspaces,
+} from "@/lib/db/schema";
 import {
   AdvertisingConnectionInputError,
   createAdvertisingConnection,
@@ -28,6 +34,7 @@ import {
   grantAdvertisingVisibility,
 } from "@/lib/advertising/grant-service";
 import { AdvertisingGrantInputError } from "@/lib/advertising/grant-service";
+import { AdvertisingSyncInputError, setAdvertisingSyncState } from "@/lib/advertising/sync-service";
 
 const ConnectionSchema = z.object({
   displayName: z.string().trim().min(1).max(120),
@@ -60,6 +67,11 @@ const FinancialAuthoritySchema = z.object({
   accountId: z.string().uuid(),
   workspaceId: z.string().uuid().optional(),
 });
+const SyncStateSchema = z.object({
+  connectionId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  enabled: z.enum(["true", "false"]).transform((value) => value === "true"),
+});
 
 export type AdvertisingActionState = {
   ok?: boolean;
@@ -85,6 +97,7 @@ async function requireAdmin() {
 function errorState(error: unknown): AdvertisingActionState {
   if (error instanceof AdvertisingConnectionInputError) return { code: error.message };
   if (error instanceof AdvertisingGrantInputError) return { code: error.message };
+  if (error instanceof AdvertisingSyncInputError) return { code: error.message };
   if (error instanceof AdvertisingConnectionNotFoundError)
     return { code: "advertising_connection_not_found" };
   if (error instanceof AdvertisingConnectionRevokedError)
@@ -97,6 +110,7 @@ function errorState(error: unknown): AdvertisingActionState {
     "advertising_connection_not_found",
     "advertising_connection_not_active",
     "advertising_connection_account_not_active",
+    "advertising_account_not_active",
     "advertising_connection_revoked",
     "advertising_account_not_in_agency",
     "workspace_not_in_agency",
@@ -273,6 +287,34 @@ export async function grantAdvertisingFinancialAuthorityAction(
   }
 }
 
+export async function setAdvertisingSyncStateAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = SyncStateSchema.safeParse({
+      connectionId: formData.get("connectionId"),
+      accountId: formData.get("accountId"),
+      enabled: formData.get("enabled"),
+    });
+    if (!parsed.success) return { code: "invalid_sync_state" };
+    const state = await setAdvertisingSyncState(db, {
+      agencyId,
+      ...parsed.data,
+      actorId: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return {
+      ok: true,
+      code: parsed.data.enabled ? "sync_activated" : "sync_disabled",
+      connectionId: state.connectionId,
+    };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
 export async function listAdvertisingConnectionsForAdmin() {
   const { agencyId } = await requireAdmin();
   return db
@@ -295,7 +337,7 @@ export async function listAdvertisingConnectionsForAdmin() {
 
 export async function listAdvertisingResourcesForAdmin() {
   const { agencyId } = await requireAdmin();
-  const [accounts, agencyWorkspaces] = await Promise.all([
+  const [accounts, agencyWorkspaces, syncStates, connectionAccounts] = await Promise.all([
     db
       .select({
         id: advertisingAccounts.id,
@@ -313,6 +355,49 @@ export async function listAdvertisingResourcesForAdmin() {
       .from(workspaces)
       .where(eq(workspaces.agencyId, agencyId))
       .orderBy(desc(workspaces.name)),
+    db
+      .select({
+        id: advertisingSyncStates.id,
+        connectionId: advertisingSyncStates.connectionId,
+        accountId: advertisingSyncStates.accountId,
+        accountName: advertisingAccounts.name,
+        externalAccountId: advertisingAccounts.externalAccountId,
+        status: advertisingSyncStates.status,
+        lastCompletedAt: advertisingSyncStates.lastCompletedAt,
+        nextRunAt: advertisingSyncStates.nextRunAt,
+        lastErrorCode: advertisingSyncStates.lastErrorCode,
+      })
+      .from(advertisingSyncStates)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingSyncStates.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .innerJoin(advertisingAccounts, eq(advertisingAccounts.id, advertisingSyncStates.accountId))
+      .orderBy(desc(advertisingSyncStates.updatedAt)),
+    db
+      .select({
+        connectionId: advertisingConnectionAccounts.connectionId,
+        accountId: advertisingConnectionAccounts.accountId,
+        accountName: advertisingAccounts.name,
+        externalAccountId: advertisingAccounts.externalAccountId,
+        status: advertisingConnectionAccounts.status,
+      })
+      .from(advertisingConnectionAccounts)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .innerJoin(
+        advertisingAccounts,
+        eq(advertisingAccounts.id, advertisingConnectionAccounts.accountId),
+      )
+      .orderBy(desc(advertisingConnectionAccounts.updatedAt)),
   ]);
-  return { accounts, workspaces: agencyWorkspaces };
+  return { accounts, workspaces: agencyWorkspaces, syncStates, connectionAccounts };
 }

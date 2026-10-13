@@ -4,6 +4,7 @@ import {
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingCredentialVersions,
+  advertisingSyncStates,
 } from "@/lib/db/schema";
 import { createDekCache, getDekForAgency } from "@/lib/social/key-management";
 import {
@@ -160,6 +161,10 @@ export async function revokeAdvertisingConnection(
       .update(advertisingConnectionAccounts)
       .set({ status: "revoked", updatedAt: new Date() })
       .where(eq(advertisingConnectionAccounts.connectionId, args.connectionId));
+    await tx
+      .update(advertisingSyncStates)
+      .set({ status: "paused", nextRunAt: null, updatedAt: new Date() })
+      .where(eq(advertisingSyncStates.connectionId, args.connectionId));
     return result[0];
   });
   if (!updated) throw new AdvertisingConnectionNotFoundError();

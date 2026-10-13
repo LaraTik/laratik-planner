@@ -47,6 +47,12 @@ export default async function AdvertisingSettingsPage() {
         }))}
         accounts={resources.accounts}
         workspaces={resources.workspaces}
+        syncStates={resources.syncStates.map((state) => ({
+          ...state,
+          lastCompletedAt: state.lastCompletedAt?.toISOString() ?? null,
+          nextRunAt: state.nextRunAt?.toISOString() ?? null,
+        }))}
+        connectionAccounts={resources.connectionAccounts}
       />
     </div>
   );

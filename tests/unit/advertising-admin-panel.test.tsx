@@ -9,6 +9,7 @@ vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
   revokeAdvertisingConnectionAction: vi.fn(async () => ({})),
   storeAdvertisingCredentialAction: vi.fn(async () => ({})),
   validateAdvertisingConnectionAction: vi.fn(async () => ({})),
+  setAdvertisingSyncStateAction: vi.fn(async () => ({})),
 }));
 
 const connection = {
@@ -26,7 +27,15 @@ const connection = {
 
 describe("AdvertisingAdminPanel", () => {
   it("renders the platform-owned credential workflow without exposing a stored token", () => {
-    render(<AdvertisingAdminPanel connections={[connection]} accounts={[]} workspaces={[]} />);
+    render(
+      <AdvertisingAdminPanel
+        connections={[connection]}
+        accounts={[]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[]}
+      />,
+    );
 
     expect(screen.getByTestId("advertising-create-form")).toBeInTheDocument();
     expect(screen.getByText("Agency Meta")).toBeInTheDocument();
@@ -36,10 +45,52 @@ describe("AdvertisingAdminPanel", () => {
   });
 
   it("renders the empty state when no connection exists", () => {
-    render(<AdvertisingAdminPanel connections={[]} accounts={[]} workspaces={[]} />);
+    render(
+      <AdvertisingAdminPanel
+        connections={[]}
+        accounts={[]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[]}
+      />,
+    );
 
     expect(screen.getByTestId("advertising-empty")).toHaveTextContent(
       "No Meta advertising connections have been configured.",
     );
+  });
+
+  it("renders an explicit sync activation control for a discovered account", () => {
+    render(
+      <AdvertisingAdminPanel
+        connections={[{ ...connection, status: "active", currentCredentialVersion: 1 }]}
+        accounts={[
+          {
+            id: "00000000-0000-4000-8000-000000000202",
+            name: "LaraTik Ads",
+            externalAccountId: "act_202",
+            currency: "EUR",
+            timezone: "Europe/Berlin",
+            status: "active",
+          },
+        ]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[
+          {
+            connectionId: connection.id,
+            accountId: "00000000-0000-4000-8000-000000000202",
+            accountName: "LaraTik Ads",
+            externalAccountId: "act_202",
+            status: "active",
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId(`advertising-sync-${connection.id}`)).toHaveTextContent(
+      "Advertising sync",
+    );
+    expect(screen.getByRole("button", { name: "Activate sync" })).toBeEnabled();
   });
 });

@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { KeyRound, Plus, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
+import { KeyRound, Pause, Play, Plus, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PasswordInput } from "@/components/forms/password-input";
@@ -19,6 +19,7 @@ import {
   revokeAdvertisingConnectionAction,
   storeAdvertisingCredentialAction,
   validateAdvertisingConnectionAction,
+  setAdvertisingSyncStateAction,
   type AdvertisingActionState,
 } from "./actions";
 
@@ -43,6 +44,24 @@ type AdvertisingAccount = {
   status: string;
 };
 type Workspace = { id: string; name: string };
+type SyncState = {
+  id: string;
+  connectionId: string;
+  accountId: string;
+  accountName: string;
+  externalAccountId: string;
+  status: string;
+  lastCompletedAt: string | null;
+  nextRunAt: string | null;
+  lastErrorCode: string | null;
+};
+type ConnectionAccount = {
+  connectionId: string;
+  accountId: string;
+  accountName: string;
+  externalAccountId: string;
+  status: string;
+};
 
 const initial: AdvertisingActionState = {};
 
@@ -55,10 +74,14 @@ export function AdvertisingAdminPanel({
   connections,
   accounts,
   workspaces,
+  syncStates,
+  connectionAccounts,
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
   workspaces: readonly Workspace[];
+  syncStates: readonly SyncState[];
+  connectionAccounts: readonly ConnectionAccount[];
 }) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
@@ -111,7 +134,14 @@ export function AdvertisingAdminPanel({
         </Card>
       ) : (
         connections.map((connection) => (
-          <ConnectionCard key={connection.id} connection={connection} />
+          <ConnectionCard
+            key={connection.id}
+            connection={connection}
+            syncStates={syncStates.filter((state) => state.connectionId === connection.id)}
+            connectionAccounts={connectionAccounts.filter(
+              (link) => link.connectionId === connection.id,
+            )}
+          />
         ))
       )}
       <GrantAccessCard accounts={accounts} workspaces={workspaces} />
@@ -264,13 +294,22 @@ function GrantAccessCard({
   );
 }
 
-function ConnectionCard({ connection }: { connection: Connection }) {
+function ConnectionCard({
+  connection,
+  syncStates,
+  connectionAccounts,
+}: {
+  connection: Connection;
+  syncStates: readonly SyncState[];
+  connectionAccounts: readonly ConnectionAccount[];
+}) {
   const t = useLocaleT();
   const [credentialState, credentialAction] = useActionState(
     storeAdvertisingCredentialAction,
     initial,
   );
   const [revokeState, revokeAction] = useActionState(revokeAdvertisingConnectionAction, initial);
+  const [syncState, syncAction] = useActionState(setAdvertisingSyncStateAction, initial);
   const [validationState, setValidationState] = React.useState<AdvertisingActionState>({});
   const [validating, setValidating] = React.useState(false);
   const [revealed, setRevealed] = React.useState(false);
@@ -390,6 +429,62 @@ function ConnectionCard({ connection }: { connection: Connection }) {
             </p>
           ))}
         </div>
+      </div>
+      <div
+        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        data-testid={`advertising-sync-${connection.id}`}
+      >
+        <div>
+          <h3 className="text-body text-fg-primary font-semibold">{t("advertising.syncTitle")}</h3>
+          <p className="text-label text-fg-muted">{t("advertising.syncDescription")}</p>
+        </div>
+        {connectionAccounts.length === 0 ? (
+          <p className="text-label text-fg-secondary">{t("advertising.noLinkedAccounts")}</p>
+        ) : (
+          <div className="space-y-2">
+            {connectionAccounts.map((link) => {
+              const state = syncStates.find((candidate) => candidate.accountId === link.accountId);
+              const paused = state?.status === "paused" || !state;
+              return (
+                <div
+                  key={link.accountId}
+                  className="border-border flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+                >
+                  <div>
+                    <p className="text-body text-fg-primary font-medium">
+                      {t("advertising.accountOption", {
+                        name: link.accountName,
+                        externalId: link.externalAccountId,
+                      })}
+                    </p>
+                    <p className="text-label text-fg-muted">
+                      {t(`advertising.syncStatus.${state?.status ?? "paused"}`)}
+                    </p>
+                  </div>
+                  <form action={syncAction}>
+                    <input type="hidden" name="connectionId" value={connection.id} />
+                    <input type="hidden" name="accountId" value={link.accountId} />
+                    <input type="hidden" name="enabled" value={paused ? "true" : "false"} />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant={paused ? "secondary" : "outline"}
+                      disabled={link.status !== "active" || connection.status !== "active"}
+                    >
+                      {paused ? (
+                        <Play className="h-4 w-4" aria-hidden="true" />
+                      ) : (
+                        <Pause className="h-4 w-4" aria-hidden="true" />
+                      )}
+                      {paused ? t("advertising.activateSync") : t("advertising.disableSync")}
+                    </Button>
+                  </form>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        {syncState.code ? <ActionMessage state={syncState} compact /> : null}
       </div>
     </Card>
   );
