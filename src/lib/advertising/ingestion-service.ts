@@ -1,9 +1,10 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingSyncStates,
   advertisingSpendObservations,
   advertisingSpendReconciliations,
 } from "@/lib/db/schema";
@@ -38,6 +39,18 @@ export class AdvertisingIngestionError extends Error {
     this.name = "AdvertisingIngestionError";
   }
 }
+
+export class AdvertisingLeaseLostError extends Error {
+  constructor() {
+    super("advertising_lease_lost");
+    this.name = "AdvertisingLeaseLostError";
+  }
+}
+
+export type AdvertisingLease = {
+  readonly stateId: string;
+  readonly leaseToken: string;
+};
 
 function parseMicros(value: string): bigint {
   if (!/^\d+(?:\.\d{1,6})?$/.test(value))
@@ -87,6 +100,7 @@ export async function ingestAdvertisingSpend(
     connectionId: string;
     syncRunId?: string | null | undefined;
     providerDataVersion?: string | null | undefined;
+    lease?: AdvertisingLease | undefined;
     observations: readonly AdvertisingSpendObservationInput[];
   },
 ) {
@@ -122,8 +136,41 @@ export async function ingestAdvertisingSpend(
     .limit(1);
   if (!connection) throw new AdvertisingIngestionError("advertising_connection_account_not_active");
 
-  if (args.observations.length === 0) return { written: 0 };
+  if (args.observations.length === 0) {
+    if (args.lease) {
+      await db
+        .select({ id: advertisingSyncStates.id })
+        .from(advertisingSyncStates)
+        .where(
+          and(
+            eq(advertisingSyncStates.id, args.lease.stateId),
+            eq(advertisingSyncStates.leaseToken, args.lease.leaseToken),
+            gt(advertisingSyncStates.leaseExpiresAt, new Date()),
+          ),
+        )
+        .limit(1)
+        .then((rows) => {
+          if (!rows[0]) throw new AdvertisingLeaseLostError();
+        });
+    }
+    return { written: 0 };
+  }
   const written = await db.transaction(async (tx) => {
+    if (args.lease) {
+      const [lease] = await tx
+        .select({ id: advertisingSyncStates.id })
+        .from(advertisingSyncStates)
+        .where(
+          and(
+            eq(advertisingSyncStates.id, args.lease.stateId),
+            eq(advertisingSyncStates.leaseToken, args.lease.leaseToken),
+            gt(advertisingSyncStates.leaseExpiresAt, new Date()),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (!lease) throw new AdvertisingLeaseLostError();
+    }
     const rows = await tx
       .insert(advertisingSpendObservations)
       .values(
@@ -181,29 +228,48 @@ export async function upsertAdvertisingReconciliation(
     currency: string;
     attributionWindow: string;
     reconciliation: SpendReconciliation;
+    lease?: AdvertisingLease | undefined;
   },
 ) {
-  const [row] = await db
-    .insert(advertisingSpendReconciliations)
-    .values({
-      agencyId: args.agencyId,
-      accountId: args.accountId,
-      reportDate: args.reportDate,
-      currency: args.currency,
-      attributionWindow: args.attributionWindow,
-      ...args.reconciliation,
-      checkedAt: new Date(),
-    })
-    .onConflictDoUpdate({
-      target: [
-        advertisingSpendReconciliations.agencyId,
-        advertisingSpendReconciliations.accountId,
-        advertisingSpendReconciliations.reportDate,
-        advertisingSpendReconciliations.attributionWindow,
-      ],
-      set: { ...args.reconciliation, checkedAt: new Date(), updatedAt: new Date() },
-    })
-    .returning({ id: advertisingSpendReconciliations.id });
-  if (!row) throw new AdvertisingIngestionError("advertising_reconciliation_not_persisted");
-  return row;
+  return db.transaction(async (tx) => {
+    if (args.lease) {
+      const [lease] = await tx
+        .select({ id: advertisingSyncStates.id })
+        .from(advertisingSyncStates)
+        .where(
+          and(
+            eq(advertisingSyncStates.id, args.lease.stateId),
+            eq(advertisingSyncStates.leaseToken, args.lease.leaseToken),
+            gt(advertisingSyncStates.leaseExpiresAt, new Date()),
+          ),
+        )
+        .for("update")
+        .limit(1);
+      if (!lease) throw new AdvertisingLeaseLostError();
+    }
+
+    const [row] = await tx
+      .insert(advertisingSpendReconciliations)
+      .values({
+        agencyId: args.agencyId,
+        accountId: args.accountId,
+        reportDate: args.reportDate,
+        currency: args.currency,
+        attributionWindow: args.attributionWindow,
+        ...args.reconciliation,
+        checkedAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [
+          advertisingSpendReconciliations.agencyId,
+          advertisingSpendReconciliations.accountId,
+          advertisingSpendReconciliations.reportDate,
+          advertisingSpendReconciliations.attributionWindow,
+        ],
+        set: { ...args.reconciliation, checkedAt: new Date(), updatedAt: new Date() },
+      })
+      .returning({ id: advertisingSpendReconciliations.id });
+    if (!row) throw new AdvertisingIngestionError("advertising_reconciliation_not_persisted");
+    return row;
+  });
 }

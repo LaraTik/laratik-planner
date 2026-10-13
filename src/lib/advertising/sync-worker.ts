@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { addMinutes } from "date-fns";
-import { and, asc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNull, lte, or, sql } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
@@ -17,6 +17,8 @@ import {
 } from "./meta-ingestion";
 import {
   buildSpendReconciliation,
+  type AdvertisingLease,
+  AdvertisingLeaseLostError,
   ingestAdvertisingSpend,
   upsertAdvertisingReconciliation,
 } from "./ingestion-service";
@@ -221,6 +223,7 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
       connectionId: target.connection.id,
       syncRunId: syncRun.id,
       providerDataVersion: context.definitionVersion,
+      lease: leaseFor(target),
       observations: adInsights.observations,
     });
 
@@ -243,6 +246,7 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
         reportDate: accountRow.reportDate,
         currency: target.account.currency,
         attributionWindow: context.attributionWindow ?? "account",
+        lease: leaseFor(target),
         reconciliation: buildSpendReconciliation({
           providerAccountSpend: accountRow.spend,
           canonicalAdSpend: canonical,
@@ -263,9 +267,17 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
         completedAt: now,
       })
       .where(eq(advertisingSyncRuns.id, syncRun.id));
-    await finishAdvertisingSync(db, target, now, partial ? "partial" : "idle");
+    const finished = await finishAdvertisingSync(db, target, now, partial ? "partial" : "idle");
+    if (!finished) {
+      await markSyncRunLeaseLost(db, syncRun.id, now);
+      return "skipped" as const;
+    }
     return partial ? ("partial" as const) : ("succeeded" as const);
   } catch (error) {
+    if (error instanceof AdvertisingLeaseLostError) {
+      await markSyncRunLeaseLost(db, syncRun.id, now);
+      return "skipped" as const;
+    }
     const errorCode = advertisingSyncErrorCode(error);
     await db
       .update(advertisingSyncRuns)
@@ -274,6 +286,10 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
     await failAdvertisingSync(db, target, now, errorCode);
     return "failed" as const;
   }
+}
+
+function leaseFor(target: ClaimedSync): AdvertisingLease {
+  return { stateId: target.stateId, leaseToken: target.leaseToken };
 }
 
 function buildAdContext(account: AdvertisingAccount, now: Date): AdvertisingReportContext {
@@ -298,8 +314,9 @@ async function finishAdvertisingSync(
   target: ClaimedSync,
   now: Date,
   status: "idle" | "partial",
-) {
-  await db
+): Promise<boolean> {
+  const leaseNow = new Date();
+  const [updated] = await db
     .update(advertisingSyncStates)
     .set({
       status,
@@ -317,11 +334,15 @@ async function finishAdvertisingSync(
       and(
         eq(advertisingSyncStates.id, target.stateId),
         eq(advertisingSyncStates.leaseToken, target.leaseToken),
+        gt(advertisingSyncStates.leaseExpiresAt, leaseNow),
       ),
-    );
+    )
+    .returning({ id: advertisingSyncStates.id });
+  return Boolean(updated);
 }
 
 async function failAdvertisingSync(db: Db, target: ClaimedSync, now: Date, errorCode: string) {
+  const leaseNow = new Date();
   await db
     .update(advertisingSyncStates)
     .set({
@@ -338,8 +359,16 @@ async function failAdvertisingSync(db: Db, target: ClaimedSync, now: Date, error
       and(
         eq(advertisingSyncStates.id, target.stateId),
         eq(advertisingSyncStates.leaseToken, target.leaseToken),
+        gt(advertisingSyncStates.leaseExpiresAt, leaseNow),
       ),
     );
+}
+
+async function markSyncRunLeaseLost(db: Db, syncRunId: string, now: Date) {
+  await db
+    .update(advertisingSyncRuns)
+    .set({ status: "failed", errorCode: "advertising_lease_lost", completedAt: now })
+    .where(eq(advertisingSyncRuns.id, syncRunId));
 }
 
 function advertisingSyncErrorCode(error: unknown): string {
