@@ -240,3 +240,22 @@ export async function setAdvertisingCapability(
   if (!row) throw new Error("Advertising capability was not persisted");
   return row;
 }
+
+/** Activate only after the credential identity probe has passed. */
+export async function activateAdvertisingConnection(
+  db: Db,
+  args: { agencyId: string; connectionId: string },
+) {
+  const [connection] = await db
+    .update(advertisingConnections)
+    .set({ status: "active", revokedAt: null, updatedAt: new Date() })
+    .where(
+      and(
+        eq(advertisingConnections.id, args.connectionId),
+        eq(advertisingConnections.agencyId, args.agencyId),
+      ),
+    )
+    .returning({ id: advertisingConnections.id, status: advertisingConnections.status });
+  if (!connection) throw new AdvertisingConnectionInputError("advertising_connection_not_found");
+  return connection;
+}
