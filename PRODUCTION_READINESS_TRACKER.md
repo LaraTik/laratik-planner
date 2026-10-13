@@ -1,5 +1,14 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising sync-history fencing checkpoint** — Exact clean
+> code commit `76d6ef0` fences creation of `advertising_sync_run` history
+> behind the current sync lease token. A stale worker can no longer create a
+> new `running` history row after recovery has replaced its lease. Concurrent
+> claim and stale-history integration coverage passes 4/4. This remains
+> **Tested**, not **Verified**: controlled live Meta UAT, real ad-level
+> reconciliation, workspace reporting UI evidence, independent review, and
+> production deployment remain open.
+
 > **2026-10-13 advertising diagnostic remediation checkpoint** — Exact clean
 > code commit `1a3e84e` adds bilingual operation labels, failure explanations,
 > and recommended corrective actions to every non-success diagnostic in the
