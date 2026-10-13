@@ -1,5 +1,18 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising lease-fencing checkpoint** — Exact clean code
+> commit `035d99b` closes the stale-worker write path in the bounded Meta
+> sync. Provider ad-day facts and reconciliation rows are now persisted only
+> while the claimed sync lease token is valid under a row lock; expired
+> completion/failure transitions are rejected, and the run is recorded as
+> skipped with `advertising_lease_lost`. Focused advertising tests pass 7/7;
+> the full clean verification passes formatting, lint, typecheck, 506 unit
+> files / 4,705 tests, and the production build. No migration, production
+> deployment, or external Meta mutation was performed. This remains
+> **Tested**, not **Verified**: controlled live Meta UAT, real ad-level
+> reconciliation, workspace reporting UI evidence, independent review, and
+> production deployment remain open.
+
 > **2026-10-13 current release validation checkpoint** — Exact clean code
 > commit `15eadbf` keeps empty Meta account and Instagram probes explicitly
 > `partial` in durable validation history instead of recording a false pass.
