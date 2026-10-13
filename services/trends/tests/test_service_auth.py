@@ -1,15 +1,20 @@
 from __future__ import annotations
 
+import hashlib
 import time
 import uuid
-import hashlib
 
 import pytest
 from fastapi import HTTPException
 from starlette.requests import Request
 
 from app.config import get_settings
-from app.service_auth import _claim_nonce, require_service_context, sign_service_request
+from app.service_auth import (
+    AUTH_MAX_SKEW_SECONDS,
+    _claim_nonce,
+    require_service_context,
+    sign_service_request,
+)
 
 
 def _request(method: str, path: str, headers: dict[str, str], body: bytes = b"") -> Request:
@@ -140,4 +145,102 @@ async def test_missing_actor_scope_is_rejected(monkeypatch: pytest.MonkeyPatch) 
     get_settings.cache_clear()
     with pytest.raises(HTTPException, match="actor_scope_required"):
         await require_service_context(_request("GET", "/v1/sources/health", headers, body))
+    get_settings.cache_clear()
+
+
+def _signed_headers(
+    *,
+    secret: str,
+    method: str = "POST",
+    path: str = "/v1/sync",
+    body: bytes = b"{}",
+    timestamp: str | None = None,
+    nonce: str | None = None,
+    identity: str = "planner-api",
+    key_id: str = "active",
+) -> dict[str, str]:
+    timestamp = timestamp or str(int(time.time()))
+    nonce = nonce or str(uuid.uuid4())
+    agency_id = uuid.uuid4()
+    actor_id = uuid.uuid4()
+    headers = {
+        "x-laratik-service-timestamp": timestamp,
+        "x-laratik-service-nonce": nonce,
+        "x-laratik-service-identity": identity,
+        "x-laratik-service-key-id": key_id,
+        "x-laratik-service-body-sha256": hashlib.sha256(body).hexdigest(),
+        "x-laratik-agency-id": str(agency_id),
+        "x-laratik-actor-id": str(actor_id),
+    }
+    headers["x-laratik-service-signature"] = sign_service_request(
+        secret=secret,
+        method=method,
+        path=path,
+        timestamp=timestamp,
+        nonce=nonce,
+        agency_id=agency_id,
+        actor_id=actor_id,
+        identity=identity,
+        key_id=key_id,
+        body=body,
+    )
+    return headers
+
+
+@pytest.mark.asyncio
+async def test_timestamp_skew_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    secret = "test-service-secret"
+    body = b"{}"
+    timestamp = str(int(time.time()) - AUTH_MAX_SKEW_SECONDS - 1)
+    headers = _signed_headers(secret=secret, body=body, timestamp=timestamp)
+    monkeypatch.setenv("TRENDS_SERVICE_SECRET", secret)
+    monkeypatch.setenv("TRENDS_SERVICE_AUTH_REQUIRED", "true")
+    get_settings.cache_clear()
+    with pytest.raises(HTTPException, match="invalid_service_scope"):
+        await require_service_context(_request("POST", "/v1/sync", headers, body))
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_signature_binds_method_path_and_body(monkeypatch: pytest.MonkeyPatch) -> None:
+    secret = "test-service-secret"
+    body = b'{"fullSync":false}'
+    headers = _signed_headers(secret=secret, body=body)
+    monkeypatch.setenv("TRENDS_SERVICE_SECRET", secret)
+    monkeypatch.setenv("TRENDS_SERVICE_AUTH_REQUIRED", "true")
+    get_settings.cache_clear()
+
+    with pytest.raises(HTTPException, match="invalid_service_body_digest"):
+        await require_service_context(_request("POST", "/v1/sync", headers, b'{"fullSync":true}'))
+    with pytest.raises(HTTPException, match="invalid_service_credentials"):
+        await require_service_context(_request("GET", "/v1/sync", headers, body))
+    with pytest.raises(HTTPException, match="invalid_service_credentials"):
+        await require_service_context(_request("POST", "/v1/other", headers, body))
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_previous_key_id_is_accepted_during_rotation(monkeypatch: pytest.MonkeyPatch) -> None:
+    old_secret = "previous-service-secret"
+    body = b"{}"
+    headers = _signed_headers(secret=old_secret, body=body, key_id="previous")
+    monkeypatch.setenv("TRENDS_SERVICE_SECRET", "active-service-secret")
+    monkeypatch.setenv("TRENDS_SERVICE_SECRET_PREVIOUS", old_secret)
+    monkeypatch.setenv("TRENDS_SERVICE_AUTH_REQUIRED", "true")
+    get_settings.cache_clear()
+    scope = await require_service_context(_request("POST", "/v1/sync", headers, body))
+    assert scope.key_id == "previous"
+    get_settings.cache_clear()
+
+
+@pytest.mark.asyncio
+async def test_untrusted_service_identity_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:
+    secret = "test-service-secret"
+    body = b"{}"
+    headers = _signed_headers(secret=secret, body=body, identity="untrusted-service")
+    monkeypatch.setenv("TRENDS_SERVICE_SECRET", secret)
+    monkeypatch.setenv("TRENDS_SERVICE_AUTH_REQUIRED", "true")
+    get_settings.cache_clear()
+    with pytest.raises(HTTPException, match="invalid_service_credentials"):
+        await require_service_context(_request("POST", "/v1/sync", headers, body))
     get_settings.cache_clear()
