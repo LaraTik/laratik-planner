@@ -12,9 +12,9 @@ from app.routes_embed import router as embed_router
 from app.routes_feed import router as feed_router
 from app.routes_sources import router as sources_router
 from app.routes_sync import router as sync_router
-from app.service_auth import require_service_context
+from app.service_auth import require_service_context_dependency
 
-router = APIRouter(dependencies=[Depends(require_service_context)])
+router = APIRouter(dependencies=[Depends(require_service_context_dependency)])
 router.include_router(feed_router)
 router.include_router(sync_router)
 router.include_router(sources_router)

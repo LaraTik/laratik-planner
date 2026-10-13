@@ -39,6 +39,7 @@ import { contentItems } from "./content";
  *  11. saved_filter           — saved Trends filters (§14.2)
  *  12. workspace_source_optout — per-workspace source opt-out (§13.8)
  *  13. trend_job_execution — durable worker leases and retries
+ *  14. trend_service_request_nonce — cross-process HMAC replay protection
  *
  * Additive: these tables are net-new. No existing column is altered.
  *
@@ -354,6 +355,25 @@ export const trendJobExecutions = pgTable(
       "trend_job_execution_attempts_valid",
       sql`${t.attemptCount} >= 0 AND ${t.maxAttempts} BETWEEN 1 AND 20`,
     ),
+  ],
+);
+
+// Service-to-service request nonces are persisted so replay protection remains
+// effective when the sidecar has multiple workers or restarts. The retention
+// window is enforced by the sidecar; the primary key makes the claim atomic.
+export const trendServiceRequestNonces = pgTable(
+  "trend_service_request_nonce",
+  {
+    keyId: text("key_id").notNull(),
+    nonce: text("nonce").notNull(),
+    seenAt: timestamp("seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    expiresAt: timestamp("expires_at", { withTimezone: true, mode: "date" }).notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.keyId, t.nonce], name: "trend_service_request_nonce_pk" }),
+    index("trend_service_request_nonce_expiry_idx").on(t.expiresAt),
   ],
 );
 

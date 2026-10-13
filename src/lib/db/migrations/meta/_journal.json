@@ -526,6 +526,13 @@
       "when": 1791886711262,
       "tag": "0074_uneven_titanium_man",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1791887560091,
+      "tag": "0075_eager_proudstar",
+      "breakpoints": true
     }
   ]
 }

@@ -1,5 +1,39 @@
 # Migration and deployment evidence
 
+## Migration 0075 — distributed Trend Radar HMAC replay protection
+
+`0075_eager_proudstar.sql` is an additive, replay-safe migration for the
+service-request nonce ledger. The sidecar claims `(key_id, nonce)` in this
+table and commits the claim before the authenticated route runs, so replay
+protection survives worker restarts and is shared by multiple sidecar
+processes. Expired claims are pruned during a later claim; the primary key is
+the atomic cross-process fence. No tenant data or credentials are stored.
+
+Filename: `src/lib/db/migrations/0075_eager_proudstar.sql`  
+Journal tag: `0075_eager_proudstar`  
+Journal `when`: `1791887560091`  
+SHA-256:
+`1287f013c534286dbc08378aa37b011e142cc7a8f09d5aa389f9a1377353b9b5`
+
+Compatibility: older application images ignore the additive nonce table. The
+new sidecar uses the database ledger through a FastAPI dependency; direct
+unit-only calls retain the existing process-local guard. A normal application
+rollback leaves the ledger in place and is safe. Schema rollback is
+forward-only; a destructive restore is approval-gated because it removes
+replay evidence.
+
+Evidence on disposable Postgres 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  122 tables; Drizzle ledger 76/76
+2. skipped migration repair PASS  guarded migration DDL replayed successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 76 before / 76 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
 ## Migration 0074 — advertising foundation storage
 
 `0074_uneven_titanium_man.sql` is an additive, replay-safe migration for the

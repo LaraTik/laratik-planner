@@ -161,6 +161,17 @@ class TrendJobExecution(Base):
     __table_args__ = (Index("trend_job_execution_claim_idx", "status", "available_at", "created_at"), Index("trend_job_execution_scope_idx", "agency_id", "workspace_id", "created_at"))
 
 
+class TrendServiceRequestNonce(Base):
+    """Committed HMAC nonce claims shared by every sidecar process."""
+
+    __tablename__ = "trend_service_request_nonce"
+    key_id: Mapped[str] = mapped_column(Text, primary_key=True)
+    nonce: Mapped[str] = mapped_column(Text, primary_key=True)
+    seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=text("now()"))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    __table_args__ = (Index("trend_service_request_nonce_expiry_idx", "expires_at"),)
+
+
 class TrendSourceHealth(Base):
     __tablename__ = "trend_source_health"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, server_default=text("gen_random_uuid()"))

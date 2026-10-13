@@ -8,12 +8,17 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
-from fastapi import HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request, status
+from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.db import get_session
+from app.models import TrendServiceRequestNonce
 
 AUTH_MAX_SKEW_SECONDS = 60
 _nonce_lock = threading.Lock()
@@ -95,7 +100,27 @@ def _remember_nonce(key_id: str, nonce: str, now: float) -> bool:
         return True
 
 
-async def require_service_context(request: Request) -> ServiceScope:
+async def _claim_nonce(session: AsyncSession, *, key_id: str, nonce: str, now: float) -> bool:
+    """Atomically claim a nonce and commit it before the route can run.
+
+    Committing here is deliberate: a later route failure must not roll back
+    the replay claim and make the signed request reusable. The unique primary
+    key is the cross-process fence; the in-memory cache only avoids a database
+    round trip for replays handled by this process.
+    """
+    seen_at = datetime.fromtimestamp(now, tz=timezone.utc)
+    expires_at = seen_at + timedelta(seconds=AUTH_MAX_SKEW_SECONDS * 2)
+    await session.execute(delete(TrendServiceRequestNonce).where(TrendServiceRequestNonce.expires_at < seen_at))
+    result = await session.execute(
+        pg_insert(TrendServiceRequestNonce)
+        .values(key_id=key_id, nonce=nonce, seen_at=seen_at, expires_at=expires_at)
+        .on_conflict_do_nothing(index_elements=[TrendServiceRequestNonce.key_id, TrendServiceRequestNonce.nonce])
+    )
+    await session.commit()
+    return result.rowcount == 1
+
+
+async def require_service_context(request: Request, session: AsyncSession | None = None) -> ServiceScope:
     settings = get_settings()
     if not settings.TRENDS_SERVICE_AUTH_REQUIRED:
         return ServiceScope(agency_id=None, workspace_id=None)
@@ -109,7 +134,7 @@ async def require_service_context(request: Request) -> ServiceScope:
     workspace_raw = request.headers.get("x-laratik-workspace-id", "")
     actor_raw = request.headers.get("x-laratik-actor-id", "")
     secret = _secret_for_key(key_id)
-    if not secret or not identity or not _trusted_identity(identity):
+    if not nonce or not secret or not identity or not _trusted_identity(identity):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_service_credentials")
     try:
         now = time.time()
@@ -140,6 +165,14 @@ async def require_service_context(request: Request) -> ServiceScope:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid_service_credentials")
     if not _remember_nonce(key_id, nonce, now):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="replayed_service_request")
+    if session is not None:
+        try:
+            if not await _claim_nonce(session, key_id=key_id, nonce=nonce, now=now):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="replayed_service_request")
+        except HTTPException:
+            raise
+        except Exception:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="service_replay_protection_unavailable") from None
     if agency_id is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="agency_scope_required")
     if actor_id is None:
@@ -147,6 +180,14 @@ async def require_service_context(request: Request) -> ServiceScope:
     scope = ServiceScope(agency_id=agency_id, workspace_id=workspace_id, identity=identity, key_id=key_id, actor_id=actor_id)
     request.state.service_scope = scope
     return scope
+
+
+async def require_service_context_dependency(
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+) -> ServiceScope:
+    """FastAPI adapter that supplies the shared nonce ledger session."""
+    return await require_service_context(request, session=session)
 
 
 def get_service_scope(request: Request) -> ServiceScope:

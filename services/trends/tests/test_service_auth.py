@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from starlette.requests import Request
 
 from app.config import get_settings
-from app.service_auth import require_service_context, sign_service_request
+from app.service_auth import _claim_nonce, require_service_context, sign_service_request
 
 
 def _request(method: str, path: str, headers: dict[str, str], body: bytes = b"") -> Request:
@@ -18,6 +18,37 @@ def _request(method: str, path: str, headers: dict[str, str], body: bytes = b"")
         return {"type": "http.request", "body": body, "more_body": False}
 
     return Request({"type": "http", "method": method, "path": path, "headers": raw}, receive)
+
+
+class _ExecuteResult:
+    def __init__(self, rowcount: int) -> None:
+        self.rowcount = rowcount
+
+
+class _NonceSession:
+    def __init__(self, insert_rowcount: int) -> None:
+        self.insert_rowcount = insert_rowcount
+        self.execute_count = 0
+        self.commits = 0
+
+    async def execute(self, _statement: object) -> _ExecuteResult:
+        self.execute_count += 1
+        return _ExecuteResult(0 if self.execute_count == 1 else self.insert_rowcount)
+
+    async def commit(self) -> None:
+        self.commits += 1
+
+
+@pytest.mark.asyncio
+async def test_nonce_claim_is_committed_and_duplicate_is_atomic() -> None:
+    session = _NonceSession(insert_rowcount=1)
+    now = time.time()
+    assert await _claim_nonce(session, key_id="active", nonce="one", now=now)
+    assert session.commits == 1
+
+    duplicate_session = _NonceSession(insert_rowcount=0)
+    assert not await _claim_nonce(duplicate_session, key_id="active", nonce="one", now=now)
+    assert duplicate_session.commits == 1
 
 
 @pytest.mark.asyncio
