@@ -7,8 +7,10 @@
 > completion/failure transitions are rejected, and the run is recorded as
 > skipped with `advertising_lease_lost`. Focused advertising tests pass 7/7;
 > the full clean verification passes formatting, lint, typecheck, 506 unit
-> files / 4,705 tests, and the production build. No migration, production
-> deployment, or external Meta mutation was performed. This remains
+> files / 4,705 tests, and the production build. The disposable PostgreSQL
+> migration drill passes 5/5 with 79/79 ledger rows, and the full integration
+> suite passes. No migration was added, and no production deployment or
+> external Meta mutation was performed. This remains
 > **Tested**, not **Verified**: controlled live Meta UAT, real ad-level
 > reconciliation, workspace reporting UI evidence, independent review, and
 > production deployment remain open.
