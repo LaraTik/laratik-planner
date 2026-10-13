@@ -1,20 +1,19 @@
 # StudioFlow Production-Readiness Tracker
 
 > **2026-10-13 advertising foundation + Trend Radar hardening checkpoint** —
-> Exact clean commit `5fb777d1` adds replay-safe durable Trend Radar migration
-> recovery, signed actor-bound sidecar authorization, lease/retry/fencing
-> corrections, and the first advertising persistence seam. Migration 0074
-> stores canonical agency-scoped Meta connections/accounts, encrypted
-> credential versions, social identities, capability/validation evidence,
-> visibility grants, separate financial authority, grant revisions, and sync
-> state/history. `pnpm format:check`, `pnpm lint`, `pnpm typecheck`, and
-> `pnpm build` pass; the application unit suite passes 494 files / 4,664
-> tests; the Trend Radar sidecar passes 121 tests; and the disposable
-> PostgreSQL migration drill passes 5/5 with 75/75 ledger rows. This is
-> **Tested**, not **Verified**: live Meta credential/account UAT, canonical
-> ad-level spend ingestion and reconciliation, reporting/export services, UI,
-> bilingual browser evidence, independent review, and production deployment
-> remain open. No external provider or production state was changed.
+> Exact clean commit `b394ee34` adds distributed HMAC replay protection,
+> credential rotation/revocation, sanitized Meta diagnostics/discovery,
+> tenant/workspace grant revisions, pre-aggregation reporting authorization,
+> and canonical ad-day spend/reconciliation storage. Migrations 0074–0076 are
+> additive and replay-safe; the latest disposable PostgreSQL drill passes 5/5
+> with 77/77 ledger rows, including backup/restore and failed-migration abort.
+> `pnpm verify` passes: 498 unit files / 4,672 tests, formatting, lint,
+> typecheck, and production build; the Trend Radar sidecar passes 122 tests.
+> This is **Tested**, not **Verified**: live Meta credential/account UAT,
+> paginated/rate-aware provider execution, report/export/AI route wiring,
+> configuration UI, bilingual browser evidence, independent review, and
+> production deployment remain open. No external provider or production state
+> was changed.
 
 ## Planned next product arc — Meedro-informed Command Center and theme refactor
 

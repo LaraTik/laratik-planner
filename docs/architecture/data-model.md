@@ -222,9 +222,13 @@ visibility is in `advertising_visibility_grant`; financial access is a separate
 `advertising_financial_authority`; and immutable grant history is in
 `advertising_grant_revision`. `advertising_sync_state` and
 `advertising_sync_run` hold only bounded progress, counts, provider request
-IDs, and sanitized error codes. No table is a source of financial truth yet:
-live reporting remains gated on controlled Meta read-only UAT and the later
-canonical ad-level spend ingestion contract.
+IDs, and sanitized error codes. `advertising_spend_observation` is the
+connection-independent canonical ad-day fact store; its uniqueness key avoids
+duplicating a shared account when multiple connections observe it.
+`advertising_spend_reconciliation` keeps provider account spend, canonical ad
+spend, explicit workspace attribution, unallocated spend, discrepancy, and
+completeness separate. No workspace ownership is inferred from campaign names;
+live reporting remains gated on controlled Meta read-only UAT.
 
 ### AI (`ai.ts`)
 
