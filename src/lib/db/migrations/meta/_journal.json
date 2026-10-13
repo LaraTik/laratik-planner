@@ -554,6 +554,13 @@
       "when": 1791894038358,
       "tag": "0078_nervous_roughhouse",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1791900000000,
+      "tag": "0079_advertising_tenant_guards",
+      "breakpoints": true
     }
   ]
 }

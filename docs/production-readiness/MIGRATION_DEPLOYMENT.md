@@ -1,5 +1,45 @@
 # Migration and deployment evidence
 
+## Migration 0079 — advertising tenant ownership guards
+
+`0079_advertising_tenant_guards.sql` adds a narrow, replay-safe database
+invariant for the advertising foundation. Before the triggers are installed,
+the migration checks for existing cross-agency links and aborts without
+changing schema state if any are found. The guards cover connection/account
+links, capabilities, sync state/run history, social identities, validation
+results, canonical observations, reconciliation rows, visibility grants, and
+financial authorities. They do not replace application authorization or
+general RLS, and they do not rewrite existing identifiers or advertising data.
+
+The migration is trigger/function-only and therefore does not change the
+Drizzle TypeScript model or add a snapshot branch. `CREATE OR REPLACE FUNCTION`
+and `DROP TRIGGER IF EXISTS` make repair replay safe. A normal application
+rollback leaves the guards installed; a schema rollback is forward-only or an
+approval-gated restore of the verified backup.
+
+Filename: `src/lib/db/migrations/0079_advertising_tenant_guards.sql`  
+Journal tag: `0079_advertising_tenant_guards`  
+Journal `when`: `1791900000000`  
+SHA-256:
+`e6cca5826253d9f152be106e8dd1dda9e3f069e95cfa8ceb34a45f96a97a3dbe`
+
+Evidence on disposable PostgreSQL 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=development TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  124 tables; Drizzle ledger 80/80
+2. skipped migration repair PASS  guarded migration DDL replayed successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 80 before / 80 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+`tests/integration/advertising-tenant-guards.test.ts` passes 3/3, covering a
+cross-agency connection/account link denial, cross-agency grant denial, and a
+valid same-agency link plus sync state. No production deployment or external
+Meta mutation was performed.
+
 ## Migrations 0077–0078 — advertising validation compatibility and sync leases
 
 `0077_perfect_crystal.sql` widens the existing advertising validation

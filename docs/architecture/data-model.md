@@ -228,7 +228,10 @@ duplicating a shared account when multiple connections observe it.
 `advertising_spend_reconciliation` keeps provider account spend, canonical ad
 spend, explicit workspace attribution, unallocated spend, discrepancy, and
 completeness separate. No workspace ownership is inferred from campaign names;
-live reporting remains gated on controlled Meta read-only UAT.
+live reporting remains gated on controlled Meta read-only UAT. Migration 0079
+adds database-level tenant-ownership guards so these links cannot combine a
+connection, account, workspace, or agency from different tenants even when a
+caller bypasses the application services.
 
 ### AI (`ai.ts`)
 
