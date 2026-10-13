@@ -3,6 +3,23 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Advertising credential lifecycle hardening — 2026-10-13, exact clean SHA `6727445b`
+
+The activation boundary now requires a non-revoked connection with a stored
+credential version. The lifecycle suite uses the disposable Postgres database
+and verifies rotation, revocation, stale-resolution refusal, paused sync state,
+and refusal to reactivate or store against a revoked connection. The suite
+uses local encryption fallback only; no provider credential or external Meta
+request was used.
+
+| Check                                                                                                                                       | Result                                                                                 |
+| ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=… pnpm exec vitest run tests/integration/advertising-credential-lifecycle.test.ts --config vitest.integration.config.ts` | **Pass** — 1 file / 2 tests                                                            |
+| `pnpm verify`                                                                                                                               | **Pass** — formatting, lint, typecheck, 507 unit files / 4,710 tests, production build |
+
+The reporting browser evidence remains the earlier exact-clean UI checkpoint
+(`c479ba62`); populated reporting data and controlled live Meta UAT remain open.
+
 ## Scoped advertising reporting UI — 2026-10-13, exact clean SHA `c479ba62`
 
 This slice adds the first workspace-scoped, read-only advertising reporting

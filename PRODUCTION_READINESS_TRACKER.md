@@ -1,5 +1,20 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising credential lifecycle hardening checkpoint** — Exact
+> clean code commit `6727445b` prevents activation after revocation and requires
+> a stored credential version before a connection can become active. The new
+> disposable-Postgres lifecycle suite proves credential rotation increments the
+> version and revokes the prior envelope, resolution uses only the current
+> active version, revocation pauses sync state and disables provider reads, and
+> revoked connections cannot be reactivated or receive new credentials. The
+> focused integration suite passes 2/2; the exact-clean full verification gate
+> passes formatting, lint, typecheck, 507 unit files / 4,710 tests, and the
+> production build. No migration, production deployment, or external Meta
+> mutation was performed. This remains **Tested**, not **Verified**: live Meta
+> credentials, controlled read-only UAT, real ad-level reconciliation,
+> populated-data browser evidence, independent review, and production
+> deployment remain open.
+
 > **2026-10-13 scoped advertising reporting UI checkpoint** — Exact clean code
 > commit `c479ba62` adds the first read-only workspace reporting surface at
 > `/app/a/[agencySlug]/w/[slug]/analytics/advertising`, backed by the existing
