@@ -1,8 +1,9 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
-import { sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { expectPgConstraint } from "./_db-error";
 
 import {
@@ -11,11 +12,17 @@ import {
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingFinancialAuthorities,
+  advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
   users,
   workspaces,
 } from "@/lib/db/schema";
+import {
+  claimAdvertisingSyncStates,
+  createAdvertisingSyncRun,
+} from "@/lib/advertising/sync-worker";
+import { AdvertisingLeaseLostError } from "@/lib/advertising/ingestion-service";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -185,5 +192,47 @@ describe("advertising tenant ownership guards", () => {
       .values({ connectionId: connectionA.id, accountId: accountA.id })
       .returning();
     expect(state).toBeDefined();
+  });
+
+  it("allows only one concurrent claim and fences stale run-history creation", async () => {
+    const { connectionA, accountA } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const [state] = await db
+      .insert(advertisingSyncStates)
+      .values({ status: "idle", connectionId: connectionA.id, accountId: accountA.id })
+      .returning();
+    if (!state) throw new Error("failed to seed sync state");
+
+    const now = new Date();
+    const [first, second] = await Promise.all([
+      claimAdvertisingSyncStates(db, { owner: "worker-a", now, limit: 1 }),
+      claimAdvertisingSyncStates(db, { owner: "worker-b", now, limit: 1 }),
+    ]);
+    expect(first.length + second.length).toBe(1);
+    const claimed = first[0] ?? second[0];
+    if (!claimed) throw new Error("no worker claimed the sync state");
+
+    await db
+      .update(advertisingSyncStates)
+      .set({
+        leaseToken: randomUUID(),
+        leaseOwner: "replacement-worker",
+        leaseExpiresAt: new Date(Date.now() + 60_000),
+        status: "running",
+      })
+      .where(eq(advertisingSyncStates.id, state.id));
+
+    await expect(createAdvertisingSyncRun(db, claimed)).rejects.toBeInstanceOf(
+      AdvertisingLeaseLostError,
+    );
+    const [run] = await db
+      .select({ id: advertisingSyncRuns.id })
+      .from(advertisingSyncRuns)
+      .where(eq(advertisingSyncRuns.syncStateId, state.id));
+    expect(run).toBeUndefined();
   });
 });

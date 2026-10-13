@@ -189,16 +189,13 @@ export async function runAdvertisingSyncTick(
 }
 
 async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
-  const [syncRun] = await db
-    .insert(advertisingSyncRuns)
-    .values({
-      syncStateId: target.stateId,
-      connectionId: target.connection.id,
-      accountId: target.account.id,
-      status: "running",
-    })
-    .returning({ id: advertisingSyncRuns.id });
-  if (!syncRun) return "skipped" as const;
+  let syncRun: { id: string };
+  try {
+    syncRun = await createAdvertisingSyncRun(db, target);
+  } catch (error) {
+    if (error instanceof AdvertisingLeaseLostError) return "skipped" as const;
+    throw error;
+  }
 
   try {
     const provider = createMetaAdvertisingProvider(
@@ -286,6 +283,40 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
     await failAdvertisingSync(db, target, now, errorCode);
     return "failed" as const;
   }
+}
+
+/** Create run history only while this worker still owns the fencing token. */
+export async function createAdvertisingSyncRun(
+  db: Db,
+  target: Pick<ClaimedSync, "stateId" | "connection" | "account" | "leaseToken">,
+) {
+  return db.transaction(async (tx) => {
+    const [lease] = await tx
+      .select({ id: advertisingSyncStates.id })
+      .from(advertisingSyncStates)
+      .where(
+        and(
+          eq(advertisingSyncStates.id, target.stateId),
+          eq(advertisingSyncStates.leaseToken, target.leaseToken),
+          gt(advertisingSyncStates.leaseExpiresAt, new Date()),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!lease) throw new AdvertisingLeaseLostError();
+
+    const [syncRun] = await tx
+      .insert(advertisingSyncRuns)
+      .values({
+        syncStateId: target.stateId,
+        connectionId: target.connection.id,
+        accountId: target.account.id,
+        status: "running",
+      })
+      .returning({ id: advertisingSyncRuns.id });
+    if (!syncRun) throw new Error("Advertising sync run was not persisted");
+    return syncRun;
+  });
 }
 
 function leaseFor(target: ClaimedSync): AdvertisingLease {
