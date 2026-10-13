@@ -23,7 +23,11 @@ import {
   upsertAdvertisingReconciliation,
 } from "./ingestion-service";
 import { resolveAdvertisingCredential } from "./credential-service";
-import { classifyMetaError, createMetaAdvertisingProvider } from "./providers/meta";
+import {
+  classifyMetaError,
+  createMetaAdvertisingProvider,
+  type MetaAdvertisingProvider,
+} from "./providers/meta";
 import type { AdvertisingAccount, AdvertisingConnection, AdvertisingReportContext } from "./types";
 
 type Db = typeof appDb;
@@ -33,7 +37,7 @@ const LEASE_MS = 50_000;
 const RETRY_DELAYS_MINUTES = [15, 60, 360] as const;
 export const ADVERTISING_SYNC_MAX_ATTEMPTS = RETRY_DELAYS_MINUTES.length + 1;
 
-type ClaimedSync = {
+export type ClaimedSync = {
   stateId: string;
   agencyId: string;
   connection: AdvertisingConnection & { graphApiVersion: string | null };
@@ -41,6 +45,9 @@ type ClaimedSync = {
   leaseToken: string;
   attempt: number;
 };
+
+/** Injectable provider boundary used by recovery tests; cron uses the Meta adapter. */
+export type AdvertisingSyncProviderFactory = (target: ClaimedSync) => MetaAdvertisingProvider;
 
 export type AdvertisingSyncTickResult = {
   claimed: number;
@@ -173,7 +180,12 @@ export async function claimAdvertisingSyncStates(
 
 export async function runAdvertisingSyncTick(
   db: Db,
-  args: { now?: Date; owner?: string; limit?: number } = {},
+  args: {
+    now?: Date;
+    owner?: string;
+    limit?: number;
+    providerFactory?: AdvertisingSyncProviderFactory;
+  } = {},
 ): Promise<AdvertisingSyncTickResult> {
   const claimed = await claimAdvertisingSyncStates(db, {
     owner: args.owner ?? `advertising:${randomUUID()}`,
@@ -189,13 +201,23 @@ export async function runAdvertisingSyncTick(
     skipped: 0,
   };
   for (const target of claimed) {
-    const outcome = await runOneAdvertisingSync(db, target, args.now ?? new Date());
+    const outcome = await runOneAdvertisingSync(
+      db,
+      target,
+      args.now ?? new Date(),
+      args.providerFactory,
+    );
     result[outcome] += 1;
   }
   return result;
 }
 
-async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
+async function runOneAdvertisingSync(
+  db: Db,
+  target: ClaimedSync,
+  now: Date,
+  providerFactory?: AdvertisingSyncProviderFactory,
+) {
   let syncRun: { id: string };
   try {
     syncRun = await createAdvertisingSyncRun(db, target);
@@ -205,19 +227,21 @@ async function runOneAdvertisingSync(db: Db, target: ClaimedSync, now: Date) {
   }
 
   try {
-    const provider = createMetaAdvertisingProvider(
-      {
-        resolve: (credentialRef) => {
-          if (credentialRef !== target.connection.credentialRef)
-            throw new Error("credential_reference_mismatch");
-          return resolveAdvertisingCredential(db, {
-            agencyId: target.agencyId,
-            connectionId: target.connection.id,
-          });
-        },
-      },
-      (credential) => createMetaReadClient(target.connection.graphApiVersion, credential),
-    );
+    const provider = providerFactory
+      ? providerFactory(target)
+      : createMetaAdvertisingProvider(
+          {
+            resolve: (credentialRef) => {
+              if (credentialRef !== target.connection.credentialRef)
+                throw new Error("credential_reference_mismatch");
+              return resolveAdvertisingCredential(db, {
+                agencyId: target.agencyId,
+                connectionId: target.connection.id,
+              });
+            },
+          },
+          (credential) => createMetaReadClient(target.connection.graphApiVersion, credential),
+        );
     const context = buildAdContext(target.account, now);
     const adResponse = await provider.readDailyInsights(target.connection, target.account, context);
     const adInsights = normalizeMetaAdInsights(adResponse, context);

@@ -12,6 +12,8 @@ import {
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingFinancialAuthorities,
+  advertisingSpendObservations,
+  advertisingSpendReconciliations,
   advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
@@ -22,9 +24,11 @@ import {
   claimAdvertisingSyncStates,
   createAdvertisingSyncRun,
   failAdvertisingSync,
+  runAdvertisingSyncTick,
 } from "@/lib/advertising/sync-worker";
 import { AdvertisingLeaseLostError } from "@/lib/advertising/ingestion-service";
 import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
+import type { MetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -284,5 +288,88 @@ describe("advertising tenant ownership guards", () => {
       .from(advertisingSyncStates)
       .where(eq(advertisingSyncStates.id, state.id));
     expect(reopened).toEqual({ status: "idle", attempt: 0 });
+  });
+
+  it("replays a post-ingestion failure without duplicating canonical spend", async () => {
+    const { connectionA, accountA } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const [state] = await db
+      .insert(advertisingSyncStates)
+      .values({ status: "idle", connectionId: connectionA.id, accountId: accountA.id })
+      .returning();
+    if (!state) throw new Error("failed to seed sync state");
+
+    let failFirstAccountRead = true;
+    const provider: MetaAdvertisingProvider = {
+      provider: "meta",
+      validateConnection: async () => undefined,
+      discoverAccounts: async () => [],
+      readCampaigns: async () => ({ data: [] }),
+      readAdSets: async () => ({ data: [] }),
+      readAds: async () => ({ data: [] }),
+      readCreatives: async () => ({ data: [] }),
+      readBreakdowns: async () => ({ data: [] }),
+      readPages: async () => ({ data: [] }),
+      readInstagramAccounts: async () => ({ data: [] }),
+      readDailyInsights: async (_connection, _account, context) => {
+        if (context.grain === "account_day" && failFirstAccountRead) {
+          failFirstAccountRead = false;
+          throw Object.assign(new Error("provider temporarily unavailable"), { status: 503 });
+        }
+        return {
+          data: [
+            {
+              ad_id: "ad_replay_1",
+              adset_id: "adset_replay_1",
+              campaign_id: "campaign_replay_1",
+              date_start: context.dateRange.since,
+              spend: "12.50",
+              impressions: "1000",
+              clicks: "25",
+            },
+          ],
+        };
+      },
+    };
+    const now = new Date();
+    const providerFactory = () => provider;
+
+    const first = await runAdvertisingSyncTick(db, {
+      now,
+      owner: "replay-worker-a",
+      limit: 1,
+      providerFactory,
+    });
+    expect(first).toMatchObject({ claimed: 1, failed: 1, succeeded: 0, dead_letter: 0 });
+
+    await db
+      .update(advertisingSyncStates)
+      .set({ status: "failed", nextRunAt: new Date() })
+      .where(eq(advertisingSyncStates.id, state.id));
+    const second = await runAdvertisingSyncTick(db, {
+      now: new Date(),
+      owner: "replay-worker-b",
+      limit: 1,
+      providerFactory,
+    });
+    expect(second).toMatchObject({ claimed: 1, succeeded: 1, failed: 0, dead_letter: 0 });
+
+    const observations = await db
+      .select({ id: advertisingSpendObservations.id })
+      .from(advertisingSpendObservations);
+    const reconciliations = await db
+      .select({ id: advertisingSpendReconciliations.id })
+      .from(advertisingSpendReconciliations);
+    const runs = await db
+      .select({ status: advertisingSyncRuns.status })
+      .from(advertisingSyncRuns)
+      .where(eq(advertisingSyncRuns.syncStateId, state.id));
+    expect(observations).toHaveLength(1);
+    expect(reconciliations).toHaveLength(1);
+    expect(runs.map((run) => run.status).sort()).toEqual(["failed", "succeeded"]);
   });
 });
