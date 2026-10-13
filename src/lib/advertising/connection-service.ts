@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt, ne } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { db as appDb } from "@/lib/db";
 import {
@@ -328,6 +328,8 @@ export async function activateAdvertisingConnection(
       and(
         eq(advertisingConnections.id, args.connectionId),
         eq(advertisingConnections.agencyId, args.agencyId),
+        ne(advertisingConnections.status, "revoked"),
+        gt(advertisingConnections.currentCredentialVersion, 0),
       ),
     )
     .returning({ id: advertisingConnections.id, status: advertisingConnections.status });
