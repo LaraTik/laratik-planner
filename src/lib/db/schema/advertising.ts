@@ -467,6 +467,116 @@ export const advertisingSyncRuns = pgTable(
   ],
 );
 
+/**
+ * Bounded provider-object snapshots used by read-only analytics. These are
+ * tenant-local projections of provider IDs; they never imply workspace
+ * ownership and are safe to refresh idempotently from multiple credentials.
+ */
+export const advertisingProviderObjects = pgTable(
+  "advertising_provider_object",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => advertisingAccounts.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => advertisingConnections.id, { onDelete: "restrict" }),
+    syncRunId: uuid("sync_run_id").references(() => advertisingSyncRuns.id, {
+      onDelete: "set null",
+    }),
+    objectType: text("object_type").notNull(),
+    externalObjectId: text("external_object_id").notNull(),
+    parentExternalObjectId: text("parent_external_object_id"),
+    name: text("name"),
+    status: text("status"),
+    objective: text("objective"),
+    dailyBudget: numeric("daily_budget", { precision: 18, scale: 6 }),
+    lifetimeBudget: numeric("lifetime_budget", { precision: 18, scale: 6 }),
+    promotedPostId: text("promoted_post_id"),
+    metadata: jsonb("metadata")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_provider_object_identity_uniq").on(
+      t.agencyId,
+      t.accountId,
+      t.objectType,
+      t.externalObjectId,
+    ),
+    index("advertising_provider_object_account_type_idx").on(t.accountId, t.objectType),
+    index("advertising_provider_object_promoted_post_idx").on(t.promotedPostId),
+    check(
+      "advertising_provider_object_type_valid",
+      sql`${t.objectType} IN ('campaign', 'adset', 'ad', 'creative')`,
+    ),
+  ],
+);
+
+/** Provider-returned audience breakdowns; no audience value is inferred. */
+export const advertisingAudienceObservations = pgTable(
+  "advertising_audience_observation",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => advertisingAccounts.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => advertisingConnections.id, { onDelete: "restrict" }),
+    syncRunId: uuid("sync_run_id").references(() => advertisingSyncRuns.id, {
+      onDelete: "set null",
+    }),
+    reportDate: date("report_date").notNull(),
+    breakdown: text("breakdown").notNull(),
+    dimensionValue: text("dimension_value").notNull(),
+    currency: text("currency").notNull(),
+    spend: numeric("spend", { precision: 18, scale: 6 }).notNull(),
+    impressions: integer("impressions"),
+    clicks: integer("clicks"),
+    reach: integer("reach"),
+    attributionWindow: text("attribution_window").notNull(),
+    actionReportTime: text("action_report_time").notNull(),
+    observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_audience_observation_identity_uniq").on(
+      t.agencyId,
+      t.accountId,
+      t.reportDate,
+      t.breakdown,
+      t.dimensionValue,
+      t.attributionWindow,
+      t.actionReportTime,
+    ),
+    index("advertising_audience_observation_account_date_idx").on(t.accountId, t.reportDate),
+    check(
+      "advertising_audience_observation_breakdown_valid",
+      sql`${t.breakdown} IN ('age', 'gender', 'placement', 'device_platform', 'country', 'region')`,
+    ),
+    check(
+      "advertising_audience_observation_counts_valid",
+      sql`(${t.impressions} IS NULL OR ${t.impressions} >= 0)
+        AND (${t.clicks} IS NULL OR ${t.clicks} >= 0)
+        AND (${t.reach} IS NULL OR ${t.reach} >= 0)`,
+    ),
+  ],
+);
+
 /** Canonical provider ad-day facts. No workspace ownership is inferred here. */
 export const advertisingSpendObservations = pgTable(
   "advertising_spend_observation",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeMetaAccountInsights,
   normalizeMetaAdInsights,
+  normalizeMetaBreakdownInsights,
   sumSpendValues,
 } from "@/lib/advertising/meta-ingestion";
 
@@ -85,5 +86,28 @@ describe("Meta ad-level ingestion normalization", () => {
       partial: false,
     });
     expect(sumSpendValues(["10.25", "0.000001", "1.75"])).toBe("12.000001");
+  });
+
+  it("keeps provider-returned audience dimensions separate and explicit", () => {
+    const result = normalizeMetaBreakdownInsights(
+      {
+        data: [
+          {
+            date_start: "2026-10-01",
+            age: "25-34",
+            gender: "female",
+            spend: "4.50",
+            impressions: "100",
+            reach: "80",
+          },
+        ],
+      },
+      { ...context, breakdowns: ["age", "gender"], grain: "account_day" },
+    );
+    expect(result.observations).toEqual([
+      expect.objectContaining({ breakdown: "age", dimensionValue: "25-34" }),
+      expect.objectContaining({ breakdown: "gender", dimensionValue: "female" }),
+    ]);
+    expect(result.partial).toBe(false);
   });
 });

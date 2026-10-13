@@ -55,6 +55,27 @@ export default async function AdvertisingSettingsPage() {
         connectionAccounts={resources.connectionAccounts}
         socialIdentities={resources.socialIdentities}
         capabilities={resources.capabilities}
+        visibilityGrants={resources.visibilityGrants.map((grant) => ({
+          ...grant,
+          startsAt: grant.startsAt.toISOString(),
+          endsAt: grant.endsAt?.toISOString() ?? null,
+          revokedAt: grant.revokedAt?.toISOString() ?? null,
+        }))}
+        financialAuthorities={resources.financialAuthorities.map((authority) => ({
+          ...authority,
+          startsAt: authority.startsAt.toISOString(),
+          endsAt: authority.endsAt?.toISOString() ?? null,
+          revokedAt: authority.revokedAt?.toISOString() ?? null,
+        }))}
+        validationResults={resources.validationResults.map((result) => ({
+          ...result,
+          checkedAt: result.checkedAt.toISOString(),
+        }))}
+        syncRuns={resources.syncRuns.map((run) => ({
+          ...run,
+          startedAt: run.startedAt.toISOString(),
+          completedAt: run.completedAt?.toISOString() ?? null,
+        }))}
       />
     </div>
   );

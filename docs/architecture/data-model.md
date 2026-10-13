@@ -228,12 +228,20 @@ duplicating a shared account when multiple connections observe it.
 `advertising_spend_reconciliation` keeps provider account spend, canonical ad
 spend, explicit workspace attribution, unallocated spend, discrepancy, and
 completeness separate. No workspace ownership is inferred from campaign names;
-live reporting remains gated on controlled Meta read-only UAT. Migration 0079
-adds database-level tenant-ownership guards so these links cannot combine a
-connection, account, workspace, or agency from different tenants even when a
-caller bypasses the application services. Advertising sync retries are bounded
-and move to an explicit `dead_letter` state after repeated failures; an
-agency-admin re-enable is required before another attempt budget is issued.
+`advertising_provider_object` stores a bounded, sanitized snapshot of campaigns,
+ad sets, ads, and creatives for reporting labels, lifecycle fields, budgets, and
+exact promoted-post IDs; it is not a second spend fact store. The optional
+`advertising_audience_observation` table stores only provider-returned age,
+gender, placement, device, country, or region dimensions with nullable metrics;
+unsupported dimensions and inferred values are not persisted. Reporting reads
+both tables only after the existing account/grant authorization boundary.
+No workspace ownership is inferred from campaign names; live reporting remains
+gated on controlled Meta read-only UAT. Migration 0079 adds database-level
+tenant-ownership guards so these links cannot combine a connection, account,
+workspace, or agency from different tenants even when a caller bypasses the
+application services. Advertising sync retries are bounded and move to an
+explicit `dead_letter` state after repeated failures; an agency-admin re-enable
+is required before another attempt budget is issued.
 
 ### AI (`ai.ts`)
 

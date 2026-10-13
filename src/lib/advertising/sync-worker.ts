@@ -13,6 +13,7 @@ import { createMetaReadClient } from "./meta-http";
 import {
   normalizeMetaAccountInsights,
   normalizeMetaAdInsights,
+  normalizeMetaBreakdownInsights,
   sumSpendValues,
 } from "./meta-ingestion";
 import {
@@ -20,8 +21,10 @@ import {
   type AdvertisingLease,
   AdvertisingLeaseLostError,
   ingestAdvertisingSpend,
+  ingestAdvertisingAudience,
   upsertAdvertisingReconciliation,
 } from "./ingestion-service";
+import { persistAdvertisingProviderObjects } from "./connection-service";
 import { resolveAdvertisingCredential } from "./credential-service";
 import {
   classifyMetaError,
@@ -254,6 +257,8 @@ async function runOneAdvertisingSync(
       lease: leaseFor(target),
       observations: adInsights.observations,
     });
+    const objectSync = await syncProviderObjects(db, target, provider, syncRun.id);
+    const audienceSync = await syncAudience(db, target, provider, syncRun.id, context);
 
     const accountContext: AdvertisingReportContext = { ...context, grain: "account_day" };
     const accountResponse = await provider.readDailyInsights(
@@ -279,12 +284,19 @@ async function runOneAdvertisingSync(
           providerAccountSpend: accountRow.spend,
           canonicalAdSpend: canonical,
           workspaceAttributedSpend: "0",
-          completeness: adInsights.partial || accountInsights.partial ? "partial" : "complete",
+          completeness:
+            adInsights.partial ||
+            accountInsights.partial ||
+            objectSync.partial ||
+            audienceSync.partial
+              ? "partial"
+              : "complete",
         }),
       });
     }
 
-    const partial = adInsights.partial || accountInsights.partial;
+    const partial =
+      adInsights.partial || accountInsights.partial || objectSync.partial || audienceSync.partial;
     await db
       .update(advertisingSyncRuns)
       .set({
@@ -314,6 +326,120 @@ async function runOneAdvertisingSync(
     const failureStatus = await failAdvertisingSync(db, target, now, errorCode);
     return failureStatus;
   }
+}
+
+async function syncProviderObjects(
+  db: Db,
+  target: ClaimedSync,
+  provider: MetaAdvertisingProvider,
+  syncRunId: string,
+): Promise<{ partial: boolean }> {
+  let partial = false;
+  try {
+    const campaigns = await provider.readCampaigns(target.connection, target.account);
+    await persistAdvertisingProviderObjects(db, {
+      agencyId: target.agencyId,
+      accountId: target.account.id,
+      connectionId: target.connection.id,
+      syncRunId,
+      objectType: "campaign",
+      rows: campaigns,
+    });
+    for (const campaign of collectionRows(campaigns).slice(0, 10)) {
+      const campaignId = stringValue(campaign.id);
+      if (!campaignId) continue;
+      const adsets = await provider.readAdSets(target.connection, campaignId);
+      await persistAdvertisingProviderObjects(db, {
+        agencyId: target.agencyId,
+        accountId: target.account.id,
+        connectionId: target.connection.id,
+        syncRunId,
+        objectType: "adset",
+        parentExternalObjectId: campaignId,
+        rows: adsets,
+      });
+      for (const adset of collectionRows(adsets).slice(0, 10)) {
+        const adsetId = stringValue(adset.id);
+        if (!adsetId) continue;
+        const ads = await provider.readAds(target.connection, adsetId);
+        await persistAdvertisingProviderObjects(db, {
+          agencyId: target.agencyId,
+          accountId: target.account.id,
+          connectionId: target.connection.id,
+          syncRunId,
+          objectType: "ad",
+          parentExternalObjectId: adsetId,
+          rows: ads,
+        });
+        for (const ad of collectionRows(ads).slice(0, 10)) {
+          const adId = stringValue(ad.id);
+          if (!adId) continue;
+          const creative = await provider.readCreatives(target.connection, adId);
+          await persistAdvertisingProviderObjects(db, {
+            agencyId: target.agencyId,
+            accountId: target.account.id,
+            connectionId: target.connection.id,
+            syncRunId,
+            objectType: "creative",
+            parentExternalObjectId: adId,
+            rows: creative,
+          });
+        }
+      }
+    }
+  } catch {
+    // Object metadata is an additive analytics projection. A provider object
+    // failure must surface as partial while preserving canonical spend facts.
+    partial = true;
+  }
+  return { partial };
+}
+
+async function syncAudience(
+  db: Db,
+  target: ClaimedSync,
+  provider: MetaAdvertisingProvider,
+  syncRunId: string,
+  baseContext: AdvertisingReportContext,
+): Promise<{ partial: boolean }> {
+  try {
+    const context: AdvertisingReportContext = {
+      ...baseContext,
+      breakdowns: ["age", "gender"],
+      grain: "account_day",
+    };
+    const response = await provider.readBreakdowns(target.connection, target.account, context);
+    const normalized = normalizeMetaBreakdownInsights(response, context);
+    const written = await ingestAdvertisingAudience(db, {
+      agencyId: target.agencyId,
+      accountId: target.account.id,
+      connectionId: target.connection.id,
+      syncRunId,
+      lease: leaseFor(target),
+      observations: normalized.observations,
+    });
+    return {
+      partial:
+        normalized.observations.length > 0 &&
+        (normalized.partial || written.written < normalized.observations.length),
+    };
+  } catch {
+    return { partial: true };
+  }
+}
+
+function collectionRows(value: unknown): readonly Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter(isRecord);
+  if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
+  return [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function stringValue(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
 /** Create run history only while this worker still owns the fencing token. */

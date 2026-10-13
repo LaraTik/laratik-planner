@@ -72,6 +72,8 @@ describe("advertising credential lifecycle", () => {
   beforeEach(async () => {
     await db.execute(sql`
       TRUNCATE
+        advertising_audience_observation,
+        advertising_provider_object,
         advertising_sync_state,
         advertising_credential_version,
         advertising_connection,

@@ -1,9 +1,10 @@
-import { and, eq, gt } from "drizzle-orm";
+import { and, eq, gt, sql } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingAudienceObservations,
   advertisingSyncStates,
   advertisingSpendObservations,
   advertisingSpendReconciliations,
@@ -20,6 +21,19 @@ export type AdvertisingSpendObservationInput = {
   readonly spend: string;
   readonly impressions: number;
   readonly clicks: number;
+  readonly attributionWindow: string;
+  readonly actionReportTime: string;
+};
+
+export type AdvertisingAudienceObservationInput = {
+  readonly reportDate: string;
+  readonly breakdown: string;
+  readonly dimensionValue: string;
+  readonly currency: string;
+  readonly spend: string;
+  readonly impressions: number | null;
+  readonly clicks: number | null;
+  readonly reach: number | null;
   readonly attributionWindow: string;
   readonly actionReportTime: string;
 };
@@ -217,6 +231,80 @@ export async function ingestAdvertisingSpend(
     return rows.length;
   });
   return { written };
+}
+
+/** Idempotently persist provider-returned audience dimensions. */
+export async function ingestAdvertisingAudience(
+  db: Db,
+  args: {
+    agencyId: string;
+    accountId: string;
+    connectionId: string;
+    syncRunId?: string | null | undefined;
+    lease?: AdvertisingLease | undefined;
+    observations: readonly AdvertisingAudienceObservationInput[];
+  },
+) {
+  if (args.observations.length > 500)
+    throw new AdvertisingIngestionError("advertising_audience_batch_too_large");
+  if (args.observations.length === 0) return { written: 0 };
+  const [connection] = await db
+    .select({ id: advertisingConnections.id })
+    .from(advertisingConnections)
+    .innerJoin(
+      advertisingConnectionAccounts,
+      and(
+        eq(advertisingConnectionAccounts.connectionId, advertisingConnections.id),
+        eq(advertisingConnectionAccounts.accountId, args.accountId),
+        eq(advertisingConnectionAccounts.status, "active"),
+      ),
+    )
+    .where(
+      and(
+        eq(advertisingConnections.id, args.connectionId),
+        eq(advertisingConnections.agencyId, args.agencyId),
+        eq(advertisingConnections.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (!connection) throw new AdvertisingIngestionError("advertising_connection_account_not_active");
+
+  const rows = await db
+    .insert(advertisingAudienceObservations)
+    .values(
+      args.observations.map((observation) => ({
+        agencyId: args.agencyId,
+        accountId: args.accountId,
+        connectionId: args.connectionId,
+        syncRunId: args.syncRunId ?? null,
+        ...observation,
+        observedAt: new Date(),
+      })),
+    )
+    .onConflictDoUpdate({
+      target: [
+        advertisingAudienceObservations.agencyId,
+        advertisingAudienceObservations.accountId,
+        advertisingAudienceObservations.reportDate,
+        advertisingAudienceObservations.breakdown,
+        advertisingAudienceObservations.dimensionValue,
+        advertisingAudienceObservations.attributionWindow,
+        advertisingAudienceObservations.actionReportTime,
+      ],
+      set: {
+        connectionId: sql`excluded.connection_id`,
+        syncRunId: sql`excluded.sync_run_id`,
+        currency: sql`excluded.currency`,
+        spend: sql`excluded.spend`,
+        impressions: sql`excluded.impressions`,
+        clicks: sql`excluded.clicks`,
+        reach: sql`excluded.reach`,
+        observedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    .returning({ id: advertisingAudienceObservations.id });
+  return { written: rows.length };
 }
 
 export async function upsertAdvertisingReconciliation(

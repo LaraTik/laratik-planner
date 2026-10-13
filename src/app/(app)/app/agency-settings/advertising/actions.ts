@@ -13,7 +13,11 @@ import {
   advertisingCapabilities,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingFinancialAuthorities,
+  advertisingValidationResults,
+  advertisingVisibilityGrants,
   advertisingSocialIdentities,
+  advertisingSyncRuns,
   advertisingSyncStates,
   workspaces,
 } from "@/lib/db/schema";
@@ -34,6 +38,8 @@ import { runMetaConfigurationWorkflow } from "@/lib/advertising/meta-workflow";
 import {
   grantAdvertisingFinancialAuthority,
   grantAdvertisingVisibility,
+  revokeAdvertisingFinancialAuthority,
+  revokeAdvertisingVisibility,
 } from "@/lib/advertising/grant-service";
 import { AdvertisingGrantInputError } from "@/lib/advertising/grant-service";
 import { AdvertisingSyncInputError, setAdvertisingSyncState } from "@/lib/advertising/sync-service";
@@ -69,6 +75,8 @@ const FinancialAuthoritySchema = z.object({
   accountId: z.string().uuid(),
   workspaceId: z.string().uuid().optional(),
 });
+const GrantIdSchema = z.object({ grantId: z.string().uuid() });
+const AuthorityIdSchema = z.object({ authorityId: z.string().uuid() });
 const SyncStateSchema = z.object({
   connectionId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -118,6 +126,8 @@ function errorState(error: unknown): AdvertisingActionState {
     "workspace_not_in_agency",
     "unsupported_advertising_capability",
     "advertising_grant_range_invalid",
+    "advertising_grant_not_found",
+    "advertising_financial_authority_not_found",
   ]);
   return { code: safeCodes.has(code) ? code : "advertising_action_failed" };
 }
@@ -289,6 +299,46 @@ export async function grantAdvertisingFinancialAuthorityAction(
   }
 }
 
+export async function revokeAdvertisingVisibilityAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = GrantIdSchema.safeParse({ grantId: formData.get("grantId") });
+    if (!parsed.success) return { code: "invalid_grant" };
+    await revokeAdvertisingVisibility(db, {
+      agencyId,
+      grantId: parsed.data.grantId,
+      revokedBy: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "grant_revoked", grantId: parsed.data.grantId };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
+export async function revokeAdvertisingFinancialAuthorityAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = AuthorityIdSchema.safeParse({ authorityId: formData.get("authorityId") });
+    if (!parsed.success) return { code: "invalid_financial_authority" };
+    await revokeAdvertisingFinancialAuthority(db, {
+      agencyId,
+      authorityId: parsed.data.authorityId,
+      revokedBy: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "financial_authority_revoked", authorityId: parsed.data.authorityId };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
 export async function setAdvertisingSyncStateAction(
   _previous: AdvertisingActionState,
   formData: FormData,
@@ -346,6 +396,10 @@ export async function listAdvertisingResourcesForAdmin() {
     connectionAccounts,
     socialIdentities,
     capabilities,
+    visibilityGrants,
+    financialAuthorities,
+    validationResults,
+    syncRuns,
   ] = await Promise.all([
     db
       .select({
@@ -448,6 +502,94 @@ export async function listAdvertisingResourcesForAdmin() {
       .innerJoin(advertisingAccounts, eq(advertisingAccounts.id, advertisingCapabilities.accountId))
       .where(eq(advertisingAccounts.agencyId, agencyId))
       .orderBy(desc(advertisingCapabilities.checkedAt)),
+    db
+      .select({
+        id: advertisingVisibilityGrants.id,
+        accountId: advertisingVisibilityGrants.accountId,
+        accountName: advertisingAccounts.name,
+        workspaceId: advertisingVisibilityGrants.workspaceId,
+        workspaceName: workspaces.name,
+        capability: advertisingVisibilityGrants.capability,
+        campaignIds: advertisingVisibilityGrants.campaignIds,
+        adSetIds: advertisingVisibilityGrants.adSetIds,
+        adIds: advertisingVisibilityGrants.adIds,
+        startsAt: advertisingVisibilityGrants.startsAt,
+        endsAt: advertisingVisibilityGrants.endsAt,
+        revokedAt: advertisingVisibilityGrants.revokedAt,
+      })
+      .from(advertisingVisibilityGrants)
+      .innerJoin(
+        advertisingAccounts,
+        eq(advertisingAccounts.id, advertisingVisibilityGrants.accountId),
+      )
+      .leftJoin(workspaces, eq(workspaces.id, advertisingVisibilityGrants.workspaceId))
+      .where(eq(advertisingVisibilityGrants.agencyId, agencyId))
+      .orderBy(desc(advertisingVisibilityGrants.createdAt)),
+    db
+      .select({
+        id: advertisingFinancialAuthorities.id,
+        accountId: advertisingFinancialAuthorities.accountId,
+        accountName: advertisingAccounts.name,
+        workspaceId: advertisingFinancialAuthorities.workspaceId,
+        workspaceName: workspaces.name,
+        startsAt: advertisingFinancialAuthorities.startsAt,
+        endsAt: advertisingFinancialAuthorities.endsAt,
+        revokedAt: advertisingFinancialAuthorities.revokedAt,
+      })
+      .from(advertisingFinancialAuthorities)
+      .innerJoin(
+        advertisingAccounts,
+        eq(advertisingAccounts.id, advertisingFinancialAuthorities.accountId),
+      )
+      .leftJoin(workspaces, eq(workspaces.id, advertisingFinancialAuthorities.workspaceId))
+      .where(eq(advertisingFinancialAuthorities.agencyId, agencyId))
+      .orderBy(desc(advertisingFinancialAuthorities.createdAt)),
+    db
+      .select({
+        id: advertisingValidationResults.id,
+        connectionId: advertisingValidationResults.connectionId,
+        accountId: advertisingValidationResults.accountId,
+        operation: advertisingValidationResults.operation,
+        status: advertisingValidationResults.status,
+        sanitizedCode: advertisingValidationResults.sanitizedCode,
+        retryable: advertisingValidationResults.retryable,
+        checkedAt: advertisingValidationResults.checkedAt,
+      })
+      .from(advertisingValidationResults)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingValidationResults.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .orderBy(desc(advertisingValidationResults.checkedAt))
+      .limit(100),
+    db
+      .select({
+        id: advertisingSyncRuns.id,
+        connectionId: advertisingSyncRuns.connectionId,
+        accountId: advertisingSyncRuns.accountId,
+        accountName: advertisingAccounts.name,
+        status: advertisingSyncRuns.status,
+        rowsRead: advertisingSyncRuns.rowsRead,
+        rowsWritten: advertisingSyncRuns.rowsWritten,
+        errorCode: advertisingSyncRuns.errorCode,
+        partial: advertisingSyncRuns.partial,
+        startedAt: advertisingSyncRuns.startedAt,
+        completedAt: advertisingSyncRuns.completedAt,
+      })
+      .from(advertisingSyncRuns)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingSyncRuns.connectionId),
+          eq(advertisingConnections.agencyId, agencyId),
+        ),
+      )
+      .innerJoin(advertisingAccounts, eq(advertisingAccounts.id, advertisingSyncRuns.accountId))
+      .orderBy(desc(advertisingSyncRuns.startedAt))
+      .limit(100),
   ]);
   return {
     accounts,
@@ -456,5 +598,9 @@ export async function listAdvertisingResourcesForAdmin() {
     connectionAccounts,
     socialIdentities,
     capabilities,
+    visibilityGrants,
+    financialAuthorities,
+    validationResults,
+    syncRuns,
   };
 }

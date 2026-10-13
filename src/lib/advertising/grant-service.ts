@@ -246,3 +246,46 @@ export async function grantAdvertisingFinancialAuthority(
   if (!authority) throw new Error("Advertising financial authority was not created");
   return authority;
 }
+
+/** Revoke financial authority without deleting its audit-relevant row. */
+export async function revokeAdvertisingFinancialAuthority(
+  db: Db,
+  args: { agencyId: string; authorityId: string; revokedBy: string },
+) {
+  return db.transaction(async (tx) => {
+    const existing = (
+      await tx
+        .select()
+        .from(advertisingFinancialAuthorities)
+        .where(
+          and(
+            eq(advertisingFinancialAuthorities.id, args.authorityId),
+            eq(advertisingFinancialAuthorities.agencyId, args.agencyId),
+          ),
+        )
+        .limit(1)
+    )[0];
+    if (!existing)
+      throw new AdvertisingGrantInputError("advertising_financial_authority_not_found");
+    const [authority] = await tx
+      .update(advertisingFinancialAuthorities)
+      .set({ revokedAt: new Date(), updatedAt: new Date() })
+      .where(eq(advertisingFinancialAuthorities.id, args.authorityId))
+      .returning();
+    if (!authority)
+      throw new AdvertisingGrantInputError("advertising_financial_authority_not_found");
+    await tx.insert(securityAuditEvents).values({
+      actorId: args.revokedBy,
+      action: "advertising.financial_authority.revoked",
+      targetType: "advertising_financial_authority",
+      targetId: authority.id,
+      outcome: "success",
+      metadata: {
+        agencyId: authority.agencyId,
+        workspaceId: authority.workspaceId,
+        accountId: authority.accountId,
+      },
+    });
+    return authority;
+  });
+}

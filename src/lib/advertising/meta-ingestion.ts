@@ -13,6 +13,23 @@ export type NormalizedMetaAccountInsights = {
   readonly partial: boolean;
 };
 
+export type NormalizedMetaBreakdownObservations = {
+  readonly observations: {
+    reportDate: string;
+    breakdown: string;
+    dimensionValue: string;
+    currency: string;
+    spend: string;
+    impressions: number | null;
+    clicks: number | null;
+    reach: number | null;
+    attributionWindow: string;
+    actionReportTime: string;
+  }[];
+  readonly skippedRows: number;
+  readonly partial: boolean;
+};
+
 /**
  * Convert only explicit Meta ad-level rows into canonical provider facts.
  * Missing identifiers or metrics are skipped and surfaced as partial data;
@@ -67,6 +84,45 @@ export function normalizeMetaAccountInsights(value: unknown): NormalizedMetaAcco
     normalized.push({ reportDate, spend });
   }
   return { rows: normalized, skippedRows, partial: skippedRows > 0 || rows.length === 0 };
+}
+
+/** Normalize only dimensions explicitly returned by Meta; never infer audience membership. */
+export function normalizeMetaBreakdownInsights(
+  value: unknown,
+  context: AdvertisingReportContext,
+): NormalizedMetaBreakdownObservations {
+  if (context.breakdowns.length === 0) throw new Error("meta_breakdown_required");
+  const rows = collectionRows(value);
+  const observations: NormalizedMetaBreakdownObservations["observations"] = [];
+  let skippedRows = 0;
+  for (const row of rows) {
+    const reportDate = stringValue(row.date_start);
+    const spend = decimalValue(row.spend);
+    if (!reportDate || spend === null) {
+      skippedRows += 1;
+      continue;
+    }
+    let added = false;
+    for (const breakdown of context.breakdowns) {
+      const dimensionValue = stringValue(row[breakdown]);
+      if (!dimensionValue) continue;
+      observations.push({
+        reportDate,
+        breakdown,
+        dimensionValue,
+        currency: context.currency,
+        spend,
+        impressions: countValue(row.impressions),
+        clicks: countValue(row.clicks),
+        reach: countValue(row.reach),
+        attributionWindow: context.attributionWindow ?? "account",
+        actionReportTime: context.actionReportTime ?? "impression",
+      });
+      added = true;
+    }
+    if (!added) skippedRows += 1;
+  }
+  return { observations, skippedRows, partial: skippedRows > 0 || rows.length === 0 };
 }
 
 export function sumSpendValues(values: readonly string[]): string {

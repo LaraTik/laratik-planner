@@ -129,6 +129,61 @@ the controlled Meta UAT below.
 | 3   | Scoped reporting        | PASS (`src/lib/advertising/reporting-query.ts` and `/api/advertising/report` apply agency/workspace grants, surface capabilities, freshness, sample size, and partial-data state)       | PASS (reporting boundary unit tests cover shared-account filtering, denied projections, export/AI authorization, financial authority, and cache-key revision; route tests normalize hidden accounts to the same 404) | PASS (`tests/e2e/advertising-reporting.spec.ts` exercises populated English/LTR and Arabic/RTL reporting with synthetic observations and no partial warning) | Verify shared-account visibility, workspace isolation, campaign/ad scope, CSV/AI authorization, revocation invalidation, and non-additive metric handling across two workspaces and two agencies                                                                                 | Owner | local synthetic / controlled UAT |      | PASS local; PENDING live UAT  | [reporting fixture](../../tests/e2e/advertising-reporting.spec.ts)                             |
 | 4   | Meta Ads controlled UAT | PASS (read-only provider boundary and sync job are gated by `ADVERTISING_SYNC_ENABLED`; no write endpoint is registered)                                                                | PARTIAL (provider contract and failure-path tests are local-only; live token, permission, rate-limit, and reconciliation evidence is intentionally absent)                                                           | N/A (a local fake cannot prove Meta permission or metric semantics)                                                                                          | With approved credentials, verify token exchange/discovery, incorrect credentials, permission denial, rate limits, concurrent ingestion, duplicate/replay behavior, reconciliation, and supported/non-additive metrics; record sanitized evidence before enabling production use | Owner | Meta test app + test ad account  |      | BLOCKED: no live credentials  | [Meta setup worksheet](./META_COMMAND_CENTER_SETUP.md)                                         |
 
+### Blocked live Meta Ads UAT — executable runbook
+
+No Meta credential variables are present in this environment, so this is a
+checklist and not a live pass. The commands below deliberately accept secrets
+only through the process environment and never print them.
+
+1. Provision a disposable Meta test app and test ad account. Confirm the
+   configured Graph version, app mode, system-user assignment, and read-only
+   permissions in `META_COMMAND_CENTER_SETUP.md`.
+2. Create a connection in `/app/agency-settings/advertising`, save the token,
+   validate it, and capture only the returned diagnostic state, sanitized code,
+   request ID, endpoint class, and timestamp. Do not capture the token or raw
+   provider payload.
+3. Confirm the bounded read sequence is limited to `me`, `me/adaccounts`,
+   account campaigns, campaign ad sets, ad-set ads, ad creative, account
+   insights, `me/accounts`, and linked Instagram identity reads. The adapter
+   follows at most three collection pages and never follows a non-Graph host.
+4. Repeat with an invalid or revoked token, missing permission, missing asset
+   assignment, unsupported field, rate limit, and temporary provider failure.
+   Expected outcomes are the normalized diagnostic states, not provider error
+   text.
+5. Select one discovered account for sync and verify a bounded historical
+   window, an incremental daily run, a recent refresh window, interrupted-run
+   recovery, idempotent replay, and account-level reconciliation. Verify that
+   repeated credentials for the same agency/account do not duplicate spend.
+6. Create explicit agency and workspace grants, including campaign-scoped
+   grants. Verify that the workspace sees only authorized campaign facts,
+   that revoked grants invalidate the report immediately, and that export/AI
+   paths are denied without their separate capability.
+7. Verify exact promoted post IDs from creative metadata when Meta returns
+   them. Keep paid, organic, and combined post views separate; if Meta does
+   not return a reliable association, record `unallocated`/`unsupported`
+   rather than inferring one.
+8. Verify audience breakdowns only for dimensions returned by the provider
+   (for example age, gender, placement, device, or geography). Preserve the
+   requested date range, account currency, account timezone, attribution
+   window, pagination state, partial-data state, and rate-limit outcome.
+9. Run the sanitized local substitute when live credentials are unavailable:
+
+   ```bash
+   TEST_DATABASE_URL=postgresql://planner:planner_dev_only@127.0.0.1:5432/planner_test \
+     pnpm test:integration -- tests/integration/advertising-credential-lifecycle.test.ts \
+       tests/integration/advertising-tenant-guards.test.ts
+   pnpm exec vitest run tests/unit/advertising-meta-provider.test.ts \
+     tests/unit/advertising-meta-workflow.test.ts \
+     tests/unit/advertising-reporting-view.test.ts
+   ```
+
+The local substitute proves encryption lifecycle, tenant isolation, shared
+external-account isolation, grant revocation, bounded object snapshots,
+promoted-post preservation, retry/dead-letter behavior, and report rollups. It
+does not prove Meta permissions, endpoint availability, attribution semantics,
+rate-limit headers, or live metric meaning. Those remain blocked until the
+controlled test credential is supplied and sanitized evidence is recorded.
+
 ## Meta external publication linking (M8)
 
 The implementation is read-only: Planner fetches candidates and stores a

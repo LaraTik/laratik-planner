@@ -2,7 +2,16 @@
 
 import * as React from "react";
 import { useActionState } from "react";
-import { KeyRound, Pause, Play, Plus, ShieldAlert, ShieldCheck, XCircle } from "lucide-react";
+import {
+  History,
+  KeyRound,
+  Pause,
+  Play,
+  Plus,
+  ShieldAlert,
+  ShieldCheck,
+  XCircle,
+} from "lucide-react";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PasswordInput } from "@/components/forms/password-input";
@@ -17,6 +26,8 @@ import {
   grantAdvertisingFinancialAuthorityAction,
   grantAdvertisingVisibilityAction,
   revokeAdvertisingConnectionAction,
+  revokeAdvertisingFinancialAuthorityAction,
+  revokeAdvertisingVisibilityAction,
   storeAdvertisingCredentialAction,
   validateAdvertisingConnectionAction,
   setAdvertisingSyncStateAction,
@@ -80,6 +91,53 @@ type Capability = {
   status: string;
   checkedAt: Date;
 };
+type VisibilityGrant = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  capability: string;
+  campaignIds: string[] | null;
+  adSetIds: string[] | null;
+  adIds: string[] | null;
+  startsAt: string;
+  endsAt: string | null;
+  revokedAt: string | null;
+};
+type FinancialAuthority = {
+  id: string;
+  accountId: string;
+  accountName: string;
+  workspaceId: string | null;
+  workspaceName: string | null;
+  startsAt: string;
+  endsAt: string | null;
+  revokedAt: string | null;
+};
+type ValidationResult = {
+  id: string;
+  connectionId: string;
+  accountId: string | null;
+  operation: string;
+  status: string;
+  sanitizedCode: string | null;
+  retryable: boolean;
+  checkedAt: string;
+};
+type SyncRun = {
+  id: string;
+  connectionId: string;
+  accountId: string;
+  accountName: string;
+  status: string;
+  rowsRead: number;
+  rowsWritten: number;
+  errorCode: string | null;
+  partial: boolean;
+  startedAt: string;
+  completedAt: string | null;
+};
 
 const initial: AdvertisingActionState = {};
 
@@ -96,6 +154,10 @@ export function AdvertisingAdminPanel({
   connectionAccounts,
   socialIdentities,
   capabilities,
+  visibilityGrants = [],
+  financialAuthorities = [],
+  validationResults = [],
+  syncRuns = [],
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
@@ -104,6 +166,10 @@ export function AdvertisingAdminPanel({
   connectionAccounts: readonly ConnectionAccount[];
   socialIdentities: readonly SocialIdentity[];
   capabilities: readonly Capability[];
+  visibilityGrants?: readonly VisibilityGrant[];
+  financialAuthorities?: readonly FinancialAuthority[];
+  validationResults?: readonly ValidationResult[];
+  syncRuns?: readonly SyncRun[];
 }) {
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
@@ -172,7 +238,17 @@ export function AdvertisingAdminPanel({
           />
         ))
       )}
-      <GrantAccessCard accounts={accounts} workspaces={workspaces} />
+      <GrantAccessCard
+        accounts={accounts}
+        workspaces={workspaces}
+        visibilityGrants={visibilityGrants}
+        financialAuthorities={financialAuthorities}
+      />
+      <AdvertisingHistoryCard
+        validationResults={validationResults}
+        syncRuns={syncRuns}
+        connections={connections}
+      />
     </div>
   );
 }
@@ -190,14 +266,26 @@ const grantCapabilities = [
 function GrantAccessCard({
   accounts,
   workspaces,
+  visibilityGrants,
+  financialAuthorities,
 }: {
   accounts: readonly AdvertisingAccount[];
   workspaces: readonly Workspace[];
+  visibilityGrants: readonly VisibilityGrant[];
+  financialAuthorities: readonly FinancialAuthority[];
 }) {
   const t = useLocaleT();
   const [grantState, grantAction] = useActionState(grantAdvertisingVisibilityAction, initial);
   const [financialState, financialAction] = useActionState(
     grantAdvertisingFinancialAuthorityAction,
+    initial,
+  );
+  const [revokeGrantState, revokeGrantAction] = useActionState(
+    revokeAdvertisingVisibilityAction,
+    initial,
+  );
+  const [revokeAuthorityState, revokeAuthorityAction] = useActionState(
+    revokeAdvertisingFinancialAuthorityAction,
     initial,
   );
   const [accountId, setAccountId] = React.useState(accounts[0]?.id ?? "");
@@ -316,8 +404,181 @@ function GrantAccessCard({
             </div>
             {financialState.code ? <ActionMessage state={financialState} compact /> : null}
           </form>
+          <div className="border-border space-y-3 rounded-[var(--radius-control)] border p-4">
+            <h3 className="text-body text-fg-primary font-semibold">
+              {t("advertising.activeGrantsTitle")}
+            </h3>
+            {visibilityGrants.length === 0 ? (
+              <p className="text-label text-fg-secondary">{t("advertising.noActiveGrants")}</p>
+            ) : (
+              <ul className="space-y-2">
+                {visibilityGrants.map((grant) => (
+                  <li
+                    key={grant.id}
+                    className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                  >
+                    <div>
+                      <p className="text-body text-fg-primary font-medium">
+                        {grant.accountName} ·{" "}
+                        {t(`advertising.capabilityLabels.${grant.capability}`)}
+                      </p>
+                      <p className="text-label text-fg-muted">
+                        {grant.workspaceName ?? t("advertising.scopeAgency")}
+                        {grant.campaignIds?.length
+                          ? ` · ${t("advertising.campaignScopeCount", { count: grant.campaignIds.length })}`
+                          : ""}
+                        {grant.revokedAt ? ` · ${t("advertising.revoked")}` : ""}
+                      </p>
+                    </div>
+                    {!grant.revokedAt ? (
+                      <form action={revokeGrantAction}>
+                        <input type="hidden" name="grantId" value={grant.id} />
+                        <Button type="submit" size="sm" variant="outline">
+                          {t("advertising.revokeGrant")}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {revokeGrantState.code ? <ActionMessage state={revokeGrantState} compact /> : null}
+          </div>
+          <div className="border-border space-y-3 rounded-[var(--radius-control)] border p-4">
+            <h3 className="text-body text-fg-primary font-semibold">
+              {t("advertising.financialAuthoritiesTitle")}
+            </h3>
+            {financialAuthorities.length === 0 ? (
+              <p className="text-label text-fg-secondary">
+                {t("advertising.noFinancialAuthorities")}
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {financialAuthorities.map((authority) => (
+                  <li
+                    key={authority.id}
+                    className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                  >
+                    <div>
+                      <p className="text-body text-fg-primary font-medium">
+                        {authority.accountName}
+                      </p>
+                      <p className="text-label text-fg-muted">
+                        {authority.workspaceName ?? t("advertising.scopeAgency")}
+                        {authority.revokedAt ? ` · ${t("advertising.revoked")}` : ""}
+                      </p>
+                    </div>
+                    {!authority.revokedAt ? (
+                      <form action={revokeAuthorityAction}>
+                        <input type="hidden" name="authorityId" value={authority.id} />
+                        <Button type="submit" size="sm" variant="outline">
+                          {t("advertising.revokeFinancial")}
+                        </Button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {revokeAuthorityState.code ? (
+              <ActionMessage state={revokeAuthorityState} compact />
+            ) : null}
+          </div>
         </div>
       )}
+    </Card>
+  );
+}
+
+function AdvertisingHistoryCard({
+  validationResults,
+  syncRuns,
+  connections,
+}: {
+  validationResults: readonly ValidationResult[];
+  syncRuns: readonly SyncRun[];
+  connections: readonly Connection[];
+}) {
+  const t = useLocaleT();
+  const connectionName = new Map(
+    connections.map((connection) => [connection.id, connection.displayName]),
+  );
+  return (
+    <Card data-testid="advertising-history-card">
+      <div className="flex items-start gap-3">
+        <History className="text-primary mt-0.5 h-5 w-5" aria-hidden="true" />
+        <div>
+          <CardTitle>{t("advertising.historyTitle")}</CardTitle>
+          <CardDescription>{t("advertising.historyDescription")}</CardDescription>
+        </div>
+      </div>
+      <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <section aria-labelledby="advertising-validation-history">
+          <h3
+            id="advertising-validation-history"
+            className="text-body text-fg-primary font-semibold"
+          >
+            {t("advertising.validationHistoryTitle")}
+          </h3>
+          {validationResults.length === 0 ? (
+            <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {validationResults.slice(0, 20).map((result) => (
+                <li
+                  key={result.id}
+                  className="border-border rounded-[var(--radius-control)] border p-3"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-body text-fg-primary font-medium">
+                      {t(`advertising.diagnosticOperations.${result.operation}`)}
+                    </span>
+                    <Badge variant={result.status === "passed" ? "success" : "danger"}>
+                      {t(`advertising.historyStatus.${result.status}`)}
+                    </Badge>
+                  </div>
+                  <p className="text-label text-fg-muted mt-1">
+                    {connectionName.get(result.connectionId) ?? result.connectionId} ·{" "}
+                    {result.sanitizedCode ?? "—"} · {new Date(result.checkedAt).toLocaleString()}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+        <section aria-labelledby="advertising-sync-history">
+          <h3 id="advertising-sync-history" className="text-body text-fg-primary font-semibold">
+            {t("advertising.syncHistoryTitle")}
+          </h3>
+          {syncRuns.length === 0 ? (
+            <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
+          ) : (
+            <ul className="mt-2 space-y-2">
+              {syncRuns.slice(0, 20).map((run) => (
+                <li
+                  key={run.id}
+                  className="border-border rounded-[var(--radius-control)] border p-3"
+                >
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <span className="text-body text-fg-primary font-medium">{run.accountName}</span>
+                    <Badge
+                      variant={
+                        run.status === "succeeded" ? "success" : run.partial ? "outline" : "danger"
+                      }
+                    >
+                      {t(`advertising.historyStatus.${run.status}`)}
+                    </Badge>
+                  </div>
+                  <p className="text-label text-fg-muted mt-1">
+                    {t("advertising.rowsSummary", { read: run.rowsRead, written: run.rowsWritten })}
+                    {run.errorCode ? ` · ${run.errorCode}` : ""}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </Card>
   );
 }

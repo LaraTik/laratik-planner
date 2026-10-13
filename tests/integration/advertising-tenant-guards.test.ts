@@ -14,6 +14,7 @@ import {
   advertisingFinancialAuthorities,
   advertisingSpendObservations,
   advertisingSpendReconciliations,
+  advertisingProviderObjects,
   advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
@@ -24,6 +25,8 @@ import {
 } from "@/lib/db/schema";
 import {
   grantAdvertisingVisibility,
+  grantAdvertisingFinancialAuthority,
+  revokeAdvertisingFinancialAuthority,
   revokeAdvertisingVisibility,
 } from "@/lib/advertising/grant-service";
 import {
@@ -38,6 +41,7 @@ import {
 } from "@/lib/advertising/sync-worker";
 import { AdvertisingLeaseLostError } from "@/lib/advertising/ingestion-service";
 import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
+import { persistAdvertisingProviderObjects } from "@/lib/advertising/connection-service";
 import type { MetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
@@ -133,6 +137,8 @@ describe("advertising tenant ownership guards", () => {
   beforeEach(async () => {
     await db.execute(sql`
       TRUNCATE
+        advertising_audience_observation,
+        advertising_provider_object,
         advertising_spend_observation,
         advertising_spend_reconciliation,
         advertising_sync_run,
@@ -383,6 +389,58 @@ describe("advertising tenant ownership guards", () => {
     expect(runs.map((run) => run.status).sort()).toEqual(["failed", "succeeded"]);
   });
 
+  it("persists bounded provider object metadata and exact promoted post IDs", async () => {
+    const { agencyA, accountA, connectionA } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+
+    const first = await persistAdvertisingProviderObjects(db, {
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      objectType: "ad",
+      rows: {
+        data: [
+          {
+            id: "ad_promoted_1",
+            name: "Launch ad",
+            status: "ACTIVE",
+            creative: { object_story_spec: { link_data: { post_id: "page_1_post_9" } } },
+            access_token: "must-not-persist",
+          },
+        ],
+      },
+    });
+    const second = await persistAdvertisingProviderObjects(db, {
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      objectType: "ad",
+      rows: { data: [{ id: "ad_promoted_1", name: "Launch ad refreshed", status: "PAUSED" }] },
+    });
+    expect(first.written).toBe(1);
+    expect(second.written).toBe(1);
+
+    const objects = await db
+      .select({
+        name: advertisingProviderObjects.name,
+        status: advertisingProviderObjects.status,
+        promotedPostId: advertisingProviderObjects.promotedPostId,
+        metadata: advertisingProviderObjects.metadata,
+      })
+      .from(advertisingProviderObjects);
+    expect(objects).toHaveLength(1);
+    expect(objects[0]).toMatchObject({
+      name: "Launch ad refreshed",
+      status: "PAUSED",
+      promotedPostId: "page_1_post_9",
+    });
+    expect(JSON.stringify(objects[0]?.metadata)).not.toContain("must-not-persist");
+  });
+
   it("scopes one shared account across workspaces and revokes report access immediately", async () => {
     const { agencyA, workspaceA, accountA, connectionA, actor } = await seed();
     const [workspaceA2] = await db
@@ -526,5 +584,137 @@ describe("advertising tenant ownership guards", () => {
         workspaceId: workspaceA.id,
       }),
     ).toEqual([]);
+  });
+
+  it("supports the same external Meta account in two agencies through isolated local links", async () => {
+    const {
+      agencyA,
+      agencyB,
+      workspaceA,
+      workspaceB,
+      accountA,
+      accountB,
+      connectionA,
+      connectionB,
+      actor,
+    } = await seed();
+    await db
+      .update(advertisingAccounts)
+      .set({ externalAccountId: accountA.externalAccountId })
+      .where(eq(advertisingAccounts.id, accountB.id));
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values([
+      { connectionId: connectionA.id, accountId: accountA.id },
+      { connectionId: connectionB.id, accountId: accountB.id },
+    ]);
+    await db.insert(agencyMemberships).values([
+      { agencyId: agencyA.id, userId: actor.id, status: "active", isAgencyAdmin: false },
+      { agencyId: agencyB.id, userId: actor.id, status: "active", isAgencyAdmin: false },
+    ]);
+    await db.insert(workspaceMemberships).values([
+      { workspaceId: workspaceA.id, userId: actor.id, status: "active" },
+      { workspaceId: workspaceB.id, userId: actor.id, status: "active" },
+    ]);
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      grantedBy: actor.id,
+    });
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyB.id,
+      workspaceId: workspaceB.id,
+      accountId: accountB.id,
+      capability: "read_reports",
+      grantedBy: actor.id,
+    });
+    await db.insert(advertisingSpendObservations).values([
+      {
+        agencyId: agencyA.id,
+        accountId: accountA.id,
+        connectionId: connectionA.id,
+        externalAdId: "shared-ad-a",
+        externalCampaignId: "shared-campaign-a",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "10.00",
+        impressions: 100,
+        clicks: 5,
+        attributionWindow: "account",
+        actionReportTime: "impression",
+      },
+      {
+        agencyId: agencyB.id,
+        accountId: accountB.id,
+        connectionId: connectionB.id,
+        externalAdId: "shared-ad-b",
+        externalCampaignId: "shared-campaign-b",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "90.00",
+        impressions: 900,
+        clicks: 90,
+        attributionWindow: "account",
+        actionReportTime: "impression",
+      },
+    ]);
+    const [reportA, reportB] = await Promise.all([
+      loadAdvertisingReport(db, {
+        actor: { id: actor.id },
+        agencyId: agencyA.id,
+        workspaceId: workspaceA.id,
+        accountId: accountA.id,
+        since: "2026-10-01",
+        until: "2026-10-01",
+        surface: "workspace_dashboard",
+      }),
+      loadAdvertisingReport(db, {
+        actor: { id: actor.id },
+        agencyId: agencyB.id,
+        workspaceId: workspaceB.id,
+        accountId: accountB.id,
+        since: "2026-10-01",
+        until: "2026-10-01",
+        surface: "workspace_dashboard",
+      }),
+    ]);
+    expect(reportA.kind).toBe("ok");
+    expect(reportB.kind).toBe("ok");
+    if (reportA.kind !== "ok" || reportB.kind !== "ok") return;
+    expect(reportA.report.totals.spend).toBe(10);
+    expect(reportB.report.totals.spend).toBe(90);
+    expect(reportA.report.rows[0]?.accountId).toBe(accountA.id);
+    expect(reportB.report.rows[0]?.accountId).toBe(accountB.id);
+  });
+
+  it("revokes financial authority in place and records an audit event", async () => {
+    const { agencyA, workspaceA, accountA, actor } = await seed();
+    const authority = await grantAdvertisingFinancialAuthority(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      grantedBy: actor.id,
+    });
+
+    const revoked = await revokeAdvertisingFinancialAuthority(db, {
+      agencyId: agencyA.id,
+      authorityId: authority.id,
+      revokedBy: actor.id,
+    });
+    expect(revoked.revokedAt).toBeInstanceOf(Date);
+
+    const auditResult = await db.execute<{ action: string; target_id: string }>(sql`
+      SELECT action, target_id
+      FROM security_audit_event
+      WHERE action = 'advertising.financial_authority.revoked'
+        AND target_id = ${authority.id}
+      ORDER BY created_at DESC
+      LIMIT 1
+    `);
+    expect(auditResult.rows[0]).toEqual({
+      action: "advertising.financial_authority.revoked",
+      target_id: authority.id,
+    });
   });
 });

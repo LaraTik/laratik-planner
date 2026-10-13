@@ -3,6 +3,7 @@ import {
   activateAdvertisingConnection,
   persistDiscoveredAdvertisingAccount,
   persistDiscoveredAdvertisingSocialIdentity,
+  persistAdvertisingProviderObjects,
   recordAdvertisingValidation,
   setAdvertisingCapability,
 } from "./connection-service";
@@ -205,6 +206,13 @@ export async function runMetaConfigurationWorkflow(
       | "breakdown_read" = "campaign_read";
     try {
       const campaigns = await args.provider.readCampaigns(args.connection, accountView);
+      await persistAdvertisingProviderObjects(db, {
+        agencyId: args.agencyId,
+        accountId: persisted.id,
+        connectionId: args.connection.id,
+        objectType: "campaign",
+        rows: campaigns,
+      });
       const validation = await recordAdvertisingValidation(db, {
         connectionId: args.connection.id,
         accountId: persisted.id,
@@ -226,6 +234,14 @@ export async function runMetaConfigurationWorkflow(
       if (campaignId) {
         operation = "adset_read";
         const adSets = await args.provider.readAdSets(args.connection, campaignId);
+        await persistAdvertisingProviderObjects(db, {
+          agencyId: args.agencyId,
+          accountId: persisted.id,
+          connectionId: args.connection.id,
+          objectType: "adset",
+          parentExternalObjectId: campaignId,
+          rows: adSets,
+        });
         const adsetValidation = await recordAdvertisingValidation(db, {
           connectionId: args.connection.id,
           accountId: persisted.id,
@@ -246,6 +262,14 @@ export async function runMetaConfigurationWorkflow(
         if (adSetId) {
           operation = "ad_read";
           const ads = await args.provider.readAds(args.connection, adSetId);
+          await persistAdvertisingProviderObjects(db, {
+            agencyId: args.agencyId,
+            accountId: persisted.id,
+            connectionId: args.connection.id,
+            objectType: "ad",
+            parentExternalObjectId: adSetId,
+            rows: ads,
+          });
           const adValidation = await recordAdvertisingValidation(db, {
             connectionId: args.connection.id,
             accountId: persisted.id,
@@ -265,7 +289,15 @@ export async function runMetaConfigurationWorkflow(
           const adId = firstCollectionId(ads);
           if (adId) {
             operation = "creative_read";
-            await args.provider.readCreatives(args.connection, adId);
+            const creative = await args.provider.readCreatives(args.connection, adId);
+            await persistAdvertisingProviderObjects(db, {
+              agencyId: args.agencyId,
+              accountId: persisted.id,
+              connectionId: args.connection.id,
+              objectType: "creative",
+              parentExternalObjectId: adId,
+              rows: creative,
+            });
             const creativeValidation = await recordAdvertisingValidation(db, {
               connectionId: args.connection.id,
               accountId: persisted.id,

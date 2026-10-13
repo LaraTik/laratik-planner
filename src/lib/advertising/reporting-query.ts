@@ -9,6 +9,8 @@ import {
   advertisingFinancialAuthorities,
   advertisingGrantRevisions,
   advertisingSpendObservations,
+  advertisingAudienceObservations,
+  advertisingProviderObjects,
   advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
@@ -57,6 +59,30 @@ export type AdvertisingReportQuery = {
   now?: string | undefined;
 };
 
+export type AdvertisingReportObject = {
+  id: string;
+  objectType: "campaign" | "adset" | "ad" | "creative";
+  externalObjectId: string;
+  parentExternalObjectId: string | null;
+  name: string | null;
+  status: string | null;
+  objective: string | null;
+  dailyBudget: string | null;
+  lifetimeBudget: string | null;
+  promotedPostId: string | null;
+};
+
+export type AdvertisingAudienceReportRow = {
+  reportDate: string;
+  breakdown: string;
+  dimensionValue: string;
+  currency: string;
+  spend: string;
+  impressions: number | null;
+  clicks: number | null;
+  reach: number | null;
+};
+
 export type AdvertisingReportQueryResult =
   | { kind: "not_found" }
   | { kind: "forbidden" }
@@ -64,6 +90,8 @@ export type AdvertisingReportQueryResult =
       kind: "ok";
       report: ScopedAdvertisingSurfaceReport;
       account: Pick<AdvertisingAccount, "id" | "name" | "currency" | "timezone">;
+      objects: readonly AdvertisingReportObject[];
+      audience: readonly AdvertisingAudienceReportRow[];
       lastSuccessfulSyncAt: string | null;
       syncStatus: "succeeded" | "partial" | "failed" | "dead_letter" | "running" | null;
       partial: boolean;
@@ -211,6 +239,7 @@ export async function loadAdvertisingReport(
     connectionId: accountRow.connection.id,
     status: "active",
   };
+
   const connection: AdvertisingConnection = {
     id: accountRow.connection.id,
     provider: "meta",
@@ -346,6 +375,65 @@ export async function loadAdvertisingReport(
   // existence to a caller without an applicable grant.
   if (!report.authorized) return { kind: "forbidden" };
 
+  const authorizedObjectIds = [
+    ...new Set(
+      report.rows.flatMap((row) =>
+        [row.campaignId, row.adSetId, row.adId].filter(
+          (value): value is string => typeof value === "string" && value.length > 0,
+        ),
+      ),
+    ),
+  ];
+  const objectRows = authorizedObjectIds.length
+    ? await db
+        .select({
+          id: advertisingProviderObjects.id,
+          objectType: advertisingProviderObjects.objectType,
+          externalObjectId: advertisingProviderObjects.externalObjectId,
+          parentExternalObjectId: advertisingProviderObjects.parentExternalObjectId,
+          name: advertisingProviderObjects.name,
+          status: advertisingProviderObjects.status,
+          objective: advertisingProviderObjects.objective,
+          dailyBudget: advertisingProviderObjects.dailyBudget,
+          lifetimeBudget: advertisingProviderObjects.lifetimeBudget,
+          promotedPostId: advertisingProviderObjects.promotedPostId,
+        })
+        .from(advertisingProviderObjects)
+        .where(
+          and(
+            eq(advertisingProviderObjects.agencyId, args.agencyId),
+            eq(advertisingProviderObjects.accountId, args.accountId),
+            inArray(advertisingProviderObjects.externalObjectId, authorizedObjectIds),
+          ),
+        )
+    : [];
+  const audienceRows = await db
+    .select({
+      reportDate: advertisingAudienceObservations.reportDate,
+      breakdown: advertisingAudienceObservations.breakdown,
+      dimensionValue: advertisingAudienceObservations.dimensionValue,
+      currency: advertisingAudienceObservations.currency,
+      spend: advertisingAudienceObservations.spend,
+      impressions: advertisingAudienceObservations.impressions,
+      clicks: advertisingAudienceObservations.clicks,
+      reach: advertisingAudienceObservations.reach,
+    })
+    .from(advertisingAudienceObservations)
+    .where(
+      and(
+        eq(advertisingAudienceObservations.agencyId, args.agencyId),
+        eq(advertisingAudienceObservations.accountId, args.accountId),
+        gte(advertisingAudienceObservations.reportDate, args.since),
+        lte(advertisingAudienceObservations.reportDate, args.until),
+      ),
+    )
+    .orderBy(
+      asc(advertisingAudienceObservations.breakdown),
+      asc(advertisingAudienceObservations.reportDate),
+      asc(advertisingAudienceObservations.dimensionValue),
+    )
+    .limit(MAX_FACT_ROWS);
+
   const syncRows = await db
     .select({
       status: advertisingSyncRuns.status,
@@ -385,6 +473,15 @@ export async function loadAdvertisingReport(
   return {
     kind: "ok",
     report,
+    objects: objectRows.flatMap((row) =>
+      row.objectType === "campaign" ||
+      row.objectType === "adset" ||
+      row.objectType === "ad" ||
+      row.objectType === "creative"
+        ? [row as AdvertisingReportObject]
+        : [],
+    ),
+    audience: audienceRows,
     account: {
       id: account.id,
       name: account.name,

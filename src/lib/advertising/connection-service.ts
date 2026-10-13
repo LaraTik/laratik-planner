@@ -1,4 +1,4 @@
-import { and, eq, gt, ne } from "drizzle-orm";
+import { and, eq, gt, ne, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { db as appDb } from "@/lib/db";
 import {
@@ -6,6 +6,7 @@ import {
   advertisingCapabilities,
   advertisingConnectionAccounts,
   advertisingConnections,
+  advertisingProviderObjects,
   advertisingSocialIdentities,
   advertisingValidationResults,
 } from "@/lib/db/schema";
@@ -162,6 +163,140 @@ export async function persistDiscoveredAdvertisingAccount(
       });
     return account;
   });
+}
+
+export type AdvertisingProviderObjectType = "campaign" | "adset" | "ad" | "creative";
+
+function providerObjectRows(value: unknown): readonly Record<string, unknown>[] {
+  if (Array.isArray(value)) return value.filter(isRecord);
+  if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
+  if (isRecord(value) && typeof value.id === "string") return [value];
+  return [];
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function boundedText(value: unknown, max = 500): string | null {
+  return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
+}
+
+function decimalText(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return String(value);
+  if (typeof value === "string" && /^\d+(?:\.\d{1,6})?$/.test(value)) return value;
+  return null;
+}
+
+function promotedPostId(value: unknown): string | null {
+  if (!isRecord(value)) return null;
+  for (const key of [
+    "promoted_object",
+    "creative",
+    "object_story_spec",
+    "link_data",
+    "video_data",
+  ]) {
+    const child = value[key];
+    if (isRecord(child)) {
+      const direct = boundedText(child.post_id) ?? boundedText(child.story_id);
+      if (direct) return direct;
+      const nested = promotedPostId(child);
+      if (nested) return nested;
+    }
+  }
+  return boundedText(value.post_id) ?? boundedText(value.story_id);
+}
+
+/** Persist only bounded, non-secret provider object fields for analytics. */
+export async function persistAdvertisingProviderObjects(
+  db: Db,
+  args: {
+    agencyId: string;
+    accountId: string;
+    connectionId: string;
+    syncRunId?: string | null | undefined;
+    objectType: AdvertisingProviderObjectType;
+    rows: unknown;
+    parentExternalObjectId?: string | null | undefined;
+  },
+) {
+  const [link] = await db
+    .select({ accountId: advertisingConnectionAccounts.accountId })
+    .from(advertisingConnectionAccounts)
+    .innerJoin(
+      advertisingConnections,
+      and(
+        eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
+        eq(advertisingConnections.agencyId, args.agencyId),
+        eq(advertisingConnections.status, "active"),
+      ),
+    )
+    .where(
+      and(
+        eq(advertisingConnectionAccounts.connectionId, args.connectionId),
+        eq(advertisingConnectionAccounts.accountId, args.accountId),
+        eq(advertisingConnectionAccounts.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (!link) throw new AdvertisingConnectionInputError("advertising_connection_account_not_active");
+
+  const values = providerObjectRows(args.rows).flatMap((row) => {
+    const externalObjectId = boundedText(row.id, 200);
+    if (!externalObjectId) return [];
+    return [
+      {
+        agencyId: args.agencyId,
+        accountId: args.accountId,
+        connectionId: args.connectionId,
+        syncRunId: args.syncRunId ?? null,
+        objectType: args.objectType,
+        externalObjectId,
+        parentExternalObjectId: args.parentExternalObjectId ?? null,
+        name: boundedText(row.name, 200),
+        status: boundedText(row.status, 80),
+        objective: boundedText(row.objective, 120),
+        dailyBudget: decimalText(row.daily_budget),
+        lifetimeBudget: decimalText(row.lifetime_budget),
+        promotedPostId: promotedPostId(row),
+        metadata: sanitizeAdvertisingMetadata({
+          ...(row.creative ? { creative: row.creative } : {}),
+          ...(row.effective_status ? { effective_status: row.effective_status } : {}),
+        }),
+        observedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    ];
+  });
+  if (values.length === 0) return { written: 0 };
+  const inserted = await db
+    .insert(advertisingProviderObjects)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [
+        advertisingProviderObjects.agencyId,
+        advertisingProviderObjects.accountId,
+        advertisingProviderObjects.objectType,
+        advertisingProviderObjects.externalObjectId,
+      ],
+      set: {
+        connectionId: args.connectionId,
+        syncRunId: args.syncRunId ?? null,
+        parentExternalObjectId: sql`excluded.parent_external_object_id`,
+        name: sql`excluded.name`,
+        status: sql`excluded.status`,
+        objective: sql`excluded.objective`,
+        dailyBudget: sql`excluded.daily_budget`,
+        lifetimeBudget: sql`excluded.lifetime_budget`,
+        promotedPostId: sql`coalesce(excluded.promoted_post_id, ${advertisingProviderObjects.promotedPostId})`,
+        metadata: sql`excluded.metadata`,
+        observedAt: new Date(),
+        updatedAt: new Date(),
+      },
+    })
+    .returning({ id: advertisingProviderObjects.id });
+  return { written: inserted.length };
 }
 
 export async function recordAdvertisingValidation(
