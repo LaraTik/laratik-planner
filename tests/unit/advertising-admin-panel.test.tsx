@@ -8,6 +8,7 @@ vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
   grantAdvertisingFinancialAuthorityAction: vi.fn(async () => ({})),
   grantAdvertisingVisibilityAction: vi.fn(async () => ({})),
   revokeAdvertisingConnectionAction: vi.fn(async () => ({})),
+  revokeAdvertisingAccountAccessAction: vi.fn(async () => ({})),
   revokeAdvertisingFinancialAuthorityAction: vi.fn(async () => ({})),
   revokeAdvertisingVisibilityAction: vi.fn(async () => ({})),
   storeAdvertisingCredentialAction: vi.fn(async () => ({})),

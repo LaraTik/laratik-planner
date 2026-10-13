@@ -29,6 +29,7 @@ import {
   AdvertisingConnectionNotFoundError,
   AdvertisingConnectionRevokedError,
   revokeAdvertisingConnection,
+  revokeAdvertisingAccountAccess,
   storeAdvertisingCredential,
 } from "@/lib/advertising/credential-service";
 import { resolveAdvertisingCredential } from "@/lib/advertising/credential-service";
@@ -58,6 +59,10 @@ const CredentialSchema = z.object({
   accessToken: z.string().min(1).max(8_000),
 });
 const ConnectionIdSchema = z.object({ connectionId: z.string().uuid() });
+const AccountAccessSchema = z.object({
+  connectionId: z.string().uuid(),
+  accountId: z.string().uuid(),
+});
 const GrantSchema = z.object({
   accountId: z.string().uuid(),
   workspaceId: z.string().uuid().optional(),
@@ -70,6 +75,9 @@ const GrantSchema = z.object({
     "export_reports",
     "use_ai_context",
   ]),
+  campaignIds: z.array(z.string().trim().min(1)).max(500).nullable(),
+  adSetIds: z.array(z.string().trim().min(1)).max(500).nullable(),
+  adIds: z.array(z.string().trim().min(1)).max(500).nullable(),
 });
 const FinancialAuthoritySchema = z.object({
   accountId: z.string().uuid(),
@@ -130,6 +138,15 @@ function errorState(error: unknown): AdvertisingActionState {
     "advertising_financial_authority_not_found",
   ]);
   return { code: safeCodes.has(code) ? code : "advertising_action_failed" };
+}
+
+function parseScopeIds(value: FormDataEntryValue | null): string[] | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  const ids = value
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+  return ids.length ? ids : null;
 }
 
 export async function createAdvertisingConnectionAction(
@@ -204,6 +221,25 @@ export async function revokeAdvertisingConnectionAction(
   }
 }
 
+export async function revokeAdvertisingAccountAccessAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { agencyId } = await requireAdmin();
+    const parsed = AccountAccessSchema.safeParse({
+      connectionId: formData.get("connectionId"),
+      accountId: formData.get("accountId"),
+    });
+    if (!parsed.success) return { code: "invalid_connection" };
+    await revokeAdvertisingAccountAccess(db, { agencyId, ...parsed.data });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "advertising_account_access_revoked" };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
 export async function validateAdvertisingConnectionAction(
   connectionId: string,
 ): Promise<AdvertisingActionState> {
@@ -259,6 +295,9 @@ export async function grantAdvertisingVisibilityAction(
       accountId: formData.get("accountId"),
       workspaceId: formData.get("workspaceId") || undefined,
       capability: formData.get("capability"),
+      campaignIds: parseScopeIds(formData.get("campaignIds")),
+      adSetIds: parseScopeIds(formData.get("adSetIds")),
+      adIds: parseScopeIds(formData.get("adIds")),
     });
     if (!parsed.success) return { code: "invalid_grant" };
     const grant = await grantAdvertisingVisibility(db, {
@@ -266,6 +305,9 @@ export async function grantAdvertisingVisibilityAction(
       accountId: parsed.data.accountId,
       workspaceId: parsed.data.workspaceId,
       capability: parsed.data.capability,
+      campaignIds: parsed.data.campaignIds,
+      adSetIds: parsed.data.adSetIds,
+      adIds: parsed.data.adIds,
       grantedBy: actor.id,
     });
     revalidatePath("/app/agency-settings/advertising");

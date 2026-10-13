@@ -70,6 +70,7 @@ export type AdvertisingReportObject = {
   dailyBudget: string | null;
   lifetimeBudget: string | null;
   promotedPostId: string | null;
+  metadata: Record<string, unknown> | null;
 };
 
 export type AdvertisingAudienceReportRow = {
@@ -346,6 +347,9 @@ export async function loadAdvertisingReport(
         spend,
         impressions: row.impressions,
         clicks: row.clicks,
+        reach: row.reach,
+        results: row.results,
+        ...(row.resultType ? { resultType: row.resultType } : {}),
       },
     ];
   });
@@ -397,6 +401,7 @@ export async function loadAdvertisingReport(
           dailyBudget: advertisingProviderObjects.dailyBudget,
           lifetimeBudget: advertisingProviderObjects.lifetimeBudget,
           promotedPostId: advertisingProviderObjects.promotedPostId,
+          metadata: advertisingProviderObjects.metadata,
         })
         .from(advertisingProviderObjects)
         .where(
@@ -407,32 +412,45 @@ export async function loadAdvertisingReport(
           ),
         )
     : [];
-  const audienceRows = await db
-    .select({
-      reportDate: advertisingAudienceObservations.reportDate,
-      breakdown: advertisingAudienceObservations.breakdown,
-      dimensionValue: advertisingAudienceObservations.dimensionValue,
-      currency: advertisingAudienceObservations.currency,
-      spend: advertisingAudienceObservations.spend,
-      impressions: advertisingAudienceObservations.impressions,
-      clicks: advertisingAudienceObservations.clicks,
-      reach: advertisingAudienceObservations.reach,
-    })
-    .from(advertisingAudienceObservations)
-    .where(
-      and(
-        eq(advertisingAudienceObservations.agencyId, args.agencyId),
-        eq(advertisingAudienceObservations.accountId, args.accountId),
-        gte(advertisingAudienceObservations.reportDate, args.since),
-        lte(advertisingAudienceObservations.reportDate, args.until),
-      ),
-    )
-    .orderBy(
-      asc(advertisingAudienceObservations.breakdown),
-      asc(advertisingAudienceObservations.reportDate),
-      asc(advertisingAudienceObservations.dimensionValue),
-    )
-    .limit(MAX_FACT_ROWS);
+  const reportNow = args.now ? new Date(args.now) : new Date();
+  const hasAccountWideAudienceGrant = visibilityGrants.some(
+    (grant) =>
+      grant.capability === "read_reports" &&
+      grant.revokedAt === null &&
+      new Date(grant.startsAt) <= reportNow &&
+      (grant.endsAt === null || new Date(grant.endsAt) > reportNow) &&
+      grant.campaignIds === null &&
+      grant.adSetIds === null &&
+      grant.adIds === null,
+  );
+  const audienceRows = hasAccountWideAudienceGrant
+    ? await db
+        .select({
+          reportDate: advertisingAudienceObservations.reportDate,
+          breakdown: advertisingAudienceObservations.breakdown,
+          dimensionValue: advertisingAudienceObservations.dimensionValue,
+          currency: advertisingAudienceObservations.currency,
+          spend: advertisingAudienceObservations.spend,
+          impressions: advertisingAudienceObservations.impressions,
+          clicks: advertisingAudienceObservations.clicks,
+          reach: advertisingAudienceObservations.reach,
+        })
+        .from(advertisingAudienceObservations)
+        .where(
+          and(
+            eq(advertisingAudienceObservations.agencyId, args.agencyId),
+            eq(advertisingAudienceObservations.accountId, args.accountId),
+            gte(advertisingAudienceObservations.reportDate, args.since),
+            lte(advertisingAudienceObservations.reportDate, args.until),
+          ),
+        )
+        .orderBy(
+          asc(advertisingAudienceObservations.breakdown),
+          asc(advertisingAudienceObservations.reportDate),
+          asc(advertisingAudienceObservations.dimensionValue),
+        )
+        .limit(MAX_FACT_ROWS)
+    : [];
 
   const syncRows = await db
     .select({

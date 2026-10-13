@@ -50,6 +50,7 @@ export function normalizeMetaAdInsights(
     const spend = decimalValue(row.spend);
     const impressions = countValue(row.impressions);
     const clicks = countValue(row.clicks);
+    const normalizedResults = normalizeResults(row);
     if (!externalAdId || !reportDate || spend === null || impressions === null || clicks === null) {
       skippedRows += 1;
       continue;
@@ -63,6 +64,10 @@ export function normalizeMetaAdInsights(
       spend,
       impressions,
       clicks,
+      reach: countValue(row.reach),
+      results: normalizedResults.results,
+      resultType: normalizedResults.resultType,
+      resultActions: normalizedResults.actions,
       attributionWindow: context.attributionWindow ?? "account",
       actionReportTime: context.actionReportTime ?? "impression",
     });
@@ -155,6 +160,32 @@ function countValue(value: unknown): number | null {
   if (typeof value === "number" && Number.isInteger(value) && value >= 0) return value;
   if (typeof value === "string" && /^\d+$/.test(value)) return Number(value);
   return null;
+}
+
+function normalizeResults(value: Record<string, unknown>): {
+  results: number | null;
+  resultType: string | null;
+  actions: Record<string, number> | null;
+} {
+  const explicit = countValue(value.results ?? value.result);
+  const explicitType = stringValue(value.result_type ?? value.resultType);
+  const rawActions = Array.isArray(value.actions) ? value.actions : [];
+  const actions: Record<string, number> = {};
+  for (const item of rawActions) {
+    if (!isRecord(item)) continue;
+    const actionType = stringValue(item.action_type ?? item.actionType);
+    const count = countValue(item.value);
+    if (actionType && count !== null) actions[actionType] = (actions[actionType] ?? 0) + count;
+  }
+  if (explicit !== null)
+    return {
+      results: explicit,
+      resultType: explicitType,
+      actions: Object.keys(actions).length ? actions : null,
+    };
+  if (Object.keys(actions).length === 0) return { results: null, resultType: null, actions: null };
+  const total = Object.values(actions).reduce((sum, value) => sum + value, 0);
+  return { results: total, resultType: explicitType ?? "provider_actions", actions };
 }
 
 function parseMicros(value: string): bigint {

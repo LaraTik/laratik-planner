@@ -263,6 +263,7 @@ export async function persistAdvertisingProviderObjects(
         metadata: sanitizeAdvertisingMetadata({
           ...(row.creative ? { creative: row.creative } : {}),
           ...(row.effective_status ? { effective_status: row.effective_status } : {}),
+          ...(row.targeting ? { targeting: row.targeting } : {}),
         }),
         observedAt: new Date(),
         updatedAt: new Date(),

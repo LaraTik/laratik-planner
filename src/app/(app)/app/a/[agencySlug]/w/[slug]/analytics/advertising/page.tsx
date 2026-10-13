@@ -237,7 +237,7 @@ export default async function AdvertisingAnalyticsPage({
                 {t("advertising.reporting.summaryDescription", { account: selectedAccount.name })}
               </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
               <MetricCard
                 label={t("advertising.reporting.spend")}
                 value={money(result.report.totals.spend, selectedAccount.currency, code)}
@@ -249,6 +249,14 @@ export default async function AdvertisingAnalyticsPage({
               <MetricCard
                 label={t("advertising.reporting.clicks")}
                 value={number(result.report.totals.clicks, code)}
+              />
+              <MetricCard
+                label={t("advertising.reporting.results")}
+                value={
+                  result.report.totals.results === null
+                    ? t("advertising.reporting.notAvailable")
+                    : number(result.report.totals.results, code)
+                }
               />
               <MetricCard
                 label={t("advertising.reporting.ctr")}
@@ -359,6 +367,9 @@ export default async function AdvertisingAnalyticsPage({
                       {t("advertising.reporting.clicks")}
                     </th>
                     <th className="px-4 py-3 text-end font-semibold" scope="col">
+                      {t("advertising.reporting.results")}
+                    </th>
+                    <th className="px-4 py-3 text-end font-semibold" scope="col">
                       {t("advertising.reporting.ctr")}
                     </th>
                     <th className="px-4 py-3 text-end font-semibold" scope="col">
@@ -395,6 +406,11 @@ export default async function AdvertisingAnalyticsPage({
                       </td>
                       <td className="px-4 py-3 text-end">{number(campaign.impressions, code)}</td>
                       <td className="px-4 py-3 text-end">{number(campaign.clicks, code)}</td>
+                      <td className="px-4 py-3 text-end">
+                        {campaign.results === null
+                          ? t("advertising.reporting.notAvailable")
+                          : number(campaign.results, code)}
+                      </td>
                       <td className="px-4 py-3 text-end">{percent(campaign.ctr, code, t)}</td>
                       <td className="px-4 py-3 text-end">
                         {moneyOrUnavailable(campaign.cpc, selectedAccount.currency, code, t)}
@@ -419,6 +435,57 @@ export default async function AdvertisingAnalyticsPage({
               </table>
             </div>
           </Card>
+          {result.objects.some(
+            (object) => object.objectType === "adset" && object.metadata?.targeting,
+          ) ? (
+            <Card data-testid="advertising-reporting-targeting">
+              <CardHeader>
+                <CardTitle>{t("advertising.reporting.targetingTitle")}</CardTitle>
+                <CardDescription>{t("advertising.reporting.targetingDescription")}</CardDescription>
+              </CardHeader>
+              <div
+                className="overflow-x-auto"
+                role="region"
+                tabIndex={0}
+                aria-label={t("advertising.reporting.targetingTableLabel")}
+              >
+                <table className="text-body w-full min-w-[640px] text-start">
+                  <caption className="sr-only">
+                    {t("advertising.reporting.targetingTableLabel")}
+                  </caption>
+                  <thead className="bg-surface-subtle text-label text-fg-muted">
+                    <tr>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.adSet")}
+                      </th>
+                      <th className="px-4 py-3 text-start font-semibold" scope="col">
+                        {t("advertising.reporting.targetingTitle")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-border divide-y">
+                    {result.objects
+                      .filter(
+                        (object) => object.objectType === "adset" && object.metadata?.targeting,
+                      )
+                      .map((object) => (
+                        <tr key={object.externalObjectId}>
+                          <th className="px-4 py-3 text-start font-semibold" scope="row">
+                            <span className="block">{object.name ?? object.externalObjectId}</span>
+                            <bdi className="text-label text-fg-muted" dir="ltr">
+                              {object.externalObjectId}
+                            </bdi>
+                          </th>
+                          <td className="px-4 py-3 text-start">
+                            {formatTargeting(object.metadata?.targeting)}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          ) : null}
           {view.promotedPosts?.length ? (
             <Card data-testid="advertising-reporting-promoted-posts">
               <CardHeader>
@@ -581,6 +648,14 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       </p>
     </Card>
   );
+}
+
+function formatTargeting(value: unknown): string {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return "—";
+  return Object.entries(value as Record<string, unknown>)
+    .slice(0, 8)
+    .map(([key, entry]) => `${key}: ${typeof entry === "string" ? entry : JSON.stringify(entry)}`)
+    .join(" · ");
 }
 
 function firstQueryValue(value: string | string[] | undefined): string | undefined {

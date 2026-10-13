@@ -156,13 +156,13 @@ export function createMetaAdvertisingProvider(
         await clientFor(connection),
         `${account.externalAccountId}/campaigns`,
         {
-          fields: "id,name,status,objective",
+          fields: "id,name,status,objective,daily_budget,lifetime_budget",
         },
       );
     },
     async readAdSets(connection, campaignId) {
       return readMetaCollection(await clientFor(connection), `${campaignId}/adsets`, {
-        fields: "id,name,status,campaign_id",
+        fields: "id,name,status,campaign_id,daily_budget,lifetime_budget,targeting",
       });
     },
     async readAds(connection, adSetId) {

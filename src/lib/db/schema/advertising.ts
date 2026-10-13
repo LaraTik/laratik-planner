@@ -602,6 +602,10 @@ export const advertisingSpendObservations = pgTable(
     spend: numeric("spend", { precision: 18, scale: 6 }).notNull(),
     impressions: integer("impressions").notNull().default(0),
     clicks: integer("clicks").notNull().default(0),
+    reach: integer("reach"),
+    results: integer("results"),
+    resultType: text("result_type"),
+    resultActions: jsonb("result_actions"),
     attributionWindow: text("attribution_window").notNull().default("account"),
     actionReportTime: text("action_report_time").notNull().default("mixed"),
     providerDataVersion: text("provider_data_version"),
@@ -623,7 +627,9 @@ export const advertisingSpendObservations = pgTable(
     check("advertising_spend_observation_amount_valid", sql`${t.spend} >= 0`),
     check(
       "advertising_spend_observation_counts_valid",
-      sql`${t.impressions} >= 0 AND ${t.clicks} >= 0`,
+      sql`${t.impressions} >= 0 AND ${t.clicks} >= 0
+        AND (${t.reach} IS NULL OR ${t.reach} >= 0)
+        AND (${t.results} IS NULL OR ${t.results} >= 0)`,
     ),
   ],
 );

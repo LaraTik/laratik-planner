@@ -21,6 +21,10 @@ export type AdvertisingSpendObservationInput = {
   readonly spend: string;
   readonly impressions: number;
   readonly clicks: number;
+  readonly reach?: number | null | undefined;
+  readonly results?: number | null | undefined;
+  readonly resultType?: string | null | undefined;
+  readonly resultActions?: Record<string, number> | null | undefined;
   readonly attributionWindow: string;
   readonly actionReportTime: string;
 };
@@ -201,6 +205,10 @@ export async function ingestAdvertisingSpend(
           spend: observation.spend,
           impressions: observation.impressions,
           clicks: observation.clicks,
+          reach: observation.reach ?? null,
+          results: observation.results ?? null,
+          resultType: observation.resultType ?? null,
+          resultActions: observation.resultActions ?? null,
           attributionWindow: observation.attributionWindow,
           actionReportTime: observation.actionReportTime,
           providerDataVersion: args.providerDataVersion ?? null,
@@ -222,6 +230,10 @@ export async function ingestAdvertisingSpend(
           spend: advertisingSpendObservations.spend,
           impressions: advertisingSpendObservations.impressions,
           clicks: advertisingSpendObservations.clicks,
+          reach: advertisingSpendObservations.reach,
+          results: advertisingSpendObservations.results,
+          resultType: advertisingSpendObservations.resultType,
+          resultActions: advertisingSpendObservations.resultActions,
           providerDataVersion: args.providerDataVersion ?? null,
           observedAt: new Date(),
           updatedAt: new Date(),

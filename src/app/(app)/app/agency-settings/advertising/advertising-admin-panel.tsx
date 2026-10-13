@@ -26,6 +26,7 @@ import {
   grantAdvertisingFinancialAuthorityAction,
   grantAdvertisingVisibilityAction,
   revokeAdvertisingConnectionAction,
+  revokeAdvertisingAccountAccessAction,
   revokeAdvertisingFinancialAuthorityAction,
   revokeAdvertisingVisibilityAction,
   storeAdvertisingCredentialAction,
@@ -366,6 +367,23 @@ function GrantAccessCard({
                 size="sm"
               />
             </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-campaigns">{t("advertising.scopeCampaigns")}</Label>
+              <Input
+                id="advertising-grant-campaigns"
+                name="campaignIds"
+                placeholder="campaign_1, campaign_2"
+              />
+              <p className="text-label text-fg-muted">{t("advertising.scopeIdsHelp")}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-adsets">{t("advertising.scopeAdSets")}</Label>
+              <Input id="advertising-grant-adsets" name="adSetIds" placeholder="adset_1, adset_2" />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="advertising-grant-ads">{t("advertising.scopeAds")}</Label>
+              <Input id="advertising-grant-ads" name="adIds" placeholder="ad_1, ad_2" />
+            </div>
             {grantState.code ? <ActionMessage state={grantState} compact /> : null}
           </form>
           <form
@@ -603,6 +621,10 @@ function ConnectionCard({
   );
   const [revokeState, revokeAction] = useActionState(revokeAdvertisingConnectionAction, initial);
   const [syncState, syncAction] = useActionState(setAdvertisingSyncStateAction, initial);
+  const [revokeAccountState, revokeAccountAction] = useActionState(
+    revokeAdvertisingAccountAccessAction,
+    initial,
+  );
   const [validationState, setValidationState] = React.useState<AdvertisingActionState>({});
   const [validating, setValidating] = React.useState(false);
   const [revealed, setRevealed] = React.useState(false);
@@ -864,12 +886,26 @@ function ConnectionCard({
                       {paused ? t("advertising.activateSync") : t("advertising.disableSync")}
                     </Button>
                   </form>
+                  <form action={revokeAccountAction}>
+                    <input type="hidden" name="connectionId" value={connection.id} />
+                    <input type="hidden" name="accountId" value={link.accountId} />
+                    <Button
+                      type="submit"
+                      size="sm"
+                      variant="destructive"
+                      disabled={link.status !== "active"}
+                    >
+                      <XCircle className="h-4 w-4" aria-hidden="true" />
+                      {t("advertising.revokeAccountAccess")}
+                    </Button>
+                  </form>
                 </div>
               );
             })}
           </div>
         )}
         {syncState.code ? <ActionMessage state={syncState} compact /> : null}
+        {revokeAccountState.code ? <ActionMessage state={revokeAccountState} compact /> : null}
       </div>
     </Card>
   );

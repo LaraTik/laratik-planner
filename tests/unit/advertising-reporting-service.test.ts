@@ -84,7 +84,15 @@ describe("advertising reporting authorization seam", () => {
       authorized: false,
       reason: "visibility_grant_missing",
       rows: [],
-      totals: { spend: 0, impressions: 0, clicks: 0, ctr: null, cpc: null, cpm: null },
+      totals: {
+        spend: 0,
+        impressions: 0,
+        clicks: 0,
+        results: null,
+        ctr: null,
+        cpc: null,
+        cpm: null,
+      },
     });
   });
 

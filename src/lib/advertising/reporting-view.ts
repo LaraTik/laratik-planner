@@ -9,12 +9,14 @@ type AdvertisingReportObject = {
   dailyBudget: string | null;
   lifetimeBudget: string | null;
   promotedPostId: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
 export type AdvertisingMetricTotals = {
   spend: number;
   impressions: number;
   clicks: number;
+  results: number | null;
   ctr: number | null;
   cpc: number | null;
   cpm: number | null;
@@ -48,10 +50,15 @@ function totals(rows: readonly AdvertisingFact[]): AdvertisingMetricTotals {
   const spend = rows.reduce((sum, row) => sum + row.spend, 0);
   const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
   const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+  const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
   return {
     spend,
     impressions,
     clicks,
+    results:
+      resultRows.length === rows.length && rows.length > 0
+        ? resultRows.reduce((sum, row) => sum + (row.results ?? 0), 0)
+        : null,
     ctr: impressions > 0 ? clicks / impressions : null,
     cpc: clicks > 0 ? spend / clicks : null,
     cpm: impressions > 0 ? (spend / impressions) * 1000 : null,

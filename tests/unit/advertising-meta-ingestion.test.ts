@@ -49,6 +49,10 @@ describe("Meta ad-level ingestion normalization", () => {
           spend: "12.345678",
           impressions: 100,
           clicks: 5,
+          reach: null,
+          results: null,
+          resultType: null,
+          resultActions: null,
           attributionWindow: "7d_click",
           actionReportTime: "impression",
         },
@@ -64,6 +68,49 @@ describe("Meta ad-level ingestion normalization", () => {
       context,
     );
     expect(result).toEqual({ observations: [], skippedRows: 1, partial: true });
+  });
+
+  it("normalizes explicit and action-based provider results without guessing a result type", () => {
+    const result = normalizeMetaAdInsights(
+      {
+        data: [
+          {
+            ad_id: "ad_1",
+            campaign_id: "campaign_1",
+            date_start: "2026-10-01",
+            spend: "4",
+            impressions: "10",
+            clicks: "1",
+            reach: "9",
+            results: "3",
+            result_type: "link_click",
+          },
+          {
+            ad_id: "ad_2",
+            campaign_id: "campaign_1",
+            date_start: "2026-10-01",
+            spend: "5",
+            impressions: "20",
+            clicks: "2",
+            actions: [
+              { action_type: "lead", value: "2" },
+              { action_type: "lead", value: "1" },
+            ],
+          },
+        ],
+      },
+      context,
+    );
+    expect(result.observations[0]).toMatchObject({
+      results: 3,
+      resultType: "link_click",
+      reach: 9,
+    });
+    expect(result.observations[1]).toMatchObject({
+      results: 3,
+      resultType: "provider_actions",
+      resultActions: { lead: 3 },
+    });
   });
 
   it("rejects non-canonical breakdowns and non-ad grains", () => {

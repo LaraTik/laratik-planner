@@ -17,6 +17,9 @@ export type AdvertisingFact = {
   readonly spend: number;
   readonly impressions: number;
   readonly clicks: number;
+  readonly reach?: number | null | undefined;
+  readonly results?: number | null | undefined;
+  readonly resultType?: string | null | undefined;
 };
 
 export type ScopedAdvertisingReport = {
@@ -27,6 +30,7 @@ export type ScopedAdvertisingReport = {
     readonly spend: number;
     readonly impressions: number;
     readonly clicks: number;
+    readonly results: number | null;
     readonly ctr: number | null;
     readonly cpc: number | null;
     readonly cpm: number | null;
@@ -45,10 +49,15 @@ function totals(rows: readonly AdvertisingFact[]) {
   const spend = rows.reduce((sum, row) => sum + row.spend, 0);
   const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
   const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+  const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
   return {
     spend,
     impressions,
     clicks,
+    results:
+      resultRows.length === rows.length && rows.length > 0
+        ? resultRows.reduce((sum, row) => sum + (row.results ?? 0), 0)
+        : null,
     ctr: impressions > 0 ? clicks / impressions : null,
     cpc: clicks > 0 ? spend / clicks : null,
     cpm: impressions > 0 ? (spend / impressions) * 1000 : null,

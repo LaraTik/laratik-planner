@@ -171,6 +171,52 @@ export async function revokeAdvertisingConnection(
   return { connectionId: updated.id, revoked: true };
 }
 
+/** Revoke one discovered ad account without revoking the agency connection. */
+export async function revokeAdvertisingAccountAccess(
+  db: Db,
+  args: { agencyId: string; connectionId: string; accountId: string },
+): Promise<{ connectionId: string; accountId: string; revoked: true }> {
+  return db.transaction(async (tx) => {
+    const link = await tx
+      .select({ accountId: advertisingConnectionAccounts.accountId })
+      .from(advertisingConnectionAccounts)
+      .innerJoin(
+        advertisingConnections,
+        and(
+          eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
+          eq(advertisingConnections.agencyId, args.agencyId),
+        ),
+      )
+      .where(
+        and(
+          eq(advertisingConnectionAccounts.connectionId, args.connectionId),
+          eq(advertisingConnectionAccounts.accountId, args.accountId),
+        ),
+      )
+      .limit(1);
+    if (!link[0]) throw new AdvertisingConnectionNotFoundError();
+    await tx
+      .update(advertisingConnectionAccounts)
+      .set({ status: "revoked", updatedAt: new Date() })
+      .where(
+        and(
+          eq(advertisingConnectionAccounts.connectionId, args.connectionId),
+          eq(advertisingConnectionAccounts.accountId, args.accountId),
+        ),
+      );
+    await tx
+      .update(advertisingSyncStates)
+      .set({ status: "paused", nextRunAt: null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(advertisingSyncStates.connectionId, args.connectionId),
+          eq(advertisingSyncStates.accountId, args.accountId),
+        ),
+      );
+    return { connectionId: args.connectionId, accountId: args.accountId, revoked: true } as const;
+  });
+}
+
 /** Resolve the current credential for a provider adapter; never use in a route response. */
 export async function resolveAdvertisingCredential(
   db: Db,

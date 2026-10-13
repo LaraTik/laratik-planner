@@ -8,6 +8,7 @@ import {
   advertisingConnections,
   advertisingSyncRuns,
   advertisingSyncStates,
+  advertisingVisibilityGrants,
 } from "@/lib/db/schema";
 import { createMetaReadClient } from "./meta-http";
 import {
@@ -16,6 +17,7 @@ import {
   normalizeMetaBreakdownInsights,
   sumSpendValues,
 } from "./meta-ingestion";
+import type { AdvertisingSpendObservationInput } from "./ingestion-service";
 import {
   buildSpendReconciliation,
   type AdvertisingLease,
@@ -39,6 +41,14 @@ const BATCH_LIMIT = 10;
 const LEASE_MS = 50_000;
 const RETRY_DELAYS_MINUTES = [15, 60, 360] as const;
 export const ADVERTISING_SYNC_MAX_ATTEMPTS = RETRY_DELAYS_MINUTES.length + 1;
+export const SUPPORTED_META_AUDIENCE_BREAKDOWNS = [
+  "age",
+  "gender",
+  "placement",
+  "device_platform",
+  "country",
+  "region",
+] as const;
 
 export type ClaimedSync = {
   stateId: string;
@@ -188,6 +198,7 @@ export async function runAdvertisingSyncTick(
     owner?: string;
     limit?: number;
     providerFactory?: AdvertisingSyncProviderFactory;
+    dateRange?: { since: string; until: string };
   } = {},
 ): Promise<AdvertisingSyncTickResult> {
   const claimed = await claimAdvertisingSyncStates(db, {
@@ -209,6 +220,7 @@ export async function runAdvertisingSyncTick(
       target,
       args.now ?? new Date(),
       args.providerFactory,
+      args.dateRange,
     );
     result[outcome] += 1;
   }
@@ -220,6 +232,7 @@ async function runOneAdvertisingSync(
   target: ClaimedSync,
   now: Date,
   providerFactory?: AdvertisingSyncProviderFactory,
+  dateRange?: { since: string; until: string },
 ) {
   let syncRun: { id: string };
   try {
@@ -245,7 +258,7 @@ async function runOneAdvertisingSync(
           },
           (credential) => createMetaReadClient(target.connection.graphApiVersion, credential),
         );
-    const context = buildAdContext(target.account, now);
+    const context = buildAdContext(target.account, now, dateRange);
     const adResponse = await provider.readDailyInsights(target.connection, target.account, context);
     const adInsights = normalizeMetaAdInsights(adResponse, context);
     const written = await ingestAdvertisingSpend(db, {
@@ -267,12 +280,34 @@ async function runOneAdvertisingSync(
       accountContext,
     );
     const accountInsights = normalizeMetaAccountInsights(accountResponse);
-    for (const accountRow of accountInsights.rows) {
-      const canonical = sumSpendValues(
-        adInsights.observations
-          .filter((observation) => observation.reportDate === accountRow.reportDate)
-          .map((observation) => observation.spend),
+    const grantRows = await db
+      .select({
+        workspaceId: advertisingVisibilityGrants.workspaceId,
+        campaignIds: advertisingVisibilityGrants.campaignIds,
+        adSetIds: advertisingVisibilityGrants.adSetIds,
+        adIds: advertisingVisibilityGrants.adIds,
+        startsAt: advertisingVisibilityGrants.startsAt,
+        endsAt: advertisingVisibilityGrants.endsAt,
+        revokedAt: advertisingVisibilityGrants.revokedAt,
+      })
+      .from(advertisingVisibilityGrants)
+      .where(
+        and(
+          eq(advertisingVisibilityGrants.agencyId, target.agencyId),
+          eq(advertisingVisibilityGrants.accountId, target.account.id),
+          lte(advertisingVisibilityGrants.startsAt, now),
+          or(
+            isNull(advertisingVisibilityGrants.endsAt),
+            gt(advertisingVisibilityGrants.endsAt, now),
+          ),
+          isNull(advertisingVisibilityGrants.revokedAt),
+        ),
       );
+    for (const accountRow of accountInsights.rows) {
+      const dayObservations = adInsights.observations.filter(
+        (observation) => observation.reportDate === accountRow.reportDate,
+      );
+      const canonical = sumSpendValues(dayObservations.map((observation) => observation.spend));
       await upsertAdvertisingReconciliation(db, {
         agencyId: target.agencyId,
         accountId: target.account.id,
@@ -283,7 +318,11 @@ async function runOneAdvertisingSync(
         reconciliation: buildSpendReconciliation({
           providerAccountSpend: accountRow.spend,
           canonicalAdSpend: canonical,
-          workspaceAttributedSpend: "0",
+          workspaceAttributedSpend: attributedSpendForDate(
+            dayObservations,
+            grantRows,
+            accountRow.reportDate,
+          ),
           completeness:
             adInsights.partial ||
             accountInsights.partial ||
@@ -402,30 +441,34 @@ async function syncAudience(
   syncRunId: string,
   baseContext: AdvertisingReportContext,
 ): Promise<{ partial: boolean }> {
-  try {
-    const context: AdvertisingReportContext = {
-      ...baseContext,
-      breakdowns: ["age", "gender"],
-      grain: "account_day",
-    };
-    const response = await provider.readBreakdowns(target.connection, target.account, context);
-    const normalized = normalizeMetaBreakdownInsights(response, context);
-    const written = await ingestAdvertisingAudience(db, {
-      agencyId: target.agencyId,
-      accountId: target.account.id,
-      connectionId: target.connection.id,
-      syncRunId,
-      lease: leaseFor(target),
-      observations: normalized.observations,
-    });
-    return {
-      partial:
-        normalized.observations.length > 0 &&
-        (normalized.partial || written.written < normalized.observations.length),
-    };
-  } catch {
-    return { partial: true };
+  let partial = false;
+  for (const breakdown of SUPPORTED_META_AUDIENCE_BREAKDOWNS) {
+    try {
+      const context: AdvertisingReportContext = {
+        ...baseContext,
+        breakdowns: [breakdown],
+        grain: "account_day",
+      };
+      const response = await provider.readBreakdowns(target.connection, target.account, context);
+      const normalized = normalizeMetaBreakdownInsights(response, context);
+      if (normalized.observations.length === 0) {
+        if (normalized.skippedRows > 0) partial = true;
+        continue;
+      }
+      const written = await ingestAdvertisingAudience(db, {
+        agencyId: target.agencyId,
+        accountId: target.account.id,
+        connectionId: target.connection.id,
+        syncRunId,
+        lease: leaseFor(target),
+        observations: normalized.observations,
+      });
+      if (normalized.partial || written.written < normalized.observations.length) partial = true;
+    } catch {
+      partial = true;
+    }
   }
+  return { partial };
 }
 
 function collectionRows(value: unknown): readonly Record<string, unknown>[] {
@@ -440,6 +483,36 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function stringValue(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+type AttributionGrant = {
+  campaignIds: readonly string[] | null;
+  adSetIds: readonly string[] | null;
+  adIds: readonly string[] | null;
+};
+
+export function attributedSpendForDate(
+  observations: readonly AdvertisingSpendObservationInput[],
+  grants: readonly AttributionGrant[],
+  reportDate: string,
+): string {
+  const attributed = observations.filter(
+    (observation) =>
+      observation.reportDate === reportDate &&
+      grants.some(
+        (grant) =>
+          (grant.campaignIds === null ||
+            (observation.externalCampaignId !== null &&
+              observation.externalCampaignId !== undefined &&
+              grant.campaignIds.includes(observation.externalCampaignId))) &&
+          (grant.adSetIds === null ||
+            (observation.externalAdSetId !== null &&
+              observation.externalAdSetId !== undefined &&
+              grant.adSetIds.includes(observation.externalAdSetId))) &&
+          (grant.adIds === null || grant.adIds.includes(observation.externalAdId)),
+      ),
+  );
+  return sumSpendValues(attributed.map((observation) => observation.spend));
 }
 
 /** Create run history only while this worker still owns the fencing token. */
@@ -480,7 +553,11 @@ function leaseFor(target: ClaimedSync): AdvertisingLease {
   return { stateId: target.stateId, leaseToken: target.leaseToken };
 }
 
-function buildAdContext(account: AdvertisingAccount, now: Date): AdvertisingReportContext {
+export function buildAdContext(
+  account: AdvertisingAccount,
+  now: Date,
+  dateRange?: { since: string; until: string },
+): AdvertisingReportContext {
   const until = now.toISOString().slice(0, 10);
   const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   return {
@@ -489,7 +566,7 @@ function buildAdContext(account: AdvertisingAccount, now: Date): AdvertisingRepo
     accountId: account.externalAccountId,
     currency: account.currency,
     timezone: account.timezone,
-    dateRange: { since, until },
+    dateRange: dateRange ?? { since, until },
     attributionWindow: "account",
     actionReportTime: "impression",
     breakdowns: [],
