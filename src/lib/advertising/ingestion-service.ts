@@ -3,6 +3,8 @@ import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
   advertisingConnectionAccounts,
+  advertisingConnectionAgencyAccess,
+  advertisingCanonicalSpendFacts,
   advertisingConnections,
   advertisingAudienceObservations,
   advertisingSyncStates,
@@ -125,7 +127,11 @@ export async function ingestAdvertisingSpend(
   if (args.observations.length > 500)
     throw new AdvertisingIngestionError("advertising_observation_batch_too_large");
   const [account] = await db
-    .select({ id: advertisingAccounts.id, agencyId: advertisingAccounts.agencyId })
+    .select({
+      id: advertisingAccounts.id,
+      agencyId: advertisingAccounts.agencyId,
+      identityId: advertisingAccounts.identityId,
+    })
     .from(advertisingAccounts)
     .where(
       and(
@@ -136,7 +142,11 @@ export async function ingestAdvertisingSpend(
     .limit(1);
   if (!account) throw new AdvertisingIngestionError("advertising_account_not_in_agency");
   const [connection] = await db
-    .select({ id: advertisingConnections.id })
+    .select({
+      id: advertisingConnections.id,
+      agencyId: advertisingConnections.agencyId,
+      ownerType: advertisingConnections.ownerType,
+    })
     .from(advertisingConnections)
     .innerJoin(
       advertisingConnectionAccounts,
@@ -145,7 +155,6 @@ export async function ingestAdvertisingSpend(
     .where(
       and(
         eq(advertisingConnections.id, args.connectionId),
-        eq(advertisingConnections.agencyId, args.agencyId),
         eq(advertisingConnections.status, "active"),
         eq(advertisingConnectionAccounts.accountId, args.accountId),
         eq(advertisingConnectionAccounts.status, "active"),
@@ -153,6 +162,21 @@ export async function ingestAdvertisingSpend(
     )
     .limit(1);
   if (!connection) throw new AdvertisingIngestionError("advertising_connection_account_not_active");
+  if (connection.agencyId !== args.agencyId) {
+    const [access] = await db
+      .select({ id: advertisingConnectionAgencyAccess.id })
+      .from(advertisingConnectionAgencyAccess)
+      .where(
+        and(
+          eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+          eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+          eq(advertisingConnectionAgencyAccess.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (connection.ownerType !== "platform" || !access)
+      throw new AdvertisingIngestionError("advertising_connection_account_not_active");
+  }
 
   if (args.observations.length === 0) {
     if (args.lease) {
@@ -188,6 +212,55 @@ export async function ingestAdvertisingSpend(
         .for("update")
         .limit(1);
       if (!lease) throw new AdvertisingLeaseLostError();
+    }
+    if (account.identityId) {
+      await tx
+        .insert(advertisingCanonicalSpendFacts)
+        .values(
+          args.observations.map((observation) => ({
+            identityId: account.identityId as string,
+            syncRunId: args.syncRunId ?? null,
+            externalAdId: observation.externalAdId,
+            externalCampaignId: observation.externalCampaignId ?? null,
+            externalAdSetId: observation.externalAdSetId ?? null,
+            reportDate: observation.reportDate,
+            currency: observation.currency,
+            spend: observation.spend,
+            impressions: observation.impressions,
+            clicks: observation.clicks,
+            reach: observation.reach ?? null,
+            results: observation.results ?? null,
+            resultType: observation.resultType ?? null,
+            resultActions: observation.resultActions ?? null,
+            attributionWindow: observation.attributionWindow,
+            actionReportTime: observation.actionReportTime,
+            observedAt: new Date(),
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [
+            advertisingCanonicalSpendFacts.identityId,
+            advertisingCanonicalSpendFacts.externalAdId,
+            advertisingCanonicalSpendFacts.reportDate,
+            advertisingCanonicalSpendFacts.attributionWindow,
+            advertisingCanonicalSpendFacts.actionReportTime,
+          ],
+          set: {
+            syncRunId: sql`excluded.sync_run_id`,
+            externalCampaignId: sql`excluded.external_campaign_id`,
+            externalAdSetId: sql`excluded.external_ad_set_id`,
+            currency: sql`excluded.currency`,
+            spend: sql`excluded.spend`,
+            impressions: sql`excluded.impressions`,
+            clicks: sql`excluded.clicks`,
+            reach: sql`excluded.reach`,
+            results: sql`excluded.results`,
+            resultType: sql`excluded.result_type`,
+            resultActions: sql`excluded.result_actions`,
+            observedAt: new Date(),
+            updatedAt: new Date(),
+          },
+        });
     }
     const rows = await tx
       .insert(advertisingSpendObservations)
@@ -261,7 +334,11 @@ export async function ingestAdvertisingAudience(
     throw new AdvertisingIngestionError("advertising_audience_batch_too_large");
   if (args.observations.length === 0) return { written: 0 };
   const [connection] = await db
-    .select({ id: advertisingConnections.id })
+    .select({
+      id: advertisingConnections.id,
+      agencyId: advertisingConnections.agencyId,
+      ownerType: advertisingConnections.ownerType,
+    })
     .from(advertisingConnections)
     .innerJoin(
       advertisingConnectionAccounts,
@@ -274,12 +351,26 @@ export async function ingestAdvertisingAudience(
     .where(
       and(
         eq(advertisingConnections.id, args.connectionId),
-        eq(advertisingConnections.agencyId, args.agencyId),
         eq(advertisingConnections.status, "active"),
       ),
     )
     .limit(1);
   if (!connection) throw new AdvertisingIngestionError("advertising_connection_account_not_active");
+  if (connection.agencyId !== args.agencyId) {
+    const [access] = await db
+      .select({ id: advertisingConnectionAgencyAccess.id })
+      .from(advertisingConnectionAgencyAccess)
+      .where(
+        and(
+          eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+          eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+          eq(advertisingConnectionAgencyAccess.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (connection.ownerType !== "platform" || !access)
+      throw new AdvertisingIngestionError("advertising_connection_account_not_active");
+  }
 
   const rows = await db
     .insert(advertisingAudienceObservations)

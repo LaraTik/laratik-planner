@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { createMetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
+import {
+  createMetaAdvertisingProvider,
+  readMetaCollectionComplete,
+} from "@/lib/advertising/providers/meta";
 
 const connection = {
   id: "00000000-0000-4000-8000-000000000201",
@@ -58,6 +61,61 @@ describe("Meta advertising provider", () => {
       fields: "id,name,currency,timezone_name",
       after: "cursor-1",
     });
+  });
+
+  it("follows production collections beyond the diagnostic page limit", async () => {
+    const get = vi.fn();
+    for (let page = 1; page <= 5; page += 1) {
+      get.mockResolvedValueOnce({
+        data: [{ id: `campaign-${page}` }],
+        ...(page < 5 ? { paging: { next: { after: `cursor-${page}` } } } : {}),
+      });
+    }
+    const result = await readMetaCollectionComplete({ get }, "act_123/campaigns", {
+      fields: "id",
+    });
+    expect(result).toMatchObject({
+      data: [
+        { id: "campaign-1" },
+        { id: "campaign-2" },
+        { id: "campaign-3" },
+        { id: "campaign-4" },
+        { id: "campaign-5" },
+      ],
+      complete: true,
+      pages: 5,
+    });
+    expect(get).toHaveBeenCalledTimes(5);
+  });
+
+  it("resumes production collection reads from a validated cursor and rejects foreign paging hosts", async () => {
+    const get = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [{ id: "campaign-2" }],
+        paging: { next: { after: "cursor-3" } },
+      })
+      .mockResolvedValueOnce({ data: [{ id: "campaign-3" }] });
+    const result = await readMetaCollectionComplete(
+      { get },
+      "act_123/campaigns",
+      { fields: "id" },
+      { cursor: { path: "act_123/campaigns", params: { fields: "id", after: "cursor-2" } } },
+    );
+    expect(result.complete).toBe(true);
+    expect(get).toHaveBeenNthCalledWith(1, "act_123/campaigns", {
+      fields: "id",
+      after: "cursor-2",
+    });
+
+    const foreignHost = vi.fn().mockResolvedValue({
+      data: [{ id: "campaign-1" }],
+      paging: { next: "https://evil.example/v20.0/act_123/campaigns?after=bad" },
+    });
+    await expect(
+      readMetaCollectionComplete({ get: foreignHost }, "act_123/campaigns", { fields: "id" }),
+    ).resolves.toMatchObject({ complete: true, pages: 1 });
+    expect(foreignHost).toHaveBeenCalledTimes(1);
   });
 
   it("requests the correct read-only grain for ad-level insights", async () => {

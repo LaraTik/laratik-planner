@@ -5,7 +5,9 @@ import {
   advertisingAccounts,
   advertisingCapabilities,
   advertisingConnectionAccounts,
+  advertisingConnectionAgencyAccess,
   advertisingConnections,
+  advertisingProviderAccountIdentities,
   advertisingProviderObjects,
   advertisingSocialIdentities,
   advertisingValidationResults,
@@ -84,7 +86,44 @@ export async function createAdvertisingConnection(
     });
   const row = inserted[0];
   if (!row) throw new Error("Advertising connection was not created");
+  await db.insert(advertisingConnectionAgencyAccess).values({
+    connectionId: row.id,
+    agencyId: args.agencyId,
+    grantedBy: args.actorId,
+  });
   return row;
+}
+
+/** Grant a platform-owned connection to a customer agency without moving its secret. */
+export async function grantAdvertisingConnectionAgency(
+  db: Db,
+  args: { connectionId: string; agencyId: string; grantedBy?: string | undefined },
+) {
+  const connection = (
+    await db
+      .select({
+        ownerType: advertisingConnections.ownerType,
+        status: advertisingConnections.status,
+      })
+      .from(advertisingConnections)
+      .where(eq(advertisingConnections.id, args.connectionId))
+      .limit(1)
+  )[0];
+  if (!connection || connection.ownerType !== "platform" || connection.status === "revoked")
+    throw new AdvertisingConnectionInputError("advertising_platform_connection_not_available");
+  const [access] = await db
+    .insert(advertisingConnectionAgencyAccess)
+    .values({ connectionId: args.connectionId, agencyId: args.agencyId, grantedBy: args.grantedBy })
+    .onConflictDoUpdate({
+      target: [
+        advertisingConnectionAgencyAccess.connectionId,
+        advertisingConnectionAgencyAccess.agencyId,
+      ],
+      set: { status: "active", revokedAt: null, grantedBy: args.grantedBy, updatedAt: new Date() },
+    })
+    .returning();
+  if (!access) throw new Error("Advertising connection agency access was not persisted");
+  return access;
 }
 
 export async function persistDiscoveredAdvertisingAccount(
@@ -101,24 +140,74 @@ export async function persistDiscoveredAdvertisingAccount(
 ) {
   const connection = (
     await db
-      .select({ id: advertisingConnections.id, provider: advertisingConnections.provider })
+      .select({
+        id: advertisingConnections.id,
+        provider: advertisingConnections.provider,
+        agencyId: advertisingConnections.agencyId,
+        ownerType: advertisingConnections.ownerType,
+      })
       .from(advertisingConnections)
       .where(
         and(
           eq(advertisingConnections.id, args.connectionId),
-          eq(advertisingConnections.agencyId, args.agencyId),
           eq(advertisingConnections.status, "active"),
         ),
       )
       .limit(1)
   )[0];
   if (!connection) throw new AdvertisingConnectionInputError("advertising_connection_not_active");
+  if (connection.agencyId !== args.agencyId) {
+    if (connection.ownerType !== "platform")
+      throw new AdvertisingConnectionInputError("advertising_connection_not_authorized");
+    const [access] = await db
+      .select({ id: advertisingConnectionAgencyAccess.id })
+      .from(advertisingConnectionAgencyAccess)
+      .where(
+        and(
+          eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+          eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+          eq(advertisingConnectionAgencyAccess.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!access) throw new AdvertisingConnectionInputError("advertising_connection_not_authorized");
+  }
 
   return db.transaction(async (tx) => {
+    const [identity] = await tx
+      .insert(advertisingProviderAccountIdentities)
+      .values({
+        provider: connection.provider,
+        externalAccountId: args.externalAccountId,
+        name: args.name.trim().slice(0, 200),
+        currency: args.currency?.trim().slice(0, 12) ?? null,
+        timezone: args.timezone?.trim().slice(0, 80) ?? null,
+        status: "active",
+        metadata: sanitizeAdvertisingMetadata(args.metadata),
+        lastSeenAt: new Date(),
+      })
+      .onConflictDoUpdate({
+        target: [
+          advertisingProviderAccountIdentities.provider,
+          advertisingProviderAccountIdentities.externalAccountId,
+        ],
+        set: {
+          name: args.name.trim().slice(0, 200),
+          currency: args.currency?.trim().slice(0, 12) ?? null,
+          timezone: args.timezone?.trim().slice(0, 80) ?? null,
+          status: "active",
+          metadata: sanitizeAdvertisingMetadata(args.metadata),
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    if (!identity) throw new Error("Advertising provider identity was not persisted");
     const [account] = await tx
       .insert(advertisingAccounts)
       .values({
         agencyId: args.agencyId,
+        identityId: identity.id,
         provider: connection.provider,
         externalAccountId: args.externalAccountId,
         name: args.name.trim().slice(0, 200),
@@ -136,6 +225,7 @@ export async function persistDiscoveredAdvertisingAccount(
         ],
         set: {
           name: args.name.trim().slice(0, 200),
+          identityId: identity.id,
           currency: args.currency?.trim().slice(0, 12) ?? null,
           timezone: args.timezone?.trim().slice(0, 80) ?? null,
           status: "active",
@@ -208,6 +298,16 @@ function promotedPostId(value: unknown): string | null {
   return boundedText(value.post_id) ?? boundedText(value.story_id);
 }
 
+function postAssociationStatus(
+  value: Record<string, unknown>,
+  postId: string | null,
+): "linked" | "unresolved" | "unsupported" | "unpublished" {
+  if (postId) return "linked";
+  if (value.is_published === false || value.published === false) return "unpublished";
+  if (value.post_linking_supported === false) return "unsupported";
+  return "unresolved";
+}
+
 /** Persist only bounded, non-secret provider object fields for analytics. */
 export async function persistAdvertisingProviderObjects(
   db: Db,
@@ -222,13 +322,16 @@ export async function persistAdvertisingProviderObjects(
   },
 ) {
   const [link] = await db
-    .select({ accountId: advertisingConnectionAccounts.accountId })
+    .select({
+      accountId: advertisingConnectionAccounts.accountId,
+      connectionAgencyId: advertisingConnections.agencyId,
+      ownerType: advertisingConnections.ownerType,
+    })
     .from(advertisingConnectionAccounts)
     .innerJoin(
       advertisingConnections,
       and(
         eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
-        eq(advertisingConnections.agencyId, args.agencyId),
         eq(advertisingConnections.status, "active"),
       ),
     )
@@ -241,10 +344,28 @@ export async function persistAdvertisingProviderObjects(
     )
     .limit(1);
   if (!link) throw new AdvertisingConnectionInputError("advertising_connection_account_not_active");
+  if (link.connectionAgencyId !== args.agencyId) {
+    if (link.ownerType !== "platform")
+      throw new AdvertisingConnectionInputError("advertising_connection_account_not_active");
+    const [access] = await db
+      .select({ id: advertisingConnectionAgencyAccess.id })
+      .from(advertisingConnectionAgencyAccess)
+      .where(
+        and(
+          eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+          eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+          eq(advertisingConnectionAgencyAccess.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!access)
+      throw new AdvertisingConnectionInputError("advertising_connection_account_not_active");
+  }
 
   const values = providerObjectRows(args.rows).flatMap((row) => {
     const externalObjectId = boundedText(row.id, 200);
     if (!externalObjectId) return [];
+    const resolvedPostId = promotedPostId(row);
     return [
       {
         agencyId: args.agencyId,
@@ -259,7 +380,8 @@ export async function persistAdvertisingProviderObjects(
         objective: boundedText(row.objective, 120),
         dailyBudget: decimalText(row.daily_budget),
         lifetimeBudget: decimalText(row.lifetime_budget),
-        promotedPostId: promotedPostId(row),
+        promotedPostId: resolvedPostId,
+        postAssociationStatus: postAssociationStatus(row, resolvedPostId),
         metadata: sanitizeAdvertisingMetadata({
           ...(row.creative ? { creative: row.creative } : {}),
           ...(row.effective_status ? { effective_status: row.effective_status } : {}),
@@ -291,6 +413,7 @@ export async function persistAdvertisingProviderObjects(
         dailyBudget: sql`excluded.daily_budget`,
         lifetimeBudget: sql`excluded.lifetime_budget`,
         promotedPostId: sql`coalesce(excluded.promoted_post_id, ${advertisingProviderObjects.promotedPostId})`,
+        postAssociationStatus: sql`CASE WHEN excluded.promoted_post_id IS NULL THEN ${advertisingProviderObjects.postAssociationStatus} ELSE excluded.post_association_status END`,
         metadata: sql`excluded.metadata`,
         observedAt: new Date(),
         updatedAt: new Date(),

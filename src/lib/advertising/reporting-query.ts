@@ -1,15 +1,17 @@
 import "server-only";
 
-import { and, asc, desc, eq, gt, gte, inArray, isNull, lte, max, or } from "drizzle-orm";
+import { and, asc, desc, eq, gt, gte, inArray, isNull, isNotNull, lte, max, or } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
   advertisingConnectionAccounts,
+  advertisingConnectionAgencyAccess,
   advertisingConnections,
   advertisingFinancialAuthorities,
   advertisingGrantRevisions,
   advertisingSpendObservations,
   advertisingAudienceObservations,
+  advertisingCanonicalSpendFacts,
   advertisingProviderObjects,
   advertisingSyncRuns,
   advertisingSyncStates,
@@ -145,8 +147,15 @@ export async function listAdvertisingReportAccounts(
       advertisingConnections,
       and(
         eq(advertisingConnections.id, advertisingConnectionAccounts.connectionId),
-        eq(advertisingConnections.agencyId, args.agencyId),
         eq(advertisingConnections.status, "active"),
+      ),
+    )
+    .leftJoin(
+      advertisingConnectionAgencyAccess,
+      and(
+        eq(advertisingConnectionAgencyAccess.connectionId, advertisingConnections.id),
+        eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+        eq(advertisingConnectionAgencyAccess.status, "active"),
       ),
     )
     .innerJoin(
@@ -168,6 +177,10 @@ export async function listAdvertisingReportAccounts(
       and(
         eq(advertisingAccounts.agencyId, args.agencyId),
         eq(advertisingAccounts.status, "active"),
+        or(
+          eq(advertisingConnections.agencyId, args.agencyId),
+          isNotNull(advertisingConnectionAgencyAccess.id),
+        ),
       ),
     )
     .orderBy(asc(advertisingAccounts.name), asc(advertisingAccounts.id));
@@ -216,12 +229,23 @@ export async function loadAdvertisingReport(
         eq(advertisingConnections.status, "active"),
       ),
     )
+    .leftJoin(
+      advertisingConnectionAgencyAccess,
+      and(
+        eq(advertisingConnectionAgencyAccess.connectionId, advertisingConnections.id),
+        eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+        eq(advertisingConnectionAgencyAccess.status, "active"),
+      ),
+    )
     .where(
       and(
         eq(advertisingAccounts.id, args.accountId),
         eq(advertisingAccounts.agencyId, args.agencyId),
         eq(advertisingAccounts.status, "active"),
-        eq(advertisingConnections.agencyId, args.agencyId),
+        or(
+          eq(advertisingConnections.agencyId, args.agencyId),
+          isNotNull(advertisingConnectionAgencyAccess.id),
+        ),
       ),
     )
     .orderBy(desc(advertisingConnections.updatedAt), asc(advertisingConnections.id))
@@ -318,28 +342,44 @@ export async function loadAdvertisingReport(
     supportAccessAgencyId: null,
   };
 
-  const observationRows = await db
-    .select()
-    .from(advertisingSpendObservations)
-    .where(
-      and(
-        eq(advertisingSpendObservations.agencyId, args.agencyId),
-        eq(advertisingSpendObservations.accountId, args.accountId),
-        gte(advertisingSpendObservations.reportDate, args.since),
-        lte(advertisingSpendObservations.reportDate, args.until),
-      ),
-    )
-    .orderBy(
-      asc(advertisingSpendObservations.reportDate),
-      asc(advertisingSpendObservations.externalAdId),
-    )
-    .limit(MAX_FACT_ROWS);
+  const observationRows = accountRow.account.identityId
+    ? await db
+        .select()
+        .from(advertisingCanonicalSpendFacts)
+        .where(
+          and(
+            eq(advertisingCanonicalSpendFacts.identityId, accountRow.account.identityId),
+            gte(advertisingCanonicalSpendFacts.reportDate, args.since),
+            lte(advertisingCanonicalSpendFacts.reportDate, args.until),
+          ),
+        )
+        .orderBy(
+          asc(advertisingCanonicalSpendFacts.reportDate),
+          asc(advertisingCanonicalSpendFacts.externalAdId),
+        )
+        .limit(MAX_FACT_ROWS)
+    : await db
+        .select()
+        .from(advertisingSpendObservations)
+        .where(
+          and(
+            eq(advertisingSpendObservations.agencyId, args.agencyId),
+            eq(advertisingSpendObservations.accountId, args.accountId),
+            gte(advertisingSpendObservations.reportDate, args.since),
+            lte(advertisingSpendObservations.reportDate, args.until),
+          ),
+        )
+        .orderBy(
+          asc(advertisingSpendObservations.reportDate),
+          asc(advertisingSpendObservations.externalAdId),
+        )
+        .limit(MAX_FACT_ROWS);
   const facts = observationRows.flatMap((row) => {
     const spend = finiteNonnegativeNumber(row.spend);
     if (!row.externalCampaignId || spend === null) return [];
     return [
       {
-        accountId: row.accountId,
+        accountId: args.accountId,
         campaignId: row.externalCampaignId,
         ...(row.externalAdSetId ? { adSetId: row.externalAdSetId } : {}),
         adId: row.externalAdId,

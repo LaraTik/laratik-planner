@@ -9,6 +9,7 @@ import { expectPgConstraint } from "./_db-error";
 import {
   agencies,
   advertisingAccounts,
+  advertisingCanonicalSpendFacts,
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingFinancialAuthorities,
@@ -45,7 +46,11 @@ import {
   ingestAdvertisingSpend,
 } from "@/lib/advertising/ingestion-service";
 import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
-import { persistAdvertisingProviderObjects } from "@/lib/advertising/connection-service";
+import {
+  grantAdvertisingConnectionAgency,
+  persistAdvertisingProviderObjects,
+  persistDiscoveredAdvertisingAccount,
+} from "@/lib/advertising/connection-service";
 import type { MetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
@@ -532,6 +537,7 @@ describe("advertising tenant ownership guards", () => {
         name: advertisingProviderObjects.name,
         status: advertisingProviderObjects.status,
         promotedPostId: advertisingProviderObjects.promotedPostId,
+        postAssociationStatus: advertisingProviderObjects.postAssociationStatus,
         metadata: advertisingProviderObjects.metadata,
       })
       .from(advertisingProviderObjects);
@@ -540,6 +546,7 @@ describe("advertising tenant ownership guards", () => {
       name: "Launch ad refreshed",
       status: "PAUSED",
       promotedPostId: "page_1_post_9",
+      postAssociationStatus: "linked",
     });
     expect(JSON.stringify(objects[0]?.metadata)).not.toContain("must-not-persist");
   });
@@ -816,6 +823,156 @@ describe("advertising tenant ownership guards", () => {
     expect(reportB.report.totals.spend).toBe(90);
     expect(reportA.report.rows[0]?.accountId).toBe(accountA.id);
     expect(reportB.report.rows[0]?.accountId).toBe(accountB.id);
+  });
+
+  it("shares one platform credential and one canonical provider identity across two agencies", async () => {
+    const { agencyA, agencyB, connectionA } = await seed();
+    await db
+      .update(advertisingConnections)
+      .set({ status: "active", ownerType: "platform" })
+      .where(eq(advertisingConnections.id, connectionA.id));
+    await grantAdvertisingConnectionAgency(db, {
+      connectionId: connectionA.id,
+      agencyId: agencyA.id,
+    });
+    await grantAdvertisingConnectionAgency(db, {
+      connectionId: connectionA.id,
+      agencyId: agencyB.id,
+    });
+
+    const accountA = await persistDiscoveredAdvertisingAccount(db, {
+      agencyId: agencyA.id,
+      connectionId: connectionA.id,
+      externalAccountId: "act_shared_platform",
+      name: "Shared Platform Account",
+      currency: "EUR",
+      timezone: "UTC",
+    });
+    const accountB = await persistDiscoveredAdvertisingAccount(db, {
+      agencyId: agencyB.id,
+      connectionId: connectionA.id,
+      externalAccountId: "act_shared_platform",
+      name: "Shared Platform Account",
+      currency: "EUR",
+      timezone: "UTC",
+    });
+
+    expect(accountA.id).not.toBe(accountB.id);
+    expect(accountA.identityId).toBeTruthy();
+    expect(accountB.identityId).toBe(accountA.identityId);
+
+    const observation = {
+      externalAdId: "ad_shared_platform",
+      externalCampaignId: "campaign_shared_platform",
+      externalAdSetId: "adset_shared_platform",
+      reportDate: "2026-10-13",
+      currency: "EUR",
+      spend: "12.50",
+      impressions: 100,
+      clicks: 5,
+      attributionWindow: "account",
+      actionReportTime: "impression",
+    } as const;
+    await ingestAdvertisingSpend(db, {
+      agencyId: agencyA.id,
+      accountId: accountA.id,
+      connectionId: connectionA.id,
+      observations: [observation],
+    });
+    await ingestAdvertisingSpend(db, {
+      agencyId: agencyB.id,
+      accountId: accountB.id,
+      connectionId: connectionA.id,
+      observations: [observation],
+    });
+    const canonicalFacts = await db
+      .select({ id: advertisingCanonicalSpendFacts.id })
+      .from(advertisingCanonicalSpendFacts)
+      .where(eq(advertisingCanonicalSpendFacts.identityId, accountA.identityId as string));
+    expect(canonicalFacts).toHaveLength(1);
+  });
+
+  it("ingests inventory beyond the diagnostic ten-object traversal limit", async () => {
+    const { accountA, connectionA } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const campaigns = Array.from({ length: 12 }, (_, index) => ({
+      id: `campaign-large-${index + 1}`,
+      name: `Campaign ${index + 1}`,
+    }));
+    const provider: MetaAdvertisingProvider = {
+      provider: "meta",
+      validateConnection: async () => undefined,
+      discoverAccounts: async () => [],
+      readCampaigns: async () => ({
+        data: campaigns.slice(0, 3),
+        paging: { next: { after: "more" } },
+      }),
+      readCampaignsComplete: async (_connection, _account, options) => {
+        await options?.onPage?.({ path: "act/campaigns", params: { after: "more" } });
+        await options?.onPage?.(null);
+        return { data: campaigns, complete: true, pages: 2 };
+      },
+      readAdSets: async () => ({ data: [] }),
+      readAdSetsComplete: async () => ({ data: [], complete: true, pages: 1 }),
+      readAds: async () => ({ data: [] }),
+      readAdsComplete: async () => ({ data: [], complete: true, pages: 1 }),
+      readCreatives: async () => ({ data: [] }),
+      readBreakdowns: async () => ({ data: [] }),
+      readBreakdownsComplete: async () => ({ data: [], complete: true, pages: 1 }),
+      readPages: async () => ({ data: [] }),
+      readInstagramAccounts: async () => ({ data: [] }),
+      readDailyInsights: async (_connection, _account, context) => ({
+        data:
+          context.grain === "ad_day"
+            ? [
+                {
+                  ad_id: "large-ad",
+                  campaign_id: campaigns[0]?.id,
+                  date_start: context.dateRange.since,
+                  spend: "1",
+                  impressions: 1,
+                  clicks: 0,
+                },
+              ]
+            : [{ date_start: context.dateRange.since, spend: "1" }],
+      }),
+      readDailyInsightsComplete: async (_connection, _account, context) => ({
+        data:
+          context.grain === "ad_day"
+            ? [
+                {
+                  ad_id: "large-ad",
+                  campaign_id: campaigns[0]?.id,
+                  date_start: context.dateRange.since,
+                  spend: "1",
+                  impressions: 1,
+                  clicks: 0,
+                },
+              ]
+            : [{ date_start: context.dateRange.since, spend: "1" }],
+        complete: true,
+        pages: 1,
+      }),
+    };
+    await db.insert(advertisingSyncStates).values({
+      status: "idle",
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const result = await runAdvertisingSyncTick(db, {
+      owner: "large-inventory-worker",
+      limit: 1,
+      providerFactory: () => provider,
+    });
+    expect(result).toMatchObject({ claimed: 1, succeeded: 1, partial: 0 });
+    const objectRows = await db
+      .select({ externalObjectId: advertisingProviderObjects.externalObjectId })
+      .from(advertisingProviderObjects);
+    expect(objectRows).toHaveLength(12);
   });
 
   it("does not expose account-level audience rows through a campaign-scoped grant", async () => {

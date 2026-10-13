@@ -66,6 +66,35 @@ export const advertisingConnections = pgTable(
   ],
 );
 
+/** Explicit customer-tenant access for a platform-owned connection. */
+export const advertisingConnectionAgencyAccess = pgTable(
+  "advertising_connection_agency_access",
+  {
+    id: idColumn(),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => advertisingConnections.id, { onDelete: "cascade" }),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    status: text("status").notNull().default("active"),
+    grantedBy: uuid("granted_by").references(() => users.id, { onDelete: "set null" }),
+    grantedAt: timestamp("granted_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    revokedAt: timestamp("revoked_at", { withTimezone: true, mode: "date" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_connection_agency_access_uniq").on(t.connectionId, t.agencyId),
+    index("advertising_connection_agency_access_agency_idx").on(t.agencyId, t.status),
+    check(
+      "advertising_connection_agency_access_status_valid",
+      sql`${t.status} IN ('active', 'revoked')`,
+    ),
+  ],
+);
+
 export const advertisingCredentialVersions = pgTable(
   "advertising_credential_version",
   {
@@ -100,11 +129,47 @@ export const advertisingCredentialVersions = pgTable(
   ],
 );
 
-/** One canonical row per agency/provider/external ad-account identity. */
+/** One provider identity shared by all tenant projections of that account. */
+export const advertisingProviderAccountIdentities = pgTable(
+  "advertising_provider_account_identity",
+  {
+    id: idColumn(),
+    provider: text("provider").notNull(),
+    externalAccountId: text("external_account_id").notNull(),
+    name: text("name").notNull(),
+    currency: text("currency"),
+    timezone: text("timezone"),
+    status: text("status").notNull().default("active"),
+    metadata: jsonb("metadata")
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    firstSeenAt: timestamp("first_seen_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    lastSeenAt: timestamp("last_seen_at", { withTimezone: true, mode: "date" }),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_provider_account_identity_provider_external_uniq").on(
+      t.provider,
+      t.externalAccountId,
+    ),
+    check("advertising_provider_account_identity_provider_valid", sql`${t.provider} IN ('meta')`),
+    check(
+      "advertising_provider_account_identity_status_valid",
+      sql`${t.status} IN ('active', 'unavailable', 'revoked')`,
+    ),
+  ],
+);
+
+/** Tenant-local account projection; grants and financial ownership attach here. */
 export const advertisingAccounts = pgTable(
   "advertising_account",
   {
     id: idColumn(),
+    identityId: uuid("identity_id").references(() => advertisingProviderAccountIdentities.id, {
+      onDelete: "restrict",
+    }),
     agencyId: uuid("agency_id")
       .notNull()
       .references(() => agencies.id, { onDelete: "cascade" }),
@@ -467,6 +532,54 @@ export const advertisingSyncRuns = pgTable(
   ],
 );
 
+/** One provider fact per shared account identity, independent of tenant projections. */
+export const advertisingCanonicalSpendFacts = pgTable(
+  "advertising_canonical_spend_fact",
+  {
+    id: idColumn(),
+    identityId: uuid("identity_id")
+      .notNull()
+      .references(() => advertisingProviderAccountIdentities.id, { onDelete: "cascade" }),
+    syncRunId: uuid("sync_run_id").references(() => advertisingSyncRuns.id, {
+      onDelete: "set null",
+    }),
+    externalAdId: text("external_ad_id").notNull(),
+    externalCampaignId: text("external_campaign_id"),
+    externalAdSetId: text("external_ad_set_id"),
+    reportDate: date("report_date").notNull(),
+    currency: text("currency").notNull(),
+    spend: numeric("spend", { precision: 18, scale: 6 }).notNull(),
+    impressions: integer("impressions").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    reach: integer("reach"),
+    results: integer("results"),
+    resultType: text("result_type"),
+    resultActions: jsonb("result_actions"),
+    attributionWindow: text("attribution_window").notNull().default("account"),
+    actionReportTime: text("action_report_time").notNull().default("mixed"),
+    financialAllocationStatus: text("financial_allocation_status").notNull().default("attributed"),
+    financialAllocationReason: text("financial_allocation_reason"),
+    observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_canonical_spend_fact_identity_uniq").on(
+      t.identityId,
+      t.externalAdId,
+      t.reportDate,
+      t.attributionWindow,
+      t.actionReportTime,
+    ),
+    index("advertising_canonical_spend_fact_identity_date_idx").on(t.identityId, t.reportDate),
+    check(
+      "advertising_canonical_spend_fact_financial_status_valid",
+      sql`${t.financialAllocationStatus} IN ('attributed', 'unallocated', 'disputed')`,
+    ),
+  ],
+);
+
 /**
  * Bounded provider-object snapshots used by read-only analytics. These are
  * tenant-local projections of provider IDs; they never imply workspace
@@ -497,6 +610,7 @@ export const advertisingProviderObjects = pgTable(
     dailyBudget: numeric("daily_budget", { precision: 18, scale: 6 }),
     lifetimeBudget: numeric("lifetime_budget", { precision: 18, scale: 6 }),
     promotedPostId: text("promoted_post_id"),
+    postAssociationStatus: text("post_association_status").notNull().default("unresolved"),
     metadata: jsonb("metadata")
       .notNull()
       .default(sql`'{}'::jsonb`),
@@ -517,6 +631,10 @@ export const advertisingProviderObjects = pgTable(
     check(
       "advertising_provider_object_type_valid",
       sql`${t.objectType} IN ('campaign', 'adset', 'ad', 'creative')`,
+    ),
+    check(
+      "advertising_provider_object_post_association_status_valid",
+      sql`${t.postAssociationStatus} IN ('linked', 'unresolved', 'unsupported', 'unpublished')`,
     ),
   ],
 );
@@ -608,6 +726,8 @@ export const advertisingSpendObservations = pgTable(
     resultActions: jsonb("result_actions"),
     attributionWindow: text("attribution_window").notNull().default("account"),
     actionReportTime: text("action_report_time").notNull().default("mixed"),
+    financialAllocationStatus: text("financial_allocation_status").notNull().default("attributed"),
+    financialAllocationReason: text("financial_allocation_reason"),
     providerDataVersion: text("provider_data_version"),
     observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
       .notNull()
@@ -630,6 +750,10 @@ export const advertisingSpendObservations = pgTable(
       sql`${t.impressions} >= 0 AND ${t.clicks} >= 0
         AND (${t.reach} IS NULL OR ${t.reach} >= 0)
         AND (${t.results} IS NULL OR ${t.results} >= 0)`,
+    ),
+    check(
+      "advertising_spend_observation_financial_status_valid",
+      sql`${t.financialAllocationStatus} IN ('attributed', 'unallocated', 'disputed')`,
     ),
   ],
 );

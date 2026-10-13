@@ -31,6 +31,7 @@ import { resolveAdvertisingCredential } from "./credential-service";
 import {
   classifyMetaError,
   createMetaAdvertisingProvider,
+  type MetaCollectionCursor,
   type MetaAdvertisingProvider,
 } from "./providers/meta";
 import type { AdvertisingAccount, AdvertisingConnection, AdvertisingReportContext } from "./types";
@@ -55,6 +56,7 @@ export type ClaimedSync = {
   agencyId: string;
   connection: AdvertisingConnection & { graphApiVersion: string | null };
   account: AdvertisingAccount;
+  cursor: string | null;
   leaseToken: string;
   attempt: number;
 };
@@ -177,7 +179,9 @@ export async function claimAdvertisingSyncStates(
       if (!updated) continue;
       claimed.push({
         stateId: row.state.id,
-        agencyId: row.connection.agencyId,
+        // Reporting and tenant-local projections follow the account's customer
+        // agency; the connection's agency remains the credential owner.
+        agencyId: row.account.agencyId,
         connection: {
           id: row.connection.id,
           provider: "meta",
@@ -198,6 +202,7 @@ export async function claimAdvertisingSyncStates(
           connectionId: row.connection.id,
           status: "active",
         },
+        cursor: row.state.cursor,
         leaseToken,
         attempt: updated.attempt,
       });
@@ -275,7 +280,12 @@ async function runOneAdvertisingSync(
           (credential) => createMetaReadClient(target.connection.graphApiVersion, credential),
         );
     const context = buildAdContext(target.account, now, dateRange);
-    const adResponse = await provider.readDailyInsights(target.connection, target.account, context);
+    const adResponse = provider.readDailyInsightsComplete
+      ? await provider.readDailyInsightsComplete(target.connection, target.account, context, {
+          cursor: cursorFor(target, "ad_insights"),
+          onPage: (next) => persistSyncCursor(db, target, "ad_insights", next),
+        })
+      : await provider.readDailyInsights(target.connection, target.account, context);
     const adInsights = normalizeMetaAdInsights(adResponse, context);
     const written = await ingestAdvertisingSpend(db, {
       agencyId: target.agencyId,
@@ -290,11 +300,17 @@ async function runOneAdvertisingSync(
     const audienceSync = await syncAudience(db, target, provider, syncRun.id, context);
 
     const accountContext: AdvertisingReportContext = { ...context, grain: "account_day" };
-    const accountResponse = await provider.readDailyInsights(
-      target.connection,
-      target.account,
-      accountContext,
-    );
+    const accountResponse = provider.readDailyInsightsComplete
+      ? await provider.readDailyInsightsComplete(
+          target.connection,
+          target.account,
+          accountContext,
+          {
+            cursor: cursorFor(target, "account_insights"),
+            onPage: (next) => persistSyncCursor(db, target, "account_insights", next),
+          },
+        )
+      : await provider.readDailyInsights(target.connection, target.account, accountContext);
     const accountInsights = normalizeMetaAccountInsights(accountResponse);
     const grantRows = await db
       .select({
@@ -341,6 +357,8 @@ async function runOneAdvertisingSync(
           ),
           completeness:
             adInsights.partial ||
+            !collectionResponseComplete(adResponse) ||
+            !collectionResponseComplete(accountResponse) ||
             accountInsights.partial ||
             objectSync.partial ||
             audienceSync.partial
@@ -351,7 +369,12 @@ async function runOneAdvertisingSync(
     }
 
     const partial =
-      adInsights.partial || accountInsights.partial || objectSync.partial || audienceSync.partial;
+      adInsights.partial ||
+      accountInsights.partial ||
+      !collectionResponseComplete(adResponse) ||
+      !collectionResponseComplete(accountResponse) ||
+      objectSync.partial ||
+      audienceSync.partial;
     await db
       .update(advertisingSyncRuns)
       .set({
@@ -391,7 +414,13 @@ async function syncProviderObjects(
 ): Promise<{ partial: boolean }> {
   let partial = false;
   try {
-    const campaigns = await provider.readCampaigns(target.connection, target.account);
+    const campaigns = provider.readCampaignsComplete
+      ? await provider.readCampaignsComplete(target.connection, target.account, {
+          cursor: cursorFor(target, "inventory:campaigns"),
+          onPage: (next) => persistSyncCursor(db, target, "inventory:campaigns", next),
+        })
+      : await provider.readCampaigns(target.connection, target.account);
+    if (!collectionResponseComplete(campaigns)) partial = true;
     await persistAdvertisingProviderObjects(db, {
       agencyId: target.agencyId,
       accountId: target.account.id,
@@ -400,10 +429,16 @@ async function syncProviderObjects(
       objectType: "campaign",
       rows: campaigns,
     });
-    for (const campaign of collectionRows(campaigns).slice(0, 10)) {
+    for (const campaign of collectionRows(campaigns)) {
       const campaignId = stringValue(campaign.id);
       if (!campaignId) continue;
-      const adsets = await provider.readAdSets(target.connection, campaignId);
+      const adsets = provider.readAdSetsComplete
+        ? await provider.readAdSetsComplete(target.connection, campaignId, {
+            cursor: cursorFor(target, `inventory:adsets:${campaignId}`),
+            onPage: (next) => persistSyncCursor(db, target, `inventory:adsets:${campaignId}`, next),
+          })
+        : await provider.readAdSets(target.connection, campaignId);
+      if (!collectionResponseComplete(adsets)) partial = true;
       await persistAdvertisingProviderObjects(db, {
         agencyId: target.agencyId,
         accountId: target.account.id,
@@ -413,10 +448,16 @@ async function syncProviderObjects(
         parentExternalObjectId: campaignId,
         rows: adsets,
       });
-      for (const adset of collectionRows(adsets).slice(0, 10)) {
+      for (const adset of collectionRows(adsets)) {
         const adsetId = stringValue(adset.id);
         if (!adsetId) continue;
-        const ads = await provider.readAds(target.connection, adsetId);
+        const ads = provider.readAdsComplete
+          ? await provider.readAdsComplete(target.connection, adsetId, {
+              cursor: cursorFor(target, `inventory:ads:${adsetId}`),
+              onPage: (next) => persistSyncCursor(db, target, `inventory:ads:${adsetId}`, next),
+            })
+          : await provider.readAds(target.connection, adsetId);
+        if (!collectionResponseComplete(ads)) partial = true;
         await persistAdvertisingProviderObjects(db, {
           agencyId: target.agencyId,
           accountId: target.account.id,
@@ -426,7 +467,7 @@ async function syncProviderObjects(
           parentExternalObjectId: adsetId,
           rows: ads,
         });
-        for (const ad of collectionRows(ads).slice(0, 10)) {
+        for (const ad of collectionRows(ads)) {
           const adId = stringValue(ad.id);
           if (!adId) continue;
           const creative = await provider.readCreatives(target.connection, adId);
@@ -465,8 +506,14 @@ async function syncAudience(
         breakdowns: [breakdown],
         grain: "account_day",
       };
-      const response = await provider.readBreakdowns(target.connection, target.account, context);
+      const response = provider.readBreakdownsComplete
+        ? await provider.readBreakdownsComplete(target.connection, target.account, context, {
+            cursor: cursorFor(target, `audience:${breakdown}`),
+            onPage: (next) => persistSyncCursor(db, target, `audience:${breakdown}`, next),
+          })
+        : await provider.readBreakdowns(target.connection, target.account, context);
       const normalized = normalizeMetaBreakdownInsights(response, context);
+      if (!collectionResponseComplete(response)) partial = true;
       if (normalized.observations.length === 0) {
         if (normalized.skippedRows > 0) partial = true;
         continue;
@@ -491,6 +538,46 @@ function collectionRows(value: unknown): readonly Record<string, unknown>[] {
   if (Array.isArray(value)) return value.filter(isRecord);
   if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
   return [];
+}
+
+function collectionResponseComplete(value: unknown): boolean {
+  if (!isRecord(value)) return true;
+  if (typeof value.complete === "boolean") return value.complete;
+  if (!isRecord(value.paging)) return true;
+  return typeof value.paging.next !== "string" && !isRecord(value.paging.next);
+}
+
+type StoredSyncCursor = { phase: string; cursor: MetaCollectionCursor };
+
+function cursorFor(target: ClaimedSync, phase: string): MetaCollectionCursor | undefined {
+  if (!target.cursor) return undefined;
+  try {
+    const parsed = JSON.parse(target.cursor) as Partial<StoredSyncCursor>;
+    return parsed.phase === phase && parsed.cursor ? parsed.cursor : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function persistSyncCursor(
+  db: Db,
+  target: ClaimedSync,
+  phase: string,
+  cursor: MetaCollectionCursor | null,
+): Promise<void> {
+  await db
+    .update(advertisingSyncStates)
+    .set({
+      cursor: cursor ? JSON.stringify({ phase, cursor } satisfies StoredSyncCursor) : null,
+      updatedAt: new Date(),
+    })
+    .where(
+      and(
+        eq(advertisingSyncStates.id, target.stateId),
+        eq(advertisingSyncStates.leaseToken, target.leaseToken),
+        gt(advertisingSyncStates.leaseExpiresAt, new Date()),
+      ),
+    );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -4,6 +4,7 @@ import {
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingCredentialVersions,
+  advertisingConnectionAgencyAccess,
   advertisingSyncStates,
 } from "@/lib/db/schema";
 import { createDekCache, getDekForAgency } from "@/lib/social/key-management";
@@ -227,13 +228,13 @@ export async function resolveAdvertisingCredential(
       .select({
         id: advertisingConnections.id,
         agencyId: advertisingConnections.agencyId,
+        ownerType: advertisingConnections.ownerType,
         currentCredentialVersion: advertisingConnections.currentCredentialVersion,
       })
       .from(advertisingConnections)
       .where(
         and(
           eq(advertisingConnections.id, args.connectionId),
-          eq(advertisingConnections.agencyId, args.agencyId),
           eq(advertisingConnections.status, "active"),
         ),
       )
@@ -241,6 +242,21 @@ export async function resolveAdvertisingCredential(
   )[0];
   if (!connection || connection.currentCredentialVersion < 1) {
     throw new AdvertisingConnectionNotFoundError();
+  }
+  if (connection.agencyId !== args.agencyId) {
+    if (connection.ownerType !== "platform") throw new AdvertisingConnectionNotFoundError();
+    const [access] = await db
+      .select({ id: advertisingConnectionAgencyAccess.id })
+      .from(advertisingConnectionAgencyAccess)
+      .where(
+        and(
+          eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+          eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+          eq(advertisingConnectionAgencyAccess.status, "active"),
+        ),
+      )
+      .limit(1);
+    if (!access) throw new AdvertisingConnectionNotFoundError();
   }
   const row = (
     await db
@@ -257,7 +273,13 @@ export async function resolveAdvertisingCredential(
       .limit(1)
   )[0];
   if (!row) throw new AdvertisingConnectionNotFoundError();
-  const dek = await getDekForAgency(db, createDekCache(db), args.agencyId);
+  // Platform-owned secrets stay encrypted under the controlling agency's DEK;
+  // customer-tenant access never changes the encryption owner.
+  const dek = await getDekForAgency(
+    db,
+    createDekCache(db),
+    connection.ownerType === "platform" ? connection.agencyId : args.agencyId,
+  );
   return openAdvertisingCredentials(
     {
       ciphertext: row.ciphertext,

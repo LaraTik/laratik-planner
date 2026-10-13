@@ -116,27 +116,31 @@ Read-only social profile analytics via Facebook Login for Business. The applicat
 ## Meta Ads (Graph API read-only)
 
 Advertising is a separate, persistent integration from social profile
-analytics. It stores encrypted versioned credentials, discovers canonical
-provider accounts, ingests bounded read-only observations, and exposes only
-agency/workspace-granted report projections. No campaign, ad, budget, bid, or
-creative write is enabled. The local synthetic fixture is not a substitute for
-the controlled Meta UAT below.
+analytics. It stores encrypted versioned credentials, resolves one global
+provider account identity into explicit tenant projections, ingests canonical
+read-only facts, and exposes only agency/workspace-granted report projections.
+Platform-owned credentials may be granted to multiple agencies without moving
+the credential's encryption owner. No campaign, ad, budget, bid, or creative
+write is enabled. The local synthetic fixture is not a substitute for the
+controlled Meta UAT below.
 
 The current local reporting surface also includes campaign, ad-set, and ad
 rollups; configured targeting is shown only from provider object metadata;
 audience delivery is shown only from provider-returned breakdown rows; exact
 promoted-post IDs are joined to the existing workspace social observation
 read model; and paid/organic/combined post views are explicitly additive rather
-than inferred unique reach. Large report tables use URL-preserving server
-pagination. Admin history shows validation, sync, and reconciliation snapshots
-without exposing credentials.
+than inferred unique reach. Diagnostic collection probes remain bounded, while
+production inventory and historical reads follow validated pages, persist a
+resume cursor, and mark incomplete reconciliation partial. Financial allocation
+and post-association resolution are separate states. Admin history shows
+validation, sync, and reconciliation snapshots without exposing credentials.
 
-| #   | Service                 | Auto-check: code path exists                                                                                                                                                            | Auto-check: unit/integration test covers                                                                                                                                                                             | Auto-check: local-fake mode works                                                                                                                            | Check                                                                                                                                                                                                                                                                            | Owner | Environment                      | Date | Result                        | Evidence link                                                                                  |
-| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------- | ---- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1   | Meta Ads connection     | PASS (global-admin connection workflow persists an agency-owned provider connection; credentials are encrypted in versioned rows and activation requires a current non-revoked version) | PASS (`tests/unit/advertising-connection-service.test.ts`; `tests/integration/advertising-credential-lifecycle.test.ts` covers rotation, old-version revocation, current-only resolution, and explicit revocation)   | PASS (the advertising test helpers use synthetic credentials and the local agency DEK; no provider secret is required)                                       | Create, rotate, activate, revoke, and re-enable a Meta Ads connection without exposing or reusing revoked credentials                                                                                                                                                            | Owner | local synthetic / production     |      | PENDING live UAT              | [credential lifecycle tests](../../tests/integration/advertising-credential-lifecycle.test.ts) |
-| 2   | Meta Ads discovery      | PASS (`src/lib/advertising/connection-service.ts` persists one canonical account per agency/provider/external account and links it to each authorized connection)                       | PASS (`advertising-credential-lifecycle.test.ts` verifies one canonical account is reused across two active connections; `advertising-tenant-guards.test.ts` covers agency boundaries and concurrent claim fencing)  | PASS (synthetic discovery persists account identity/currency/timezone while excluding token-like metadata from the stored account payload)                   | Discover account identity, currency, timezone, campaigns, ad sets, ads, creative metadata, and insights using the approved read-only credential and record unsupported fields as partial rather than inferred                                                                    | Owner | controlled Meta test agency      |      | BLOCKED: credentials required | [tenant and ingestion tests](../../tests/integration/advertising-tenant-guards.test.ts)        |
-| 3   | Scoped reporting        | PASS (`src/lib/advertising/reporting-query.ts` and `/api/advertising/report` apply agency/workspace grants, surface capabilities, freshness, sample size, and partial-data state)       | PASS (reporting boundary unit tests cover shared-account filtering, denied projections, export/AI authorization, financial authority, and cache-key revision; route tests normalize hidden accounts to the same 404) | PASS (`tests/e2e/advertising-reporting.spec.ts` exercises populated English/LTR and Arabic/RTL reporting with synthetic observations and no partial warning) | Verify shared-account visibility, workspace isolation, campaign/ad scope, CSV/AI authorization, revocation invalidation, and non-additive metric handling across two workspaces and two agencies                                                                                 | Owner | local synthetic / controlled UAT |      | PASS local; PENDING live UAT  | [reporting fixture](../../tests/e2e/advertising-reporting.spec.ts)                             |
-| 4   | Meta Ads controlled UAT | PASS (read-only provider boundary and sync job are gated by `ADVERTISING_SYNC_ENABLED`; no write endpoint is registered)                                                                | PARTIAL (provider contract and failure-path tests are local-only; live token, permission, rate-limit, and reconciliation evidence is intentionally absent)                                                           | N/A (a local fake cannot prove Meta permission or metric semantics)                                                                                          | With approved credentials, verify token exchange/discovery, incorrect credentials, permission denial, rate limits, concurrent ingestion, duplicate/replay behavior, reconciliation, and supported/non-additive metrics; record sanitized evidence before enabling production use | Owner | Meta test app + test ad account  |      | BLOCKED: no live credentials  | [Meta setup worksheet](./META_COMMAND_CENTER_SETUP.md)                                         |
+| #   | Service                 | Auto-check: code path exists                                                                                                                                                            | Auto-check: unit/integration test covers                                                                                                                                                                                      | Auto-check: local-fake mode works                                                                                                                            | Check                                                                                                                                                                                                                                                                            | Owner | Environment                      | Date | Result                        | Evidence link                                                                                  |
+| --- | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | -------------------------------- | ---- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| 1   | Meta Ads connection     | PASS (global-admin connection workflow persists an agency-owned provider connection; credentials are encrypted in versioned rows and activation requires a current non-revoked version) | PASS (`tests/unit/advertising-connection-service.test.ts`; `tests/integration/advertising-credential-lifecycle.test.ts` covers rotation, old-version revocation, current-only resolution, and explicit revocation)            | PASS (the advertising test helpers use synthetic credentials and the local agency DEK; no provider secret is required)                                       | Create, rotate, activate, revoke, and re-enable a Meta Ads connection without exposing or reusing revoked credentials                                                                                                                                                            | Owner | local synthetic / production     |      | PENDING live UAT              | [credential lifecycle tests](../../tests/integration/advertising-credential-lifecycle.test.ts) |
+| 2   | Meta Ads discovery      | PASS (`src/lib/advertising/connection-service.ts` persists one global provider identity, one tenant projection per agency, and explicit platform-connection agency access)              | PASS (`advertising-credential-lifecycle.test.ts` verifies credential/account dedupe; `advertising-tenant-guards.test.ts` proves two agencies share one identity and one canonical spend fact without cross-tenant disclosure) | PASS (synthetic discovery persists account identity/currency/timezone while excluding token-like metadata from the stored account payload)                   | Discover account identity, currency, timezone, campaigns, ad sets, ads, creative metadata, and insights using the approved read-only credential and record unsupported fields as partial rather than inferred                                                                    | Owner | controlled Meta test agency      |      | BLOCKED: credentials required | [tenant and ingestion tests](../../tests/integration/advertising-tenant-guards.test.ts)        |
+| 3   | Scoped reporting        | PASS (`src/lib/advertising/reporting-query.ts` and `/api/advertising/report` apply agency/workspace grants, surface capabilities, freshness, sample size, and partial-data state)       | PASS (reporting boundary unit tests cover shared-account filtering, denied projections, export/AI authorization, financial authority, and cache-key revision; route tests normalize hidden accounts to the same 404)          | PASS (`tests/e2e/advertising-reporting.spec.ts` exercises populated English/LTR and Arabic/RTL reporting with synthetic observations and no partial warning) | Verify shared-account visibility, workspace isolation, campaign/ad scope, CSV/AI authorization, revocation invalidation, and non-additive metric handling across two workspaces and two agencies                                                                                 | Owner | local synthetic / controlled UAT |      | PASS local; PENDING live UAT  | [reporting fixture](../../tests/e2e/advertising-reporting.spec.ts)                             |
+| 4   | Meta Ads controlled UAT | PASS (read-only provider boundary and sync job are gated by `ADVERTISING_SYNC_ENABLED`; no write endpoint is registered)                                                                | PARTIAL (provider contract and failure-path tests are local-only; live token, permission, rate-limit, and reconciliation evidence is intentionally absent)                                                                    | N/A (a local fake cannot prove Meta permission or metric semantics)                                                                                          | With approved credentials, verify token exchange/discovery, incorrect credentials, permission denial, rate limits, concurrent ingestion, duplicate/replay behavior, reconciliation, and supported/non-additive metrics; record sanitized evidence before enabling production use | Owner | Meta test app + test ad account  |      | BLOCKED: no live credentials  | [Meta setup worksheet](./META_COMMAND_CENTER_SETUP.md)                                         |
 
 ### Blocked live Meta Ads UAT — executable runbook
 
@@ -151,31 +155,37 @@ only through the process environment and never print them.
    validate it, and capture only the returned diagnostic state, sanitized code,
    request ID, endpoint class, and timestamp. Do not capture the token or raw
    provider payload.
-3. Confirm the bounded read sequence is limited to `me`, `me/adaccounts`,
-   account campaigns, campaign ad sets, ad-set ads, ad creative, account
-   insights, `me/accounts`, and linked Instagram identity reads. The adapter
-   follows at most three collection pages and never follows a non-Graph host.
+3. Confirm the read sequence is limited to `me`, `me/adaccounts`, account
+   campaigns, campaign ad sets, ad-set ads, ad creative, account insights,
+   `me/accounts`, and linked Instagram identity reads. Diagnostic probes follow
+   at most three collection pages; production inventory and historical sync
+   follow every page, reject non-Graph paging hosts, and persist a cursor after
+   each page.
 4. Repeat with an invalid or revoked token, missing permission, missing asset
    assignment, unsupported field, rate limit, and temporary provider failure.
    Expected outcomes are the normalized diagnostic states, not provider error
    text.
-5. Select one discovered account for sync and verify a bounded historical
-   window, an incremental daily run, a recent refresh window, interrupted-run
-   recovery, idempotent replay, and account-level reconciliation. The cron route
-   accepts an explicit `since`/`until` window for controlled backfill checks;
-   verify that repeated credentials for the same agency/account do not
-   duplicate spend and that the admin reconciliation history records provider,
-   attributed, unallocated, discrepancy, and completeness values.
+5. Select one discovered account for sync and verify a seven-day historical
+   window, an incremental daily run, a recent refresh window, a collection
+   larger than the diagnostic page limit, interrupted-run recovery from the
+   persisted cursor, idempotent replay, and account-level reconciliation. The
+   cron route accepts an explicit `since`/`until` window for controlled backfill
+   checks; verify that repeated credentials and shared tenant projections do not
+   create duplicate canonical spend facts and that reconciliation records
+   provider, attributed, unallocated, disputed, discrepancy, and
+   complete/partial/unavailable values.
 6. Create explicit agency and workspace grants, including campaign-scoped
    grants. Verify that the workspace sees only authorized campaign facts,
    that revoked grants invalidate the report immediately, and that export/AI
    paths are denied without their separate capability.
 7. Verify exact promoted post IDs from creative metadata when Meta returns
-   them. Keep paid, organic, and additive combined post views separate; several
-   ads may point at one post but must produce one post row with aggregated paid
-   delivery. If Meta does not return a reliable association, record
-   `unallocated`/`unsupported` rather than inferring one. Combined views are
-   not a unique-reach claim.
+   them. Keep financial allocation (`attributed`, `unallocated`, `disputed`),
+   planner post association (`linked`, `unresolved`, `unsupported`,
+   `unpublished`), and provider completeness (`complete`, `partial`,
+   `unavailable`) independent. Missing post IDs must not change valid financial
+   allocation; several ads may point at one post but must produce one post row
+   with aggregated paid delivery. Never infer a link from names or captions.
+   Combined views are not a unique-reach claim.
 8. Verify audience breakdowns only for dimensions returned by the provider
    (for example age, gender, placement, device, or geography). Preserve the
    requested date range, account currency, account timezone, attribution

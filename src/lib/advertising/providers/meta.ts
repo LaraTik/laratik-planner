@@ -28,24 +28,64 @@ export interface MetaCredentialResolver {
 export interface MetaReadClient {
   get(path: string, params: Readonly<Record<string, string>>): Promise<unknown>;
 }
+export type MetaCollectionCursor = {
+  readonly path: string;
+  readonly params: Readonly<Record<string, string>>;
+};
+export type MetaCollectionReadOptions = {
+  readonly cursor?: MetaCollectionCursor | null | undefined;
+  readonly onPage?: ((next: MetaCollectionCursor | null) => Promise<void>) | undefined;
+};
+export type MetaCollectionResult = {
+  readonly data: readonly Record<string, unknown>[];
+  readonly complete: boolean;
+  readonly pages: number;
+};
 export interface MetaAdvertisingProvider {
   readonly provider: "meta";
   validateConnection(connection: AdvertisingConnection): Promise<void>;
   discoverAccounts(connection: AdvertisingConnection): Promise<readonly AdvertisingAccount[]>;
   readCampaigns(connection: AdvertisingConnection, account: AdvertisingAccount): Promise<unknown>;
+  readCampaignsComplete?: (
+    connection: AdvertisingConnection,
+    account: AdvertisingAccount,
+    options?: MetaCollectionReadOptions,
+  ) => Promise<MetaCollectionResult>;
   readAdSets(connection: AdvertisingConnection, campaignId: string): Promise<unknown>;
+  readAdSetsComplete?: (
+    connection: AdvertisingConnection,
+    campaignId: string,
+    options?: MetaCollectionReadOptions,
+  ) => Promise<MetaCollectionResult>;
   readAds(connection: AdvertisingConnection, adSetId: string): Promise<unknown>;
+  readAdsComplete?: (
+    connection: AdvertisingConnection,
+    adSetId: string,
+    options?: MetaCollectionReadOptions,
+  ) => Promise<MetaCollectionResult>;
   readCreatives(connection: AdvertisingConnection, adId: string): Promise<unknown>;
   readDailyInsights(
     connection: AdvertisingConnection,
     account: AdvertisingAccount,
     context: AdvertisingReportContext,
   ): Promise<unknown>;
+  readDailyInsightsComplete?: (
+    connection: AdvertisingConnection,
+    account: AdvertisingAccount,
+    context: AdvertisingReportContext,
+    options?: MetaCollectionReadOptions,
+  ) => Promise<MetaCollectionResult>;
   readBreakdowns(
     connection: AdvertisingConnection,
     account: AdvertisingAccount,
     context: AdvertisingReportContext,
   ): Promise<unknown>;
+  readBreakdownsComplete?: (
+    connection: AdvertisingConnection,
+    account: AdvertisingAccount,
+    context: AdvertisingReportContext,
+    options?: MetaCollectionReadOptions,
+  ) => Promise<MetaCollectionResult>;
   readPages(connection: AdvertisingConnection): Promise<unknown>;
   readInstagramAccounts(connection: AdvertisingConnection, pageId: string): Promise<unknown>;
 }
@@ -59,27 +99,62 @@ export function classifyMetaError(status: number, code?: number): MetaAdvertisin
   return "unknown";
 }
 
-const MAX_COLLECTION_PAGES = 3;
+export const META_DIAGNOSTIC_MAX_COLLECTION_PAGES = 3;
 
-/** Read at most three provider pages and never follow an untrusted host. */
+/** Diagnostic reads remain deliberately bounded and never follow an untrusted host. */
 export async function readMetaCollection(
   client: MetaReadClient,
   path: string,
   params: Readonly<Record<string, string>>,
-): Promise<{ data: readonly Record<string, unknown>[] }> {
+): Promise<MetaCollectionResult> {
   const rows: Record<string, unknown>[] = [];
   let currentPath = path;
   let currentParams: Readonly<Record<string, string>> = params;
   let response = await client.get(path, params);
-  for (let page = 0; page < MAX_COLLECTION_PAGES; page += 1) {
+  let pages = 0;
+  let complete = true;
+  for (let page = 0; page < META_DIAGNOSTIC_MAX_COLLECTION_PAGES; page += 1) {
+    pages += 1;
     rows.push(...collectionData(response));
     const next = nextPage(response, currentPath, currentParams);
-    if (!next || page === MAX_COLLECTION_PAGES - 1) break;
+    if (!next) break;
+    if (page === META_DIAGNOSTIC_MAX_COLLECTION_PAGES - 1) {
+      complete = false;
+      break;
+    }
     response = await client.get(next.path, next.params);
     currentPath = next.path;
     currentParams = next.params;
   }
-  return { data: rows };
+  return { data: rows, complete, pages };
+}
+
+/** Production reads follow every validated page and can resume from a cursor. */
+export async function readMetaCollectionComplete(
+  client: MetaReadClient,
+  path: string,
+  params: Readonly<Record<string, string>>,
+  options: MetaCollectionReadOptions = {},
+): Promise<MetaCollectionResult> {
+  const rows: Record<string, unknown>[] = [];
+  let currentPath = options.cursor?.path ?? path;
+  let currentParams: Readonly<Record<string, string>> = options.cursor?.params ?? params;
+  const seen = new Set<string>();
+  let pages = 0;
+  while (pages < 10_000) {
+    const requestKey = `${currentPath}?${new URLSearchParams(currentParams).toString()}`;
+    if (seen.has(requestKey)) return { data: rows, complete: false, pages };
+    seen.add(requestKey);
+    const response = await client.get(currentPath, currentParams);
+    pages += 1;
+    rows.push(...collectionData(response));
+    const next = nextPage(response, currentPath, currentParams);
+    await options.onPage?.(next);
+    if (!next) return { data: rows, complete: true, pages };
+    currentPath = next.path;
+    currentParams = next.params;
+  }
+  return { data: rows, complete: false, pages };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -96,7 +171,7 @@ function nextPage(
   value: unknown,
   currentPath: string,
   currentParams: Readonly<Record<string, string>>,
-): { path: string; params: Readonly<Record<string, string>> } | null {
+): MetaCollectionCursor | null {
   if (!isRecord(value) || !isRecord(value.paging)) return null;
   const next = value.paging.next;
   if (isRecord(next) && typeof next.after === "string" && next.after.length > 0)
@@ -160,15 +235,39 @@ export function createMetaAdvertisingProvider(
         },
       );
     },
+    async readCampaignsComplete(connection, account, options) {
+      return readMetaCollectionComplete(
+        await clientFor(connection),
+        `${account.externalAccountId}/campaigns`,
+        { fields: "id,name,status,objective,daily_budget,lifetime_budget" },
+        options,
+      );
+    },
     async readAdSets(connection, campaignId) {
       return readMetaCollection(await clientFor(connection), `${campaignId}/adsets`, {
         fields: "id,name,status,campaign_id,daily_budget,lifetime_budget,targeting",
       });
     },
+    async readAdSetsComplete(connection, campaignId, options) {
+      return readMetaCollectionComplete(
+        await clientFor(connection),
+        `${campaignId}/adsets`,
+        { fields: "id,name,status,campaign_id,daily_budget,lifetime_budget,targeting" },
+        options,
+      );
+    },
     async readAds(connection, adSetId) {
       return readMetaCollection(await clientFor(connection), `${adSetId}/ads`, {
         fields: "id,name,status,adset_id,creative",
       });
+    },
+    async readAdsComplete(connection, adSetId, options) {
+      return readMetaCollectionComplete(
+        await clientFor(connection),
+        `${adSetId}/ads`,
+        { fields: "id,name,status,adset_id,creative" },
+        options,
+      );
     },
     async readCreatives(connection, adId) {
       return (await clientFor(connection)).get(`${adId}/creative`, {
@@ -196,8 +295,39 @@ export function createMetaAdvertisingProvider(
         },
       );
     },
+    async readDailyInsightsComplete(connection, account, context, options) {
+      return readMetaCollectionComplete(
+        await clientFor(connection),
+        `${account.externalAccountId}/insights`,
+        {
+          fields:
+            "ad_id,adset_id,campaign_id,date_start,spend,impressions,clicks,reach,actions,ctr,cpc,cpm",
+          time_range: JSON.stringify(context.dateRange),
+          time_increment: "1",
+          level:
+            context.grain === "ad_day"
+              ? "ad"
+              : context.grain === "adset_day"
+                ? "adset"
+                : context.grain === "campaign_day"
+                  ? "campaign"
+                  : "account",
+          ...(context.breakdowns.length ? { breakdowns: context.breakdowns.join(",") } : {}),
+        },
+        options,
+      );
+    },
     async readBreakdowns(connection, account, context) {
       return this.readDailyInsights(connection, account, context);
+    },
+    async readBreakdownsComplete(connection, account, context, options) {
+      return (
+        this.readDailyInsightsComplete?.(connection, account, context, options) ?? {
+          data: [],
+          complete: false,
+          pages: 0,
+        }
+      );
     },
     async readPages(connection) {
       return readMetaCollection(await clientFor(connection), "me/accounts", {

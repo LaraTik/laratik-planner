@@ -3,6 +3,7 @@ import type { db as appDb } from "@/lib/db";
 import {
   advertisingAccounts,
   advertisingConnectionAccounts,
+  advertisingConnectionAgencyAccess,
   advertisingConnections,
   advertisingSyncStates,
   securityAuditEvents,
@@ -46,17 +47,32 @@ export async function setAdvertisingSyncState(
   return db.transaction(async (tx) => {
     const connection = (
       await tx
-        .select({ id: advertisingConnections.id, status: advertisingConnections.status })
+        .select({
+          id: advertisingConnections.id,
+          status: advertisingConnections.status,
+          agencyId: advertisingConnections.agencyId,
+          ownerType: advertisingConnections.ownerType,
+        })
         .from(advertisingConnections)
-        .where(
-          and(
-            eq(advertisingConnections.id, args.connectionId),
-            eq(advertisingConnections.agencyId, args.agencyId),
-          ),
-        )
+        .where(and(eq(advertisingConnections.id, args.connectionId)))
         .limit(1)
     )[0];
     if (!connection) throw new AdvertisingSyncInputError("advertising_connection_not_found");
+    if (connection.agencyId !== args.agencyId) {
+      const [access] = await tx
+        .select({ id: advertisingConnectionAgencyAccess.id })
+        .from(advertisingConnectionAgencyAccess)
+        .where(
+          and(
+            eq(advertisingConnectionAgencyAccess.connectionId, args.connectionId),
+            eq(advertisingConnectionAgencyAccess.agencyId, args.agencyId),
+            eq(advertisingConnectionAgencyAccess.status, "active"),
+          ),
+        )
+        .limit(1);
+      if (connection.ownerType !== "platform" || !access)
+        throw new AdvertisingSyncInputError("advertising_connection_not_authorized");
+    }
 
     const account = (
       await tx
