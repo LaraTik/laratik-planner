@@ -65,7 +65,7 @@ export default async function BrandKitLogosPage({
         title={t("brandKit.logosTitle")}
         description={t("brandKit.logosDescription")}
       />
-      <BrandKitHealth section="logos" slug={slug} count={logos.length} />
+      <BrandKitHealth agencySlug={agencySlug} section="logos" slug={slug} count={logos.length} />
 
       <SectionCard
         id="logos"

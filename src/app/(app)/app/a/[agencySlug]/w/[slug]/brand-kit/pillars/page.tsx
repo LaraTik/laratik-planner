@@ -54,7 +54,12 @@ export default async function BrandKitPillarsPage({
         title={t("brandKit.pillarsTitle")}
         description={t("brandKit.pillarsDescription")}
       />
-      <BrandKitHealth section="pillars" slug={slug} count={pillars.length} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="pillars"
+        slug={slug}
+        count={pillars.length}
+      />
 
       <SectionCard
         id="pillars"

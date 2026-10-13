@@ -88,7 +88,13 @@ export default async function BrandKitColorsPage({
         title={t("brandKit.colorsTitle")}
         description={t("brandKit.colorsDescription")}
       />
-      <BrandKitHealth section="colors" slug={slug} count={colors.length} breakdown={breakdown} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="colors"
+        slug={slug}
+        count={colors.length}
+        breakdown={breakdown}
+      />
 
       <SectionCard
         id="colors"

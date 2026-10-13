@@ -67,7 +67,13 @@ export default async function BrandKitVoicePage({
         title={t("brandKit.voiceTitle")}
         description={t("brandKit.voiceDescription")}
       />
-      <BrandKitHealth section="voice" slug={slug} count={rules.length} breakdown={breakdown} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="voice"
+        slug={slug}
+        count={rules.length}
+        breakdown={breakdown}
+      />
 
       <SectionCard
         id="voice"

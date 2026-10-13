@@ -53,7 +53,12 @@ export default async function BrandKitLinkedPage({
         title={t("brandKit.linkedTitle")}
         description={t("brandKit.linkedDescription")}
       />
-      <BrandKitHealth section="linked" slug={slug} count={resources.length} />
+      <BrandKitHealth
+        agencySlug={agencySlug}
+        section="linked"
+        slug={slug}
+        count={resources.length}
+      />
 
       <SectionCard
         id="linked"

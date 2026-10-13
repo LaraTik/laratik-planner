@@ -6,6 +6,7 @@ import { Sparkles, CheckCircle2, AlertCircle, Info, Check, Clock } from "lucide-
 import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { workspaceBasePath } from "@/lib/urls";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
@@ -194,6 +195,8 @@ const AI_STATE_BADGE: Record<AiState, { labelKey: string; icon: typeof Check; cl
 export interface BrandKitHealthProps {
   section: Section;
   slug: string;
+  /** Canonical agency segment. Required for the workspace URLs built below. */
+  agencySlug: string;
   count: number;
   /** Per-role counts — `voice`, `typography`, and `colors` read this today. */
   breakdown?: {
@@ -210,7 +213,13 @@ export interface BrandKitHealthProps {
   };
 }
 
-export function BrandKitHealth({ section, slug, count, breakdown }: BrandKitHealthProps) {
+export function BrandKitHealth({
+  section,
+  slug,
+  agencySlug,
+  count,
+  breakdown,
+}: BrandKitHealthProps) {
   const t = useLocaleT();
   const suggestions = suggestionsFor(section, count, t, breakdown);
   const status = coverStatus(count, suggestions);
@@ -267,7 +276,7 @@ export function BrandKitHealth({ section, slug, count, breakdown }: BrandKitHeal
             </p>
           </div>
           <Link
-            href={`/app/w/${slug}/brand-kit`}
+            href={`${workspaceBasePath(agencySlug, slug)}/brand-kit`}
             className="text-label text-primary inline-flex items-center gap-1 font-semibold hover:underline"
           >
             {t("brandKit.health.overviewLink")}
