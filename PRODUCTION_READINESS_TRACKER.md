@@ -1,5 +1,19 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 multi-tenant advertising hardening checkpoint** — Exact
+> implementation commit `8695adf92e611e5a7f03494157df3e90b5a02027` adds global
+> provider-account identities, explicit platform-to-agency access grants,
+> canonical spend facts, separate financial/post/completeness states, complete
+> resumable production pagination, cursor persistence, approved-host URL
+> validation, and inventory/audience pagination without the diagnostic page
+> cap. The focused provider suite passes 14/14, the tenant-guard integration
+> suite passes 14/14, the migration drill passes 5/5 with 85/85 ledger rows,
+> strict typecheck, formatting, lint, and the production build pass. No live
+> Meta credential was used, and no push or deployment was performed. This
+> remains **Tested**, not **Verified**: controlled credentialed Meta UAT,
+> external reconciliation, offsite backup/restore evidence, and independent
+> review remain open.
+
 > **2026-10-13 complete Meta Ads reporting checkpoint** — Exact clean code
 > commit `d9f59b824df89212c45a537a7845aa4d6a1d2a72` completes the local
 > read-only reporting surfaces: admin reconciliation history; campaign, ad-set,

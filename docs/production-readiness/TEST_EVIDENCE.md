@@ -3,6 +3,37 @@
 > Authoritative work list: `PRODUCTION_READINESS_TRACKER.md` (rows QA-001..QA-005, OBS-001).
 > Re-baseline every milestone — this file is the snapshot, not a perpetual claim.
 
+## Multi-tenant advertising hardening — 2026-10-13, implementation SHA `8695adf92e611e5a7f03494157df3e90b5a02027`
+
+This pass hardens the advertising foundation for shared canonical provider
+accounts and platform-owned credentials. Tenant-local projections now point to
+a global provider identity, agency visibility is an explicit grant, and
+canonical spend facts are deduplicated independently from tenant reporting
+projections. Financial allocation (`attributed`, `unallocated`, `disputed`),
+post association (`linked`, `unresolved`, `unsupported`, `unpublished`), and
+reconciliation completeness (`complete`, `partial`, `unavailable`) are stored
+separately. Production inventory, insights, and audience reads follow every
+approved-host page, persist a resumable cursor, and report partial state rather
+than silently truncating at the diagnostic limit.
+
+| Check                                                                                                     | Result                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm vitest run tests/unit/advertising-meta-provider.test.ts tests/unit/advertising-sync-worker.test.ts` | **Pass** — 14/14; includes five-page production pagination, cursor resume, foreign-host safety, and bounded diagnostic reads |
+| `TEST_DATABASE_URL=… pnpm test:integration -- tests/integration/advertising-tenant-guards.test.ts`        | **Pass** — 14/14; includes two-agency shared identity/canonical-spend dedupe and a 12-campaign inventory sync                |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                                                | **Pass** — 5/5 drills; 85/85 Drizzle ledger rows                                                                             |
+| `pnpm typecheck`                                                                                          | **Pass** — strict TypeScript                                                                                                 |
+| `pnpm exec prettier --check .`                                                                            | **Pass**                                                                                                                     |
+| `pnpm lint`                                                                                               | **Pass**                                                                                                                     |
+| `pnpm build`                                                                                              | **Pass** — Next.js production build                                                                                          |
+| `git diff --check`                                                                                        | **Pass**                                                                                                                     |
+
+No live Meta credential was used. The local `meta-ads-agent` environment was
+only inspected for key names and set/empty status; secret values were not read
+or imported. Controlled live Meta UAT therefore remains **Blocked** pending an
+explicit secure authorization workflow. Offsite restic backup/restore and
+RPO/RTO evidence also remain open production-readiness blockers. No push or
+deployment was performed.
+
 ## Complete Meta Ads reporting surfaces — 2026-10-13, exact clean code SHA `d9f59b824df89212c45a537a7845aa4d6a1d2a72`
 
 This pass completes the local read-only Meta Ads foundation without enabling
