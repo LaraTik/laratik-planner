@@ -1,5 +1,14 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 Trend Radar durable-job fencing checkpoint** — Exact clean code
+> commit `9be3a6bf` prevents an expired worker from renewing its lease, clears
+> lease ownership on completion/requeue/dead-letter transitions, and adds
+> recovery, fencing, and active-dedupe regression coverage. The focused job
+> suite passes 7/7; the full Trend Radar sidecar passes 129/129; Ruff passes
+> for the changed modules. This remains **Tested**, not **Verified**: live Meta
+> UAT, real ad-level reconciliation, workspace reporting UI evidence,
+> independent review, and production deployment remain open.
+
 > **2026-10-13 advertising admin browser checkpoint** — Exact clean code
 > commit `85b5e25` fixes the Graph API version input pattern so the default
 > `v25.0` value is accepted, adds a Chromium browser contract for creating a
