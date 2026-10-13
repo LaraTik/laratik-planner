@@ -165,6 +165,7 @@ export async function devSeed(
     includeDeliveryMediaFixture?: boolean;
     enableTrendRadar?: boolean;
     visualFixture?: boolean;
+    advertisingReportingFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   return withRetry(async () => {
@@ -190,6 +191,7 @@ export async function devSeed(
           : {}),
         ...(options.enableTrendRadar ? { enableTrendRadar: true } : {}),
         ...(options.visualFixture ? { visualFixture: true } : {}),
+        ...(options.advertisingReportingFixture ? { advertisingReportingFixture: true } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step
@@ -257,6 +259,7 @@ export async function bootstrapTestSession(
     authRole?: "agency_admin" | "user";
     enableTrendRadar?: boolean;
     visualFixture?: boolean;
+    advertisingReportingFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
   const result = await devSeed(page.request, options);

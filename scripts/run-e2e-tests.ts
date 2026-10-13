@@ -77,6 +77,9 @@ async function main() {
     // social credentials. Keep the isolated browser contract self-contained
     // while making the test-only key unmistakable and non-production.
     SOCIAL_TOKEN_ENCRYPTION_KEY: process.env.SOCIAL_TOKEN_ENCRYPTION_KEY ?? testOnlySocialKek,
+    // Reporting is read-only and remains disabled by default outside this
+    // isolated test process. The populated reporting fixture is synthetic.
+    ADVERTISING_REPORTING_ENABLED: process.env.ADVERTISING_REPORTING_ENABLED ?? "true",
     // Trend Radar is intentionally off by default in production. Isolated E2E
     // runs opt into the capability so the gated Trend Radar journeys are
     // exercised without changing the production configuration.

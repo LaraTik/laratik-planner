@@ -5,6 +5,11 @@ import {
   agencies,
   agencyEntitlements,
   agencyMemberships,
+  agencySocialDek,
+  advertisingConnections,
+  advertisingSyncRuns,
+  advertisingSyncStates,
+  advertisingVisibilityGrants,
   bootstrapLocks,
   contentItemChannels,
   contentItems,
@@ -22,7 +27,7 @@ import {
   workspaces,
   aiFeatureSettings,
 } from "@/lib/db/schema";
-import { and, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, ne, sql } from "drizzle-orm";
 import {
   AGENCY_CONTEXT_COOKIE_NAME,
   AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
@@ -30,6 +35,15 @@ import {
 } from "@/lib/auth/agency-context";
 import { serverEnv } from "@/lib/validation/env";
 import { PLATFORM_ROLE_VALUES, type PlatformRole } from "@/lib/auth/platform-access-types";
+import {
+  activateAdvertisingConnection,
+  createAdvertisingConnection,
+  persistDiscoveredAdvertisingAccount,
+} from "@/lib/advertising/connection-service";
+import { ingestAdvertisingSpend } from "@/lib/advertising/ingestion-service";
+import { grantAdvertisingVisibility } from "@/lib/advertising/grant-service";
+import { enableAgencyDek } from "@/lib/social/key-management";
+import { storeAdvertisingCredential } from "@/lib/advertising/credential-service";
 import { z } from "zod";
 
 /**
@@ -109,6 +123,8 @@ type SeedBody = {
   enableTrendRadar?: boolean;
   /** Keep visual planning fixtures in the committed visual-reference month. Test-only. */
   visualFixture?: boolean;
+  /** Seed canonical, synthetic advertising facts for the populated reporting E2E. */
+  advertisingReportingFixture?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -175,6 +191,7 @@ export async function POST(req: NextRequest) {
     includeDeliveryMediaFixture: body.includeDeliveryMediaFixture ?? false,
     enableTrendRadar: body.enableTrendRadar ?? false,
     visualFixture: body.visualFixture ?? false,
+    advertisingReportingFixture: body.advertisingReportingFixture ?? false,
   };
 
   try {
@@ -214,6 +231,7 @@ async function seedInternal(f: {
   includeDeliveryMediaFixture: boolean;
   enableTrendRadar: boolean;
   visualFixture: boolean;
+  advertisingReportingFixture: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -625,6 +643,10 @@ async function seedInternal(f: {
     }
   }
 
+  if (f.advertisingReportingFixture) {
+    await seedAdvertisingReportingFixture({ agencyId, workspaceId, userId });
+  }
+
   // ─── Deterministic content item (Task 6) ─────────────────────────────
   // The visual-regression spec (Task 7) and the planning-detail
   // captures need a stable `{contentItemId}` placeholder. We look up
@@ -776,6 +798,240 @@ async function seedInternal(f: {
     maxAge: AGENCY_CONTEXT_DEFAULT_MAX_AGE_SECONDS,
   });
   return response;
+}
+
+/**
+ * Seed bounded, canonical advertising facts for the populated reporting E2E.
+ *
+ * This helper is reachable only through the non-production dev seed route. It
+ * still exercises the production connection, credential, grant, sync, and
+ * ingestion services so the browser fixture cannot bypass their invariants.
+ * The credential is synthetic and is never used against Meta.
+ */
+async function seedAdvertisingReportingFixture(args: {
+  agencyId: string;
+  workspaceId: string;
+  userId: string;
+}) {
+  const [dek] = await db
+    .select({ agencyId: agencySocialDek.agencyId })
+    .from(agencySocialDek)
+    .where(eq(agencySocialDek.agencyId, args.agencyId))
+    .limit(1);
+  if (!dek) {
+    await enableAgencyDek(db, { agencyId: args.agencyId, actorId: args.userId });
+  }
+
+  let [connection] = await db
+    .select({
+      id: advertisingConnections.id,
+      status: advertisingConnections.status,
+      currentCredentialVersion: advertisingConnections.currentCredentialVersion,
+    })
+    .from(advertisingConnections)
+    .where(
+      and(
+        eq(advertisingConnections.agencyId, args.agencyId),
+        eq(advertisingConnections.displayName, "E2E Synthetic Meta Advertising"),
+        ne(advertisingConnections.status, "revoked"),
+      ),
+    )
+    .orderBy(desc(advertisingConnections.createdAt))
+    .limit(1);
+
+  if (!connection) {
+    const created = await createAdvertisingConnection(db, {
+      agencyId: args.agencyId,
+      provider: "meta",
+      displayName: "E2E Synthetic Meta Advertising",
+      actorId: args.userId,
+    });
+    connection = {
+      id: created.id,
+      status: "invalid",
+      currentCredentialVersion: 0,
+    };
+  }
+
+  if (connection.currentCredentialVersion === 0 || connection.status !== "active") {
+    await storeAdvertisingCredential(db, {
+      agencyId: args.agencyId,
+      connectionId: connection.id,
+      credentials: { accessToken: "e2e-synthetic-advertising-token" },
+      actorId: args.userId,
+    });
+    await activateAdvertisingConnection(db, {
+      agencyId: args.agencyId,
+      connectionId: connection.id,
+    });
+  }
+
+  const account = await persistDiscoveredAdvertisingAccount(db, {
+    agencyId: args.agencyId,
+    connectionId: connection.id,
+    externalAccountId: "act_e2e_synthetic_reporting",
+    name: "E2E Synthetic Account",
+    currency: "EUR",
+    timezone: "Europe/Berlin",
+    metadata: { fixture: "synthetic_canonical_facts" },
+  });
+
+  const [grant] = await db
+    .select({ id: advertisingVisibilityGrants.id })
+    .from(advertisingVisibilityGrants)
+    .where(
+      and(
+        eq(advertisingVisibilityGrants.agencyId, args.agencyId),
+        eq(advertisingVisibilityGrants.workspaceId, args.workspaceId),
+        eq(advertisingVisibilityGrants.accountId, account.id),
+        eq(advertisingVisibilityGrants.capability, "read_reports"),
+        isNull(advertisingVisibilityGrants.revokedAt),
+      ),
+    )
+    .limit(1);
+  if (!grant) {
+    await grantAdvertisingVisibility(db, {
+      agencyId: args.agencyId,
+      workspaceId: args.workspaceId,
+      accountId: account.id,
+      capability: "read_reports",
+      grantedBy: args.userId,
+    });
+  }
+
+  const now = new Date();
+  const [existingSyncState] = await db
+    .select({ id: advertisingSyncStates.id })
+    .from(advertisingSyncStates)
+    .where(
+      and(
+        eq(advertisingSyncStates.connectionId, connection.id),
+        eq(advertisingSyncStates.accountId, account.id),
+      ),
+    )
+    .limit(1);
+  const syncState = existingSyncState
+    ? (
+        await db
+          .update(advertisingSyncStates)
+          .set({
+            status: "idle",
+            lastCompletedAt: now,
+            nextRunAt: null,
+            lastErrorCode: null,
+            lastErrorAt: null,
+            updatedAt: now,
+          })
+          .where(eq(advertisingSyncStates.id, existingSyncState.id))
+          .returning({ id: advertisingSyncStates.id })
+      )[0]
+    : (
+        await db
+          .insert(advertisingSyncStates)
+          .values({
+            connectionId: connection.id,
+            accountId: account.id,
+            status: "idle",
+            lastCompletedAt: now,
+          })
+          .returning({ id: advertisingSyncStates.id })
+      )[0];
+  if (!syncState) throw new Error("Synthetic advertising sync state was not created");
+
+  const [existingRun] = await db
+    .select({ id: advertisingSyncRuns.id })
+    .from(advertisingSyncRuns)
+    .where(
+      and(
+        eq(advertisingSyncRuns.connectionId, connection.id),
+        eq(advertisingSyncRuns.accountId, account.id),
+      ),
+    )
+    .orderBy(desc(advertisingSyncRuns.startedAt))
+    .limit(1);
+  const startedAt = new Date(now.getTime() - 60_000);
+  const syncRun = existingRun
+    ? (
+        await db
+          .update(advertisingSyncRuns)
+          .set({
+            syncStateId: syncState.id,
+            status: "succeeded",
+            rowsRead: 3,
+            rowsWritten: 3,
+            providerRequestId: "e2e-synthetic-report",
+            errorCode: null,
+            partial: false,
+            startedAt,
+            completedAt: now,
+          })
+          .where(eq(advertisingSyncRuns.id, existingRun.id))
+          .returning({ id: advertisingSyncRuns.id })
+      )[0]
+    : (
+        await db
+          .insert(advertisingSyncRuns)
+          .values({
+            syncStateId: syncState.id,
+            connectionId: connection.id,
+            accountId: account.id,
+            status: "succeeded",
+            rowsRead: 3,
+            rowsWritten: 3,
+            providerRequestId: "e2e-synthetic-report",
+            partial: false,
+            startedAt,
+            completedAt: now,
+          })
+          .returning({ id: advertisingSyncRuns.id })
+      )[0];
+  if (!syncRun) throw new Error("Synthetic advertising sync run was not created");
+
+  await ingestAdvertisingSpend(db, {
+    agencyId: args.agencyId,
+    accountId: account.id,
+    connectionId: connection.id,
+    syncRunId: syncRun.id,
+    providerDataVersion: "e2e-synthetic-canonical",
+    observations: [
+      {
+        externalAdId: "e2e-ad-spring",
+        externalCampaignId: "e2e-campaign-spring",
+        externalAdSetId: "e2e-adset-spring",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "12.50",
+        impressions: 1000,
+        clicks: 50,
+        attributionWindow: "account",
+        actionReportTime: "mixed",
+      },
+      {
+        externalAdId: "e2e-ad-retargeting",
+        externalCampaignId: "e2e-campaign-retargeting",
+        externalAdSetId: "e2e-adset-retargeting",
+        reportDate: "2026-10-02",
+        currency: "EUR",
+        spend: "30.00",
+        impressions: 500,
+        clicks: 20,
+        attributionWindow: "account",
+        actionReportTime: "mixed",
+      },
+      {
+        externalAdId: "e2e-ad-spring",
+        externalCampaignId: "e2e-campaign-spring",
+        externalAdSetId: "e2e-adset-spring",
+        reportDate: "2026-10-02",
+        currency: "EUR",
+        spend: "7.50",
+        impressions: 600,
+        clicks: 30,
+        attributionWindow: "account",
+        actionReportTime: "mixed",
+      },
+    ],
+  });
 }
 
 export async function GET() {
