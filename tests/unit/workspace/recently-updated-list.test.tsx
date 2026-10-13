@@ -35,22 +35,24 @@ describe("RecentlyUpdatedList", () => {
   it("renders the 'Recently updated' header and a 'View all' footer link", () => {
     render(
       <RecentlyUpdatedList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
-        viewAllHref="/app/w/acme/planning"
+        viewAllHref="/app/a/acme/w/acme/planning"
       />,
     );
     expect(screen.getByText("Recently updated")).toBeInTheDocument();
     const link = screen.getByRole("link", { name: /view all/i });
-    expect(link).toHaveAttribute("href", "/app/w/acme/planning");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning");
   });
 
   it("renders one row per item with format + title + date + status", () => {
     render(
       <RecentlyUpdatedList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
-        viewAllHref="/app/w/acme/planning"
+        viewAllHref="/app/a/acme/w/acme/planning"
       />,
     );
     expect(screen.getByText("August Challenge Launch")).toBeInTheDocument();
@@ -63,18 +65,24 @@ describe("RecentlyUpdatedList", () => {
   it("links each row to the planning detail page", () => {
     render(
       <RecentlyUpdatedList
+        agencySlug="acme"
         items={baseItems}
         workspaceSlug="acme"
-        viewAllHref="/app/w/acme/planning"
+        viewAllHref="/app/a/acme/w/acme/planning"
       />,
     );
     const link = screen.getByRole("link", { name: /August Challenge Launch/i });
-    expect(link).toHaveAttribute("href", "/app/w/acme/planning/a");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning/a");
   });
 
   it("shows the empty state when items is empty", () => {
     render(
-      <RecentlyUpdatedList items={[]} workspaceSlug="acme" viewAllHref="/app/w/acme/planning" />,
+      <RecentlyUpdatedList
+        agencySlug="acme"
+        items={[]}
+        workspaceSlug="acme"
+        viewAllHref="/app/a/acme/w/acme/planning"
+      />,
     );
     expect(screen.getByText("No content yet")).toBeInTheDocument();
   });
@@ -82,14 +90,15 @@ describe("RecentlyUpdatedList", () => {
   it("shows the 'New content' CTA in the empty state when createHref is provided", () => {
     render(
       <RecentlyUpdatedList
+        agencySlug="acme"
         items={[]}
         workspaceSlug="acme"
-        viewAllHref="/app/w/acme/planning"
-        createHref="/app/w/acme/planning/new"
+        viewAllHref="/app/a/acme/w/acme/planning"
+        createHref="/app/a/acme/w/acme/planning/new"
       />,
     );
     const link = screen.getByRole("link", { name: /new content/i });
-    expect(link).toHaveAttribute("href", "/app/w/acme/planning/new");
+    expect(link).toHaveAttribute("href", "/app/a/acme/w/acme/planning/new");
   });
 
   it("renders a relative time ('just now' / '5m ago' / etc.) based on updatedAt, not plannedPublishAt", () => {
@@ -142,7 +151,12 @@ describe("RecentlyUpdatedList", () => {
     // Render and assert the testid + title attribute carry
     // the updatedAt semantics, not the plannedPublishAt.
     render(
-      <RecentlyUpdatedList items={items} workspaceSlug="acme" viewAllHref="/app/w/acme/planning" />,
+      <RecentlyUpdatedList
+        agencySlug="acme"
+        items={items}
+        workspaceSlug="acme"
+        viewAllHref="/app/a/acme/w/acme/planning"
+      />,
     );
     const relativeCells = screen.getAllByTestId("recently-updated-relative");
     expect(relativeCells).toHaveLength(2);

@@ -21,6 +21,7 @@ import { StagePill } from "@/components/workspace/stage-pill";
 import { ReadinessIndicator } from "@/components/workspace/readiness-indicator";
 import { NextActionChip } from "@/components/workspace/next-action-chip";
 import type { LocaleCode } from "@/lib/i18n/locales";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * PlanningListItem — the enriched row for `/app/w/[slug]/planning`.
@@ -75,6 +76,8 @@ const FORMAT_ICON: Record<
 
 export interface PlanningListItemProps {
   item: EnrichedContentItem;
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   workspaceTimezone: string;
   density?: "comfortable" | "compact";
@@ -123,6 +126,7 @@ function StatusChip({ status, t }: { status: string; t?: PlanningListItemProps["
 export function PlanningListItem({
   item,
   workspaceSlug,
+  agencySlug,
   workspaceTimezone,
   density = "comfortable",
   now,
@@ -132,7 +136,7 @@ export function PlanningListItem({
 }: PlanningListItemProps) {
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t ? t(key, params) : fallback;
-  const detailHref = `/app/w/${workspaceSlug}/planning/${item.id}`;
+  const detailHref = `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${item.id}`;
   const opDate = formatOperationalDate(item.plannedPublishAt, now, workspaceTimezone, locale);
   const scheduleLabel = t
     ? opDate.relative === "today"

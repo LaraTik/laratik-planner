@@ -38,6 +38,7 @@ export type ResearchEvidenceRow = {
   commentsLabel: string;
   collectionId: string | null;
 };
+import { workspaceBasePath } from "@/lib/urls";
 
 type Collection = {
   id: string;
@@ -220,12 +221,15 @@ function sortRows(
 
 export function ResearchEvidenceGrid({
   workspaceSlug,
+  agencySlug,
   slug,
   rows,
   canManage,
   collections,
   labels,
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   slug: string;
   rows: ResearchEvidenceRow[];
@@ -632,7 +636,7 @@ export function ResearchEvidenceGrid({
                   ) : null}
                   <Button size="sm" asChild>
                     <a
-                      href={`/app/w/${encodeURIComponent(slug)}/planning/new?researchPostObservationId=${encodeURIComponent(row.observationId)}`}
+                      href={`${workspaceBasePath(agencySlug, slug)}/planning/new?researchPostObservationId=${encodeURIComponent(row.observationId)}`}
                     >
                       {labels.createBrief}
                     </a>

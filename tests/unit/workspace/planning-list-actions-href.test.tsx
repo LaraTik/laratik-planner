@@ -35,6 +35,7 @@ describe("PlanningListActions — Edit href", () => {
     render(
       <LocaleProvider locale="en">
         <PlanningListActions
+          agencySlug="acme"
           workspaceSlug="acme"
           itemId="11111111-2222-3333-4444-555555555555"
           itemTitle="Spring drop"
@@ -57,9 +58,9 @@ describe("PlanningListActions — Edit href", () => {
     const editLink = screen.getByTestId("row-action-edit");
     expect(editLink.tagName).toBe("A");
     // The fixed shape. The previous broken shape was
-    // `/app/w/acme/planning/11111111-.../edit`.
+    // `/app/a/acme/w/acme/planning/11111111-.../edit`.
     expect(editLink.getAttribute("href")).toBe(
-      "/app/w/acme/planning/edit/11111111-2222-3333-4444-555555555555",
+      "/app/a/acme/w/acme/planning/edit/11111111-2222-3333-4444-555555555555",
     );
   });
 
@@ -68,6 +69,7 @@ describe("PlanningListActions — Edit href", () => {
     render(
       <LocaleProvider locale="en">
         <PlanningListActions
+          agencySlug="acme"
           workspaceSlug="acme"
           itemId="11111111-2222-3333-4444-555555555555"
           itemTitle="Spring drop"
@@ -93,6 +95,7 @@ describe("PlanningListActions — Edit href", () => {
     render(
       <LocaleProvider locale="en">
         <PlanningListActions
+          agencySlug="acme"
           workspaceSlug="acme"
           itemId="11111111-2222-3333-4444-555555555555"
           itemTitle="Spring drop"
@@ -118,6 +121,7 @@ describe("PlanningListActions — Edit href", () => {
     render(
       <LocaleProvider locale="en">
         <PlanningListActions
+          agencySlug="acme"
           workspaceSlug="acme"
           itemId="11111111-2222-3333-4444-555555555555"
           itemTitle="Spring drop"
@@ -142,6 +146,7 @@ describe("PlanningListActions — Edit href", () => {
     render(
       <LocaleProvider locale="en">
         <PlanningListActions
+          agencySlug="acme"
           workspaceSlug="acme"
           itemId="11111111-2222-3333-4444-555555555555"
           itemTitle="Spring drop"

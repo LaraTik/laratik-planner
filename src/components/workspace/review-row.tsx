@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { humanFormat } from "@/lib/content/status";
 import { formatDate, DateFormat } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Minimal shape the review queue row needs. The page supplies the DB
@@ -26,6 +27,8 @@ export type ReviewRowItem = {
 
 export interface ReviewRowProps {
   item: ReviewRowItem;
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   /** Captured once by the parent so the overdue check is pure. */
   nowMs: number;
@@ -54,6 +57,7 @@ export interface ReviewRowProps {
 export function ReviewRow({
   item,
   workspaceSlug,
+  agencySlug,
   nowMs,
   overdueVariant = "danger",
   locale,
@@ -71,7 +75,7 @@ export function ReviewRow({
   return (
     <li>
       <Link
-        href={`/app/w/${workspaceSlug}/planning/${item.contentId}`}
+        href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${item.contentId}`}
         data-testid={`review-row-${item.id}`}
         className="hover:bg-surface-subtle focus-visible:bg-surface-subtle flex flex-wrap items-center gap-3 px-4 py-3 focus:outline-none sm:px-5"
       >

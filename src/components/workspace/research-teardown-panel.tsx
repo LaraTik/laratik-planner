@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import type { ResearchTeardown } from "@/lib/research/teardown";
 import { ResearchCollectionPicker } from "@/components/workspace/research-collection-picker";
 import type { ResearchCollectionOption } from "@/components/workspace/research-collections";
+import { workspaceBasePath } from "@/lib/urls";
 
 type Labels = {
   title: string;
@@ -48,6 +49,7 @@ type SavedTeardown = {
 
 export function ResearchTeardownPanel({
   workspaceSlug,
+  agencySlug,
   locale,
   canManage,
   initialSaved,
@@ -55,6 +57,8 @@ export function ResearchTeardownPanel({
   collectionLabels,
   labels,
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   locale: string;
   canManage: boolean;
@@ -205,7 +209,7 @@ export function ResearchTeardownPanel({
               {savedResultId ? (
                 <Button type="button" size="sm" asChild>
                   <Link
-                    href={`/app/w/${encodeURIComponent(workspaceSlug)}/planning/new?researchTeardownId=${encodeURIComponent(savedResultId)}`}
+                    href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/new?researchTeardownId=${encodeURIComponent(savedResultId)}`}
                   >
                     {labels.createDraft}
                   </Link>
@@ -310,7 +314,7 @@ export function ResearchTeardownPanel({
                   {canManage ? (
                     <Button variant="ghost" size="sm" asChild>
                       <Link
-                        href={`/app/w/${encodeURIComponent(workspaceSlug)}/planning/new?researchTeardownId=${encodeURIComponent(item.id)}`}
+                        href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/new?researchTeardownId=${encodeURIComponent(item.id)}`}
                       >
                         {labels.createDraft}
                       </Link>

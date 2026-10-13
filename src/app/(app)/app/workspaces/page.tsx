@@ -252,6 +252,8 @@ type WorkspaceRow = {
   id: string;
   name: string;
   slug: string;
+  /** Canonical agency segment for the row link. */
+  agencySlug: string;
   status: "active" | "archived";
   updatedAt: Date;
 };
@@ -340,6 +342,7 @@ function workspacesColumns(props: {
       cellClassName: "text-end",
       cell: (ws) => (
         <WorkspaceRowActions
+          agencySlug={ws.agencySlug}
           slug={ws.slug}
           name={ws.name}
           canArchive={props.canArchive}

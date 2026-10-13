@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * ReviewsFilters — gate + sort controls for the Reviews queue. Mirrors
@@ -11,6 +12,8 @@ import Link from "next/link";
  * if a filter combination produces no results.
  */
 export interface ReviewsFiltersProps {
+  agencySlug: string;
+  /** Canonical agency segment. */
   slug: string;
   /** Available gates, derived from the user's workspace roles. */
   gates: ReadonlyArray<"content" | "creative_internal" | "creative_client">;
@@ -68,6 +71,7 @@ const clearClass =
 
 export function ReviewsFilters({
   slug,
+  agencySlug,
   gates,
   selectedGate,
   selectedSort,
@@ -76,7 +80,7 @@ export function ReviewsFilters({
 }: ReviewsFiltersProps) {
   return (
     <form
-      action={`/app/w/${slug}/reviews`}
+      action={`${workspaceBasePath(agencySlug, slug)}/reviews`}
       method="get"
       className="flex flex-wrap items-center gap-2"
       aria-label={t("reviews.filtersAria")}
@@ -112,7 +116,7 @@ export function ReviewsFilters({
         {t("reviews.apply")}
       </button>
       {hasFilter ? (
-        <Link href={`/app/w/${slug}/reviews`} className={clearClass}>
+        <Link href={`${workspaceBasePath(agencySlug, slug)}/reviews`} className={clearClass}>
           {t("reviews.clear")}
         </Link>
       ) : null}

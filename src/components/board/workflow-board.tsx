@@ -6,6 +6,7 @@ import { formatDate } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
 import { planningStageForStatus } from "@/lib/planning/presentation";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * One column on the workflow board. `label` is the human header,
@@ -53,6 +54,8 @@ export type WorkflowBoardItem = {
 export interface WorkflowBoardProps {
   items: readonly WorkflowBoardItem[];
   columns: readonly WorkflowBoardColumn[];
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   locale?: LocaleCode;
   workspaceTimezone?: string;
@@ -111,6 +114,7 @@ export function WorkflowBoard({
   items,
   columns,
   workspaceSlug,
+  agencySlug,
   locale,
   workspaceTimezone,
   t,
@@ -160,6 +164,7 @@ export function WorkflowBoard({
                     <BoardCard
                       key={item.id}
                       item={item}
+                      agencySlug={agencySlug}
                       workspaceSlug={workspaceSlug}
                       {...(memberDirectory ? { memberDirectory } : {})}
                       locale={activeLocale}
@@ -198,6 +203,7 @@ export function WorkflowBoard({
               <BoardCard
                 key={item.id}
                 item={item}
+                agencySlug={agencySlug}
                 workspaceSlug={workspaceSlug}
                 {...(memberDirectory ? { memberDirectory } : {})}
                 locale={activeLocale}
@@ -239,6 +245,7 @@ export function WorkflowBoard({
               <BoardCard
                 key={item.id}
                 item={item}
+                agencySlug={agencySlug}
                 workspaceSlug={workspaceSlug}
                 {...(memberDirectory ? { memberDirectory } : {})}
                 locale={activeLocale}
@@ -322,6 +329,7 @@ const STATUS_BORDER_CLASSES: Record<string, string> = {
 };
 
 function BoardCard({
+  agencySlug,
   item,
   workspaceSlug,
   memberDirectory,
@@ -330,6 +338,7 @@ function BoardCard({
   t,
 }: {
   item: WorkflowBoardItem;
+  agencySlug: string;
   workspaceSlug: string;
   memberDirectory?: Readonly<Record<string, BoardMemberEntry>>;
   locale: LocaleCode;
@@ -352,7 +361,7 @@ function BoardCard({
       : item.status;
   return (
     <Link
-      href={`/app/w/${workspaceSlug}/planning/${item.id}`}
+      href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${item.id}`}
       data-testid={`board-card-${item.id}`}
       className={cn(
         "group border-border bg-surface hover:border-primary/60 hover:bg-primary-subtle/20 focus-visible:ring-focus-ring block min-w-0 overflow-hidden rounded-[var(--radius-control)] border border-s-4 p-3 transition-[border-color,background-color,box-shadow] duration-200 hover:shadow-sm focus:outline-none focus-visible:ring-2",

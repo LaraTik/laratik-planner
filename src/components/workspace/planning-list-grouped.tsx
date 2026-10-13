@@ -96,6 +96,7 @@ function groupKey(
 
 export interface PlanningListGroupedProps {
   items: EnrichedContentItem[];
+  agencySlug: string;
   workspaceSlug: string;
   workspaceTimezone: string;
   density: "comfortable" | "compact";
@@ -114,6 +115,7 @@ export interface PlanningListGroupedProps {
 }
 
 export function PlanningListGrouped({
+  agencySlug,
   items,
   workspaceSlug,
   workspaceTimezone,
@@ -129,6 +131,7 @@ export function PlanningListGrouped({
       <PlanningListItemList>
         {items.map((it) => (
           <PlanningListItem
+            agencySlug={agencySlug}
             key={it.id}
             item={it}
             workspaceSlug={workspaceSlug}
@@ -170,6 +173,7 @@ export function PlanningListGrouped({
           <PlanningListItemList>
             {g.items.map((it) => (
               <PlanningListItem
+                agencySlug={agencySlug}
                 key={it.id}
                 item={it}
                 workspaceSlug={workspaceSlug}

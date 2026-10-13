@@ -7,6 +7,7 @@ import { DashboardPanel } from "./dashboard-panel";
 import type { KpiContentFormat, KpiContentStatus } from "@/lib/dashboard/kpis";
 import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
 import { StatusBadge } from "@/components/content/status-badge";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * NeedsAttentionList — the refactored "Needs attention" panel on
@@ -38,6 +39,8 @@ export interface NeedsAttentionItem {
 
 export interface NeedsAttentionListProps {
   items: NeedsAttentionItem[];
+  agencySlug: string;
+  /** Canonical agency segment. */
   workspaceSlug: string;
   now: Date;
   viewAllHref: string;
@@ -117,6 +120,7 @@ function formatDeadline(input: {
 export function NeedsAttentionList({
   items,
   workspaceSlug,
+  agencySlug,
   now,
   viewAllHref,
   t,
@@ -187,7 +191,7 @@ export function NeedsAttentionList({
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
                       <Link
-                        href={`/app/w/${workspaceSlug}/planning/${it.id}`}
+                        href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${it.id}`}
                         className="text-body text-fg-primary hover:text-primary truncate font-semibold"
                         dir="auto"
                       >
@@ -228,7 +232,7 @@ export function NeedsAttentionList({
                     </div>
                   </div>
                   <Link
-                    href={`/app/w/${workspaceSlug}/planning/${it.id}`}
+                    href={`${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${it.id}`}
                     className="text-label text-primary inline-flex items-center gap-1 self-center rounded-[var(--radius-control)] px-2 py-1 font-semibold underline-offset-4 hover:underline"
                     aria-label={`Open ${it.title}`}
                   >

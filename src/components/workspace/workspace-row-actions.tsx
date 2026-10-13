@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { workspaceBasePath } from "@/lib/urls";
 
 /**
  * Workspace row actions — a Radix dropdown that surfaces the
@@ -33,12 +34,15 @@ import { Button } from "@/components/ui/button";
  */
 export function WorkspaceRowActions({
   slug,
+  agencySlug,
   name,
   canArchive = false,
   canDuplicate = false,
   canManageTeam = true,
   canEditSettings = true,
 }: {
+  agencySlug: string;
+  /** Canonical agency segment. */
   slug: string;
   name: string;
   canArchive?: boolean;
@@ -65,14 +69,20 @@ export function WorkspaceRowActions({
         <DropdownMenuLabel>{name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={`/app/w/${slug}`} data-testid={`workspaces-row-open-${slug}`}>
+          <Link
+            href={`${workspaceBasePath(agencySlug, slug)}`}
+            data-testid={`workspaces-row-open-${slug}`}
+          >
             <span className="me-2 inline-flex w-4 justify-center">↗</span>
             {t("workspaces.actions.open")}
           </Link>
         </DropdownMenuItem>
         {canEditSettings ? (
           <DropdownMenuItem asChild>
-            <Link href={`/app/w/${slug}/settings`} data-testid={`workspaces-row-settings-${slug}`}>
+            <Link
+              href={`${workspaceBasePath(agencySlug, slug)}/settings`}
+              data-testid={`workspaces-row-settings-${slug}`}
+            >
               <Settings className="me-2 h-4 w-4" aria-hidden="true" />
               {t("workspaces.actions.settings")}
             </Link>
@@ -80,14 +90,20 @@ export function WorkspaceRowActions({
         ) : null}
         {canManageTeam ? (
           <DropdownMenuItem asChild>
-            <Link href={`/app/w/${slug}/team`} data-testid={`workspaces-row-team-${slug}`}>
+            <Link
+              href={`${workspaceBasePath(agencySlug, slug)}/team`}
+              data-testid={`workspaces-row-team-${slug}`}
+            >
               <Users className="me-2 h-4 w-4" aria-hidden="true" />
               {t("workspaces.actions.manageTeam")}
             </Link>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
-          <Link href={`/app/w/${slug}/channels`} data-testid={`workspaces-row-channels-${slug}`}>
+          <Link
+            href={`${workspaceBasePath(agencySlug, slug)}/channels`}
+            data-testid={`workspaces-row-channels-${slug}`}
+          >
             <Share2 className="me-2 h-4 w-4" aria-hidden="true" />
             {t("workspaces.actions.channels")}
           </Link>

@@ -121,6 +121,7 @@ export default async function ReviewsQueuePage({
       </section>
 
       <ReviewsFilters
+        agencySlug={agencySlug}
         slug={slug}
         gates={gates}
         selectedGate={activeGate}
@@ -134,6 +135,7 @@ export default async function ReviewsQueuePage({
           <ul className="divide-border divide-y">
             {sortedRows.map((row) => (
               <ReviewRow
+                agencySlug={agencySlug}
                 key={row.id}
                 item={
                   {
