@@ -1,5 +1,40 @@
 # Migration and deployment evidence
 
+## Migration 0076 — canonical ad-day spend and reconciliation
+
+`0076_tiny_queen_noir.sql` adds canonical ad-day observations and independent
+account reconciliation snapshots. Observation uniqueness is keyed by agency,
+account, provider ad, report date, attribution window, and action-report time,
+not by connection; the same shared account therefore cannot duplicate spend
+when seen through multiple active credentials. The tables contain no
+workspace assignment. Workspace-attributed and unallocated amounts are
+explicit reconciliation inputs and are never inferred from names.
+
+The migration is additive and replay-safe: table creation, primary/check/FK
+constraints, and indexes are guarded so a repair can safely replay it.
+
+Filename: `src/lib/db/migrations/0076_tiny_queen_noir.sql`  
+Journal tag: `0076_tiny_queen_noir`  
+Journal `when`: `1791887915370`  
+SHA-256:
+`6b6a7b8b091cf3cc87e988ce874d0cbb495acc166395a891ad6e8aacf451256f`
+
+Compatibility: older application images ignore the additive tables. The
+application rollback path retains the tables; schema rollback is forward-only
+or an approval-gated restore of the verified pre-migration backup.
+
+Evidence on disposable Postgres 16 (`planner_test`, 2026-10-13), using
+`NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                PASS  124 tables; Drizzle ledger 77/77
+2. skipped migration repair PASS  guarded migration DDL replayed successfully
+3. in-place upgrade         PASS  marker add/drop cycle
+4. backup + restore         PASS  ledger 77 before / 77 after; restore verified
+5. failed-migration abort   PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
 ## Migration 0075 — distributed Trend Radar HMAC replay protection
 
 `0075_eager_proudstar.sql` is an additive, replay-safe migration for the

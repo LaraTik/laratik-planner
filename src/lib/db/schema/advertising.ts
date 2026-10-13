@@ -2,9 +2,11 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   index,
   integer,
   jsonb,
+  numeric,
   pgTable,
   smallint,
   text,
@@ -461,7 +463,106 @@ export const advertisingSyncRuns = pgTable(
   ],
 );
 
+/** Canonical provider ad-day facts. No workspace ownership is inferred here. */
+export const advertisingSpendObservations = pgTable(
+  "advertising_spend_observation",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => advertisingAccounts.id, { onDelete: "cascade" }),
+    connectionId: uuid("connection_id")
+      .notNull()
+      .references(() => advertisingConnections.id, { onDelete: "restrict" }),
+    syncRunId: uuid("sync_run_id").references(() => advertisingSyncRuns.id, {
+      onDelete: "set null",
+    }),
+    externalAdId: text("external_ad_id").notNull(),
+    externalCampaignId: text("external_campaign_id"),
+    externalAdSetId: text("external_ad_set_id"),
+    reportDate: date("report_date").notNull(),
+    currency: text("currency").notNull(),
+    spend: numeric("spend", { precision: 18, scale: 6 }).notNull(),
+    impressions: integer("impressions").notNull().default(0),
+    clicks: integer("clicks").notNull().default(0),
+    attributionWindow: text("attribution_window").notNull().default("account"),
+    actionReportTime: text("action_report_time").notNull().default("mixed"),
+    providerDataVersion: text("provider_data_version"),
+    observedAt: timestamp("observed_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_spend_observation_identity_uniq").on(
+      t.agencyId,
+      t.accountId,
+      t.externalAdId,
+      t.reportDate,
+      t.attributionWindow,
+      t.actionReportTime,
+    ),
+    index("advertising_spend_observation_account_date_idx").on(t.accountId, t.reportDate),
+    check("advertising_spend_observation_amount_valid", sql`${t.spend} >= 0`),
+    check(
+      "advertising_spend_observation_counts_valid",
+      sql`${t.impressions} >= 0 AND ${t.clicks} >= 0`,
+    ),
+  ],
+);
+
+/** Reconciliation snapshot between canonical ad facts and an account report. */
+export const advertisingSpendReconciliations = pgTable(
+  "advertising_spend_reconciliation",
+  {
+    id: idColumn(),
+    agencyId: uuid("agency_id")
+      .notNull()
+      .references(() => agencies.id, { onDelete: "cascade" }),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => advertisingAccounts.id, { onDelete: "cascade" }),
+    reportDate: date("report_date").notNull(),
+    currency: text("currency").notNull(),
+    attributionWindow: text("attribution_window").notNull(),
+    providerAccountSpend: numeric("provider_account_spend", {
+      precision: 18,
+      scale: 6,
+    }).notNull(),
+    canonicalAdSpend: numeric("canonical_ad_spend", { precision: 18, scale: 6 }).notNull(),
+    workspaceAttributedSpend: numeric("workspace_attributed_spend", {
+      precision: 18,
+      scale: 6,
+    }).notNull(),
+    unallocatedSpend: numeric("unallocated_spend", { precision: 18, scale: 6 }).notNull(),
+    discrepancy: numeric("discrepancy", { precision: 18, scale: 6 }).notNull(),
+    completeness: text("completeness").notNull(),
+    checkedAt: timestamp("checked_at", { withTimezone: true, mode: "date" })
+      .notNull()
+      .default(sql`now()`),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex("advertising_spend_reconciliation_identity_uniq").on(
+      t.agencyId,
+      t.accountId,
+      t.reportDate,
+      t.attributionWindow,
+    ),
+    index("advertising_spend_reconciliation_account_date_idx").on(t.accountId, t.reportDate),
+    check(
+      "advertising_spend_reconciliation_completeness_valid",
+      sql`${t.completeness} IN ('complete', 'partial', 'unavailable')`,
+    ),
+  ],
+);
+
 export type AdvertisingConnection = typeof advertisingConnections.$inferSelect;
 export type NewAdvertisingConnection = typeof advertisingConnections.$inferInsert;
 export type AdvertisingAccount = typeof advertisingAccounts.$inferSelect;
 export type AdvertisingVisibilityGrant = typeof advertisingVisibilityGrants.$inferSelect;
+export type AdvertisingSpendObservation = typeof advertisingSpendObservations.$inferSelect;
+export type AdvertisingSpendReconciliation = typeof advertisingSpendReconciliations.$inferSelect;

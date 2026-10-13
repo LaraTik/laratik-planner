@@ -6,20 +6,20 @@
 >
 > Latest capture: 2026-10-13 on local Postgres 16
 > (`127.0.0.1:5432`, database `planner_test`), after migration
-> `0075_eager_proudstar` was registered.
+> `0076_tiny_queen_noir` was registered.
 > Result: **5/5 PASS** — from-zero and restored databases applied the complete
 > 76-entry Drizzle ledger; the skipped-migration repair safely reapplied the
-> nonce-ledger DDL, backup/restore preserved the ledger, and failed-migration
+> canonical advertising DDL, backup/restore preserved the ledger, and failed-migration
 > abort left the schema unchanged. The migration is additive and forward-only;
 > destructive downgrade is not supported, so rollback is application-level
 > retention followed by a reviewed forward-fix migration after backup.
 
 ```text
-1. from-zero                PASS  122 public tables; Drizzle ledger 76/76
-2. skipped migration repair PASS  guarded 0075 DDL reapplied successfully
+1. from-zero                PASS  124 public tables; Drizzle ledger 77/77
+2. skipped migration repair PASS  guarded 0076 DDL reapplied successfully
 3. in-place upgrade         PASS  marker add/drop cycle
-4. backup + restore         PASS  ledger 76 before / 76 after; restore verified
-5. failed-migration abort   PASS  123 tables before / after; schema unchanged
+4. backup + restore         PASS  ledger 77 before / 77 after; restore verified
+5. failed-migration abort   PASS  125 tables before / after; schema unchanged
 total: 5/5 PASS
 ```
 
