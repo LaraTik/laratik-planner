@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising replay-safety checkpoint** — Exact clean code
+> commit `3a12930` adds an injectable provider boundary for the worker’s
+> recovery harness and proves an at-least-once replay: the first run persists
+> ad-level facts, fails during the later account read, and the retry succeeds
+> without duplicating canonical observations or reconciliation rows. The
+> focused integration suite passes 6/6 and the worker unit suite passes 6/6.
+> This remains **Tested**, not **Verified**: controlled live Meta UAT, real
+> ad-level reconciliation, workspace reporting UI evidence, independent
+> review, and production deployment remain open.
+
 > **2026-10-13 advertising retry/dead-letter checkpoint** — Exact clean code
 > commit `eb08990` adds the replay-safe migration `0080`, bounded four-attempt
 > advertising sync retries, explicit `dead_letter` state, admin re-enable
