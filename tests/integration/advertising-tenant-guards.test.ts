@@ -17,9 +17,19 @@ import {
   advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
+  agencyMemberships,
+  workspaceMemberships,
   users,
   workspaces,
 } from "@/lib/db/schema";
+import {
+  grantAdvertisingVisibility,
+  revokeAdvertisingVisibility,
+} from "@/lib/advertising/grant-service";
+import {
+  listAdvertisingReportAccounts,
+  loadAdvertisingReport,
+} from "@/lib/advertising/reporting-query";
 import {
   claimAdvertisingSyncStates,
   createAdvertisingSyncRun,
@@ -371,5 +381,150 @@ describe("advertising tenant ownership guards", () => {
     expect(observations).toHaveLength(1);
     expect(reconciliations).toHaveLength(1);
     expect(runs.map((run) => run.status).sort()).toEqual(["failed", "succeeded"]);
+  });
+
+  it("scopes one shared account across workspaces and revokes report access immediately", async () => {
+    const { agencyA, workspaceA, accountA, connectionA, actor } = await seed();
+    const [workspaceA2] = await db
+      .insert(workspaces)
+      .values({
+        agencyId: agencyA.id,
+        slug: "workspace-a2",
+        name: "Workspace A2",
+        createdBy: actor.id,
+      })
+      .returning();
+    if (!workspaceA2) throw new Error("failed to seed second workspace");
+
+    await db.insert(agencyMemberships).values({
+      agencyId: agencyA.id,
+      userId: actor.id,
+      status: "active",
+      isAgencyAdmin: false,
+    });
+    await db.insert(workspaceMemberships).values([
+      { workspaceId: workspaceA.id, userId: actor.id, status: "active" },
+      { workspaceId: workspaceA2.id, userId: actor.id, status: "active" },
+    ]);
+    await db
+      .update(advertisingConnections)
+      .set({ status: "active" })
+      .where(eq(advertisingConnections.id, connectionA.id));
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    await db.insert(advertisingSpendObservations).values([
+      {
+        agencyId: agencyA.id,
+        accountId: accountA.id,
+        connectionId: connectionA.id,
+        externalAdId: "ad_workspace_a1",
+        externalCampaignId: "campaign_workspace_a1",
+        externalAdSetId: "adset_workspace_a1",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "10.00",
+        impressions: 100,
+        clicks: 5,
+        attributionWindow: "account",
+        actionReportTime: "impression",
+      },
+      {
+        agencyId: agencyA.id,
+        accountId: accountA.id,
+        connectionId: connectionA.id,
+        externalAdId: "ad_workspace_a2",
+        externalCampaignId: "campaign_workspace_a2",
+        externalAdSetId: "adset_workspace_a2",
+        reportDate: "2026-10-01",
+        currency: "EUR",
+        spend: "90.00",
+        impressions: 900,
+        clicks: 90,
+        attributionWindow: "account",
+        actionReportTime: "impression",
+      },
+    ]);
+
+    const grantA1 = await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      campaignIds: ["campaign_workspace_a1"],
+      grantedBy: actor.id,
+    });
+    await grantAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      workspaceId: workspaceA2.id,
+      accountId: accountA.id,
+      capability: "read_reports",
+      campaignIds: ["campaign_workspace_a2"],
+      grantedBy: actor.id,
+    });
+
+    const accountsA1 = await listAdvertisingReportAccounts(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+    });
+    const accountsA2 = await listAdvertisingReportAccounts(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA2.id,
+    });
+    expect(accountsA1.map((account) => account.id)).toEqual([accountA.id]);
+    expect(accountsA2.map((account) => account.id)).toEqual([accountA.id]);
+
+    const reportA1 = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "workspace_dashboard",
+    });
+    const reportA2 = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA2.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "workspace_dashboard",
+    });
+    expect(reportA1.kind).toBe("ok");
+    expect(reportA2.kind).toBe("ok");
+    if (reportA1.kind !== "ok" || reportA2.kind !== "ok") return;
+    expect(reportA1.report.rows.map((row) => row.campaignId)).toEqual(["campaign_workspace_a1"]);
+    expect(reportA2.report.rows.map((row) => row.campaignId)).toEqual(["campaign_workspace_a2"]);
+    expect(reportA1.report.totals.spend).toBe(10);
+    expect(reportA2.report.totals.spend).toBe(90);
+    expect(reportA1.report.cacheKey).not.toBe(reportA2.report.cacheKey);
+
+    await revokeAdvertisingVisibility(db, {
+      agencyId: agencyA.id,
+      grantId: grantA1.id,
+      revokedBy: actor.id,
+    });
+    const revokedReport = await loadAdvertisingReport(db, {
+      actor: { id: actor.id },
+      agencyId: agencyA.id,
+      workspaceId: workspaceA.id,
+      accountId: accountA.id,
+      since: "2026-10-01",
+      until: "2026-10-01",
+      surface: "workspace_dashboard",
+    });
+    expect(revokedReport).toEqual({ kind: "forbidden" });
+    expect(
+      await listAdvertisingReportAccounts(db, {
+        actor: { id: actor.id },
+        agencyId: agencyA.id,
+        workspaceId: workspaceA.id,
+      }),
+    ).toEqual([]);
   });
 });
