@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-13 advertising diagnostic remediation checkpoint** — Exact clean
+> code commit `1a3e84e` adds bilingual operation labels, failure explanations,
+> and recommended corrective actions to every non-success diagnostic in the
+> Global Admin Meta Ads workflow. The focused admin-panel suite passes 4/4 and
+> TypeScript reports no errors. The tenant-integrity migration and full
+> integration evidence remain current below. This remains **Tested**, not
+> **Verified**: controlled live Meta UAT, real ad-level reconciliation,
+> workspace reporting UI evidence, independent review, and production
+> deployment remain open.
+
 > **2026-10-13 advertising tenant-integrity checkpoint** — Exact clean code
 > commit `c4e97e2` adds replay-safe migration `0079` with
 > database guards for cross-agency connection/account links, capabilities,
