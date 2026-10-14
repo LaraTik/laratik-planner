@@ -407,5 +407,16 @@
     "empty": "لا يوجد نشاط حديث لهذا المجلد.",
     "actor": "بواسطة {name}",
     "timeAgo": "{when}"
-  }
+  },
+  "paginationAll": "عرض {from}–{to} من {total}",
+  "paginationAria": "ترقيم صفحات مكتبة الوسائط",
+  "paginationPrev": "السابق",
+  "paginationNext": "التالي",
+  "paginationPageOf": "{page} / {total}",
+  "openAsset": "فتح {name}",
+  "viewerCounter": "{current} من {count}",
+  "viewerPrevious": "الوسائط السابقة",
+  "viewerNext": "الوسائط التالية",
+  "kind": "النوع",
+  "resultsCount": "{count} عنصر"
 }

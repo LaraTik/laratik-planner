@@ -1,34 +1,30 @@
 import Link from "next/link";
-import { Briefcase, FileText, Grid2X2, Image as ImageIcon, List, Video } from "lucide-react";
+import { Briefcase, Grid2X2, Image as ImageIcon, List } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MediaAssetActions } from "./media-asset-actions";
+import { ListPagination } from "@/components/ui/list-pagination";
+import { PageHeader } from "@/components/workspace/page-header";
 import { MediaAssetSelectionCheckbox, MediaSelectionToolbar } from "./media-selection-controls";
+import { MediaAssetActions } from "./media-asset-actions";
+import { MediaAssetTile } from "./media-asset-tile";
 import { MediaFolderTree } from "./media-folder-tree";
 import { MediaBreadcrumb } from "./media-breadcrumb";
 import { MediaBulkToolbar } from "./media-bulk-toolbar";
 import { MediaBulkHeader } from "./media-bulk-header";
 import { MediaSelectionProvider } from "@/lib/media/selection-store";
-import { workspaceBasePath } from "@/lib/urls";
 import { MediaLibraryActions } from "./media-library-actions";
 import { MediaStorageSummary } from "./media-storage-summary";
+import { MediaViewer, useMediaViewer } from "./media-viewer";
+import {
+  formatBytes,
+  MediaKindIcon,
+  resolveFolderPath,
+  type MediaLibraryRow,
+} from "./media-asset-shared";
+import type { MediaFolderTreeRow } from "@/lib/media/service";
 import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
-import type { listMediaAssets, MediaFolderTreeRow } from "@/lib/media/service";
-
-type MediaRow = Awaited<ReturnType<typeof listMediaAssets>>[number] & {
-  /**
-   * PR 3 / Tier 3 (perf/media): short-lived R2 signed URL pointing
-   * directly at the preview variant. When present, the `<img>` uses
-   * it so the bytes flow R2 → browser without the Next.js proxy hop.
-   * Null when the asset has no preview yet (legacy asset or the
-   * generator failed at upload time) or the sign helper failed; the
-   * component falls back to `/api/media/assets/<id>/preview` in that
-   * case.
-   */
-  signedPreviewUrl?: string | null;
-};
 
 type WorkspaceOption = { id: string; name: string; slug: string };
 
@@ -61,7 +57,7 @@ export function MediaLibraryPage({
   mode: MediaLibraryMode;
   workspace: WorkspaceOption | null;
   agencyWorkspaces: WorkspaceOption[];
-  rows: MediaRow[];
+  rows: MediaLibraryRow[];
   basePath: string;
   selectedFolderId: string;
   sharedOnly: boolean;
@@ -93,6 +89,13 @@ export function MediaLibraryPage({
 }) {
   const selectedWorkspaceId = workspace?.id ?? "";
   const hasFilters = Boolean(search || kind || includeTrashed || selectedFolderId || sharedOnly);
+  const folderOptions = (folderTree ?? []).map((f) => ({
+    id: f.id,
+    name: f.name,
+    parentId: f.parentId,
+  }));
+  const canManageActive = managerWorkspaceIds.includes(selectedWorkspaceId);
+
   const viewHref = (nextView: "grid" | "list") => {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
@@ -117,82 +120,58 @@ export function MediaLibraryPage({
     else params.delete("page");
     return `${basePath}?${params.toString()}`;
   };
+
+  // Range math for the shared ListPagination strip. Derived from the server's
+  // `total` so the copy stays honest when the last page is partial.
+  const totalPages = Math.max(1, Math.ceil(pageInfo.total / pageInfo.pageSize));
+  const rangeFrom = pageInfo.total === 0 ? 0 : (pageInfo.page - 1) * pageInfo.pageSize + 1;
+  const rangeTo =
+    pageInfo.total === 0 ? 0 : Math.min(pageInfo.page * pageInfo.pageSize, pageInfo.total);
+
   return (
     <div className="flex flex-col gap-6" data-testid="media-library">
-      <header className="order-1 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
-        <div className="min-w-0 flex-1">
-          {mode === "agency" ? (
-            <>
-              <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
-              <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
-                {workspace?.name ?? t("media.library")}
-              </h1>
-              {activeFolderLabel && workspace ? (
-                <MediaBreadcrumb
-                  basePath={basePath}
-                  workspaceId={selectedWorkspaceId}
-                  workspaceName={workspace.name}
-                  ancestors={ancestors ?? []}
-                  currentLabel={activeFolderLabel}
-                />
-              ) : null}
-            </>
-          ) : (
-            <>
-              <p className="text-label text-fg-muted">{t("media.privateStorage")}</p>
-              <h1 className="text-title-page text-fg-primary font-semibold text-balance break-words">
-                {workspace?.name ?? t("media.title")}
-              </h1>
-              {activeFolderLabel && workspace ? (
-                <MediaBreadcrumb
-                  basePath={basePath}
-                  workspaceId={selectedWorkspaceId}
-                  workspaceName={workspace.name}
-                  ancestors={ancestors ?? []}
-                  currentLabel={activeFolderLabel}
-                />
-              ) : null}
-            </>
-          )}
+      <PageHeader
+        eyebrow={t("media.privateStorage")}
+        title={workspace?.name ?? t("media.title")}
+        description={
+          workspace && activeFolderLabel ? (
+            <MediaBreadcrumb
+              basePath={basePath}
+              workspaceId={selectedWorkspaceId}
+              workspaceName={workspace.name}
+              ancestors={ancestors ?? []}
+              currentLabel={activeFolderLabel}
+            />
+          ) : undefined
+        }
+        action={
+          <MediaLibraryActions
+            mode={mode}
+            canUpload={canUpload}
+            workspace={
+              workspace ? { id: workspace.id, name: workspace.name, slug: workspace.slug } : null
+            }
+            agencyWorkspaces={agencyWorkspaces.map((workspaceOption) => ({
+              id: workspaceOption.id,
+              name: workspaceOption.name,
+              slug: workspaceOption.slug,
+            }))}
+            basePath={basePath}
+            preserveParams={preserveParams}
+            workspaceOptions={mode === "agency" ? agencyWorkspaces : workspace ? [workspace] : []}
+            folderOptionsByWorkspace={workspace ? { [workspace.id]: folderOptions } : {}}
+            initialSource={initialSource}
+          />
+        }
+      />
+
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="grid gap-3 lg:w-72 lg:shrink-0 xl:w-80">
           <MediaStorageSummary
             mode={storageSummary.mode}
             bucket={storageSummary.bucket}
             keyPrefix={storageSummary.keyPrefix}
           />
-          <p className="text-body text-fg-secondary mt-2 max-w-3xl text-pretty">
-            {t("media.description")}
-          </p>
-        </div>
-        <MediaLibraryActions
-          mode={mode}
-          canUpload={canUpload}
-          workspace={
-            workspace ? { id: workspace.id, name: workspace.name, slug: workspace.slug } : null
-          }
-          agencyWorkspaces={agencyWorkspaces.map((workspaceOption) => ({
-            id: workspaceOption.id,
-            name: workspaceOption.name,
-            slug: workspaceOption.slug,
-          }))}
-          basePath={basePath}
-          preserveParams={preserveParams}
-          workspaceOptions={mode === "agency" ? agencyWorkspaces : workspace ? [workspace] : []}
-          folderOptionsByWorkspace={
-            workspace
-              ? {
-                  [workspace.id]: (folderTree ?? []).map((f) => ({
-                    id: f.id,
-                    name: f.name,
-                    parentId: f.parentId,
-                  })),
-                }
-              : {}
-          }
-          initialSource={initialSource}
-        />
-      </header>
-      <div className="order-2 flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="grid gap-3 lg:w-72 lg:shrink-0 xl:w-80">
           {workspace && folderTree ? (
             <MediaFolderTree
               basePath={basePath}
@@ -204,7 +183,7 @@ export function MediaLibraryPage({
               }
               sharedOnly={sharedOnly}
               ancestors={ancestors ?? []}
-              canManage={managerWorkspaceIds.includes(selectedWorkspaceId)}
+              canManage={canManageActive}
               labels={{
                 tree: t("media.tree.label"),
                 allMedia: t("media.breadcrumb.allMedia"),
@@ -278,6 +257,7 @@ export function MediaLibraryPage({
             </Card>
           ) : null}
         </div>
+
         <div className="min-w-0 flex-1">
           <form
             method="get"
@@ -342,7 +322,7 @@ export function MediaLibraryPage({
             {sharedOnly ? <input type="hidden" name="shared" value="1" /> : null}
             <button
               type="submit"
-              className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
+              className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button text-primary-foreground inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"
             >
               {t("media.searchPlaceholder")}
             </button>
@@ -355,8 +335,14 @@ export function MediaLibraryPage({
               </Link>
             ) : null}
           </form>
-          <div className="flex justify-end" aria-label={t("media.viewOptions")}>
-            <div className="border-border bg-surface inline-flex rounded-[var(--radius-control)] border p-1">
+
+          {/* Result count and the view switch share one bar so each strip has a
+              single job: how much is here, and how it is arranged. */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-label text-fg-secondary" data-testid="media-result-count">
+              {t("media.resultsCount", { count: pageInfo.total })}
+            </p>
+            <div className="flex items-center gap-1" aria-label={t("media.viewOptions")}>
               <Link
                 href={viewHref("grid")}
                 aria-current={view === "grid" ? "page" : undefined}
@@ -375,13 +361,14 @@ export function MediaLibraryPage({
               </Link>
             </div>
           </div>
+
           <MediaSelectionToolbar />
           {folderTree ? (
-            <MediaSelectionProvider canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}>
+            <MediaSelectionProvider canWrite={canManageActive}>
               <MediaBulkToolbar
                 workspaceId={selectedWorkspaceId}
                 folders={folderTree}
-                canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}
+                canWrite={canManageActive}
                 hasTrashedSelected={includeTrashed}
                 pageAssetIds={rows.map((row) => row.asset.id)}
                 total={pageInfo.total}
@@ -390,15 +377,16 @@ export function MediaLibraryPage({
             </MediaSelectionProvider>
           ) : null}
           {folderTree && rows.length > 0 ? (
-            <MediaSelectionProvider canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}>
+            <MediaSelectionProvider canWrite={canManageActive}>
               <MediaBulkHeader
                 pageAssetIds={rows.map((row) => row.asset.id)}
                 total={pageInfo.total}
                 pageSize={pageInfo.pageSize}
-                canWrite={managerWorkspaceIds.includes(selectedWorkspaceId)}
+                canWrite={canManageActive}
               />
             </MediaSelectionProvider>
           ) : null}
+
           {rows.length === 0 ? (
             <Card padding="lg">
               <EmptyState
@@ -410,33 +398,35 @@ export function MediaLibraryPage({
               />
             </Card>
           ) : view === "grid" ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {rows.map((row, index) => (
-                <MediaCard
-                  key={row.asset.id}
-                  row={row}
-                  t={t}
-                  canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
-                  folderOptions={(folderTree ?? []).map((f) => ({
-                    id: f.id,
-                    name: f.name,
-                    parentId: f.parentId,
-                  }))}
-                  // Prioritise only the first viewport's worth of previews:
-                  // three cards on wide screens plus one small-screen buffer.
-                  // Anything past that stays lazy.
-                  // The remaining cards stay lazy so a 24-item page does not
-                  // turn into an eager burst of Cloudflare requests.
-                  priority={index < 4}
-                  // Grid thumb is 1 of 3 columns at xl (~33vw), 1 of 2
-                  // at sm (~50vw), and full-width on mobile. Used by
-                  // browsers that pick a `srcset` density; we have no
-                  // variant today but wiring `sizes` now keeps the
-                  // PR 2 thumbnail pipeline a one-line change away.
-                  sizes="(min-width: 1280px) 33vw, (min-width: 640px) 50vw, 100vw"
-                />
-              ))}
-            </div>
+            // Masonry via CSS multi-column: the only layout that preserves each
+            // asset's true aspect ratio with zero measurement JavaScript and no
+            // crop. `break-inside-avoid` on the tile keeps a tile intact.
+            // Column flow is column-major, which is the standard trade-off for
+            // a visual gallery; operators who need row order switch to list view.
+            <MediaViewer
+              rows={rows}
+              folderOptionsById={folderOptions}
+              managerWorkspaceIds={managerWorkspaceIds}
+              totalLabel={t("media.resultsCount", { count: pageInfo.total })}
+            >
+              <div
+                className="columns-2 gap-3 md:columns-3 xl:columns-4"
+                data-testid="media-masonry"
+              >
+                {rows.map((row, index) => (
+                  <MediaAssetTile
+                    key={row.asset.id}
+                    row={row}
+                    index={index}
+                    folderOptions={folderOptions}
+                    // Eager only the first two rows of tiles; everything else
+                    // stays lazy so a 24-tile page is not an eager burst of
+                    // edge requests on a cold cache.
+                    priority={index < 8}
+                  />
+                ))}
+              </div>
+            </MediaViewer>
           ) : (
             <div className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
               <ul className="divide-border divide-y">
@@ -444,350 +434,114 @@ export function MediaLibraryPage({
                   <MediaListRow
                     key={row.asset.id}
                     row={row}
+                    index={index}
                     t={t}
                     canManage={managerWorkspaceIds.includes(row.asset.ownerWorkspaceId)}
-                    folderOptions={(folderTree ?? []).map((f) => ({
-                      id: f.id,
-                      name: f.name,
-                      parentId: f.parentId,
-                    }))}
+                    folderOptions={folderOptions}
                     priority={index < 4}
-                    sizes="56px"
                   />
                 ))}
               </ul>
             </div>
           )}
-          <nav
-            className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3"
-            aria-label={t("common.paginationAria")}
-          >
-            <span className="text-label text-fg-secondary">
-              {t("media.pageSummary", { page: pageInfo.page })}
-            </span>
-            <div className="flex gap-2">
-              {pageInfo.hasPreviousPage ? (
-                <Link
-                  href={pageHref(pageInfo.page - 1)}
-                  className="border-border text-button focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
-                >
-                  {t("media.previousPage")}
-                </Link>
-              ) : null}
-              {pageInfo.hasNextPage ? (
-                <Link
-                  href={pageHref(pageInfo.page + 1)}
-                  className="border-border text-button focus-visible:ring-focus-ring hover:bg-surface-subtle inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
-                >
-                  {t("media.nextPage")}
-                </Link>
-              ) : null}
-            </div>
-          </nav>
+
+          {rows.length > 0 ? (
+            <ListPagination
+              testId="media-pagination"
+              page={pageInfo.page}
+              totalPages={totalPages}
+              total={pageInfo.total}
+              from={rangeFrom}
+              to={rangeTo}
+              prevHref={pageInfo.hasPreviousPage ? pageHref(pageInfo.page - 1) : null}
+              nextHref={pageInfo.hasNextPage ? pageHref(pageInfo.page + 1) : null}
+              counterLabel={t("media.paginationAll", {
+                from: rangeFrom,
+                to: rangeTo,
+                total: pageInfo.total,
+              })}
+              ariaLabel={t("media.paginationAria")}
+              prevLabel={t("media.paginationPrev")}
+              nextLabel={t("media.paginationNext")}
+              pageIndicator={t("media.paginationPageOf", {
+                page: pageInfo.page,
+                total: totalPages,
+              })}
+            />
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
 
-function MediaCard({
-  row,
-  t,
-  canManage,
-  folderOptions,
-  priority = false,
-  sizes = "100vw",
-}: {
-  row: MediaRow;
-  t: (key: string, params?: Record<string, string | number>) => string;
-  canManage: boolean;
-  folderOptions: { id: string; name: string; parentId?: string | null }[];
-  priority?: boolean;
-  sizes?: string;
-}) {
-  const kind = row.object.kind as MediaKind;
-  const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
-  const downloadable = row.asset.status === "ready";
-  const statusLabel = mediaStatusLabel(row, t);
-  // Width/height come from `storage_objects` populated by the upload
-  // validator (`validateStoredMediaObject`). They are null for legacy
-  // assets where extraction failed; in that case we omit the attrs so
-  // the browser falls back to layout-driven sizing (the parent already
-  // reserves `aspect-[4/3]`).
-  const intrinsicWidth =
-    typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
-  const intrinsicHeight =
-    typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
-  // PR 3 / Tier 3 (perf/media): when the parent page issued a signed
-  // R2 URL for the preview variant, render it directly. Otherwise
-  // fall back to the proxy route that PR 2 shipped (`/preview`); the
-  // legacy `<id>` route is the last resort for assets that never had
-  // a preview generated. The signed URL is the cheapest path — R2's
-  // Cloudflare edge serves the bytes without our Node process in
-  // the loop. See `getSignedPreviewUrl` in `src/lib/media/thumbnails.ts`
-  // for the auth gate that produces the URL.
-  const hasPreview =
-    typeof row.object.previewStorageObjectId === "string" &&
-    row.object.previewStorageObjectId.length > 0;
-  const thumbnailSrc =
-    row.signedPreviewUrl ??
-    (hasPreview
-      ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
-      : `/api/media/assets/${encodeURIComponent(row.asset.id)}`);
-  const thumbnail =
-    downloadable && kind === "image" ? (
-      <>
-        <span className="sr-only">{t("media.download")}</span>
-        {/* The media route is private. A browser request keeps the session
-            cookie available; next/image's optimizer cannot authenticate it. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={thumbnailSrc}
-          alt={row.asset.altText ?? row.asset.title}
-          loading={priority ? "eager" : "lazy"}
-          decoding="async"
-          // `fetchpriority` is the modern equivalent of `priority` on
-          // next/image; it tells the browser to compete for bandwidth
-          // on first paint for the above-the-fold cards. Browsers
-          // without support (Safari < 17.4) ignore the attribute.
-          // Emit intrinsic width/height only when BOTH are present —
-          // a half-known dimension misleads the browser about the
-          // aspect ratio and triggers a layout shift on load.
-          {...(intrinsicWidth !== undefined && intrinsicHeight !== undefined
-            ? { width: intrinsicWidth, height: intrinsicHeight }
-            : {})}
-          {...(priority ? { fetchPriority: "high" as const } : {})}
-          sizes={sizes}
-          className="h-full w-full object-cover"
-        />
-      </>
-    ) : downloadable && kind === "video" ? (
-      <video
-        controls
-        playsInline
-        preload="metadata"
-        aria-label={row.asset.altText ?? row.asset.title}
-        className="h-full w-full object-cover"
-      >
-        <source
-          src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
-          type={row.object.mimeType}
-        />
-      </video>
-    ) : (
-      <>
-        <Icon className="h-12 w-12" aria-hidden="true" />
-        {!downloadable ? <span className="sr-only">{statusLabel}</span> : null}
-      </>
-    );
-  const thumbnailClassName =
-    "bg-surface-subtle text-fg-muted focus-visible:ring-focus-ring relative flex aspect-[4/3] items-center justify-center focus-visible:ring-2";
-  return (
-    <article className="border-border bg-surface overflow-hidden rounded-[var(--radius-card)] border">
-      {downloadable && kind !== "video" ? (
-        <a
-          href={`/api/media/assets/${encodeURIComponent(row.asset.id)}?download=1`}
-          className={`${thumbnailClassName} focus-visible:outline-none`}
-          aria-label={`${t("media.download")}: ${row.asset.title}`}
-        >
-          {thumbnail}
-        </a>
-      ) : downloadable && kind === "video" ? (
-        <div className={thumbnailClassName}>{thumbnail}</div>
-      ) : (
-        <div className={thumbnailClassName} role="status" aria-label={statusLabel}>
-          {thumbnail}
-        </div>
-      )}
-      <div className="grid gap-2 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-start gap-2">
-            {downloadable ? (
-              <MediaAssetSelectionCheckbox assetId={row.asset.id} title={row.asset.title} />
-            ) : null}
-            <div className="min-w-0">
-              <h2 className="text-title-card text-fg-primary truncate font-semibold">
-                {row.asset.title}
-              </h2>
-              <p className="text-label text-fg-muted mt-1 truncate">
-                {row.object.originalName ?? "—"}
-              </p>
-            </div>
-          </div>
-          <Badge variant={mediaStatusVariant(row.asset.status)}>{statusLabel}</Badge>
-        </div>
-        <div className="text-label text-fg-secondary flex flex-wrap gap-x-2 gap-y-1">
-          <span>{formatBytes(row.object.byteSize)}</span>
-          <span>{row.workspaceName}</span>
-          <span>
-            <span className="sr-only">{t("media.source")}: </span>
-            {mediaSourceLabel(row.asset.sourceType as MediaSourceType, t)}
-          </span>
-          <span>
-            {row.asset.visibility === "agency" ? t("media.agencyShared") : t("media.workspaceOnly")}
-          </span>
-          <span>
-            <span className="sr-only">{t("media.folder")}: </span>
-            <span dir="auto">
-              {formatFolderPath(row.folder?.id, folderOptions, t("media.unfiled"))}
-            </span>
-          </span>
-        </div>
-        <RelatedPosts row={row} t={t} />
-        <MediaAssetActions
-          assetId={row.asset.id}
-          title={row.asset.title}
-          kind={kind}
-          trashed={row.asset.status === "trashed"}
-          visibility={row.asset.visibility as "workspace" | "agency"}
-          folderId={row.asset.folderId}
-          folderOptions={folderOptions}
-          canManage={canManage}
-        />
-      </div>
-    </article>
-  );
-}
-
-function formatBytes(value: number) {
-  if (value < 1024 ** 2) return `${Math.max(1, Math.round(value / 1024))} KB`;
-  if (value < 1024 ** 3) return `${(value / 1024 ** 2).toFixed(1)} MB`;
-  return `${(value / 1024 ** 3).toFixed(1)} GB`;
-}
-
-function RelatedPosts({
-  row,
-  t,
-}: {
-  row: MediaRow;
-  t: (key: string, params?: Record<string, string | number>) => string;
-}) {
-  const related = row.relatedContentItems;
-  if (related.length === 0) {
-    return <p className="text-label text-fg-muted">{t("media.notLinkedToPost")}</p>;
-  }
-  return (
-    <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border px-3 py-2">
-      <p className="text-label text-fg-muted mb-1">
-        {t(related.length === 1 ? "media.relatedPost" : "media.relatedPosts")}
-      </p>
-      <div className="grid gap-1">
-        {related.slice(0, 3).map((post) => (
-          <Link
-            key={post.contentItemId}
-            href={`${workspaceBasePath(post.workspaceAgencySlug, post.workspaceSlug)}/planning/${post.contentItemId}#delivery`}
-            className="text-label text-primary focus-visible:ring-focus-ring inline-flex min-h-8 items-center justify-between gap-2 rounded-[var(--radius-control)] font-semibold hover:underline focus:outline-none focus-visible:ring-2"
-          >
-            <span className="min-w-0 truncate" dir="auto">
-              {post.title}
-            </span>
-            <span className="shrink-0 text-xs font-normal uppercase" dir="ltr">
-              {post.format.replaceAll("_", " ")}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
-
+/**
+ * List view — the scan path. Keeps names and facts permanently visible for
+ * operators who are looking for a specific file rather than browsing.
+ *
+ * Like the tile, it never mounts a `<video>` element: videos show the same
+ * play affordance as the grid and play in the lightbox.
+ */
 function MediaListRow({
   row,
+  index,
   t,
   canManage,
   folderOptions,
   priority = false,
-  sizes = "100vw",
 }: {
-  row: MediaRow;
+  row: MediaLibraryRow;
+  index: number;
   t: (key: string, params?: Record<string, string | number>) => string;
   canManage: boolean;
   folderOptions: { id: string; name: string; parentId?: string | null }[];
   priority?: boolean;
-  sizes?: string;
 }) {
+  const { open } = useMediaViewer();
   const kind = row.object.kind as MediaKind;
-  const Icon = kind === "image" ? ImageIcon : kind === "video" ? Video : FileText;
-  const downloadable = row.asset.status === "ready";
+  const ready = row.asset.status === "ready";
   const statusLabel = mediaStatusLabel(row, t);
-  // List-view thumb is rendered at 56×56 (h-14 w-14). We still pass
-  // intrinsic width/height so the browser reserves layout space and
-  // skips a full-pixel decode for legacy assets that ship without
-  // a stored dimension.
-  const intrinsicWidth =
-    typeof row.object.width === "number" && row.object.width > 0 ? row.object.width : undefined;
-  const intrinsicHeight =
-    typeof row.object.height === "number" && row.object.height > 0 ? row.object.height : undefined;
-  // PR 3: same signed-URL preference as the grid card above. List-view
-  // thumbs render at 56x56 px so the byte savings are particularly
-  // stark — the variant drops the typical asset from ~2 MB to ~25 KB.
   const hasPreview =
     typeof row.object.previewStorageObjectId === "string" &&
     row.object.previewStorageObjectId.length > 0;
-  const thumbnailSrc =
+  const thumbSrc =
     row.signedPreviewUrl ??
     (hasPreview
       ? `/api/media/assets/${encodeURIComponent(row.asset.id)}/preview`
       : `/api/media/assets/${encodeURIComponent(row.asset.id)}`);
-  const thumbnail =
-    downloadable && kind === "image" ? (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={thumbnailSrc}
-        alt={row.asset.altText ?? row.asset.title}
-        loading={priority ? "eager" : "lazy"}
-        decoding="async"
-        {...(intrinsicWidth !== undefined && intrinsicHeight !== undefined
-          ? { width: intrinsicWidth, height: intrinsicHeight }
-          : {})}
-        {...(priority ? { fetchPriority: "high" as const } : {})}
-        sizes={sizes}
-        className="h-full w-full rounded-[var(--radius-control)] object-cover"
-      />
-    ) : downloadable && kind === "video" ? (
-      <video
-        controls
-        playsInline
-        preload="metadata"
-        aria-label={row.asset.altText ?? row.asset.title}
-        className="h-full w-full rounded-[var(--radius-control)] object-cover"
-      >
-        <source
-          src={`/api/media/assets/${encodeURIComponent(row.asset.id)}`}
-          type={row.object.mimeType}
-        />
-      </video>
-    ) : (
-      <>
-        <Icon className="h-6 w-6" aria-hidden="true" />
-        {!downloadable ? <span className="sr-only">{statusLabel}</span> : null}
-      </>
-    );
-  const thumbnailClassName =
-    "bg-surface-subtle text-fg-muted relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[var(--radius-control)]";
+
   return (
     <li className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap">
-      {downloadable && kind !== "video" ? (
-        <a
-          href={`/api/media/assets/${encodeURIComponent(row.asset.id)}?download=1`}
-          className={`${thumbnailClassName} focus-visible:ring-focus-ring focus:outline-none focus-visible:ring-2`}
-          aria-label={`${t("media.download")}: ${row.asset.title}`}
-        >
-          {thumbnail}
-        </a>
-      ) : downloadable && kind === "video" ? (
-        <div className={thumbnailClassName}>{thumbnail}</div>
-      ) : (
-        <div className={thumbnailClassName} role="status" aria-label={statusLabel}>
-          {thumbnail}
-        </div>
-      )}
-      {downloadable ? (
+      <button
+        type="button"
+        onClick={() => open(index)}
+        aria-label={t("media.openAsset", { name: row.asset.title })}
+        className="bg-surface-subtle text-fg-muted focus-visible:ring-focus-ring relative flex h-14 w-14 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded-[var(--radius-control)] focus:outline-none focus-visible:ring-2"
+      >
+        {ready && kind === "image" ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbSrc}
+            alt={row.asset.altText ?? row.asset.title}
+            loading={priority ? "eager" : "lazy"}
+            decoding="async"
+            {...(priority ? { fetchPriority: "high" as const } : {})}
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <MediaKindIcon kind={kind} className="h-6 w-6" />
+        )}
+      </button>
+      {ready ? (
         <MediaAssetSelectionCheckbox assetId={row.asset.id} title={row.asset.title} />
       ) : null}
       <div className="min-w-0 flex-1">
-        <h2 className="text-body text-fg-primary truncate font-semibold">{row.asset.title}</h2>
-        <p className="text-label text-fg-muted truncate">{row.object.originalName ?? "—"}</p>
+        <h2 className="text-body text-fg-primary truncate font-semibold" dir="auto">
+          {row.asset.title}
+        </h2>
+        <p className="text-label text-fg-muted truncate" dir="auto">
+          {row.object.originalName ?? "—"}
+        </p>
       </div>
       <div className="text-label text-fg-secondary flex flex-wrap gap-x-3 gap-y-1 sm:max-w-xs sm:justify-end">
         <span>{formatBytes(row.object.byteSize)}</span>
@@ -797,23 +551,17 @@ function MediaListRow({
           {mediaSourceLabel(row.asset.sourceType as MediaSourceType, t)}
         </span>
         <span>
-          {row.asset.visibility === "agency" ? t("media.agencyShared") : t("media.workspaceOnly")}
-        </span>
-        <span>
           <span className="sr-only">{t("media.folder")}: </span>
           <span dir="auto">
-            {formatFolderPath(row.folder?.id, folderOptions, t("media.unfiled"))}
+            {resolveFolderPath(row.asset.folderId, folderOptions, t("media.unfiled"))}
           </span>
         </span>
-      </div>
-      <div className="w-full sm:w-auto sm:min-w-52">
-        <RelatedPosts row={row} t={t} />
       </div>
       <Badge variant={mediaStatusVariant(row.asset.status)}>{statusLabel}</Badge>
       <MediaAssetActions
         assetId={row.asset.id}
         title={row.asset.title}
-        kind={kind}
+        kind={kind as "image" | "video" | "document"}
         trashed={row.asset.status === "trashed"}
         visibility={row.asset.visibility as "workspace" | "agency"}
         folderId={row.asset.folderId}
@@ -824,28 +572,14 @@ function MediaListRow({
   );
 }
 
-function formatFolderPath(
-  folderId: string | undefined,
-  folders: { id: string; name: string; parentId?: string | null }[],
-  unfiledLabel: string,
-): string {
-  if (!folderId) return unfiledLabel;
-  const byId = new Map(folders.map((folder) => [folder.id, folder]));
-  const names: string[] = [];
-  const visited = new Set<string>();
-  let currentId: string | undefined = folderId;
-  while (currentId && !visited.has(currentId)) {
-    visited.add(currentId);
-    const folder = byId.get(currentId);
-    if (!folder) break;
-    names.unshift(folder.name);
-    currentId = folder.parentId ?? undefined;
-  }
-  return names.length > 0 ? names.join(" / ") : unfiledLabel;
+function mediaStatusVariant(status: string): "success" | "warning" | "outline" {
+  if (status === "ready") return "success";
+  if (status === "failed") return "warning";
+  return "outline";
 }
 
 function mediaStatusLabel(
-  row: MediaRow,
+  row: MediaLibraryRow,
   t: (key: string, params?: Record<string, string | number>) => string,
 ): string {
   if (row.asset.sourceType === "legacy") return t("media.legacy");
@@ -854,12 +588,6 @@ function mediaStatusLabel(
   if (row.asset.status === "failed") return t("media.failed");
   if (row.asset.status === "trashed") return t("media.trashed");
   return t("media.deleted");
-}
-
-function mediaStatusVariant(status: string): "success" | "warning" | "outline" {
-  if (status === "ready") return "success";
-  if (status === "failed") return "warning";
-  return "outline";
 }
 
 function mediaSourceLabel(

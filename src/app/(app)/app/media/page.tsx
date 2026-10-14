@@ -9,8 +9,10 @@ import {
   listMediaAssetsPage,
   listMediaFolders,
   listMediaFoldersTree,
+  MEDIA_PAGE_SIZE,
   type MediaSort,
 } from "@/lib/media/service";
+import { attachSignedPreviewUrls } from "@/lib/media/signed-preview";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -101,14 +103,18 @@ export default async function AgencyMediaPage({
     includeTrashed: filters.trash === "1",
     sort,
     page,
-    // Cap the agency-wide media page at 24 to keep the initial paint
-    // under ~25 preview fetches (the signed-URL Cloudflare pipeline
-    // is bandwidth-bound, and a 48-row page routinely produced bursts
-    // of 401/proxy-redirect retries on a cold cache). Users can still
-    // widen the page with `?size=48` if they want a denser grid.
-    pageSize: 24,
+    // Keep the first response small enough that the browser only has to
+    // discover a single viewport of previews before the user interacts.
+    // Additional assets remain available through pagination.
+    pageSize: MEDIA_PAGE_SIZE,
   });
   const storageSummary = await getAgencyStorageSummary(context.agencyId);
+
+  // Hand the grid direct R2 signed URLs so preview bytes come from the
+  // Cloudflare edge instead of streaming through this Node process. Rows are
+  // already authorization-filtered by `listMediaAssetsPage` above, which is
+  // the precondition `attachSignedPreviewUrls` documents.
+  const rowsWithSignedUrl = await attachSignedPreviewUrls(mediaPage.rows);
   // Resolve roles for every switchable workspace in ONE batched pass, then
   // derive both filters from it. This used to loop per workspace twice —
   // `canWriteToWorkspace` and then `hasWorkspaceRole` — and each call costs
@@ -142,7 +148,7 @@ export default async function AgencyMediaPage({
         name: workspace.name,
         slug: workspace.slug,
       }))}
-      rows={mediaPage.rows}
+      rows={rowsWithSignedUrl}
       basePath="/app/media"
       selectedFolderId={selectedFolderId}
       sharedOnly={filters.shared === "1"}

@@ -407,5 +407,16 @@
     "empty": "No recent activity for this folder.",
     "actor": "by {name}",
     "timeAgo": "{when}"
-  }
+  },
+  "paginationAll": "Showing {from}–{to} of {total}",
+  "paginationAria": "Media library pagination",
+  "paginationPrev": "Previous",
+  "paginationNext": "Next",
+  "paginationPageOf": "{page} / {total}",
+  "openAsset": "Open {name}",
+  "viewerCounter": "{current} of {count}",
+  "viewerPrevious": "Previous asset",
+  "viewerNext": "Next asset",
+  "kind": "Type",
+  "resultsCount": "{count} assets"
 }

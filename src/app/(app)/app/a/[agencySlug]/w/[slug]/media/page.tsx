@@ -8,8 +8,10 @@ import {
   listMediaAssetsPage,
   listMediaFolders,
   listMediaFoldersTree,
+  MEDIA_PAGE_SIZE,
   type MediaSort,
 } from "@/lib/media/service";
+import { attachSignedPreviewUrls } from "@/lib/media/signed-preview";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { MediaLibraryPage } from "@/components/media/media-library-page";
@@ -77,24 +79,9 @@ export default async function WorkspaceMediaPage({
     // Keep the first response small enough that the browser only has to
     // discover a single viewport of previews before the user interacts.
     // Additional assets remain available through pagination.
-    pageSize: 24,
+    pageSize: MEDIA_PAGE_SIZE,
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
-
-  // PR 3 / Tier 3 (perf/media): issue R2 signed URLs so the browser
-  // downloads preview variants straight from the Cloudflare edge instead
-  // of streaming them through this Node process. The batch helper keeps
-  // the page to one preview-object query and one storage-context lookup;
-  // the signer reuses URLs during their safe 15-minute lifetime.
-  const { getSignedPreviewUrls } = await import("@/lib/media/thumbnails");
-  const signedPreviewUrls = await getSignedPreviewUrls(
-    mediaPage.rows.map((row) => ({
-      assetId: row.asset.id,
-      agencyId: row.asset.agencyId,
-      workspaceId: row.asset.ownerWorkspaceId,
-      previewStorageObjectId: row.object.previewStorageObjectId,
-    })),
-  );
 
   // Resolve the active folder's ancestor chain for the breadcrumb.
   const ancestors: { id: string; name: string }[] = [];
@@ -116,10 +103,7 @@ export default async function WorkspaceMediaPage({
   // Attach the signed URL onto each row so the MediaLibraryPage can emit it
   // directly without re-querying. Rows without a preview keep the proxy
   // fallback used for legacy or not-yet-generated variants.
-  const rowsWithSignedUrl = mediaPage.rows.map((row) => ({
-    ...row,
-    signedPreviewUrl: signedPreviewUrls.get(row.asset.id) ?? null,
-  }));
+  const rowsWithSignedUrl = await attachSignedPreviewUrls(mediaPage.rows);
 
   return (
     <MediaLibraryPage

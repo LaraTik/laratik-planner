@@ -5,9 +5,69 @@ The media library is a reusable production-file catalog. It is separate from the
 ## Navigation and scope
 
 - `/app/media` is the agency-wide view for internal agency members with at least one internal workspace role.
-- `/app/w/[slug]/media` is the workspace view. It shows assets owned by that workspace plus any `visibility = agency` assets the eligible internal agency member may reuse; the owner workspace remains visible in provenance metadata.
+- `/app/a/[agencySlug]/w/[slug]/media` is the workspace view (canonical; the legacy `/app/w/[slug]/media` shape now only resolves through the legacy catch-all redirect). It shows assets owned by that workspace plus any `visibility = agency` assets the eligible internal agency member may reuse; the owner workspace remains visible in provenance metadata.
 - Client reviewers and viewers do not receive general media-library access. Client-visible files are linked explicitly to a delivery, comment, or content item; delivery review reads the private storage route, not a provider access URL.
 - A file belongs to one owner workspace. `visibility = workspace` is the default; `visibility = agency` allows reuse by eligible internal agency members without copying the object.
+
+## Library surface
+
+Both routes render the same `MediaLibraryPage`. Anything that must differ
+between them belongs in the page's props, not in a forked component.
+
+### Preview delivery
+
+Every grid tile and lightbox image resolves its source through
+`mediaAssetSrc`: the server-issued R2 signed preview URL when present,
+otherwise the authenticated proxy route, otherwise the original object for
+assets that never got a preview variant.
+
+Both routes must call `attachSignedPreviewUrls` before rendering. It is the
+only sanctioned caller of `getSignedPreviewUrls` and it documents the
+precondition that makes it safe: rows must already be authorization-filtered
+by `listMediaAssets`/`listMediaAssetsPage`. The batch signer performs no
+per-asset permission check of its own — adding one would reintroduce the
+N-query cost the batch form exists to remove. A signed URL grants direct,
+unauthenticated read access to that one object for its 15-minute lifetime.
+
+Rows without a preview variant fall back to the full original, which is
+correct but heavy. Those rows are what a page feels slow on, so they are worth
+`backfillPreviewIfMissing` rather than a bigger page size.
+
+### Grid
+
+The grid is a masonry layout built on CSS multi-column. Two properties are
+load-bearing:
+
+- **Tiles take their `aspect-ratio` from the asset's own stored
+  width/height.** A fixed tile ratio crops; this is why vertical 9:16 reels
+  used to lose most of their frame. Ratios are clamped to 0.5–2 so a single
+  panorama cannot produce a 3px sliver. Legacy assets with no stored
+  dimensions fall back to 4:3.
+- **Column flow is column-major.** That is the standard trade-off for a
+  visual gallery and the reason list view remains the ordered path. Anything
+  that needs to scan rows in sort order is a list-view job.
+
+A tile deliberately shows almost nothing: no byte size, no folder path, no
+related posts. Those live in the lightbox. Keeping tiles light is what makes a
+24-row page read as a gallery instead of a wall of cards, and it costs no
+capability because the lightbox carries everything the tile hides. Finding an
+asset _by name_ is a search-box or list-view job, not a tile job.
+
+### Media elements
+
+The grid mounts no `<video>` element. A mixed page used to open up to 24
+players, each with controls and its own range request. Videos render as a
+still tile with a play glyph; the lightbox is the page's only player.
+
+`posterStorageObjectId` exists on `media_asset` but nothing generates it, so
+video tiles cannot rely on a poster frame yet.
+
+### Shared primitives
+
+Use `ListPagination` for the page strip, `PageHeader` for the page header, and
+`Badge` for status. The library previously hand-rolled its own pagination and
+header; both now read from the shared primitives so a future change lands in
+one place.
 
 ## Upload source contract
 

@@ -369,6 +369,17 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
   }));
 }
 
+/**
+ * Rows fetched per library page, shared by the agency route (`/app/media`)
+ * and the workspace route (`/app/a/<agencySlug>/w/<slug>/media`) so the two
+ * cannot drift apart.
+ *
+ * 24 keeps the initial paint under ~25 preview fetches. The signed-URL
+ * Cloudflare pipeline is bandwidth-bound, and a 48-row page routinely
+ * produced bursts of 401/proxy-redirect retries on a cold cache.
+ */
+export const MEDIA_PAGE_SIZE = 24;
+
 export async function listMediaAssetsPage(actor: Actor, input: ListInput) {
   const pageSize = Math.min(Math.max(input.pageSize ?? input.limit ?? 48, 1), 100);
   const page = Math.max(input.page ?? 1, 1);

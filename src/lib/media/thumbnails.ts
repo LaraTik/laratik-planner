@@ -53,11 +53,18 @@ import {
 } from "@/lib/storage/read-service";
 
 /**
- * Cap on the preview's longest edge. A 4:3 cell rendered at 240x180
- * (the media grid's max CSS size) is the binding constraint; 480px
- * gives 2x device-pixel-ratio headroom on hi-dpi without bloating
- * the bytes. A 480px WebP at quality 80 averages 25-40 KB per image;
- * the full original is often 1-4 MB.
+ * Cap on the preview's longest edge.
+ *
+ * The media library renders a masonry grid at 2–4 columns inside a
+ * `max-w-7xl` surface, so a tile is roughly 170–300 CSS px wide — and vertical
+ * assets (9:16 reels and stories, which the gallery deliberately does NOT crop)
+ * are bounded by their height instead, so the longest edge is the right axis to
+ * cap. 480px gives ~2x device-pixel-ratio headroom on the widest tile without
+ * bloating the bytes: a 480px WebP at quality 80 averages 25-40 KB per image,
+ * while the full original is often 1-4 MB.
+ *
+ * Raising this is only worth it if the grid column count goes up; at 4 columns
+ * the current cap is the binding constraint, not the bytes.
  */
 export const THUMBNAIL_MAX_WIDTH = 480;
 
@@ -487,6 +494,15 @@ export async function getSignedPreviewUrl(actor: Actor, assetId: string): Promis
  * Batch form used by the media library after `listMediaAssets` has applied
  * its visibility and workspace-access rules. It avoids repeating the
  * per-asset authorization/configuration path for every card on a page.
+ *
+ * SECURITY: this performs NO per-asset permission check. The `actor` argument
+ * exists to keep the call shape aligned with `getSignedPreviewUrl` (the single
+ * form, which does authorize), but the batch path trusts its caller entirely.
+ * Authorization must already have happened — in practice, via
+ * `listMediaAssets` / `listMediaAssetsPage`. Never call this with asset ids
+ * assembled from another source. See `attachSignedPreviewUrls` in
+ * `src/lib/media/signed-preview.ts`, which is the only sanctioned caller and
+ * documents the precondition.
  */
 export async function getSignedPreviewUrls(
   targets: ReadonlyArray<{

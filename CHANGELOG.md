@@ -12,6 +12,71 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — media library previews were proxied through Node on the agency route, and vertical assets were cropped to a sliver
+
+Three user-reported symptoms on `/app/media`: too much on the first page,
+images not displaying correctly, and a page that needed reworking. The first
+two were real defects, not taste.
+
+- **The agency-wide library never issued signed preview URLs.**
+  `app/media/page.tsx` rendered the same grid as the workspace library but
+  passed raw rows straight through, so every thumbnail fell back to
+  `/api/media/assets/<id>/preview` and streamed through the Next.js Node
+  process instead of Cloudflare's edge. The workspace route signed; the agency
+  route did not. Both now call `attachSignedPreviewUrls`
+  (`src/lib/media/signed-preview.ts`), so neither route can silently regress
+  again and a future third route gets the behaviour by construction. The helper
+  documents its security precondition: it performs no per-asset authorization,
+  because `listMediaAssets`/`listMediaAssetsPage` already established it, and a
+  per-row check would reintroduce the N-query cost the batch signer exists to
+  avoid. `getSignedPreviewUrls` carried an unused `actor` parameter that made
+  it look like it authorized; its doc comment said so explicitly.
+- **The grid centre-cropped every 9:16 reel and story.** Cards forced
+  `aspect-[4/3]` with `object-cover`, so a vertical asset lost most of its frame
+  to a horizontal strip. Tiles now take their `aspect-ratio` from the asset's
+  own stored width/height, which leaves `object-cover` nothing to crop. Extreme
+  ratios are clamped to 0.5–2 so one panorama cannot produce a 3px sliver, and
+  so one ultra-tall strip cannot produce a 2000px column. Legacy assets with no
+  stored dimensions fall back to 4:3 rather than collapsing.
+- **A page of mixed media mounted up to 24 `<video>` elements**, each with
+  controls and its own range request, because the grid rendered a player inline
+  for every video row. Videos are now a still tile with a play glyph and play in
+  the lightbox, which is the only player on the page.
+- Removed a comment on the agency page promising a `?size=48` page-size
+  override that no code read. `MEDIA_PAGE_SIZE` is now exported from the media
+  service and shared by both routes so they cannot drift.
+- Corrected `THUMBNAIL_MAX_WIDTH`'s stated basis: it claimed the grid's binding
+  constraint was "a 4:3 cell at 240×180". The grid is now a 2–4 column masonry
+  with uncropped vertical assets, so the longest edge is the right axis.
+
+### Changed — the media library is now a masonry gallery with a lightbox, on the shared list primitives
+
+Redesign pass on the same routes. The tile is the work surface, so it carries
+almost nothing; everything the tiles hide (byte size, folder path, linked posts,
+the action menu) moved into a lightbox, so compacting the grid removes no
+capability. Naming stays the scan path via the existing search box and list view.
+
+- Masonry uses CSS multi-column, which preserves each asset's true aspect ratio
+  with no measurement JavaScript and no crop. Column flow is column-major — the
+  standard trade-off for a visual gallery, and the reason list view remains the
+  ordered path.
+- Replaced the hand-rolled `<nav>` pagination with the `ListPagination` primitive
+  already used by five other paginated surfaces, so the library gains the real
+  "Showing X–Y of Z" counter and disabled boundary buttons it never had
+  (`media.pageSummary` only ever rendered "Page {page}").
+- The duplicated agency/workspace header branches collapsed into the shared
+  `PageHeader`, which the design system mandates.
+- Added 11 keys to both `en/media.json` and `ar/media.json`; the repo enforces
+  bilingual catalog parity.
+
+`scripts/seed-media-fixture.sql` is new and **not yet wired into the E2E runner**.
+It exists because the visual-regression suite seeds zero media assets, so the
+library has always been captured in its empty state and no gallery change could
+be verified by that suite. The script seeds a deliberately varied fixture (9:16,
+16:9, square, panorama, ultra-tall, missing dimensions, video, document, and
+three non-ready statuses) against a disposable database. Wiring it into
+`scripts/run-e2e-tests.ts` and the visual case list is the follow-up.
+
 ### Changed — canonical workspace URLs: the sweep is complete
 
 Every `/app/w/<slug>` navigation the app generated is now
