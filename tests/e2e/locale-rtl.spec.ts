@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { bootstrapTestSession } from "./_helpers";
+import { bootstrapTestSession, type SeedResult } from "./_helpers";
 
 // This contract visits four authenticated routes. A cold isolated Next.js
 // server can spend more than the default 30s budget compiling the final
@@ -21,6 +21,10 @@ async function gotoStable(page: Page, path: string) {
   }
 }
 
+function workspaceRoute(seeded: SeedResult, rest = "") {
+  return `/app/a/test-agency/w/${seeded.workspaceSlug}${rest ? `/${rest}` : ""}`;
+}
+
 /**
  * The interface locale is a server-resolved setting, not just a CSS flip.
  * Keep one browser-level contract for the authenticated shell so regressions
@@ -29,9 +33,9 @@ async function gotoStable(page: Page, path: string) {
 test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y", async ({
   page,
 }) => {
-  await bootstrapTestSession(page, { locale: "ar" });
+  const seeded = await bootstrapTestSession(page, { locale: "ar" });
 
-  await gotoStable(page, "/app/w/acme");
+  await gotoStable(page, workspaceRoute(seeded));
 
   const html = page.locator("html");
   await expect(html).toHaveAttribute("lang", "ar");
@@ -48,7 +52,7 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   );
   expect(overflowsHorizontally).toBe(false);
 
-  await gotoStable(page, "/app/w/acme/planning");
+  await gotoStable(page, workspaceRoute(seeded, "planning"));
   await expect(page.getByRole("heading", { name: "التخطيط", level: 1 })).toBeVisible();
   await expect(page.getByTestId("planning-search-input")).toHaveAttribute(
     "placeholder",
@@ -59,7 +63,7 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   );
   expect(planningOverflowsHorizontally).toBe(false);
 
-  await gotoStable(page, "/app/w/acme/board");
+  await gotoStable(page, workspaceRoute(seeded, "board"));
   await expect(page.getByRole("heading", { name: "لوحة سير العمل", level: 1 })).toBeVisible();
   await expect(page.getByTestId("board-search-input")).toHaveAttribute(
     "placeholder",
@@ -73,12 +77,12 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   );
   expect(boardOverflowsHorizontally).toBe(false);
 
-  await gotoStable(page, "/app/w/acme/settings");
+  await gotoStable(page, workspaceRoute(seeded, "settings"));
   await expect(page.getByRole("heading", { name: "إعدادات مساحة العمل", level: 1 })).toBeVisible();
   await expect(page.getByTestId("settings-setup-checklist-progress")).toContainText("تم إعداد");
   await expect(page.getByTestId("sidebar-settings-lifecycle")).toHaveAttribute(
     "href",
-    "/app/w/acme/settings#lifecycle",
+    `${workspaceRoute(seeded, "settings")}#lifecycle`,
   );
   await expect(page.getByRole("heading", { name: "أوقات التسليم", level: 2 })).toBeVisible();
   const settingsOverflowsHorizontally = await page.evaluate(
@@ -88,7 +92,7 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
 
   await expect(page.getByTestId("settings-health-lead-times")).toContainText("صحة الإعدادات");
 
-  await gotoStable(page, "/app/w/acme/planning/batch");
+  await gotoStable(page, workspaceRoute(seeded, "planning/batch"));
   await expect(page.getByRole("heading", { name: "إضافة دفعة", level: 1 })).toBeVisible();
   await expect(page.getByTestId("batch-planning-canvas")).toBeVisible();
   const batchOverflowsHorizontally = await page.evaluate(
@@ -96,10 +100,10 @@ test("authenticated shell resolves Arabic RTL without horizontal overflow @a11y"
   );
   expect(batchOverflowsHorizontally).toBe(false);
 
-  await gotoStable(page, "/app/w/acme/planning/monthly");
+  await gotoStable(page, workspaceRoute(seeded, "planning/monthly"));
   await expect(page.getByRole("heading", { name: "التخطيط الشهري", level: 1 })).toBeVisible();
 
-  await gotoStable(page, "/app/w/acme/brand-kit/profile");
+  await gotoStable(page, workspaceRoute(seeded, "brand-kit/profile"));
   await expect(page.getByRole("heading", { name: "ملف العلامة التجارية", level: 1 })).toBeVisible();
 
   await gotoStable(page, "/app/agency-settings/planning-packs");

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { bootstrapTestSession } from "./_helpers";
+import { bootstrapTestSession, type SeedResult } from "./_helpers";
 
 /**
  * Per-route axe-core scan for the authenticated app shell.
@@ -30,14 +30,24 @@ function reportViolations(route: string, results: Awaited<ReturnType<AxeBuilder[
   );
 }
 
-async function createDraft(page: import("@playwright/test").Page, title: string) {
-  await page.goto("/app/w/acme/planning/new");
+function workspaceRoute(seeded: SeedResult, rest = "") {
+  return `/app/a/test-agency/w/${seeded.workspaceSlug}${rest ? `/${rest}` : ""}`;
+}
+
+async function createDraft(
+  page: import("@playwright/test").Page,
+  title: string,
+  seeded: SeedResult,
+) {
+  await page.goto(workspaceRoute(seeded, "planning/new"));
   await page.getByLabel(/Title/i).first().fill(title);
   await page.getByRole("button", { name: /Create draft/i }).click();
-  await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-    timeout: 20_000,
-    waitUntil: "commit",
-  });
+  await page.waitForURL(
+    (url) =>
+      url.pathname.startsWith(`/app/a/test-agency/w/${seeded.workspaceSlug}/planning/`) &&
+      /^[0-9a-f-]+$/.test(url.pathname.split("/").at(-1) ?? ""),
+    { timeout: 20_000 },
+  );
   return page.url();
 }
 
@@ -102,31 +112,34 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
   });
 
   test("@a11y /app/w/[slug] (workspace overview) has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme");
-    await expectClean("/app/w/acme", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded);
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/media");
-    await expectClean("/app/w/[slug]/media", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "media");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/planning (planning list) has no critical violations", async ({
     page,
   }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning");
-    await expectClean("/app/w/acme/planning", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "planning");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/planning/[id] (content detail) has no critical violations", async ({
     page,
   }) => {
-    await bootstrapTestSession(page);
-    await createDraft(page, `A11y detail ${Date.now()}`);
-    await expectClean("/app/w/acme/planning/[id]", page);
+    const seeded = await bootstrapTestSession(page);
+    await createDraft(page, `A11y detail ${Date.now()}`, seeded);
+    await expectClean(page.url(), page);
   });
 
   test("@a11y /app/w/[slug]/planning/[id]?tab=publishing has no critical violations", async ({
@@ -140,13 +153,13 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     // `publish-package-form-mount`). The a11y sweep now targets
     // the planning detail page with the publishing tab active.
     const seeded = await bootstrapTestSession(page);
-    await page.goto(`/app/w/${seeded.workspaceSlug}/planning/${seeded.contentItemId}#publishing`);
+    await page.goto(`${workspaceRoute(seeded, `planning/${seeded.contentItemId}`)}#publishing`);
     // The shell may mount the panel asynchronously after the
     // hash syncs; give the form mount a beat to appear.
     await expect(page.getByTestId("publish-package-form-mount")).toBeVisible({
       timeout: 10_000,
     });
-    await expectClean("/app/w/[slug]/planning/[id]?tab=publishing", page);
+    await expectClean(page.url(), page);
   });
 
   // ─── Extended Stitch canonical coverage ──────────────────────────────────
@@ -229,34 +242,39 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
   });
 
   test("@a11y /app/w/[slug]/brand-kit has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/brand-kit");
-    await expectClean("/app/w/acme/brand-kit", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "brand-kit");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/channels has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/channels");
-    await expectClean("/app/w/acme/channels", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "channels");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/analytics/social has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/analytics/social");
-    await expectClean("/app/w/acme/analytics/social", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "analytics/social");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/analytics/advertising has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/analytics/advertising");
-    await expectClean("/app/w/acme/analytics/advertising", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "analytics/advertising");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/analytics/advertising renders Arabic RTL", async ({ page }) => {
-    await bootstrapTestSession(page, { locale: "ar" });
-    await page.goto("/app/w/acme/analytics/advertising");
+    const seeded = await bootstrapTestSession(page, { locale: "ar" });
+    const route = workspaceRoute(seeded, "analytics/advertising");
+    await page.goto(route);
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expectClean("/app/w/[slug]/analytics/advertising [ar]", page);
+    await expectClean(`${route} [ar]`, page);
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
     );
@@ -264,69 +282,80 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
   });
 
   test("@a11y /app/w/[slug]/research has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/research");
-    await expectClean("/app/w/acme/research", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "research");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/team has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/team");
-    await expectClean("/app/w/acme/team", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "team");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/settings has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/settings");
-    await expectClean("/app/w/acme/settings", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "settings");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/calendar has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/calendar");
-    await expectClean("/app/w/acme/calendar", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "calendar");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/board has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/board");
-    await expectClean("/app/w/acme/board", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "board");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/design-queue has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/design-queue");
-    await expectClean("/app/w/acme/design-queue", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "design-queue");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/reviews has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/reviews");
-    await expectClean("/app/w/acme/reviews", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "reviews");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/planning/new has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning/new");
-    await expectClean("/app/w/acme/planning/new", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "planning/new");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/planning/batch has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning/batch");
-    await expectClean("/app/w/acme/planning/batch", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "planning/batch");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/planning/monthly has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/planning/monthly");
-    await expectClean("/app/w/acme/planning/monthly", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "planning/monthly");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/brand-kit/profile has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/brand-kit/profile");
-    await expectClean("/app/w/acme/brand-kit/profile", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "brand-kit/profile");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/agency-settings/planning-packs has no critical violations", async ({ page }) => {
@@ -336,20 +365,23 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
   });
 
   test("@a11y /app/w/[slug]/library has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/library");
-    await expectClean("/app/w/acme/library", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "library");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/client has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/client");
-    await expectClean("/app/w/acme/client", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "client");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 
   test("@a11y /app/w/[slug]/client/calendar has no critical violations", async ({ page }) => {
-    await bootstrapTestSession(page);
-    await page.goto("/app/w/acme/client/calendar");
-    await expectClean("/app/w/acme/client/calendar", page);
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "client/calendar");
+    await page.goto(route);
+    await expectClean(route, page);
   });
 });

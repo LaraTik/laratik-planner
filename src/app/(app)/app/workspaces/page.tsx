@@ -72,6 +72,7 @@ export default async function WorkspacesPage() {
       updatedAt: workspaces.updatedAt,
     })
     .from(workspaces)
+    .innerJoin(agencies, eq(agencies.id, workspaces.agencyId))
     .where(and(eq(workspaces.agencyId, agencyId), isNull(workspaces.archivedAt)))
     .orderBy(desc(workspaces.updatedAt));
 
