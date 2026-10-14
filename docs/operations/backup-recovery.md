@@ -102,7 +102,14 @@ on the data-loss axis. The
 sub-flow" must be the first action of any suspected data-loss event,
 because the only available restore point is the local 14-day window.
 
-## 6. References
+## 6. Operator verification procedure
+
+The release-candidate operator checklist for provisioning restic and timing a
+disposable restore is [`../production-readiness/OFFSITE_RECOVERY_VERIFICATION.md`](../production-readiness/OFFSITE_RECOVERY_VERIFICATION.md).
+It deliberately remains an operator action: no repository, secret, or server
+configuration was added during this review.
+
+## 7. References
 
 - [`runbook.md`](./runbook.md) § Backup / Restore — the day-2 procedure.
 - [`../production-readiness/MIGRATION_DEPLOYMENT.md`](../production-readiness/MIGRATION_DEPLOYMENT.md) § "2026-08-24 incident" — worked example of a migration-time data-safety event.

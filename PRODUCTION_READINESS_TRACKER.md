@@ -1,13 +1,14 @@
 # StudioFlow Production-Readiness Tracker
 
 > **2026-10-14 final local regression checkpoint** — Exact clean code commit
-> `9b24fe9e4a01e367217e55a68430387f533b0cfa` passes `pnpm verify` with 507
+> `90a533f437aacd3df704e0db1e68580b7cd90d8f` passes `pnpm verify` with 507
 > unit files / 4,718 tests and a production build. The canonical workspace
 > a11y contract now passes content detail 5/5, publishing tab 5/5, and the
 > Arabic RTL shell 5/5 across Chromium, Firefox, WebKit, mobile Chrome, and
 > mobile Safari. The `/app/workspaces` admin query now includes its required
 > agency join. Earlier evidence also records full integration, migration drill
-> 5/5 with 85/85 ledger rows, and the advertising E2E matrix 15/15. No live
+> 5/5 with 85/85 ledger rows, and the advertising browser gate 30/30: 15/15
+> functional plus 15/15 accessibility. No live
 > Meta credential, provider mutation, push, or deployment was performed. This
 > remains **Tested**, not **Verified**: live Meta UAT, offsite backup/restore,
 > and independent review remain open; production flags stay disabled.

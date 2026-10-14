@@ -1,6 +1,6 @@
 # Test and coverage evidence
 
-## Final local regression — 2026-10-14, exact clean code SHA `9b24fe9e4a01e367217e55a68430387f533b0cfa`
+## Final local regression — 2026-10-14, exact clean code SHA `90a533f437aacd3df704e0db1e68580b7cd90d8f`
 
 This checkpoint closes the local regression defects found during the final
 browser pass. Accessibility tests now use the canonical agency/workspace URL
@@ -8,17 +8,18 @@ shape and wait for the completed content-detail path without racing the
 `#overview` hash transition. The admin workspace list query also joins the
 agency row required by its selected `agencySlug` field.
 
-| Check                                     | Result                                                                                                    |
-| ----------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `pnpm verify`                             | **Pass** — formatting, lint, strict typecheck, 507 unit files / 4,718 tests, and Next.js production build |
-| Content-detail a11y                       | **Pass** — 5/5 browser projects                                                                           |
-| Publishing-tab a11y                       | **Pass** — 5/5 browser projects                                                                           |
-| Arabic authenticated shell / RTL overflow | **Pass** — 5/5 browser projects                                                                           |
-| Advertising admin/reporting E2E           | **Pass** — 15/15 across five browser projects; EN/LTR + AR/RTL                                            |
-| Advertising a11y routes                   | **Pass** — 10/10 across five browser projects; no serious/critical axe violations                         |
-| Full integration runner                   | **Pass** — completed on disposable `planner_test`; advertising lifecycle 3/3 and tenant guards 14/14      |
-| `pnpm migration-drill`                    | **Pass** — 5/5 drills; 85/85 Drizzle ledger rows                                                          |
-| `git diff --check`                        | **Pass**                                                                                                  |
+| Check                                     | Result                                                                                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                             | **Pass** — formatting, lint, strict typecheck, 507 unit files / 4,718 tests, and Next.js production build                             |
+| Content-detail a11y                       | **Pass** — 5/5 browser projects                                                                                                       |
+| Publishing-tab a11y                       | **Pass** — 5/5 browser projects                                                                                                       |
+| Arabic authenticated shell / RTL overflow | **Pass** — 5/5 browser projects                                                                                                       |
+| Advertising functional E2E                | **Pass** — 15/15 across five browser projects; admin 5/5 + reporting EN 5/5 + reporting AR 5/5                                        |
+| Advertising accessibility E2E             | **Pass** — 15/15 across five browser projects; settings 5/5 + analytics EN 5/5 + analytics AR 5/5; no serious/critical axe violations |
+| Advertising combined release gate         | **Pass** — 30/30; five browser projects, EN/LTR + AR/RTL                                                                              |
+| Full integration runner                   | **Pass** — completed on disposable `planner_test`; advertising lifecycle 3/3 and tenant guards 15/15                                  |
+| `pnpm migration-drill`                    | **Pass** — 5/5 drills; 85/85 Drizzle ledger rows                                                                                      |
+| `git diff --check`                        | **Pass**                                                                                                                              |
 
 The broad historical accessibility sweep was also exercised, but its first
 run exposed the stale legacy-route test contract and an intermittent isolated

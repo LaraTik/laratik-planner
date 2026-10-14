@@ -5,7 +5,7 @@
 
 ## Candidate
 
-- Code: `9b24fe9e4a01e367217e55a68430387f533b0cfa`
+- Code: `90a533f437aacd3df704e0db1e68580b7cd90d8f`
 - Database: additive migration 0084 is applied only through the normal
   migration runner; verify the production ledger and backup before execution.
 - Current decision: **NO-GO** pending independent review, authorized live Meta
