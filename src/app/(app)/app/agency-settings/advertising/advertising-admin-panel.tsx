@@ -21,6 +21,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 import {
   createAdvertisingConnectionAction,
   grantAdvertisingFinancialAuthorityAction,
@@ -218,7 +219,7 @@ export function AdvertisingAdminPanel({
             <Input
               id="advertising-graph-version"
               name="graphApiVersion"
-              defaultValue="v25.0"
+              defaultValue={META_DEFAULT_GRAPH_VERSION}
               pattern="v\d+\.\d+"
               maxLength={20}
             />
@@ -716,7 +717,7 @@ function ConnectionCard({
           <div>
             <CardTitle>{connection.displayName}</CardTitle>
             <CardDescription>
-              {connection.provider} · {connection.graphApiVersion ?? "v25.0"} ·{" "}
+              {connection.provider} · {connection.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION} ·{" "}
               {t("advertising.credentialVersion", { count: connection.currentCredentialVersion })}
             </CardDescription>
           </div>

@@ -10,6 +10,7 @@ import {
   advertisingConnectionAccounts,
   advertisingConnections,
   advertisingCredentialVersions,
+  advertisingValidationResults,
   advertisingSyncStates,
   users,
   workspaces,
@@ -27,6 +28,10 @@ import {
   revokeAdvertisingConnection,
   storeAdvertisingCredential,
 } from "@/lib/advertising/credential-service";
+import { MetaHttpError } from "@/lib/advertising/meta-http";
+import { createMetaAdvertisingProvider } from "@/lib/advertising/providers/meta";
+import { runMetaConfigurationWorkflow } from "@/lib/advertising/meta-workflow";
+import type { AdvertisingConnection } from "@/lib/advertising/types";
 
 process.env.SOCIAL_TOKEN_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
 
@@ -62,7 +67,30 @@ async function seed() {
     displayName: "Lifecycle Meta Connection",
     actorId: user.id,
   });
-  return { agency, user, workspace, connection };
+  const [storedConnection] = await db
+    .select({
+      id: advertisingConnections.id,
+      provider: advertisingConnections.provider,
+      agencyId: advertisingConnections.agencyId,
+      credentialRef: advertisingConnections.credentialRef,
+      status: advertisingConnections.status,
+      lastValidatedAt: advertisingConnections.lastValidatedAt,
+    })
+    .from(advertisingConnections)
+    .where(eq(advertisingConnections.id, connection.id));
+  if (!storedConnection) throw new Error("failed to reload lifecycle connection");
+  const fullConnection: AdvertisingConnection = {
+    ...storedConnection,
+    provider: "meta",
+    status: storedConnection.status as AdvertisingConnection["status"],
+    lastValidatedAt: storedConnection.lastValidatedAt?.toISOString() ?? null,
+  };
+  return {
+    agency,
+    user,
+    workspace,
+    connection: fullConnection,
+  };
 }
 
 describe("advertising credential lifecycle", () => {
@@ -177,6 +205,39 @@ describe("advertising credential lifecycle", () => {
         allowPendingValidation: true,
       }),
     ).resolves.toEqual({ accessToken: "meta-token-pending-validation" });
+  });
+
+  it("records a sanitized diagnostic when the Meta identity probe is denied", async () => {
+    const { agency, connection } = await seed();
+    const provider = createMetaAdvertisingProvider(
+      {
+        resolve: async () => ({ accessToken: "synthetic-token" }),
+      },
+      () => ({
+        get: async () => {
+          throw new MetaHttpError(403, 190);
+        },
+      }),
+    );
+
+    const result = await runMetaConfigurationWorkflow(db, {
+      agencyId: agency.id,
+      connection,
+      provider,
+    });
+
+    expect(result.status).toBe("failed");
+    expect(result.diagnostics).toEqual([
+      { operation: "diagnostics", state: "expired_or_revoked", retryable: false },
+    ]);
+    const rows = await db
+      .select({
+        operation: advertisingValidationResults.operation,
+        sanitizedCode: advertisingValidationResults.sanitizedCode,
+      })
+      .from(advertisingValidationResults)
+      .where(eq(advertisingValidationResults.connectionId, connection.id));
+    expect(rows).toEqual([{ operation: "diagnostics", sanitizedCode: "meta_permission_denied" }]);
   });
 
   it("revokes provider reads, active versions, linked sync state, and blocks reactivation", async () => {

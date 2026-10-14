@@ -114,13 +114,13 @@ Use the exact URL rendered by Planner; do not reconstruct it from memory.
 An agency administrator enters the following at
 `/app/agency-settings/social/providers`:
 
-| Field                        | Value                                                                          |
-| ---------------------------- | ------------------------------------------------------------------------------ |
-| Meta app ID                  | Selected canonical app ID                                                      |
-| App secret                   | Enter directly in the password field; never paste into chat or files           |
-| Login for Business config ID | Newly created read-only configuration                                          |
-| Graph API version            | `v25.0` unless the controlled upgrade review selects another supported version |
-| Enabled                      | On only after the callback and credential test are ready                       |
+| Field                        | Value                                                                |
+| ---------------------------- | -------------------------------------------------------------------- |
+| Meta app ID                  | Selected canonical app ID                                            |
+| App secret                   | Enter directly in the password field; never paste into chat or files |
+| Login for Business config ID | Newly created read-only configuration                                |
+| Graph API version            | `v26.0` unless the agency explicitly pins another supported version  |
+| Enabled                      | On only after the callback and credential test are ready             |
 
 Then run, in order:
 

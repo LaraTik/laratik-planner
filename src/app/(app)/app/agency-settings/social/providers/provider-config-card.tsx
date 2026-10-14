@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
@@ -123,7 +124,7 @@ const PROVIDER_META = {
     loginConfigIdLabel: "Login for Business config id",
     loginConfigIdPlaceholder: "1234567890",
     graphApiVersionLabel: "Graph API version (optional)",
-    graphApiVersionPlaceholder: "v25.0",
+    graphApiVersionPlaceholder: META_DEFAULT_GRAPH_VERSION,
     developerConsoleUrl: "https://developers.facebook.com/apps/",
   },
   tiktok: {

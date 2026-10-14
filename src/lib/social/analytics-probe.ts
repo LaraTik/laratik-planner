@@ -24,6 +24,7 @@ import {
   type SocialMetric,
 } from "./metrics";
 import type { SocialPlatform } from "./types";
+import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 
 export type AnalyticsProbeProfile = {
   channelId: string;
@@ -116,7 +117,7 @@ export async function runAnalyticsProbe(
   try {
     const permissionResult = await probeMetaPermissions({
       accessToken: credentials.accessToken,
-      apiVersion: config.graphApiVersion ?? "v25.0",
+      apiVersion: config.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION,
     });
     permissions = permissionResult.permissions;
   } catch {
@@ -164,14 +165,14 @@ export async function runAnalyticsProbe(
       accessToken:
         credentials.profileAccessTokens?.[row.channel.externalAccountId] ?? credentials.accessToken,
       igUserId: row.channel.externalAccountId,
-      apiVersion: config.graphApiVersion ?? "v25.0",
+      apiVersion: config.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION,
     });
   } else if (profile.platform === "facebook" && row.channel.externalAccountId) {
     mediaInsights = await probeMetaRecentFacebookPagePostInsights({
       accessToken:
         credentials.profileAccessTokens?.[row.channel.externalAccountId] ?? credentials.accessToken,
       pageId: row.channel.externalAccountId,
-      apiVersion: config.graphApiVersion ?? "v25.0",
+      apiVersion: config.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION,
     });
   }
   await persistProbe(agencyId, profile, statuses, testedAt);

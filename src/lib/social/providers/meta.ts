@@ -25,6 +25,7 @@ import {
   type MetaPublicationPlatform,
 } from "@/lib/social/meta-publications";
 import { blankToNull, httpsOrNull } from "@/lib/social/media-fields";
+import { resolveMetaGraphVersion, type MetaGraphVersion } from "@/lib/meta/version";
 
 /**
  * M2 — Meta (Facebook Login for Business) provider adapter.
@@ -62,7 +63,7 @@ import { blankToNull, httpsOrNull } from "@/lib/social/media-fields";
  *   - Paging follows `cursors.after`; the loop terminates when the
  *     response has no `paging.next` or has produced 100 Pages.
  *   - The Graph API version is supplied by the agency provider configuration
- *     and defaults to `v25.0` when that optional field is empty.
+ *     and defaults to `v26.0` when that optional field is empty.
  */
 
 // Read-only scopes requested in the Facebook Login for Business
@@ -109,14 +110,8 @@ const ANALYTICS_TASKS = new Set([
   "EDIT_CONTENT",
 ]);
 
-type MetaGraphVersion = `v${number}.${number}`;
-const DEFAULT_GRAPH_VERSION: MetaGraphVersion = "v25.0";
-
 export function resolveGraphVersion(override: string | null | undefined): MetaGraphVersion {
-  if (override && /^v\d+\.\d+$/.test(override)) {
-    return override as MetaGraphVersion;
-  }
-  return DEFAULT_GRAPH_VERSION;
+  return resolveMetaGraphVersion(override);
 }
 
 export function graphBaseUrl(version?: string | null): string {
@@ -136,7 +131,7 @@ export type BuildMetaAuthorizationUrlInput = {
   loginConfigId: string;
   state: string;
   redirectUri: string;
-  /** Per-agency Graph API version override. Null falls back to v25.0. */
+  /** Per-agency Graph API version override. Null falls back to v26.0. */
   graphApiVersion?: string | null;
 };
 

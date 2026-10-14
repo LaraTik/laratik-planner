@@ -1,6 +1,6 @@
 import type { MetaReadClient } from "./providers/meta";
+import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 
-const DEFAULT_GRAPH_API_VERSION = "v25.0";
 const MAX_ATTEMPTS = 3;
 const REQUEST_TIMEOUT_MS = 15_000;
 
@@ -21,7 +21,7 @@ export function createMetaReadClient(
   graphApiVersion?: string | null,
   credential?: { accessToken: string; appSecretProof?: string },
 ): MetaReadClient {
-  const version = graphApiVersion?.match(/^v\d+\.\d+$/)?.[0] ?? DEFAULT_GRAPH_API_VERSION;
+  const version = graphApiVersion?.match(/^v\d+\.\d+$/)?.[0] ?? META_DEFAULT_GRAPH_VERSION;
   return {
     async get(path, params) {
       const url = new URL(`https://graph.facebook.com/${version}/${path.replace(/^\//, "")}`);

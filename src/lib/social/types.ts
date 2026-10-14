@@ -114,7 +114,7 @@ export type AppCredentials = {
   /**
    * Optional per-agency Graph API version override (Meta only).
    * Null falls back to the adapter's compile-time default
-   * (`v25.0`). Pinned per agency so a tenant's app does not
+   * (`v26.0`). Pinned per agency so a tenant's app does not
    * silently get bumped to a new Graph version on platform
    * upgrades.
    */

@@ -1,5 +1,6 @@
 import { SocialProviderError, providerRequest } from "@/lib/social/http";
 import { httpsOrNull, blankToNull } from "@/lib/social/media-fields";
+import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 
 /**
  * Targeted re-fetch of the media fields a Command Center row needs.
@@ -43,7 +44,9 @@ export async function fetchMetaPostMediaFields(input: {
   const platform = input.platform;
   const deps = input.deps ?? (await defaultDeps());
 
-  const url = new URL(`${deps.baseUrl(input.apiVersion ?? "v25.0")}/${input.publicationId}`);
+  const url = new URL(
+    `${deps.baseUrl(input.apiVersion ?? META_DEFAULT_GRAPH_VERSION)}/${input.publicationId}`,
+  );
   url.searchParams.set("fields", FIELD_SET[platform]);
   url.searchParams.set("access_token", input.accessToken);
 

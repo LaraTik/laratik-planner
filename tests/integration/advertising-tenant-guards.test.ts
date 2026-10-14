@@ -17,6 +17,7 @@ import {
   advertisingAudienceObservations,
   advertisingSpendReconciliations,
   advertisingProviderObjects,
+  advertisingValidationResults,
   advertisingSyncRuns,
   advertisingSyncStates,
   advertisingVisibilityGrants,
@@ -225,6 +226,42 @@ describe("advertising tenant ownership guards", () => {
       .values({ connectionId: connectionA.id, accountId: accountA.id })
       .returning();
     expect(state).toBeDefined();
+  });
+
+  it("allows connection-scoped validation results and rejects account mismatches", async () => {
+    const { connectionA, accountA, accountB } = await seed();
+
+    const [result] = await db
+      .insert(advertisingValidationResults)
+      .values({
+        connectionId: connectionA.id,
+        operation: "diagnostics",
+        status: "failed",
+        sanitizedCode: "meta_permission_denied",
+      })
+      .returning();
+    expect(result).toBeDefined();
+
+    await expectPgConstraint(
+      db.insert(advertisingValidationResults).values({
+        connectionId: connectionA.id,
+        accountId: accountB.id,
+        operation: "campaign_read",
+        status: "failed",
+      }),
+      "advertising_tenant_ownership_guard",
+    );
+
+    const [accountBound] = await db
+      .insert(advertisingValidationResults)
+      .values({
+        connectionId: connectionA.id,
+        accountId: accountA.id,
+        operation: "campaign_read",
+        status: "passed",
+      })
+      .returning();
+    expect(accountBound).toBeDefined();
   });
 
   it("deduplicates the same provider fact observed through multiple credentials", async () => {

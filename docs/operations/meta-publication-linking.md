@@ -93,7 +93,7 @@ The remaining provider work is intentionally separate from linking:
   permissions. Several legacy impression metrics are deprecated above Graph
   API v25, so new code must prefer current media-view/video metrics and record
   the pinned Graph version with every observation.
-- The repository defaults to Graph API `v25.0`. Do not change the default or
+- The repository defaults to Graph API `v26.0`. Do not change the default or
   add OAuth scopes based on documentation alone. Reach, saves, shares,
   Facebook post insights, and historical pagination still require controlled
   read-only probes and additive follow-up work. Command Center observed posts

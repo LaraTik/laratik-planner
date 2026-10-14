@@ -546,7 +546,7 @@ describe("exchangeMetaCodeForShortLivedToken", () => {
     });
     expect(result).toEqual(mockResponse);
     const [url, init] = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls[0]!;
-    expect(url).toContain("https://graph.facebook.com/v25.0/oauth/access_token");
+    expect(url).toContain("https://graph.facebook.com/v26.0/oauth/access_token");
     expect(init.method).toBe("POST");
     const body = String(init.body);
     expect(body).toContain("client_id=app-1");
@@ -607,7 +607,7 @@ describe("exchangeShortLivedForLongLivedToken", () => {
 });
 
 describe("discoverMetaPages", () => {
-  const baseGraph = "https://graph.facebook.com/v25.0";
+  const baseGraph = "https://graph.facebook.com/v26.0";
   const appId = "app-1";
   const appSecret = "secret";
 

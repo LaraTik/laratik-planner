@@ -596,6 +596,13 @@
       "when": 1791905000000,
       "tag": "0084_advertising_shared_identity_and_states",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1791906000000,
+      "tag": "0085_fix_advertising_validation_tenant_guard",
+      "breakpoints": true
     }
   ]
 }
