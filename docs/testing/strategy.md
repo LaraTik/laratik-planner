@@ -7,33 +7,34 @@ the authoritative `CI` workflow passes. The deploy workflow triggers on
 successful `CI` (`workflow_run`) and never on a partial run, so missing or
 skipped required gates remain deploy-blockers. Coverage and browser checks
 run independently in `advisory-quality.yml`: targeted Chromium E2E runs
-against the pushed SHA on every non-documentation `main` push; strict
-coverage plus the full browser and visual matrix run nightly and through the
-release-candidate dispatch. See ADR 0013 for the split-gate rationale.
+against the selected SHA on an explicit critical dispatch; strict coverage
+plus the full browser and visual matrix run nightly and through the
+release-candidate dispatch. Routine pushes run only the authoritative CI
+workflow. See ADR 0013 for the split-gate rationale.
 
-| Gate                                                        | Where                                                                                | Required for deploy     | Release-candidate |
-| ----------------------------------------------------------- | ------------------------------------------------------------------------------------ | ----------------------- | ----------------- |
-| Format (`pnpm format:check`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)    | ✅ (CI + pre-commit)    | ✅                |
-| Lint (`pnpm lint`)                                          | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)        | ✅ (CI + pre-commit)    | ✅                |
-| Typecheck (`pnpm typecheck`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                   | ✅ (CI + pre-commit)    | ✅                |
-| Full unit suite (`pnpm test:unit`)                          | `.github/workflows/ci.yml`                                                           | ✅ (CI)                 | ✅                |
-| Affected unit selection on staged changes                   | `.husky/pre-commit`                                                                  | ✅ (pre-commit)         | ✅                |
-| Affected unit/integration selection on pushed changes       | `.husky/pre-push` → `pnpm test:affected -- --push --layer core`                      | ✅ (local feedback)     | ✅                |
-| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` `unit-quality` `Integration tests` (authoritative full run)                 | ✅ (CI)                 | ✅                |
-| Migration drill (`pnpm migration-drill`)                    | `ci.yml` `unit-quality` `Migration drill` + release checklist                        | ✅                      | ✅                |
-| Targeted E2E (Chromium functional)                          | `advisory-quality.yml` on exact pushed SHA + `pnpm test:affected -- --layer browser` | ❌ (advisory)           | ✅                |
-| Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
-| Visual matrix (`pnpm test:visual`)                          | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
-| Changed-line coverage (`pnpm test:coverage:advisory`)       | `advisory-quality.yml`                                                               | ❌ (advisory)           | ❌                |
-| Absolute coverage (`pnpm test:coverage`)                    | `advisory-quality.yml` nightly/dispatch                                              | ❌ (advisory)           | ✅                |
-| Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`                                       | ✅ (zero critical/high) | ✅                |
-| Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                                                   | ✅                      | ✅                |
-| Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                      | ✅                      | ✅                |
-| GHCR push (app + migrator, `<sha>` + `latest`)              | `ci.yml` → `build-smoke` → `Push to GHCR` (post-smoke, only on green)                | ✅                      | ✅                |
-| Image tag exists in GHCR (verify)                           | `deploy.yml` → `deploy` → `Verify image exists`                                      | ✅                      | ✅                |
-| SSH to VPS, pull, migrate, recreate, health check, rollback | `deploy.yml` → `deploy` → `SSH + deploy`                                             | ✅                      | ✅                |
-| SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                                                         | ✅                      | ✅                |
-| Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                                                               | ✅                      | ✅                |
+| Gate                                                        | Where                                                                                          | Required for deploy     | Release-candidate |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
+| Format (`pnpm format:check`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → prettier --write)              | ✅ (CI + pre-commit)    | ✅                |
+| Lint (`pnpm lint`)                                          | `.github/workflows/ci.yml` + `.husky/pre-commit` (lint-staged → eslint --fix)                  | ✅ (CI + pre-commit)    | ✅                |
+| Typecheck (`pnpm typecheck`)                                | `.github/workflows/ci.yml` + `.husky/pre-commit` (sentinel-driven)                             | ✅ (CI + pre-commit)    | ✅                |
+| Full unit suite (`pnpm test:unit`)                          | `.github/workflows/ci.yml`                                                                     | ✅ (CI)                 | ✅                |
+| Affected unit selection on staged changes                   | `.husky/pre-commit`                                                                            | ✅ (pre-commit)         | ✅                |
+| Affected unit/integration selection on pushed changes       | `.husky/pre-push` → `pnpm test:affected -- --push --layer core`                                | ✅ (local feedback)     | ✅                |
+| Integration + migration drill (`pnpm test:integration`)     | `ci.yml` `unit-quality` `Integration tests` (authoritative full run)                           | ✅ (CI)                 | ✅                |
+| Migration drill (`pnpm migration-drill`)                    | `ci.yml` `unit-quality` `Migration drill` + release checklist                                  | ✅                      | ✅                |
+| Targeted E2E (Chromium functional)                          | `advisory-quality.yml` on explicit critical dispatch + `pnpm test:affected -- --layer browser` | ❌ (advisory)           | ✅                |
+| Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                              | ❌ (advisory)           | ✅                |
+| Visual matrix (`pnpm test:visual`)                          | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                              | ❌ (advisory)           | ✅                |
+| Changed-line coverage (`pnpm test:coverage:advisory`)       | `advisory-quality.yml` explicit critical dispatch                                              | ❌ (advisory)           | ❌                |
+| Absolute coverage (`pnpm test:coverage`)                    | `advisory-quality.yml` nightly/dispatch                                                        | ❌ (advisory)           | ✅                |
+| Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`                                                 | ✅ (zero critical/high) | ✅                |
+| Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                                                             | ✅                      | ✅                |
+| Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                                | ✅                      | ✅                |
+| GHCR push (app + migrator, `<sha>` + `latest`)              | `ci.yml` → `build-smoke` → `Push to GHCR` (post-smoke, only on green)                          | ✅                      | ✅                |
+| Image tag exists in GHCR (verify)                           | `deploy.yml` → `deploy` → `Verify image exists`                                                | ✅                      | ✅                |
+| SSH to VPS, pull, migrate, recreate, health check, rollback | `deploy.yml` → `deploy` → `SSH + deploy`                                                       | ✅                      | ✅                |
+| SMTP cert probe (deploy-blocker)                            | `ci.yml` → `check-smtp-cert`                                                                   | ✅                      | ✅                |
+| Workflow / Dockerfile / shell linters                       | `ci.yml` → `lint-meta`                                                                         | ✅                      | ✅                |
 
 `CI` enforces the authoritative deploy-critical subset: full unit and
 integration tests, production build + Docker image + GHCR push
@@ -45,9 +46,9 @@ Format, lint, typecheck, and affected unit/integration checks provide local
 feedback; CI repeats the complete unit and integration gates authoritatively.
 Local E2E is explicit: `pnpm test:affected -- --layer browser` is the normal
 development loop and `pnpm test:e2e:release` is the release-candidate check.
-The advisory workflow runs targeted Chromium against the exact pushed SHA;
-the full browser and visual matrices run nightly or by release-candidate
-dispatch.
+An explicit critical advisory dispatch runs targeted Chromium against the
+exact selected SHA; the full browser and visual matrices run nightly or by
+release-candidate dispatch.
 
 `advisory-quality.yml` uploads coverage, Playwright, visual-diff, and
 structured JSON result artifacts. Persistent failures update one deduplicated

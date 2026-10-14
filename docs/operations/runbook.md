@@ -122,9 +122,9 @@ git push origin main
 # CI: lint, typecheck, unit, integration, audit, build,
 #      Docker image + health smoke + GHCR push, SMTP cert probe,
 #      workflow/Dockerfile/shell linters. Required release-gate contract —
-# Advisory workflow: changed-line coverage + targeted Chromium against the
-#      pushed SHA on each non-documentation main push; strict coverage + full
-#      browser/visual matrix nightly and via release-candidate dispatch.
+# Advisory workflow: changed-line coverage + targeted Chromium on an explicit
+#      critical dispatch; strict coverage + full browser/visual matrix nightly
+#      and via release-candidate dispatch. Routine pushes run CI only.
 #      see docs/testing/strategy.md (Release gates).
 # On green CI: deploy workflow verifies the GHCR tag, SSHes to the
 #              VPS, and runs scripts/deploy.sh.
@@ -328,7 +328,8 @@ Format, lint, and typecheck run in the local hooks. Local E2E is explicit:
 `pnpm test:affected -- --layer browser` selects affected Chromium contracts,
 while `pnpm test:e2e:release` runs the complete local browser and visual
 release-candidate matrix. `.github/workflows/advisory-quality.yml` runs the
-targeted Chromium check against the exact pushed SHA.
+targeted Chromium check only on an explicit critical dispatch, against the
+exact selected SHA.
 
 The full 5-browser E2E matrix and visual matrix run nightly and through
 the release-candidate dispatch. Their artifacts and structured result

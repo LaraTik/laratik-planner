@@ -73,19 +73,21 @@ describe("CI production-image smoke environment", () => {
     expect(workflow.match(/check-smtp-cert\.sh --warn 30 --critical 14/g)).toHaveLength(1);
   });
 
-  it("keeps advisory work off documentation-only pushes and makes E2E SHA selection explicit", () => {
+  it("keeps advisory work off routine pushes and makes E2E SHA selection explicit", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
       "utf8",
     );
 
-    expect(workflow).toContain('paths-ignore: ["docs/**", "**.md", "**.mdx"]');
+    expect(workflow).not.toMatch(/\n  push:\n/);
+    expect(workflow).toContain("  schedule:");
+    expect(workflow).toContain("  workflow_dispatch:");
     expect(workflow).toContain("ref: ${{ github.sha }}");
     expect(workflow).not.toContain("Run coverage attempt 2 after failure");
     expect(workflow).not.toContain("Run E2E attempt 2 after failure");
   });
 
-  it("runs the pushed Chromium check from the immutable workflow SHA", () => {
+  it("runs the explicitly dispatched Chromium check from the immutable workflow SHA", () => {
     const workflow = readFileSync(
       resolve(process.cwd(), ".github/workflows/advisory-quality.yml"),
       "utf8",
@@ -96,7 +98,7 @@ describe("CI production-image smoke environment", () => {
     expect(e2eStart).toBeGreaterThan(-1);
     expect(e2e).toContain("ref: ${{ github.sha }}");
     expect(e2e).toContain(
-      "if: github.event_name == 'push' && env.ADVISORY_SUITE != 'release-candidate'",
+      "if: github.event_name == 'workflow_dispatch' && env.ADVISORY_SUITE != 'release-candidate'",
     );
     expect(e2e).toContain("pnpm test:e2e:critical");
   });

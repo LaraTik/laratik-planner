@@ -27,9 +27,11 @@ workflow/container/shell linting.
 Move coverage and browser validation to the independent
 `.github/workflows/advisory-quality.yml` workflow:
 
-- every non-documentation `main` push runs threshold-free coverage with
-  changed-line analysis and targeted Chromium E2E against the exact pushed
-  SHA;
+- the nightly schedule runs strict coverage, the complete browser and visual
+  matrix, and an explicit critical dispatch runs threshold-free coverage with
+  targeted Chromium E2E against the exact selected SHA; routine `main` pushes
+  do not start a second advisory workflow because `CI` already owns the
+  required per-push gate;
 - nightly and explicit release-candidate runs execute strict coverage,
   the complete five-browser matrix, and visual regression;
 - each test command uses its framework's failed-test retry support, uploads
@@ -60,7 +62,8 @@ Positive:
 
 Risks and mitigations:
 
-- a browser or coverage regression can deploy before detection; required
+- a browser or coverage regression can deploy before the next scheduled or
+  explicitly dispatched advisory run; required
   unit/integration/build/smoke gates and automatic rollback remain in place;
 - issue automation can become noisy; framework retries, one issue per check, and
   automatic close-on-recovery limit duplication;

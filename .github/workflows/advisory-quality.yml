@@ -1,12 +1,10 @@
 name: Advisory quality
 
 # Advisory checks intentionally live in a separate workflow. The deploy
-# workflow listens only to the required CI workflow, so a coverage or browser
-# failure remains visible without preventing the exact SHA from shipping.
+# workflow runs on its nightly schedule or by explicit dispatch, so coverage
+# and browser failures remain visible without adding a second run to every
+# routine push or preventing the required CI workflow from shipping its SHA.
 on:
-  push:
-    branches: [main]
-    paths-ignore: ["docs/**", "**.md", "**.mdx"]
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
@@ -164,7 +162,6 @@ jobs:
           fi
 
       - name: Download previous coverage baseline
-        if: github.event_name == 'push'
         continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -346,7 +343,7 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install Chromium
-        if: github.event_name == 'push' && env.ADVISORY_SUITE != 'release-candidate'
+        if: github.event_name == 'workflow_dispatch' && env.ADVISORY_SUITE != 'release-candidate'
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Install full browser matrix
