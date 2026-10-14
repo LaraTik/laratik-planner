@@ -58,8 +58,33 @@
       Review `src/lib/advertising/credential-service.ts`
       (`revokeAdvertisingConnection`, `revokeAdvertisingAccountAccess`),
       `sync-worker.ts` (`finishAdvertisingSync`, `failAdvertisingSync`), and the
-      disable-during-flight plus account-revocation integration tests. Revocation
-      must clear lease metadata, pause the state, and leave future claims empty.
+      exact integration tests:
+      `fences late completion after an in-flight account is disabled` and
+      `revoking one account access fences its lease and removes it from future
+    claims` in `tests/integration/advertising-tenant-guards.test.ts`.
+      Revocation must clear lease metadata, pause the state, and leave future
+      claims empty.
+
+### Exact authorization and aggregation tests
+
+The reviewer should verify these named tests at the immutable source SHA:
+
+- `tests/unit/advertising-reporting-service.test.ts` — `filters facts before
+totals for two tenants sharing one account` and `returns an indistinguishable
+empty projection when the tenant is denied`.
+- `tests/unit/advertising-reporting-boundary.test.ts` — `authorizes before
+aggregation for dashboard, detail, and background surfaces`, `does not leak
+denied rows through exports or AI context`, and `does not expose spend to AI
+context without financial authority`.
+- `tests/integration/advertising-tenant-guards.test.ts` — `scopes one shared
+account across workspaces and revokes report access immediately`, `supports
+the same external Meta account in two agencies through isolated local links`,
+  `shares one platform credential and one canonical provider identity across two
+agencies`, `does not expose account-level audience rows through a
+campaign-scoped grant`, and `revokes financial authority in place and records
+an audit event`.
+- `tests/integration/advertising-credential-lifecycle.test.ts` — `revokes
+provider reads, active versions, linked sync state, and blocks reactivation`.
 
 ### Credentials and provider safety
 
