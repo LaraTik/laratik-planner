@@ -130,6 +130,7 @@ export async function setAdvertisingSyncState(
       status,
       nextRunAt: args.enabled ? now : null,
       ...(args.enabled ? { lastErrorCode: null } : {}),
+      ...(!args.enabled ? { leaseOwner: null, leaseToken: null, leaseExpiresAt: null } : {}),
       ...(args.enabled && existing?.status === "dead_letter" ? { attempt: 0 } : {}),
       updatedAt: now,
     };

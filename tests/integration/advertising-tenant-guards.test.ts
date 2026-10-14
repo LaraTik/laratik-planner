@@ -39,6 +39,7 @@ import {
   claimAdvertisingSyncStates,
   createAdvertisingSyncRun,
   failAdvertisingSync,
+  finishAdvertisingSync,
   runAdvertisingSyncTick,
 } from "@/lib/advertising/sync-worker";
 import {
@@ -374,6 +375,56 @@ describe("advertising tenant ownership guards", () => {
       .from(advertisingSyncStates)
       .where(eq(advertisingSyncStates.id, state.id));
     expect(reopened).toEqual({ status: "idle", attempt: 0 });
+  });
+
+  it("fences late completion after an in-flight account is disabled", async () => {
+    const { agencyA, connectionA, accountA, actor } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const [state] = await db
+      .insert(advertisingSyncStates)
+      .values({ status: "idle", connectionId: connectionA.id, accountId: accountA.id })
+      .returning();
+    if (!state) throw new Error("failed to seed sync state");
+
+    const [claimed] = await claimAdvertisingSyncStates(db, {
+      owner: "canary-worker",
+      now: new Date(),
+      limit: 1,
+    });
+    if (!claimed) throw new Error("sync state was not claimed");
+
+    await setAdvertisingSyncState(db, {
+      agencyId: agencyA.id,
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+      enabled: false,
+      actorId: actor.id,
+    });
+
+    expect(await finishAdvertisingSync(db, claimed, new Date(), "idle")).toBe(false);
+    await failAdvertisingSync(db, claimed, new Date(), "meta_provider_unavailable");
+
+    const [disabled] = await db
+      .select({
+        status: advertisingSyncStates.status,
+        nextRunAt: advertisingSyncStates.nextRunAt,
+        leaseOwner: advertisingSyncStates.leaseOwner,
+        leaseToken: advertisingSyncStates.leaseToken,
+        leaseExpiresAt: advertisingSyncStates.leaseExpiresAt,
+      })
+      .from(advertisingSyncStates)
+      .where(eq(advertisingSyncStates.id, state.id));
+    expect(disabled).toEqual({
+      status: "paused",
+      nextRunAt: null,
+      leaseOwner: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+    });
   });
 
   it("replays a post-ingestion failure without duplicating canonical spend", async () => {

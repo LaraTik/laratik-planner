@@ -677,7 +677,7 @@ export function buildAdContext(
   };
 }
 
-async function finishAdvertisingSync(
+export async function finishAdvertisingSync(
   db: Db,
   target: ClaimedSync,
   now: Date,
@@ -701,6 +701,7 @@ async function finishAdvertisingSync(
     .where(
       and(
         eq(advertisingSyncStates.id, target.stateId),
+        eq(advertisingSyncStates.status, "running"),
         eq(advertisingSyncStates.leaseToken, target.leaseToken),
         gt(advertisingSyncStates.leaseExpiresAt, leaseNow),
       ),
@@ -732,6 +733,7 @@ export async function failAdvertisingSync(
     .where(
       and(
         eq(advertisingSyncStates.id, target.stateId),
+        eq(advertisingSyncStates.status, "running"),
         eq(advertisingSyncStates.leaseToken, target.leaseToken),
         gt(advertisingSyncStates.leaseExpiresAt, leaseNow),
       ),
