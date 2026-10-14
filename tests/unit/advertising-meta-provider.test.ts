@@ -160,8 +160,8 @@ describe("Meta advertising provider", () => {
     });
   });
 
-  it("reads creative metadata through the configured Graph API version", async () => {
-    const get = vi.fn().mockResolvedValue({ id: "creative_123", name: "Creative" });
+  it("reads stable creative identity through the configured Graph API version", async () => {
+    const get = vi.fn().mockResolvedValue({ id: "creative_123" });
     const provider = createMetaAdvertisingProvider(
       { resolve: vi.fn().mockResolvedValue({ accessToken: "secret-token" }) },
       () => ({ get }),
@@ -170,7 +170,7 @@ describe("Meta advertising provider", () => {
     await provider.readCreatives(connection, "ad_123");
 
     expect(get).toHaveBeenCalledWith("ad_123/creative", {
-      fields: "id,name",
+      fields: "id",
     });
   });
 
