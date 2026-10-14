@@ -1,7 +1,7 @@
 # Advertising independent-review checklist
 
 > Review target: LaraTik Planner advertising foundation at exact clean SHA
-> `90a533f437aacd3df704e0db1e68580b7cd90d8f`.
+> `dd2135d13c613b1a4dc33fae00c9f5642a829746`.
 >
 > This checklist is prepared for an independent reviewer. The implementer may
 > provide evidence and fix findings, but must not assign `Verified` to these
@@ -11,7 +11,7 @@
 ## Evidence already available
 
 - [x] `pnpm verify` passes: 507 unit files / 4,718 tests and production build.
-- [x] Full disposable-Postgres integration runner completed; advertising lifecycle 3/3 and tenant guards 15/15.
+- [x] Focused disposable-Postgres integration completed; advertising lifecycle 3/3 and tenant guards 16/16, including account-revocation lease fencing.
 - [x] Migration drill completed 5/5 with 85/85 ledger rows.
 - [x] Advertising functional browser matrix completed 15/15 across five browser projects: admin 5/5, reporting EN 5/5, reporting AR 5/5.
 - [x] Advertising accessibility browser matrix completed 15/15 across five browser projects: settings 5/5, analytics EN 5/5, analytics AR 5/5; serious and critical axe findings absent.
@@ -22,15 +22,30 @@
 
 ### Tenant and authorization isolation
 
-- [ ] Confirm every advertising read and write resolves agency and workspace
-      scope before loading provider facts. Review
-      `src/lib/advertising/reporting-query.ts` (`listAdvertisingReportAccounts`,
-      `loadAdvertisingReport`) and
-      `src/lib/advertising/sync-service.ts` (`setAdvertisingSyncState`).
+- [ ] Confirm the reviewer contract: canonical Meta ingestion is platform/account
+      scoped and is performed only by the trusted, cron-authorized worker. Review
+      `src/app/api/cron/advertising-sync/route.ts` (`isCronAuthorized`, `handle`)
+      and `src/lib/advertising/sync-worker.ts`
+      (`claimAdvertisingSyncStates`, `runAdvertisingSyncTick`). Claims join only
+      active connections, active account links, and active provider accounts;
+      this ingestion scope is not tenant disclosure authorization.
+- [ ] Confirm activation remains explicit and account-scoped. Review
+      `src/lib/advertising/meta-workflow.ts` (`runMetaConfigurationWorkflow`),
+      `src/lib/advertising/connection-service.ts`
+      (`activateAdvertisingConnection`), and
+      `src/lib/advertising/sync-service.ts` (`setAdvertisingSyncState`). A
+      configured connection or global sync flag must not activate an unapproved
+      account.
+- [ ] Confirm every tenant-facing report, grant, export, and AI projection
+      resolves agency/workspace authorization before loading, aggregating, or
+      disclosing provider facts. Review
+      `src/lib/advertising/authorization.ts` (`authorizeAdvertising`),
+      `src/lib/advertising/reporting-service.ts` (`buildScopedAdvertisingReport`),
+      `src/lib/advertising/reporting-boundary.ts`, and
+      `src/lib/advertising/reporting-query.ts`.
 - [ ] Confirm shared canonical provider accounts cannot leak campaigns, spend,
-      audiences, or exports across agencies without an explicit active grant.
-      Review the grant joins in `reporting-query.ts` and the ownership guards in
-      `connection-service.ts`.
+      audiences, or exports across agencies without an explicit active grant and
+      required financial authority.
 - [ ] Confirm grant revocation and financial-authority revocation take effect
       immediately and leave an auditable event.
 - [ ] Confirm replay, concurrent claims, fencing, failed attempts, and
@@ -39,6 +54,12 @@
       `finishAdvertisingSync`, `failAdvertisingSync`) and
       `ingestion-service.ts` (`ingestAdvertisingSpend`,
       `buildSpendReconciliation`).
+- [ ] Confirm deactivation fences both in-flight writes and queued retries.
+      Review `src/lib/advertising/credential-service.ts`
+      (`revokeAdvertisingConnection`, `revokeAdvertisingAccountAccess`),
+      `sync-worker.ts` (`finishAdvertisingSync`, `failAdvertisingSync`), and the
+      disable-during-flight plus account-revocation integration tests. Revocation
+      must clear lease metadata, pause the state, and leave future claims empty.
 
 ### Credentials and provider safety
 

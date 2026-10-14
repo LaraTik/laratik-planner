@@ -35,6 +35,43 @@ Do not treat a successful local `pg_dump` as offsite evidence. Record the
 restic snapshot ID only in the operator’s approved evidence system if policy
 allows; this repository should record only a redacted reference.
 
+## Required recovery checks
+
+The owner must complete every check below in the disposable restore. A local
+dump, a successful database start, or synthetic test reruns alone do not close
+this gate.
+
+- **Synthetic encrypted canary:** before the backup, seed only synthetic
+  advertising credential-envelope data and synthetic private-storage objects.
+  After restore, confirm the encrypted envelope is present and can be tested
+  with a non-production canary operation without recording plaintext, tokens, or
+  database contents.
+- **Separately recovered keys:** recover the non-production test key material
+  through the approved secret store as a separate operator action. Prove that
+  the database dump alone cannot decrypt the canary, then verify the isolated
+  application can use the separately recovered key. Do not copy key material to
+  Git, tickets, screenshots, or shell history.
+- **R2/private-storage completeness:** restore the approved private-storage
+  inventory separately from Postgres. Compare object count, total bytes,
+  checksums or provider integrity markers, and every referenced object needed by
+  the canary. Any missing, extra, unreadable, or unlinked object is a failure.
+- **Backup integrity:** verify the archive checksum, decompression, restic
+  snapshot readability, repository integrity check permitted by the provider,
+  migration ledger, and row/checksum comparison for the synthetic canary.
+- **End-to-end duration:** start timing at snapshot retrieval and stop only
+  after key installation, disposable application start, `/api/health/ready`,
+  login/bootstrap safety, and the isolated tenant/report smoke check succeed.
+  Record each phase and the total restore duration.
+- **Observed RPO/RTO:** record the backup timestamp, incident cut-off, latest
+  recoverable data timestamp, and the end-to-end health-check completion time.
+  Compare observed RPO/RTO with the owner-approved targets. The placeholders in
+  `docs/operations/backup-recovery.md` are not targets; no pass is possible
+  until the owner defines them.
+
+Stop immediately if a production endpoint, production secret, provider write,
+unexpected tenant data, key mismatch, checksum/object mismatch, health failure,
+or target RPO/RTO breach is observed.
+
 ## Disposable restore drill
 
 Restore into a newly created, isolated non-production Postgres instance and a
@@ -77,6 +114,11 @@ The owner records:
 | RTO observed                                 | `TODO` |
 | Application health / tenant-isolation result | `TODO` |
 | Storage-object result                        | `TODO` |
+| Synthetic encrypted canary                   | `TODO` |
+| Separately recovered key check               | `TODO` |
+| Backup/restic integrity                      | `TODO` |
+| RPO/RTO targets and observed values          | `TODO` |
+| Phase timings and end-to-end health check    | `TODO` |
 | Evidence location                            | `TODO` |
 
 Only after the timed restore succeeds may the owner replace the RPO/RTO

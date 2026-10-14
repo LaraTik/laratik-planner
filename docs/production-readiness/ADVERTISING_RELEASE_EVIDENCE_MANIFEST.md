@@ -7,7 +7,7 @@ it does not authorize a push, deployment, Meta request, or provider mutation.
 
 | Identity                 | Value                                                                   |
 | ------------------------ | ----------------------------------------------------------------------- |
-| Source code commit       | `90a533f437aacd3df704e0db1e68580b7cd90d8f`                              |
+| Source code commit       | `dd2135d13c613b1a4dc33fae00c9f5642a829746`                              |
 | Database migration head  | `0084`                                                                  |
 | Drizzle migration ledger | `85/85` in the disposable migration drill                               |
 | Deployed image digest    | **N/A — no image was built or deployed in this pass**                   |
@@ -21,20 +21,20 @@ attached. If the branch advances or becomes dirty, rerun the affected gates.
 
 All database commands use a disposable `planner_test` database.
 
-| Gate                                   | Result                                                                                    |
-| -------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Verification                           | Pass — formatting, lint, strict typecheck, 507 unit files / 4,718 tests, production build |
-| Advertising integration                | Pass — 15/15, including disable-during-flight lease fencing                               |
-| Full migration safety                  | Pass — 5/5 drills, 85/85 ledger rows, backup/restore included                             |
-| Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari               |
-| Advertising accessibility browser gate | Pass — 15/15 across the same five projects; serious/critical axe findings absent          |
-| Combined advertising browser gate      | Pass — **30/30**                                                                          |
+| Gate                                   | Result                                                                                                      |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Verification                           | Pass — formatting, lint, strict typecheck, 507 unit files / 4,718 tests, production build                   |
+| Advertising integration                | Pass — focused lifecycle 3/3 and tenant guards 16/16, including connection/account revocation lease fencing |
+| Full migration safety                  | Pass — 5/5 drills, 85/85 ledger rows, backup/restore included                                               |
+| Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari                                 |
+| Advertising accessibility browser gate | Pass — 15/15 across the same five projects; serious/critical axe findings absent                            |
+| Combined advertising browser gate      | Pass — **30/30**                                                                                            |
 
 Exact command forms:
 
 ```text
 pnpm verify
-TEST_DATABASE_URL=… pnpm test:integration tests/integration/advertising-tenant-guards.test.ts
+TEST_DATABASE_URL=… pnpm test:integration tests/integration/advertising-credential-lifecycle.test.ts tests/integration/advertising-tenant-guards.test.ts
 TEST_DATABASE_URL=… pnpm migration-drill
 TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/advertising-admin.spec.ts tests/e2e/advertising-reporting.spec.ts --grep 'advertising|Advertising'
 TEST_DATABASE_URL=… pnpm test:e2e:isolated -- tests/e2e/a11y-routes.spec.ts --grep 'advertising|Advertising'
@@ -57,6 +57,9 @@ controls provide the smallest scoped canary:
 - `finishAdvertisingSync` and `failAdvertisingSync` require the state to remain
   `running` with the original unexpired lease token, so a late in-flight result
   cannot reactivate a disabled account.
+- `revokeAdvertisingConnection` and `revokeAdvertisingAccountAccess` also clear
+  lease ownership/token/expiry immediately; the account-revocation regression
+  proves the revoked state is absent from subsequent claims.
 - Workspace reporting is independently grant-scoped through
   `listAdvertisingReportAccounts` / `loadAdvertisingReport`.
 - `ADVERTISING_SYNC_ENABLED`, `ADVERTISING_REPORTING_ENABLED`, and
@@ -70,7 +73,7 @@ reporting independently, and disable it before expanding scope.
 
 ## Remaining release blockers
 
-1. Authorized, read-only live Meta UAT with a sanitized account-level
+1. Authorized, read-only live Meta UAT with a sanitized platform/account-level
    reconciliation is not complete. The separate `meta-ads-agent` workspace was
    not read or used because authorization was not provided.
 2. Restic offsite backup is not wired and no disposable offsite restore has

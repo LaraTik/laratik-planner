@@ -1,6 +1,6 @@
 # Test and coverage evidence
 
-## Final local regression — 2026-10-14, exact clean code SHA `90a533f437aacd3df704e0db1e68580b7cd90d8f`
+## Final local regression — 2026-10-14, exact clean code SHA `dd2135d13c613b1a4dc33fae00c9f5642a829746`
 
 This checkpoint closes the local regression defects found during the final
 browser pass. Accessibility tests now use the canonical agency/workspace URL
@@ -17,7 +17,7 @@ agency row required by its selected `agencySlug` field.
 | Advertising functional E2E                | **Pass** — 15/15 across five browser projects; admin 5/5 + reporting EN 5/5 + reporting AR 5/5                                        |
 | Advertising accessibility E2E             | **Pass** — 15/15 across five browser projects; settings 5/5 + analytics EN 5/5 + analytics AR 5/5; no serious/critical axe violations |
 | Advertising combined release gate         | **Pass** — 30/30; five browser projects, EN/LTR + AR/RTL                                                                              |
-| Full integration runner                   | **Pass** — completed on disposable `planner_test`; advertising lifecycle 3/3 and tenant guards 15/15                                  |
+| Focused advertising integration           | **Pass** — disposable `planner_test`; lifecycle 3/3 and tenant guards 16/16, including account-revocation lease fencing               |
 | `pnpm migration-drill`                    | **Pass** — 5/5 drills; 85/85 Drizzle ledger rows                                                                                      |
 | `git diff --check`                        | **Pass**                                                                                                                              |
 

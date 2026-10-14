@@ -46,10 +46,11 @@ provisioned yet). The independent reviewer flips `Pass` rows to
 
 The local implementation and disposable-database evidence are recorded at
 exact clean SHA
-`90a533f437aacd3df704e0db1e68580b7cd90d8f`. The advertising browser gate is
+`dd2135d13c613b1a4dc33fae00c9f5642a829746`. The advertising browser gate is
 30/30 across five browser projects: 15/15 functional cases and 15/15
-advertising accessibility cases. The canonical tenant-guard integration is
-15/15, and the migration drill is 5/5 with 85/85 ledger rows. The exact
+advertising accessibility cases. The focused advertising integration is
+lifecycle 3/3 and tenant guards 16/16, and the migration drill is 5/5 with
+85/85 ledger rows. The exact
 command breakdown and immutable evidence contract are in
 [`ADVERTISING_RELEASE_EVIDENCE_MANIFEST.md`](./ADVERTISING_RELEASE_EVIDENCE_MANIFEST.md).
 
