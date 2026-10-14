@@ -42,6 +42,24 @@ missing credential or an external account that the owner has not
 provisioned yet). The independent reviewer flips `Pass` rows to
 `Verified`; this file never self-assigns `Verified`.
 
+## Current advertising release status — 2026-10-14
+
+The local implementation and disposable-database evidence are recorded at
+exact clean SHA
+`9b24fe9e4a01e367217e55a68430387f533b0cfa`. The advertising admin/reporting
+browser matrix is 15/15 across five browser projects, the advertising route
+a11y matrix is 10/10, tenant-guard integration is 14/14, and the migration
+drill is 5/5 with 85/85 ledger rows.
+
+Controlled credentialed Meta UAT remains **Blocked**. The task did not receive
+explicit authorization to read or use credentials from the separate
+`meta-ads-agent` workspace, so no real Meta request, permission check, rate
+limit observation, account reconciliation, spend comparison, or provider
+mutation was performed. Offsite restic backup and a disposable offsite restore
+are also still **Blocked/Missing** as described below. An independent reviewer
+must complete [`ADVERTISING_INDEPENDENT_REVIEW.md`](./ADVERTISING_INDEPENDENT_REVIEW.md)
+before assigning `Verified`.
+
 ## Auto-check columns (added in 2026-08-22 pre-fill)
 
 The first three columns under each section are auto-verified by

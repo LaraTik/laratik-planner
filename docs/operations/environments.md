@@ -102,7 +102,7 @@ re-tooled when it becomes the production-shaping step.
 
 - ✅ Solo operator + postmortem runbook ([`incident-response.md`](./incident-response.md)).
 - ✅ Forward-only migration discipline ([`../production-readiness/MIGRATION_DEPLOYMENT.md`](../production-readiness/MIGRATION_DEPLOYMENT.md) § "2026-08-24 incident").
-- ✅ Offsite backup wired ([`backup-recovery.md`](./backup-recovery.md) § 5) — the goal is to make the offsite backup path production-ready so it doubles as the staging restore path.
+- ⏳ Offsite backup remains blocked ([`backup-recovery.md`](./backup-recovery.md) § 5) — restic wiring, a secure repository, and a disposable offsite restore are still required before production handoff.
 - ✅ Per-agency provider config (M4.6) and per-agency DEK (M4.5) — the staging app and the production app cannot share credentials even by accident.
 
 ### Phase 1 — staging infrastructure (3 days, CODE_REVIEW row 35)
