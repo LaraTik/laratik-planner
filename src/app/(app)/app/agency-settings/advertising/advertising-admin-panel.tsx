@@ -31,6 +31,7 @@ import {
   revokeAdvertisingFinancialAuthorityAction,
   revokeAdvertisingVisibilityAction,
   storeAdvertisingCredentialAction,
+  updateAdvertisingGraphApiVersionAction,
   validateAdvertisingConnectionAction,
   setAdvertisingSyncStateAction,
   type AdvertisingActionState,
@@ -680,6 +681,10 @@ function ConnectionCard({
     storeAdvertisingCredentialAction,
     initial,
   );
+  const [versionState, versionAction] = useActionState(
+    updateAdvertisingGraphApiVersionAction,
+    initial,
+  );
   const [revokeState, revokeAction] = useActionState(revokeAdvertisingConnectionAction, initial);
   const [syncState, syncAction] = useActionState(setAdvertisingSyncStateAction, initial);
   const [revokeAccountState, revokeAccountAction] = useActionState(
@@ -818,6 +823,39 @@ function ConnectionCard({
           ))}
         </div>
       </div>
+      <form
+        action={versionAction}
+        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+      >
+        <div>
+          <h3 className="text-body text-fg-primary font-semibold">
+            {t("advertising.graphVersionTitle")}
+          </h3>
+          <p className="text-label text-fg-muted">{t("advertising.graphVersionDescription")}</p>
+        </div>
+        <input type="hidden" name="connectionId" value={connection.id} />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="min-w-48 space-y-1.5">
+            <Label htmlFor={`advertising-graph-version-${connection.id}`}>
+              {t("advertising.graphVersion")}
+            </Label>
+            <Input
+              id={`advertising-graph-version-${connection.id}`}
+              name="graphApiVersion"
+              defaultValue={connection.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION}
+              pattern="v\d+\.\d+"
+              maxLength={20}
+              required
+            />
+          </div>
+          <FormSubmitButton
+            label={t("advertising.updateGraphVersion")}
+            pendingLabel={t("advertising.updatingGraphVersion")}
+            size="sm"
+          />
+        </div>
+        {versionState.code ? <ActionMessage state={versionState} compact /> : null}
+      </form>
       <div
         className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
         data-testid={`advertising-capabilities-${connection.id}`}

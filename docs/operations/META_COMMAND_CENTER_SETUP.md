@@ -132,6 +132,18 @@ Then run, in order:
 4. **Run one controlled sync tick** — proves freshness, partial-data handling,
    retry/backoff, and Command Center observations.
 
+### Migrating an existing explicit Graph API pin
+
+An existing connection may retain an older explicit version even though the
+application default is `v26.0`. Use the per-connection **Pinned Graph API
+version** control in the advertising admin surface to migrate that connection;
+do not edit the database or assume a global default change migrates saved
+connections. The controlled update preserves the encrypted credential, marks
+the connection as needing validation, clears validation evidence, pauses its
+account sync rows, and clears worker lease metadata. Re-run the read-only
+validation and account discovery before any account is considered eligible for
+sync. Do not activate sync as part of the migration.
+
 ## 4. UAT evidence and stop gates
 
 Record only sanitized evidence: timestamps, profile type, metric status,

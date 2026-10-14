@@ -10,7 +10,9 @@ import {
   advertisingProviderAccountIdentities,
   advertisingProviderObjects,
   advertisingSocialIdentities,
+  advertisingSyncStates,
   advertisingValidationResults,
+  securityAuditEvents,
 } from "@/lib/db/schema";
 import type { AdvertisingCapability, AdvertisingProvider } from "./types";
 
@@ -92,6 +94,87 @@ export async function createAdvertisingConnection(
     grantedBy: args.actorId,
   });
   return row;
+}
+
+/**
+ * Change the pinned Graph API version without touching the encrypted
+ * credential. A version change invalidates the connection and fences every
+ * scheduled/in-flight sync until the new version is validated explicitly.
+ */
+export async function updateAdvertisingGraphApiVersion(
+  db: Db,
+  args: {
+    agencyId: string;
+    connectionId: string;
+    graphApiVersion: string;
+    actorId: string;
+  },
+) {
+  if (!/^v\d+\.\d+$/.test(args.graphApiVersion))
+    throw new AdvertisingConnectionInputError("invalid_graph_api_version");
+
+  return db.transaction(async (tx) => {
+    const connection = (
+      await tx
+        .select({
+          id: advertisingConnections.id,
+          status: advertisingConnections.status,
+        })
+        .from(advertisingConnections)
+        .where(
+          and(
+            eq(advertisingConnections.id, args.connectionId),
+            eq(advertisingConnections.agencyId, args.agencyId),
+          ),
+        )
+        .limit(1)
+    )[0];
+    if (!connection) throw new AdvertisingConnectionInputError("advertising_connection_not_found");
+    if (connection.status === "revoked")
+      throw new AdvertisingConnectionInputError("advertising_connection_revoked");
+
+    const now = new Date();
+    const [updated] = await tx
+      .update(advertisingConnections)
+      .set({
+        graphApiVersion: args.graphApiVersion,
+        status: "invalid",
+        lastValidatedAt: null,
+        lastValidationStatus: null,
+        lastValidationCode: null,
+        updatedAt: now,
+      })
+      .where(eq(advertisingConnections.id, args.connectionId))
+      .returning({ id: advertisingConnections.id });
+    if (!updated) throw new AdvertisingConnectionInputError("advertising_connection_not_found");
+
+    await tx
+      .update(advertisingSyncStates)
+      .set({
+        status: "paused",
+        nextRunAt: null,
+        leaseOwner: null,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        updatedAt: now,
+      })
+      .where(eq(advertisingSyncStates.connectionId, args.connectionId));
+
+    await tx.insert(securityAuditEvents).values({
+      actorId: args.actorId,
+      action: "advertising.connection.graph_version_updated",
+      targetType: "advertising_connection",
+      targetId: args.connectionId,
+      outcome: "success",
+      metadata: {
+        agencyId: args.agencyId,
+        connectionId: args.connectionId,
+        graphApiVersion: args.graphApiVersion,
+        status: "invalid",
+      },
+    });
+    return { connectionId: updated.id, graphApiVersion: args.graphApiVersion } as const;
+  });
 }
 
 /** Grant a platform-owned connection to a customer agency without moving its secret. */

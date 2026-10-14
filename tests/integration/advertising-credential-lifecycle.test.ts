@@ -12,6 +12,7 @@ import {
   advertisingCredentialVersions,
   advertisingValidationResults,
   advertisingSyncStates,
+  securityAuditEvents,
   users,
   workspaces,
 } from "@/lib/db/schema";
@@ -20,6 +21,7 @@ import {
   activateAdvertisingConnection,
   createAdvertisingConnection,
   persistDiscoveredAdvertisingAccount,
+  updateAdvertisingGraphApiVersion,
 } from "@/lib/advertising/connection-service";
 import {
   AdvertisingConnectionNotFoundError,
@@ -238,6 +240,91 @@ describe("advertising credential lifecycle", () => {
       .from(advertisingValidationResults)
       .where(eq(advertisingValidationResults.connectionId, connection.id));
     expect(rows).toEqual([{ operation: "diagnostics", sanitizedCode: "meta_permission_denied" }]);
+  });
+
+  it("migrates the pinned Graph version while fencing active synchronization", async () => {
+    const { agency, user, connection } = await seed();
+    await storeAdvertisingCredential(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      credentials: { accessToken: "meta-token-version-migration" },
+      actorId: user.id,
+    });
+    await activateAdvertisingConnection(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+    });
+    const account = await persistDiscoveredAdvertisingAccount(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      externalAccountId: "act_version_migration",
+      name: "Version Migration Account",
+      currency: "EUR",
+      timezone: "Europe/Berlin",
+    });
+    await db.insert(advertisingSyncStates).values({
+      connectionId: connection.id,
+      accountId: account.id,
+      status: "running",
+      nextRunAt: new Date(),
+      leaseOwner: "worker",
+      leaseToken: randomUUID(),
+      leaseExpiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await updateAdvertisingGraphApiVersion(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      graphApiVersion: "v26.0",
+      actorId: user.id,
+    });
+
+    const [updatedConnection] = await db
+      .select({
+        graphApiVersion: advertisingConnections.graphApiVersion,
+        status: advertisingConnections.status,
+        lastValidatedAt: advertisingConnections.lastValidatedAt,
+        lastValidationStatus: advertisingConnections.lastValidationStatus,
+        lastValidationCode: advertisingConnections.lastValidationCode,
+      })
+      .from(advertisingConnections)
+      .where(eq(advertisingConnections.id, connection.id));
+    expect(updatedConnection).toEqual({
+      graphApiVersion: "v26.0",
+      status: "invalid",
+      lastValidatedAt: null,
+      lastValidationStatus: null,
+      lastValidationCode: null,
+    });
+
+    const [syncState] = await db
+      .select({
+        status: advertisingSyncStates.status,
+        nextRunAt: advertisingSyncStates.nextRunAt,
+        leaseOwner: advertisingSyncStates.leaseOwner,
+        leaseToken: advertisingSyncStates.leaseToken,
+        leaseExpiresAt: advertisingSyncStates.leaseExpiresAt,
+      })
+      .from(advertisingSyncStates)
+      .where(eq(advertisingSyncStates.connectionId, connection.id));
+    expect(syncState).toEqual({
+      status: "paused",
+      nextRunAt: null,
+      leaseOwner: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+    });
+
+    const [audit] = await db
+      .select({ action: securityAuditEvents.action, outcome: securityAuditEvents.outcome })
+      .from(securityAuditEvents)
+      .where(eq(securityAuditEvents.targetId, connection.id))
+      .orderBy(sql`created_at DESC`)
+      .limit(1);
+    expect(audit).toEqual({
+      action: "advertising.connection.graph_version_updated",
+      outcome: "success",
+    });
   });
 
   it("revokes provider reads, active versions, linked sync state, and blocks reactivation", async () => {

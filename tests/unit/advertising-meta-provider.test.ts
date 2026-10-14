@@ -160,6 +160,20 @@ describe("Meta advertising provider", () => {
     });
   });
 
+  it("reads creative metadata through the configured Graph API version", async () => {
+    const get = vi.fn().mockResolvedValue({ id: "creative_123", name: "Creative" });
+    const provider = createMetaAdvertisingProvider(
+      { resolve: vi.fn().mockResolvedValue({ accessToken: "secret-token" }) },
+      () => ({ get }),
+    );
+
+    await provider.readCreatives(connection, "ad_123");
+
+    expect(get).toHaveBeenCalledWith("ad_123/creative", {
+      fields: "id,name,object_story_spec",
+    });
+  });
+
   it("keeps the provider surface read-only and bounded to the approved probes", async () => {
     const get = vi.fn().mockResolvedValue({ data: [] });
     const provider = createMetaAdvertisingProvider(

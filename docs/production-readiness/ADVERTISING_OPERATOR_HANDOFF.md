@@ -21,6 +21,10 @@ window; sanitized evidence location; reviewer-approved reconciliation window.
 1. Record a sanitized baseline and confirm no advertising work is running.
 2. Configure and validate the approved read-only connection without copying the
    credential into evidence. Activate only the approved account/link.
+   If migrating an existing explicit Graph API pin, update it to the approved
+   version first; expect the connection to become invalid and its sync rows to
+   pause, then complete fresh validation before continuing. Do not activate
+   sync during this handoff.
 3. Run one bounded sync tick through the existing scheduler path. Observe
    account-scoped claims, pagination/partial state, retry behavior, and audit
    history.

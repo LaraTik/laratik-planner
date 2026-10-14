@@ -25,6 +25,7 @@ import {
 import {
   AdvertisingConnectionInputError,
   createAdvertisingConnection,
+  updateAdvertisingGraphApiVersion,
 } from "@/lib/advertising/connection-service";
 import {
   AdvertisingConnectionNotFoundError,
@@ -60,6 +61,13 @@ const CredentialSchema = z.object({
   accessToken: z.string().min(1).max(8_000),
 });
 const ConnectionIdSchema = z.object({ connectionId: z.string().uuid() });
+const GraphVersionSchema = z.object({
+  connectionId: z.string().uuid(),
+  graphApiVersion: z
+    .string()
+    .trim()
+    .regex(/^v\d+\.\d+$/),
+});
 const AccountAccessSchema = z.object({
   connectionId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -137,6 +145,7 @@ function errorState(error: unknown): AdvertisingActionState {
     "advertising_grant_range_invalid",
     "advertising_grant_not_found",
     "advertising_financial_authority_not_found",
+    "invalid_graph_api_version",
   ]);
   return { code: safeCodes.has(code) ? code : "advertising_action_failed" };
 }
@@ -201,6 +210,30 @@ export async function storeAdvertisingCredentialAction(
       connectionId: stored.connectionId,
       version: stored.version,
     };
+  } catch (error) {
+    return errorState(error);
+  }
+}
+
+export async function updateAdvertisingGraphApiVersionAction(
+  _previous: AdvertisingActionState,
+  formData: FormData,
+): Promise<AdvertisingActionState> {
+  try {
+    const { actor, agencyId } = await requireAdmin();
+    const parsed = GraphVersionSchema.safeParse({
+      connectionId: formData.get("connectionId"),
+      graphApiVersion: formData.get("graphApiVersion"),
+    });
+    if (!parsed.success) return { code: "invalid_graph_api_version" };
+    const updated = await updateAdvertisingGraphApiVersion(db, {
+      agencyId,
+      connectionId: parsed.data.connectionId,
+      graphApiVersion: parsed.data.graphApiVersion,
+      actorId: actor.id,
+    });
+    revalidatePath("/app/agency-settings/advertising");
+    return { ok: true, code: "graph_version_updated", connectionId: updated.connectionId };
   } catch (error) {
     return errorState(error);
   }

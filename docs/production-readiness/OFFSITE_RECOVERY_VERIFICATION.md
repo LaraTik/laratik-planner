@@ -84,7 +84,7 @@ production, and do not restore into the live database.
    objects separately if the storage provider is part of the approved backup
    design.
 3. Run the forward migration check and confirm
-   `drizzle.__drizzle_migrations` reaches the expected head (`0084` for this
+   `drizzle.__drizzle_migrations` reaches the expected head (`0085` for this
    release candidate).
 4. Start an isolated application configuration with production provider calls,
    cron, email delivery, publishing, and external OAuth disabled.

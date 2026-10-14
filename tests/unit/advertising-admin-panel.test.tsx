@@ -12,6 +12,7 @@ vi.mock("@/app/(app)/app/agency-settings/advertising/actions", () => ({
   revokeAdvertisingFinancialAuthorityAction: vi.fn(async () => ({})),
   revokeAdvertisingVisibilityAction: vi.fn(async () => ({})),
   storeAdvertisingCredentialAction: vi.fn(async () => ({})),
+  updateAdvertisingGraphApiVersionAction: vi.fn(async () => ({})),
   validateAdvertisingConnectionAction: vi.fn(async () => ({})),
   setAdvertisingSyncStateAction: vi.fn(async () => ({})),
 }));
@@ -46,6 +47,10 @@ describe("AdvertisingAdminPanel", () => {
     expect(screen.getByTestId("advertising-create-form")).toBeInTheDocument();
     expect(screen.getByText("Agency Meta")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save credential" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Update version" })).toBeInTheDocument();
+    expect(
+      screen.getAllByLabelText("Graph API version").map((input) => input.getAttribute("value")),
+    ).toContain("v25.0");
     expect(screen.getByRole("button", { name: "Validate and discover" })).toBeDisabled();
     expect(screen.queryByText("secret-token")).not.toBeInTheDocument();
   });
