@@ -61,7 +61,7 @@
       exact integration tests:
       `fences late completion after an in-flight account is disabled` and
       `revoking one account access fences its lease and removes it from future
-    claims` in `tests/integration/advertising-tenant-guards.test.ts`.
+  claims` in `tests/integration/advertising-tenant-guards.test.ts`.
       Revocation must clear lease metadata, pause the state, and leave future
       claims empty.
 
