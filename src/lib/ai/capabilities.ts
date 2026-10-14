@@ -38,7 +38,8 @@ export type AiCapabilityId =
   | "related_format_ideas"
   | "completeness_check"
   | "trend_radar"
-  | "monthly_planning_copilot";
+  | "monthly_planning_copilot"
+  | "advertising_recommendations";
 
 export interface AiCapabilityMetadata {
   /** Server-side identifier — matches the §15 enum and the `aiFeatureSettings.enabledCapabilities` allowlist. */
@@ -200,6 +201,16 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
       "delivery",
       "Brand Kit without manager approval",
     ],
+  },
+  {
+    id: "advertising_recommendations",
+    label: "Advertising recommendations",
+    adminLabel: "Advertising recommendations",
+    description: "Generate explainable actions from verified, authorized advertising performance.",
+    enabledOnContentDetail: false,
+    hint: "Read-only recommendations with source metrics and limitations.",
+    willUpdate: [],
+    willNotChange: ["campaigns", "budgets", "ads", "publishing"],
   },
 ] as const;
 

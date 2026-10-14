@@ -53,6 +53,10 @@
     "monthly_planning_copilot": {
       "label": "Monthly planning copilot",
       "description": "Guide discovery, strategy, execution, and review for a complete monthly plan."
+    },
+    "advertising_recommendations": {
+      "label": "Advertising recommendations",
+      "description": "Generate explainable actions from verified, authorized advertising performance."
     }
   }
 }

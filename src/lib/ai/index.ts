@@ -636,6 +636,59 @@ export async function campaignIdeas(input: {
 }
 
 /**
+ * Generate read-only, explainable actions from an already-authorized
+ * advertising projection. The caller is responsible for authorization,
+ * capability, quota, and audit logging; this provider helper never writes to
+ * campaigns, budgets, content, or publishing state.
+ */
+export async function advertisingRecommendations(input: {
+  accountName: string;
+  period: { since: string; until: string };
+  partial: boolean;
+  summary: unknown;
+  campaigns: unknown;
+  budgetPacing: unknown;
+  creativeFatigue: unknown;
+  paidOrganic: unknown;
+  apiKey?: string | undefined;
+  onUsage?: (result: ChatResult) => void;
+  maxTokens?: number | undefined;
+}): Promise<string | null> {
+  if (!input.apiKey) return null;
+  const result = await chat({
+    temperature: 0.2,
+    maxTokens: input.maxTokens ?? 900,
+    apiKey: input.apiKey,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You are an advertising performance analyst. Return ONLY valid JSON matching this exact shape: " +
+          '{"schemaVersion":1,"recommendations":[{"title":"...","action":"...","rationale":"...","evidence":["..."],"confidence":"high|medium|low"}],"limitations":["..."]}. ' +
+          "Use only the supplied verified projection. Never invent metrics, budgets, campaign dates, attribution, audience facts, or business context. " +
+          "If data is partial or a signal is insufficient, state that limitation and do not recommend a risky action. " +
+          "Recommendations are advisory and must never instruct automatic publishing or budget changes.",
+      },
+      {
+        role: "user",
+        content: JSON.stringify({
+          accountName: input.accountName,
+          period: input.period,
+          partial: input.partial,
+          summary: input.summary,
+          campaigns: input.campaigns,
+          budgetPacing: input.budgetPacing,
+          creativeFatigue: input.creativeFatigue,
+          paidOrganic: input.paidOrganic,
+        }),
+      },
+    ],
+  });
+  if (result) input.onUsage?.(result);
+  return result?.content ?? null;
+}
+
+/**
  * Suggest formats that pair well with the planner's current brief —
  * the §15 "related format ideas" capability. Returns 3-5 suggestions,
  * each on its own line: 'Format — <why it pairs>'. Limited to the 8

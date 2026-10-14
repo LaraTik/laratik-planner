@@ -30,6 +30,13 @@ test.describe("synthetic advertising reporting", () => {
     );
 
     await expect(page.getByTestId("advertising-reporting-page")).toBeVisible();
+    await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
+    await expect(page.getByTestId("advertising-campaign-signals")).toContainText("Effective");
+    await expect(page.getByTestId("advertising-budget-pacing")).toContainText("Budget pacing");
+    await expect(page.getByRole("link", { name: "Export CSV" })).toHaveAttribute(
+      "href",
+      /surface=csv_export/,
+    );
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-spring",
     );
@@ -49,6 +56,17 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText("1");
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
+    await expect(page.getByRole("link", { name: "Open client report" })).toHaveAttribute(
+      "href",
+      /presentation=client/,
+    );
+    await page.goto(
+      (await page.getByRole("link", { name: "Open client report" }).getAttribute("href"))!,
+    );
+    await expect(page.getByTestId("advertising-client-report")).toBeVisible();
+    await expect(page.getByTestId("advertising-client-report")).toContainText("Campaign scorecard");
+    await expect(page.getByTestId("advertising-ai-recommendations")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Generate recommendations" })).toBeVisible();
     await expectNoSeriousAccessibilityViolations(page);
   });
 
@@ -72,6 +90,8 @@ test.describe("synthetic advertising reporting", () => {
 
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByTestId("advertising-reporting-page")).toBeVisible();
+    await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
+    await expect(page.getByTestId("advertising-campaign-signals")).toContainText("فعّالة");
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-spring",
     );
@@ -90,6 +110,17 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
+    await expect(page.getByRole("link", { name: "فتح تقرير العميل" })).toHaveAttribute(
+      "href",
+      /presentation=client/,
+    );
+    await page.goto(
+      (await page.getByRole("link", { name: "فتح تقرير العميل" }).getAttribute("href"))!,
+    );
+    await expect(page.getByTestId("advertising-client-report")).toBeVisible();
+    await expect(page.getByTestId("advertising-client-report")).toContainText("بطاقة أداء الحملات");
+    await expect(page.getByTestId("advertising-ai-recommendations")).toBeVisible();
+    await expect(page.getByRole("button", { name: "إنشاء التوصيات" })).toBeVisible();
     await expectNoSeriousAccessibilityViolations(page);
   });
 });

@@ -61,6 +61,7 @@ const ICON_BY_ID = {
   // union. The icon is referenced only as a safety net.
   trend_radar: Radar,
   monthly_planning_copilot: Sparkles,
+  advertising_recommendations: Lightbulb,
 } as const;
 
 // The planner-detail surface lists AI capabilities that

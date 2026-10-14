@@ -24,7 +24,20 @@ import {
   loadAdvertisingReport,
 } from "@/lib/advertising/reporting-query";
 import { buildAdvertisingReportView } from "@/lib/advertising/reporting-view";
+import {
+  buildBudgetPacingInsights,
+  buildCampaignPerformanceInsights,
+  buildCreativeFatigueInsights,
+} from "@/lib/advertising/intelligence";
 import { querySocialPostObservations } from "@/lib/social/analytics-query";
+import {
+  AdvertisingIntelligencePanel,
+  type AdvertisingIntelligenceLabels,
+} from "./advertising-intelligence-panel";
+import {
+  AdvertisingClientReport,
+  type AdvertisingClientReportLabels,
+} from "./advertising-client-report";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -39,6 +52,7 @@ type SearchParams = {
   adSetPage?: string | string[];
   adPage?: string | string[];
   audiencePage?: string | string[];
+  presentation?: string | string[];
 };
 
 export default async function AdvertisingAnalyticsPage({
@@ -169,6 +183,9 @@ export default async function AdvertisingAnalyticsPage({
   }
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
+  const campaignInsights = buildCampaignPerformanceInsights(view.campaigns);
+  const budgetPacing = buildBudgetPacingInsights(view.campaigns, since, until);
+  const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
   const organicByPostId = await loadOrganicPromotedPosts({
     postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
     workspaceId: workspace.id,
@@ -185,6 +202,45 @@ export default async function AdvertisingAnalyticsPage({
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
   const adPage = paginate(view.ads, firstQueryValue(query.adPage));
   const audiencePage = paginate(result.audience, firstQueryValue(query.audiencePage));
+  const clientReportHref = `${basePath}?${new URLSearchParams({
+    accountId: selectedAccount.id,
+    since,
+    until,
+    presentation: "client",
+  }).toString()}`;
+
+  if (firstQueryValue(query.presentation) === "client") {
+    return (
+      <div className="space-y-6" data-testid="advertising-client-report-shell">
+        <AdvertisingClientReport
+          accountName={selectedAccount.name}
+          accountId={selectedAccount.id}
+          workspaceId={workspace.id}
+          currency={selectedAccount.currency}
+          since={since}
+          until={until}
+          freshness={freshnessLabel}
+          partial={result.partial}
+          totals={result.report.totals}
+          campaigns={view.campaigns}
+          performance={campaignInsights}
+          pacing={budgetPacing}
+          fatigue={creativeFatigue}
+          promotedPosts={view.promotedPosts ?? []}
+          organicByPostId={
+            new Map(
+              [...organicByPostId.entries()].map(
+                ([postId, value]) => [postId, value.views] as const,
+              ),
+            )
+          }
+          backHref={`${basePath}?accountId=${encodeURIComponent(selectedAccount.id)}&since=${since}&until=${until}`}
+          labels={advertisingClientReportLabels(t)}
+          locale={code}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6" data-testid="advertising-reporting-page">
@@ -192,7 +248,7 @@ export default async function AdvertisingAnalyticsPage({
       <form
         method="get"
         action={basePath}
-        className="border-border bg-surface grid gap-4 rounded-[var(--radius-card)] border p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end"
+        className="border-border bg-surface grid gap-4 rounded-[var(--radius-card)] border p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end"
         data-testid="advertising-reporting-filters"
       >
         <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
@@ -220,6 +276,19 @@ export default async function AdvertisingAnalyticsPage({
         >
           {t("advertising.reporting.apply")}
         </button>
+        <a
+          href={`/api/advertising/report?${new URLSearchParams({
+            accountId: selectedAccount.id,
+            workspaceId: workspace.id,
+            since,
+            until,
+            surface: "csv_export",
+          }).toString()}`}
+          className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-4 font-semibold focus:outline-none focus-visible:ring-2"
+          download
+        >
+          {t("advertising.reporting.exportCsv")}
+        </a>
       </form>
 
       <div className="flex flex-wrap items-center gap-2" data-testid="advertising-reporting-status">
@@ -234,6 +303,12 @@ export default async function AdvertisingAnalyticsPage({
         <span className="text-label text-fg-muted">
           {t("advertising.reporting.syncStatus")}: {syncLabel}
         </span>
+        <Link
+          href={clientReportHref}
+          className="text-label text-primary focus-visible:ring-focus-ring ms-auto inline-flex min-h-9 items-center rounded font-semibold focus:outline-none focus-visible:ring-2"
+        >
+          {t("advertising.reporting.openClientReport")}
+        </Link>
       </div>
       {result.partial ? (
         <div
@@ -258,6 +333,14 @@ export default async function AdvertisingAnalyticsPage({
         </Card>
       ) : (
         <>
+          <AdvertisingIntelligencePanel
+            campaigns={campaignInsights}
+            pacing={budgetPacing}
+            fatigue={creativeFatigue}
+            currency={selectedAccount.currency}
+            locale={code}
+            labels={advertisingIntelligenceLabels(t)}
+          />
           <section aria-labelledby="advertising-reporting-summary-title" className="space-y-3">
             <div>
               <h2
@@ -905,6 +988,99 @@ function ReportState({
   action?: ReactNode;
 }) {
   return <EmptyState icon={icon} title={title} description={description} action={action} />;
+}
+
+function advertisingIntelligenceLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingIntelligenceLabels {
+  return {
+    title: t("advertising.reporting.decisionTitle"),
+    description: t("advertising.reporting.decisionDescription"),
+    campaignSignal: t("advertising.reporting.campaignSignal"),
+    campaignSignalDescription: t("advertising.reporting.campaignSignalDescription"),
+    effective: t("advertising.reporting.effective"),
+    underperforming: t("advertising.reporting.underperforming"),
+    monitor: t("advertising.reporting.monitor"),
+    insufficient: t("advertising.reporting.insufficient"),
+    budgetPacing: t("advertising.reporting.budgetPacing"),
+    budgetPacingDescription: t("advertising.reporting.budgetPacingDescription"),
+    over: t("advertising.reporting.over"),
+    onTrack: t("advertising.reporting.onTrack"),
+    under: t("advertising.reporting.under"),
+    unavailable: t("advertising.reporting.notAvailable"),
+    creativeHealth: t("advertising.reporting.creativeHealth"),
+    creativeHealthDescription: t("advertising.reporting.creativeHealthDescription"),
+    fatiguing: t("advertising.reporting.fatiguing"),
+    stable: t("advertising.reporting.stable"),
+    needsData: t("advertising.reporting.needsData"),
+    noComparison: t("advertising.reporting.noComparison"),
+    noBudgetData: t("advertising.reporting.noBudgetData"),
+    noFatigueData: t("advertising.reporting.noFatigueData"),
+    sample: t("advertising.reporting.sample"),
+    actual: t("advertising.reporting.actual"),
+    expected: t("advertising.reporting.expected"),
+    change: t("advertising.reporting.change"),
+    cpc: t("advertising.reporting.cpc"),
+  };
+}
+
+function advertisingClientReportLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingClientReportLabels {
+  return {
+    backToAnalytics: t("advertising.reporting.backToAnalytics"),
+    reportBadge: t("advertising.reporting.reportBadge"),
+    title: t("advertising.reporting.clientReportTitle"),
+    description: t("advertising.reporting.clientReportDescription"),
+    period: t("advertising.reporting.period"),
+    source: t("advertising.reporting.source"),
+    dataStatus: t("advertising.reporting.dataStatus"),
+    partial: t("advertising.reporting.partial"),
+    complete: t("advertising.reporting.complete"),
+    summary: t("advertising.reporting.summaryTitle"),
+    spend: t("advertising.reporting.spend"),
+    impressions: t("advertising.reporting.impressions"),
+    clicks: t("advertising.reporting.clicks"),
+    results: t("advertising.reporting.results"),
+    ctr: t("advertising.reporting.ctr"),
+    cpc: t("advertising.reporting.cpc"),
+    campaignScorecard: t("advertising.reporting.campaignScorecard"),
+    campaign: t("advertising.reporting.campaign"),
+    status: t("advertising.reporting.status"),
+    effective: t("advertising.reporting.effective"),
+    underperforming: t("advertising.reporting.underperforming"),
+    monitor: t("advertising.reporting.monitor"),
+    insufficient: t("advertising.reporting.insufficient"),
+    budgetPacing: t("advertising.reporting.budgetPacing"),
+    actual: t("advertising.reporting.actual"),
+    expected: t("advertising.reporting.expected"),
+    over: t("advertising.reporting.over"),
+    onTrack: t("advertising.reporting.onTrack"),
+    under: t("advertising.reporting.under"),
+    unavailable: t("advertising.reporting.notAvailable"),
+    creativeHealth: t("advertising.reporting.creativeHealth"),
+    fatiguing: t("advertising.reporting.fatiguing"),
+    stable: t("advertising.reporting.stable"),
+    needsData: t("advertising.reporting.needsData"),
+    promotedContent: t("advertising.reporting.promotedContent"),
+    promotedContentDescription: t("advertising.reporting.promotedContentDescription"),
+    post: t("advertising.reporting.postId"),
+    paidImpressions: t("advertising.reporting.impressions"),
+    organicViews: t("advertising.reporting.organicViews"),
+    combinedViews: t("advertising.reporting.combinedViews"),
+    notAvailable: t("advertising.reporting.notAvailable"),
+    aiRecommendations: {
+      title: t("advertising.reporting.aiRecommendations"),
+      description: t("advertising.reporting.aiRecommendationsDescription"),
+      generate: t("advertising.reporting.generateRecommendations"),
+      generating: t("advertising.reporting.generatingRecommendations"),
+      confidence: t("advertising.reporting.confidence"),
+      evidence: t("advertising.reporting.evidence"),
+      limitations: t("advertising.reporting.limitations"),
+      error: t("advertising.reporting.recommendationsError"),
+      unavailable: t("advertising.reporting.recommendationsUnavailable"),
+    },
+  };
 }
 
 function MetricCard({ label, value, testId }: { label: string; value: string; testId?: string }) {

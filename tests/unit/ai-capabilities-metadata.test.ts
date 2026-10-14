@@ -32,6 +32,7 @@ describe("AI capabilities metadata (single source of truth)", () => {
       "completeness_check",
       "trend_radar",
       "monthly_planning_copilot",
+      "advertising_recommendations",
     ]);
   });
 
@@ -55,7 +56,12 @@ describe("AI capabilities metadata (single source of truth)", () => {
     // the planner's content detail page; the assertion below
     // skips that capability explicitly.
     for (const cap of AI_CAPABILITY_METADATA) {
-      if (cap.id === "trend_radar" || cap.id === "monthly_planning_copilot") continue;
+      if (
+        cap.id === "trend_radar" ||
+        cap.id === "monthly_planning_copilot" ||
+        cap.id === "advertising_recommendations"
+      )
+        continue;
       expect(cap.enabledOnContentDetail).toBe(true);
     }
   });

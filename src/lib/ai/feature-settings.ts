@@ -47,6 +47,7 @@ export const AI_CAPABILITIES = [
   "completeness_check",
   "trend_radar",
   "monthly_planning_copilot",
+  "advertising_recommendations",
 ] as const;
 export type AiCapability = (typeof AI_CAPABILITIES)[number];
 
