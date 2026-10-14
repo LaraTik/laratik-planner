@@ -50,6 +50,9 @@ test.describe("Meta Ads advertising administration", () => {
     await expect(connectionCard.getByRole("status")).toHaveText(
       "Credential encrypted and stored. Validate it before use.",
     );
+    await expect(connectionCard.getByTestId(/advertising-credential-status-/)).toContainText(
+      `••••${token.slice(-4)}`,
+    );
     await expect(page.locator("body")).not.toContainText(token);
     await expect(tokenInput).toHaveValue("");
   });

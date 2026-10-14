@@ -5,11 +5,14 @@ import { useActionState } from "react";
 import {
   History,
   KeyRound,
+  Database,
+  Gauge,
   Pause,
   Play,
   Plus,
   ShieldAlert,
   ShieldCheck,
+  RefreshCw,
   XCircle,
 } from "lucide-react";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -47,6 +50,7 @@ type Connection = {
   lastValidationStatus: string | null;
   lastValidationCode: string | null;
   graphApiVersion: string | null;
+  accessTokenLast4: string | null;
   createdAt: string;
 };
 type AdvertisingAccount = {
@@ -235,6 +239,13 @@ export function AdvertisingAdminPanel({
         {createState.code ? <ActionMessage state={createState} /> : null}
       </Card>
 
+      <AdvertisingOverviewCard
+        connections={connections}
+        accounts={accounts}
+        capabilities={capabilities}
+        syncStates={syncStates}
+      />
+
       {connections.length === 0 ? (
         <Card variant="subtle" data-testid="advertising-empty">
           <p className="text-body text-fg-secondary">{t("advertising.empty")}</p>
@@ -270,6 +281,89 @@ export function AdvertisingAdminPanel({
         reconciliations={reconciliations}
       />
     </div>
+  );
+}
+
+function AdvertisingOverviewCard({
+  connections,
+  accounts,
+  capabilities,
+  syncStates,
+}: {
+  connections: readonly Connection[];
+  accounts: readonly AdvertisingAccount[];
+  capabilities: readonly Capability[];
+  syncStates: readonly SyncState[];
+}) {
+  const t = useLocaleT();
+  const configuredConnections = connections.filter(
+    (connection) => connection.currentCredentialVersion > 0,
+  ).length;
+  const availableCapabilities = capabilities.filter(
+    (capability) => capability.status === "available",
+  ).length;
+  const activeSyncs = syncStates.filter(
+    (state) => !["paused", "dead_letter"].includes(state.status),
+  ).length;
+  const metrics = [
+    {
+      label: t("advertising.overviewConnections"),
+      value: connections.length,
+      detail: t("advertising.overviewConnectionsDetail", {
+        configured: configuredConnections,
+        total: connections.length,
+      }),
+      icon: Gauge,
+    },
+    {
+      label: t("advertising.overviewAccounts"),
+      value: accounts.length,
+      detail: t("advertising.overviewAccountsDetail"),
+      icon: Database,
+    },
+    {
+      label: t("advertising.overviewCapabilities"),
+      value: availableCapabilities,
+      detail: t("advertising.overviewCapabilitiesDetail", {
+        total: capabilities.length,
+      }),
+      icon: ShieldCheck,
+    },
+    {
+      label: t("advertising.overviewSyncs"),
+      value: activeSyncs,
+      detail: t("advertising.overviewSyncsDetail"),
+      icon: RefreshCw,
+    },
+  ] as const;
+
+  return (
+    <Card variant="subtle" data-testid="advertising-overview">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <CardTitle>{t("advertising.overviewTitle")}</CardTitle>
+          <CardDescription>{t("advertising.overviewDescription")}</CardDescription>
+        </div>
+        <Badge variant="outline">{t("advertising.readOnlyBadge")}</Badge>
+      </div>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map(({ label, value, detail, icon: Icon }) => (
+          <div
+            key={label}
+            className="border-border bg-surface flex min-h-28 flex-col justify-between rounded-[var(--radius-control)] border p-4"
+          >
+            <div className="text-fg-muted flex items-center justify-between gap-2">
+              <span className="text-label font-medium">{label}</span>
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </div>
+            <div>
+              <p className="text-title-card text-fg-primary font-semibold tabular-nums">{value}</p>
+              <p className="text-label text-fg-muted">{detail}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
@@ -742,6 +836,40 @@ function ConnectionCard({
             </h3>
           </div>
           <p className="text-label text-fg-muted">{t("advertising.credentialDescription")}</p>
+          <div
+            className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
+            data-testid={`advertising-credential-status-${connection.id}`}
+          >
+            <div className="flex items-center gap-2">
+              {connection.currentCredentialVersion > 0 ? (
+                <ShieldCheck className="text-success h-4 w-4" aria-hidden="true" />
+              ) : (
+                <ShieldAlert className="text-fg-muted h-4 w-4" aria-hidden="true" />
+              )}
+              <div>
+                <p className="text-label text-fg-primary font-semibold">
+                  {connection.currentCredentialVersion > 0
+                    ? t("advertising.credentialConfigured")
+                    : t("advertising.credentialNotConfigured")}
+                </p>
+                <p className="text-label text-fg-muted">
+                  {connection.currentCredentialVersion > 0
+                    ? t("advertising.credentialVersion", {
+                        count: connection.currentCredentialVersion,
+                      })
+                    : t("advertising.credentialNotConfiguredDescription")}
+                </p>
+              </div>
+            </div>
+            {connection.currentCredentialVersion > 0 ? (
+              <code
+                className="bg-surface-subtle text-body text-fg-primary rounded-[var(--radius-control)] px-2.5 py-1 font-mono"
+                aria-label={t("advertising.credentialHintAria")}
+              >
+                ••••{connection.accessTokenLast4 ?? "••••"}
+              </code>
+            ) : null}
+          </div>
           <input type="hidden" name="connectionId" value={connection.id} />
           <Label htmlFor={`advertising-token-${connection.id}`}>
             {t("advertising.accessToken")}
@@ -750,6 +878,11 @@ function ConnectionCard({
             id={`advertising-token-${connection.id}`}
             name="accessToken"
             autoComplete="new-password"
+            placeholder={
+              connection.currentCredentialVersion > 0
+                ? t("advertising.replaceCredentialPlaceholder")
+                : t("advertising.enterCredentialPlaceholder")
+            }
             required
             revealed={revealed}
             onToggleRevealed={() => setRevealed((value) => !value)}
@@ -801,26 +934,12 @@ function ConnectionCard({
               {t("advertising.lastResult", { code: connection.lastValidationCode })}
             </p>
           ) : null}
-          {validationState.diagnostics?.map((diagnostic) => (
-            <div
-              key={`${diagnostic.operation}-${diagnostic.state}`}
-              className="border-border bg-surface-subtle space-y-1 rounded-[var(--radius-control)] border p-3"
-              data-testid={`advertising-diagnostic-${diagnostic.operation}`}
-            >
-              <p className="text-label text-fg-primary font-semibold">
-                {t(`advertising.diagnosticOperations.${diagnostic.operation}`)}
-              </p>
-              <p className="text-label text-fg-secondary">
-                {t(`advertising.diagnostics.${diagnostic.state}`)}
-              </p>
-              {diagnostic.state !== "valid" ? (
-                <p className="text-label text-fg-muted" data-testid="advertising-diagnostic-fix">
-                  <span className="font-semibold">{t("advertising.diagnosticToFix")}</span>{" "}
-                  {t(`advertising.diagnosticFixes.${diagnostic.state}`)}
-                </p>
-              ) : null}
-            </div>
-          ))}
+          {validationState.diagnostics?.length ? (
+            <DiagnosticSummary
+              diagnostics={validationState.diagnostics}
+              connectionId={connection.id}
+            />
+          ) : null}
         </div>
       </div>
       <form
@@ -1007,6 +1126,81 @@ function ConnectionCard({
         {revokeAccountState.code ? <ActionMessage state={revokeAccountState} compact /> : null}
       </div>
     </Card>
+  );
+}
+
+function DiagnosticSummary({
+  diagnostics,
+  connectionId,
+}: {
+  diagnostics: readonly { operation: string; state: string; retryable: boolean }[];
+  connectionId: string;
+}) {
+  const t = useLocaleT();
+  const passed = diagnostics.filter((diagnostic) => diagnostic.state === "valid").length;
+  const attention = diagnostics.length - passed;
+  const summaryStatus = attention === 0 ? "success" : "warning";
+  return (
+    <div
+      className="space-y-3"
+      data-testid={`advertising-diagnostic-summary-${connectionId}`}
+      aria-live="polite"
+    >
+      <div className="grid gap-2 sm:grid-cols-3">
+        <div className="border-border bg-surface rounded-[var(--radius-control)] border p-3">
+          <p className="text-label text-fg-muted">{t("advertising.diagnosticCheckCount")}</p>
+          <p className="text-title-card text-fg-primary font-semibold tabular-nums">
+            {diagnostics.length}
+          </p>
+        </div>
+        <div className="border-border bg-surface rounded-[var(--radius-control)] border p-3">
+          <p className="text-label text-fg-muted">{t("advertising.diagnosticPassedCount")}</p>
+          <p className="text-title-card text-success font-semibold tabular-nums">{passed}</p>
+        </div>
+        <div className="border-border bg-surface rounded-[var(--radius-control)] border p-3">
+          <p className="text-label text-fg-muted">{t("advertising.diagnosticAttentionCount")}</p>
+          <p className="text-title-card text-warning font-semibold tabular-nums">{attention}</p>
+        </div>
+      </div>
+      <Badge variant={summaryStatus}>
+        {attention === 0
+          ? t("advertising.diagnosticSummaryPassed")
+          : t("advertising.diagnosticSummaryAttention")}
+      </Badge>
+      <div className="space-y-2">
+        {diagnostics.map((diagnostic) => {
+          const fixKey =
+            diagnostic.operation === "instagram_read" && diagnostic.state === "no_data"
+              ? "instagram_no_data"
+              : diagnostic.state;
+          return (
+            <div
+              key={`${diagnostic.operation}-${diagnostic.state}`}
+              className="border-border bg-surface-subtle space-y-1 rounded-[var(--radius-control)] border p-3"
+              data-testid={`advertising-diagnostic-${diagnostic.operation}`}
+            >
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-label text-fg-primary font-semibold">
+                  {t(`advertising.diagnosticOperations.${diagnostic.operation}`)}
+                </p>
+                <Badge variant={diagnostic.state === "valid" ? "success" : "warning"}>
+                  {t(`advertising.diagnosticStates.${diagnostic.state}`)}
+                </Badge>
+              </div>
+              <p className="text-label text-fg-secondary">
+                {t(`advertising.diagnostics.${diagnostic.state}`)}
+              </p>
+              {diagnostic.state !== "valid" ? (
+                <p className="text-label text-fg-muted" data-testid="advertising-diagnostic-fix">
+                  <span className="font-semibold">{t("advertising.diagnosticToFix")}</span>{" "}
+                  {t(`advertising.diagnosticFixes.${fixKey}`)}
+                </p>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 

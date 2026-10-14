@@ -30,6 +30,7 @@ import {
 import {
   AdvertisingConnectionNotFoundError,
   AdvertisingConnectionRevokedError,
+  getAdvertisingCredentialLast4,
   revokeAdvertisingConnection,
   revokeAdvertisingAccountAccess,
   storeAdvertisingCredential,
@@ -449,7 +450,7 @@ export async function setAdvertisingSyncStateAction(
 
 export async function listAdvertisingConnectionsForAdmin() {
   const { agencyId } = await requireAdmin();
-  return db
+  const rows = await db
     .select({
       id: advertisingConnections.id,
       displayName: advertisingConnections.displayName,
@@ -465,6 +466,20 @@ export async function listAdvertisingConnectionsForAdmin() {
     .from(advertisingConnections)
     .where(eq(advertisingConnections.agencyId, agencyId))
     .orderBy(desc(advertisingConnections.createdAt));
+  return Promise.all(
+    rows.map(async (row) => ({
+      ...row,
+      // This derives a four-character confirmation suffix server-side. The
+      // credential itself never crosses the server/client boundary.
+      accessTokenLast4:
+        row.currentCredentialVersion > 0 && row.status !== "revoked"
+          ? await getAdvertisingCredentialLast4(db, {
+              agencyId,
+              connectionId: row.id,
+            })
+          : null,
+    })),
+  );
 }
 
 export async function listAdvertisingResourcesForAdmin() {

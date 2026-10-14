@@ -170,7 +170,7 @@ describe("Meta advertising provider", () => {
     await provider.readCreatives(connection, "ad_123");
 
     expect(get).toHaveBeenCalledWith("ad_123/creative", {
-      fields: "id,name,object_story_spec",
+      fields: "id,name",
     });
   });
 

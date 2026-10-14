@@ -271,7 +271,9 @@ export function createMetaAdvertisingProvider(
     },
     async readCreatives(connection, adId) {
       return (await clientFor(connection)).get(`${adId}/creative`, {
-        fields: "id,name,object_story_spec",
+        // v26 rejects object_story_spec for this read path. The canonical
+        // reporting model only needs stable creative identity metadata.
+        fields: "id,name",
       });
     },
     async readDailyInsights(connection, account, context) {

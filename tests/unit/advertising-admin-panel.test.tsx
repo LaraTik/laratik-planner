@@ -27,6 +27,7 @@ const connection = {
   lastValidationStatus: null,
   lastValidationCode: null,
   graphApiVersion: "v25.0",
+  accessTokenLast4: null,
   createdAt: "2026-10-13T00:00:00.000Z",
 } as const;
 
@@ -106,6 +107,31 @@ describe("AdvertisingAdminPanel", () => {
     expect(screen.getByTestId("advertising-diagnostic-campaign_read")).toHaveTextContent(
       "Campaign read",
     );
+  });
+
+  it("shows a safe configured indicator without filling the write-only token field", () => {
+    render(
+      <AdvertisingAdminPanel
+        connections={[{ ...connection, currentCredentialVersion: 1, accessTokenLast4: "9abc" }]}
+        accounts={[]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[]}
+        socialIdentities={[]}
+        capabilities={[]}
+      />,
+    );
+
+    expect(screen.getByTestId(`advertising-credential-status-${connection.id}`)).toHaveTextContent(
+      "Credential configured",
+    );
+    expect(screen.getByTestId(`advertising-credential-status-${connection.id}`)).toHaveTextContent(
+      "••••9abc",
+    );
+    expect(screen.getByLabelText("Access token")).toHaveValue("");
+    expect(
+      screen.getByPlaceholderText("Enter a new token to replace the stored credential"),
+    ).toBeInTheDocument();
   });
 
   it("renders an explicit sync activation control for a discovered account", () => {

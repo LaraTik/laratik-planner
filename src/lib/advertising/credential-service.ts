@@ -38,6 +38,32 @@ export type StoredAdvertisingCredential = {
 };
 
 /**
+ * Return only a non-sensitive suffix for operator confirmation. The full
+ * token remains write-only and is never included in a page or action result.
+ */
+export function advertisingAccessTokenLast4(accessToken: string): string | null {
+  const normalized = accessToken.trim();
+  return normalized.length > 0 ? normalized.slice(-4) : null;
+}
+
+/** Resolve a credential only long enough to derive its safe operator hint. */
+export async function getAdvertisingCredentialLast4(
+  db: Db,
+  args: { agencyId: string; connectionId: string },
+): Promise<string | null> {
+  try {
+    const credentials = await resolveAdvertisingCredential(db, {
+      agencyId: args.agencyId,
+      connectionId: args.connectionId,
+      allowPendingValidation: true,
+    });
+    return advertisingAccessTokenLast4(credentials.accessToken);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Store a new encrypted credential version. The plaintext is accepted only in
  * this server-side function, is sealed with the agency DEK, and is never
  * returned or logged. A new version is inserted before the connection pointer

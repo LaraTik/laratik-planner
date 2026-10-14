@@ -387,17 +387,22 @@ export async function runMetaConfigurationWorkflow(
   if (pageProbePassed) {
     try {
       const pageId = firstCollectionId(pageProbe);
-      if (pageId) await args.provider.readInstagramAccounts(args.connection, pageId);
+      const instagramProbe = pageId
+        ? await args.provider.readInstagramAccounts(args.connection, pageId)
+        : null;
+      const instagramAvailable = hasMetaInstagramAccount(instagramProbe);
       await recordAdvertisingValidation(db, {
         connectionId: args.connection.id,
         operation: "instagram_read",
-        status: pageId ? "passed" : "partial",
-        sanitizedCode: pageId ? "meta_instagram_read_available" : "meta_no_instagram_asset",
-        metadata: { state: pageId ? "valid" : "no_data" },
+        status: instagramAvailable ? "passed" : "partial",
+        sanitizedCode: instagramAvailable
+          ? "meta_instagram_read_available"
+          : "meta_no_instagram_asset",
+        metadata: { state: instagramAvailable ? "valid" : "no_data" },
       });
       diagnostics.push({
         operation: "instagram_read",
-        state: pageId ? "valid" : "no_data",
+        state: instagramAvailable ? "valid" : "no_data",
         retryable: false,
       });
     } catch (error) {
@@ -408,6 +413,15 @@ export async function runMetaConfigurationWorkflow(
         retryable: failure.retryable,
       });
     }
+  } else {
+    await recordAdvertisingValidation(db, {
+      connectionId: args.connection.id,
+      operation: "instagram_read",
+      status: "partial",
+      sanitizedCode: "meta_no_instagram_asset",
+      metadata: { state: "no_data" },
+    });
+    diagnostics.push({ operation: "instagram_read", state: "no_data", retryable: false });
   }
   const accountDiscoveryState = accounts.length ? "valid" : "no_data";
   await recordAdvertisingValidation(db, {
@@ -422,10 +436,30 @@ export async function runMetaConfigurationWorkflow(
     state: accountDiscoveryState,
     retryable: false,
   });
-  const status = diagnostics.some((diagnostic) => diagnostic.state !== "valid")
+  // An Instagram professional account is an optional social identity for the
+  // advertising connection. Its absence must not downgrade otherwise-valid
+  // ad-account validation; the diagnostic remains visible for operators who
+  // need Instagram reporting and asset assignment guidance.
+  const status = diagnostics.some(
+    (diagnostic) =>
+      diagnostic.state !== "valid" &&
+      !(diagnostic.operation === "instagram_read" && diagnostic.state === "no_data"),
+  )
     ? ("partial" as const)
     : ("passed" as const);
   return { status, diagnostics, accounts };
+}
+
+export function hasMetaInstagramAccount(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const profile = (value as { instagram_business_account?: unknown }).instagram_business_account;
+  return Boolean(
+    profile &&
+    typeof profile === "object" &&
+    !Array.isArray(profile) &&
+    typeof (profile as { id?: unknown }).id === "string" &&
+    (profile as { id: string }).id.length > 0,
+  );
 }
 
 function firstCollectionId(value: unknown): string | null {

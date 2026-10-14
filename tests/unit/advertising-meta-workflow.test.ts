@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   classifyMetaDiagnostic,
   extractMetaSocialIdentities,
+  hasMetaInstagramAccount,
 } from "@/lib/advertising/meta-workflow";
 
 describe("Meta advertising diagnostic mapping", () => {
@@ -68,5 +69,11 @@ describe("Meta advertising diagnostic mapping", () => {
       },
     ]);
     expect(JSON.stringify(result)).not.toContain("must-not-persist");
+  });
+
+  it("treats an unassigned Instagram professional account as optional no-data", () => {
+    expect(hasMetaInstagramAccount({ id: "page-1" })).toBe(false);
+    expect(hasMetaInstagramAccount({ instagram_business_account: { id: "ig-1" } })).toBe(true);
+    expect(hasMetaInstagramAccount({ instagram_business_account: {} })).toBe(false);
   });
 });
