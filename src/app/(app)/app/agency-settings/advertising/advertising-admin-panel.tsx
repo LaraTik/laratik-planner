@@ -3,16 +3,25 @@
 import * as React from "react";
 import { useActionState } from "react";
 import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDollarSign,
+  Clock3,
+  Filter,
   History,
   KeyRound,
+  Link2,
   Database,
   Gauge,
+  Search,
   Pause,
   Play,
   Plus,
   ShieldAlert,
   ShieldCheck,
   RefreshCw,
+  SlidersHorizontal,
+  UsersRound,
   XCircle,
 } from "lucide-react";
 import { useLocaleT } from "@/components/i18n/locale-provider";
@@ -197,53 +206,15 @@ export function AdvertisingAdminPanel({
   const t = useLocaleT();
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
   return (
-    <div className="space-y-4">
-      <Card data-testid="advertising-create-card">
-        <div className="flex items-start gap-3">
-          <Plus className="text-primary mt-0.5 h-5 w-5" aria-hidden="true" />
-          <div>
-            <CardTitle>{t("advertising.createTitle")}</CardTitle>
-            <CardDescription>{t("advertising.createDescription")}</CardDescription>
-          </div>
-        </div>
-        <form
-          action={createAction}
-          className="mt-5 grid gap-4 sm:grid-cols-2"
-          data-testid="advertising-create-form"
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="advertising-display-name">{t("advertising.displayName")}</Label>
-            <Input id="advertising-display-name" name="displayName" required maxLength={120} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="advertising-app-id">{t("advertising.appId")}</Label>
-            <Input id="advertising-app-id" name="appId" maxLength={200} autoComplete="off" />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="advertising-graph-version">{t("advertising.graphVersion")}</Label>
-            <Input
-              id="advertising-graph-version"
-              name="graphApiVersion"
-              defaultValue={META_DEFAULT_GRAPH_VERSION}
-              pattern="v\d+\.\d+"
-              maxLength={20}
-            />
-          </div>
-          <div className="flex items-end justify-end sm:col-span-2">
-            <FormSubmitButton
-              label={t("advertising.create")}
-              pendingLabel={t("advertising.creating")}
-            />
-          </div>
-        </form>
-        {createState.code ? <ActionMessage state={createState} /> : null}
-      </Card>
+    <div className="space-y-6">
+      <AdvertisingCreateCard createAction={createAction} createState={createState} />
 
       <AdvertisingOverviewCard
         connections={connections}
         accounts={accounts}
         capabilities={capabilities}
         syncStates={syncStates}
+        visibilityGrants={visibilityGrants}
       />
 
       {connections.length === 0 ? (
@@ -268,6 +239,14 @@ export function AdvertisingAdminPanel({
           />
         ))
       )}
+
+      <AdvertisingAccountsTable
+        accounts={accounts}
+        connectionAccounts={connectionAccounts}
+        syncStates={syncStates}
+        capabilities={capabilities}
+        visibilityGrants={visibilityGrants}
+      />
       <GrantAccessCard
         accounts={accounts}
         workspaces={workspaces}
@@ -284,16 +263,75 @@ export function AdvertisingAdminPanel({
   );
 }
 
+function AdvertisingCreateCard({
+  createAction,
+  createState,
+}: {
+  createAction: (formData: FormData) => void;
+  createState: AdvertisingActionState;
+}) {
+  const t = useLocaleT();
+  return (
+    <Card data-testid="advertising-create-card" className="border-primary/15 bg-primary-subtle/30">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex items-start gap-3">
+          <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <Plus className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>{t("advertising.createTitle")}</CardTitle>
+            <CardDescription>{t("advertising.createDescription")}</CardDescription>
+          </div>
+        </div>
+        <Badge variant="info">{t("advertising.platformOwnedBadge")}</Badge>
+      </div>
+      <form
+        action={createAction}
+        className="border-primary/10 bg-surface mt-5 grid gap-4 rounded-xl border p-4 sm:grid-cols-2"
+        data-testid="advertising-create-form"
+      >
+        <div className="space-y-1.5">
+          <Label htmlFor="advertising-display-name">{t("advertising.displayName")}</Label>
+          <Input id="advertising-display-name" name="displayName" required maxLength={120} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="advertising-app-id">{t("advertising.appId")}</Label>
+          <Input id="advertising-app-id" name="appId" maxLength={200} autoComplete="off" />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="advertising-graph-version">{t("advertising.graphVersion")}</Label>
+          <Input
+            id="advertising-graph-version"
+            name="graphApiVersion"
+            defaultValue={META_DEFAULT_GRAPH_VERSION}
+            pattern="v\d+\.\d+"
+            maxLength={20}
+          />
+        </div>
+        <div className="flex items-end justify-end sm:col-span-2">
+          <FormSubmitButton
+            label={t("advertising.create")}
+            pendingLabel={t("advertising.creating")}
+          />
+        </div>
+      </form>
+      {createState.code ? <ActionMessage state={createState} /> : null}
+    </Card>
+  );
+}
+
 function AdvertisingOverviewCard({
   connections,
   accounts,
   capabilities,
   syncStates,
+  visibilityGrants,
 }: {
   connections: readonly Connection[];
   accounts: readonly AdvertisingAccount[];
   capabilities: readonly Capability[];
   syncStates: readonly SyncState[];
+  visibilityGrants: readonly VisibilityGrant[];
 }) {
   const t = useLocaleT();
   const configuredConnections = connections.filter(
@@ -305,6 +343,10 @@ function AdvertisingOverviewCard({
   const activeSyncs = syncStates.filter(
     (state) => !["paused", "dead_letter"].includes(state.status),
   ).length;
+  const readyAccounts = accounts.filter((account) =>
+    isReportingReady(account, capabilities, visibilityGrants),
+  ).length;
+  const attentionAccounts = Math.max(accounts.length - readyAccounts, 0);
   const metrics = [
     {
       label: t("advertising.overviewConnections"),
@@ -314,12 +356,14 @@ function AdvertisingOverviewCard({
         total: connections.length,
       }),
       icon: Gauge,
+      tone: "primary",
     },
     {
       label: t("advertising.overviewAccounts"),
       value: accounts.length,
       detail: t("advertising.overviewAccountsDetail"),
       icon: Database,
+      tone: "primary",
     },
     {
       label: t("advertising.overviewCapabilities"),
@@ -328,42 +372,297 @@ function AdvertisingOverviewCard({
         total: capabilities.length,
       }),
       icon: ShieldCheck,
+      tone: "primary",
     },
     {
       label: t("advertising.overviewSyncs"),
       value: activeSyncs,
       detail: t("advertising.overviewSyncsDetail"),
       icon: RefreshCw,
+      tone: "info",
+    },
+    {
+      label: t("advertising.readyForReporting"),
+      value: readyAccounts,
+      detail: t("advertising.readyForReportingDetail", { count: accounts.length }),
+      icon: CheckCircle2,
+      tone: "success",
+    },
+    {
+      label: t("advertising.needsAttention"),
+      value: attentionAccounts,
+      detail: t("advertising.needsAttentionDetail"),
+      icon: AlertTriangle,
+      tone: "warning",
     },
   ] as const;
 
   return (
-    <Card variant="subtle" data-testid="advertising-overview">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <section aria-labelledby="advertising-overview-title" data-testid="advertising-overview">
+      <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <CardTitle>{t("advertising.overviewTitle")}</CardTitle>
-          <CardDescription>{t("advertising.overviewDescription")}</CardDescription>
+          <p className="text-label text-primary font-semibold tracking-[0.12em] uppercase">
+            {t("advertising.overviewTitle")}
+          </p>
+          <p id="advertising-overview-title" className="text-body text-fg-secondary mt-1">
+            {t("advertising.overviewDescription")}
+          </p>
         </div>
         <Badge variant="outline">{t("advertising.readOnlyBadge")}</Badge>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map(({ label, value, detail, icon: Icon }) => (
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+        {metrics.map(({ label, value, detail, icon: Icon, tone }) => (
           <div
             key={label}
-            className="border-border bg-surface flex min-h-28 flex-col justify-between rounded-[var(--radius-control)] border p-4"
+            className="border-border bg-surface hover:border-primary/30 flex min-h-32 flex-col justify-between rounded-[var(--radius-card)] border p-4 transition-colors"
           >
             <div className="text-fg-muted flex items-center justify-between gap-2">
               <span className="text-label font-medium">{label}</span>
-              <Icon className="h-4 w-4" aria-hidden="true" />
+              <Icon
+                className={`h-4 w-4 ${
+                  tone === "success"
+                    ? "text-success"
+                    : tone === "warning"
+                      ? "text-warning"
+                      : tone === "info"
+                        ? "text-info"
+                        : "text-primary"
+                }`}
+                aria-hidden="true"
+              />
             </div>
             <div>
-              <p className="text-title-card text-fg-primary font-semibold tabular-nums">{value}</p>
+              <p className="text-title-page text-fg-primary font-semibold tabular-nums">{value}</p>
               <p className="text-label text-fg-muted">{detail}</p>
             </div>
           </div>
         ))}
       </div>
+    </section>
+  );
+}
+
+function AdvertisingAccountsTable({
+  accounts,
+  connectionAccounts,
+  syncStates,
+  capabilities,
+  visibilityGrants,
+}: {
+  accounts: readonly AdvertisingAccount[];
+  connectionAccounts: readonly ConnectionAccount[];
+  syncStates: readonly SyncState[];
+  capabilities: readonly Capability[];
+  visibilityGrants: readonly VisibilityGrant[];
+}) {
+  const t = useLocaleT();
+  const [query, setQuery] = React.useState("");
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const filteredAccounts = accounts.filter((account) =>
+    `${account.name} ${account.externalAccountId}`.toLocaleLowerCase().includes(normalizedQuery),
+  );
+  const readyCount = accounts.filter((account) =>
+    isReportingReady(account, capabilities, visibilityGrants),
+  ).length;
+
+  return (
+    <Card data-testid="advertising-accounts-table-card" padding="none">
+      <div className="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="bg-info-subtle text-info flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+            <Database className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>{t("advertising.accountsTitle")}</CardTitle>
+            <CardDescription>{t("advertising.accountsDescription")}</CardDescription>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant="success">
+            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            {t("advertising.readyForReportingDetail", { count: readyCount })}
+          </Badge>
+          <Badge variant="outline">
+            <UsersRound className="h-3.5 w-3.5" aria-hidden="true" />
+            {accounts.length}
+          </Badge>
+        </div>
+      </div>
+
+      <div className="border-border bg-surface-subtle/60 flex flex-wrap items-center gap-3 border-y p-3 sm:px-5">
+        <div className="relative min-w-56 flex-1">
+          <Search
+            className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            aria-label={t("advertising.accountSearch")}
+            placeholder={t("advertising.accountSearch")}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="ps-9"
+          />
+        </div>
+        <Button type="button" variant="secondary" size="sm" disabled>
+          <Filter className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.accountStatusFilter")}
+        </Button>
+        <Button type="button" variant="secondary" size="sm" disabled>
+          <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.accountCapabilityFilter")}
+        </Button>
+      </div>
+
+      {accounts.length === 0 ? (
+        <div className="p-5">
+          <p className="text-body text-fg-secondary">{t("advertising.noAccounts")}</p>
+        </div>
+      ) : filteredAccounts.length === 0 ? (
+        <div className="p-5">
+          <p className="text-body text-fg-secondary">{t("advertising.accountSearchEmpty")}</p>
+        </div>
+      ) : (
+        <div
+          className="overflow-x-auto"
+          tabIndex={0}
+          role="region"
+          aria-label={t("advertising.accountTableLabel")}
+        >
+          <table className="w-full min-w-[720px] text-start">
+            <thead className="bg-surface-subtle/40">
+              <tr className="border-border border-b">
+                <th className="text-label text-fg-muted px-5 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableAccount")}
+                </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableStatus")}
+                </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableScope")}
+                </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableReporting")}
+                </th>
+                <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                  {t("advertising.accountTableSync")}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredAccounts.map((account) => {
+                const linked = connectionAccounts.find((link) => link.accountId === account.id);
+                const sync = syncStates.find((state) => state.accountId === account.id);
+                const grants = visibilityGrants.filter(
+                  (grant) => grant.accountId === account.id && !grant.revokedAt,
+                );
+                const isReady = isReportingReady(account, capabilities, grants);
+                return (
+                  <tr key={account.id} className="border-border border-b last:border-b-0">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-primary-subtle text-primary text-label flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold">
+                          {account.name.slice(0, 1).toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-body text-fg-primary truncate font-semibold">
+                            {account.name}
+                          </p>
+                          <p className="text-label text-fg-muted font-mono" dir="ltr">
+                            {account.externalAccountId}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <StatusBadge
+                        variant={account.status === "active" ? "success" : "warning"}
+                        label={
+                          account.status === "active"
+                            ? t("advertising.accountActive")
+                            : t("advertising.accountNeedsAttention")
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <p className="text-label text-fg-primary">
+                        {grants.length > 0
+                          ? t("advertising.scopeAgency")
+                          : t("advertising.notGranted")}
+                      </p>
+                      {linked ? (
+                        <p className="text-label text-fg-muted">
+                          {linked.status === "active"
+                            ? t("advertising.connected")
+                            : t("advertising.notConnected")}
+                        </p>
+                      ) : null}
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <StatusBadge
+                        variant={isReady ? "success" : "warning"}
+                        label={
+                          isReady
+                            ? t("advertising.reportingReady")
+                            : t("advertising.reportingNotReady")
+                        }
+                      />
+                    </td>
+                    <td className="px-3 py-3.5">
+                      <StatusBadge
+                        variant={
+                          sync && !["paused", "dead_letter"].includes(sync.status)
+                            ? "success"
+                            : "outline"
+                        }
+                        label={
+                          sync && !["paused", "dead_letter"].includes(sync.status)
+                            ? t("advertising.syncEnabled")
+                            : t("advertising.syncDisabled")
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </Card>
+  );
+}
+
+function isReportingReady(
+  account: AdvertisingAccount,
+  capabilities: readonly Capability[],
+  visibilityGrants: readonly VisibilityGrant[],
+) {
+  return (
+    account.status === "active" &&
+    (capabilities.some(
+      (capability) =>
+        capability.accountId === account.id &&
+        capability.capability === "read_reports" &&
+        capability.status === "available",
+    ) ||
+      visibilityGrants.some((grant) => grant.accountId === account.id && !grant.revokedAt))
+  );
+}
+
+function StatusBadge({
+  variant,
+  label,
+}: {
+  variant: "success" | "warning" | "danger" | "outline";
+  label: string;
+}) {
+  const Icon =
+    variant === "success" ? CheckCircle2 : variant === "danger" ? XCircle : AlertTriangle;
+  return (
+    <Badge variant={variant}>
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {label}
+    </Badge>
   );
 }
 
@@ -637,13 +936,21 @@ function AdvertisingHistoryCard({
     connections.map((connection) => [connection.id, connection.displayName]),
   );
   return (
-    <Card data-testid="advertising-history-card">
-      <div className="flex items-start gap-3">
-        <History className="text-primary mt-0.5 h-5 w-5" aria-hidden="true" />
-        <div>
-          <CardTitle>{t("advertising.historyTitle")}</CardTitle>
-          <CardDescription>{t("advertising.historyDescription")}</CardDescription>
+    <Card data-testid="advertising-history-card" className="overflow-hidden">
+      <div className="border-border bg-surface-subtle/55 -mx-4 -mt-4 mb-5 flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:-mx-5 sm:-mt-5 sm:px-5">
+        <div className="flex items-start gap-3">
+          <div className="bg-primary-subtle text-primary flex h-10 w-10 items-center justify-center rounded-xl">
+            <History className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <div>
+            <CardTitle>{t("advertising.historyTitle")}</CardTitle>
+            <CardDescription>{t("advertising.historyDescription")}</CardDescription>
+          </div>
         </div>
+        <Badge variant="outline">
+          <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+          {t("advertising.readOnlyBadge")}
+        </Badge>
       </div>
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
         <section aria-labelledby="advertising-validation-history">
@@ -714,8 +1021,9 @@ function AdvertisingHistoryCard({
         <section aria-labelledby="advertising-reconciliation-history">
           <h3
             id="advertising-reconciliation-history"
-            className="text-body text-fg-primary font-semibold"
+            className="text-body text-fg-primary flex items-center gap-2 font-semibold"
           >
+            <CircleDollarSign className="text-primary h-4 w-4" aria-hidden="true" />
             {t("advertising.reconciliationTitle")}
           </h3>
           {reconciliations.length === 0 ? (
@@ -805,29 +1113,47 @@ function ConnectionCard({
   };
 
   return (
-    <Card data-testid={`advertising-connection-${connection.id}`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <Card data-testid={`advertising-connection-${connection.id}`} className="overflow-hidden">
+      <div className="border-border bg-surface-subtle/55 -mx-4 -mt-4 mb-5 flex flex-wrap items-start justify-between gap-4 border-b px-4 py-4 sm:-mx-5 sm:-mt-5 sm:px-5">
         <div className="flex items-start gap-3">
-          {connection.status === "active" ? (
-            <ShieldCheck className="text-success mt-0.5 h-5 w-5" aria-hidden="true" />
-          ) : (
-            <ShieldAlert className="text-fg-muted mt-0.5 h-5 w-5" aria-hidden="true" />
-          )}
+          <div className="bg-primary-subtle text-primary flex h-11 w-11 shrink-0 items-center justify-center rounded-xl">
+            <Link2 className="h-5 w-5" aria-hidden="true" />
+          </div>
           <div>
-            <CardTitle>{connection.displayName}</CardTitle>
+            <p className="text-label text-primary font-semibold tracking-[0.12em] uppercase">
+              {t("advertising.connectionSectionTitle")}
+            </p>
+            <CardTitle className="mt-1">{connection.displayName}</CardTitle>
             <CardDescription>
-              {connection.provider} · {connection.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION} ·{" "}
-              {t("advertising.credentialVersion", { count: connection.currentCredentialVersion })}
+              {t("advertising.connectionSectionDescription")} · {connection.provider} ·{" "}
+              <bdi dir="ltr">{connection.graphApiVersion ?? META_DEFAULT_GRAPH_VERSION}</bdi>
             </CardDescription>
           </div>
         </div>
-        <Badge variant={status}>{t(`advertising.status.${connection.status}`)}</Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={status}>
+            {connection.status === "active" ? (
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {t(`advertising.status.${connection.status}`)}
+          </Badge>
+          {connection.lastValidatedAt ? (
+            <span className="text-label text-fg-muted inline-flex items-center gap-1">
+              <Clock3 className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("advertising.lastUpdated", {
+                date: new Date(connection.lastValidatedAt).toLocaleString(),
+              })}
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-5 grid gap-4 lg:grid-cols-2">
         <form
           action={credentialAction}
-          className="border-border bg-surface-subtle space-y-3 rounded-[var(--radius-control)] border p-4"
+          className="border-border bg-surface-subtle/55 space-y-3 rounded-[var(--radius-card)] border p-4"
         >
           <div className="flex items-center gap-2">
             <KeyRound className="text-fg-muted h-4 w-4" aria-hidden="true" />
@@ -895,7 +1221,7 @@ function ConnectionCard({
           {credentialState.code ? <ActionMessage state={credentialState} compact /> : null}
         </form>
 
-        <div className="border-border bg-surface-subtle space-y-3 rounded-[var(--radius-control)] border p-4">
+        <div className="border-border bg-surface-subtle/55 space-y-3 rounded-[var(--radius-card)] border p-4">
           <h3 className="text-body text-fg-primary font-semibold">
             {t("advertising.validationTitle")}
           </h3>
@@ -944,7 +1270,7 @@ function ConnectionCard({
       </div>
       <form
         action={versionAction}
-        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        className="border-border bg-surface-subtle/55 mt-4 space-y-3 rounded-[var(--radius-card)] border p-4"
       >
         <div>
           <h3 className="text-body text-fg-primary font-semibold">
@@ -976,7 +1302,7 @@ function ConnectionCard({
         {versionState.code ? <ActionMessage state={versionState} compact /> : null}
       </form>
       <div
-        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        className="border-border bg-surface-subtle/55 mt-4 space-y-3 rounded-[var(--radius-card)] border p-4"
         data-testid={`advertising-capabilities-${connection.id}`}
       >
         <div>
@@ -1014,7 +1340,7 @@ function ConnectionCard({
         )}
       </div>
       <div
-        className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-4"
+        className="border-border bg-surface-subtle/55 mt-4 space-y-3 rounded-[var(--radius-card)] border p-4"
         data-testid={`advertising-identities-${connection.id}`}
       >
         <div>

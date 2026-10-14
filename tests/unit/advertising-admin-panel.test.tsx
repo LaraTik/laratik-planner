@@ -195,4 +195,44 @@ describe("AdvertisingAdminPanel", () => {
       "Read reports",
     );
   });
+
+  it("organizes discovered accounts into the dashboard inventory with a searchable table", () => {
+    render(
+      <AdvertisingAdminPanel
+        connections={[{ ...connection, status: "active", currentCredentialVersion: 1 }]}
+        accounts={[
+          {
+            id: "00000000-0000-4000-8000-000000000202",
+            name: "LaraTik Ads",
+            externalAccountId: "act_202",
+            currency: "EUR",
+            timezone: "Europe/Berlin",
+            status: "active",
+          },
+        ]}
+        workspaces={[]}
+        syncStates={[]}
+        connectionAccounts={[]}
+        socialIdentities={[]}
+        capabilities={[
+          {
+            id: "00000000-0000-4000-8000-000000000404",
+            connectionId: connection.id,
+            accountId: "00000000-0000-4000-8000-000000000202",
+            capability: "read_reports",
+            status: "available",
+            checkedAt: new Date("2026-10-13T00:00:00.000Z"),
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByTestId("advertising-overview")).toBeInTheDocument();
+    expect(screen.getByTestId("advertising-accounts-table-card")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Account name / ID" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Search accounts by name or ID" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Ready")).toBeInTheDocument();
+  });
 });
