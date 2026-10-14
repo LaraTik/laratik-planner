@@ -46,6 +46,7 @@ import {
   AdvertisingLeaseLostError,
   ingestAdvertisingSpend,
 } from "@/lib/advertising/ingestion-service";
+import { revokeAdvertisingAccountAccess } from "@/lib/advertising/credential-service";
 import { setAdvertisingSyncState } from "@/lib/advertising/sync-service";
 import {
   grantAdvertisingConnectionAgency,
@@ -425,6 +426,58 @@ describe("advertising tenant ownership guards", () => {
       leaseToken: null,
       leaseExpiresAt: null,
     });
+  });
+
+  it("revoking one account access fences its lease and removes it from future claims", async () => {
+    const { agencyA, connectionA, accountA } = await seed();
+    await db.update(advertisingConnections).set({ status: "active" });
+    await db.insert(advertisingConnectionAccounts).values({
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+    const [state] = await db
+      .insert(advertisingSyncStates)
+      .values({ status: "idle", connectionId: connectionA.id, accountId: accountA.id })
+      .returning();
+    if (!state) throw new Error("failed to seed sync state");
+
+    const [claimed] = await claimAdvertisingSyncStates(db, {
+      owner: "account-revoke-worker",
+      now: new Date(),
+      limit: 1,
+    });
+    if (!claimed) throw new Error("sync state was not claimed");
+
+    await revokeAdvertisingAccountAccess(db, {
+      agencyId: agencyA.id,
+      connectionId: connectionA.id,
+      accountId: accountA.id,
+    });
+
+    const [revoked] = await db
+      .select({
+        status: advertisingSyncStates.status,
+        nextRunAt: advertisingSyncStates.nextRunAt,
+        leaseOwner: advertisingSyncStates.leaseOwner,
+        leaseToken: advertisingSyncStates.leaseToken,
+        leaseExpiresAt: advertisingSyncStates.leaseExpiresAt,
+      })
+      .from(advertisingSyncStates)
+      .where(eq(advertisingSyncStates.id, state.id));
+    expect(revoked).toEqual({
+      status: "paused",
+      nextRunAt: null,
+      leaseOwner: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+    });
+    await expect(
+      claimAdvertisingSyncStates(db, {
+        owner: "account-revoke-retry-worker",
+        now: new Date(),
+        limit: 1,
+      }),
+    ).resolves.toEqual([]);
   });
 
   it("replays a post-ingestion failure without duplicating canonical spend", async () => {

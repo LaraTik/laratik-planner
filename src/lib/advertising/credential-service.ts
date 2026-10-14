@@ -164,7 +164,14 @@ export async function revokeAdvertisingConnection(
       .where(eq(advertisingConnectionAccounts.connectionId, args.connectionId));
     await tx
       .update(advertisingSyncStates)
-      .set({ status: "paused", nextRunAt: null, updatedAt: new Date() })
+      .set({
+        status: "paused",
+        nextRunAt: null,
+        leaseOwner: null,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        updatedAt: new Date(),
+      })
       .where(eq(advertisingSyncStates.connectionId, args.connectionId));
     return result[0];
   });
@@ -207,7 +214,14 @@ export async function revokeAdvertisingAccountAccess(
       );
     await tx
       .update(advertisingSyncStates)
-      .set({ status: "paused", nextRunAt: null, updatedAt: new Date() })
+      .set({
+        status: "paused",
+        nextRunAt: null,
+        leaseOwner: null,
+        leaseToken: null,
+        leaseExpiresAt: null,
+        updatedAt: new Date(),
+      })
       .where(
         and(
           eq(advertisingSyncStates.connectionId, args.connectionId),

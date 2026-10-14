@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
@@ -183,7 +184,13 @@ describe("advertising credential lifecycle", () => {
     expect(syncState).toBeDefined();
     await db
       .update(advertisingSyncStates)
-      .set({ status: "idle", nextRunAt: new Date() })
+      .set({
+        status: "running",
+        nextRunAt: new Date(),
+        leaseOwner: "lifecycle-worker",
+        leaseToken: randomUUID(),
+        leaseExpiresAt: new Date(Date.now() + 60_000),
+      })
       .where(eq(advertisingSyncStates.id, syncState!.id));
 
     await revokeAdvertisingConnection(db, { agencyId: agency.id, connectionId: connection.id });
@@ -202,10 +209,22 @@ describe("advertising credential lifecycle", () => {
       .where(eq(advertisingCredentialVersions.connectionId, connection.id));
     expect(version?.revokedAt).not.toBeNull();
     const [pausedState] = await db
-      .select({ status: advertisingSyncStates.status, nextRunAt: advertisingSyncStates.nextRunAt })
+      .select({
+        status: advertisingSyncStates.status,
+        nextRunAt: advertisingSyncStates.nextRunAt,
+        leaseOwner: advertisingSyncStates.leaseOwner,
+        leaseToken: advertisingSyncStates.leaseToken,
+        leaseExpiresAt: advertisingSyncStates.leaseExpiresAt,
+      })
       .from(advertisingSyncStates)
       .where(eq(advertisingSyncStates.id, syncState!.id));
-    expect(pausedState).toEqual({ status: "paused", nextRunAt: null });
+    expect(pausedState).toEqual({
+      status: "paused",
+      nextRunAt: null,
+      leaseOwner: null,
+      leaseToken: null,
+      leaseExpiresAt: null,
+    });
     await expect(
       resolveAdvertisingCredential(db, {
         agencyId: agency.id,
