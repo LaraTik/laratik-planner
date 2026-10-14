@@ -9,10 +9,12 @@
 > lint, strict typecheck, production build, 508 unit files / 4,721 tests, the
 > complete disposable-Postgres integration runner, focused advertising
 > lifecycle 6/6 and tenant-guard 17/17, and migration drill 5/5 with 86/86
-> ledger rows. This remains **Tested**, not **Verified**: the new commit must
-> still be deployed, the existing connection must be revalidated on v26 without
-> activating sync, offsite recovery must pass, and an independent reviewer
-> must assign `Verified`.
+> ledger rows. The implementation was deployed as evidence commit
+> `a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`; controlled v26 read-only UAT
+> passed identity, Page, campaign, ad-set, ad, and account discovery, with
+> creative-field and Instagram-asset limitations recorded as partial results.
+> Sync remains disabled. This remains **Tested**, not **Verified**: offsite
+> recovery must pass and an independent reviewer must assign `Verified`.
 
 > **2026-10-14 final local regression checkpoint** — Exact clean code commit
 > `dd2135d13c613b1a4dc33fae00c9f5642a829746` passes `pnpm verify` with 507

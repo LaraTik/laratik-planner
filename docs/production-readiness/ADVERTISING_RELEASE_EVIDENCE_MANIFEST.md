@@ -1,18 +1,19 @@
 # Advertising release-candidate evidence manifest
 
-Status: **Tested / NO-GO**. This manifest records the local release candidate;
-it does not authorize a push, deployment, Meta request, or provider mutation.
+Status: **Tested / NO-GO**. This manifest records the verified local candidate
+and the controlled live v26 read-only result; it does not authorize production
+flag changes, provider writes, or release approval.
 
 ## Immutable identity
 
-| Identity                 | Value                                                                   |
-| ------------------------ | ----------------------------------------------------------------------- |
-| Source code commit       | `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`                              |
-| Database migration head  | `0085`                                                                  |
-| Drizzle migration ledger | `86/86` in the disposable migration drill                               |
-| Deployed image digest    | **N/A — no image was built or deployed in this pass**                   |
-| Production version       | **N/A — production was not accessed**                                   |
-| CI workflow artifact     | **Pending CI run for this exact SHA; do not substitute a local result** |
+| Identity                   | Value                                                                                                                                                                                                                                             |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Implementation commit      | `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`                                                                                                                                                                                                        |
+| Evidence/deployment commit | `a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`                                                                                                                                                                                                        |
+| Database migration head    | `0085`                                                                                                                                                                                                                                            |
+| Drizzle migration ledger   | `86/86` in the disposable migration drill                                                                                                                                                                                                         |
+| Production version         | `a458fa1` confirmed by `/api/health`                                                                                                                                                                                                              |
+| CI workflow artifact       | [CI](https://github.com/LaraTik/laratik-planner/actions/runs/38564688298), [Deploy](https://github.com/LaraTik/laratik-planner/actions/runs/38567790013), [Release](https://github.com/LaraTik/laratik-planner/actions/runs/38567948555) — passed |
 
 The source commit is the only code identity to which the results below may be
 attached. If the branch advances or becomes dirty, rerun the affected gates.
@@ -45,6 +46,17 @@ advertising accessibility cases. The older “15/15 plus 10/10” wording counte
 only the reporting accessibility subset and must not be used as the final
 release total.
 
+## Controlled live v26 UAT result
+
+The deployed evidence commit migrated the existing explicit pin to `v26.0` and
+ran one bounded, read-only validation. Identity, Facebook Page, campaign, ad
+set, ad, and ad-account discovery passed. Creative read returned an explicit
+unsupported-field partial result, and Instagram returned an explicit no-
+accessible-data partial result. The approved account remained **Disabled**;
+sync was not activated and no sync history was created. These provider
+limitations were surfaced as partial/unavailable state, not converted to zero
+or treated as a full-capability pass.
+
 ## Canary activation decision
 
 No new server allowlist is required for this release candidate. The existing
@@ -73,13 +85,10 @@ reporting independently, and disable it before expanding scope.
 
 ## Remaining release blockers
 
-1. The existing production connection's earlier controlled read-only UAT used
-   an explicit v25 pin. The v26 migration and fresh read-only revalidation for
-   this source commit are still pending; sync remains disabled.
-2. Restic offsite backup is not wired and no disposable offsite restore has
+1. Restic offsite backup is not wired and no disposable offsite restore has
    been timed. The operator procedure is in
    [`OFFSITE_RECOVERY_VERIFICATION.md`](./OFFSITE_RECOVERY_VERIFICATION.md).
-3. An independent reviewer has not assigned `Verified`.
+2. An independent reviewer has not assigned `Verified`.
 
 Therefore the release recommendation is **NO-GO**. This manifest does not
 authorize production flag changes, deployment, credential access, or provider

@@ -1,15 +1,17 @@
 # Advertising release-candidate rollout plan
 
-> Plan only. No rollout, live Meta request, production write, flag change,
-> push, or deployment was executed as part of this pass.
+> Current status: **NO-GO**. This document is the rollout plan; the current
+> deployed/evidence checkpoint is recorded in
+> `ADVERTISING_RELEASE_EVIDENCE_MANIFEST.md`.
 
 ## Candidate
 
-- Code: `dd2135d13c613b1a4dc33fae00c9f5642a829746`
-- Database: additive migration 0084 is applied only through the normal
-  migration runner; verify the production ledger and backup before execution.
-- Current decision: **NO-GO** pending independent review, authorized live Meta
-  UAT, and encrypted offsite backup plus disposable restore evidence.
+- Implementation: `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`
+- Evidence/deployment: `a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`
+- Database: migration head `0085`; disposable drill ledger `86/86`.
+- Current decision: **NO-GO** pending encrypted offsite backup plus disposable
+  restore evidence and independent review. Controlled v26 Meta UAT completed
+  with explicit partial provider results; sync remains disabled.
 
 ## Preconditions
 

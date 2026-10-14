@@ -16,9 +16,12 @@ integration test also proves the connection/account fencing behavior.
 | `TEST_DATABASE_URL=… pnpm migration-drill`  | **Pass** — 5/5 drills; 86/86 Drizzle ledger rows                                                  |
 | `git diff --check`                          | **Pass**                                                                                          |
 
-No provider write or sync activation was performed by this local change. The
-deployed v26 revalidation, offsite restore, and independent review remain
-external release gates.
+The implementation was deployed as evidence commit
+`a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`. Controlled v26 read-only UAT then
+passed identity, Page, campaign, ad-set, ad, and account discovery while
+surfacing creative-field and Instagram-asset limitations as explicit partial
+results. No provider write or sync activation was performed. Offsite restore
+and independent review remain external release gates.
 
 ## Final local regression — 2026-10-14, exact clean code SHA `dd2135d13c613b1a4dc33fae00c9f5642a829746`
 
