@@ -269,7 +269,11 @@ export async function validateAdvertisingConnectionAction(
       {
         async resolve(credentialRef) {
           if (credentialRef !== row.credentialRef) throw new Error("credential_reference_mismatch");
-          return resolveAdvertisingCredential(db, { agencyId, connectionId: row.id });
+          return resolveAdvertisingCredential(db, {
+            agencyId,
+            connectionId: row.id,
+            allowPendingValidation: true,
+          });
         },
       },
       (credential) => createMetaReadClient(row.graphApiVersion, credential),

@@ -155,6 +155,30 @@ describe("advertising credential lifecycle", () => {
     expect(storedConnection?.currentCredentialVersion).toBe(2);
   });
 
+  it("resolves a newly stored credential for validation before activation", async () => {
+    const { agency, user, connection } = await seed();
+    await storeAdvertisingCredential(db, {
+      agencyId: agency.id,
+      connectionId: connection.id,
+      credentials: { accessToken: "meta-token-pending-validation" },
+      actorId: user.id,
+    });
+
+    await expect(
+      resolveAdvertisingCredential(db, {
+        agencyId: agency.id,
+        connectionId: connection.id,
+      }),
+    ).rejects.toBeInstanceOf(AdvertisingConnectionNotFoundError);
+    await expect(
+      resolveAdvertisingCredential(db, {
+        agencyId: agency.id,
+        connectionId: connection.id,
+        allowPendingValidation: true,
+      }),
+    ).resolves.toEqual({ accessToken: "meta-token-pending-validation" });
+  });
+
   it("revokes provider reads, active versions, linked sync state, and blocks reactivation", async () => {
     const { agency, user, connection } = await seed();
     await storeAdvertisingCredential(db, {

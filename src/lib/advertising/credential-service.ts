@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { db as appDb } from "@/lib/db";
 import {
   advertisingConnectionAccounts,
@@ -235,7 +235,7 @@ export async function revokeAdvertisingAccountAccess(
 /** Resolve the current credential for a provider adapter; never use in a route response. */
 export async function resolveAdvertisingCredential(
   db: Db,
-  args: { agencyId: string; connectionId: string },
+  args: { agencyId: string; connectionId: string; allowPendingValidation?: boolean },
 ): Promise<AdvertisingCredentialPayload> {
   const connection = (
     await db
@@ -249,7 +249,12 @@ export async function resolveAdvertisingCredential(
       .where(
         and(
           eq(advertisingConnections.id, args.connectionId),
-          eq(advertisingConnections.status, "active"),
+          args.allowPendingValidation
+            ? or(
+                eq(advertisingConnections.status, "active"),
+                eq(advertisingConnections.status, "invalid"),
+              )
+            : eq(advertisingConnections.status, "active"),
         ),
       )
       .limit(1)
