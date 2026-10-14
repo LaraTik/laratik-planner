@@ -1,5 +1,25 @@
 # Test and coverage evidence
 
+## Safe Graph API version migration — 2026-10-14, exact clean implementation SHA `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`
+
+The advertising admin surface now supports migrating an existing explicit Meta
+Graph API pin without changing encrypted credentials. The service marks the
+connection invalid until fresh validation, pauses its account sync rows,
+clears worker lease metadata, and records a sanitized audit event. The focused
+integration test also proves the connection/account fencing behavior.
+
+| Check                                       | Result                                                                                            |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                               | **Pass** — formatting, lint, strict typecheck, 508 unit files / 4,721 tests, and production build |
+| `TEST_DATABASE_URL=… pnpm test:integration` | **Pass** — complete disposable-Postgres integration runner                                        |
+| Focused advertising integration             | **Pass** — lifecycle 6/6 and tenant guards 17/17                                                  |
+| `TEST_DATABASE_URL=… pnpm migration-drill`  | **Pass** — 5/5 drills; 86/86 Drizzle ledger rows                                                  |
+| `git diff --check`                          | **Pass**                                                                                          |
+
+No provider write or sync activation was performed by this local change. The
+deployed v26 revalidation, offsite restore, and independent review remain
+external release gates.
+
 ## Final local regression — 2026-10-14, exact clean code SHA `dd2135d13c613b1a4dc33fae00c9f5642a829746`
 
 This checkpoint closes the local regression defects found during the final

@@ -1,5 +1,19 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-14 Graph-version migration checkpoint** — Exact clean local
+> implementation commit `3a518784a4e977ddf54f08d9f03c314f01bc0c9e` adds the
+> agency-admin path for migrating an existing explicit Meta Graph API pin to
+> `v26.0`. The update preserves the encrypted credential, marks the connection
+> invalid until fresh validation, pauses its account sync rows, clears worker
+> leases, and records an audit event. Local verification passes formatting,
+> lint, strict typecheck, production build, 508 unit files / 4,721 tests, the
+> complete disposable-Postgres integration runner, focused advertising
+> lifecycle 6/6 and tenant-guard 17/17, and migration drill 5/5 with 86/86
+> ledger rows. This remains **Tested**, not **Verified**: the new commit must
+> still be deployed, the existing connection must be revalidated on v26 without
+> activating sync, offsite recovery must pass, and an independent reviewer
+> must assign `Verified`.
+
 > **2026-10-14 final local regression checkpoint** — Exact clean code commit
 > `dd2135d13c613b1a4dc33fae00c9f5642a829746` passes `pnpm verify` with 507
 > unit files / 4,718 tests and a production build. The canonical workspace

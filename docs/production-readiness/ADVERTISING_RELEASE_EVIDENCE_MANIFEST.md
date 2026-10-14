@@ -7,9 +7,9 @@ it does not authorize a push, deployment, Meta request, or provider mutation.
 
 | Identity                 | Value                                                                   |
 | ------------------------ | ----------------------------------------------------------------------- |
-| Source code commit       | `dd2135d13c613b1a4dc33fae00c9f5642a829746`                              |
-| Database migration head  | `0084`                                                                  |
-| Drizzle migration ledger | `85/85` in the disposable migration drill                               |
+| Source code commit       | `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`                              |
+| Database migration head  | `0085`                                                                  |
+| Drizzle migration ledger | `86/86` in the disposable migration drill                               |
 | Deployed image digest    | **N/A — no image was built or deployed in this pass**                   |
 | Production version       | **N/A — production was not accessed**                                   |
 | CI workflow artifact     | **Pending CI run for this exact SHA; do not substitute a local result** |
@@ -21,14 +21,14 @@ attached. If the branch advances or becomes dirty, rerun the affected gates.
 
 All database commands use a disposable `planner_test` database.
 
-| Gate                                   | Result                                                                                                      |
-| -------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Verification                           | Pass — formatting, lint, strict typecheck, 507 unit files / 4,718 tests, production build                   |
-| Advertising integration                | Pass — focused lifecycle 3/3 and tenant guards 16/16, including connection/account revocation lease fencing |
-| Full migration safety                  | Pass — 5/5 drills, 85/85 ledger rows, backup/restore included                                               |
-| Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari                                 |
-| Advertising accessibility browser gate | Pass — 15/15 across the same five projects; serious/critical axe findings absent                            |
-| Combined advertising browser gate      | Pass — **30/30**                                                                                            |
+| Gate                                   | Result                                                                                                    |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Verification                           | Pass — formatting, lint, strict typecheck, 508 unit files / 4,721 tests, production build                 |
+| Advertising integration                | Pass — focused lifecycle 6/6 and tenant guards 17/17, including Graph-version migration and lease fencing |
+| Full migration safety                  | Pass — 5/5 drills, 86/86 ledger rows, backup/restore included                                             |
+| Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari                               |
+| Advertising accessibility browser gate | Pass — 15/15 across the same five projects; serious/critical axe findings absent                          |
+| Combined advertising browser gate      | Pass — **30/30**                                                                                          |
 
 Exact command forms:
 
@@ -73,14 +73,14 @@ reporting independently, and disable it before expanding scope.
 
 ## Remaining release blockers
 
-1. Authorized, read-only live Meta UAT with a sanitized platform/account-level
-   reconciliation is not complete. The separate `meta-ads-agent` workspace was
-   not read or used because authorization was not provided.
+1. The existing production connection's earlier controlled read-only UAT used
+   an explicit v25 pin. The v26 migration and fresh read-only revalidation for
+   this source commit are still pending; sync remains disabled.
 2. Restic offsite backup is not wired and no disposable offsite restore has
    been timed. The operator procedure is in
    [`OFFSITE_RECOVERY_VERIFICATION.md`](./OFFSITE_RECOVERY_VERIFICATION.md).
 3. An independent reviewer has not assigned `Verified`.
 
-Therefore the release recommendation is **NO-GO**. No production flag change,
-push, deployment, credential access, or provider write is authorized by this
-manifest.
+Therefore the release recommendation is **NO-GO**. This manifest does not
+authorize production flag changes, deployment, credential access, or provider
+writes.
