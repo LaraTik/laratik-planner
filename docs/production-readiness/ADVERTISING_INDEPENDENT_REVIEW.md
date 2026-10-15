@@ -1,7 +1,7 @@
 # Advertising independent-review checklist
 
 > Review target: LaraTik Planner advertising foundation at exact clean SHA
-> `dd2135d13c613b1a4dc33fae00c9f5642a829746`.
+> `a54629e4a5fcd61556d1d734fdea5e51168d1d91`.
 >
 > This checklist is prepared for an independent reviewer. The implementer may
 > provide evidence and fix findings, but must not assign `Verified` to these
@@ -10,13 +10,15 @@
 
 ## Evidence already available
 
-- [x] `pnpm verify` passes: 507 unit files / 4,718 tests and production build.
-- [x] Focused disposable-Postgres integration completed; advertising lifecycle 3/3 and tenant guards 16/16, including account-revocation lease fencing.
-- [x] Migration drill completed 5/5 with 85/85 ledger rows.
+- [x] `pnpm verify` passes: 509 unit files / 4,728 tests and production build.
+- [x] Focused disposable-Postgres integration completed; advertising lifecycle 6/6 and tenant guards 17/17, including account-revocation lease fencing.
+- [x] Migration drill completed 5/5 with 86/86 ledger rows.
 - [x] Advertising functional browser matrix completed 15/15 across five browser projects: admin 5/5, reporting EN 5/5, reporting AR 5/5.
 - [x] Advertising accessibility browser matrix completed 15/15 across five browser projects: settings 5/5, analytics EN 5/5, analytics AR 5/5; serious and critical axe findings absent.
 - [x] Combined advertising browser release gate completed 30/30; the prior 15/15 + 10/10 wording counted only the reporting accessibility subset and is superseded here.
-- [x] No push, deployment, live Meta request, or provider mutation was performed.
+- [x] Production health, CI, deployment, and release workflows passed for the
+      exact target SHA; the live Meta validation was read-only and recorded
+      sanitized results only.
 
 ## Reviewer gates
 
@@ -95,8 +97,10 @@ provider reads, active versions, linked sync state, and blocks reactivation`.
 - [ ] Confirm provider scopes are read-only and the Meta publishing kill switch
       remains disabled.
 - [ ] Complete the controlled Meta UAT using an explicitly authorized test
-      account, one test agency, and a documented stop window. Record only
-      sanitized outcomes in `EXTERNAL_SERVICES_UAT.md`.
+      account, one test agency, and a documented stop window. The initial
+      read-only validation passed 9/10 checks at 2026-10-15 10:39:42; scoped
+      visibility, reconciliation, bounded sync, and fencing evidence remain.
+      Record only sanitized outcomes in `EXTERNAL_SERVICES_UAT.md`.
 - [ ] Observe and record permission denial, rate limiting, pagination, retry,
       partial-data, and provider-error behavior against the authorized account.
 
@@ -133,7 +137,7 @@ provider reads, active versions, linked sync state, and blocks reactivation`.
 | State               | What is currently evidenced                                                                | What is still required                                             |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | Local code/tests    | Exact-SHA verification, disposable-DB integration, migration drill, and 30/30 browser gate | Independent reviewer confirmation                                  |
-| Live provider       | No Meta credential read or request made                                                    | Authorized read-only Meta UAT and account reconciliation           |
+| Live provider       | Sanitized production v26 validation: 9/10 checks passed; creative read fixed; Instagram has no data | Scoped visibility, bounded sync, reconciliation, deactivation fencing, and operator sign-off |
 | Operations/recovery | Local backup/restore drill only; restic remains stubbed                                    | Provision offsite repository and complete timed disposable restore |
 | Independent review  | Checklist and code-reference map prepared; implementer status remains Tested               | Reviewer assigns Verified after all applicable gates               |
 

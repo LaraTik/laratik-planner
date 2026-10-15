@@ -8,12 +8,12 @@ flag changes, provider writes, or release approval.
 
 | Identity                   | Value                                                                                                                                                                                                                                             |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Implementation commit      | `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`                                                                                                                                                                                                        |
-| Evidence/deployment commit | `a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`                                                                                                                                                                                                        |
+| Implementation commit      | `a54629e4a5fcd61556d1d734fdea5e51168d1d91`                                                                                                                                                                                                        |
+| Evidence/deployment commit | `a54629e4a5fcd61556d1d734fdea5e51168d1d91`                                                                                                                                                                                                        |
 | Database migration head    | `0085`                                                                                                                                                                                                                                            |
 | Drizzle migration ledger   | `86/86` in the disposable migration drill                                                                                                                                                                                                         |
-| Production version         | `a458fa1` confirmed by `/api/health`                                                                                                                                                                                                              |
-| CI workflow artifact       | [CI](https://github.com/LaraTik/laratik-planner/actions/runs/38564688298), [Deploy](https://github.com/LaraTik/laratik-planner/actions/runs/38567790013), [Release](https://github.com/LaraTik/laratik-planner/actions/runs/38567948555) — passed |
+| Production version         | `a54629e` confirmed by `/api/health`                                                                                                                                                                                                              |
+| CI workflow artifact       | [CI](https://github.com/LaraTik/laratik-planner/actions/runs/38696125682), [Deploy](https://github.com/LaraTik/laratik-planner/actions/runs/38698789956), [Release](https://github.com/LaraTik/laratik-planner/actions/runs/38698989956) — passed |
 
 The source commit is the only code identity to which the results below may be
 attached. If the branch advances or becomes dirty, rerun the affected gates.
@@ -24,7 +24,7 @@ All database commands use a disposable `planner_test` database.
 
 | Gate                                   | Result                                                                                                    |
 | -------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| Verification                           | Pass — formatting, lint, strict typecheck, 508 unit files / 4,721 tests, production build                 |
+| Verification                           | Pass — formatting, lint, strict typecheck, 509 unit files / 4,728 tests, production build                 |
 | Advertising integration                | Pass — focused lifecycle 6/6 and tenant guards 17/17, including Graph-version migration and lease fencing |
 | Full migration safety                  | Pass — 5/5 drills, 86/86 ledger rows, backup/restore included                                             |
 | Advertising functional browser gate    | Pass — 15/15 across Chromium, Firefox, WebKit, mobile Chrome, mobile Safari                               |
@@ -48,14 +48,15 @@ release total.
 
 ## Controlled live v26 UAT result
 
-The deployed evidence commit migrated the existing explicit pin to `v26.0` and
-ran one bounded, read-only validation. Identity, Facebook Page, campaign, ad
-set, ad, and ad-account discovery passed. Creative read returned an explicit
-unsupported-field partial result, and Instagram returned an explicit no-
-accessible-data partial result. The approved account remained **Disabled**;
-sync was not activated and no sync history was created. These provider
-limitations were surfaced as partial/unavailable state, not converted to zero
-or treated as a full-capability pass.
+The deployed candidate ran a bounded, read-only validation at
+`2026-10-15 10:39:42` (Europe/Berlin). Nine of ten checks passed: identity,
+Facebook Page, campaign, ad set, ad, creative, daily insights, breakdown, and
+ad-account discovery. Instagram returned explicit no-accessible-data; this is
+an optional social-identity condition and does not block ad-account reporting.
+The account is active and scheduled/synced at the provider-account layer, but
+the test workspace visibility grant is still revoked/not shared. No sync
+history or spend reconciliation has been recorded yet, and no publishing or
+financial workflow was used.
 
 ## Canary activation decision
 
@@ -85,10 +86,14 @@ reporting independently, and disable it before expanding scope.
 
 ## Remaining release blockers
 
-1. Restic offsite backup is not wired and no disposable offsite restore has
+1. The read-only visibility grant and complete live UAT (bounded sync,
+   reconciliation, deactivation fencing, and queued-retry checks) are still
+   pending. The operator procedure is in
+   [`ADVERTISING_OPERATOR_HANDOFF.md`](./ADVERTISING_OPERATOR_HANDOFF.md).
+2. Restic offsite backup is not wired and no disposable offsite restore has
    been timed. The operator procedure is in
    [`OFFSITE_RECOVERY_VERIFICATION.md`](./OFFSITE_RECOVERY_VERIFICATION.md).
-2. An independent reviewer has not assigned `Verified`.
+3. An independent reviewer has not assigned `Verified`.
 
 Therefore the release recommendation is **NO-GO**. This manifest does not
 authorize production flag changes, deployment, credential access, or provider
