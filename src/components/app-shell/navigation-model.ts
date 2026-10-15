@@ -18,6 +18,7 @@ import {
   Library,
   Link as LinkIcon,
   Lock,
+  Megaphone,
   MessageCircle,
   MessageSquare,
   Package,
@@ -149,7 +150,7 @@ export function buildWorkspaceNavigation(input: {
       href: wsBase,
       label: "Command Center",
       labelKey: "sidebar.workspaceOverview",
-      icon: LayoutDashboard,
+      icon: Home,
     },
   ];
 
@@ -241,7 +242,7 @@ export function buildWorkspaceNavigation(input: {
           href: `${wsBase}/analytics/advertising`,
           label: "Advertising",
           labelKey: "sidebar.advertising",
-          icon: Gauge,
+          icon: Megaphone,
         },
         {
           kind: "link",

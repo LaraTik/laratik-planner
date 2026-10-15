@@ -44,6 +44,7 @@ describe("AdvertisingReportVisuals", () => {
           spendTrendTitle: "Performance trend",
           spendTrendDescription: "Daily spend",
           spendTrendAccessible: "Daily spend trend chart",
+          trendLineLabel: "Trend",
           performanceByObjectiveTitle: "Performance by objective",
           performanceByObjectiveDescription: "Spend distribution",
           noSpendData: "No spend",
@@ -51,6 +52,7 @@ describe("AdvertisingReportVisuals", () => {
           unknownObjective: "Unspecified",
           totalSpend: "Total spend",
           legendSpend: "Spend",
+          spendMetric: "Spend",
         }}
       />,
     );

@@ -220,7 +220,11 @@ export function AdvertisingAdminPanel({
           (state) => !["paused", "dead_letter"].includes(state.status),
         )}
       />
-      <AdvertisingCreateCard createAction={createAction} createState={createState} />
+      <AdvertisingCreateCard
+        createAction={createAction}
+        createState={createState}
+        defaultOpen={connections.length === 0}
+      />
 
       <AdvertisingOverviewCard
         connections={connections}
@@ -362,14 +366,21 @@ function AdvertisingSetupSteps({
 function AdvertisingCreateCard({
   createAction,
   createState,
+  defaultOpen,
 }: {
   createAction: (formData: FormData) => void;
   createState: AdvertisingActionState;
+  defaultOpen: boolean;
 }) {
   const t = useLocaleT();
   return (
-    <Card data-testid="advertising-create-card" className="border-primary/15 bg-primary-subtle/30">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <details
+      id="advertising-create-card"
+      data-testid="advertising-create-card"
+      className="border-primary/15 bg-primary-subtle/30 rounded-[var(--radius-card)] border"
+      open={defaultOpen || undefined}
+    >
+      <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-4 p-4 sm:p-5 [&::-webkit-details-marker]:hidden">
         <div className="flex items-start gap-3">
           <div className="bg-primary/10 text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
             <Plus className="h-5 w-5" aria-hidden="true" />
@@ -380,39 +391,41 @@ function AdvertisingCreateCard({
           </div>
         </div>
         <Badge variant="info">{t("advertising.platformOwnedBadge")}</Badge>
+      </summary>
+      <div className="border-primary/10 bg-surface grid gap-4 border-t p-4 sm:grid-cols-2 sm:p-5">
+        <form
+          action={createAction}
+          className="grid gap-4 sm:col-span-2 sm:grid-cols-2"
+          data-testid="advertising-create-form"
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="advertising-display-name">{t("advertising.displayName")}</Label>
+            <Input id="advertising-display-name" name="displayName" required maxLength={120} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="advertising-app-id">{t("advertising.appId")}</Label>
+            <Input id="advertising-app-id" name="appId" maxLength={200} autoComplete="off" />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="advertising-graph-version">{t("advertising.graphVersion")}</Label>
+            <Input
+              id="advertising-graph-version"
+              name="graphApiVersion"
+              defaultValue={META_DEFAULT_GRAPH_VERSION}
+              pattern="v\d+\.\d+"
+              maxLength={20}
+            />
+          </div>
+          <div className="flex items-end justify-end">
+            <FormSubmitButton
+              label={t("advertising.create")}
+              pendingLabel={t("advertising.creating")}
+            />
+          </div>
+          {createState.code ? <ActionMessage state={createState} /> : null}
+        </form>
       </div>
-      <form
-        action={createAction}
-        className="border-primary/10 bg-surface mt-5 grid gap-4 rounded-xl border p-4 sm:grid-cols-2"
-        data-testid="advertising-create-form"
-      >
-        <div className="space-y-1.5">
-          <Label htmlFor="advertising-display-name">{t("advertising.displayName")}</Label>
-          <Input id="advertising-display-name" name="displayName" required maxLength={120} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="advertising-app-id">{t("advertising.appId")}</Label>
-          <Input id="advertising-app-id" name="appId" maxLength={200} autoComplete="off" />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="advertising-graph-version">{t("advertising.graphVersion")}</Label>
-          <Input
-            id="advertising-graph-version"
-            name="graphApiVersion"
-            defaultValue={META_DEFAULT_GRAPH_VERSION}
-            pattern="v\d+\.\d+"
-            maxLength={20}
-          />
-        </div>
-        <div className="flex items-end justify-end sm:col-span-2">
-          <FormSubmitButton
-            label={t("advertising.create")}
-            pendingLabel={t("advertising.creating")}
-          />
-        </div>
-      </form>
-      {createState.code ? <ActionMessage state={createState} /> : null}
-    </Card>
+    </details>
   );
 }
 
@@ -700,14 +713,6 @@ function AdvertisingAccountsTable({
                         }
                       />
                     </td>
-                    <td className="px-5 py-3.5 text-end">
-                      <a
-                        href="#advertising-grants-card"
-                        className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
-                      >
-                        {t("advertising.manageAccess")}
-                      </a>
-                    </td>
                     <td className="px-3 py-3.5">
                       <p className="text-label text-fg-primary">
                         {grants.length > 0
@@ -731,6 +736,14 @@ function AdvertisingAccountsTable({
                             : t("advertising.reportingNotReady")
                         }
                       />
+                    </td>
+                    <td className="px-5 py-3.5 text-end">
+                      <a
+                        href="#advertising-grants-card"
+                        className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+                      >
+                        {t("advertising.manageAccess")}
+                      </a>
                     </td>
                     <td className="px-3 py-3.5">
                       <StatusBadge
@@ -846,13 +859,23 @@ function GrantAccessCard({
 
   return (
     <Card id="advertising-grants-card" data-testid="advertising-grants-card">
-      <CardTitle>{t("advertising.accountsTitle")}</CardTitle>
-      <CardDescription>{t("advertising.accountsDescription")}</CardDescription>
+      <div className="flex items-start gap-3">
+        <div className="bg-primary-subtle text-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+          <KeyRound className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <div>
+          <CardTitle>{t("advertising.permissionsTitle")}</CardTitle>
+          <CardDescription>{t("advertising.permissionsDescription")}</CardDescription>
+        </div>
+      </div>
       {accounts.length === 0 ? (
         <p className="text-body text-fg-secondary mt-4">{t("advertising.noAccounts")}</p>
       ) : (
-        <div className="mt-5 space-y-5">
-          <form action={grantAction} className="grid gap-4 lg:grid-cols-4">
+        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+          <form
+            action={grantAction}
+            className="border-border bg-surface-subtle/45 grid gap-4 rounded-[var(--radius-card)] border p-4 lg:col-span-2 lg:grid-cols-4"
+          >
             <div className="space-y-1.5">
               <Label htmlFor="advertising-grant-account">{t("advertising.accountsTitle")}</Label>
               <Combobox
@@ -925,7 +948,7 @@ function GrantAccessCard({
           </form>
           <form
             action={financialAction}
-            className="border-border space-y-3 rounded-[var(--radius-control)] border p-4"
+            className="border-border bg-surface-subtle/45 space-y-3 rounded-[var(--radius-card)] border p-4"
           >
             <div>
               <h3 className="text-body text-fg-primary font-semibold">
@@ -1439,26 +1462,33 @@ function ConnectionCard({
         {capabilities.length === 0 ? (
           <p className="text-label text-fg-secondary">{t("advertising.noCapabilities")}</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {capabilities.map((capability) => (
               <li
                 key={capability.id}
-                className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                className="border-border bg-surface flex items-start gap-2 rounded-[var(--radius-control)] border p-3"
               >
-                <span className="text-body text-fg-primary">
-                  {t(`advertising.capabilityLabels.${capability.capability}`)}
-                </span>
-                <Badge
-                  variant={
+                <span
+                  className={
                     capability.status === "available"
-                      ? "success"
-                      : capability.status === "unavailable"
-                        ? "danger"
-                        : "outline"
+                      ? "bg-success text-primary-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
+                      : "bg-surface-subtle text-fg-muted flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
                   }
                 >
-                  {t(`advertising.capabilityStatus.${capability.status}`)}
-                </Badge>
+                  {capability.status === "available" ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <ShieldAlert className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                </span>
+                <span className="min-w-0">
+                  <span className="text-label text-fg-primary block font-semibold">
+                    {t(`advertising.capabilityLabels.${capability.capability}`)}
+                  </span>
+                  <span className="text-label text-fg-muted block">
+                    {t(`advertising.capabilityStatus.${capability.status}`)}
+                  </span>
+                </span>
               </li>
             ))}
           </ul>
@@ -1477,25 +1507,30 @@ function ConnectionCard({
         {socialIdentities.length === 0 ? (
           <p className="text-label text-fg-secondary">{t("advertising.noSocialIdentities")}</p>
         ) : (
-          <ul className="space-y-2">
+          <ul className="grid gap-3 sm:grid-cols-2">
             {socialIdentities.map((identity) => (
               <li
                 key={identity.id}
-                className="border-border flex flex-wrap items-center justify-between gap-2 rounded-[var(--radius-control)] border p-3"
+                className="border-border bg-surface flex items-center justify-between gap-3 rounded-[var(--radius-control)] border p-3"
               >
-                <div>
-                  <p className="text-body text-fg-primary font-medium">
-                    {identity.displayName ?? identity.username ?? identity.externalIdentityId}
-                  </p>
-                  <p className="text-label text-fg-muted">
-                    {t(`advertising.socialIdentityType.${identity.identityType}`)}
-                    {identity.username ? (
-                      <>
-                        {" · "}
-                        <bdi dir="ltr">@{identity.username}</bdi>
-                      </>
-                    ) : null}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="bg-info-subtle text-info flex h-9 w-9 shrink-0 items-center justify-center rounded-lg">
+                    <UsersRound className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-body text-fg-primary truncate font-medium">
+                      {identity.displayName ?? identity.username ?? identity.externalIdentityId}
+                    </p>
+                    <p className="text-label text-fg-muted">
+                      {t(`advertising.socialIdentityType.${identity.identityType}`)}
+                      {identity.username ? (
+                        <>
+                          {" · "}
+                          <bdi dir="ltr">@{identity.username}</bdi>
+                        </>
+                      ) : null}
+                    </p>
+                  </div>
                 </div>
                 <bdi className="text-label text-fg-muted" dir="ltr">
                   {identity.externalIdentityId}

@@ -8,6 +8,7 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { Button } from "@/components/ui/button";
+import { AdvertisingProviderMark } from "@/components/advertising/provider-mark";
 import { AdvertisingAdminPanel } from "./advertising-admin-panel";
 import { listAdvertisingConnectionsForAdmin, listAdvertisingResourcesForAdmin } from "./actions";
 
@@ -61,7 +62,12 @@ export default async function AdvertisingSettingsPage() {
       </nav>
       <PageHeader
         eyebrow={t("advertising.eyebrow")}
-        title={t("advertising.title")}
+        title={
+          <span className="inline-flex items-center gap-3">
+            <AdvertisingProviderMark size="lg" />
+            <span>{t("advertising.title")}</span>
+          </span>
+        }
         description={t("advertising.description")}
         action={
           <>
