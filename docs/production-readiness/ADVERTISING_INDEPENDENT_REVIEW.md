@@ -134,20 +134,20 @@ provider reads, active versions, linked sync state, and blocks reactivation`.
 
 ### Distinct evidence state
 
-| State               | What is currently evidenced                                                                | What is still required                                             |
-| ------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
-| Local code/tests    | Exact-SHA verification, disposable-DB integration, migration drill, and 30/30 browser gate | Independent reviewer confirmation                                  |
+| State               | What is currently evidenced                                                                                                                                                                             | What is still required                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Local code/tests    | Exact-SHA verification, disposable-DB integration, migration drill, and 30/30 browser gate                                                                                                              | Independent reviewer confirmation                                                                      |
 | Live provider       | Sanitized production v26 validation: 9/10 checks passed; creative read fixed; `Read reports` is granted to DR Reem Reda; financial authority revoked; Instagram has no data; reporting flag remains off | Bounded sync, reconciliation, deactivation fencing, product-owner flag approval, and operator sign-off |
-| Operations/recovery | Local backup/restore drill only; restic remains stubbed                                    | Provision offsite repository and complete timed disposable restore |
-| Independent review  | Checklist and code-reference map prepared; implementer status remains Tested               | Reviewer assigns Verified after all applicable gates               |
+| Operations/recovery | Local backup/restore drill only; restic remains stubbed                                                                                                                                                 | Provision offsite repository and complete timed disposable restore                                     |
+| Independent review  | Checklist and code-reference map prepared; implementer status remains Tested                                                                                                                            | Reviewer assigns Verified after all applicable gates                                                   |
 
 ## Sign-off
 
-| Role                 | Name | Date | Result  | Notes                                       |
-| -------------------- | ---- | ---- | ------- | ------------------------------------------- |
-| Implementer          |      |      | Tested  | Evidence prepared; no `Verified` assignment |
-| Independent reviewer |      |      | Pending | Must complete all applicable gates          |
-| Operations owner     |      |      | Pending | Must close backup/RPO/RTO gates             |
+| Role                 | Name   | Date | Result  | Notes                                        |
+| -------------------- | ------ | ---- | ------- | -------------------------------------------- |
+| Implementer          |        |      | Tested  | Evidence prepared; no `Verified` assignment  |
+| Independent reviewer | Msalam |      | Pending | Assigned; must complete all applicable gates |
+| Operations owner     |        |      | Pending | Must close backup/RPO/RTO gates              |
 
 Current recommendation: **NO-GO** for production advertising enablement until
 the unchecked live-UAT, offsite-recovery, and independent-review gates are
