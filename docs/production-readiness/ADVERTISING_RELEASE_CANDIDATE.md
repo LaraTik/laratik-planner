@@ -38,10 +38,10 @@
    validate credentials without exposing the token.
 4. Run one read-only discovery/probe and confirm the approved host, requested
    scopes, account identity, pagination, retry, and partial-state evidence.
-5. Grant one test workspace the minimum `Read reports` scope required for the
-   read-only test. Do not grant financial authority for this test; revoke any
-   pre-existing agency-wide financial authority. Reconcile provider totals
-   against the canonical spend facts.
+5. Grant the approved `DR Reem Reda` workspace the minimum `Read reports`
+   scope required for the read-only test. This grant is now active and the
+   pre-existing agency-wide financial authority is revoked. Reconcile provider
+   totals against the canonical spend facts.
 6. Enable reporting only for the test agency, observe one bounded sync window,
    then review audit and sync history. Do not enable publishing.
 7. Expand only after the reviewer records a pass for isolation, freshness,

@@ -137,7 +137,7 @@ provider reads, active versions, linked sync state, and blocks reactivation`.
 | State               | What is currently evidenced                                                                | What is still required                                             |
 | ------------------- | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------ |
 | Local code/tests    | Exact-SHA verification, disposable-DB integration, migration drill, and 30/30 browser gate | Independent reviewer confirmation                                  |
-| Live provider       | Sanitized production v26 validation: 9/10 checks passed; creative read fixed; Instagram has no data; reporting flag remains off | Scoped visibility, bounded sync, reconciliation, deactivation fencing, product-owner flag approval, and operator sign-off |
+| Live provider       | Sanitized production v26 validation: 9/10 checks passed; creative read fixed; `Read reports` is granted to DR Reem Reda; financial authority revoked; Instagram has no data; reporting flag remains off | Bounded sync, reconciliation, deactivation fencing, product-owner flag approval, and operator sign-off |
 | Operations/recovery | Local backup/restore drill only; restic remains stubbed                                    | Provision offsite repository and complete timed disposable restore |
 | Independent review  | Checklist and code-reference map prepared; implementer status remains Tested               | Reviewer assigns Verified after all applicable gates               |
 

@@ -58,10 +58,12 @@ The deployed v26 connection was validated through the approved read-only
 workflow at `2026-10-15 10:39:42` (Europe/Berlin). Nine of ten checks passed,
 including creative, daily insights, breakdown, and account discovery. Instagram
 returned no accessible data; no Instagram professional account is linked. The
-account is scheduled/synced at the provider-account layer, but workspace
-visibility is still revoked/not shared and no reconciliation or sync history
-has been recorded. Offsite restic backup/disposable restore and independent
-review remain open; an independent reviewer must complete
+account is scheduled/synced at the provider-account layer. `Read reports` is
+granted to the approved `DR Reem Reda` workspace and the pre-existing
+agency-wide financial authority is revoked, but no reconciliation or sync
+history has been recorded. The reporting rollout flag remains off. Offsite
+restic backup/disposable restore and independent review remain open; an
+independent reviewer must complete
 [`ADVERTISING_INDEPENDENT_REVIEW.md`](./ADVERTISING_INDEPENDENT_REVIEW.md)
 before assigning `Verified`.
 
