@@ -1,4 +1,4 @@
-import { Gauge, Sparkles, TriangleAlert } from "lucide-react";
+import { ArrowUpRight, Gauge, Sparkles, TriangleAlert, UsersRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/i18n/format-locale";
@@ -36,6 +36,14 @@ export type AdvertisingIntelligenceLabels = {
   expected: string;
   change: string;
   cpc: string;
+  audienceOpportunity: string;
+  audienceOpportunityDescription: string;
+  audienceRows: string;
+  noAudienceData: string;
+  campaignAction: string;
+  budgetAction: string;
+  creativeAction: string;
+  audienceAction: string;
 };
 
 export function AdvertisingIntelligencePanel({
@@ -44,6 +52,7 @@ export function AdvertisingIntelligencePanel({
   fatigue,
   currency,
   locale,
+  audienceCount,
   labels,
 }: {
   campaigns: readonly CampaignPerformanceInsight[];
@@ -51,6 +60,7 @@ export function AdvertisingIntelligencePanel({
   fatigue: readonly CreativeFatigueInsight[];
   currency: string | null;
   locale: string;
+  audienceCount: number;
   labels: AdvertisingIntelligenceLabels;
 }) {
   const effective = campaigns.filter((item) => item.status === "effective");
@@ -67,18 +77,25 @@ export function AdvertisingIntelligencePanel({
       className="space-y-3"
       data-testid="advertising-intelligence"
     >
-      <div>
-        <h2
-          id="advertising-intelligence-title"
-          className="text-title-card text-fg-primary font-semibold"
-        >
-          {labels.title}
-        </h2>
-        <p className="text-label text-fg-muted mt-1">{labels.description}</p>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h2
+            id="advertising-intelligence-title"
+            className="text-title-card text-fg-primary font-semibold"
+          >
+            {labels.title}
+          </h2>
+          <p className="text-label text-fg-muted mt-1">{labels.description}</p>
+        </div>
+        <Sparkles className="text-primary hidden h-5 w-5 shrink-0 sm:block" aria-hidden="true" />
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
-        <Card padding="md" data-testid="advertising-campaign-signals">
+      <div className="grid gap-3 lg:grid-cols-4">
+        <Card
+          padding="md"
+          className="flex min-h-[190px] flex-col"
+          data-testid="advertising-campaign-signals"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-body text-fg-primary font-semibold">{labels.campaignSignal}</h3>
@@ -94,7 +111,7 @@ export function AdvertisingIntelligencePanel({
               variant="warning"
             />
           </div>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 flex-1 space-y-2">
             {effective.slice(0, 2).map((item) => (
               <SignalRow
                 key={item.campaignId}
@@ -115,9 +132,14 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noComparison}</p>
             ) : null}
           </div>
+          <DecisionAction href="#advertising-reporting-campaigns" label={labels.campaignAction} />
         </Card>
 
-        <Card padding="md" data-testid="advertising-budget-pacing">
+        <Card
+          padding="md"
+          className="flex min-h-[190px] flex-col"
+          data-testid="advertising-budget-pacing"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-body text-fg-primary font-semibold">{labels.budgetPacing}</h3>
@@ -130,7 +152,7 @@ export function AdvertisingIntelligencePanel({
             <SignalCount label={labels.onTrack} value={onTrack.length} variant="success" />
             <SignalCount label={labels.under} value={under.length} variant="outline" />
           </div>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 flex-1 space-y-2">
             {pacing
               .filter((item) => item.status !== "unavailable")
               .slice(0, 3)
@@ -153,9 +175,14 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noBudgetData}</p>
             ) : null}
           </div>
+          <DecisionAction href="#advertising-reporting-campaigns" label={labels.budgetAction} />
         </Card>
 
-        <Card padding="md" data-testid="advertising-creative-health">
+        <Card
+          padding="md"
+          className="flex min-h-[190px] flex-col"
+          data-testid="advertising-creative-health"
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-body text-fg-primary font-semibold">{labels.creativeHealth}</h3>
@@ -167,7 +194,7 @@ export function AdvertisingIntelligencePanel({
             <SignalCount label={labels.fatiguing} value={fatiguing.length} variant="warning" />
             <SignalCount label={labels.stable} value={stable.length} variant="success" />
           </div>
-          <div className="mt-4 space-y-2">
+          <div className="mt-4 flex-1 space-y-2">
             {fatiguing.slice(0, 2).map((item) => (
               <div key={item.adId} className="text-label flex items-center justify-between gap-2">
                 <span className="text-fg-primary min-w-0 truncate">{item.name ?? item.adId}</span>
@@ -179,6 +206,35 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noFatigueData}</p>
             ) : null}
           </div>
+          <DecisionAction href="#advertising-reporting-ads" label={labels.creativeAction} />
+        </Card>
+
+        <Card
+          padding="md"
+          className="flex min-h-[190px] flex-col"
+          data-testid="advertising-audience-opportunity"
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-body text-fg-primary font-semibold">
+                {labels.audienceOpportunity}
+              </h3>
+              <p className="text-label text-fg-muted mt-1">
+                {labels.audienceOpportunityDescription}
+              </p>
+            </div>
+            <UsersRound className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
+          </div>
+          <div className="mt-4 flex items-end gap-2">
+            <span className="text-title-page text-fg-primary font-semibold tabular-nums">
+              {audienceCount}
+            </span>
+            <span className="text-label text-fg-muted mb-1">{labels.audienceRows}</span>
+          </div>
+          <p className="text-label text-fg-muted mt-3 flex-1">
+            {audienceCount > 0 ? labels.audienceOpportunityDescription : labels.noAudienceData}
+          </p>
+          <DecisionAction href="#advertising-reporting-audience" label={labels.audienceAction} />
         </Card>
       </div>
 
@@ -219,6 +275,18 @@ export function AdvertisingIntelligencePanel({
         </Card>
       ) : null}
     </section>
+  );
+}
+
+function DecisionAction({ href, label }: { href: string; label: string }) {
+  return (
+    <a
+      href={href}
+      className="border-border text-label text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring mt-4 inline-flex min-h-9 items-center justify-center gap-1 rounded-[var(--radius-control)] border px-3 font-semibold transition-colors focus:outline-none focus-visible:ring-2"
+    >
+      {label}
+      <ArrowUpRight className="h-3.5 w-3.5" aria-hidden="true" />
+    </a>
   );
 }
 

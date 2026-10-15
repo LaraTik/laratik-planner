@@ -287,9 +287,10 @@ export async function runMetaConfigurationWorkflow(
           });
           diagnostics.push({ operation: "ad_read", state: "valid", retryable: false });
           const adId = firstCollectionId(ads);
-          if (adId) {
+          const creativeId = firstCreativeId(ads);
+          if (adId && creativeId) {
             operation = "creative_read";
-            const creative = await args.provider.readCreatives(args.connection, adId);
+            const creative = await args.provider.readCreatives(args.connection, creativeId);
             await persistAdvertisingProviderObjects(db, {
               agencyId: args.agencyId,
               accountId: persisted.id,
@@ -472,6 +473,20 @@ function firstCollectionId(value: unknown): string | null {
   return first && typeof first === "object" && typeof (first as { id?: unknown }).id === "string"
     ? (first as { id: string }).id
     : null;
+}
+
+function firstCreativeId(value: unknown): string | null {
+  const rows = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { data?: unknown }).data)
+      ? (value as { data: unknown[] }).data
+      : [];
+  const first = rows[0];
+  if (!first || typeof first !== "object" || Array.isArray(first)) return null;
+  const creative = (first as { creative?: unknown }).creative;
+  if (!creative || typeof creative !== "object" || Array.isArray(creative)) return null;
+  const id = (creative as { id?: unknown }).id;
+  return typeof id === "string" && id.length > 0 ? id : null;
 }
 
 function capabilityForOperation(

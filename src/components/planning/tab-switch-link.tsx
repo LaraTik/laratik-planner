@@ -84,6 +84,9 @@ function scrollToTabSection(hash: string) {
   if (typeof window === "undefined") return;
   const targetId = TAB_SECTION_IDS[hash] ?? hash;
   window.setTimeout(() => {
+    // The delayed callback can outlive a test/document environment during
+    // teardown; keep the scroll helper safe after the DOM has disappeared.
+    if (typeof document === "undefined") return;
     const section = document.getElementById(targetId);
     if (!section || section.closest("[hidden]") !== null) return;
     const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;

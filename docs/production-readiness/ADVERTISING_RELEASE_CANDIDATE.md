@@ -6,12 +6,16 @@
 
 ## Candidate
 
-- Implementation: `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`
-- Evidence/deployment: `a458fa1c546f15c44bb63fb504bc5455ad0a3ecd`
+- Implementation: `a54629e4a5fcd61556d1d734fdea5e51168d1d91`
+- Evidence/deployment: `a54629e4a5fcd61556d1d734fdea5e51168d1d91`
 - Database: migration head `0085`; disposable drill ledger `86/86`.
 - Current decision: **NO-GO** pending encrypted offsite backup plus disposable
-  restore evidence and independent review. Controlled v26 Meta UAT completed
-  with explicit partial provider results; sync remains disabled.
+  restore evidence and independent review. The v26 validation passed 9/10
+  checks; creative, insights, breakdown, and ad-account reads pass. Instagram
+  has no linked professional account. The bounded worker UAT completed with an
+  explicit partial result, zero reconciliation discrepancy, deactivation
+  fencing, and a zero-claim queued-retry check. The reporting rollout flag
+  remains off.
 
 ## Preconditions
 
@@ -35,11 +39,13 @@
    validate credentials without exposing the token.
 4. Run one read-only discovery/probe and confirm the approved host, requested
    scopes, account identity, pagination, retry, and partial-state evidence.
-5. Grant one test workspace the minimum campaign/reporting scope and financial
-   authority required for the test. Reconcile provider totals against the
-   canonical spend facts.
-6. Enable reporting only for the test agency, observe one bounded sync window,
-   then review audit and sync history. Do not enable publishing.
+5. Grant the approved `DR Reem Reda` workspace the minimum `Read reports`
+   scope required for the read-only test. This grant is now active and the
+   pre-existing agency-wide financial authority is revoked. Reconcile provider
+   totals against the canonical spend facts.
+6. Keep reporting and publishing disabled. The bounded sync canary was run by
+   temporarily enabling only the worker gate, then disabling the approved
+   account and restoring the worker gate to its default-off state.
 7. Expand only after the reviewer records a pass for isolation, freshness,
    financial reconciliation, error recovery, and rollback readiness.
 
