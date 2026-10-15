@@ -14,7 +14,7 @@
   and independent review. The v26 validation passed 9/10 checks; creative,
   insights, breakdown, and ad-account reads pass. Instagram has no linked
   professional account. Full sync/reconciliation/fencing evidence is not yet
-  recorded.
+  recorded, and the reporting rollout flag remains off.
 
 ## Preconditions
 
