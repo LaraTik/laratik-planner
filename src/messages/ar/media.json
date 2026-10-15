@@ -418,5 +418,6 @@
   "viewerPrevious": "الوسائط السابقة",
   "viewerNext": "الوسائط التالية",
   "kind": "النوع",
-  "resultsCount": "{count} عنصر"
+  "resultsCount": "{count} عنصر",
+  "perPage": "لكل صفحة"
 }

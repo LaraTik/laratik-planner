@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ListPagination } from "@/components/ui/list-pagination";
+import { FilterChip } from "@/components/ui/data-table-toolbar";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MediaAssetSelectionCheckbox, MediaSelectionToolbar } from "./media-selection-controls";
 import { MediaAssetActions } from "./media-asset-actions";
@@ -47,6 +48,7 @@ export function MediaLibraryPage({
   kind,
   sort,
   pageInfo,
+  pageSizeOptions,
   initialSource = "device",
   t,
   storageSummary,
@@ -76,6 +78,8 @@ export function MediaLibraryPage({
     hasNextPage: boolean;
     total: number;
   };
+  /** Legal per-page values for the `?size=` selector, in display order. */
+  pageSizeOptions: readonly number[];
   initialSource?: "device" | "link";
   t: (key: string, params?: Record<string, string | number>) => string;
   storageSummary: {
@@ -264,7 +268,7 @@ export function MediaLibraryPage({
             className="border-border bg-surface flex flex-col gap-3 rounded-[var(--radius-card)] border p-4 sm:flex-row sm:flex-wrap sm:items-end"
           >
             <label
-              className="text-body text-fg-primary min-w-0 flex-1 font-semibold"
+              className="text-body text-fg-primary min-w-0 flex-1 font-semibold sm:min-w-64"
               htmlFor="media-search"
             >
               {t("media.searchPlaceholder")}
@@ -320,6 +324,29 @@ export function MediaLibraryPage({
               <input type="hidden" name="folder" value={selectedFolderId} />
             ) : null}
             {sharedOnly ? <input type="hidden" name="shared" value="1" /> : null}
+            {/* Per-page selector. `FilterChip` submits its own name/value,
+                so clicking one re-runs this form with the new `?size=`. It
+                sits inside the form rather than beside it for that reason.
+                A chip that is already active is still rendered — pressed
+                rather than hidden — so the control does not reflow when
+                picked, and `aria-pressed` carries the state. */}
+            <div
+              className="flex w-full items-center gap-2 sm:ml-auto sm:w-auto"
+              role="group"
+              aria-label={t("media.perPage")}
+            >
+              <span className="text-label text-fg-muted">{t("media.perPage")}</span>
+              {pageSizeOptions.map((option) => (
+                <FilterChip
+                  key={option}
+                  label={String(option)}
+                  name="size"
+                  value={String(option)}
+                  selected={option === pageInfo.pageSize}
+                  testId={`media-page-size-${option}`}
+                />
+              ))}
+            </div>
             <button
               type="submit"
               className="bg-primary hover:bg-primary-hover focus-visible:ring-focus-ring text-button text-primary-foreground inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"

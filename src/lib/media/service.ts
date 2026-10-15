@@ -374,11 +374,36 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
  * and the workspace route (`/app/a/<agencySlug>/w/<slug>/media`) so the two
  * cannot drift apart.
  *
- * 24 keeps the initial paint under ~25 preview fetches. The signed-URL
- * Cloudflare pipeline is bandwidth-bound, and a 48-row page routinely
- * produced bursts of 401/proxy-redirect retries on a cold cache.
+ * 12, not 24: the library is browsed as a gallery, and 24 full tiles is two
+ * screens of scrolling before the operator reaches the pager. Operators who
+ * want a denser view pass `?size=24` or `?size=48`; the selector in the filter
+ * bar submits exactly that. The lower default also keeps first paint under ~12
+ * preview fetches, and the signed-URL Cloudflare pipeline is bandwidth-bound —
+ * a 48-row page routinely produced bursts of 401/proxy-redirect retries on a
+ * cold cache.
  */
-export const MEDIA_PAGE_SIZE = 24;
+export const MEDIA_PAGE_SIZE = 12;
+
+/**
+ * Allow-list for the `?size=` override. A fixed set rather than a free-form
+ * integer so a hand-edited URL cannot request an unbounded page, and so the
+ * selector renders one chip per legal value.
+ */
+export const MEDIA_PAGE_SIZE_OPTIONS = [12, 24, 48] as const;
+
+/**
+ * Reads the `?size=` override, falling back to {@link MEDIA_PAGE_SIZE} for a
+ * missing or non-matching value.
+ *
+ * Matches the raw string against the options rather than `parseInt`-ing it:
+ * `parseInt("24.5")` is 24 and `parseInt("12abc")` is 12, so truncation would
+ * silently turn a typo into a *different* legal page size. A value that is not
+ * exactly one of the offered ones means nothing and falls back to the default.
+ */
+export function parseMediaPageSize(value: string | undefined): number {
+  const raw = (value ?? "").trim();
+  return MEDIA_PAGE_SIZE_OPTIONS.find((option) => String(option) === raw) ?? MEDIA_PAGE_SIZE;
+}
 
 export async function listMediaAssetsPage(actor: Actor, input: ListInput) {
   const pageSize = Math.min(Math.max(input.pageSize ?? input.limit ?? 48, 1), 100);

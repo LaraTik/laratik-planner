@@ -66,7 +66,18 @@ capability. Naming stays the scan path via the existing search box and list view
   (`media.pageSummary` only ever rendered "Page {page}").
 - The duplicated agency/workspace header branches collapsed into the shared
   `PageHeader`, which the design system mandates.
-- Added 11 keys to both `en/media.json` and `ar/media.json`; the repo enforces
+- **The first page carried 24 records, which is what "too much on the first
+  page" actually meant.** `MEDIA_PAGE_SIZE` is now 12 — roughly one screen of
+  tiles — and a per-page selector (12 / 24 / 48, built on the existing
+  `FilterChip`) lets an operator widen it. `?size=` is parsed against an
+  allow-list and matches the raw string rather than `parseInt`-ing it, because
+  `parseInt("24.5")` is 24 and would have silently turned a typo into a
+  different legal page size. The value survives pagination and is preserved
+  across filter and view-switch links.
+- Adding the selector to the filter row initially crushed the search input
+  until its label collided with the neighbouring one; the search field now
+  holds a 16rem floor and wraps the selector instead.
+- Added 12 keys to both `en/media.json` and `ar/media.json`; the repo enforces
   bilingual catalog parity.
 
 `scripts/seed-media-fixture.sql` is new and **not yet wired into the E2E runner**.

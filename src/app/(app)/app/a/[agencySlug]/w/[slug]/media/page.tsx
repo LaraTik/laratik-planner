@@ -8,7 +8,8 @@ import {
   listMediaAssetsPage,
   listMediaFolders,
   listMediaFoldersTree,
-  MEDIA_PAGE_SIZE,
+  MEDIA_PAGE_SIZE_OPTIONS,
+  parseMediaPageSize,
   type MediaSort,
 } from "@/lib/media/service";
 import { attachSignedPreviewUrls } from "@/lib/media/signed-preview";
@@ -39,6 +40,7 @@ export default async function WorkspaceMediaPage({
     shared?: string;
     sort?: string;
     page?: string;
+    size?: string;
   }>;
 }) {
   const { t } = await tForActive();
@@ -76,10 +78,10 @@ export default async function WorkspaceMediaPage({
     includeTrashed: filters.trash === "1",
     sort,
     page,
-    // Keep the first response small enough that the browser only has to
-    // discover a single viewport of previews before the user interacts.
-    // Additional assets remain available through pagination.
-    pageSize: MEDIA_PAGE_SIZE,
+    // Defaults to a single screen of previews; `?size=` lets an operator
+    // widen it. Parsed against an allow-list, so a hand-edited URL cannot
+    // ask for an unbounded page.
+    pageSize: parseMediaPageSize(filters.size),
   });
   const storageSummary = await getAgencyStorageSummary(workspace.agencyId);
 
@@ -121,6 +123,7 @@ export default async function WorkspaceMediaPage({
         ...(filters.view ? { view: filters.view } : {}),
         ...(filters.source ? { source: filters.source } : {}),
         ...(sort !== "name" ? { sort } : {}),
+        ...(filters.size ? { size: filters.size } : {}),
       }}
       managerWorkspaceIds={
         (await hasWorkspaceRole(actor, workspace.id, ["workspace_manager"])) ? [workspace.id] : []
@@ -132,6 +135,7 @@ export default async function WorkspaceMediaPage({
       kind={filters.kind ?? ""}
       sort={sort}
       pageInfo={mediaPage}
+      pageSizeOptions={MEDIA_PAGE_SIZE_OPTIONS}
       initialSource={filters.source === "link" ? "link" : "device"}
       t={t}
       storageSummary={{

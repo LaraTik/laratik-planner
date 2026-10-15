@@ -27,21 +27,36 @@ WHERE storage_object_id IN (
 );
 DELETE FROM storage_object WHERE object_key LIKE 'e2e-media-fixture/%';
 
+-- psql does NOT substitute :'var' inside a dollar-quoted body, so the ids
+-- travel through a runtime GUC instead and the block reads them at execution
+-- time. Pass them with -v agency_id=<uuid> -v workspace_id=<uuid>; leave either
+-- empty to fall back to the oldest agency/workspace.
+SELECT set_config('media_fixture.agency_id', :'agency_id', false);
+SELECT set_config('media_fixture.workspace_id', :'workspace_id', false);
+
 DO $fn$
 DECLARE
-  v_agency uuid;
-  v_workspace uuid;
+  v_agency uuid := nullif(current_setting('media_fixture.agency_id', true), '')::uuid;
+  v_workspace uuid := nullif(current_setting('media_fixture.workspace_id', true), '')::uuid;
   v_user uuid;
   v_storage uuid;
   r record;
 BEGIN
-  SELECT id INTO v_agency FROM agency ORDER BY created_at LIMIT 1;
-  SELECT id INTO v_workspace FROM workspace ORDER BY created_at LIMIT 1;
+  -- `devSeed` creates a FRESH agency per run, so "first by created_at" is
+  -- usually the wrong tenant and the library then reads 0 assets. Pass the
+  -- ids from the bootstrap result: -v agency_id=... -v workspace_id=...
+  IF v_agency IS NULL THEN
+    SELECT id INTO v_agency FROM agency ORDER BY created_at LIMIT 1;
+  END IF;
+  IF v_workspace IS NULL THEN
+    SELECT id INTO v_workspace FROM workspace ORDER BY created_at LIMIT 1;
+  END IF;
   SELECT id INTO v_user FROM "user" ORDER BY created_at LIMIT 1;
 
   IF v_agency IS NULL OR v_workspace IS NULL OR v_user IS NULL THEN
     RAISE EXCEPTION 'seed agencies/workspaces/users required before media fixture';
   END IF;
+  RAISE NOTICE 'seeding media fixture for agency % workspace %', v_agency, v_workspace;
 
   FOR r IN
     SELECT * FROM (VALUES

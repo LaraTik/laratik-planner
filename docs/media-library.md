@@ -62,6 +62,26 @@ still tile with a play glyph; the lightbox is the page's only player.
 `posterStorageObjectId` exists on `media_asset` but nothing generates it, so
 video tiles cannot rely on a poster frame yet.
 
+### Page size
+
+`MEDIA_PAGE_SIZE` is 12: roughly one screen of tiles. `MEDIA_PAGE_SIZE_OPTIONS`
+is the allow-list the `?size=` selector offers (12 / 24 / 48), and
+`parseMediaPageSize` resolves the query parameter against it.
+
+Two rules the implementation depends on:
+
+- **Exact string match, not `parseInt`.** `parseInt("24.5")` is 24 and
+  `parseInt("12abc")` is 12, so truncation would silently turn a typo into a
+  _different_ legal page size. Anything that is not exactly one of the offered
+  values falls back to the default.
+- **The value is carried, not recomputed.** Both routes put `size` into
+  `preserveParams`, so pagination, filter submits, and the view switch all
+  preserve the operator's choice instead of snapping back to the default.
+
+The lower default is also the bandwidth reason the cap exists: first paint is
+~12 preview fetches, and the signed-URL edge path degrades badly on a cold
+cache at 48.
+
 ### Shared primitives
 
 Use `ListPagination` for the page strip, `PageHeader` for the page header, and

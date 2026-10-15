@@ -9,7 +9,8 @@ import {
   listMediaAssetsPage,
   listMediaFolders,
   listMediaFoldersTree,
-  MEDIA_PAGE_SIZE,
+  MEDIA_PAGE_SIZE_OPTIONS,
+  parseMediaPageSize,
   type MediaSort,
 } from "@/lib/media/service";
 import { attachSignedPreviewUrls } from "@/lib/media/signed-preview";
@@ -37,6 +38,7 @@ export default async function AgencyMediaPage({
     shared?: string;
     sort?: string;
     page?: string;
+    size?: string;
   }>;
 }) {
   const { t } = await tForActive();
@@ -103,10 +105,10 @@ export default async function AgencyMediaPage({
     includeTrashed: filters.trash === "1",
     sort,
     page,
-    // Keep the first response small enough that the browser only has to
-    // discover a single viewport of previews before the user interacts.
-    // Additional assets remain available through pagination.
-    pageSize: MEDIA_PAGE_SIZE,
+    // Defaults to a single screen of previews; `?size=` lets an operator
+    // widen it. Parsed against an allow-list, so a hand-edited URL cannot
+    // ask for an unbounded page.
+    pageSize: parseMediaPageSize(filters.size),
   });
   const storageSummary = await getAgencyStorageSummary(context.agencyId);
 
@@ -158,6 +160,7 @@ export default async function AgencyMediaPage({
         ...(filters.trash === "1" ? { trash: "1" } : {}),
         ...(filters.view ? { view: filters.view } : {}),
         ...(sort !== "name" ? { sort } : {}),
+        ...(filters.size ? { size: filters.size } : {}),
       }}
       managerWorkspaceIds={managerWorkspaceIds}
       canUpload={writableOptions.length > 0 && Boolean(activeWorkspace)}
@@ -167,6 +170,7 @@ export default async function AgencyMediaPage({
       kind={filters.kind ?? ""}
       sort={sort}
       pageInfo={mediaPage}
+      pageSizeOptions={MEDIA_PAGE_SIZE_OPTIONS}
       t={t}
       storageSummary={{
         mode: storageSummary.mode,

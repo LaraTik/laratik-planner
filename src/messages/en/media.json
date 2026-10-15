@@ -418,5 +418,6 @@
   "viewerPrevious": "Previous asset",
   "viewerNext": "Next asset",
   "kind": "Type",
-  "resultsCount": "{count} assets"
+  "resultsCount": "{count} assets",
+  "perPage": "Per page"
 }
