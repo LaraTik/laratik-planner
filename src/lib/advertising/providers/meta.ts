@@ -258,19 +258,19 @@ export function createMetaAdvertisingProvider(
     },
     async readAds(connection, adSetId) {
       return readMetaCollection(await clientFor(connection), `${adSetId}/ads`, {
-        fields: "id,name,status,adset_id,creative",
+        fields: "id,name,status,adset_id,creative{id}",
       });
     },
     async readAdsComplete(connection, adSetId, options) {
       return readMetaCollectionComplete(
         await clientFor(connection),
         `${adSetId}/ads`,
-        { fields: "id,name,status,adset_id,creative" },
+        { fields: "id,name,status,adset_id,creative{id}" },
         options,
       );
     },
-    async readCreatives(connection, adId) {
-      return (await clientFor(connection)).get(`${adId}/creative`, {
+    async readCreatives(connection, creativeId) {
+      return (await clientFor(connection)).get(creativeId, {
         // Keep the validation probe to the identity field guaranteed by the
         // AdCreative edge. Optional fields can vary by Graph version and
         // account asset, while reporting only needs the stable creative ID.

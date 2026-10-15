@@ -468,16 +468,16 @@ async function syncProviderObjects(
           rows: ads,
         });
         for (const ad of collectionRows(ads)) {
-          const adId = stringValue(ad.id);
-          if (!adId) continue;
-          const creative = await provider.readCreatives(target.connection, adId);
+          const creativeId = creativeIdFromAd(ad);
+          if (!creativeId) continue;
+          const creative = await provider.readCreatives(target.connection, creativeId);
           await persistAdvertisingProviderObjects(db, {
             agencyId: target.agencyId,
             accountId: target.account.id,
             connectionId: target.connection.id,
             syncRunId,
             objectType: "creative",
-            parentExternalObjectId: adId,
+            parentExternalObjectId: stringValue(ad.id) ?? creativeId,
             rows: creative,
           });
         }
@@ -538,6 +538,12 @@ function collectionRows(value: unknown): readonly Record<string, unknown>[] {
   if (Array.isArray(value)) return value.filter(isRecord);
   if (isRecord(value) && Array.isArray(value.data)) return value.data.filter(isRecord);
   return [];
+}
+
+function creativeIdFromAd(ad: Record<string, unknown>): string | null {
+  const creative = ad.creative;
+  if (!isRecord(creative)) return null;
+  return stringValue(creative.id);
 }
 
 function collectionResponseComplete(value: unknown): boolean {

@@ -167,10 +167,24 @@ describe("Meta advertising provider", () => {
       () => ({ get }),
     );
 
-    await provider.readCreatives(connection, "ad_123");
+    await provider.readCreatives(connection, "creative_123");
 
-    expect(get).toHaveBeenCalledWith("ad_123/creative", {
+    expect(get).toHaveBeenCalledWith("creative_123", {
       fields: "id",
+    });
+  });
+
+  it("requests the nested creative identity from ad reads", async () => {
+    const get = vi.fn().mockResolvedValue({ data: [] });
+    const provider = createMetaAdvertisingProvider(
+      { resolve: vi.fn().mockResolvedValue({ accessToken: "secret-token" }) },
+      () => ({ get }),
+    );
+
+    await provider.readAds(connection, "adset_123");
+
+    expect(get).toHaveBeenCalledWith("adset_123/ads", {
+      fields: "id,name,status,adset_id,creative{id}",
     });
   });
 
