@@ -9,12 +9,13 @@
 - Implementation: `a54629e4a5fcd61556d1d734fdea5e51168d1d91`
 - Evidence/deployment: `a54629e4a5fcd61556d1d734fdea5e51168d1d91`
 - Database: migration head `0085`; disposable drill ledger `86/86`.
-- Current decision: **NO-GO** pending the scoped read-only visibility grant,
-  complete live UAT, encrypted offsite backup plus disposable restore evidence,
-  and independent review. The v26 validation passed 9/10 checks; creative,
-  insights, breakdown, and ad-account reads pass. Instagram has no linked
-  professional account. Full sync/reconciliation/fencing evidence is not yet
-  recorded, and the reporting rollout flag remains off.
+- Current decision: **NO-GO** pending encrypted offsite backup plus disposable
+  restore evidence and independent review. The v26 validation passed 9/10
+  checks; creative, insights, breakdown, and ad-account reads pass. Instagram
+  has no linked professional account. The bounded worker UAT completed with an
+  explicit partial result, zero reconciliation discrepancy, deactivation
+  fencing, and a zero-claim queued-retry check. The reporting rollout flag
+  remains off.
 
 ## Preconditions
 
@@ -42,8 +43,9 @@
    scope required for the read-only test. This grant is now active and the
    pre-existing agency-wide financial authority is revoked. Reconcile provider
    totals against the canonical spend facts.
-6. Enable reporting only for the test agency, observe one bounded sync window,
-   then review audit and sync history. Do not enable publishing.
+6. Keep reporting and publishing disabled. The bounded sync canary was run by
+   temporarily enabling only the worker gate, then disabling the approved
+   account and restoring the worker gate to its default-off state.
 7. Expand only after the reviewer records a pass for isolation, freshness,
    financial reconciliation, error recovery, and rollback readiness.
 

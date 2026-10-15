@@ -53,13 +53,20 @@ The deployed candidate ran a bounded, read-only validation at
 Facebook Page, campaign, ad set, ad, creative, daily insights, breakdown, and
 ad-account discovery. Instagram returned explicit no-accessible-data; this is
 an optional social-identity condition and does not block ad-account reporting.
-The account is active and scheduled/synced at the provider-account layer. A
-`Read reports` visibility grant is now active for the approved `DR Reem Reda`
-workspace, and the pre-existing agency-wide financial authority is revoked.
-No sync history or spend reconciliation has been recorded yet, and no
-publishing or financial workflow was used. The reporting surface also
-shows the expected rollout-gate state: advertising reporting is not enabled and
-no data is disclosed while `ADVERTISING_REPORTING_ENABLED` remains off.
+The approved account then ran one bounded worker tick at `2026-10-15
+10:42:40 UTC`: one account was claimed, the run completed as an explicit
+`partial` result with 21 rows read and written, and no error or dead-letter
+state was recorded. Six reconciliation snapshots were written; all six were
+`partial` with zero discrepancy and zero unallocated spend. The account was
+then disabled through the admin workflow; its state became `paused`,
+`nextRunAt` and all lease fields were cleared, and a follow-up worker tick
+claimed zero accounts. No publishing or financial workflow was used. The
+`Read reports` visibility grant remains active for the approved `DR Reem Reda`
+workspace, while the pre-existing agency-wide financial authority is revoked.
+The reporting surface remains behind its rollout gate: advertising reporting
+is not enabled and no data is disclosed while `ADVERTISING_REPORTING_ENABLED`
+remains off. The temporary sync enablement was removed and production health
+returned to ready on the verified application image.
 
 ## Canary activation decision
 
@@ -89,15 +96,13 @@ reporting independently, and disable it before expanding scope.
 
 ## Remaining release blockers
 
-1. Complete live UAT (bounded sync, reconciliation, deactivation fencing, and
-   queued-retry checks) is still pending. The operator procedure is in
-   [`ADVERTISING_OPERATOR_HANDOFF.md`](./ADVERTISING_OPERATOR_HANDOFF.md).
-2. `ADVERTISING_REPORTING_ENABLED` remains off pending product-owner approval
-   after the controlled canary evidence is complete.
-3. Restic offsite backup is not wired and no disposable offsite restore has
+1. `ADVERTISING_REPORTING_ENABLED` remains off. A product owner must separately
+   approve any live reporting canary after review of the bounded UAT evidence;
+   publishing remains disabled.
+2. Restic offsite backup is not wired and no disposable offsite restore has
    been timed. The operator procedure is in
    [`OFFSITE_RECOVERY_VERIFICATION.md`](./OFFSITE_RECOVERY_VERIFICATION.md).
-4. An independent reviewer has not assigned `Verified`.
+3. An independent reviewer has not assigned `Verified`.
 
 Therefore the release recommendation is **NO-GO**. This manifest does not
 authorize production flag changes, deployment, credential access, or provider
