@@ -1,10 +1,13 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BookOpen, Plus } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
+import { Button } from "@/components/ui/button";
 import { AdvertisingAdminPanel } from "./advertising-admin-panel";
 import { listAdvertisingConnectionsForAdmin, listAdvertisingResourcesForAdmin } from "./actions";
 
@@ -34,10 +37,52 @@ export default async function AdvertisingSettingsPage() {
   ]);
   return (
     <div className="space-y-6" data-testid="advertising-settings">
+      <nav aria-label={t("advertising.breadcrumbAria")} className="text-label text-fg-muted">
+        <ol className="flex flex-wrap items-center gap-2">
+          <li>
+            <Link className="hover:text-fg-primary transition-colors" href="/app/agency-settings">
+              {t("advertising.breadcrumbIntegrations")}
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li>
+            <Link
+              className="hover:text-fg-primary transition-colors"
+              href="/app/agency-settings/advertising"
+            >
+              {t("advertising.breadcrumbAdvertising")}
+            </Link>
+          </li>
+          <li aria-hidden="true">/</li>
+          <li className="text-fg-primary font-medium" aria-current="page">
+            {t("advertising.breadcrumbMetaAds")}
+          </li>
+        </ol>
+      </nav>
       <PageHeader
         eyebrow={t("advertising.eyebrow")}
         title={t("advertising.title")}
         description={t("advertising.description")}
+        action={
+          <>
+            <Button asChild variant="secondary" size="sm">
+              <a
+                href="https://developers.facebook.com/docs/marketing-api"
+                target="_blank"
+                rel="noreferrer"
+              >
+                <BookOpen className="h-4 w-4" aria-hidden="true" />
+                {t("advertising.viewDocumentation")}
+              </a>
+            </Button>
+            <Button asChild size="sm">
+              <a href="#advertising-create-card">
+                <Plus className="h-4 w-4" aria-hidden="true" />
+                {t("advertising.addConnection")}
+              </a>
+            </Button>
+          </>
+        }
       />
       <AdvertisingAdminPanel
         connections={connections.map((connection) => ({

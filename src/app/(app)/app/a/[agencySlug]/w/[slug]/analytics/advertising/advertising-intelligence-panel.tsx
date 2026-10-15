@@ -1,4 +1,4 @@
-import { Gauge, Sparkles, TriangleAlert } from "lucide-react";
+import { Gauge, Sparkles, TriangleAlert, UsersRound } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatPercent } from "@/lib/i18n/format-locale";
@@ -36,6 +36,10 @@ export type AdvertisingIntelligenceLabels = {
   expected: string;
   change: string;
   cpc: string;
+  audienceOpportunity: string;
+  audienceOpportunityDescription: string;
+  audienceRows: string;
+  noAudienceData: string;
 };
 
 export function AdvertisingIntelligencePanel({
@@ -44,6 +48,7 @@ export function AdvertisingIntelligencePanel({
   fatigue,
   currency,
   locale,
+  audienceCount,
   labels,
 }: {
   campaigns: readonly CampaignPerformanceInsight[];
@@ -51,6 +56,7 @@ export function AdvertisingIntelligencePanel({
   fatigue: readonly CreativeFatigueInsight[];
   currency: string | null;
   locale: string;
+  audienceCount: number;
   labels: AdvertisingIntelligenceLabels;
 }) {
   const effective = campaigns.filter((item) => item.status === "effective");
@@ -77,7 +83,7 @@ export function AdvertisingIntelligencePanel({
         <p className="text-label text-fg-muted mt-1">{labels.description}</p>
       </div>
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-3 lg:grid-cols-4">
         <Card padding="md" data-testid="advertising-campaign-signals">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -179,6 +185,29 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noFatigueData}</p>
             ) : null}
           </div>
+        </Card>
+
+        <Card padding="md" data-testid="advertising-audience-opportunity">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-body text-fg-primary font-semibold">
+                {labels.audienceOpportunity}
+              </h3>
+              <p className="text-label text-fg-muted mt-1">
+                {labels.audienceOpportunityDescription}
+              </p>
+            </div>
+            <UsersRound className="text-primary h-5 w-5 shrink-0" aria-hidden="true" />
+          </div>
+          <div className="mt-4 flex items-end gap-2">
+            <span className="text-title-page text-fg-primary font-semibold tabular-nums">
+              {audienceCount}
+            </span>
+            <span className="text-label text-fg-muted mb-1">{labels.audienceRows}</span>
+          </div>
+          <p className="text-label text-fg-muted mt-3">
+            {audienceCount > 0 ? labels.audienceOpportunityDescription : labels.noAudienceData}
+          </p>
         </Card>
       </div>
 

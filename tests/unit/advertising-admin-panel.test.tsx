@@ -45,6 +45,8 @@ describe("AdvertisingAdminPanel", () => {
       />,
     );
 
+    expect(screen.getByTestId("advertising-setup-steps")).toBeInTheDocument();
+    expect(screen.getByText("Connect credential")).toBeInTheDocument();
     expect(screen.getByTestId("advertising-create-form")).toBeInTheDocument();
     expect(screen.getByText("Agency Meta")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Save credential" })).toBeInTheDocument();

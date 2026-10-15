@@ -8,6 +8,7 @@ import {
   CircleDollarSign,
   Clock3,
   Filter,
+  ChevronRight,
   History,
   KeyRound,
   Link2,
@@ -30,6 +31,7 @@ import { PasswordInput } from "@/components/forms/password-input";
 import { Combobox } from "@/components/ui/combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -207,6 +209,17 @@ export function AdvertisingAdminPanel({
   const [createState, createAction] = useActionState(createAdvertisingConnectionAction, initial);
   return (
     <div className="space-y-6">
+      <AdvertisingSetupSteps
+        hasCredential={connections.some((connection) => connection.currentCredentialVersion > 0)}
+        hasValidation={connections.some(
+          (connection) => connection.lastValidationStatus === "passed",
+        )}
+        hasAccounts={accounts.length > 0}
+        hasWorkspaceAccess={visibilityGrants.some((grant) => !grant.revokedAt)}
+        hasReportingSync={syncStates.some(
+          (state) => !["paused", "dead_letter"].includes(state.status),
+        )}
+      />
       <AdvertisingCreateCard createAction={createAction} createState={createState} />
 
       <AdvertisingOverviewCard
@@ -260,6 +273,89 @@ export function AdvertisingAdminPanel({
         reconciliations={reconciliations}
       />
     </div>
+  );
+}
+
+function AdvertisingSetupSteps({
+  hasCredential,
+  hasValidation,
+  hasAccounts,
+  hasWorkspaceAccess,
+  hasReportingSync,
+}: {
+  hasCredential: boolean;
+  hasValidation: boolean;
+  hasAccounts: boolean;
+  hasWorkspaceAccess: boolean;
+  hasReportingSync: boolean;
+}) {
+  const t = useLocaleT();
+  const steps = [
+    {
+      title: t("advertising.setup.step1.title"),
+      description: t("advertising.setup.step1.description"),
+      complete: hasCredential,
+    },
+    {
+      title: t("advertising.setup.step2.title"),
+      description: t("advertising.setup.step2.description"),
+      complete: hasValidation,
+    },
+    {
+      title: t("advertising.setup.step3.title"),
+      description: t("advertising.setup.step3.description"),
+      complete: hasAccounts,
+    },
+    {
+      title: t("advertising.setup.step4.title"),
+      description: t("advertising.setup.step4.description"),
+      complete: hasWorkspaceAccess,
+    },
+    {
+      title: t("advertising.setup.step5.title"),
+      description: t("advertising.setup.step5.description"),
+      complete: hasReportingSync,
+    },
+  ];
+
+  return (
+    <Card data-testid="advertising-setup-steps" className="overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <CardTitle>{t("advertising.setup.title")}</CardTitle>
+          <CardDescription>{t("advertising.setup.description")}</CardDescription>
+        </div>
+        <Badge variant="outline">{t("advertising.readOnlyBadge")}</Badge>
+      </div>
+      <ol className="mt-5 grid gap-4 md:grid-cols-5">
+        {steps.map((step, index) => (
+          <li key={step.title} className="relative min-w-0">
+            {index > 0 ? (
+              <span
+                className="border-border absolute start-[-1rem] top-4 hidden w-4 border-t md:block"
+                aria-hidden="true"
+              />
+            ) : null}
+            <div className="flex items-start gap-3 md:block">
+              <div
+                className={
+                  step.complete
+                    ? "border-success bg-success text-primary-foreground text-label flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-semibold"
+                    : "border-primary bg-primary-subtle text-primary text-label flex h-8 w-8 shrink-0 items-center justify-center rounded-full border font-semibold"
+                }
+                aria-hidden="true"
+              >
+                {step.complete ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
+              </div>
+              <div className="mt-0 md:mt-3">
+                <p className="text-body text-fg-primary font-semibold">{step.title}</p>
+                <p className="text-label text-fg-muted mt-1 leading-5">{step.description}</p>
+              </div>
+            </div>
+          </li>
+        ))}
+      </ol>
+    </Card>
   );
 }
 
@@ -466,7 +562,11 @@ function AdvertisingAccountsTable({
   ).length;
 
   return (
-    <Card data-testid="advertising-accounts-table-card" padding="none">
+    <Card
+      id="advertising-accounts-table-card"
+      data-testid="advertising-accounts-table-card"
+      padding="none"
+    >
       <div className="flex flex-wrap items-start justify-between gap-4 p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="bg-info-subtle text-info flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
@@ -546,6 +646,12 @@ function AdvertisingAccountsTable({
                 <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
                   {t("advertising.accountTableSync")}
                 </th>
+                <th
+                  className="text-label text-fg-muted px-5 py-3 text-end font-semibold"
+                  scope="col"
+                >
+                  {t("advertising.accountTableActions")}
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -560,6 +666,17 @@ function AdvertisingAccountsTable({
                   <tr key={account.id} className="border-border border-b last:border-b-0">
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
+                        <Checkbox
+                          checked={grants.length > 0}
+                          disabled
+                          aria-label={t("advertising.accountSelection", {
+                            account: account.name,
+                          })}
+                        />
+                        <ChevronRight
+                          className="text-fg-muted h-4 w-4 shrink-0 rtl:rotate-180"
+                          aria-hidden="true"
+                        />
                         <div className="bg-primary-subtle text-primary text-label flex h-9 w-9 shrink-0 items-center justify-center rounded-lg font-bold">
                           {account.name.slice(0, 1).toUpperCase()}
                         </div>
@@ -582,6 +699,14 @@ function AdvertisingAccountsTable({
                             : t("advertising.accountNeedsAttention")
                         }
                       />
+                    </td>
+                    <td className="px-5 py-3.5 text-end">
+                      <a
+                        href="#advertising-grants-card"
+                        className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-9 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+                      >
+                        {t("advertising.manageAccess")}
+                      </a>
                     </td>
                     <td className="px-3 py-3.5">
                       <p className="text-label text-fg-primary">
@@ -720,7 +845,7 @@ function GrantAccessCard({
   ];
 
   return (
-    <Card data-testid="advertising-grants-card">
+    <Card id="advertising-grants-card" data-testid="advertising-grants-card">
       <CardTitle>{t("advertising.accountsTitle")}</CardTitle>
       <CardDescription>{t("advertising.accountsDescription")}</CardDescription>
       {accounts.length === 0 ? (

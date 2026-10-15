@@ -2,7 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { ArrowUpRight, BarChart3, ShieldAlert } from "lucide-react";
+import {
+  ArrowUpRight,
+  BarChart3,
+  Bookmark,
+  CalendarDays,
+  Download,
+  Search,
+  ShieldAlert,
+} from "lucide-react";
 import { FormField } from "@/components/forms/form-field";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +43,10 @@ import {
   type AdvertisingIntelligenceLabels,
 } from "./advertising-intelligence-panel";
 import {
+  AdvertisingReportVisuals,
+  type AdvertisingReportVisualLabels,
+} from "./advertising-report-visuals";
+import {
   AdvertisingClientReport,
   type AdvertisingClientReportLabels,
 } from "./advertising-client-report";
@@ -53,6 +65,9 @@ type SearchParams = {
   adPage?: string | string[];
   audiencePage?: string | string[];
   presentation?: string | string[];
+  search?: string | string[];
+  objective?: string | string[];
+  status?: string | string[];
 };
 
 export default async function AdvertisingAnalyticsPage({
@@ -91,18 +106,34 @@ export default async function AdvertisingAnalyticsPage({
       93 * 24 * 60 * 60 * 1000;
 
   const heading = (
-    <PageHeader
-      eyebrow={workspace.name}
-      title={t("advertising.reporting.title")}
-      description={
-        <>
-          {t("advertising.reporting.description")}
-          <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold">
-            {workspace.timezone}
-          </span>
-        </>
-      }
-    />
+    <div className="space-y-3">
+      <nav
+        aria-label={t("advertising.reporting.breadcrumbAria")}
+        className="text-label text-fg-muted"
+      >
+        <ol className="flex flex-wrap items-center gap-2">
+          <li>{t("advertising.reporting.breadcrumbIntegrations")}</li>
+          <li aria-hidden="true">/</li>
+          <li>{t("advertising.reporting.breadcrumbAdvertising")}</li>
+          <li aria-hidden="true">/</li>
+          <li className="text-fg-primary font-medium" aria-current="page">
+            {t("advertising.reporting.breadcrumbReporting")}
+          </li>
+        </ol>
+      </nav>
+      <PageHeader
+        eyebrow={workspace.name}
+        title={t("advertising.reporting.title")}
+        description={
+          <>
+            {t("advertising.reporting.description")}
+            <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center rounded-full border px-2.5 py-0.5 font-semibold">
+              {workspace.timezone}
+            </span>
+          </>
+        }
+      />
+    </div>
   );
 
   if (!serverEnv.ADVERTISING_REPORTING_ENABLED) {
@@ -183,8 +214,21 @@ export default async function AdvertisingAnalyticsPage({
   }
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
-  const campaignInsights = buildCampaignPerformanceInsights(view.campaigns);
-  const budgetPacing = buildBudgetPacingInsights(view.campaigns, since, until);
+  const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
+  const objectiveFilter = firstQueryValue(query.objective) ?? "";
+  const statusFilter = firstQueryValue(query.status) ?? "";
+  const visibleCampaigns = view.campaigns.filter((campaign) => {
+    const searchMatch =
+      campaignSearch.length === 0 ||
+      (String(campaign.name ?? "") + " " + campaign.campaignId)
+        .toLowerCase()
+        .includes(campaignSearch);
+    const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
+    const statusMatch = !statusFilter || campaign.status === statusFilter;
+    return searchMatch && objectiveMatch && statusMatch;
+  });
+  const campaignInsights = buildCampaignPerformanceInsights(visibleCampaigns);
+  const budgetPacing = buildBudgetPacingInsights(visibleCampaigns, since, until);
   const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
   const organicByPostId = await loadOrganicPromotedPosts({
     postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
@@ -193,12 +237,11 @@ export default async function AdvertisingAnalyticsPage({
     since,
     until,
   });
-  const maxDailySpend = Math.max(...view.dailySpend.map((day) => day.spend), 0);
   const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
   const syncLabel = result.syncStatus
     ? t(`advertising.syncStatus.${result.syncStatus}`)
     : t("advertising.reporting.notAvailable");
-  const campaignPage = paginate(view.campaigns, firstQueryValue(query.campaignPage));
+  const campaignPage = paginate(visibleCampaigns, firstQueryValue(query.campaignPage));
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
   const adPage = paginate(view.ads, firstQueryValue(query.adPage));
   const audiencePage = paginate(result.audience, firstQueryValue(query.audiencePage));
@@ -208,6 +251,12 @@ export default async function AdvertisingAnalyticsPage({
     until,
     presentation: "client",
   }).toString()}`;
+  const objectiveOptions = [
+    ...new Set(view.campaigns.map((campaign) => campaign.objective).filter(Boolean)),
+  ] as string[];
+  const statusOptions = [
+    ...new Set(view.campaigns.map((campaign) => campaign.status).filter(Boolean)),
+  ] as string[];
 
   if (firstQueryValue(query.presentation) === "client") {
     return (
@@ -248,7 +297,7 @@ export default async function AdvertisingAnalyticsPage({
       <form
         method="get"
         action={basePath}
-        className="border-border bg-surface grid gap-4 rounded-[var(--radius-card)] border p-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_auto_auto] lg:items-end"
+        className="border-border bg-surface grid gap-4 rounded-[var(--radius-card)] border p-4 sm:grid-cols-2 xl:grid-cols-6 xl:items-end"
         data-testid="advertising-reporting-filters"
       >
         <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
@@ -270,6 +319,51 @@ export default async function AdvertisingAnalyticsPage({
         <FormField id="advertising-report-until" label={t("advertising.reporting.to")}>
           <Input name="until" type="date" defaultValue={until} />
         </FormField>
+        <FormField id="advertising-report-search" label={t("advertising.reporting.search")}>
+          <div className="relative">
+            <Search
+              className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
+              aria-hidden="true"
+            />
+            <Input
+              id="advertising-report-search"
+              name="search"
+              defaultValue={campaignSearch}
+              placeholder={t("advertising.reporting.searchPlaceholder")}
+              className="ps-9"
+            />
+          </div>
+        </FormField>
+        <FormField id="advertising-report-objective" label={t("advertising.reporting.objective")}>
+          <select
+            id="advertising-report-objective"
+            name="objective"
+            defaultValue={objectiveFilter}
+            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+          >
+            <option value="">{t("advertising.reporting.allObjectives")}</option>
+            {objectiveOptions.map((objective) => (
+              <option key={objective} value={objective}>
+                {objective}
+              </option>
+            ))}
+          </select>
+        </FormField>
+        <FormField id="advertising-report-status" label={t("advertising.reporting.status")}>
+          <select
+            id="advertising-report-status"
+            name="status"
+            defaultValue={statusFilter}
+            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+          >
+            <option value="">{t("advertising.reporting.allStatuses")}</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </FormField>
         <button
           type="submit"
           className="bg-primary text-label focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
@@ -287,9 +381,14 @@ export default async function AdvertisingAnalyticsPage({
           className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-4 font-semibold focus:outline-none focus-visible:ring-2"
           download
         >
+          <Download className="h-4 w-4" aria-hidden="true" />
           {t("advertising.reporting.exportCsv")}
         </a>
       </form>
+      <p className="text-label text-fg-muted -mt-3 inline-flex items-center gap-2">
+        <CalendarDays className="h-4 w-4" aria-hidden="true" />
+        {t("advertising.reporting.periodSummary", { since, until })}
+      </p>
 
       <div className="flex flex-wrap items-center gap-2" data-testid="advertising-reporting-status">
         <Badge variant={result.freshness === "fresh" ? "success" : "warning"}>
@@ -305,8 +404,9 @@ export default async function AdvertisingAnalyticsPage({
         </span>
         <Link
           href={clientReportHref}
-          className="text-label text-primary focus-visible:ring-focus-ring ms-auto inline-flex min-h-9 items-center rounded font-semibold focus:outline-none focus-visible:ring-2"
+          className="text-label text-primary focus-visible:ring-focus-ring ms-auto inline-flex min-h-9 items-center gap-1 rounded font-semibold focus:outline-none focus-visible:ring-2"
         >
+          <Bookmark className="h-4 w-4" aria-hidden="true" />
           {t("advertising.reporting.openClientReport")}
         </Link>
       </div>
@@ -333,25 +433,22 @@ export default async function AdvertisingAnalyticsPage({
         </Card>
       ) : (
         <>
-          <AdvertisingIntelligencePanel
-            campaigns={campaignInsights}
-            pacing={budgetPacing}
-            fatigue={creativeFatigue}
-            currency={selectedAccount.currency}
-            locale={code}
-            labels={advertisingIntelligenceLabels(t)}
-          />
           <section aria-labelledby="advertising-reporting-summary-title" className="space-y-3">
-            <div>
-              <h2
-                id="advertising-reporting-summary-title"
-                className="text-title-card text-fg-primary font-semibold"
-              >
-                {t("advertising.reporting.summaryTitle")}
-              </h2>
-              <p className="text-label text-fg-muted mt-1">
-                {t("advertising.reporting.summaryDescription", { account: selectedAccount.name })}
-              </p>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2
+                  id="advertising-reporting-summary-title"
+                  className="text-title-card text-fg-primary font-semibold"
+                >
+                  {t("advertising.reporting.summaryTitle")}
+                </h2>
+                <p className="text-label text-fg-muted mt-1">
+                  {t("advertising.reporting.summaryDescription", { account: selectedAccount.name })}
+                </p>
+              </div>
+              <Badge variant="outline">
+                {t("advertising.reporting.periodSummary", { since, until })}
+              </Badge>
             </div>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-8">
               <MetricCard
@@ -407,53 +504,26 @@ export default async function AdvertisingAnalyticsPage({
               />
             </div>
           </section>
-
-          <Card data-testid="advertising-reporting-daily-spend">
-            <CardHeader>
-              <div>
-                <CardTitle>{t("advertising.reporting.dailySpendTitle")}</CardTitle>
-                <CardDescription>
-                  {t("advertising.reporting.dailySpendDescription")}
-                </CardDescription>
-              </div>
-              <span className="text-label text-fg-muted">
-                {t("advertising.reporting.adCount", { count: number(view.adCount, code) })}
-              </span>
-            </CardHeader>
-            <div
-              className="space-y-3"
-              role="img"
-              aria-label={t("advertising.reporting.dailySpendChartLabel")}
-            >
-              {view.dailySpend.map((day) => (
-                <div
-                  key={day.date}
-                  className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3"
-                >
-                  <span className="text-label text-fg-muted" dir="ltr">
-                    {formatDate(new Date(`${day.date}T12:00:00Z`), code, {
-                      timeZone: selectedAccount.timezone ?? workspace.timezone,
-                      day: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                  <div className="bg-surface-subtle h-3 overflow-hidden rounded-full">
-                    <div
-                      className="bg-primary h-full rounded-full"
-                      style={{
-                        width: `${maxDailySpend > 0 ? (day.spend / maxDailySpend) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-label text-fg-primary font-semibold">
-                    {money(day.spend, selectedAccount.currency, code)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </Card>
+          <AdvertisingIntelligencePanel
+            campaigns={campaignInsights}
+            pacing={budgetPacing}
+            fatigue={creativeFatigue}
+            currency={selectedAccount.currency}
+            locale={code}
+            audienceCount={result.audience.length}
+            labels={advertisingIntelligenceLabels(t)}
+          />
+          <AdvertisingReportVisuals
+            dailySpend={view.dailySpend}
+            campaigns={view.campaigns}
+            currency={selectedAccount.currency}
+            locale={code}
+            labels={advertisingReportVisualLabels(t)}
+          />
+          <ReportViewTabs t={t} />
 
           <Card
+            id="advertising-reporting-campaigns"
             padding="none"
             className="overflow-hidden"
             data-testid="advertising-reporting-campaigns"
@@ -574,7 +644,7 @@ export default async function AdvertisingAnalyticsPage({
               t={t}
             />
           </Card>
-          <Card data-testid="advertising-reporting-adsets">
+          <Card id="advertising-reporting-adsets" data-testid="advertising-reporting-adsets">
             <CardHeader>
               <CardTitle>{t("advertising.reporting.adSetsTitle")}</CardTitle>
               <CardDescription>{t("advertising.reporting.adSetsDescription")}</CardDescription>
@@ -663,7 +733,7 @@ export default async function AdvertisingAnalyticsPage({
               t={t}
             />
           </Card>
-          <Card data-testid="advertising-reporting-ads">
+          <Card id="advertising-reporting-ads" data-testid="advertising-reporting-ads">
             <CardHeader>
               <CardTitle>{t("advertising.reporting.adsTitle")}</CardTitle>
               <CardDescription>{t("advertising.reporting.adsDescription")}</CardDescription>
@@ -878,7 +948,7 @@ export default async function AdvertisingAnalyticsPage({
               </div>
             </Card>
           ) : null}
-          <Card data-testid="advertising-reporting-audience">
+          <Card id="advertising-reporting-audience" data-testid="advertising-reporting-audience">
             <CardHeader>
               <div>
                 <CardTitle>{t("advertising.reporting.audienceTitle")}</CardTitle>
@@ -1021,7 +1091,66 @@ function advertisingIntelligenceLabels(
     expected: t("advertising.reporting.expected"),
     change: t("advertising.reporting.change"),
     cpc: t("advertising.reporting.cpc"),
+    audienceOpportunity: t("advertising.reporting.audienceOpportunity"),
+    audienceOpportunityDescription: t("advertising.reporting.audienceOpportunityDescription"),
+    audienceRows: t("advertising.reporting.audienceRows"),
+    noAudienceData: t("advertising.reporting.noAudienceData"),
   };
+}
+
+function advertisingReportVisualLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingReportVisualLabels {
+  return {
+    spendTrendTitle: t("advertising.reporting.spendTrendTitle"),
+    spendTrendDescription: t("advertising.reporting.spendTrendDescription"),
+    spendTrendAccessible: t("advertising.reporting.spendTrendAccessible"),
+    performanceByObjectiveTitle: t("advertising.reporting.performanceByObjectiveTitle"),
+    performanceByObjectiveDescription: t("advertising.reporting.performanceByObjectiveDescription"),
+    noSpendData: t("advertising.reporting.noSpendData"),
+    noObjectiveData: t("advertising.reporting.noObjectiveData"),
+    unknownObjective: t("advertising.reporting.unknownObjective"),
+    totalSpend: t("advertising.reporting.totalSpend"),
+    legendSpend: t("advertising.reporting.legendSpend"),
+  };
+}
+
+function ReportViewTabs({
+  t,
+}: {
+  t: (key: string, values?: Record<string, string | number>) => string;
+}) {
+  return (
+    <nav
+      aria-label={t("advertising.reporting.viewNavigation")}
+      className="border-border bg-surface flex flex-wrap gap-1 rounded-[var(--radius-card)] border p-1"
+    >
+      <a
+        href="#advertising-reporting-campaigns"
+        className="bg-primary-subtle text-primary focus-visible:ring-focus-ring text-label inline-flex min-h-10 items-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"
+      >
+        {t("advertising.reporting.campaignsTitle")}
+      </a>
+      <a
+        href="#advertising-reporting-adsets"
+        className="text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring text-label inline-flex min-h-10 items-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"
+      >
+        {t("advertising.reporting.adSetsTitle")}
+      </a>
+      <a
+        href="#advertising-reporting-ads"
+        className="text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring text-label inline-flex min-h-10 items-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"
+      >
+        {t("advertising.reporting.adsTitle")}
+      </a>
+      <a
+        href="#advertising-reporting-audience"
+        className="text-fg-secondary hover:bg-surface-subtle focus-visible:ring-focus-ring text-label inline-flex min-h-10 items-center rounded-[var(--radius-control)] px-4 font-semibold focus:outline-none focus-visible:ring-2"
+      >
+        {t("advertising.reporting.audienceTitle")}
+      </a>
+    </nav>
+  );
 }
 
 function advertisingClientReportLabels(
