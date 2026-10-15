@@ -14,6 +14,7 @@ import board from "./board.json";
 import brandKit from "./brandKit.json";
 import buildInfo from "./buildInfo.json";
 import calendar from "./calendar.json";
+import communityInbox from "./communityInbox.json";
 import common from "./common.json";
 import contentDetail from "./contentDetail.json";
 import emails from "./emails.json";
@@ -63,6 +64,7 @@ export default {
   brandKit,
   buildInfo,
   calendar,
+  communityInbox,
   common,
   contentDetail,
   emails,

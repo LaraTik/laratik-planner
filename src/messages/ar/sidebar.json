@@ -170,5 +170,19 @@
   "mobileGlobalDescription": "وجهات الوكالة والمنصة",
   "personal": "شخصي",
   "account": "الحساب",
-  "help": "المساعدة"
+  "help": "المساعدة",
+  "communityInbox": "المجتمع وصندوق الوارد",
+  "communityOverview": "نظرة عامة",
+  "communityInboxView": "صندوق الوارد الموحد",
+  "communityComments": "تعليقات المنشورات",
+  "communityReviews": "قائمة المراجعة",
+  "communityAutomations": "الأتمتة",
+  "communityPlaybooks": "الإرشادات",
+  "communityTestLab": "مختبر اختبار الذكاء الاصطناعي",
+  "communityAnalytics": "التحليلات",
+  "communityConnections": "الاتصالات",
+  "communityTeam": "الفريق والتوجيه",
+  "communitySettings": "الإعدادات والسلامة",
+  "communityActivity": "النشاط والتسليم",
+  "communitySetup": "معالج الإعداد"
 }

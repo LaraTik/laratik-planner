@@ -9,6 +9,7 @@ import {
   Cloud,
   FileText,
   KeyRound,
+  MessageSquare,
   Server,
   Users2,
 } from "lucide-react";
@@ -16,9 +17,15 @@ import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
-import { count, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
-import { agencies, agencyMemberships, aiFeatureSettings, workspaces } from "@/lib/db/schema";
+import {
+  agencies,
+  agencyMemberships,
+  agencyModuleSettings,
+  aiFeatureSettings,
+  workspaces,
+} from "@/lib/db/schema";
 import { serverEnv } from "@/lib/validation/env";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +36,9 @@ import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { getSocialStatus } from "@/lib/social/service";
 import { getActiveApiKey } from "@/lib/ai";
 import { listInstructionPacks } from "@/lib/ai/instruction-packs";
+import { getEffectiveEntitlement } from "@/lib/entitlements";
+import { COMMUNITY_INBOX_MODULE } from "@/lib/community/access";
+import { CommunityModuleToggle } from "@/components/community/community-module-toggle";
 
 /**
  * Agency-level identity and operational configuration (M3.4 — agency CRUD).
@@ -95,6 +105,23 @@ export default async function AgencySettingsPage() {
     listInstructionPacks(agencyId),
   ]);
   if (!agency) redirect("/setup");
+
+  const [[communityModule], communityEntitlement] = await Promise.all([
+    db
+      .select({ enabled: agencyModuleSettings.enabled })
+      .from(agencyModuleSettings)
+      .where(
+        and(
+          eq(agencyModuleSettings.agencyId, agencyId),
+          eq(agencyModuleSettings.module, COMMUNITY_INBOX_MODULE),
+        ),
+      )
+      .limit(1),
+    getEffectiveEntitlement({ agencyId }).catch(() => null),
+  ]);
+  const communityPlanIncluded =
+    communityEntitlement?.enabledModules?.has(COMMUNITY_INBOX_MODULE) === true;
+  const communityEnabled = communityModule?.enabled === true;
 
   // Pre-compute the managed-services status (read-only display). These
   // two services are database-backed, so the overview must reflect the
@@ -281,6 +308,46 @@ export default async function AgencySettingsPage() {
                 ? t("agencySettings.serviceConfigured")
                 : t("agencySettings.serviceDisabled")}
             </Badge>
+          </div>
+        </Card>
+      </section>
+
+      <section id="community-inbox" aria-labelledby="agency-settings-community-title">
+        <Card padding="lg" data-testid="agency-settings-community-summary">
+          <SectionHeading
+            icon={<MessageSquare className="h-5 w-5" aria-hidden="true" />}
+            title={t("communityInbox.module")}
+            description={t("communityInbox.connectionsDescription")}
+            action={
+              <Badge variant={communityEnabled ? "success" : "outline"}>
+                {communityEnabled ? t("communityInbox.available") : t("communityInbox.disabled")}
+              </Badge>
+            }
+            titleId="agency-settings-community-title"
+          />
+          <div className="bg-surface-subtle mt-5 flex flex-wrap items-center justify-between gap-4 rounded-[var(--radius-control)] border p-4">
+            <div className="max-w-2xl">
+              <p className="text-body text-fg-primary font-semibold">
+                {communityPlanIncluded
+                  ? t("communityInbox.setupRequiredTitle")
+                  : t("communityInbox.moduleUnavailable")}
+              </p>
+              <p className="text-label text-fg-secondary mt-1">
+                {communityPlanIncluded
+                  ? t("communityInbox.setupRequiredDescription")
+                  : t("communityInbox.moduleUnavailable")}
+              </p>
+            </div>
+            {communityPlanIncluded ? (
+              <CommunityModuleToggle
+                enabled={communityEnabled}
+                enableLabel={t("communityInbox.enableModule")}
+                disableLabel={t("communityInbox.disabled")}
+                errorLabel={t("common.error.body")}
+              />
+            ) : (
+              <Badge variant="outline">{t("communityInbox.disabled")}</Badge>
+            )}
           </div>
         </Card>
       </section>

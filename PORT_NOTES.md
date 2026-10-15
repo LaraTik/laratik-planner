@@ -71,6 +71,31 @@ server-enforced. Approval: product owner request in the 2026-09-09 task.
 - All accessibility rules (§18): WCAG 2.2 AA, responsive breakpoints at 360/390/768/1024/1280/1440, focus ring, reduced motion, touch targets ≥ 44px
 - All 234 release checks (§24)
 
+## Community & Inbox module (2026-10-15)
+
+The Community & Inbox feature is an additive LaraTik SaaS module derived from
+the attached product plan and design package. It is not a silent amendment to
+the StudioFlow master prompt. The implementation adds a plan-level
+`community_inbox` entitlement, an agency opt-in, and a workspace opt-in;
+existing agencies therefore remain disabled by default.
+
+Impact: the module introduces workspace-scoped conversation, message, draft,
+send-attempt, provider-capability, sync, routing, playbook, automation, test,
+and activity records. Every future provider action must pass the shared
+server-side access policy and immediate safety checks. Provider credentials
+and response payloads must not cross the client boundary.
+
+Security/data implications: the provider root comment/message identity and
+workspace/provider dedupe keys are persisted for reconciliation. Sending is
+at-least-once and explicitly distinguishes confirmed, failed, and unknown
+outcomes. AI Assist drafts never send; controlled automation, webhooks, and
+additional providers remain disabled pending external UAT and independent
+production-readiness verification.
+
+Approval requirement: Meta UAT must prove each claimed operation for the
+actual login mode, account type, permissions, and provider version before the
+corresponding capability is enabled for customers.
+
 ## Why these deviations are safe
 
 1. **Data layer is portable** — Drizzle + Postgres is the canonical "self-hosted Supabase" stack. The same tables, the same RLS-equivalent policies, the same migrations; we just own the infra.

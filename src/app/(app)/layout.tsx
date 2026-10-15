@@ -31,6 +31,7 @@ import { readSidebarCollapsed } from "@/lib/nav/sidebar-preference";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import type { AppShellChrome } from "@/components/app-shell/app-shell";
 import { getThemePreference } from "@/lib/theme/server";
+import { canExposeCommunityInboxForAgency } from "@/lib/community/service";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -105,6 +106,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const canAccessTrendRadar = Boolean(
     aiFeature?.enabled && agencyId && (await loadEnabledCapabilities(agencyId)).has("trend_radar"),
   );
+  const canAccessCommunityInbox = agencyId
+    ? await canExposeCommunityInboxForAgency(agencyId)
+    : false;
   // R9 — the bell's two reads are wrapped in `unstable_cache` so
   // a single `revalidateTag("notifications:user:<id>")` call from
   // the mark-read action or the outbox dispatcher invalidates
@@ -334,6 +338,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       performance: t("sidebar.performance"),
       channels: t("sidebar.channels"),
       analytics: t("sidebar.analytics"),
+      "community-inbox": t("sidebar.communityInbox"),
+      "community-overview": t("sidebar.communityOverview"),
+      "community-inbox-view": t("sidebar.communityInboxView"),
+      "community-comments": t("sidebar.communityComments"),
+      "community-reviews": t("sidebar.communityReviews"),
+      "community-automations": t("sidebar.communityAutomations"),
+      "community-playbooks": t("sidebar.communityPlaybooks"),
+      "community-test-lab": t("sidebar.communityTestLab"),
+      "community-analytics": t("sidebar.communityAnalytics"),
+      "community-connections": t("sidebar.communityConnections"),
+      "community-team": t("sidebar.communityTeam"),
+      "community-settings": t("sidebar.communitySettings"),
+      "community-activity": t("sidebar.communityActivity"),
+      "community-setup": t("sidebar.communitySetup"),
       advertising: t("sidebar.advertising"),
       brand: t("sidebar.brand"),
       "brand-kit": t("sidebar.brandKit"),
@@ -441,6 +459,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       themePreference={themePreference}
       platformAccess={platformAccess}
       canAccessTrendRadar={canAccessTrendRadar}
+      canAccessCommunityInbox={canAccessCommunityInbox}
       supportGrants={supportGrants}
       workspaceBadges={workspaceBadgesMap}
       unreadAppErrors={globalBadges.unreadAppErrors}

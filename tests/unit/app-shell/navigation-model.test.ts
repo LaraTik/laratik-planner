@@ -178,6 +178,40 @@ describe("buildWorkspaceNavigation", () => {
       expect.arrayContaining([expect.objectContaining({ key: "trends" })]),
     );
   });
+
+  it("adds the Community & Inbox screen tree only when the agency module is enabled", () => {
+    const disabled = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: true,
+      canManage: true,
+      canAccessTrendRadar: false,
+    });
+    expect(disabled.groups.flatMap((group) => group.items)).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ key: "community-inbox" })]),
+    );
+
+    const enabled = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: true,
+      canManage: true,
+      canAccessTrendRadar: false,
+      canAccessCommunityInbox: true,
+    });
+    const community = enabled.groups
+      .find((group) => group.key === "understand")
+      ?.items.find((item) => item.key === "community-inbox");
+    expect(community?.kind).toBe("expandable");
+    if (community?.kind === "expandable") {
+      expect(community.children).toHaveLength(13);
+      const childHrefs = community.children
+        .filter((child) => child.kind === "link")
+        .map((child) => child.href);
+      expect(childHrefs).toContain(`${wsBase}/engagement/inbox`);
+      expect(childHrefs).toContain(`${wsBase}/engagement/setup`);
+    }
+  });
 });
 
 describe("buildAgencyNavigation", () => {

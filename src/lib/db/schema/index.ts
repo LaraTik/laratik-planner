@@ -21,6 +21,7 @@ export * from "./audit";
 export * from "./ai";
 export * from "./brand-kit";
 export * from "./plans";
+export * from "./modules";
 export * from "./usage";
 export * from "./support";
 // M4 — social profile analytics. Imported after identity / workspaces
@@ -36,6 +37,7 @@ export * from "./app-errors";
 export * from "./social-dek";
 export * from "./provider-config";
 export * from "./social-publishing";
+export * from "./community";
 // M4.7 / Phase 1 of the social-cron-admin plan: cron_tick_history
 // powers the platform-admin /app/platform/operations/cron page and
 // the "Run now" audit hook. Imported after identity for the optional

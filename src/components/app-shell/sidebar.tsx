@@ -63,6 +63,7 @@ export function Sidebar({
   workspaceCanCreateContent = {},
   platformAccess,
   canAccessTrendRadar = false,
+  canAccessCommunityInbox = false,
   workspaceBadgesByWorkspaceId = {},
   unreadAppErrors = 0,
   collapsed = false,
@@ -75,6 +76,7 @@ export function Sidebar({
   workspaceCanCreateContent?: Record<string, boolean>;
   platformAccess: PlatformNavigationAccess;
   canAccessTrendRadar?: boolean;
+  canAccessCommunityInbox?: boolean;
   workspaceBadgesByWorkspaceId?: Record<string, { approvals: number; designQueue: number }>;
   unreadAppErrors?: number;
   collapsed?: boolean;
@@ -153,6 +155,7 @@ export function Sidebar({
           canCreateContent,
           canManage: user.isAdmin || workspaceCanCreateContent[currentWorkspace.id] === true,
           canAccessTrendRadar,
+          canAccessCommunityInbox,
         })
       : null;
   const createContentHref = workspaceNav?.createContentHref ?? null;

@@ -4,6 +4,7 @@ import {
   Bookmark,
   BarChart3,
   FileText,
+  FlaskConical,
   BookOpen,
   Bot,
   Briefcase,
@@ -139,8 +140,10 @@ export function buildWorkspaceNavigation(input: {
   canManage: boolean;
   /** Whether Trend Radar is enabled for the active agency and deployment. */
   canAccessTrendRadar: boolean;
+  /** Whether the agency has enabled the plan-entitled Community & Inbox module. */
+  canAccessCommunityInbox?: boolean;
 }): { top: SidebarLinkSpec[]; groups: SidebarGroupSpec[]; createContentHref: string | null } {
-  const { wsBase, badges, canManage, canAccessTrendRadar } = input;
+  const { wsBase, badges, canManage, canAccessTrendRadar, canAccessCommunityInbox = false } = input;
 
   const top: SidebarLinkSpec[] = [
     {
@@ -251,6 +254,114 @@ export function buildWorkspaceNavigation(input: {
           labelKey: "sidebar.channels",
           icon: Share2,
         },
+        ...(canAccessCommunityInbox
+          ? [
+              {
+                kind: "expandable" as const,
+                key: "community-inbox",
+                label: "Community & Inbox",
+                labelKey: "sidebar.communityInbox",
+                href: `${wsBase}/engagement`,
+                icon: MessageCircle,
+                activePrefixes: [`${wsBase}/engagement`],
+                testId: "sidebar-community-inbox",
+                children: [
+                  [
+                    "community-overview",
+                    "engagement",
+                    "Overview",
+                    "communityOverview",
+                    LayoutDashboard,
+                  ],
+                  [
+                    "community-inbox-view",
+                    "engagement/inbox",
+                    "Unified inbox",
+                    "communityInboxView",
+                    MessageSquare,
+                  ],
+                  [
+                    "community-comments",
+                    "engagement/comments",
+                    "Post comments",
+                    "communityComments",
+                    MessageCircle,
+                  ],
+                  [
+                    "community-reviews",
+                    "engagement/reviews",
+                    "Review queue",
+                    "communityReviews",
+                    ClipboardList,
+                  ],
+                  [
+                    "community-automations",
+                    "engagement/automations",
+                    "Automations",
+                    "communityAutomations",
+                    Bot,
+                  ],
+                  [
+                    "community-playbooks",
+                    "engagement/playbooks",
+                    "Playbooks",
+                    "communityPlaybooks",
+                    BookOpen,
+                  ],
+                  [
+                    "community-test-lab",
+                    "engagement/test-lab",
+                    "AI Test Lab",
+                    "communityTestLab",
+                    FlaskConical,
+                  ],
+                  [
+                    "community-analytics",
+                    "engagement/analytics",
+                    "Analytics",
+                    "communityAnalytics",
+                    BarChart3,
+                  ],
+                  [
+                    "community-connections",
+                    "engagement/connections",
+                    "Connections",
+                    "communityConnections",
+                    PlugZap,
+                  ],
+                  ["community-team", "engagement/team", "Team & routing", "communityTeam", Users],
+                  [
+                    "community-settings",
+                    "engagement/settings",
+                    "Settings & safety",
+                    "communitySettings",
+                    Shield,
+                  ],
+                  [
+                    "community-activity",
+                    "engagement/activity",
+                    "Activity & delivery",
+                    "communityActivity",
+                    History,
+                  ],
+                  [
+                    "community-setup",
+                    "engagement/setup",
+                    "Setup wizard",
+                    "communitySetup",
+                    ShieldCheck,
+                  ],
+                ].map(([key, path, label, labelKey, icon]) => ({
+                  kind: "link" as const,
+                  key: key as string,
+                  href: `${wsBase}/${path}`,
+                  label: label as string,
+                  labelKey: `sidebar.${labelKey as string}`,
+                  icon: icon as IconComponent,
+                })),
+              },
+            ]
+          : []),
       ],
     },
     {

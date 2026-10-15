@@ -603,6 +603,13 @@
       "when": 1791906000000,
       "tag": "0085_fix_advertising_validation_tenant_guard",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1792100700542,
+      "tag": "0086_community_inbox_foundation",
+      "breakpoints": true
     }
   ]
 }

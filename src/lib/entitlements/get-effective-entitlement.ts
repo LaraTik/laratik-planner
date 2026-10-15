@@ -13,6 +13,7 @@ import {
   type OverrideShape,
   type PlatformKey,
   type PlatformPlanTemplateRow,
+  type ProductModule,
   ALL_AI_CAPABILITIES,
   ALL_PLATFORM_KEYS,
 } from "./types";
@@ -107,9 +108,28 @@ export function mergeEntitlement(input: MergeInput): EffectiveEntitlement {
       overrides.enabled_capabilities,
       defaults?.enabled_capabilities,
     ),
+    enabledModules: intersectModules(overrides.enabled_modules, defaults?.enabled_modules),
     hardStopPercent: clampHardStop(coerceNumber(entitlement.hardStopPercent, 100)),
     gracePolicy: resolveGracePolicy(entitlement.gracePolicy, defaults?.grace_policy),
   };
+}
+
+function intersectModules(
+  override: ReadonlyArray<ProductModule> | null | undefined,
+  defaults: ReadonlyArray<ProductModule> | null | undefined,
+): ReadonlySet<ProductModule> {
+  const overrideSet = override == null ? null : new Set(override);
+  const defaultSet = defaults == null ? null : new Set(defaults);
+  // Product access is plan-ceilinged. A missing plan module list must never
+  // be interpreted as an unlimited plan, even when an agency override asks
+  // for the module.
+  if (defaultSet === null) return new Set<ProductModule>();
+  if (overrideSet === null) return new Set(defaultSet);
+  const result = new Set<ProductModule>();
+  for (const productModule of overrideSet ?? []) {
+    if (defaultSet?.has(productModule)) result.add(productModule);
+  }
+  return result;
 }
 
 /**

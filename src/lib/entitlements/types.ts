@@ -66,6 +66,10 @@ export type AiCapability =
   | "monthly_planning_copilot"
   | "advertising_recommendations";
 
+export type ProductModule = "community_inbox";
+
+export const ALL_PRODUCT_MODULES: ReadonlyArray<ProductModule> = ["community_inbox"] as const;
+
 /**
  * The default capability set. Used when neither the plan default
  * nor the agency override lists capabilities — an empty
@@ -172,6 +176,8 @@ export interface EffectiveEntitlement {
    * UI hides buttons against.
    */
   enabledAiCapabilities: ReadonlySet<AiCapability>;
+  /** Plan-level product modules. Missing modules fail closed. */
+  enabledModules?: ReadonlySet<ProductModule>;
   /**
    * 0..100. The percent of any limit at which the M2.4 enforcement
    * layer starts rejecting new allocations. Defaults to 100
@@ -350,6 +356,7 @@ export const OverrideShapeSchema = z.object({
   trend_radar_cost_cents_per_month: z.number().int().nonnegative().nullable().optional(),
   trend_radar_workspaces_enabled_max: z.number().int().nonnegative().nullable().optional(),
   enabled_capabilities: z.array(z.enum(AI_CAPABILITY_VALUES)).nullable().optional(),
+  enabled_modules: z.array(z.literal("community_inbox")).nullable().optional(),
   grace_policy: z.enum(GRACE_POLICY_VALUES).nullable().optional(),
 });
 

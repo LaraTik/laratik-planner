@@ -74,6 +74,7 @@ export function AppShell({
   themePreference,
   platformAccess,
   canAccessTrendRadar = false,
+  canAccessCommunityInbox = false,
   supportGrants = [],
   workspaceBadges,
   unreadAppErrors = 0,
@@ -108,6 +109,7 @@ export function AppShell({
   themePreference: ThemePreference;
   platformAccess: PlatformNavigationAccess;
   canAccessTrendRadar?: boolean;
+  canAccessCommunityInbox?: boolean;
   supportGrants?: Array<{
     id: string;
     targetAgencyId: string;
@@ -158,6 +160,7 @@ export function AppShell({
           workspaceCanCreateContent={workspaceCanCreateContent}
           platformAccess={platformAccess}
           canAccessTrendRadar={canAccessTrendRadar}
+          canAccessCommunityInbox={canAccessCommunityInbox}
           workspaceBadgesByWorkspaceId={workspaceBadges ?? {}}
           unreadAppErrors={unreadAppErrors}
           collapsed={sidebarCollapsed}

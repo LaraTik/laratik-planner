@@ -496,4 +496,30 @@ describe("M2.2 — entitlement merge function (unit)", () => {
       expect(result.maxOutputTokensPerRequest).toBe(4000);
     });
   });
+
+  describe("product modules", () => {
+    it("intersects agency module overrides with plan modules", () => {
+      const result = mergeEntitlement({
+        entitlement: entitlementWith({ enabled_modules: ["community_inbox"] }),
+        planTemplate: {
+          ...starterTemplate,
+          defaultLimits: {
+            ...starterTemplate.defaultLimits!,
+            enabled_modules: ["community_inbox"],
+          },
+        },
+      });
+
+      expect(result.enabledModules?.has("community_inbox")).toBe(true);
+    });
+
+    it("fails closed when the plan does not include the module", () => {
+      const result = mergeEntitlement({
+        entitlement: entitlementWith({ enabled_modules: ["community_inbox"] }),
+        planTemplate: starterTemplate,
+      });
+
+      expect(result.enabledModules?.has("community_inbox")).toBe(false);
+    });
+  });
 });

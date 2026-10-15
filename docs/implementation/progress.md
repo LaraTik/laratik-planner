@@ -11,6 +11,20 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-15 — Community & Inbox pre-build foundation
+
+Status: **Implemented foundation; not release-ready.** The plan-aligned route
+contract, navigation, bilingual catalogs, fail-closed plan/agency/workspace
+gates, module settings, workspace-scoped data model, provider boundary, and
+visual parity matrix are present. The routes intentionally render labeled
+empty/unknown/simulation states while provider operations remain unimplemented.
+
+Outstanding before customer enablement: Meta capability discovery and UAT,
+read-only polling/catch-up, human inbox delivery, AI draft/review behavior,
+automation safety/reconciliation, bilingual browser evidence, responsive
+visual baselines, migration drill, isolation/permission tests, and independent
+production-readiness verification. No `Verified` claim is made here.
+
 ## 2026-10-03 — Targeted visual baseline refresh
 
 The strict visual matrix was rerun at the current workspace state. The

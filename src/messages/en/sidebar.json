@@ -170,5 +170,19 @@
   "mobileGlobalDescription": "Agency and platform destinations",
   "personal": "Personal",
   "account": "Account",
-  "help": "Help"
+  "help": "Help",
+  "communityInbox": "Community & Inbox",
+  "communityOverview": "Overview",
+  "communityInboxView": "Unified inbox",
+  "communityComments": "Post comments",
+  "communityReviews": "Review queue",
+  "communityAutomations": "Automations",
+  "communityPlaybooks": "Playbooks",
+  "communityTestLab": "AI Test Lab",
+  "communityAnalytics": "Analytics",
+  "communityConnections": "Connections",
+  "communityTeam": "Team & routing",
+  "communitySettings": "Settings & safety",
+  "communityActivity": "Activity & delivery",
+  "communitySetup": "Setup wizard"
 }

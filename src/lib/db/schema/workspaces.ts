@@ -96,6 +96,13 @@ export const workspaceSettings = pgTable("workspace_settings", {
   // agency switches must both be enabled before a queue action can
   // ever be added by the future publishing worker.
   metaPublishingEnabled: boolean("meta_publishing_enabled").notNull().default(false),
+  communityInboxEnabled: boolean("community_inbox_enabled").notNull().default(false),
+  communityInboxMode: text("community_inbox_mode").notNull().default("manual"),
+  communityInboxAutoSendEnabled: boolean("community_inbox_auto_send_enabled")
+    .notNull()
+    .default(false),
+  communityInboxEmergencyStop: boolean("community_inbox_emergency_stop").notNull().default(true),
+  communityInboxRetentionDays: integer("community_inbox_retention_days").notNull().default(90),
   ...timestamps,
 });
 
