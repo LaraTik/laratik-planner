@@ -25,6 +25,9 @@ describe("getWorkspaceSwitchPath", () => {
   it.each([
     ["/app/a/acme/w/old", `/app/a/acme/w/${target}`],
     ["/app/a/acme/w/old/analytics/social", `/app/a/acme/w/${target}/analytics/social`],
+    ["/app/a/acme/w/old/analytics/advertising", `/app/a/acme/w/${target}/analytics/advertising`],
+    ["/app/a/acme/w/old/engagement/inbox", `/app/a/acme/w/${target}/engagement/inbox`],
+    ["/app/a/acme/w/old/engagement/connections", `/app/a/acme/w/${target}/engagement/connections`],
     ["/app/a/acme/w/old/brand-kit/colors", `/app/a/acme/w/${target}/brand-kit/colors`],
     // A dynamic record id is dropped rather than carried into another
     // workspace, where it would 404 — or worse, resolve.

@@ -172,6 +172,7 @@ async function readMetrics(workspaceId: string) {
         state: communityConversations.state,
         body: communityMessages.body,
         authorName: communityMessages.authorName,
+        direction: communityMessages.direction,
         postedAt: communityMessages.postedAt,
       })
       .from(communityConversations)
@@ -198,6 +199,7 @@ async function readMetrics(workspaceId: string) {
           state: row.state,
           body: row.body ?? "",
           authorName: row.authorName,
+          direction: row.direction,
         },
       ]),
     ).values(),
@@ -474,7 +476,10 @@ function InboxScreen({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-label text-fg-muted uppercase">{item.channelType}</span>
                   <Badge variant={item.state === "open" ? "info" : "outline"}>
-                    {communityText(t, item.state)}
+                    {communityText(
+                      t,
+                      item.direction === "outgoing" ? "waitingCustomer" : item.state,
+                    )}
                   </Badge>
                 </div>
                 <p className="text-body text-fg-primary mt-2 line-clamp-2">{item.body}</p>
@@ -879,6 +884,16 @@ function ConnectionsScreen({
     media_context: "operationMediaContext",
     conversation_history: "operationConversationHistory",
   };
+  const capabilityDetailLabels: Record<string, string> = {
+    mutation_uat_required: "capabilityDetailMutationUat",
+    read_not_implemented: "capabilityDetailReadNotImplemented",
+    webhooks_not_enabled: "capabilityDetailWebhooks",
+    media_context_not_implemented: "capabilityDetailMediaContext",
+    conversation_history_not_implemented: "capabilityDetailConversationHistory",
+  };
+  const readCommentsAvailable = metrics.capabilityRows.some(
+    (row) => row.operation === "read_comments" && row.state === "available",
+  );
   return (
     <>
       <div className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-3 rounded-[var(--radius-card)] border p-4">
@@ -892,8 +907,8 @@ function ConnectionsScreen({
               <CardTitle>{communityText(t, "meta")}</CardTitle>
               <CardDescription>{communityText(t, "channelHealth")}</CardDescription>
             </div>
-            <Badge variant={metrics.channels > 0 ? "success" : "outline"}>
-              {metrics.channels > 0
+            <Badge variant={readCommentsAvailable ? "success" : "outline"}>
+              {readCommentsAvailable
                 ? communityText(t, "available")
                 : communityText(t, "notValidated")}
             </Badge>
@@ -924,31 +939,42 @@ function ConnectionsScreen({
             <CardDescription>{communityText(t, "status")}</CardDescription>
           </CardHeader>
           <div className="space-y-2">
-            {OPERATION_KEYS.slice(0, 4).map((operation) => (
+            {OPERATION_KEYS.map((operation) => (
               <div
                 key={operation}
-                className="bg-surface-subtle flex items-center justify-between gap-3 rounded-[var(--radius-control)] px-3 py-2"
+                className="bg-surface-subtle rounded-[var(--radius-control)] px-3 py-2"
               >
-                <span className="text-label text-fg-primary">
-                  {communityText(t, operationLabels[operation])}
-                </span>
-                <Badge
-                  variant={
-                    metrics.capabilityRows.find((row) => row.operation === operation)?.state ===
-                    "available"
-                      ? "success"
-                      : metrics.capabilityRows.find((row) => row.operation === operation)?.state ===
-                          "unavailable"
-                        ? "warning"
-                        : "outline"
-                  }
-                >
-                  {communityText(
-                    t,
-                    metrics.capabilityRows.find((row) => row.operation === operation)?.state ??
-                      "unknown",
-                  )}
-                </Badge>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-label text-fg-primary">
+                    {communityText(t, operationLabels[operation])}
+                  </span>
+                  <Badge
+                    variant={
+                      metrics.capabilityRows.find((row) => row.operation === operation)?.state ===
+                      "available"
+                        ? "success"
+                        : metrics.capabilityRows.find((row) => row.operation === operation)
+                              ?.state === "unavailable"
+                          ? "warning"
+                          : "outline"
+                    }
+                  >
+                    {communityText(
+                      t,
+                      metrics.capabilityRows.find((row) => row.operation === operation)?.state ??
+                        "unknown",
+                    )}
+                  </Badge>
+                </div>
+                {(() => {
+                  const detail = metrics.capabilityRows.find(
+                    (row) => row.operation === operation,
+                  )?.detail;
+                  const detailKey = detail ? capabilityDetailLabels[detail] : undefined;
+                  return detailKey ? (
+                    <p className="text-label text-fg-muted mt-1">{communityText(t, detailKey)}</p>
+                  ) : null;
+                })()}
               </div>
             ))}
           </div>

@@ -11,6 +11,23 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-16 — Workspace-preserving navigation and provider-reply reconciliation
+
+Status: **Implemented; pending release verification.** The global workspace
+switcher now preserves the safe route family for Community & Inbox and
+Advertising analytics while replacing only the agency/workspace segments.
+Dynamic record paths and query state remain intentionally dropped so
+workspace-owned IDs and filters cannot leak across tenants.
+
+Comment sync now identifies comments authored by the connected Meta account,
+stores them as provider-confirmed outgoing messages, and moves the conversation
+to `waiting_customer` when that reply is the latest provider event. Customer
+comments remain open. The Connections screen shows all discovered operations
+and the provider/UAT reason for every unavailable or not-yet-implemented
+operation. Reply and private-message operations are not falsely marked
+available until their exact Meta permissions, endpoint behavior, and controlled
+UAT are complete.
+
 ## 2026-10-16 — Community read-only capability and comment sync milestone
 
 Status: **Tested and deployed; not release-ready.** Meta capability validation is

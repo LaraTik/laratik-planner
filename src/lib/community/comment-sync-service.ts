@@ -15,6 +15,7 @@ import { createDekCache, getDekForWorkspace } from "@/lib/social/key-management"
 import { openConnectionCredentials } from "@/lib/social/repository";
 import { SocialProviderError } from "@/lib/social/http";
 import { readMetaCommunityComments } from "./meta-community-reader";
+import { isProviderReply, syncedMessageState } from "./comment-sync-state";
 
 export type CommunityCommentSyncResult = {
   checkedConnections: number;
@@ -101,6 +102,12 @@ async function persistComment(
   channel: typeof socialChannels.$inferSelect,
   comment: Awaited<ReturnType<typeof readMetaCommunityComments>>["comments"][number],
 ): Promise<boolean> {
+  // Meta returns comments written by the connected Page/Instagram account in
+  // the same feed as customer comments. Treat an owned comment as an
+  // outbound provider-confirmed reply so a sync never asks the operator to
+  // answer a conversation that Meta already answered.
+  const providerReply = isProviderReply(comment.authorExternalId, channel.externalAccountId);
+  const messageState = syncedMessageState(providerReply);
   const [conversation] = await db
     .insert(communityConversations)
     .values({
@@ -126,7 +133,12 @@ async function persistComment(
         socialChannelId: channel.id,
         externalRootId: comment.externalRootId,
         externalPostId: comment.externalPostId,
-        state: "open",
+        state: sql`CASE
+          WHEN ${communityConversations.lastMessageAt} IS NULL
+            OR ${communityConversations.lastMessageAt} <= ${comment.postedAt}
+          THEN ${messageState.conversationState}
+          ELSE ${communityConversations.state}
+        END`,
         lastMessageAt: sql`GREATEST(COALESCE(${communityConversations.lastMessageAt}, ${comment.postedAt}), ${comment.postedAt})`,
         metadata: comment.metadata,
         updatedAt: comment.postedAt,
@@ -142,13 +154,13 @@ async function persistComment(
       conversationId: conversation.id,
       provider: "meta",
       externalMessageId: comment.externalMessageId,
-      direction: "incoming",
+      direction: messageState.direction,
       visibility: "public",
       body: comment.body,
       authorName: comment.authorName,
       authorExternalId: comment.authorExternalId,
       externalParentId: comment.externalParentId,
-      deliveryState: "received",
+      deliveryState: messageState.deliveryState,
       postedAt: comment.postedAt,
       metadata: comment.metadata,
       updatedAt: comment.postedAt,
