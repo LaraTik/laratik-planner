@@ -11,6 +11,22 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-16 — Community read-only capability and comment sync milestone
+
+Status: **Tested and deployed; not release-ready.** Meta capability validation is
+now a real server-side, workspace-scoped read-only probe. It records separate
+operation states and never enables reply or private-message sending implicitly.
+Validated connections can run a bounded Facebook Page / Instagram comment sync;
+root-comment identities, incoming messages, sync state, and sanitized events are
+stored with workspace/provider deduplication.
+
+Evidence: commit `9380c989`, CI `38907980965`, deployment `38910709459`, and
+production health version `9380c98`. Live Food Game validation confirmed read
+comments **Available**, reply comments **Unavailable** pending UAT, read private
+messages **Unknown**, and reply private messages **Unavailable**. The next gates
+remain provider UAT, inbox interaction/assignment, bilingual browser evidence,
+isolation tests, and independent production-readiness verification.
+
 ## 2026-10-15 — Community & Inbox pre-build foundation
 
 Status: **Implemented foundation; not release-ready.** The plan-aligned route

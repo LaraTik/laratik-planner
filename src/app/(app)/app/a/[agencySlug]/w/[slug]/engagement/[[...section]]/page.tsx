@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { and, count, eq } from "drizzle-orm";
+import { and, count, desc, eq } from "drizzle-orm";
 import {
   Activity,
   AlertTriangle,
@@ -46,6 +46,7 @@ import { workspaceBasePath } from "@/lib/urls";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
+import { CommentSyncButton } from "@/components/community/comment-sync-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -110,6 +111,7 @@ async function readMetrics(workspaceId: string) {
     events,
     rules,
     playbooks,
+    inboxRows,
   ] = await Promise.all([
     db
       .select({ value: count() })
@@ -162,7 +164,44 @@ async function readMetrics(workspaceId: string) {
       .select({ value: count() })
       .from(communityPlaybooks)
       .where(eq(communityPlaybooks.workspaceId, workspaceId)),
+    db
+      .select({
+        id: communityConversations.id,
+        channelType: communityConversations.channelType,
+        lastMessageAt: communityConversations.lastMessageAt,
+        state: communityConversations.state,
+        body: communityMessages.body,
+        authorName: communityMessages.authorName,
+        postedAt: communityMessages.postedAt,
+      })
+      .from(communityConversations)
+      .leftJoin(
+        communityMessages,
+        and(
+          eq(communityMessages.conversationId, communityConversations.id),
+          eq(communityMessages.workspaceId, workspaceId),
+        ),
+      )
+      .where(eq(communityConversations.workspaceId, workspaceId))
+      .orderBy(desc(communityConversations.lastMessageAt), desc(communityMessages.postedAt))
+      .limit(100),
   ]);
+
+  const inboxItems = Array.from(
+    new Map(
+      inboxRows.map((row) => [
+        row.id,
+        {
+          id: row.id,
+          channelType: row.channelType,
+          lastMessageAt: row.lastMessageAt,
+          state: row.state,
+          body: row.body ?? "",
+          authorName: row.authorName,
+        },
+      ]),
+    ).values(),
+  ).slice(0, 25);
 
   return {
     conversations: conversations[0]?.value ?? 0,
@@ -175,6 +214,7 @@ async function readMetrics(workspaceId: string) {
     events: events[0]?.value ?? 0,
     rules: rules[0]?.value ?? 0,
     playbooks: playbooks[0]?.value ?? 0,
+    inboxItems,
   };
 }
 
@@ -386,7 +426,21 @@ function Overview({
   );
 }
 
-function InboxScreen({ t, basePath }: { t: Translator; basePath: string }) {
+function InboxScreen({
+  t,
+  basePath,
+  metrics,
+  agencySlug,
+  workspaceSlug,
+  canManage,
+}: {
+  t: Translator;
+  basePath: string;
+  metrics: Awaited<ReturnType<typeof readMetrics>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
+}) {
   return (
     <div
       className="grid min-h-[560px] gap-3 xl:grid-cols-[250px_minmax(0,1fr)_280px]"
@@ -410,17 +464,49 @@ function InboxScreen({ t, basePath }: { t: Translator; basePath: string }) {
             {communityText(t, "comments")}
           </Button>
         </div>
-        <div className="p-3">
-          <EmptyCommunity t={t} />
+        <div className="space-y-2 p-3">
+          {metrics.inboxItems.length > 0 ? (
+            metrics.inboxItems.map((item) => (
+              <div
+                key={item.id}
+                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-label text-fg-muted uppercase">{item.channelType}</span>
+                  <Badge variant={item.state === "open" ? "info" : "outline"}>
+                    {communityText(t, item.state)}
+                  </Badge>
+                </div>
+                <p className="text-body text-fg-primary mt-2 line-clamp-2">{item.body}</p>
+                <p className="text-label text-fg-muted mt-2">
+                  {item.authorName ?? communityText(t, "unknownAuthor")}
+                </p>
+              </div>
+            ))
+          ) : (
+            <EmptyCommunity t={t} />
+          )}
         </div>
       </Card>
       <Card padding="none" className="flex min-w-0 flex-col">
         <div className="border-border flex items-center justify-between border-b p-4">
           <div>
-            <CardTitle>{communityText(t, "noDataTitle")}</CardTitle>
-            <CardDescription>{communityText(t, "noDataDescription")}</CardDescription>
+            <CardTitle>{communityText(t, "inboxTitle")}</CardTitle>
+            <CardDescription>
+              {metrics.inboxItems.length > 0
+                ? communityText(t, "inboxLoadedDescription")
+                : communityText(t, "noDataDescription")}
+            </CardDescription>
           </div>
-          <Badge variant="outline">{communityText(t, "status")}</Badge>
+          <CommentSyncButton
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            canManage={canManage}
+            label={communityText(t, "syncComments")}
+            pendingLabel={communityText(t, "syncingComments")}
+            successLabel={communityText(t, "syncSuccess")}
+            failureLabel={communityText(t, "syncFailure")}
+          />
         </div>
         <div className="flex flex-1 items-center justify-center p-6">
           <EmptyCommunity t={t} icon={<MessageSquare className="h-6 w-6" />} />
@@ -1174,6 +1260,7 @@ export default async function CommunityEngagementPage({
         events: 0,
         rules: 0,
         playbooks: 0,
+        inboxItems: [],
       };
   const spec = SECTION_KEYS[currentSection];
   const title = communityText(t, spec.title);
@@ -1208,7 +1295,14 @@ export default async function CommunityEngagementPage({
         currentSection === "overview" ? (
           <Overview t={t} basePath={basePath} metrics={metrics} />
         ) : currentSection === "inbox" ? (
-          <InboxScreen t={t} basePath={basePath} />
+          <InboxScreen
+            t={t}
+            basePath={basePath}
+            metrics={metrics}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "comments" ? (
           <CommentsScreen t={t} metrics={metrics} />
         ) : currentSection === "reviews" ? (
