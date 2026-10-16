@@ -1121,6 +1121,9 @@ export default async function CommunityEngagementPage({
     Object.hasOwn(SECTION_KEYS, requested) ? requested : "overview"
   ) as CommunitySection;
   const access = await getCommunityWorkspaceAccess(workspace.agencyId, workspace.id);
+  if (currentSection === "setup" && access.workspaceEnabled) {
+    redirect(basePath);
+  }
   const canManage = await canManageCommunityInbox({ id: session.user.id }, workspace);
   const metrics = access.planIncluded
     ? await readMetrics(workspace.id)
