@@ -187,7 +187,7 @@ describe("probeMetaRecentInstagramMediaInsights", () => {
 });
 
 describe("probeMetaRecentFacebookPagePostInsights", () => {
-  it("tests one Page post with the current v25 viewer metrics", async () => {
+  it("tests one Page post with the compatible viewer metrics", async () => {
     const calls: URL[] = [];
     globalThis.fetch = vi.fn(async (input: RequestInfo | URL) => {
       const url = new URL(String(input));

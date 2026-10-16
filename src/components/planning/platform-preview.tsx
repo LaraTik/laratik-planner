@@ -235,6 +235,22 @@ export function PlatformPreview({
     initialFormat === "reel" || initialFormat === "story" ? "vertical" : "square",
   );
   const [compareAll, setCompareAll] = React.useState(false);
+  /**
+   * The format actually rendered, clamped to what THIS platform offers.
+   *
+   * `format` is state and the set of valid formats is a function of
+   * `platform`, so the two can disagree whenever the component is
+   * re-pointed at a different channel. Rendering the raw state would let
+   * a format the destination does not have (Instagram "story" on a
+   * Pinterest channel) drive the chrome: the action row disappears and the
+   * story safe-area overlay mounts, with no toggle available to undo it.
+   *
+   * Clamping at render is the same pattern `activeDimension` uses below,
+   * and it holds no matter how the caller manages identity — the `key` in
+   * `PlatformPreviewSwitcher` resets the state, this guarantees the
+   * invariant.
+   */
+  const activeFormat: PreviewFormat = options.includes(format) ? format : options[0]!;
   const activeDimension = availableDimensions.includes(dimension)
     ? dimension
     : availableDimensions[0]!;
@@ -259,7 +275,30 @@ export function PlatformPreview({
     () => diagnoseAspectRatio(imageDims.width, imageDims.height, [targetSpec]),
     [imageDims.width, imageDims.height, targetSpec],
   );
-  const safeAreaShape = safeAreaShapeFor(format);
+  /**
+   * Whether the aspect diagnostic has anything to report.
+   *
+   * `diagnoseAspectRatio` answers "Dimensions unknown" with
+   * `severity: "warning"` — correct for a caller that must render
+   * something, wrong for this one. The diagnostic's entire value is
+   * "this 1080×1350 image matches 4:5" / "this 1920×1080 landscape will
+   * be cropped". With no dimensions it knows neither, and rendering it
+   * anyway produced a permanent amber warning that could never clear:
+   * during the probe, and forever after for a legacy asset with no
+   * stored size, because `useImageDimensions` deliberately skips the
+   * `/api/media/assets/<uuid>` URL — the very fallback the page hands
+   * this component.
+   *
+   * A warning that is always on is indistinguishable from a real one, so
+   * it trains the operator to ignore the row — including the genuine
+   * "will be cropped" case. Stay silent instead.
+   */
+  const hasKnownDimensions =
+    typeof imageDims.width === "number" &&
+    typeof imageDims.height === "number" &&
+    imageDims.width > 0 &&
+    imageDims.height > 0;
+  const safeAreaShape = safeAreaShapeFor(activeFormat);
   const selectFormat = (nextFormat: PreviewFormat) => {
     setFormat(nextFormat);
     setCompareAll(false);
@@ -341,7 +380,7 @@ export function PlatformPreview({
   // `PreviewEmptyState`).
   const hasMedia = Boolean(thumbnailUrl);
   const mediaBody = hasMedia
-    ? renderMedia(activeDimension, format, "platform-preview-media")
+    ? renderMedia(activeDimension, activeFormat, "platform-preview-media")
     : null;
 
   return (
@@ -352,7 +391,7 @@ export function PlatformPreview({
       )}
       data-testid="platform-preview"
       data-platform={platform}
-      data-format={format}
+      data-format={activeFormat}
       role="figure"
       aria-label={t("contentDetail.preview.ariaLabel", {
         account: accountName,
@@ -363,6 +402,8 @@ export function PlatformPreview({
         <div
           className="border-border bg-surface-subtle flex items-center gap-1 border-b p-2"
           data-testid="platform-preview-format-toggle"
+          role="group"
+          aria-label={t("contentDetail.preview.formatControlLabel")}
         >
           {options.map((opt) => (
             <button
@@ -370,10 +411,17 @@ export function PlatformPreview({
               type="button"
               onClick={() => selectFormat(opt)}
               data-testid={`platform-preview-format-${opt}`}
-              data-active={opt === format || undefined}
+              data-active={opt === activeFormat || undefined}
+              // The format row is a single-select toggle group. It had
+              // only `data-active` — a styling hook invisible to assistive
+              // tech — while the dimension row below correctly exposed
+              // `aria-pressed` and a labelled `role="group"`. Two
+              // adjacent single-select controls, only one of them
+              // announcing its state.
+              aria-pressed={opt === activeFormat}
               className={cn(
                 "text-label focus-visible:ring-focus-ring min-h-11 min-w-11 rounded-full px-2.5 py-1 font-semibold tracking-wide uppercase",
-                opt === format
+                opt === activeFormat
                   ? "bg-primary text-primary-foreground"
                   : "text-fg-secondary hover:text-fg-primary",
               )}
@@ -506,7 +554,7 @@ export function PlatformPreview({
                     compact
                   />
                 )}
-                {thumbnailUrl ? (
+                {thumbnailUrl && hasKnownDimensions ? (
                   <div className="px-2 pb-2">
                     <AspectRatioDiagnosticView diagnostic={comparisonDiagnostic} />
                   </div>
@@ -522,16 +570,17 @@ export function PlatformPreview({
           mediaBody
         )
       ) : (
-        <PreviewEmptyState dimension={activeDimension} format={format} />
+        <PreviewEmptyState dimension={activeDimension} format={activeFormat} />
       )}
 
-      {/* Aspect-ratio diagnostic. The view hides itself when
-          the image is still loading or the URL was a share
-          page (no dimensions available). The diagnostic is
-          the planner-facing signal: "this 1080×1920 image
-          matches Reel 9:16" or "this 1920×1080 image is
-          landscape — try 1080×566 for the feed". */}
-      {thumbnailUrl && !compareAll ? (
+      {/* Aspect-ratio diagnostic. Gated on `hasKnownDimensions`, not on
+          `thumbnailUrl`: the view has no self-hiding behaviour, and
+          "Dimensions unknown" is a warning that never clears, so an
+          ungated render showed a permanent amber row for every asset
+          whose size is not known. The diagnostic is the planner-facing
+          signal: "this 1080×1920 image matches Reel 9:16" or "this
+          1920×1080 image is landscape — try 1080×566 for the feed". */}
+      {thumbnailUrl && hasKnownDimensions && !compareAll ? (
         <div className="px-3 pt-2" data-testid="platform-preview-aspect-diagnostic">
           <AspectRatioDiagnosticView diagnostic={diagnostic} />
         </div>
@@ -539,7 +588,7 @@ export function PlatformPreview({
 
       {/* Actions + caption — same chrome across formats; stories
           collapse to just the caption. */}
-      {format !== "story" ? (
+      {activeFormat !== "story" ? (
         <div className="flex items-center justify-between p-3">
           <div className="flex items-center gap-3">
             <Heart className="h-5 w-5" aria-hidden="true" />

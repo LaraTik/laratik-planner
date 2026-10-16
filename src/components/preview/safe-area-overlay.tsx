@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 
 /**
  * SafeAreaOverlay — toggle that paints a translucent mask
@@ -56,6 +57,11 @@ export function SafeAreaOverlay({
   children: React.ReactNode;
 }) {
   const [showSafeAreas, setShowSafeAreas] = useState(false);
+  // The toggle is operator chrome inside the preview, so it follows the
+  // workspace locale like every other string on this surface. It was
+  // hardcoded English, which left an English button on an Arabic
+  // workspace.
+  const t = useLocaleT();
   const regions = SAFE_AREA_REGIONS[shape];
   return (
     <div className="relative">
@@ -74,7 +80,9 @@ export function SafeAreaOverlay({
           ) : (
             <Eye className="h-3 w-3" aria-hidden="true" />
           )}
-          {showSafeAreas ? "Hide safe areas" : "Show safe areas"}
+          {showSafeAreas
+            ? t("contentDetail.preview.hideSafeAreas")
+            : t("contentDetail.preview.showSafeAreas")}
         </Button>
       </div>
       {children}

@@ -1014,7 +1014,21 @@
     },
     "noMediaTitle": "No approved media yet",
     "noMediaDescription": "The preview appears once a delivery asset is approved.",
-    "reviewAssets": "Review assets"
+    "reviewAssets": "Review assets",
+    "showSafeAreas": "Show safe areas",
+    "hideSafeAreas": "Hide safe areas",
+    "formatControlLabel": "Preview format",
+    "diagnostic": {
+      "unknownSummary": "Dimensions unknown",
+      "unknownRecommendation": "Pick a target shape to see what Instagram needs.",
+      "matchSummary": "{width} × {height} ({ratio}) — matches {label}.",
+      "belowMinimumSummary": "{width} × {height} ({ratio}) — matches {label}.",
+      "belowMinimumRecommendation": "Minimum {recommendedWidth} × {recommendedHeight} for {label}.",
+      "noMatchSummary": "{width} × {height} ({ratio}) — not an exact match for any recommended Instagram shape.",
+      "noMatchRecommendation": "Try {recommendedWidth} × {recommendedHeight} for {label}.",
+      "noTargetSummary": "{width} × {height} ({ratio}) — no target shape configured.",
+      "noTargetRecommendation": "Pick a target shape above to see what Instagram needs."
+    }
   },
   "publishReadiness": {
     "title": "Publishing requirements",

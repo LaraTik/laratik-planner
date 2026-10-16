@@ -190,8 +190,8 @@
 > independent review, and production deployment remain open.
 
 > **2026-10-13 advertising admin browser checkpoint** — Exact clean code
-> commit `85b5e25` fixes the Graph API version input pattern so the default
-> `v25.0` value is accepted, adds a Chromium browser contract for creating a
+> commit `85b5e25` fixes the Graph API version input pattern so an explicit
+> `v25.0` compatibility pin is accepted, adds a Chromium browser contract for creating a
 > platform-owned Meta connection and storing a local fixture credential without
 > rendering the token, and adds the advertising settings route to the
 > authenticated axe matrix. The focused unit suite passes 4/4; the focused
@@ -934,8 +934,9 @@ light/dark verification before the Command Center surface is called ready.
 > broader role evidence, provider UAT, and independent review remain open.
 
 > **2026-09-30 Facebook post capability checkpoint** — The agency-admin Meta
-> probe now tests one owned Facebook Page post with the current v25 replacement
-> metrics `post_media_view` and `post_total_media_view_unique` using lifetime
+> probe now tests one owned Facebook Page post with the v26-compatible
+> replacement metrics (originally introduced as v25 replacements)
+> `post_media_view` and `post_total_media_view_unique` using lifetime
 > semantics, and renders each result with explicit capability status. Focused
 > provider and probe-card tests pass. This does not promote those metrics into
 > durable sync: controlled Page UAT is still required to verify the connected

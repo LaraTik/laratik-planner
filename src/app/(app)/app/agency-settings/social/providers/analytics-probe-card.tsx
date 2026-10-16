@@ -151,7 +151,8 @@ export function AnalyticsProbeCard({ profiles }: { profiles: ProbeProfile[] }) {
               // mean four different things; do not collapse them.
               //   available   → green check (data flowing)
               //   unsupported → muted info  (platform contract — e.g.
-              //                 Pages have no accounts_engaged in v25.0)
+              //                 Pages may not expose accounts_engaged on the
+              //                 configured Graph API version)
               //   no_data     → muted minus (metric is supported but
               //                 Meta returned an empty window, e.g. a
               //                 new account that has not accrued data)

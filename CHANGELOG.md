@@ -12,6 +12,106 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — the Publish tab's Platform preview was frozen on the last saved copy, and showed a permanent warning it could never clear
+
+The reported symptom was "the Platform preview is not working". It was
+rendering, correctly, from the wrong data.
+
+- **Root cause: the preview read a server snapshot, not the live draft.**
+  `PublishPackageForm` received `previewData` — the _persisted_
+  `platformPayload` rows, resolved once by the server page — and passed it
+  straight to `PlatformPreviewSwitcher`. The form, meanwhile, edits
+  `drafts` in client state, and nothing is written back until Save. So an
+  operator typed a new caption, watched the character counter move and the
+  form go dirty, and the preview kept rendering the previously saved copy.
+  Same for hashtags, and for every channel: the preview answered "what did
+  we last save?" when its whole job is "what will this actually post?".
+  A preview that is confidently stale is worse than no preview, because it
+  is the surface people trust before pressing publish.
+
+  Fixed with a `livePreviewData` memo that overlays the copy from `drafts`,
+  per channel id, while the server snapshot keeps its original job of
+  supplying what the form has no state for (platform, account name,
+  approved media URL, intrinsic dimensions). Two rules make it correct
+  rather than merely different:
+
+  - The overlay is keyed by **channel id**, matching `drafts`, so a caption
+    typed on Instagram never bleeds onto LinkedIn.
+  - An explicitly cleared field is honoured, via `typeof === "string"` /
+    `Array.isArray` and never truthiness — a truthiness check would
+    resurrect the stale server value the moment the operator deleted the
+    field. Conversely an _untouched_ field stays `undefined` so
+    `payload?.caption ?? sharedCaption` still applies: coercing it to `""`
+    would swallow shared-copy inheritance and show an empty preview for a
+    channel that has none of its own.
+
+- **Preview state leaked across channels.** `PlatformPreviewSwitcher`
+  mounted one `PlatformPreview` and re-pointed it, so React reconciled it
+  in place and its `format` / `dimension` / `compareAll` state survived the
+  switch. Those values are platform-dependent — `formatOptionsFor` gives
+  Instagram feed/reel/story, TikTok reel/post, and a Pinterest channel only
+  `post` — so choosing Instagram "story" and then opening a Pinterest channel
+  rendered story chrome on a destination with no story format: the action row
+  hidden, the story safe-area overlay mounted, and no toggle available to
+  escape it. Fixed with `key={active.id}`, which resets the preview's view
+  state per destination, plus an `activeFormat` clamp in `PlatformPreview`
+  that makes "never render a format the platform does not have" hold
+  regardless of how a caller manages identity.
+
+- **A permanent, unresolvable warning under the preview.**
+  `diagnoseAspectRatio` answers unknown dimensions with
+  `severity: "warning"` ("Dimensions unknown") — right for a caller that
+  must render something, wrong for this one. The render was gated on
+  `thumbnailUrl` alone, so that warning appeared while the probe was still
+  loading **and forever** for any asset with no stored size, because
+  `useImageDimensions` deliberately never probes `/api/media/assets/<uuid>`
+  — which is exactly the fallback URL the page hands the preview. The row is
+  now gated on `hasKnownDimensions`. A warning that is always on is
+  indistinguishable from a real one, so it was training operators to ignore
+  the row that actually matters ("this landscape image will be cropped").
+  `tests/unit/preview/platform-preview-aspect.test.tsx` had asserted the
+  buggy behaviour in a comment ("the container still renders"); it is
+  corrected, with the reason recorded.
+
+- **The diagnostic was English-only.** The verdict was assembled as an
+  English sentence inside `diagnoseAspectRatio`, a pure lib with no access to
+  the catalog, so an Arabic workspace got an English answer to "will my
+  creative be cropped?". The lib now returns a structured `message` (data,
+  never prose) and `diagnosticCopy` resolves the words through `t()`. Same
+  for the safe-area toggle, which hardcoded "Show safe areas" / "Hide safe
+  areas" beside the localized `contentDetail.preview.*` chrome.
+
+- **The format toggle announced no state.** It carried only `data-active`, a
+  styling hook invisible to assistive tech, while the dimension row directly
+  below correctly exposed `aria-pressed` and a labelled `role="group"` — two
+  adjacent single-select controls, only one of them reporting its selection.
+
+- **A failed image probe was cached for the session.** `useImageDimensions`
+  memoized `status: "error"` with no retry and no eviction, so one transient
+  404 — an asset still uploading, a rotated signed URL — pinned the
+  diagnostic to "unknown" for the rest of the JS lifetime. Failures are now
+  evicted so the next mount retries, and the cache is bounded at 64 entries
+  since it is keyed by URL and lives for the whole session.
+
+Also removed: `AspectRatioListHeader`, which had zero call sites and hardcoded
+English. Noted, not changed: `DiagnosticSeverity` still includes `"error"`,
+which `diagnoseAspectRatio` never returns — the `XCircle` branch and the
+`role="alert"` ternary in the view are currently unreachable. It is left in
+place deliberately rather than deleted, because it is a plausible future
+state (a hard aspect-ratio violation) and removing it would touch the
+diagnostic's public type for no behavioural gain. Likewise
+`diagnoseCarouselConsistency` still returns English `summary` strings, but it
+has **no `src/` consumer** — only `instagram-aspect-ratios.test.ts` — so its
+prose never reaches a rendered surface. Both are flagged rather than changed:
+if carousel consistency is ever wired up, that summary needs the same
+`{kind, …values}` treatment before it ships.
+
+Tests: `tests/unit/planning/publish-preview-live-binding.test.tsx`,
+`tests/unit/preview/platform-preview-channel-switch.test.tsx`,
+`tests/unit/preview/platform-preview-diagnostic-silence.test.tsx`,
+`tests/unit/preview/aspect-diagnostic-locale.test.tsx`. The first three were
+written failing against the old code before any fix landed.
+
 ### Fixed — media library previews were proxied through Node on the agency route, and vertical assets were cropped to a sliver
 
 Three user-reported symptoms on `/app/media`: too much on the first page,
@@ -333,7 +433,6 @@ fixtures "accumulated by previous test runs". Once those aged out, the two
 filtered cases failed against an empty month. It now derives the current month,
 the same way the new spec does.
 
-
 ### Fixed — "Strongest accounts" ranked on one metric and displayed another, and "Best time to post" recommended Tuesday while highlighting Friday
 
 Two Command Center panels on the Workspace Overview read as confident
@@ -404,7 +503,6 @@ these objects directly, so `strongest_accounts` rows now carry `rate` instead of
 flat `interactions`/`views`, and `best_time_to_post.best` gains `liftRatio` and
 `confidence`. The tool and the page share one read path, so an operator sees what
 the browser shows.
-
 
 ### Fixed — a shared post's link pointed at `0.0.0.0`, not the public domain
 

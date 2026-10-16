@@ -1014,7 +1014,21 @@
     },
     "noMediaTitle": "لا توجد وسائط معتمدة بعد",
     "noMediaDescription": "تظهر المعاينة بعد اعتماد أحد أصول التسليم.",
-    "reviewAssets": "مراجعة الأصول"
+    "reviewAssets": "مراجعة الأصول",
+    "showSafeAreas": "إظهار المناطق الآمنة",
+    "hideSafeAreas": "إخفاء المناطق الآمنة",
+    "formatControlLabel": "صيغة المعاينة",
+    "diagnostic": {
+      "unknownSummary": "الأبعاد غير معروفة",
+      "unknownRecommendation": "اختر شكلاً مستهدفاً لمعرفة ما يتطلبه إنستغرام.",
+      "matchSummary": "{width} × {height} ({ratio}) — يطابق {label}.",
+      "belowMinimumSummary": "{width} × {height} ({ratio}) — يطابق {label}.",
+      "belowMinimumRecommendation": "الحد الأدنى {recommendedWidth} × {recommendedHeight} لـ {label}.",
+      "noMatchSummary": "{width} × {height} ({ratio}) — لا يطابق أي شكل موصى به من إنستغرام.",
+      "noMatchRecommendation": "جرّب {recommendedWidth} × {recommendedHeight} لـ {label}.",
+      "noTargetSummary": "{width} × {height} ({ratio}) — لم يتم تحديد شكل مستهدف.",
+      "noTargetRecommendation": "اختر شكلاً مستهدفاً أعلاه لمعرفة ما يتطلبه إنستغرام."
+    }
   },
   "publishReadiness": {
     "title": "متطلبات النشر",

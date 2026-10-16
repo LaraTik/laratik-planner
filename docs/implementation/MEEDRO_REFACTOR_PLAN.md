@@ -412,8 +412,9 @@ visible rather than being coerced to zero.
 
 ### Meta post-insight probe matrix — 2026-09-30
 
-The adapter currently pins `v25.0` by default and requests the existing
-read-only scopes in `src/lib/social/providers/meta.ts`. The internal,
+The adapter defaults to `v26.0` and requests the existing read-only scopes in
+`src/lib/social/providers/meta.ts`. An agency may explicitly pin another
+supported version. The internal,
 read-only Instagram capability check is now attached to the existing admin
 analytics probe; it tests one recent owned media item and does not broaden
 OAuth scopes or write durable post observations.
@@ -433,15 +434,15 @@ scope permits it. It returns sanitized per-metric statuses for `views`,
 provider error codes retained only in the capability response. Facebook
 post-level reach/views insights remain nullable until the pinned Graph version
 and the connected Page prove those metrics are available. The agency-admin
-probe now tests one Page post against the v25 replacement metrics
+probe now tests one Page post against the v26-compatible replacement metrics
 `post_media_view` and `post_total_media_view_unique` with `lifetime` semantics;
 this is capability evidence only and does not yet promote either metric into
 normal Facebook observation sync or Command Center ranking.
 
 Meta’s current reference documents media-level Instagram insights and Page
 post insights, but metric availability is media-type/version dependent. The
-Facebook reference also marks several legacy impression metrics deprecated
-above Graph API v25. The implementation must therefore normalize supported
+Facebook reference also marks several legacy impression metrics deprecated in
+Graph API v26.0 and later. The implementation must therefore normalize supported
 metrics into a provider-neutral observation contract and keep unsupported
 metrics nullable; it must never treat a single unsupported metric as a failed
 account sync.

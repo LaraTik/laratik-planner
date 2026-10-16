@@ -242,7 +242,7 @@ branding or implementation source.
 - Keep provider post observations bounded (currently ten recent objects per
   connected-account sync). Instagram post metrics come only from the approved
   read-only insights response; unsupported fields stay nullable. The agency
-  probe may test one Facebook Page post with the v25 viewer metrics
+  probe may test one Facebook Page post with the v26-compatible viewer metrics
   `post_media_view` and `post_total_media_view_unique`, but normal Facebook
   observations remain metadata/engagement-only until controlled Page UAT proves
   the token, permissions, and viewer semantics.
@@ -857,6 +857,70 @@ it was just never applied to the second share route.
   does this** rather than deriving the host. Do not add an exception to the
   architecture test; the resolver's whole job is that a public link has a
   correct origin without the call site knowing how the app is deployed.
+
+### 2026-10-16 — Publish preview: a component re-pointed at different data must not keep the old data's state
+
+The Publish tab's Platform preview rendered correctly and read the wrong
+thing. `PublishPackageForm` was handed `previewData` — persisted
+`platformPayload` rows resolved once by the server — while the form edits
+`drafts` in client state, so the preview showed the last **saved** copy and
+ignored every unsaved edit. The general lesson, and the four invariants that
+came out of it:
+
+- **A preview must read the same state the editor writes.** Server props that
+  are a _snapshot_ of a resource the user is actively editing are a stale-read
+  waiting to happen. When a host page resolves data once and hands it to a
+  client component that also owns edit state, the client owns the binding and
+  the snapshot is only the fallback for what it has no state for (platform,
+  account, media URL, dimensions).
+- **A component re-pointed at a different subject must reset its view state.**
+  `PlatformPreviewSwitcher` mounts one `PlatformPreview` and re-points it at
+  the active channel, so React reconciles in place and `format` / `dimension` /
+  `compareAll` survive the switch. They are platform-dependent, so this
+  rendered Instagram "story" chrome on a Pinterest channel — a destination
+  with no story format and no toggle to escape it. Use `key` when a component's
+  state is only valid for one subject, and clamp at render
+  (`activeFormat = options.includes(format) ? format : options[0]!`) so the
+  invariant holds however the caller manages identity.
+- **"We don't know" is not a warning.** `diagnoseAspectRatio` returns
+  `severity: "warning"` for unknown dimensions because its callers may need
+  something to render. The preview gated on `thumbnailUrl` alone, so that
+  warning fired during the probe and _forever_ for any asset without a stored
+  size — `useImageDimensions` deliberately never probes
+  `/api/media/assets/<uuid>`, which is the very fallback URL the page passes
+  in. Gate the advisory on the knowledge it depends on, not on the presence of
+  the subject. A permanently-on warning is indistinguishable from a real one
+  and trains people to ignore the one that matters.
+- **Pure libs must not assemble prose.** The diagnostic was an English sentence
+  built inside `diagnoseAspectRatio`, so an Arabic workspace got an English
+  verdict. Return structured data (`message: { kind, …values }`) and resolve
+  words in the view via `t()`. The same applied to the safe-area toggle, which
+  hardcoded English beside localized `contentDetail.preview.*` chrome. Note
+  `exactOptionalPropertyTypes` is on here: build optional payloads with
+  conditional spread, never explicit `undefined`.
+
+Also: the format toggle exposed only `data-active` while the dimension row
+beside it correctly used `aria-pressed` + a labelled `role="group"`; a failed
+image probe was cached for the session with no retry; and `AspectRatioListHeader`
+was removed (zero call sites, hardcoded English). `DiagnosticSeverity` still
+carries an unreachable `"error"` branch — left in place on purpose, since it is
+a plausible future state and removing it churns a public type for no
+behavioural gain.
+
+Tests: `tests/unit/planning/publish-preview-live-binding.test.tsx`,
+`tests/unit/preview/platform-preview-channel-switch.test.tsx`,
+`tests/unit/preview/platform-preview-diagnostic-silence.test.tsx`,
+`tests/unit/preview/aspect-diagnostic-locale.test.tsx`. The first three were
+written **failing** against the old code before any fix landed.
+`platform-preview-aspect.test.tsx` had asserted the buggy diagnostic behaviour
+in a comment; it is corrected with the reason recorded.
+
+Note for the next agent: `docs/production-readiness/PUBLISH_PREVIEW_CONTRACT.md`
+and the "Deliberately deferred to PR4" note further up are **historical**. The
+preview is now wired into the publish form; the contract's open question
+(should the real preview ship?) was answered yes. Its finding 3 — preview and
+readiness resolving media from different sources — is still open: neither call
+site filters to final-approved delivery versions.
 
 ### 2026-10-07 — Command Center observations collapse to one row per post
 

@@ -435,7 +435,7 @@ calculation, provider, and catalog checks pass 20/20. The repository-wide
 build after stabilizing the per-agency Meta callback test's module loading.
 
 The Meta capability probe now also tests one Facebook Page post with the
-Graph API v25 replacement metrics `post_media_view` and
+Graph API v26-compatible replacement metrics `post_media_view` and
 `post_total_media_view_unique` using the required lifetime period. The result
 is rendered in the existing agency-admin probe card with the same explicit
 available/unsupported/no-data/error states. This is still a capability check:
