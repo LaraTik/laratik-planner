@@ -1,12 +1,21 @@
 {
   "title": "إدارة المستخدمين",
   "description": "ادعُ أعضاء الفريق، أنشئ حسابات مسبقًا، خصص أدوارًا في مساحات العمل، وعطّل الحسابات عند المغادرة.",
+  "heroTitle": "إدارة مستخدمي الوكالة",
+  "heroDescription": "أدر جميع الأشخاص في وكالتك، وأدوارهم العامة، وصلاحيات الوصول إلى مساحات العمل.",
+  "levelAgency": "على مستوى الوكالة",
+  "invitePeople": "دعوة أشخاص",
   "forbiddenTitle": "ممنوع",
   "forbiddenBody": "مسؤولو الوكالة فقط يمكنهم إدارة المستخدمين.",
   "backToMyWork": "← العودة إلى My Work",
   "kpiActive": "المستخدمون النشطون",
   "kpiPending": "الدعوات المعلّقة",
   "kpiDeactivated": "المعطّلون",
+  "kpiActiveUsers": "المستخدمون النشطون",
+  "kpiPendingInvitations": "الدعوات المعلّقة",
+  "kpiAdmins": "مسؤولو الوكالة",
+  "kpiAdminsDetail": "صلاحية كاملة للوكالة",
+  "kpiDeactivatedUsers": "المستخدمون المعطّلون",
   "addUserTitle": "إضافة مستخدم",
   "searchPlaceholder": "البحث بالاسم أو البريد الإلكتروني…",
   "searchLabel": "البحث في الأعضاء",
@@ -28,7 +37,11 @@
   "tabInvite": "إرسال دعوة",
   "tabAdd": "إضافة مباشرة",
   "pendingTitle": "الدعوات المعلّقة",
+  "pendingSubtitle": "دعوات بانتظار الرد.",
   "membersTitle": "الأعضاء",
+  "membersSubtitle": "أدر أدوار الوكالة وصلاحيات مساحات العمل من مكان واحد.",
+  "invitePanelTitle": "دعوة أشخاص إلى الوكالة",
+  "invitePanelDescription": "اختر المسار، ثم امنح الشخص الصلاحيات التي يحتاجها فقط.",
   "sendInvite": {
     "emailLabel": "البريد الإلكتروني",
     "emailHint": "سنرسل رابطًا لمرة واحدة لتعيين كلمة المرور.",
@@ -286,6 +299,12 @@
     "empty": "لا توجد دعوات معلقة."
   },
   "memberList": {
+    "colPerson": "الشخص",
+    "colAgencyRole": "دور الوكالة",
+    "colWorkspaceAccess": "الوصول إلى مساحات العمل",
+    "colLastActive": "آخر نشاط",
+    "colStatus": "الحالة",
+    "colStatusActions": "الحالة والإجراءات",
     "joined": "انضم في {date}",
     "lastActive": "آخر نشاط",
     "activeNow": "نشِط الآن",
@@ -293,6 +312,7 @@
     "active": "نشِط",
     "deactivated": "معطّل",
     "admin": "مسؤول",
+    "allWorkspaces": "جميع مساحات العمل",
     "agencyAdmin": "مسؤول الوكالة",
     "edit": "تعديل",
     "editAria": "تعديل {name}",
@@ -302,7 +322,7 @@
     "reactivateAria": "إعادة تفعيل {name}",
     "role": "الدور",
     "member": "العضو",
-    "empty": "لا يوجد أعضاء بعد."
+    "empty": "لا يطابق أي عضو عوامل التصفية الحالية."
   },
   "memberEdit": {
     "title": "تعديل {name}",

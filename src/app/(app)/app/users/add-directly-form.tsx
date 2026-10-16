@@ -56,13 +56,6 @@ export function AddDirectlyForm({
   const fieldErrors = state?.fieldErrors ?? {};
   const errorMessage = state?.error;
 
-  // Local password state for the strength meter + show/hide.
-  // Uncontrolled <input> would not let us show the strength bar live,
-  // so the password field is the one input that IS controlled.
-  const [password, setPassword] = React.useState("");
-  const [showPassword, setShowPassword] = React.useState(false);
-  const strength: PasswordStrength = passwordStrength(password);
-
   return (
     <div className="space-y-4" data-testid="add-directly-form-wrapper">
       {errorMessage ? (
@@ -135,71 +128,11 @@ export function AddDirectlyForm({
           </FormField>
         </div>
 
-        <FormField
-          id="add-password"
-          label={t("users.addDirectlyPasswordLabel")}
-          required
-          hint={t("users.addDirectlyPasswordHint")}
+        <DirectPasswordFields
+          key={formKey}
+          t={t}
           {...(fieldErrors.password?.[0] ? { error: fieldErrors.password[0] } : {})}
-        >
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <div className="flex-1">
-                <PasswordInput
-                  name="password"
-                  required
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  minLength={8}
-                  revealed={showPassword}
-                  onToggleRevealed={() => setShowPassword((s) => !s)}
-                  toggleTestId="add-directly-showhide"
-                  data-testid="add-directly-password"
-                />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  // Client-side equivalent of the server's
-                  // generateStrongPassword — same alphabet, same
-                  // length. Generated password is then re-typed into
-                  // the controlled input so the strength meter
-                  // reflects it.
-                  const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-                  const lowercase = "abcdefghijklmnopqrstuvwxyz";
-                  const digits = "0123456789";
-                  const symbols = "!@#$%^&*";
-                  const alphabet = uppercase + lowercase + digits + symbols;
-                  const bytes = new Uint8Array(24);
-                  crypto.getRandomValues(bytes);
-                  const required = [uppercase, lowercase, digits, symbols];
-                  let out = required.map((set, index) => set[bytes[index]! % set.length]).join("");
-                  for (let i = required.length; i < 16; i++) {
-                    out += alphabet[bytes[i]! % alphabet.length];
-                  }
-                  setPassword(out);
-                  // Show the generated value so the admin can verify
-                  // before submitting (the password will be revealed
-                  // to the new user via the success strip anyway).
-                  setShowPassword(true);
-                }}
-                aria-label={t("users.addDirectlyGenerateAria")}
-                data-testid="add-directly-generate"
-              >
-                <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                <span className="ms-1">{t("users.addDirectlyGenerate")}</span>
-              </Button>
-            </div>
-            <PasswordStrengthMeter
-              score={strength.score}
-              tone={strength.tone}
-              label={strength.label}
-              testId="add-directly-strength-meter"
-            />
-          </div>
-        </FormField>
+        />
 
         <div className="space-y-1">
           <label
@@ -257,6 +190,81 @@ export function AddDirectlyForm({
         />
       </form>
     </div>
+  );
+}
+
+function DirectPasswordFields({
+  t,
+  error,
+}: {
+  t: (key: string, params?: Record<string, string | number>) => string;
+  error?: string;
+}) {
+  // This small keyed component owns the controlled password state. The
+  // parent changes `formKey` after a successful create, so the credential
+  // is cleared by remounting the field rather than by a synchronous effect.
+  const [password, setPassword] = React.useState("");
+  const [showPassword, setShowPassword] = React.useState(false);
+  const strength: PasswordStrength = passwordStrength(password);
+
+  return (
+    <FormField
+      id="add-password"
+      label={t("users.addDirectlyPasswordLabel")}
+      required
+      hint={t("users.addDirectlyPasswordHint")}
+      {...(error ? { error } : {})}
+    >
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <PasswordInput
+              name="password"
+              required
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
+              revealed={showPassword}
+              onToggleRevealed={() => setShowPassword((s) => !s)}
+              toggleTestId="add-directly-showhide"
+              data-testid="add-directly-password"
+            />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => {
+              const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+              const lowercase = "abcdefghijklmnopqrstuvwxyz";
+              const digits = "0123456789";
+              const symbols = "!@#$%^&*";
+              const alphabet = uppercase + lowercase + digits + symbols;
+              const bytes = new Uint8Array(24);
+              crypto.getRandomValues(bytes);
+              const required = [uppercase, lowercase, digits, symbols];
+              let out = required.map((set, index) => set[bytes[index]! % set.length]).join("");
+              for (let i = required.length; i < 16; i++) {
+                out += alphabet[bytes[i]! % alphabet.length];
+              }
+              setPassword(out);
+              setShowPassword(true);
+            }}
+            aria-label={t("users.addDirectlyGenerateAria")}
+            data-testid="add-directly-generate"
+          >
+            <RefreshCw className="h-4 w-4" aria-hidden="true" />
+            <span className="ms-1">{t("users.addDirectlyGenerate")}</span>
+          </Button>
+        </div>
+        <PasswordStrengthMeter
+          score={strength.score}
+          tone={strength.tone}
+          label={strength.label}
+          testId="add-directly-strength-meter"
+        />
+      </div>
+    </FormField>
   );
 }
 

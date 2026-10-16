@@ -18,10 +18,19 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
 import { ListPagination } from "@/components/ui/list-pagination";
-import { KpiTile } from "@/components/workspace/kpi-tile";
+import { AccessHero, AccessStat } from "@/components/team/access-surface";
+import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
 import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/lib/list-page-utils";
-import { Filter as FilterIcon, UserCheck, Mail, UserPlus, UserX } from "lucide-react";
+import {
+  Filter as FilterIcon,
+  Mail,
+  ShieldCheck,
+  UserCheck,
+  UserPlus,
+  UserX,
+  UsersRound,
+} from "lucide-react";
 
 /**
  * User Management (admin only) — Stitch-aligned dashboard.
@@ -97,6 +106,7 @@ export default async function UsersPage({
   const [allForKpi] = await Promise.all([listAgencyMembers(agencyId)]);
   const activeCount = allForKpi.filter((m) => m.status === "active").length;
   const deactivatedCount = allForKpi.length - activeCount;
+  const adminCount = allForKpi.filter((m) => m.status === "active" && m.isAgencyAdmin).length;
   const pendingCount = pending.length;
   const workspaceList = allWorkspaces.map((w) => ({ id: w.id, name: w.name }));
 
@@ -164,59 +174,207 @@ export default async function UsersPage({
 
   return (
     <div className="space-y-6">
-      <PageHeader title={t("users.title")} description={t("users.description")} />
+      <AccessHero
+        scope={t("users.levelAgency")}
+        title={t("users.heroTitle")}
+        description={t("users.heroDescription")}
+        icon={<UsersRound className="h-6 w-6 sm:h-7 sm:w-7" />}
+        action={
+          <Button asChild size="lg">
+            <Link href="#users-add-card" data-testid="users-invite-cta">
+              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              {t("users.invitePeople")}
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3" data-testid="users-kpi-row">
-        <KpiTile
+      <div
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4"
+        data-testid="users-kpi-row"
+      >
+        <AccessStat
           icon={<UserCheck className="h-4 w-4" aria-hidden="true" />}
-          label={t("users.kpiActive")}
+          label={t("users.kpiActiveUsers")}
           value={activeCount}
           tone="success"
         />
-        <KpiTile
+        <AccessStat
           icon={<Mail className="h-4 w-4" aria-hidden="true" />}
-          label={t("users.kpiPending")}
+          label={t("users.kpiPendingInvitations")}
           value={pendingCount}
           tone="warning"
         />
-        <KpiTile
+        <AccessStat
+          icon={<ShieldCheck className="h-4 w-4" aria-hidden="true" />}
+          label={t("users.kpiAdmins")}
+          value={adminCount}
+          detail={t("users.kpiAdminsDetail")}
+          tone="info"
+        />
+        <AccessStat
           icon={<UserX className="h-4 w-4" aria-hidden="true" />}
-          label={t("users.kpiDeactivated")}
+          label={t("users.kpiDeactivatedUsers")}
           value={deactivatedCount}
         />
       </div>
 
-      <Card data-testid="users-add-card">
-        <CardHeader>
-          <CardTitle className="inline-flex items-center gap-2">
-            <UserPlus className="text-fg-secondary h-4 w-4" aria-hidden="true" />
-            {t("users.addUserTitle")}
-          </CardTitle>
-          <Badge variant="outline">{t("users.adminOnly")}</Badge>
-        </CardHeader>
-        <Tabs defaultValue="invite">
-          <TabsList aria-label={t("users.addAria")}>
-            <TabsTrigger value="invite" data-testid="users-tab-invite">
-              <Mail className="me-1 h-4 w-4" aria-hidden="true" />
-              {t("users.tabInvite")}
-            </TabsTrigger>
-            <TabsTrigger value="add" data-testid="users-tab-add">
-              <UserPlus className="me-1 h-4 w-4" aria-hidden="true" />
-              {t("users.tabAdd")}
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="invite">
-            <SendInviteForm workspaces={workspaceList} />
-          </TabsContent>
-          <TabsContent value="add">
-            <AddDirectlyForm workspaces={workspaceList} />
-          </TabsContent>
-        </Tabs>
-      </Card>
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,390px)]">
+        <Card padding="none" className="overflow-hidden" data-testid="users-members-card">
+          <CardHeader className="border-border mb-0 border-b px-4 py-4 sm:px-5">
+            <div>
+              <CardTitle>{t("users.membersTitle")}</CardTitle>
+              <p className="text-label text-fg-muted mt-1">{t("users.membersSubtitle")}</p>
+            </div>
+            <Badge variant="info">
+              {filterActive
+                ? t("users.membersFiltered", { count: paginated.total })
+                : membersAll.length}
+            </Badge>
+          </CardHeader>
+          <DataTableToolbar
+            testIdPrefix="users-toolbar"
+            searchPlaceholder={t("users.searchPlaceholder")}
+            searchLabel={t("users.searchLabel")}
+            defaultSearchValue={filters.q}
+            hiddenParams={{
+              ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
+              ...(filters.status.length > 0 ? { status: filters.status } : {}),
+              ...(filters.role.length > 0 ? { role: filters.role } : {}),
+            }}
+            clearHref={buildListHref({
+              basePath,
+              current: {
+                q: filters.q,
+                status: filters.status,
+                role: filters.role,
+                size: filters.size,
+              },
+              next: { q: "", status: [], role: [], page: 1, size: 50, clear: true },
+            })}
+            clearLabel={t("users.searchClear")}
+          >
+            <FilterIcon
+              className="text-fg-muted h-4 w-4"
+              aria-hidden={true}
+              data-testid="users-toolbar-divider"
+            />
+            <FilterChip
+              name="status"
+              value="active"
+              selected={filters.status.includes("active")}
+              label={t("users.statusActive")}
+              testId="users-filter-status-active"
+            />
+            <FilterChip
+              name="status"
+              value="deactivated"
+              selected={filters.status.includes("deactivated")}
+              label={t("users.statusDeactivated")}
+              testId="users-filter-status-deactivated"
+            />
+            <FilterChip
+              name="role"
+              value="agency_admin"
+              selected={filters.role.includes("agency_admin")}
+              label={t("users.roleAgencyAdmin")}
+              testId="users-filter-role-admin"
+            />
+            <FilterChip
+              name="role"
+              value="non_admin"
+              selected={filters.role.includes("non_admin")}
+              label={t("users.roleNonAdmin")}
+              testId="users-filter-role-non-admin"
+            />
+          </DataTableToolbar>
+          <MemberList
+            actorId={session.user.id}
+            actorIsAgencyAdmin={actorIsAgencyAdmin}
+            workspaces={workspaceList}
+            rolesByUser={rolesByUser}
+            members={paginated.rows.map((m) => ({
+              id: m.userId,
+              name: m.name ?? m.email,
+              email: m.email,
+              isAgencyAdmin: m.isAgencyAdmin,
+              status: m.status,
+              role: m.role,
+              joinedAt: m.joinedAt.toISOString().slice(0, 10),
+            }))}
+          />
+          <ListPagination
+            testId="users-pagination"
+            page={paginated.page}
+            totalPages={paginated.totalPages}
+            total={paginated.total}
+            from={paginated.from}
+            to={paginated.to}
+            prevHref={prevHref}
+            nextHref={nextHref}
+            counterLabel={t("users.paginationAll", {
+              from: paginated.from,
+              to: paginated.to,
+              total: paginated.total,
+            })}
+            ariaLabel={t("users.paginationAria")}
+            prevLabel={t("users.paginationPrev")}
+            nextLabel={t("users.paginationNext")}
+            pageIndicator={t("users.paginationPageOf", {
+              page: paginated.page,
+              total: paginated.totalPages,
+            })}
+          />
+        </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("users.pendingTitle")}</CardTitle>
+        <Card
+          id="users-add-card"
+          padding="none"
+          className="overflow-hidden"
+          data-testid="users-add-card"
+        >
+          <div className="border-border bg-primary-subtle border-b px-4 py-4 sm:px-5">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 className="text-title-card text-fg-primary font-semibold">
+                  {t("users.invitePanelTitle")}
+                </h2>
+                <p className="text-label text-fg-secondary mt-1">
+                  {t("users.invitePanelDescription")}
+                </p>
+              </div>
+              <Badge variant="outline">{t("users.adminOnly")}</Badge>
+            </div>
+          </div>
+          <div className="p-4 sm:p-5">
+            <Tabs defaultValue="invite">
+              <TabsList className="w-full justify-start" aria-label={t("users.addAria")}>
+                <TabsTrigger value="invite" data-testid="users-tab-invite">
+                  <Mail className="me-1 h-4 w-4" aria-hidden="true" />
+                  {t("users.tabInvite")}
+                </TabsTrigger>
+                <TabsTrigger value="add" data-testid="users-tab-add">
+                  <UserPlus className="me-1 h-4 w-4" aria-hidden="true" />
+                  {t("users.tabAdd")}
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="invite">
+                <SendInviteForm workspaces={workspaceList} />
+              </TabsContent>
+              <TabsContent value="add">
+                <AddDirectlyForm workspaces={workspaceList} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </Card>
+      </div>
+
+      <Card padding="none" className="overflow-hidden" data-testid="users-pending-card">
+        <CardHeader className="border-border mb-0 border-b px-4 py-4 sm:px-5">
+          <div>
+            <CardTitle>{t("users.pendingTitle")}</CardTitle>
+            <p className="text-label text-fg-muted mt-1">{t("users.pendingSubtitle")}</p>
+          </div>
           <Badge variant="info">{pending.length}</Badge>
         </CardHeader>
         <InvitationList
@@ -227,115 +385,6 @@ export default async function UsersPage({
             grantsAgencyAdmin: i.grantsAgencyAdmin,
             workspaceGrants: grantsByInvitation[i.id] ?? [],
           }))}
-        />
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("users.membersTitle")}</CardTitle>
-          <Badge variant="info">
-            {filterActive
-              ? t("users.membersFiltered", { count: paginated.total })
-              : membersAll.length}
-          </Badge>
-        </CardHeader>
-        <DataTableToolbar
-          testIdPrefix="users-toolbar"
-          searchPlaceholder={t("users.searchPlaceholder")}
-          searchLabel={t("users.searchLabel")}
-          defaultSearchValue={filters.q}
-          hiddenParams={{
-            ...(filters.size !== 50 ? { size: String(filters.size) } : {}),
-            ...(filters.status.length > 0 ? { status: filters.status } : {}),
-            ...(filters.role.length > 0 ? { role: filters.role } : {}),
-          }}
-          clearHref={buildListHref({
-            basePath,
-            current: {
-              q: filters.q,
-              status: filters.status,
-              role: filters.role,
-              size: filters.size,
-            },
-            next: { q: "", status: [], role: [], page: 1, size: 50, clear: true },
-          })}
-          clearLabel={t("users.searchClear")}
-        >
-          <FilterIcon
-            className="text-fg-muted h-4 w-4"
-            aria-hidden={true}
-            data-testid="users-toolbar-divider"
-          />
-          <FilterChip
-            name="status"
-            value="active"
-            selected={filters.status.includes("active")}
-            label={t("users.statusActive")}
-            testId="users-filter-status-active"
-          />
-          <FilterChip
-            name="status"
-            value="deactivated"
-            selected={filters.status.includes("deactivated")}
-            label={t("users.statusDeactivated")}
-            testId="users-filter-status-deactivated"
-          />
-          <FilterChip
-            name="role"
-            value="agency_admin"
-            selected={filters.role.includes("agency_admin")}
-            label={t("users.roleAgencyAdmin")}
-            testId="users-filter-role-admin"
-          />
-          <FilterChip
-            name="role"
-            value="non_admin"
-            selected={filters.role.includes("non_admin")}
-            label={t("users.roleNonAdmin")}
-            testId="users-filter-role-non-admin"
-          />
-        </DataTableToolbar>
-
-        <MemberList
-          actorId={session.user.id}
-          // Derived from the same `isAgencyAdmin` check that gates this
-          // page, so the drawer's admin section can never disagree with
-          // the access decision that let us render.
-          actorIsAgencyAdmin={actorIsAgencyAdmin}
-          workspaces={workspaceList}
-          rolesByUser={rolesByUser}
-          members={paginated.rows.map((m) => ({
-            id: m.userId,
-            name: m.name ?? m.email,
-            email: m.email,
-            isAgencyAdmin: m.isAgencyAdmin,
-            status: m.status,
-            role: m.role,
-            joinedAt: m.joinedAt.toISOString().slice(0, 10),
-          }))}
-        />
-
-        <ListPagination
-          testId="users-pagination"
-          page={paginated.page}
-          totalPages={paginated.totalPages}
-          total={paginated.total}
-          from={paginated.from}
-          to={paginated.to}
-          prevHref={prevHref}
-          nextHref={nextHref}
-          counterLabel={t("users.paginationAll", {
-            from: paginated.from,
-            to: paginated.to,
-            total: paginated.total,
-          })}
-          ariaLabel={t("users.paginationAria")}
-          prevLabel={t("users.paginationPrev")}
-          nextLabel={t("users.paginationNext")}
-          pageIndicator={t("users.paginationPageOf", {
-            page: paginated.page,
-            total: paginated.totalPages,
-          })}
         />
       </Card>
     </div>
