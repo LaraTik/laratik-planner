@@ -530,7 +530,11 @@ function InboxScreen({
           <div className="bg-surface-subtle rounded-[var(--radius-control)] p-3">
             <p className="text-label text-fg-muted">{communityText(t, "channelHealth")}</p>
             <p className="text-body text-fg-primary mt-1 font-medium">
-              {communityText(t, "notValidated")}
+              {metrics.capabilityRows.some(
+                (row) => row.operation === "read_comments" && row.state === "available",
+              )
+                ? communityText(t, "available")
+                : communityText(t, "notValidated")}
             </p>
           </div>
           <div className="bg-primary-subtle rounded-[var(--radius-control)] p-3">
