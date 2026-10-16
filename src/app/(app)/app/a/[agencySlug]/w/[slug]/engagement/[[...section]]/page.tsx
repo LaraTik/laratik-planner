@@ -29,7 +29,11 @@ import {
   XCircle,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { canManageCommunityInbox, getCommunityWorkspaceAccess } from "@/lib/community/service";
+import {
+  canManageCommunityInbox,
+  canReplyInCommunityInbox,
+  getCommunityWorkspaceAccess,
+} from "@/lib/community/service";
 import { firstCapabilityDetail } from "@/lib/community/capabilities";
 import { db } from "@/lib/db";
 import {
@@ -48,6 +52,8 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
 import { CommentSyncButton } from "@/components/community/comment-sync-button";
+import { CommunityReplyForm } from "@/components/community/community-reply-form";
+import { PrivateMessageSyncButton } from "@/components/community/private-message-sync-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -174,6 +180,7 @@ async function readMetrics(workspaceId: string) {
         body: communityMessages.body,
         authorName: communityMessages.authorName,
         direction: communityMessages.direction,
+        visibility: communityMessages.visibility,
         postedAt: communityMessages.postedAt,
       })
       .from(communityConversations)
@@ -201,6 +208,7 @@ async function readMetrics(workspaceId: string) {
           body: row.body ?? "",
           authorName: row.authorName,
           direction: row.direction,
+          visibility: row.visibility,
         },
       ]),
     ).values(),
@@ -436,6 +444,7 @@ function InboxScreen({
   agencySlug,
   workspaceSlug,
   canManage,
+  canReply,
 }: {
   t: Translator;
   basePath: string;
@@ -443,7 +452,9 @@ function InboxScreen({
   agencySlug: string;
   workspaceSlug: string;
   canManage: boolean;
+  canReply: boolean;
 }) {
+  const selectedConversation = metrics.inboxItems[0] ?? null;
   return (
     <div
       className="grid min-h-[560px] gap-3 xl:grid-cols-[250px_minmax(0,1fr)_280px]"
@@ -513,19 +524,59 @@ function InboxScreen({
             successLabel={communityText(t, "syncSuccess")}
             failureLabel={communityText(t, "syncFailure")}
           />
+          <PrivateMessageSyncButton
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            canManage={canManage}
+            label={communityText(t, "syncPrivateMessages")}
+            pendingLabel={communityText(t, "syncingPrivateMessages")}
+            successLabel={communityText(t, "privateSyncSuccess")}
+            failureLabel={communityText(t, "syncFailure")}
+          />
         </div>
-        <div className="flex flex-1 items-center justify-center p-6">
-          <EmptyCommunity t={t} icon={<MessageSquare className="h-6 w-6" />} />
+        <div className="flex flex-1 flex-col p-6">
+          {selectedConversation ? (
+            <div className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-label text-fg-muted uppercase">
+                  {selectedConversation.channelType}
+                </span>
+                <Badge variant="outline">
+                  {communityText(
+                    t,
+                    selectedConversation.direction === "outgoing"
+                      ? "waitingCustomer"
+                      : selectedConversation.state,
+                  )}
+                </Badge>
+              </div>
+              <p className="text-body text-fg-primary mt-4 whitespace-pre-wrap">
+                {selectedConversation.body}
+              </p>
+              <p className="text-label text-fg-muted mt-3">
+                {selectedConversation.authorName ?? communityText(t, "unknownAuthor")}
+              </p>
+            </div>
+          ) : (
+            <div className="flex flex-1 items-center justify-center">
+              <EmptyCommunity t={t} icon={<MessageSquare className="h-6 w-6" />} />
+            </div>
+          )}
         </div>
         <div className="border-border border-t p-4">
-          <div className="border-border bg-surface-subtle flex items-center gap-2 rounded-[var(--radius-control)] border p-2">
-            <span className="text-body text-fg-muted flex-1 px-2">
-              {communityText(t, "replyPlaceholder")}
-            </span>
-            <Button size="icon" aria-label={communityText(t, "sendReply")} disabled>
-              <Send className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
+          <CommunityReplyForm
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            conversationId={selectedConversation?.id ?? null}
+            canReply={canReply}
+            visibility={selectedConversation?.visibility === "private" ? "private" : "public"}
+            placeholder={communityText(t, "replyPlaceholder")}
+            sendLabel={communityText(t, "sendReply")}
+            sendingLabel={communityText(t, "sendingReply")}
+            successLabel={communityText(t, "replySuccess")}
+            failureLabel={communityText(t, "replyFailure")}
+            disabledLabel={communityText(t, "replyUnavailable")}
+          />
         </div>
       </Card>
       <Card padding="none" className="min-w-0">
@@ -868,12 +919,14 @@ function ConnectionsScreen({
   metrics,
   agencySlug,
   workspaceSlug,
+  basePath,
   canManage,
 }: {
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
   agencySlug: string;
   workspaceSlug: string;
+  basePath: string;
   canManage: boolean;
 }) {
   const operationLabels: Record<(typeof OPERATION_KEYS)[number], string> = {
@@ -900,6 +953,12 @@ function ConnectionsScreen({
       <div className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-3 rounded-[var(--radius-card)] border p-4">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p className="text-label">{communityText(t, "connectionsDescription")}</p>
+        <Link
+          href={`${basePath}/channels`}
+          className="text-warning text-label ms-auto shrink-0 font-semibold underline underline-offset-2"
+        >
+          {communityText(t, "reconnectMeta")}
+        </Link>
       </div>
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
@@ -1283,6 +1342,7 @@ export default async function CommunityEngagementPage({
     redirect(basePath);
   }
   const canManage = await canManageCommunityInbox({ id: session.user.id }, workspace);
+  const canReply = await canReplyInCommunityInbox({ id: session.user.id }, workspace);
   const metrics = access.planIncluded
     ? await readMetrics(workspace.id)
     : {
@@ -1338,6 +1398,7 @@ export default async function CommunityEngagementPage({
             agencySlug={agencySlug}
             workspaceSlug={slug}
             canManage={canManage}
+            canReply={canReply}
           />
         ) : currentSection === "comments" ? (
           <CommentsScreen t={t} metrics={metrics} />
@@ -1357,6 +1418,7 @@ export default async function CommunityEngagementPage({
             metrics={metrics}
             agencySlug={agencySlug}
             workspaceSlug={slug}
+            basePath={basePath}
             canManage={canManage}
           />
         ) : currentSection === "team" ? (

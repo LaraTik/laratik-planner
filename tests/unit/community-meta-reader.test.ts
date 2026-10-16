@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { readMetaCommunityComments } from "@/lib/community/meta-community-reader";
+import {
+  readMetaCommunityComments,
+  readMetaCommunityPrivateMessages,
+} from "@/lib/community/meta-community-reader";
 
 function response(body: unknown) {
   return Promise.resolve({ body: JSON.stringify(body), requestId: "request-1" });
@@ -114,5 +117,52 @@ describe("Meta community comment reader", () => {
     });
 
     expect(result.comments.map((comment) => comment.externalMessageId)).toEqual(["valid"]);
+  });
+
+  it("normalizes bounded private-message history and preserves the participant id", async () => {
+    const result = await readMetaCommunityPrivateMessages({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      request: async (url) => {
+        expect(new URL(url).pathname).toBe("/v26.0/page-1/conversations");
+        return {
+          requestId: "request-2",
+          body: JSON.stringify({
+            data: [
+              {
+                id: "conversation-1",
+                participants: { data: [{ id: "page-1" }, { id: "person-1" }] },
+                messages: {
+                  data: [
+                    {
+                      id: "message-1",
+                      message: "Hello",
+                      from: { id: "person-1", name: "Person" },
+                      created_time: "2026-10-16T10:00:00.000Z",
+                    },
+                    {
+                      id: "message-2",
+                      message: "Welcome",
+                      from: { id: "page-1", name: "Page" },
+                      created_time: "2026-10-16T10:01:00.000Z",
+                    },
+                  ],
+                },
+              },
+            ],
+          }),
+        };
+      },
+    });
+
+    expect(result.requestIds).toEqual(["request-2"]);
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]).toMatchObject({
+      externalConversationId: "conversation-1",
+      authorExternalId: "person-1",
+      metadata: { platform: "facebook", participantExternalId: "person-1" },
+    });
+    expect(result.messages[1]?.authorExternalId).toBe("page-1");
   });
 });

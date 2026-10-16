@@ -119,6 +119,18 @@ export async function canManageCommunityInbox(actor: Actor, workspace: Community
   );
 }
 
+export async function canReplyInCommunityInbox(
+  actor: Actor,
+  workspace: CommunityWorkspaceIdentity,
+): Promise<boolean> {
+  const access = await getCommunityWorkspaceAccess(workspace.agencyId, workspace.id);
+  if (!access.allowed) return false;
+  return (
+    (await isAgencyAdmin(actor, workspace.agencyId)) ||
+    (await hasWorkspaceRole(actor, workspace.id, [...COMMUNITY_PERMISSION_ROLES.reply_publicly]))
+  );
+}
+
 /**
  * Shared server-side permission gate for every future community command.
  * Agency administrators retain the existing full-access policy; all other

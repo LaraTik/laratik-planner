@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
 import { validateCommunityCapabilitiesAction } from "@/lib/community/capability-actions";
 import { Button } from "@/components/ui/button";
@@ -25,6 +26,7 @@ export function CapabilityValidationButton({
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
+  const router = useRouter();
 
   function validate() {
     setMessage(null);
@@ -37,6 +39,7 @@ export function CapabilityValidationButton({
         return;
       }
       setMessage(successLabel);
+      router.refresh();
     });
   }
 

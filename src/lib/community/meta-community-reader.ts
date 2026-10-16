@@ -34,6 +34,21 @@ export type MetaCommunityReadResult = {
   requestIds: string[];
 };
 
+export type MetaCommunityPrivateMessage = {
+  externalMessageId: string;
+  externalConversationId: string;
+  body: string;
+  authorName: string | null;
+  authorExternalId: string | null;
+  postedAt: Date;
+  metadata: { platform: "facebook" | "instagram"; participantExternalId: string | null };
+};
+
+export type MetaCommunityPrivateReadResult = {
+  messages: MetaCommunityPrivateMessage[];
+  requestIds: string[];
+};
+
 type JsonRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): JsonRecord | null {
@@ -180,4 +195,84 @@ export async function readMetaCommunityComments(
       : await readInstagramComments(input, request, version, requestIds);
 
   return { comments, requestIds };
+}
+
+function participantId(value: unknown): string | null {
+  return asString(asRecord(value)?.id);
+}
+
+function readNestedMessages(value: unknown): unknown[] {
+  const messages = asRecord(value);
+  return Array.isArray(messages?.data) ? messages.data : [];
+}
+
+function privateMessageFromProvider(
+  value: unknown,
+  conversationId: string,
+  platform: "facebook" | "instagram",
+  accountId: string,
+  participantExternalId: string | null,
+): MetaCommunityPrivateMessage | null {
+  const row = asRecord(value);
+  const externalMessageId = asString(row?.id);
+  const body = asString(row?.message);
+  const postedAt = parseDate(row?.created_time) ?? parseDate(row?.timestamp);
+  if (!externalMessageId || !body || !postedAt) return null;
+  const author = asRecord(row?.from);
+  const authorExternalId = asString(author?.id);
+  return {
+    externalMessageId,
+    externalConversationId: conversationId,
+    body,
+    authorName: asString(author?.name) ?? asString(author?.username),
+    authorExternalId,
+    postedAt,
+    metadata: {
+      platform,
+      participantExternalId:
+        participantExternalId ?? (authorExternalId === accountId ? null : authorExternalId),
+    },
+  };
+}
+
+/**
+ * Read bounded private-message history without mutating provider state.
+ * Facebook uses the Page Messenger conversations edge; Instagram uses the
+ * Professional Account conversations edge with the same normalized shape.
+ */
+export async function readMetaCommunityPrivateMessages(
+  input: MetaCommunityReadInput,
+): Promise<MetaCommunityPrivateReadResult> {
+  const request = input.request ?? providerRequest;
+  const version = resolveMetaGraphVersion(input.apiVersion);
+  const url = graphUrl(
+    version,
+    `${encodeURIComponent(input.accountId)}/conversations`,
+    "id,updated_time,participants,messages.limit(25){id,message,from,created_time}",
+    input.accessToken,
+  );
+  const requestIds: string[] = [];
+  const result = await request(url);
+  if (result.requestId) requestIds.push(result.requestId);
+  const messages: MetaCommunityPrivateMessage[] = [];
+  for (const conversationValue of dataRows(result.body)) {
+    const conversation = asRecord(conversationValue);
+    const conversationId = asString(conversation?.id);
+    if (!conversationId) continue;
+    const participants = asRecord(conversation?.participants);
+    const participantValues = Array.isArray(participants?.data) ? participants.data : [];
+    const participant = participantValues.find((value) => participantId(value) !== input.accountId);
+    const participantExternalId = participantId(participant);
+    for (const messageValue of readNestedMessages(conversation?.messages)) {
+      const message = privateMessageFromProvider(
+        messageValue,
+        conversationId,
+        input.platform,
+        input.accountId,
+        participantExternalId,
+      );
+      if (message) messages.push(message);
+    }
+  }
+  return { messages, requestIds };
 }

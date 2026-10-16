@@ -11,6 +11,20 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-16 — Community provider operations and inbox reply path
+
+Status: **Implemented; pending release verification.** The Community & Inbox
+slice now includes bounded private-message polling, provider-owned message
+reconciliation, Meta public-comment and private-message write adapters, and a
+workspace-scoped inbox composer. Every reply re-checks access, capability,
+connection health, and emergency-stop state immediately before dispatch.
+Confirmed sends are stored as outgoing messages and delivery attempts; known
+provider failures are failed, transient/unknown outcomes are held for
+reconciliation, and deterministic idempotency keys prevent duplicate sends.
+The Connections screen includes a reconnect path for analytics-only Meta
+grants. Webhooks remain intentionally unavailable until the documented
+operational subscription and UAT gate is complete.
+
 ## 2026-10-16 — Community permission-aware capability validation
 
 Status: **Implemented; pending release verification.** The Meta connection

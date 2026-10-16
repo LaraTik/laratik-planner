@@ -38,7 +38,9 @@ callback subscription and operational UAT are complete.
 
 The first release uses bounded polling and catch-up. Webhooks are represented
 in the contract and schema but are not customer-enabled until provider UAT.
-No publishing or autonomous provider action is included in this module.
+Human public comment replies and private-message replies now use the dedicated
+Meta messaging adapter after a capability check; autonomous provider action
+and publishing remain excluded from this module.
 
 ## Delivery and safety state
 
@@ -47,9 +49,10 @@ message identity, not only the post identity. Provider message IDs and
 deterministic dedupe keys are unique within the workspace/provider scope.
 
 Send attempts are at-least-once. `sent` is confirmed, `failed` is a confirmed
-rejection, and `unknown` requires reconciliation before retry. A future
-dispatcher must re-check workspace access, capability, mode, safety rules,
-rate limits, and emergency stop immediately before dispatch.
+rejection, and `unknown` requires reconciliation before retry. The human reply
+service re-checks workspace access, capability, safety rules, and emergency
+stop immediately before dispatch, and uses a workspace-scoped deterministic
+idempotency key to prevent duplicate sends.
 
 AI Assist creates drafts only. Playbooks and knowledge must carry ownership,
 approval, revision, expiry, and stale-source state. Test Lab is simulation
