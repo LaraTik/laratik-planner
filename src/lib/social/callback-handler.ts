@@ -12,7 +12,7 @@ import {
   exchangeMetaCodeForShortLivedToken,
   exchangeShortLivedForLongLivedToken,
   discoverMetaPages,
-  META_SCOPES,
+  probeMetaPermissions,
 } from "@/lib/social/providers/meta";
 import { exchangeTikTokCodeForTokens, fetchTikTokProfile } from "@/lib/social/providers/tiktok";
 import { revalidatePath } from "next/cache";
@@ -49,8 +49,35 @@ import { mutatingApiHeaders } from "@/lib/security/headers";
 
 export type CallbackAgencyResolver = (slug: string) => Promise<{ id: string } | null>;
 
-const CHANNELS_PATH = /^\/app\/w\/[a-z0-9-]+\/channels$/;
+const CHANNELS_PATH = /^\/app(?:\/a\/[a-z0-9-]+)?\/w\/[a-z0-9-]+\/channels$/;
 const TIKTOK_SCOPES = ["user.info.basic", "user.info.profile", "user.info.stats"];
+
+/**
+ * Persist the permissions Meta actually granted, never the permissions we
+ * merely requested. A Login for Business configuration can omit or decline
+ * a requested permission; treating the request list as granted would make
+ * Community & Inbox advertise operations that the provider cannot perform.
+ * Permission-probe failure is non-fatal for the analytics connection, but
+ * deliberately falls back to an empty set so capability validation remains
+ * fail-closed.
+ */
+async function readGrantedMetaScopes(
+  accessToken: string,
+  graphApiVersion: string | null,
+): Promise<string[]> {
+  try {
+    const result = await probeMetaPermissions({ accessToken, apiVersion: graphApiVersion });
+    return [
+      ...new Set(
+        result.permissions
+          .filter((permission) => permission.status.toLowerCase() === "granted")
+          .map((permission) => permission.permission),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
 
 function safeReturnPath(path: string): string {
   return CHANNELS_PATH.test(path) ? path : "/app";
@@ -177,12 +204,13 @@ export async function handleMetaCallbackForAgency(
       accessToken: long.accessToken,
       graphApiVersion: config.graphApiVersion,
     });
+    const grantedScopes = await readGrantedMetaScopes(long.accessToken, config.graphApiVersion);
     const subjectHash = createHash("sha256").update(long.accessToken).digest("hex").slice(0, 32);
     await createPendingConnection(defaultDb, {
       workspaceId: stateRow.workspaceId,
       provider: "meta",
       providerSubjectId: subjectHash,
-      scopes: [...META_SCOPES],
+      scopes: grantedScopes,
       credentials: discovered.credentials,
       accessTokenExpiresAt: long.accessTokenExpiresAt,
       refreshTokenExpiresAt: null,
@@ -313,12 +341,13 @@ export async function handleMetaCallbackLegacy(req: NextRequest): Promise<NextRe
       accessToken: long.accessToken,
       graphApiVersion: config.graphApiVersion,
     });
+    const grantedScopes = await readGrantedMetaScopes(long.accessToken, config.graphApiVersion);
     const subjectHash = createHash("sha256").update(long.accessToken).digest("hex").slice(0, 32);
     await createPendingConnection(defaultDb, {
       workspaceId: stateRow.workspaceId,
       provider: "meta",
       providerSubjectId: subjectHash,
-      scopes: [...META_SCOPES],
+      scopes: grantedScopes,
       credentials: discovered.credentials,
       accessTokenExpiresAt: long.accessTokenExpiresAt,
       refreshTokenExpiresAt: null,

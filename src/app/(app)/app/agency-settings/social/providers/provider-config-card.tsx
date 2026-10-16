@@ -196,7 +196,7 @@ export function ProviderConfigCard({
   }
 
   function save() {
-    if (!appId || !appSecret) {
+    if (!appId || (!appSecret && !existing)) {
       setState({ error: tr("agencyProviders.appSecretRequiredError") });
       return;
     }

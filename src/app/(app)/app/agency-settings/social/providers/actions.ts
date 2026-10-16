@@ -36,7 +36,11 @@ import { hasAgencyProviderConfig } from "@/lib/social/provider-config";
 
 const ProviderConfigSchema = z.object({
   appId: z.string().trim().min(1, "App id is required.").max(200, "App id is too long."),
-  appSecret: z.string().min(1, "App secret is required.").max(500, "App secret is too long."),
+  // Existing configurations intentionally accept a blank secret so an
+  // administrator can change the Graph version or Login config without
+  // re-pasting the sealed secret. The action resolves the blank value to
+  // the already-sealed secret below; new configurations still require one.
+  appSecret: z.string().max(500, "App secret is too long."),
   loginConfigId: z.string().trim().max(200, "Login config id is too long.").nullable(),
   graphApiVersion: z
     .string()
@@ -80,11 +84,15 @@ export async function setProviderConfigAction(
     return { error: parsed.error.issues[0]?.message ?? "Invalid form input." };
   }
   try {
+    const existing = await getAgencyProviderConfig(db, ctx, provider);
+    const appSecret =
+      parsed.data.appSecret.trim() || ("appId" in existing ? existing.appSecret : "");
+    if (!appSecret) return { error: "App secret is required." };
     await setAgencyProviderConfig(db, {
       agencyId: ctx,
       provider,
       appId: parsed.data.appId,
-      appSecret: parsed.data.appSecret,
+      appSecret,
       loginConfigId: parsed.data.loginConfigId ?? null,
       graphApiVersion: parsed.data.graphApiVersion ?? null,
       enabled: parsed.data.enabled,
