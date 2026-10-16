@@ -515,6 +515,72 @@ export function PublishPackageForm({
     return order[idx + 1] ?? null;
   }, [readiness.issues, dirty, dirtyCount]);
 
+  /**
+   * The preview, re-bound to the form's LIVE edit state.
+   *
+   * `previewData` arrives from the server as a snapshot of the *persisted*
+   * `platformPayload` rows. The form, however, edits `drafts` in client
+   * state and nothing writes back to the server until Save. Passing
+   * `previewData` straight through therefore meant the preview showed the
+   * last *saved* copy: an operator typed a new caption, the character
+   * counter moved, the form went dirty — and the preview still rendered
+   * the old caption. A preview that is confidently stale is worse than no
+   * preview, because it is the surface that answers "what will this
+   * actually post?".
+   *
+   * So the copy is overlaid from `drafts` here, per channel, while the
+   * server snapshot keeps its original job: supplying the parts the form
+   * has no state for (platform, account name, approved media URL,
+   * intrinsic dimensions).
+   *
+   * Two rules matter for correctness:
+   *
+   *   - The overlay is per **channel id**, matching the `drafts` key, so
+   *     a caption typed on Instagram never bleeds onto LinkedIn.
+   *   - An explicitly cleared field is honoured. `""` and `[]` are real
+   *     operator intent ("no caption", "no hashtags"), so the guard is
+   *     `typeof === "string"` / `Array.isArray`, never truthiness. A
+   *     truthiness check would resurrect the stale server value the
+   *     moment the operator deleted the field.
+   *
+   * Declared above the no-channels early return for the same reason as
+   * `nextPhase`: hooks must run on every render.
+   */
+  const livePreviewData = useMemo(() => {
+    if (!previewData) return undefined;
+    return {
+      ...previewData,
+      channels: previewData.channels.map((channel) => {
+        const draft = drafts[channel.id] as { caption?: unknown; hashtags?: unknown } | undefined;
+        if (!draft) return channel;
+        // Fall back to the SNAPSHOT's value, not to `""`/`[]`. A draft
+        // field that was never touched is not the same as one the
+        // operator cleared: leaving it `undefined` lets
+        // `PlatformPreviewSwitcher` apply the shared-copy fallback
+        // (`payload?.caption ?? sharedCaption`). Coercing it to `""`
+        // here would swallow that fallback and show an empty preview
+        // for a channel that inherits shared copy.
+        const caption =
+          typeof draft.caption === "string" ? draft.caption : channel.payload?.caption;
+        const hashtags = Array.isArray(draft.hashtags)
+          ? (draft.hashtags as string[])
+          : channel.payload?.hashtags;
+        return {
+          ...channel,
+          // Conditional keys, not explicit `undefined`: the repo compiles
+          // with `exactOptionalPropertyTypes`, and — more importantly — an
+          // absent key and a key set to `undefined` must behave the same
+          // to the `payload?.caption ?? sharedCaption` fallback. Both mean
+          // "this channel has no override of its own".
+          payload: {
+            ...(caption !== undefined ? { caption } : {}),
+            ...(hashtags !== undefined ? { hashtags } : {}),
+          },
+        };
+      }),
+    };
+  }, [previewData, drafts]);
+
   if (channels.length === 0) {
     return (
       <Card padding="lg" data-testid="publish-no-channels">
@@ -1790,7 +1856,7 @@ export function PublishPackageForm({
             active channel from the tab row above and does not need its
             own duplicate channel strip.
           */}
-          {previewData && previewData.channels.length > 0 ? (
+          {livePreviewData && livePreviewData.channels.length > 0 ? (
             <>
               <div
                 id="publish-preview"
@@ -1804,13 +1870,13 @@ export function PublishPackageForm({
                   <p className="text-label text-fg-secondary mt-0.5">
                     {t("contentDetail.preview.description", {
                       platform: localizedPlatformLabel(
-                        current?.platform ?? previewData.channels[0]!.platform,
+                        current?.platform ?? livePreviewData.channels[0]!.platform,
                       ),
-                      account: current?.accountName ?? previewData.channels[0]!.accountName,
+                      account: current?.accountName ?? livePreviewData.channels[0]!.accountName,
                     })}
                   </p>
                 </div>
-                <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
+                <PlatformPreviewSwitcher {...livePreviewData} activeChannelId={activeChannel} />
               </div>
               <details className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3 xl:hidden">
                 <summary className="text-body text-fg-primary flex min-h-11 cursor-pointer items-center justify-between font-semibold">
@@ -1825,12 +1891,12 @@ export function PublishPackageForm({
                   <p className="text-label text-fg-secondary">
                     {t("contentDetail.preview.description", {
                       platform: localizedPlatformLabel(
-                        current?.platform ?? previewData.channels[0]!.platform,
+                        current?.platform ?? livePreviewData.channels[0]!.platform,
                       ),
-                      account: current?.accountName ?? previewData.channels[0]!.accountName,
+                      account: current?.accountName ?? livePreviewData.channels[0]!.accountName,
                     })}
                   </p>
-                  <PlatformPreviewSwitcher {...previewData} activeChannelId={activeChannel} />
+                  <PlatformPreviewSwitcher {...livePreviewData} activeChannelId={activeChannel} />
                 </div>
               </details>
             </>

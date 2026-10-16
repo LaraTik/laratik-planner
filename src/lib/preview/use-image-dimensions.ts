@@ -49,6 +49,26 @@ const probeCache = new Map<
   { promise: Promise<ImageDimensions>; result: ImageDimensions | null }
 >();
 
+/**
+ * Bound on the cache. Entries are keyed by URL and this module lives for
+ * the whole JS session, so an unbounded map would retain one entry per
+ * distinct image the operator ever opened. The oldest insertion is
+ * dropped once the cap is reached — first-in, first-out, because Map
+ * preserves insertion order.
+ */
+const MAX_CACHE_ENTRIES = 64;
+
+function rememberProbe(
+  url: string,
+  entry: { promise: Promise<ImageDimensions>; result: ImageDimensions | null },
+) {
+  if (probeCache.size >= MAX_CACHE_ENTRIES) {
+    const oldest = probeCache.keys().next();
+    if (!oldest.done) probeCache.delete(oldest.value);
+  }
+  probeCache.set(url, entry);
+}
+
 function probeImageOnce(url: string): Promise<ImageDimensions> {
   const cached = probeCache.get(url);
   if (cached) {
@@ -59,7 +79,7 @@ function probeImageOnce(url: string): Promise<ImageDimensions> {
     promise: Promise.resolve({ width: null, height: null, status: "loading" }),
     result: null,
   };
-  probeCache.set(url, entry);
+  rememberProbe(url, entry);
   const promise = new Promise<ImageDimensions>((resolve) => {
     const img = new Image();
     img.onload = () => {
@@ -78,7 +98,13 @@ function probeImageOnce(url: string): Promise<ImageDimensions> {
         status: "error",
         errorMessage: "Could not load image",
       };
-      entry.result = result;
+      // A failure is evicted rather than cached. A failed probe carries
+      // no information worth keeping — it is usually transient (the
+      // asset finished uploading, a signed URL rotated, the network
+      // blipped) — and a cached `error` would pin the caller to
+      // "unknown" for the rest of the session with no way to retry.
+      // `cancelled` in the caller still guards the late setState.
+      if (probeCache.get(url) === entry) probeCache.delete(url);
       resolve(result);
     };
     img.src = url;

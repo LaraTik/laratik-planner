@@ -35,7 +35,17 @@ describe("diagnoseAspectRatio", () => {
     const d = diagnoseAspectRatio(800, 800, FEED_RATIOS);
     expect(d.severity).toBe("warning");
     expect(d.belowMinimum).toBe(true);
-    expect(d.recommendation).toContain("Minimum 1080 × 1080");
+    // The verdict is structured data, not prose: the view localizes it.
+    // Assert the values the "Minimum 1080 × 1080 for …" frame interpolates.
+    expect(d.message).toEqual({
+      kind: "belowMinimum",
+      width: 800,
+      height: 800,
+      ratio: "1:1",
+      label: "Square 1:1",
+      recommendedWidth: 1080,
+      recommendedHeight: 1080,
+    });
   });
 
   it("matches the 4:5 portrait spec at exactly 1080×1350", () => {
@@ -48,7 +58,14 @@ describe("diagnoseAspectRatio", () => {
     const d = diagnoseAspectRatio(1920, 1080, FEED_RATIOS);
     expect(d.severity).toBe("warning");
     expect(d.matchedSpec).toBeNull();
-    expect(d.recommendation).toMatch(/Try \d+ × \d+ for /);
+    // Nearest spec for 16:9 (1.78) across FEED_RATIOS (1 / 0.8 / 1.91)
+    // is Landscape 1.91:1 at 0.13 away — not Square at 0.78.
+    expect(d.message).toMatchObject({
+      kind: "noMatch",
+      recommendedWidth: 1080,
+      recommendedHeight: 566,
+      label: "Landscape 1.91:1",
+    });
   });
 
   it("matches a 9:16 Reel at 1080×1920", () => {
@@ -63,9 +80,9 @@ describe("diagnoseAspectRatio", () => {
     expect(d.matchedSpec).toBeNull();
   });
 
-  it("includes a human-readable ratio in the summary", () => {
+  it("carries a human-readable ratio label in the message", () => {
     const d = diagnoseAspectRatio(1080, 1350, FEED_RATIOS);
-    expect(d.summary).toContain("4:5");
+    expect(d.message).toMatchObject({ kind: "match", ratio: "4:5" });
   });
 });
 

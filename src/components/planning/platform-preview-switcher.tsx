@@ -129,7 +129,22 @@ export function PlatformPreviewSwitcher({
           })}
         </div>
       ) : null}
+      {/*
+        `key` is load-bearing, not decoration. `PlatformPreview` is
+        mounted once and re-pointed at the active channel, so without a
+        key React reconciles it in place and its internal `format`,
+        `dimension` and `compareAll` state survives the switch. Those
+        values are platform-dependent — `formatOptionsFor` gives
+        Instagram feed/reel/story, TikTok reel/post, and a Pinterest
+        channel only "post" — so an Instagram "story" selection was
+        carried onto Pinterest and rendered story chrome (action row
+        hidden, story safe-area overlay mounted) on a channel that has no
+        story format and no toggle to escape it. Keying by channel id
+        resets the preview's own view state whenever the destination
+        changes, which fixes the whole class rather than one symptom.
+      */}
       <PlatformPreview
+        key={active.id}
         platform={active.platform}
         accountName={active.accountName}
         caption={caption}

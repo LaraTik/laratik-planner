@@ -59,12 +59,25 @@ describe("PlatformPreview — aspect ratio + safe area", () => {
     expect(screen.queryByTestId("platform-preview-aspect-diagnostic")).not.toBeInTheDocument();
   });
 
-  it("renders the aspect-diagnostic container when a thumbnail URL is provided", () => {
-    render(<PlatformPreview {...baseProps} thumbnailUrl="https://x.com/hero.png" />);
-    // jsdom does not actually load images, so the diagnostic
-    // resolves to "Dimensions unknown" — the container still
-    // renders. The full "ok" / "warning" path is covered
-    // by the pure `diagnoseAspectRatio` tests.
+  it("renders the aspect-diagnostic container once dimensions are known", () => {
+    // CHANGED 2026-10-16: this used to assert the opposite — that the
+    // container renders on `thumbnailUrl` alone, with the comment "jsdom
+    // does not actually load images, so the diagnostic resolves to
+    // 'Dimensions unknown' — the container still renders". That pinned the
+    // bug: "Dimensions unknown" is a `warning`, so every asset without a
+    // known size (still probing, or a legacy asset served from
+    // `/api/media/assets/<uuid>`, which is deliberately never probed) got
+    // a permanent amber row that could never clear. The container is now
+    // gated on known dimensions; `platform-preview-diagnostic-silence.test.tsx`
+    // covers the silent case.
+    render(
+      <PlatformPreview
+        {...baseProps}
+        thumbnailUrl="https://x.com/hero.png"
+        thumbnailWidth={1080}
+        thumbnailHeight={1080}
+      />,
+    );
     expect(screen.getByTestId("platform-preview-aspect-diagnostic")).toBeInTheDocument();
   });
 

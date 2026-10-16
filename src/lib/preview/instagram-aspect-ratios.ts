@@ -118,6 +118,52 @@ export const STORY_RATIOS: ReadonlyArray<AspectRatioSpec> = REEL_RATIOS;
 /** Result of an aspect-ratio diagnostic. */
 export type DiagnosticSeverity = "ok" | "warning" | "error";
 
+/**
+ * What the diagnostic has to say, as data rather than prose.
+ *
+ * The summary/recommendation used to be English sentences assembled here,
+ * which meant the preview's diagnostic row stayed English on an Arabic
+ * workspace. The lib is pure and knows nothing about locales, so it now
+ * returns a `kind` plus every value the sentence needs, and the view
+ * resolves the copy through `t()`.
+ *
+ * Each variant maps 1:1 to the summary/recommendation pair it replaces:
+ *   unknown    → "Dimensions unknown" / "Pick a target shape…"
+ *   match      → "<w> × <h> (<ratio>) — matches <label>." / spec prose
+ *   belowMinimum → same summary / "Minimum <rw> × <rh> for <label>."
+ *   noMatch    → "<w> × <h> (<ratio>) — not an exact match…" / "Try…"
+ *   noTarget   → "<w> × <h> (<ratio>) — no target shape configured." / …
+ */
+export type DiagnosticMessage =
+  | { kind: "unknown" }
+  | {
+      kind: "match";
+      width: number;
+      height: number;
+      ratio: string;
+      label: string;
+      description: string;
+    }
+  | {
+      kind: "belowMinimum";
+      width: number;
+      height: number;
+      ratio: string;
+      label: string;
+      recommendedWidth: number;
+      recommendedHeight: number;
+    }
+  | {
+      kind: "noMatch";
+      width: number;
+      height: number;
+      ratio: string;
+      recommendedWidth: number;
+      recommendedHeight: number;
+      label: string;
+    }
+  | { kind: "noTarget"; width: number; height: number; ratio: string };
+
 export interface AspectRatioDiagnostic {
   severity: DiagnosticSeverity;
   /** True when the shape matches but one or both dimensions are below the minimum. */
@@ -133,10 +179,8 @@ export interface AspectRatioDiagnostic {
   width: number | null;
   /** Height in pixels, if known. */
   height: number | null;
-  /** Human-readable summary line. */
-  summary: string;
-  /** One-sentence advice (e.g. "Try 1080 × 1350 for 4:5"). */
-  recommendation: string;
+  /** Structured verdict for the view to localize. */
+  message: DiagnosticMessage;
 }
 
 /**
@@ -162,8 +206,7 @@ export function diagnoseAspectRatio(
       ratio: 0,
       width: null,
       height: null,
-      summary: "Dimensions unknown",
-      recommendation: "Pick a target shape to see what Instagram needs.",
+      message: { kind: "unknown" },
     };
   }
   const ratio = width / height;
@@ -180,10 +223,24 @@ export function diagnoseAspectRatio(
       ratio,
       width,
       height,
-      summary: `${width} × ${height} (${describeRatio(ratio)}) — matches ${matchedSpec.label}.`,
-      recommendation: belowMinimum
-        ? `Minimum ${matchedSpec.recommended.width} × ${matchedSpec.recommended.height} for ${matchedSpec.label}.`
-        : matchedSpec.description,
+      message: belowMinimum
+        ? {
+            kind: "belowMinimum",
+            width,
+            height,
+            ratio: describeRatio(ratio),
+            label: matchedSpec.label,
+            recommendedWidth: matchedSpec.recommended.width,
+            recommendedHeight: matchedSpec.recommended.height,
+          }
+        : {
+            kind: "match",
+            width,
+            height,
+            ratio: describeRatio(ratio),
+            label: matchedSpec.label,
+            description: matchedSpec.description,
+          },
     };
   }
   // No match — pick the nearest spec to give actionable advice.
@@ -199,8 +256,15 @@ export function diagnoseAspectRatio(
       ratio,
       width,
       height,
-      summary: `${width} × ${height} (${describeRatio(ratio)}) — not an exact match for any recommended Instagram shape.`,
-      recommendation: `Try ${nearest.recommended.width} × ${nearest.recommended.height} for ${nearest.label}.`,
+      message: {
+        kind: "noMatch",
+        width,
+        height,
+        ratio: describeRatio(ratio),
+        recommendedWidth: nearest.recommended.width,
+        recommendedHeight: nearest.recommended.height,
+        label: nearest.label,
+      },
     };
   }
   return {
@@ -211,8 +275,7 @@ export function diagnoseAspectRatio(
     ratio,
     width,
     height,
-    summary: `${width} × ${height} (${describeRatio(ratio)}) — no target shape configured.`,
-    recommendation: "Pick a target shape above to see what Instagram needs.",
+    message: { kind: "noTarget", width, height, ratio: describeRatio(ratio) },
   };
 }
 
@@ -247,7 +310,7 @@ export function diagnoseCarouselConsistency(
   };
 }
 
-function describeRatio(r: number): string {
+export function describeRatio(r: number): string {
   // Pretty-print the common shapes; fall back to "w:h"
   // for anything else.
   const close = (target: number, label: string) => (Math.abs(r - target) < 0.01 ? label : null);

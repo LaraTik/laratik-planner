@@ -88,7 +88,18 @@ describe("PlatformPreview — no-media empty state", () => {
 
 describe("PlatformPreview — media present", () => {
   it("allocates the aspect-ratio frame once media exists", () => {
-    render(<PlatformPreview {...baseProps} thumbnailUrl="https://x.com/hero.png" />);
+    // Dimensions are supplied because the aspect diagnostic is now gated
+    // on them: with no known size it stays silent instead of showing a
+    // "Dimensions unknown" warning that can never clear. The gate itself
+    // is covered by `platform-preview-diagnostic-silence.test.tsx`.
+    render(
+      <PlatformPreview
+        {...baseProps}
+        thumbnailUrl="https://x.com/hero.png"
+        thumbnailWidth={1080}
+        thumbnailHeight={1080}
+      />,
+    );
 
     expect(screen.queryByTestId("platform-preview-empty")).not.toBeInTheDocument();
     expect(screen.getByTestId("platform-preview-media")).toHaveClass("aspect-square");
