@@ -85,7 +85,11 @@ export function MobileNav({
   // `src/lib/urls.ts`.
   const parsedWorkspacePath = parseWorkspacePath(pathname);
   const currentWorkspace = parsedWorkspacePath
-    ? (workspaces.find((workspace) => workspace.slug === parsedWorkspacePath.workspaceSlug) ?? null)
+    ? (workspaces.find(
+        (workspace) =>
+          workspace.slug === parsedWorkspacePath.workspaceSlug &&
+          workspace.agencySlug === parsedWorkspacePath.agencySlug,
+      ) ?? null)
     : null;
   const wsBase =
     currentWorkspace && parsedWorkspacePath

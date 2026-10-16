@@ -26,6 +26,12 @@ export type MetaCommunityReadInput = {
   accountId: string;
   accessToken: string;
   apiVersion?: string | null;
+  /**
+   * Lower bound for bounded catch-up. The sync service deliberately passes
+   * an overlap window and relies on database deduplication, so provider rows
+   * at the boundary are safe and cannot be lost between runs.
+   */
+  since?: Date | null;
   request?: MetaCommunityReadRequest;
 };
 
@@ -121,6 +127,10 @@ function dataRows(body: string): unknown[] {
   return Array.isArray(data) ? data : [];
 }
 
+function afterCursor(postedAt: Date, since: Date | null | undefined): boolean {
+  return !since || postedAt >= since;
+}
+
 async function readFacebookComments(
   input: MetaCommunityReadInput,
   request: MetaCommunityReadRequest,
@@ -145,7 +155,7 @@ async function readFacebookComments(
     if (!postId || !nested) continue;
     for (const commentValue of Array.isArray(nested.data) ? nested.data : []) {
       const comment = commentFromProvider(commentValue, postId, "facebook");
-      if (comment) comments.push(comment);
+      if (comment && afterCursor(comment.postedAt, input.since)) comments.push(comment);
     }
   }
   return comments;
@@ -177,7 +187,7 @@ async function readInstagramComments(
     if (commentsResult.requestId) requestIds.push(commentsResult.requestId);
     for (const commentValue of dataRows(commentsResult.body)) {
       const comment = commentFromProvider(commentValue, mediaId, "instagram");
-      if (comment) comments.push(comment);
+      if (comment && afterCursor(comment.postedAt, input.since)) comments.push(comment);
     }
   }
   return comments;
@@ -271,7 +281,7 @@ export async function readMetaCommunityPrivateMessages(
         input.accountId,
         participantExternalId,
       );
-      if (message) messages.push(message);
+      if (message && afterCursor(message.postedAt, input.since)) messages.push(message);
     }
   }
   return { messages, requestIds };

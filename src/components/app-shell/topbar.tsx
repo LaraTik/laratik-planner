@@ -67,9 +67,13 @@ export function Topbar({
   chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
 }) {
   const pathname = usePathname();
-  const workspaceSlug = parseWorkspacePath(pathname)?.workspaceSlug;
-  const activeWorkspace = workspaceSlug
-    ? (workspaces.find((workspace) => workspace.slug === workspaceSlug) ?? null)
+  const parsedWorkspacePath = parseWorkspacePath(pathname);
+  const activeWorkspace = parsedWorkspacePath
+    ? (workspaces.find(
+        (workspace) =>
+          workspace.slug === parsedWorkspacePath.workspaceSlug &&
+          workspace.agencySlug === parsedWorkspacePath.agencySlug,
+      ) ?? null)
     : null;
 
   return (

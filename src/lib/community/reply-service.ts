@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   communityCapabilities,
@@ -17,6 +17,7 @@ import { createDekCache, getDekForWorkspace } from "@/lib/social/key-management"
 import { openConnectionCredentials } from "@/lib/social/repository";
 import { SocialProviderError } from "@/lib/social/http";
 import { getCommunityWorkspaceAccess } from "./service";
+import { providerReplyIsLatest } from "./comment-sync-state";
 import {
   replyToMetaComment,
   replyToMetaPrivateMessage,
@@ -37,6 +38,7 @@ export type CommunityReplyResult =
         | "emergency_stop"
         | "capability_unavailable"
         | "recipient_missing"
+        | "already_replied"
         | "already_processing"
         | "unknown_outcome"
         | "provider_failed";
@@ -150,6 +152,37 @@ export async function sendCommunityReply(args: {
     return { ok: false, code: "capability_unavailable" };
   }
   if (!channel.externalAccountId) return { ok: false, code: "capability_unavailable" };
+
+  // A provider-authored message is already a confirmed reply. Do not send a
+  // second response merely because the inbox was opened before the next sync
+  // refreshed its state. A later inbound message reopens the conversation,
+  // which keeps genuine follow-ups available.
+  const [latestMessage] = await db
+    .select({
+      direction: communityMessages.direction,
+      deliveryState: communityMessages.deliveryState,
+      authorExternalId: communityMessages.authorExternalId,
+    })
+    .from(communityMessages)
+    .where(
+      and(
+        eq(communityMessages.workspaceId, args.workspaceId),
+        eq(communityMessages.conversationId, args.conversationId),
+      ),
+    )
+    .orderBy(desc(communityMessages.postedAt))
+    .limit(1);
+  if (
+    providerReplyIsLatest({
+      conversationState: row.conversation.state,
+      latestDirection: latestMessage?.direction,
+      latestDeliveryState: latestMessage?.deliveryState,
+      latestAuthorExternalId: latestMessage?.authorExternalId,
+      providerAccountId: channel.externalAccountId,
+    })
+  ) {
+    return { ok: false, code: "already_replied" };
+  }
 
   const operation = args.visibility === "public" ? "reply_comments" : "reply_private_messages";
   const [capability] = await db

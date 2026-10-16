@@ -56,4 +56,14 @@ describe("getWorkspaceSwitchPath", () => {
       expect(getWorkspaceSwitchPath(pathname, target, "acme")).not.toContain("/app/w/");
     }
   });
+
+  it("preserves view filters while dropping source-workspace record ids", () => {
+    expect(
+      getWorkspaceSwitchPath(
+        "/app/a/acme/w/old/analytics/advertising?accountId=old-account&since=2026-10-01&until=2026-10-16",
+        target,
+        "acme",
+      ),
+    ).toBe(`/app/a/acme/w/${target}/analytics/advertising?since=2026-10-01&until=2026-10-16`);
+  });
 });

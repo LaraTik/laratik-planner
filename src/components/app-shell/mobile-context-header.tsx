@@ -20,7 +20,11 @@ export function MobileContextHeader({ workspaces }: { workspaces: Workspace[] })
   // identity. See `src/lib/urls.ts`.
   const parsedWorkspacePath = parseWorkspacePath(pathname);
   const workspace = parsedWorkspacePath
-    ? workspaces.find((candidate) => candidate.slug === parsedWorkspacePath.workspaceSlug)
+    ? workspaces.find(
+        (candidate) =>
+          candidate.slug === parsedWorkspacePath.workspaceSlug &&
+          candidate.agencySlug === parsedWorkspacePath.agencySlug,
+      )
     : undefined;
   const href =
     workspace && parsedWorkspacePath

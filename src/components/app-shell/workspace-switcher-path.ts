@@ -47,6 +47,37 @@ const PRESERVED_WORKSPACE_PATHS = new Set([
   "team",
 ]);
 
+// These filters describe the view, not a workspace-owned record. Preserve
+// them when they are useful in the destination workspace; drop identifiers
+// that point at an account, conversation, post, or content item owned by the
+// source workspace.
+const PRESERVED_QUERY_KEYS = new Set([
+  "since",
+  "until",
+  "date",
+  "from",
+  "to",
+  "status",
+  "state",
+  "channel",
+  "platform",
+  "view",
+  "tab",
+  "sort",
+  "direction",
+]);
+
+function preserveViewQuery(query: string): string {
+  if (!query) return "";
+  const params = new URLSearchParams(query.startsWith("?") ? query.slice(1) : query);
+  const next = new URLSearchParams();
+  for (const [key, value] of params) {
+    if (PRESERVED_QUERY_KEYS.has(key)) next.append(key, value);
+  }
+  const serialized = next.toString();
+  return serialized ? `?${serialized}` : "";
+}
+
 /**
  * Resolve a workspace switch without carrying workspace-owned record IDs or
  * filters into the destination workspace. The longest known static route
@@ -79,5 +110,6 @@ export function getWorkspaceSwitchPath(
     }
   }
 
-  return preserved ? `${base}/${preserved}` : base;
+  const query = preserveViewQuery(parsed?.query ?? "");
+  return preserved ? `${base}/${preserved}${query}` : `${base}${query}`;
 }

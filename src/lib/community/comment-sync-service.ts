@@ -26,6 +26,15 @@ export type CommunityCommentSyncResult = {
   completedAt: Date;
 };
 
+const SYNC_OVERLAP_MS = 2 * 60 * 1000;
+
+function overlapCursor(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const cursor = new Date(value);
+  if (Number.isNaN(cursor.getTime())) return null;
+  return new Date(cursor.getTime() - SYNC_OVERLAP_MS);
+}
+
 function safeErrorCode(error: unknown): string {
   if (error instanceof SocialProviderError) return error.code;
   if (error && typeof error === "object" && "code" in error) {
@@ -35,9 +44,9 @@ function safeErrorCode(error: unknown): string {
   return "sync_failed";
 }
 
-async function markSyncStarted(workspaceId: string, socialConnectionId: string): Promise<void> {
+async function markSyncStarted(workspaceId: string, socialConnectionId: string): Promise<boolean> {
   const now = new Date();
-  await db
+  const claimed = await db
     .insert(communitySyncStates)
     .values({
       workspaceId,
@@ -55,7 +64,12 @@ async function markSyncStarted(workspaceId: string, socialConnectionId: string):
         lastErrorAt: null,
         updatedAt: now,
       },
-    });
+      // Manual sync is at-least-once, but two clicks must not create two
+      // overlapping provider reads. The condition makes the claim atomic.
+      where: sql`${communitySyncStates.status} <> 'running'`,
+    })
+    .returning({ id: communitySyncStates.id });
+  return claimed.length > 0;
 }
 
 async function markSyncCompleted(
@@ -215,6 +229,16 @@ export async function syncMetaCommunityComments(
       ),
     );
   const readableConnections = new Set(capabilityRows.map((row) => row.socialConnectionId));
+  const syncRows = await db
+    .select({
+      socialConnectionId: communitySyncStates.socialConnectionId,
+      cursor: communitySyncStates.cursor,
+    })
+    .from(communitySyncStates)
+    .where(eq(communitySyncStates.workspaceId, workspaceId));
+  const cursorByConnection = new Map(
+    syncRows.map((row) => [row.socialConnectionId, row.cursor] as const),
+  );
   const cache = createDekCache(db);
   const byConnection = new Map<string, (typeof channels)[number][]>();
   for (const row of channels) {
@@ -232,7 +256,10 @@ export async function syncMetaCommunityComments(
       skippedChannels += rows.length;
       continue;
     }
-    await markSyncStarted(workspaceId, connectionId);
+    if (!(await markSyncStarted(workspaceId, connectionId))) {
+      skippedChannels += rows.length;
+      continue;
+    }
     const connection = rows[0]?.connection;
     if (!connection) continue;
     try {
@@ -256,6 +283,7 @@ export async function syncMetaCommunityComments(
           accountId: row.channel.externalAccountId,
           accessToken,
           apiVersion: config.graphApiVersion,
+          since: overlapCursor(cursorByConnection.get(connectionId)),
         });
         readChannels += 1;
         for (const comment of result.comments) {
@@ -264,7 +292,11 @@ export async function syncMetaCommunityComments(
           if (await persistComment(workspaceId, row.channel, comment)) insertedMessages += 1;
         }
       }
-      await markSyncCompleted(workspaceId, connectionId, latestTimestamp?.toISOString() ?? null);
+      await markSyncCompleted(
+        workspaceId,
+        connectionId,
+        latestTimestamp?.toISOString() ?? cursorByConnection.get(connectionId) ?? null,
+      );
     } catch (error) {
       const errorCode = safeErrorCode(error);
       failures.push(errorCode);

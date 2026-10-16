@@ -21,6 +21,9 @@ import {
   type SidebarNestedItemSpec,
 } from "./navigation-model";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
+import type { SwitcherWorkspace } from "@/lib/workspaces/context";
+
+type SidebarWorkspace = Omit<SwitcherWorkspace, "agencySlug"> & { agencySlug?: string };
 
 /**
  * Primary navigation sidebar.
@@ -71,7 +74,7 @@ export function Sidebar({
   labels = {},
 }: {
   user: { name: string; isAdmin: boolean };
-  workspaces: { id: string; slug: string; name: string }[];
+  workspaces: SidebarWorkspace[];
   workspaceAccess?: Record<string, "internal" | "client" | "none">;
   workspaceCanCreateContent?: Record<string, boolean>;
   platformAccess: PlatformNavigationAccess;
@@ -104,7 +107,11 @@ export function Sidebar({
   // legacy redirect. See `src/lib/urls.ts`.
   const parsedWorkspacePath = parseWorkspacePath(pathname);
   const currentWorkspace = parsedWorkspacePath
-    ? (workspaces.find((w) => w.slug === parsedWorkspacePath.workspaceSlug) ?? null)
+    ? (workspaces.find(
+        (w) =>
+          w.slug === parsedWorkspacePath.workspaceSlug &&
+          (!w.agencySlug || w.agencySlug === parsedWorkspacePath.agencySlug),
+      ) ?? null)
     : null;
   const inWorkspace = currentWorkspace !== null;
   // Tenant comes from the URL; the slug comes from the verified workspace, so

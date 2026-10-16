@@ -22,3 +22,24 @@ export function syncedMessageState(isReply: boolean): {
     ? { direction: "outgoing", conversationState: "waiting_customer", deliveryState: "sent" }
     : { direction: "incoming", conversationState: "open", deliveryState: "received" };
 }
+
+/**
+ * A reply form must not dispatch a second provider message while the latest
+ * confirmed message is already authored by the connected account. The
+ * conversation state is included so a later customer message can reopen the
+ * thread and allow a legitimate follow-up.
+ */
+export function providerReplyIsLatest(input: {
+  conversationState: string;
+  latestDirection: string | null | undefined;
+  latestDeliveryState: string | null | undefined;
+  latestAuthorExternalId: string | null | undefined;
+  providerAccountId: string;
+}): boolean {
+  return (
+    input.conversationState === "waiting_customer" &&
+    input.latestDirection === "outgoing" &&
+    (input.latestDeliveryState === "sent" || input.latestDeliveryState === "reconciled") &&
+    input.latestAuthorExternalId === input.providerAccountId
+  );
+}

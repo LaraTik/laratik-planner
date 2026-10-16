@@ -103,6 +103,10 @@ export function WorkspaceSwitcher({
   const choose = (w: Workspace) => {
     setOpen(false);
     router.push(getWorkspaceSwitchPath(pathname, w.slug, w.agencySlug));
+    // The shell is a persistent layout. Refreshing after the navigation
+    // ensures the server-rendered workspace list, badges, and agency context
+    // are re-read when the previous context cookie was stale.
+    router.refresh();
   };
 
   const onListKeyDown = (e: React.KeyboardEvent<HTMLUListElement>) => {

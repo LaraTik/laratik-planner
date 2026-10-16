@@ -44,6 +44,7 @@ import {
   communityMessages,
   communityPlaybooks,
   communitySendAttempts,
+  communitySyncStates,
   socialChannels,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
@@ -115,6 +116,7 @@ async function readMetrics(workspaceId: string) {
     channels,
     capabilityRows,
     sends,
+    syncStates,
     events,
     rules,
     playbooks,
@@ -159,6 +161,14 @@ async function readMetrics(workspaceId: string) {
       .select({ value: count() })
       .from(communitySendAttempts)
       .where(eq(communitySendAttempts.workspaceId, workspaceId)),
+    db
+      .select({
+        status: communitySyncStates.status,
+        lastCompletedAt: communitySyncStates.lastCompletedAt,
+        lastErrorCode: communitySyncStates.lastErrorCode,
+      })
+      .from(communitySyncStates)
+      .where(eq(communitySyncStates.workspaceId, workspaceId)),
     db
       .select({ value: count() })
       .from(communityEvents)
@@ -222,6 +232,7 @@ async function readMetrics(workspaceId: string) {
     capabilities: capabilityRows.filter((row) => row.state === "available").length,
     capabilityRows,
     sends: sends[0]?.value ?? 0,
+    syncStates,
     events: events[0]?.value ?? 0,
     rules: rules[0]?.value ?? 0,
     playbooks: playbooks[0]?.value ?? 0,
@@ -575,6 +586,7 @@ function InboxScreen({
             sendingLabel={communityText(t, "sendingReply")}
             successLabel={communityText(t, "replySuccess")}
             failureLabel={communityText(t, "replyFailure")}
+            alreadyRepliedLabel={communityText(t, "alreadyReplied")}
             disabledLabel={communityText(t, "replyUnavailable")}
           />
         </div>
@@ -946,6 +958,12 @@ function ConnectionsScreen({
   const readCommentsAvailable = metrics.capabilityRows.some(
     (row) => row.operation === "read_comments" && row.state === "available",
   );
+  const lastSync = metrics.syncStates
+    .map((state) => state.lastCompletedAt)
+    .filter((value): value is Date => value instanceof Date)
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+  const syncFailed = metrics.syncStates.some((state) => state.status === "failed");
+  const syncRunning = metrics.syncStates.some((state) => state.status === "running");
   return (
     <>
       <div className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-3 rounded-[var(--radius-card)] border p-4">
@@ -989,6 +1007,27 @@ function ConnectionsScreen({
               successLabel={communityText(t, "validationSuccess")}
               errorLabel={communityText(t, "validationFailed")}
             />
+            <div className="border-border bg-surface-subtle mt-4 space-y-1 rounded-[var(--radius-control)] border p-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-label text-fg-secondary">
+                  {communityText(t, "syncStatus")}
+                </span>
+                <Badge variant={syncFailed ? "warning" : syncRunning ? "info" : "outline"}>
+                  {communityText(
+                    t,
+                    syncFailed ? "syncFailed" : syncRunning ? "syncRunning" : "syncIdle",
+                  )}
+                </Badge>
+              </div>
+              <p className="text-label text-fg-muted">
+                {lastSync
+                  ? `${communityText(t, "syncLastCompleted")}: ${lastSync.toLocaleString()}`
+                  : communityText(t, "syncNeverRun")}
+              </p>
+              {syncFailed ? (
+                <p className="text-label text-danger">{communityText(t, "syncError")}</p>
+              ) : null}
+            </div>
           </div>
         </Card>
         <Card>
@@ -1351,6 +1390,7 @@ export default async function CommunityEngagementPage({
         capabilities: 0,
         capabilityRows: [],
         sends: 0,
+        syncStates: [],
         events: 0,
         rules: 0,
         playbooks: 0,

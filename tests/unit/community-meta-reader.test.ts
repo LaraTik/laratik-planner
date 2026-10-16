@@ -119,6 +119,35 @@ describe("Meta community comment reader", () => {
     expect(result.comments.map((comment) => comment.externalMessageId)).toEqual(["valid"]);
   });
 
+  it("uses the sync cursor as an inclusive catch-up boundary", async () => {
+    const result = await readMetaCommunityComments({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      since: new Date("2026-10-16T10:00:00.000Z"),
+      request: async () =>
+        response({
+          data: [
+            {
+              id: "post-1",
+              comments: {
+                data: [
+                  { id: "before", message: "Before", created_time: "2026-10-16T09:59:59Z" },
+                  { id: "boundary", message: "Boundary", created_time: "2026-10-16T10:00:00Z" },
+                  { id: "after", message: "After", created_time: "2026-10-16T10:00:01Z" },
+                ],
+              },
+            },
+          ],
+        }),
+    });
+
+    expect(result.comments.map((comment) => comment.externalMessageId)).toEqual([
+      "boundary",
+      "after",
+    ]);
+  });
+
   it("normalizes bounded private-message history and preserves the participant id", async () => {
     const result = await readMetaCommunityPrivateMessages({
       platform: "facebook",
