@@ -1069,8 +1069,9 @@ export async function probeMetaRecentInstagramMediaInsights(args: {
 
 /**
  * Read-only capability probe for one owned Facebook Page post. Meta retired
- * the legacy post-impression metrics in Graph API v25; keep the replacement
- * viewer metrics opt-in until a real Page proves the response and permissions.
+ * the legacy post-impression metrics in Graph API v26.0 and later; keep the
+ * replacement viewer metrics opt-in until a real Page proves the response and
+ * permissions.
  */
 export async function probeMetaRecentFacebookPagePostInsights(args: {
   accessToken: string;
@@ -1660,7 +1661,7 @@ function statusForInsight(
 }
 
 const PAGE_INSIGHTS_METRICS = [
-  // Meta deprecated `page_impressions_unique` above Graph API v25.
+  // Meta deprecated `page_impressions_unique` in Graph API v26.0 and later.
   // `page_total_media_view_unique` is the current Page-level unique
   // viewer replacement; `page_views_total` is the current profile
   // view metric. Keep our normalized fields stable for the dashboard.

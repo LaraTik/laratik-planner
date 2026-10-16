@@ -90,9 +90,9 @@ The remaining provider work is intentionally separate from linking:
   adapter must keep unsupported metrics nullable.
 - Facebook Page post insights use `/{post-id}/insights` and require the Page
   token to have the Page's `ANALYZE` task and the applicable insight/read
-  permissions. Several legacy impression metrics are deprecated above Graph
-  API v25, so new code must prefer current media-view/video metrics and record
-  the pinned Graph version with every observation.
+  permissions. Several legacy impression metrics are deprecated in Graph API
+  v26.0 and later, so new code must prefer current media-view/video metrics
+  and record the pinned Graph version with every observation.
 - The repository defaults to Graph API `v26.0`. Do not change the default or
   add OAuth scopes based on documentation alone. Reach, saves, shares,
   Facebook post insights, and historical pagination still require controlled

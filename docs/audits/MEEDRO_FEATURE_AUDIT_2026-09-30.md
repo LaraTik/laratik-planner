@@ -4,6 +4,10 @@ Date: 2026-09-30
 Scope: authenticated Meedro web app, every visible top-level section, shared entry points, and the planner capability crosswalk.  
 Evidence: live Chrome inspection of the authenticated account. Screenshots were captured inline during the audit for each section; the route list below is the reproducible evidence index.
 
+Historical note: this audit predates the repository-wide `v26.0` default. References
+to metrics introduced as v25 replacements describe metric lineage, not the
+version used by the current runtime.
+
 ## Executive decision
 
 Do not clone Meedro. The useful product loop is:
@@ -218,7 +222,7 @@ now also accepts up to 10 Facebook Page feed pointers with aggregate
 engagement counts when the existing read-only scope permits them. Facebook
 post-level reach/views and historical pagination still require provider
 capability evidence and must not be approximated from profile totals. The
-agency-admin probe now checks one Page post with v25's
+agency-admin probe now checks one Page post with the v26-compatible
 `post_media_view`/`post_total_media_view_unique` replacement metrics, but
 controlled Page UAT is still required before these values enter normal sync or
 ranking.

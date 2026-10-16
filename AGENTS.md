@@ -242,7 +242,7 @@ branding or implementation source.
 - Keep provider post observations bounded (currently ten recent objects per
   connected-account sync). Instagram post metrics come only from the approved
   read-only insights response; unsupported fields stay nullable. The agency
-  probe may test one Facebook Page post with the v25 viewer metrics
+  probe may test one Facebook Page post with the v26-compatible viewer metrics
   `post_media_view` and `post_total_media_view_unique`, but normal Facebook
   observations remain metadata/engagement-only until controlled Page UAT proves
   the token, permissions, and viewer semantics.
