@@ -29,7 +29,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { canManageCommunityInbox, getCommunityWorkspaceAccess } from "@/lib/community/service";
 import { db } from "@/lib/db";
 import {
   communityAutomationRules,
@@ -44,7 +44,6 @@ import {
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { workspaceBasePath } from "@/lib/urls";
 import { tForActive } from "@/lib/i18n/t-for-active";
-import { getCommunityWorkspaceAccess } from "@/lib/community/service";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1122,9 +1121,7 @@ export default async function CommunityEngagementPage({
     Object.hasOwn(SECTION_KEYS, requested) ? requested : "overview"
   ) as CommunitySection;
   const access = await getCommunityWorkspaceAccess(workspace.agencyId, workspace.id);
-  const canManage = await hasWorkspaceRole({ id: session.user.id }, workspace.id, [
-    "workspace_manager",
-  ]);
+  const canManage = await canManageCommunityInbox({ id: session.user.id }, workspace);
   const metrics = access.planIncluded
     ? await readMetrics(workspace.id)
     : {
