@@ -3,6 +3,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { createMediaShareCollection } from "@/lib/media/collection-service";
 import { MediaPermissionError } from "@/lib/media/service";
+import { resolvePublicAppOrigin } from "@/lib/http/public-app-origin";
+import { clientEnv, serverEnv } from "@/lib/validation/env";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -28,11 +30,24 @@ export async function POST(req: NextRequest) {
       ...(parsed.data.sourceId ? { sourceId: parsed.data.sourceId } : {}),
       ...(parsed.data.assetIds ? { assetIds: parsed.data.assetIds } : {}),
     });
-    const origin = new URL(req.url).origin;
+    // Never copy the request origin into a shareable link. Behind Traefik the
+    // container binds `HOSTNAME=0.0.0.0` (Dockerfile), so the host the route
+    // observes is the proxy-facing bind address — a link built from it reads
+    // `http://0.0.0.0:3000/share/...` and is unusable by the recipient.
+    // Same resolver as the single-asset public link route; see
+    // `src/lib/http/public-app-origin.ts`.
+    const origin = resolvePublicAppOrigin({
+      requestOrigin: req.nextUrl.origin,
+      configuredOrigins: [serverEnv.AUTH_URL, clientEnv.NEXT_PUBLIC_APP_URL],
+      allowLocalhost: serverEnv.NODE_ENV !== "production",
+    });
     return NextResponse.json(
       {
         ...created,
-        url: `${origin}/share/media-collection/${encodeURIComponent(created.token)}`,
+        url: new URL(
+          `/share/media-collection/${encodeURIComponent(created.token)}`,
+          origin,
+        ).toString(),
       },
       { status: 201, headers: { "Cache-Control": "no-store" } },
     );
