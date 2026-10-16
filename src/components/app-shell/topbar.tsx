@@ -11,6 +11,7 @@ import type { BuildInfo } from "@/lib/build-info";
 import type { ThemePreference } from "@/lib/theme/preferences";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import type { SwitcherWorkspace } from "@/lib/workspaces/context";
+import { parseWorkspacePath } from "@/lib/urls";
 
 /**
  * Compact shell bar — tenant context, notifications, theme, and user menu.
@@ -66,7 +67,7 @@ export function Topbar({
   chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
 }) {
   const pathname = usePathname();
-  const workspaceSlug = pathname.match(/^\/app\/w\/([^/]+)/)?.[1];
+  const workspaceSlug = parseWorkspacePath(pathname)?.workspaceSlug;
   const activeWorkspace = workspaceSlug
     ? (workspaces.find((workspace) => workspace.slug === workspaceSlug) ?? null)
     : null;
