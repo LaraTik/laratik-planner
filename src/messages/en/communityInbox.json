@@ -126,7 +126,7 @@
   "operationMediaContext": "Media context",
   "operationConversationHistory": "Conversation history",
   "capabilityDetailMutationUat": "Reply sending remains disabled until a controlled Meta test confirms the exact account and permission path.",
-  "capabilityDetailMissingScope": "Reconnect Meta after the required Community permission is enabled and approved for this app.",
+  "capabilityDetailMissingScope": "Required Meta permission(s): {scopes}. Enable and approve them for this app, reconnect Meta, then validate again.",
   "capabilityDetailReadNotImplemented": "Private-message import is not implemented for this connection yet.",
   "capabilityDetailWebhooks": "Polling is active; webhook delivery will be enabled after operational setup and UAT.",
   "capabilityDetailMediaContext": "Media context enrichment is not implemented for this connection yet.",

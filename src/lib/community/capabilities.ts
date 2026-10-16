@@ -24,6 +24,16 @@ export function firstCapabilityDetail(detail: string | null | undefined): string
     .find((value) => value.length > 0);
 }
 
+export function missingCapabilityScopes(detail: string | null | undefined): string[] {
+  const first = firstCapabilityDetail(detail);
+  if (!first?.startsWith("missing_scope:")) return [];
+  return first
+    .slice("missing_scope:".length)
+    .split("|")
+    .map((scope) => scope.trim())
+    .filter((scope) => scope.length > 0);
+}
+
 export function capabilityAvailability(
   discovered: readonly CommunityCapability[] | null | undefined,
   operation: CommunityOperation,

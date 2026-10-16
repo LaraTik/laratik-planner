@@ -34,7 +34,7 @@ import {
   canReplyInCommunityInbox,
   getCommunityWorkspaceAccess,
 } from "@/lib/community/service";
-import { firstCapabilityDetail } from "@/lib/community/capabilities";
+import { firstCapabilityDetail, missingCapabilityScopes } from "@/lib/community/capabilities";
 import { db } from "@/lib/db";
 import {
   communityAutomationRules,
@@ -1068,13 +1068,19 @@ function ConnectionsScreen({
                     (row) => row.operation === operation,
                   )?.detail;
                   const detailCode = firstCapabilityDetail(detail);
-                  const detailKey = detailCode?.startsWith("missing_scope:")
-                    ? "capabilityDetailMissingScope"
-                    : detailCode
-                      ? capabilityDetailLabels[detailCode]
-                      : undefined;
+                  const missingScopes = missingCapabilityScopes(detailCode);
+                  const detailKey =
+                    missingScopes.length > 0
+                      ? "capabilityDetailMissingScope"
+                      : detailCode
+                        ? capabilityDetailLabels[detailCode]
+                        : undefined;
                   return detailKey ? (
-                    <p className="text-label text-fg-muted mt-1">{communityText(t, detailKey)}</p>
+                    <p className="text-label text-fg-muted mt-1">
+                      {communityText(t, detailKey, {
+                        scopes: missingScopes.join(" or "),
+                      })}
+                    </p>
                   ) : null;
                 })()}
               </div>

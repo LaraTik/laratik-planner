@@ -3,6 +3,7 @@ import {
   probeMetaCommunityCapabilities,
   type MetaCommunityProbeRequest,
 } from "@/lib/community/meta-capability-probe";
+import { missingCapabilityScopes } from "@/lib/community/capabilities";
 
 function response(
   body: unknown,
@@ -14,6 +15,16 @@ function response(
 }
 
 describe("Meta community capability probe", () => {
+  it("extracts the exact missing Meta permissions for actionable UI copy", () => {
+    expect(missingCapabilityScopes("missing_scope:pages_messaging")).toEqual(["pages_messaging"]);
+    expect(
+      missingCapabilityScopes(
+        "missing_scope:instagram_manage_messages|instagram_business_manage_messages",
+      ),
+    ).toEqual(["instagram_manage_messages", "instagram_business_manage_messages"]);
+    expect(missingCapabilityScopes("permission_denied")).toEqual([]);
+  });
+
   it("validates Facebook comment reads without dispatching a mutation", async () => {
     const calls: URL[] = [];
     const result = await probeMetaCommunityCapabilities({

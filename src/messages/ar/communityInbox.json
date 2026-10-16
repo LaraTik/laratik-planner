@@ -126,7 +126,7 @@
   "operationMediaContext": "سياق الوسائط",
   "operationConversationHistory": "سجل المحادثة",
   "capabilityDetailMutationUat": "يبقى إرسال الردود متوقفًا حتى يؤكد اختبار Meta مضبوط مسار الحساب والصلاحية الفعليين.",
-  "capabilityDetailMissingScope": "أعد ربط Meta بعد تفعيل الصلاحية المطلوبة للمجتمع والموافقة عليها لهذا التطبيق.",
+  "capabilityDetailMissingScope": "صلاحيات Meta المطلوبة: {scopes}. فعّلها ووافق عليها لهذا التطبيق، ثم أعد ربط Meta وأعد التحقق.",
   "capabilityDetailReadNotImplemented": "لم يتم تنفيذ استيراد الرسائل الخاصة لهذا الاتصال بعد.",
   "capabilityDetailWebhooks": "المزامنة الدورية مفعلة؛ سيتم تفعيل إشعارات الويب بعد الإعداد التشغيلي واختبار القبول.",
   "capabilityDetailMediaContext": "لم يتم تنفيذ إثراء سياق الوسائط لهذا الاتصال بعد.",
