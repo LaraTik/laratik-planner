@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   COMMUNITY_OPERATIONS,
   capabilityAvailability,
+  firstCapabilityDetail,
   type CommunityCapability,
 } from "@/lib/community/capabilities";
 
@@ -19,5 +20,13 @@ describe("community capability discovery", () => {
     expect(capabilityAvailability(capabilities, "read_comments")).toBe("available");
     expect(capabilityAvailability(capabilities, "reply_comments")).toBe("unavailable");
     expect(capabilityAvailability(undefined, "webhooks")).toBe("unknown");
+  });
+
+  it("normalizes merged provider detail codes for the capability UI", () => {
+    expect(firstCapabilityDetail("mutation_uat_required,mutation_uat_required")).toBe(
+      "mutation_uat_required",
+    );
+    expect(firstCapabilityDetail(" , read_not_implemented ")).toBe("read_not_implemented");
+    expect(firstCapabilityDetail(null)).toBeUndefined();
   });
 });

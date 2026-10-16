@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { canManageCommunityInbox, getCommunityWorkspaceAccess } from "@/lib/community/service";
+import { firstCapabilityDetail } from "@/lib/community/capabilities";
 import { db } from "@/lib/db";
 import {
   communityAutomationRules,
@@ -970,7 +971,9 @@ function ConnectionsScreen({
                   const detail = metrics.capabilityRows.find(
                     (row) => row.operation === operation,
                   )?.detail;
-                  const detailKey = detail ? capabilityDetailLabels[detail] : undefined;
+                  const detailKey = detail
+                    ? capabilityDetailLabels[firstCapabilityDetail(detail) ?? detail]
+                    : undefined;
                   return detailKey ? (
                     <p className="text-label text-fg-muted mt-1">{communityText(t, detailKey)}</p>
                   ) : null;

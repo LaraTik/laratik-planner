@@ -12,6 +12,18 @@ export type CommunityOperation = (typeof COMMUNITY_OPERATIONS)[number];
 export type CommunityCapability = CommunityOperation;
 export type CommunityCapabilityState = "available" | "unavailable" | "unknown";
 
+/**
+ * Capability probes may be merged across several Meta channels. Keep the
+ * first stable provider reason so the UI can render a useful explanation even
+ * when multiple channels report the same limitation.
+ */
+export function firstCapabilityDetail(detail: string | null | undefined): string | undefined {
+  return detail
+    ?.split(",")
+    .map((value) => value.trim())
+    .find((value) => value.length > 0);
+}
+
 export function capabilityAvailability(
   discovered: readonly CommunityCapability[] | null | undefined,
   operation: CommunityOperation,

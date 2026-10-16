@@ -23,17 +23,22 @@ type OperationResult = { state: CommunityCapabilityState; detail?: string };
 
 function mergeOperationResults(results: OperationResult[]): OperationResult {
   if (results.some((result) => result.state === "available")) return { state: "available" };
+  const details = [
+    ...new Set(
+      results.flatMap((result) =>
+        result.detail
+          ? result.detail
+              .split(",")
+              .map((value) => value.trim())
+              .filter((value) => value.length > 0)
+          : [],
+      ),
+    ),
+  ];
+  const detail = details.length > 0 ? details.join(",") : undefined;
   if (results.length > 0 && results.every((result) => result.state === "unavailable")) {
-    const detail = results
-      .map((result) => result.detail)
-      .filter(Boolean)
-      .join(",");
     return detail ? { state: "unavailable", detail } : { state: "unavailable" };
   }
-  const detail = results
-    .map((result) => result.detail)
-    .filter(Boolean)
-    .join(",");
   return detail ? { state: "unknown", detail } : { state: "unknown" };
 }
 
