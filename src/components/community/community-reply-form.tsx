@@ -17,6 +17,7 @@ export function CommunityReplyForm({
   sendingLabel,
   successLabel,
   failureLabel,
+  alreadyRepliedLabel,
   disabledLabel,
 }: {
   agencySlug: string;
@@ -29,10 +30,11 @@ export function CommunityReplyForm({
   sendingLabel: string;
   successLabel: string;
   failureLabel: string;
+  alreadyRepliedLabel: string;
   disabledLabel: string;
 }) {
   const [body, setBody] = useState("");
-  const [feedback, setFeedback] = useState<"success" | "failure" | null>(null);
+  const [feedback, setFeedback] = useState<"success" | "failure" | "already_replied" | null>(null);
   const [pending, startTransition] = useTransition();
   const disabled = !conversationId || !canReply || pending;
 
@@ -50,6 +52,8 @@ export function CommunityReplyForm({
       if (result.ok) {
         setBody("");
         setFeedback("success");
+      } else if (result.code === "already_replied") {
+        setFeedback("already_replied");
       } else {
         setFeedback("failure");
       }
@@ -89,6 +93,11 @@ export function CommunityReplyForm({
       {feedback === "failure" ? (
         <p className="text-label text-danger" role="alert">
           {failureLabel}
+        </p>
+      ) : null}
+      {feedback === "already_replied" ? (
+        <p className="text-label text-warning" role="status">
+          {alreadyRepliedLabel}
         </p>
       ) : null}
     </div>
