@@ -25,7 +25,7 @@ import {
   UsersRound,
   XCircle,
 } from "lucide-react";
-import { useLocaleT } from "@/components/i18n/locale-provider";
+import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { PasswordInput } from "@/components/forms/password-input";
 import { Combobox } from "@/components/ui/combobox";
@@ -35,6 +35,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { DateFormat, formatCurrency, formatDate } from "@/lib/i18n/format-locale";
 import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 import {
   createAdvertisingConnectionAction,
@@ -1080,9 +1081,16 @@ function AdvertisingHistoryCard({
   reconciliations: readonly Reconciliation[];
 }) {
   const t = useLocaleT();
+  const locale = useLocaleCode();
   const connectionName = new Map(
     connections.map((connection) => [connection.id, connection.displayName]),
   );
+  const validationPreview = validationResults.slice(0, 6);
+  const validationOverflow = validationResults.slice(6);
+  const syncPreview = syncRuns.slice(0, 6);
+  const syncOverflow = syncRuns.slice(6);
+  const reconciliationPreview = reconciliations.slice(0, 8);
+  const reconciliationOverflow = reconciliations.slice(8);
   return (
     <Card data-testid="advertising-history-card" className="overflow-hidden">
       <div className="border-border bg-surface-subtle/55 -mx-4 -mt-4 mb-5 flex flex-wrap items-start justify-between gap-3 border-b px-4 py-4 sm:-mx-5 sm:-mt-5 sm:px-5">
@@ -1100,116 +1108,380 @@ function AdvertisingHistoryCard({
           {t("advertising.readOnlyBadge")}
         </Badge>
       </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
-        <section aria-labelledby="advertising-validation-history">
-          <h3
-            id="advertising-validation-history"
-            className="text-body text-fg-primary font-semibold"
-          >
-            {t("advertising.validationHistoryTitle")}
-          </h3>
-          {validationResults.length === 0 ? (
-            <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {validationResults.slice(0, 20).map((result) => (
-                <li
-                  key={result.id}
-                  className="border-border rounded-[var(--radius-control)] border p-3"
-                >
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <span className="text-body text-fg-primary font-medium">
+      <div className="mt-5 grid gap-5 xl:grid-cols-2">
+        <HistoryListSection
+          id="advertising-validation-history"
+          title={t("advertising.validationHistoryTitle")}
+          count={validationResults.length}
+          rows={validationResults}
+          previewRows={validationPreview}
+          overflowRows={validationOverflow}
+          renderRows={(rows) =>
+            rows.map((result) => (
+              <li
+                key={result.id}
+                className="border-border flex gap-3 border-b py-3 last:border-b-0"
+              >
+                <HistoryStatusIcon status={result.status} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                    <span className="text-body text-fg-primary min-w-0 font-medium">
                       {t(`advertising.diagnosticOperations.${result.operation}`)}
                     </span>
-                    <Badge variant={result.status === "passed" ? "success" : "danger"}>
-                      {t(`advertising.historyStatus.${result.status}`)}
-                    </Badge>
+                    <HistoryStatusBadge status={result.status} t={t} />
                   </div>
-                  <p className="text-label text-fg-muted mt-1">
-                    {connectionName.get(result.connectionId) ?? result.connectionId} ·{" "}
-                    {result.sanitizedCode ?? "—"} · {new Date(result.checkedAt).toLocaleString()}
+                  <p className="text-label text-fg-muted overflow-wrap-anywhere mt-1">
+                    {connectionName.get(result.connectionId) ?? result.connectionId}
+                    <span aria-hidden="true"> · </span>
+                    <bdi dir="ltr">{result.sanitizedCode ?? "—"}</bdi>
+                    <span aria-hidden="true"> · </span>
+                    {formatDate(result.checkedAt, locale, DateFormat.dateTime)}
                   </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section aria-labelledby="advertising-sync-history">
-          <h3 id="advertising-sync-history" className="text-body text-fg-primary font-semibold">
-            {t("advertising.syncHistoryTitle")}
-          </h3>
-          {syncRuns.length === 0 ? (
-            <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
-          ) : (
-            <ul className="mt-2 space-y-2">
-              {syncRuns.slice(0, 20).map((run) => (
-                <li
-                  key={run.id}
-                  className="border-border rounded-[var(--radius-control)] border p-3"
-                >
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <span className="text-body text-fg-primary font-medium">{run.accountName}</span>
-                    <Badge
-                      variant={
-                        run.status === "succeeded" ? "success" : run.partial ? "outline" : "danger"
-                      }
-                    >
-                      {t(`advertising.historyStatus.${run.status}`)}
-                    </Badge>
+                </div>
+              </li>
+            ))
+          }
+          t={t}
+        />
+        <HistoryListSection
+          id="advertising-sync-history"
+          title={t("advertising.syncHistoryTitle")}
+          count={syncRuns.length}
+          rows={syncRuns}
+          previewRows={syncPreview}
+          overflowRows={syncOverflow}
+          renderRows={(rows) =>
+            rows.map((run) => (
+              <li key={run.id} className="border-border flex gap-3 border-b py-3 last:border-b-0">
+                <HistoryStatusIcon status={run.status} partial={run.partial} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                    <span className="text-body text-fg-primary min-w-0 font-medium">
+                      {run.accountName}
+                    </span>
+                    <HistoryStatusBadge status={run.status} partial={run.partial} t={t} />
                   </div>
                   <p className="text-label text-fg-muted mt-1">
                     {t("advertising.rowsSummary", { read: run.rowsRead, written: run.rowsWritten })}
-                    {run.errorCode ? ` · ${run.errorCode}` : ""}
+                    {run.errorCode ? (
+                      <>
+                        <span aria-hidden="true"> · </span>
+                        <bdi dir="ltr">{run.errorCode}</bdi>
+                      </>
+                    ) : null}
                   </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section aria-labelledby="advertising-reconciliation-history">
+                </div>
+              </li>
+            ))
+          }
+          t={t}
+        />
+        <section
+          aria-labelledby="advertising-reconciliation-history"
+          className="border-border bg-surface-subtle/35 rounded-[var(--radius-card)] border p-4 xl:col-span-2"
+        >
           <h3
             id="advertising-reconciliation-history"
             className="text-body text-fg-primary flex items-center gap-2 font-semibold"
           >
             <CircleDollarSign className="text-primary h-4 w-4" aria-hidden="true" />
             {t("advertising.reconciliationTitle")}
+            <span className="bg-surface text-fg-muted rounded-full px-2 py-0.5 text-xs font-medium">
+              {t("advertising.historyCount", { count: reconciliations.length })}
+            </span>
           </h3>
+          <p className="text-label text-fg-muted mt-1 max-w-3xl">
+            {t("advertising.reconciliationDescription")}
+          </p>
+          <p className="text-label text-fg-muted mt-2 max-w-3xl xl:text-end">
+            {t("advertising.zeroValueNote")}
+          </p>
           {reconciliations.length === 0 ? (
             <p className="text-label text-fg-secondary mt-2">{t("advertising.noHistory")}</p>
           ) : (
-            <ul className="mt-2 space-y-2">
-              {reconciliations.slice(0, 20).map((row) => (
-                <li
-                  key={row.id}
-                  className="border-border rounded-[var(--radius-control)] border p-3"
+            <>
+              <div className="border-border mt-4 overflow-x-auto rounded-[var(--radius-control)] border">
+                <table
+                  className="w-full min-w-[780px] text-start"
+                  data-testid="advertising-reconciliation-table"
                 >
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <span className="text-body text-fg-primary font-medium">{row.accountName}</span>
-                    <Badge variant={row.completeness === "complete" ? "success" : "warning"}>
-                      {t(`advertising.historyStatus.${row.completeness}`)}
-                    </Badge>
+                  <thead className="bg-surface border-border border-b">
+                    <tr>
+                      <th className="text-label text-fg-muted px-4 py-3 font-semibold" scope="col">
+                        {t("advertising.reconciliationAccount")}
+                      </th>
+                      <th className="text-label text-fg-muted px-3 py-3 font-semibold" scope="col">
+                        {t("advertising.reconciliationDate")}
+                      </th>
+                      <th
+                        className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                        scope="col"
+                      >
+                        {t("advertising.providerSpend")}
+                      </th>
+                      <th
+                        className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                        scope="col"
+                      >
+                        {t("advertising.unallocatedSpend")}
+                      </th>
+                      <th
+                        className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                        scope="col"
+                      >
+                        {t("advertising.discrepancy")}
+                      </th>
+                      <th className="text-label text-fg-muted px-4 py-3 font-semibold" scope="col">
+                        {t("advertising.reconciliationStatus")}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reconciliationPreview.map((row) => (
+                      <ReconciliationRow key={row.id} row={row} locale={locale} t={t} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {reconciliationOverflow.length > 0 ? (
+                <details className="mt-3">
+                  <summary className="text-label text-primary focus-ring inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius-control)] px-2 font-semibold">
+                    {t("advertising.historyViewAll", { count: reconciliationOverflow.length })}
+                  </summary>
+                  <div className="border-border mt-2 overflow-x-auto rounded-[var(--radius-control)] border">
+                    <table className="w-full min-w-[780px] text-start">
+                      <thead className="bg-surface border-border border-b">
+                        <tr>
+                          <th
+                            className="text-label text-fg-muted px-4 py-3 font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.reconciliationAccount")}
+                          </th>
+                          <th
+                            className="text-label text-fg-muted px-3 py-3 font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.reconciliationDate")}
+                          </th>
+                          <th
+                            className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.providerSpend")}
+                          </th>
+                          <th
+                            className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.unallocatedSpend")}
+                          </th>
+                          <th
+                            className="text-label text-fg-muted px-3 py-3 text-end font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.discrepancy")}
+                          </th>
+                          <th
+                            className="text-label text-fg-muted px-4 py-3 font-semibold"
+                            scope="col"
+                          >
+                            {t("advertising.reconciliationStatus")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reconciliationOverflow.map((row) => (
+                          <ReconciliationRow key={row.id} row={row} locale={locale} t={t} />
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
-                  <p className="text-label text-fg-muted mt-1">
-                    <bdi dir="ltr">{row.reportDate}</bdi> · {t("advertising.providerSpend")}:{" "}
-                    {row.providerAccountSpend} {row.currency}
-                  </p>
-                  <p className="text-label text-fg-muted">
-                    {t("advertising.unallocatedSpend")}:{" "}
-                    <bdi dir="ltr">
-                      {row.unallocatedSpend} {row.currency}
-                    </bdi>{" "}
-                    · {t("advertising.discrepancy")}:{" "}
-                    <bdi dir="ltr">
-                      {row.discrepancy} {row.currency}
-                    </bdi>
-                  </p>
-                </li>
-              ))}
-            </ul>
+                </details>
+              ) : null}
+            </>
           )}
         </section>
       </div>
     </Card>
+  );
+}
+
+function HistoryListSection<T extends { id: string }>({
+  id,
+  title,
+  count,
+  rows,
+  previewRows,
+  overflowRows,
+  renderRows,
+  t,
+}: {
+  id: string;
+  title: string;
+  count: number;
+  rows: readonly T[];
+  previewRows: readonly T[];
+  overflowRows: readonly T[];
+  renderRows: (rows: readonly T[]) => React.ReactNode;
+  t: ReturnType<typeof useLocaleT>;
+}) {
+  return (
+    <section aria-labelledby={id} className="border-border rounded-[var(--radius-card)] border p-4">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={id} className="text-body text-fg-primary font-semibold">
+          {title}
+        </h3>
+        <span className="bg-surface-subtle text-fg-muted rounded-full px-2 py-0.5 text-xs font-medium">
+          {t("advertising.historyCount", { count })}
+        </span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-label text-fg-secondary mt-3">{t("advertising.noHistory")}</p>
+      ) : (
+        <>
+          <ul className="mt-2">{renderRows(previewRows)}</ul>
+          {overflowRows.length > 0 ? (
+            <details className="mt-2">
+              <summary className="text-label text-primary focus-ring inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius-control)] px-2 font-semibold">
+                {t("advertising.historyViewAll", { count: overflowRows.length })}
+              </summary>
+              <ul className="border-border mt-2 border-t">{renderRows(overflowRows)}</ul>
+            </details>
+          ) : null}
+        </>
+      )}
+    </section>
+  );
+}
+
+function HistoryStatusIcon({ status, partial = false }: { status: string; partial?: boolean }) {
+  if (status === "passed" || status === "succeeded") {
+    return <CheckCircle2 className="text-success mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />;
+  }
+  if (partial || status === "partial") {
+    return <AlertTriangle className="text-warning mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />;
+  }
+  return <XCircle className="text-danger mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />;
+}
+
+function HistoryStatusBadge({
+  status,
+  partial = false,
+  t,
+}: {
+  status: string;
+  partial?: boolean;
+  t: ReturnType<typeof useLocaleT>;
+}) {
+  return (
+    <Badge
+      variant={
+        status === "passed" || status === "succeeded"
+          ? "success"
+          : partial || status === "partial"
+            ? "outline"
+            : "danger"
+      }
+    >
+      {t(`advertising.historyStatus.${status}`)}
+    </Badge>
+  );
+}
+
+function ReconciliationRow({
+  row,
+  locale,
+  t,
+}: {
+  row: Reconciliation;
+  locale: ReturnType<typeof useLocaleCode>;
+  t: ReturnType<typeof useLocaleT>;
+}) {
+  const discrepancyIsZero = parseAmount(row.discrepancy) === 0;
+  return (
+    <tr className="border-border border-b last:border-b-0">
+      <td className="px-4 py-3 align-top">
+        <div className="min-w-0">
+          <p className="text-body text-fg-primary overflow-wrap-anywhere max-w-[18rem] font-medium">
+            {row.accountName}
+          </p>
+          <p className="text-label text-fg-muted mt-0.5 font-mono" dir="ltr">
+            {row.accountId}
+          </p>
+        </div>
+      </td>
+      <td className="text-label text-fg-secondary px-3 py-3 align-top whitespace-nowrap">
+        <bdi dir="ltr">{row.reportDate}</bdi>
+      </td>
+      <td
+        className="text-body text-fg-primary px-3 py-3 text-end align-top font-medium whitespace-nowrap tabular-nums"
+        dir="ltr"
+      >
+        {formatSpend(row.providerAccountSpend, row.currency, locale)}
+      </td>
+      <td
+        className="text-body px-3 py-3 text-end align-top whitespace-nowrap tabular-nums"
+        dir="ltr"
+      >
+        <ZeroAwareSpend value={row.unallocatedSpend} currency={row.currency} locale={locale} />
+      </td>
+      <td
+        className="text-body px-3 py-3 text-end align-top whitespace-nowrap tabular-nums"
+        dir="ltr"
+      >
+        <ZeroAwareSpend value={row.discrepancy} currency={row.currency} locale={locale} />
+      </td>
+      <td className="px-4 py-3 align-top">
+        <div className="flex flex-col items-start gap-1.5">
+          <Badge variant={row.completeness === "complete" ? "success" : "warning"}>
+            {row.completeness === "complete" && discrepancyIsZero ? (
+              <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            )}
+            {t(`advertising.historyStatus.${row.completeness}`)}
+          </Badge>
+          {discrepancyIsZero ? (
+            <span className="text-label text-success">{t("advertising.reconciled")}</span>
+          ) : null}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+function parseAmount(value: string): number | null {
+  const amount = Number(value);
+  return Number.isFinite(amount) ? amount : null;
+}
+
+function formatSpend(value: string, currency: string, locale: ReturnType<typeof useLocaleCode>) {
+  const amount = parseAmount(value);
+  if (amount === null) return "—";
+  return formatCurrency(amount, currency, locale, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function ZeroAwareSpend({
+  value,
+  currency,
+  locale,
+}: {
+  value: string;
+  currency: string;
+  locale: ReturnType<typeof useLocaleCode>;
+}) {
+  const formatted = formatSpend(value, currency, locale);
+  if (parseAmount(value) !== 0) {
+    return <span className="text-fg-primary">{formatted}</span>;
+  }
+  return (
+    <span className="text-fg-muted" title={formatted} aria-label={formatted}>
+      —
+    </span>
   );
 }
 
