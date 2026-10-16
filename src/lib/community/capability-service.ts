@@ -101,6 +101,7 @@ export async function validateCommunityCapabilities(
         accountId: row.channel.externalAccountId,
         accessToken,
         apiVersion: config.graphApiVersion,
+        grantedScopes: connection.scopes,
       });
       for (const operation of COMMUNITY_OPERATIONS) {
         const result = probe.operations[operation];

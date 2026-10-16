@@ -12,6 +12,7 @@ import {
   exchangeMetaCodeForShortLivedToken,
   exchangeShortLivedForLongLivedToken,
   discoverMetaPages,
+  META_SCOPES,
 } from "@/lib/social/providers/meta";
 import { exchangeTikTokCodeForTokens, fetchTikTokProfile } from "@/lib/social/providers/tiktok";
 import { revalidatePath } from "next/cache";
@@ -181,12 +182,7 @@ export async function handleMetaCallbackForAgency(
       workspaceId: stateRow.workspaceId,
       provider: "meta",
       providerSubjectId: subjectHash,
-      scopes: [
-        "pages_show_list",
-        "pages_read_engagement",
-        "instagram_basic",
-        "instagram_manage_insights",
-      ],
+      scopes: [...META_SCOPES],
       credentials: discovered.credentials,
       accessTokenExpiresAt: long.accessTokenExpiresAt,
       refreshTokenExpiresAt: null,
@@ -322,12 +318,7 @@ export async function handleMetaCallbackLegacy(req: NextRequest): Promise<NextRe
       workspaceId: stateRow.workspaceId,
       provider: "meta",
       providerSubjectId: subjectHash,
-      scopes: [
-        "pages_show_list",
-        "pages_read_engagement",
-        "instagram_basic",
-        "instagram_manage_insights",
-      ],
+      scopes: [...META_SCOPES],
       credentials: discovered.credentials,
       accessTokenExpiresAt: long.accessTokenExpiresAt,
       refreshTokenExpiresAt: null,

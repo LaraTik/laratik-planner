@@ -36,9 +36,9 @@ import { resolveMetaGraphVersion, type MetaGraphVersion } from "@/lib/meta/versi
  *
  * Safety properties concentrated in this file:
  *
- *   - The only scopes sent to Facebook are the read-only set in
- *     `META_SCOPES`. No publish / manage / ads scope ever appears in
- *     the authorization URL.
+ *   - The authorization dialog requests the analytics scopes plus the
+ *     explicitly approved Community & Inbox scopes. Publishing and ads
+ *     scopes are never requested by this provider.
  *   - `providerRequest` enforces the 10s timeout, 1 MiB body cap,
  *     2-retry cap on 429/502/503/504, and full-jitter 4s ceiling
  *     defined in `src/lib/social/http.ts`. The provider functions
@@ -66,10 +66,10 @@ import { resolveMetaGraphVersion, type MetaGraphVersion } from "@/lib/meta/versi
  *     and defaults to `v26.0` when that optional field is empty.
  */
 
-// Read-only scopes requested in the Facebook Login for Business
-// dialog. The scope list is the contract for what the access token
-// will be authorized to read; missing scopes show up as
-// `permission_denied` errors at fetch time.
+// Analytics scopes requested in the Facebook Login for Business dialog.
+// Keep this list separate from the Community scopes so an operator can
+// reason about why a connection has analytics access without assuming that
+// it can read or mutate customer conversations.
 //
 // `read_insights` was removed 2026-08-28: Meta deprecated it for
 // new apps and rejects the dialog with `Invalid Scopes:
@@ -90,13 +90,32 @@ import { resolveMetaGraphVersion, type MetaGraphVersion } from "@/lib/meta/versi
 // + `instagram_basic` + `instagram_manage_insights` set) confirmed
 // all required endpoints return the expected shape; removing
 // `read_insights` does not regress any data the pipeline reads.
-export const META_SCOPES = [
+export const META_ANALYTICS_SCOPES = [
   "pages_show_list",
   "pages_read_engagement",
   "pages_read_user_content",
   "instagram_basic",
   "instagram_manage_insights",
 ] as const;
+
+/**
+ * Community scopes for the current Facebook Login for Business flow.
+ *
+ * These permissions must also be enabled/approved in the Meta app and are
+ * only useful after the customer reconnects the account. Requesting them is
+ * necessary, but it is not evidence that Meta granted them; capability
+ * validation still uses the persisted grant and live read checks.
+ */
+export const META_COMMUNITY_SCOPES = [
+  "pages_manage_engagement",
+  "pages_manage_metadata",
+  "pages_messaging",
+  "instagram_manage_comments",
+  "instagram_manage_messages",
+] as const;
+
+/** Every scope requested by the Meta connection flow. */
+export const META_SCOPES = [...META_ANALYTICS_SCOPES, ...META_COMMUNITY_SCOPES] as const;
 
 export type MetaScope = (typeof META_SCOPES)[number];
 

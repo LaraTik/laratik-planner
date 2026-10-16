@@ -9,6 +9,8 @@ import {
   fetchMetaPublicationById,
   fetchMetaPublicationCandidates,
   fetchMetaPublicationCandidatesPage,
+  META_ANALYTICS_SCOPES,
+  META_COMMUNITY_SCOPES,
   META_SCOPES,
   metaAdapter,
   probeMetaPermissions,
@@ -77,27 +79,35 @@ describe("META_SCOPES", () => {
   // 2026-08-28: `read_insights` was removed. Meta deprecated it for
   // new apps and rejects the OAuth dialog with `Invalid Scopes:
   // read_insights` when the Login for Business config or the URL
-  // still includes it. The four remaining scopes cover every
-  // metric the social pipeline reads.
-  it("lists only the read scopes that are still valid for new Meta apps", () => {
-    expect(META_SCOPES).toEqual([
+  // still includes it. Community scopes are explicit because
+  // analytics access does not grant messaging access.
+  it("keeps analytics and community scopes explicit", () => {
+    expect(META_ANALYTICS_SCOPES).toEqual([
       "pages_show_list",
       "pages_read_engagement",
       "pages_read_user_content",
       "instagram_basic",
       "instagram_manage_insights",
     ]);
+    expect(META_COMMUNITY_SCOPES).toEqual([
+      "pages_manage_engagement",
+      "pages_manage_metadata",
+      "pages_messaging",
+      "instagram_manage_comments",
+      "instagram_manage_messages",
+    ]);
+    expect(META_SCOPES).toEqual([...META_ANALYTICS_SCOPES, ...META_COMMUNITY_SCOPES]);
   });
   it("does not include the deprecated read_insights scope", () => {
     expect(META_SCOPES).not.toContain("read_insights");
   });
-  it("contains no publish / manage / ads scope", () => {
-    // Defensive: the project rule is "read-only analytics first;
-    // never request publish, manage, or ads scopes".
+  it("contains no publishing or advertising scope", () => {
+    // Defensive: community moderation/messaging scopes are permitted,
+    // while publishing and advertising remain out of scope.
     for (const forbidden of [
       "publish_pages",
       "publish_video",
-      "manage_pages",
+      "pages_manage_posts",
       "ads_management",
       "ads_read",
       "business_management",
@@ -526,8 +536,8 @@ describe("buildMetaAuthorizationUrl", () => {
     const u = new URL(url);
     const scope = u.searchParams.get("scope") ?? "";
     expect(scope.split(",").sort()).toEqual([...META_SCOPES].sort());
-    // No write / publish scope leaks into the URL.
-    expect(scope).not.toMatch(/pages_manage|publish_|ads_|instagram_content_publish/);
+    // No publishing or advertising scope leaks into the URL.
+    expect(scope).not.toMatch(/pages_manage_posts|publish_|ads_|instagram_content_publish/);
   });
 });
 

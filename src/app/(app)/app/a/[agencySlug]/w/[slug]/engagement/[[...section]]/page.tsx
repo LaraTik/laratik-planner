@@ -971,9 +971,12 @@ function ConnectionsScreen({
                   const detail = metrics.capabilityRows.find(
                     (row) => row.operation === operation,
                   )?.detail;
-                  const detailKey = detail
-                    ? capabilityDetailLabels[firstCapabilityDetail(detail) ?? detail]
-                    : undefined;
+                  const detailCode = firstCapabilityDetail(detail);
+                  const detailKey = detailCode?.startsWith("missing_scope:")
+                    ? "capabilityDetailMissingScope"
+                    : detailCode
+                      ? capabilityDetailLabels[detailCode]
+                      : undefined;
                   return detailKey ? (
                     <p className="text-label text-fg-muted mt-1">{communityText(t, detailKey)}</p>
                   ) : null;

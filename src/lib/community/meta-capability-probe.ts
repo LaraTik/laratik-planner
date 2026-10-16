@@ -14,6 +14,8 @@ export type MetaCommunityProbeInput = {
   accountId: string;
   accessToken: string;
   apiVersion?: string | null;
+  /** Scopes granted on the user connection, persisted at OAuth time. */
+  grantedScopes?: readonly string[];
   request?: MetaCommunityProbeRequest["request"];
 };
 
@@ -23,6 +25,15 @@ export type MetaCommunityProbeResult = {
 };
 
 const MUTATION_UAT_DETAIL = "mutation_uat_required";
+
+function hasAnyScope(input: MetaCommunityProbeInput, scopes: readonly string[]): boolean {
+  const granted = new Set(input.grantedScopes ?? []);
+  return scopes.some((scope) => granted.has(scope));
+}
+
+function missingScopeDetail(scopes: readonly string[]): string {
+  return `missing_scope:${scopes.join("|")}`;
+}
 
 function emptyOperations(): MetaCommunityProbeResult["operations"] {
   return {
@@ -34,6 +45,46 @@ function emptyOperations(): MetaCommunityProbeResult["operations"] {
     media_context: { state: "unknown", detail: "media_context_not_implemented" },
     conversation_history: { state: "unknown", detail: "conversation_history_not_implemented" },
   };
+}
+
+function communityScopeOperations(
+  input: MetaCommunityProbeInput,
+): MetaCommunityProbeResult["operations"] {
+  const operations = emptyOperations();
+  const commentReplyScopes =
+    input.platform === "facebook"
+      ? ["pages_manage_engagement"]
+      : ["instagram_manage_comments", "instagram_business_manage_comments"];
+  const privateMessageScopes =
+    input.platform === "facebook"
+      ? ["pages_messaging"]
+      : ["instagram_manage_messages", "instagram_business_manage_messages"];
+
+  if (hasAnyScope(input, commentReplyScopes)) {
+    operations.reply_comments = { state: "available" };
+  } else {
+    operations.reply_comments = {
+      state: "unavailable",
+      detail: missingScopeDetail(commentReplyScopes),
+    };
+  }
+  if (hasAnyScope(input, privateMessageScopes)) {
+    operations.read_private_messages = { state: "unknown" };
+    operations.reply_private_messages = { state: "unknown" };
+  } else {
+    operations.read_private_messages = {
+      state: "unavailable",
+      detail: missingScopeDetail(privateMessageScopes),
+    };
+    operations.reply_private_messages = {
+      state: "unavailable",
+      detail: missingScopeDetail(privateMessageScopes),
+    };
+  }
+  if (hasAnyScope(input, ["pages_manage_metadata"])) {
+    operations.webhooks = { state: "unknown", detail: "webhooks_not_enabled" };
+  }
+  return operations;
 }
 
 function detailForError(error: unknown): string {
@@ -132,15 +183,76 @@ async function probeInstagramComments(
   }
 }
 
+async function probePrivateMessages(
+  input: MetaCommunityProbeInput,
+  request: MetaCommunityProbeRequest["request"],
+  requestIds: string[],
+): Promise<{ state: CommunityCapabilityState; detail?: string }> {
+  const version = resolveMetaGraphVersion(input.apiVersion);
+  const fields = "id,updated_time";
+  const url = new URL(
+    graphUrl(
+      version,
+      `${encodeURIComponent(input.accountId)}/conversations`,
+      fields,
+      input.accessToken,
+    ),
+  );
+  if (input.platform === "facebook") url.searchParams.set("platform", "messenger");
+  try {
+    const result = await request(url.toString());
+    if (result.requestId) requestIds.push(result.requestId);
+    return hasData(result.body)
+      ? { state: "available" }
+      : { state: "unavailable", detail: "invalid_response" };
+  } catch (error) {
+    return { state: "unavailable", detail: detailForError(error) };
+  }
+}
+
 export async function probeMetaCommunityCapabilities(
   input: MetaCommunityProbeInput,
 ): Promise<MetaCommunityProbeResult> {
   const request = input.request ?? providerRequest;
-  const operations = emptyOperations();
+  const operations = communityScopeOperations(input);
   const requestIds: string[] = [];
   operations.read_comments =
     input.platform === "facebook"
       ? await probeFacebookComments(input, request, requestIds)
       : await probeInstagramComments(input, request, requestIds);
+
+  // The comment read check is the non-mutating validation for the public
+  // reply path. A reply is only surfaced as available when the connection
+  // has the exact provider scope; the dispatch path still re-checks policy,
+  // kill-switch, capability, and provider response immediately before send.
+  if (
+    operations.reply_comments.state === "available" &&
+    operations.read_comments.state !== "available"
+  ) {
+    operations.reply_comments = { state: "unknown", detail: "comment_read_not_validated" };
+  }
+
+  if (operations.read_private_messages.state === "unknown") {
+    operations.read_private_messages = await probePrivateMessages(input, request, requestIds);
+    operations.reply_private_messages =
+      operations.read_private_messages.state === "available"
+        ? { state: "available" }
+        : operations.read_private_messages.state === "unavailable"
+          ? operations.read_private_messages.detail
+            ? {
+                state: "unavailable",
+                detail: operations.read_private_messages.detail,
+              }
+            : { state: "unavailable" }
+          : { state: "unknown", detail: "private_message_read_not_validated" };
+  }
+  operations.media_context =
+    operations.read_comments.state === "available"
+      ? { state: "available" }
+      : { state: "unknown", detail: "media_context_not_validated" };
+  operations.conversation_history =
+    operations.read_private_messages.state === "available"
+      ? { state: "available" }
+      : { state: "unknown", detail: "conversation_history_not_validated" };
   return { operations, requestIds };
 }

@@ -1,6 +1,7 @@
 # Community & Inbox architecture
 
-Status: implemented foundation; provider operations and customer enablement remain blocked until external Meta UAT is complete.
+Status: implemented foundation; customer enablement remains gated by the Meta
+permission grant, provider UAT, and production-readiness evidence.
 
 ## Authority and rollout
 
@@ -23,9 +24,17 @@ gates server-side.
 Community messaging is not an extension of the analytics adapter. The
 provider contract in `src/lib/community/provider.ts` requires capability
 discovery for comments, private messages, replies, webhooks, media context,
-and conversation history. The UI must show `unknown` until a capability has
-been discovered and validated for the actual Meta login mode, account type,
-permissions, and version.
+and conversation history. The Meta connection flow requests analytics scopes
+and the explicit Community scopes (`pages_manage_engagement`,
+`pages_manage_metadata`, `pages_messaging`, `instagram_manage_comments`, and
+`instagram_manage_messages`). A customer must reconnect after the Meta app has
+the relevant permissions approved; an existing analytics-only grant does not
+gain messaging access automatically.
+
+Capability validation combines the persisted granted-scope set with a live,
+non-mutating endpoint check. An operation is not shown as available merely
+because the OAuth dialog requested its scope. Webhooks remain gated until the
+callback subscription and operational UAT are complete.
 
 The first release uses bounded polling and catch-up. Webhooks are represented
 in the contract and schema but are not customer-enabled until provider UAT.

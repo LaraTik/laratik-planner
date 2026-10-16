@@ -11,6 +11,17 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-16 — Community permission-aware capability validation
+
+Status: **Implemented; pending release verification.** The Meta connection
+flow now requests the explicit Community permissions in addition to the
+analytics permissions and persists the same scope contract on new OAuth
+connections. Capability validation consumes that granted-scope set, performs a
+non-mutating conversations check for private messaging, and exposes actionable
+missing-scope guidance. Existing analytics-only connections must be reconnected
+after the agency's Meta app permissions are approved; the code does not mark
+unsupported operations available by label alone.
+
 ## 2026-10-16 — Workspace-preserving navigation and provider-reply reconciliation
 
 Status: **Implemented; pending release verification.** The global workspace

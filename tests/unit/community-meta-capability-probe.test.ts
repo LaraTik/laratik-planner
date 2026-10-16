@@ -37,7 +37,7 @@ describe("Meta community capability probe", () => {
     expect(result.operations.read_comments).toEqual({ state: "available" });
     expect(result.operations.reply_comments).toEqual({
       state: "unavailable",
-      detail: "mutation_uat_required",
+      detail: "missing_scope:pages_manage_engagement",
     });
     expect(calls).toHaveLength(1);
     expect(calls[0]?.pathname).toBe("/v26.0/page-1/feed");
@@ -81,5 +81,30 @@ describe("Meta community capability probe", () => {
       state: "unavailable",
       detail: "permission_denied",
     });
+  });
+
+  it("checks private-message access only after the connection has the messaging scope", async () => {
+    const paths: string[] = [];
+    const result = await probeMetaCommunityCapabilities({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      grantedScopes: ["pages_manage_engagement", "pages_messaging"],
+      request: async (url) => {
+        const parsed = new URL(url);
+        paths.push(parsed.pathname);
+        if (parsed.pathname.endsWith("/feed")) {
+          return response({ data: [{ id: "post-1", comments: { data: [] } }] });
+        }
+        return response({ data: [] });
+      },
+    });
+
+    expect(result.operations.reply_comments).toEqual({ state: "available" });
+    expect(result.operations.read_private_messages).toEqual({ state: "available" });
+    expect(result.operations.reply_private_messages).toEqual({ state: "available" });
+    expect(result.operations.media_context).toEqual({ state: "available" });
+    expect(result.operations.conversation_history).toEqual({ state: "available" });
+    expect(paths).toEqual(["/v26.0/page-1/feed", "/v26.0/page-1/conversations"]);
   });
 });
