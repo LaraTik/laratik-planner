@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+import {
+  probeMetaCommunityCapabilities,
+  type MetaCommunityProbeRequest,
+} from "@/lib/community/meta-capability-probe";
+
+function response(
+  body: unknown,
+): MetaCommunityProbeRequest["request"] extends (...args: never[]) => infer R ? R : never {
+  return Promise.resolve({
+    body: JSON.stringify(body),
+    requestId: "request-1",
+  });
+}
+
+describe("Meta community capability probe", () => {
+  it("validates Facebook comment reads without dispatching a mutation", async () => {
+    const calls: URL[] = [];
+    const result = await probeMetaCommunityCapabilities({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      apiVersion: "v26.0",
+      request: async (url) => {
+        calls.push(new URL(url));
+        return response({
+          data: [
+            {
+              id: "post-1",
+              comments: { data: [{ id: "comment-1", message: "hello" }] },
+            },
+          ],
+        });
+      },
+    });
+
+    expect(result.operations.read_comments).toEqual({ state: "available" });
+    expect(result.operations.reply_comments).toEqual({
+      state: "unavailable",
+      detail: "mutation_uat_required",
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.pathname).toBe("/v26.0/page-1/feed");
+    expect(calls[0]?.searchParams.get("access_token")).toBe("secret-token");
+  });
+
+  it("validates Instagram comment reads through media then comments", async () => {
+    const paths: string[] = [];
+    const result = await probeMetaCommunityCapabilities({
+      platform: "instagram",
+      accountId: "ig-1",
+      accessToken: "secret-token",
+      apiVersion: "v26.0",
+      request: async (url) => {
+        const parsed = new URL(url);
+        paths.push(parsed.pathname);
+        if (parsed.pathname.endsWith("/media")) {
+          return response({ data: [{ id: "media-1" }] });
+        }
+        return response({ data: [{ id: "comment-1", text: "hello" }] });
+      },
+    });
+
+    expect(result.operations.read_comments).toEqual({ state: "available" });
+    expect(paths).toEqual(["/v26.0/ig-1/media", "/v26.0/media-1/comments"]);
+  });
+
+  it("records permission failures as unavailable", async () => {
+    const result = await probeMetaCommunityCapabilities({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      request: async () => {
+        const error = new Error("permission denied") as Error & { code?: string };
+        error.code = "permission_denied";
+        throw error;
+      },
+    });
+
+    expect(result.operations.read_comments).toEqual({
+      state: "unavailable",
+      detail: "permission_denied",
+    });
+  });
+});

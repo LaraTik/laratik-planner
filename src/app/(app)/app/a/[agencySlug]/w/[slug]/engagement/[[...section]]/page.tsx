@@ -45,6 +45,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { workspaceBasePath } from "@/lib/urls";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
+import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -104,7 +105,7 @@ async function readMetrics(workspaceId: string) {
     messages,
     reviews,
     channels,
-    capabilities,
+    capabilityRows,
     sends,
     events,
     rules,
@@ -137,7 +138,12 @@ async function readMetrics(workspaceId: string) {
       .from(socialChannels)
       .where(and(eq(socialChannels.workspaceId, workspaceId), eq(socialChannels.isActive, true))),
     db
-      .select({ value: count() })
+      .select({
+        operation: communityCapabilities.operation,
+        state: communityCapabilities.state,
+        checkedAt: communityCapabilities.checkedAt,
+        detail: communityCapabilities.detail,
+      })
       .from(communityCapabilities)
       .where(eq(communityCapabilities.workspaceId, workspaceId)),
     db
@@ -163,7 +169,8 @@ async function readMetrics(workspaceId: string) {
     messages: messages[0]?.value ?? 0,
     reviews: reviews[0]?.value ?? 0,
     channels: channels[0]?.value ?? 0,
-    capabilities: capabilities[0]?.value ?? 0,
+    capabilities: capabilityRows.filter((row) => row.state === "available").length,
+    capabilityRows,
     sends: sends[0]?.value ?? 0,
     events: events[0]?.value ?? 0,
     rules: rules[0]?.value ?? 0,
@@ -763,9 +770,15 @@ function MetricLine({ label, value }: { label: string; value: string }) {
 function ConnectionsScreen({
   t,
   metrics,
+  agencySlug,
+  workspaceSlug,
+  canManage,
 }: {
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
 }) {
   const operationLabels: Record<(typeof OPERATION_KEYS)[number], string> = {
     read_comments: "operationReadComments",
@@ -800,12 +813,19 @@ function ConnectionsScreen({
               <span className="text-label text-fg-secondary">
                 {communityText(t, "lastChecked")}
               </span>
-              <span className="text-label text-fg-muted">—</span>
+              <span className="text-label text-fg-muted">
+                {metrics.capabilityRows[0]?.checkedAt?.toLocaleString() ?? "—"}
+              </span>
             </div>
-            <Button variant="secondary" disabled className="w-full">
-              <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-              {communityText(t, "validate")}
-            </Button>
+            <CapabilityValidationButton
+              agencySlug={agencySlug}
+              workspaceSlug={workspaceSlug}
+              canManage={canManage}
+              validateLabel={communityText(t, "validate")}
+              validatingLabel={communityText(t, "validating")}
+              successLabel={communityText(t, "validationSuccess")}
+              errorLabel={communityText(t, "validationFailed")}
+            />
           </div>
         </Card>
         <Card>
@@ -822,7 +842,23 @@ function ConnectionsScreen({
                 <span className="text-label text-fg-primary">
                   {communityText(t, operationLabels[operation])}
                 </span>
-                <Badge variant="outline">{communityText(t, "unknown")}</Badge>
+                <Badge
+                  variant={
+                    metrics.capabilityRows.find((row) => row.operation === operation)?.state ===
+                    "available"
+                      ? "success"
+                      : metrics.capabilityRows.find((row) => row.operation === operation)?.state ===
+                          "unavailable"
+                        ? "warning"
+                        : "outline"
+                  }
+                >
+                  {communityText(
+                    t,
+                    metrics.capabilityRows.find((row) => row.operation === operation)?.state ??
+                      "unknown",
+                  )}
+                </Badge>
               </div>
             ))}
           </div>
@@ -1133,6 +1169,7 @@ export default async function CommunityEngagementPage({
         reviews: 0,
         channels: 0,
         capabilities: 0,
+        capabilityRows: [],
         sends: 0,
         events: 0,
         rules: 0,
@@ -1185,7 +1222,13 @@ export default async function CommunityEngagementPage({
         ) : currentSection === "analytics" ? (
           <AnalyticsScreen t={t} metrics={metrics} />
         ) : currentSection === "connections" ? (
-          <ConnectionsScreen t={t} metrics={metrics} />
+          <ConnectionsScreen
+            t={t}
+            metrics={metrics}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "team" ? (
           <TeamScreen t={t} metrics={metrics} />
         ) : currentSection === "settings" ? (
