@@ -8,6 +8,7 @@ import { Pencil, UserCheck, UserX } from "lucide-react";
 import { toggleDeactivationAction } from "./actions";
 import { MemberEditDrawer, type MemberEditWorkspace } from "./member-edit-drawer";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { roleKey, roleLabel } from "@/lib/auth/role-labels";
 
 type MemberRow = {
   id: string;
@@ -97,6 +98,12 @@ export function MemberList({
       }
     : null;
 
+  const roleName = (role: string) => {
+    const key = roleKey(role);
+    const translated = t(key);
+    return translated === key ? roleLabel(role) : translated;
+  };
+
   return (
     <>
       {error ? (
@@ -112,119 +119,160 @@ export function MemberList({
           {t("users.memberList.empty")}
         </p>
       ) : (
-        <ul className="divide-border divide-y" data-testid="users-member-list">
-          {members.map((m) => {
-            const active = m.status === "active";
-            const canEdit = active; // deactivated members are not editable here
-            // Per-workspace role chips so the user can see at a
-            // glance which workspaces a member is in. Mirrors the
-            // `Roles` column on the workspace Team page so the two
-            // surfaces look consistent.
-            const memberRoles = rolesByUser[m.id] ?? {};
-            const assignedWorkspaceIds = Object.keys(memberRoles).filter((wid) => {
-              const list = memberRoles[wid];
-              return Array.isArray(list) && list.length > 0;
-            });
-            return (
-              <li
-                key={m.id}
-                className="text-body flex flex-col gap-3 py-3 sm:flex-row sm:flex-wrap sm:items-center"
-                data-testid={`users-member-row-${m.id}`}
-              >
-                <div className="bg-surface-subtle text-fg-primary text-label flex h-8 w-8 shrink-0 items-center justify-center rounded-full font-semibold">
-                  {m.name.charAt(0).toUpperCase()}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-fg-primary truncate font-semibold">{m.name}</p>
-                  <p className="text-label text-fg-muted truncate">
-                    {m.email} · {t("users.memberList.joined", { date: m.joinedAt })}
-                  </p>
-                  {assignedWorkspaceIds.length > 0 ? (
-                    <ul
-                      className="mt-1 flex flex-wrap items-center gap-1"
-                      data-testid={`users-member-roles-${m.id}`}
-                    >
-                      {assignedWorkspaceIds.slice(0, 3).map((wid) => {
-                        const wsName = workspaces.find((w) => w.id === wid)?.name ?? "";
-                        const roles = memberRoles[wid] ?? [];
-                        return (
-                          <li key={wid} className="contents">
-                            <Badge
-                              variant="info"
-                              className="font-normal"
-                              title={wsName ? `${wsName}: ${roles.join(", ")}` : roles.join(", ")}
-                            >
-                              <span className="truncate">
-                                {wsName ? `${wsName}: ${roles.join(", ")}` : roles.join(", ")}
-                              </span>
-                            </Badge>
-                          </li>
-                        );
-                      })}
-                      {assignedWorkspaceIds.length > 3 ? (
-                        <Badge variant="default" className="font-normal">
-                          +{assignedWorkspaceIds.length - 3}
-                        </Badge>
-                      ) : null}
-                    </ul>
-                  ) : null}
-                </div>
-                {/* Status pills + action buttons collapse below the
+        <>
+          <div className="bg-surface-subtle border-border text-label text-fg-secondary hidden border-b px-4 py-3 font-semibold tracking-wide uppercase lg:grid lg:grid-cols-[minmax(170px,1.25fr)_minmax(80px,0.65fr)_minmax(120px,1fr)_80px_minmax(170px,1.2fr)] lg:items-center lg:gap-4">
+            <span>{t("users.memberList.colPerson")}</span>
+            <span>{t("users.memberList.colAgencyRole")}</span>
+            <span>{t("users.memberList.colWorkspaceAccess")}</span>
+            <span>{t("users.memberList.colLastActive")}</span>
+            <span className="text-end">{t("users.memberList.colStatusActions")}</span>
+          </div>
+          <ul className="divide-border divide-y" data-testid="users-member-list">
+            {members.map((m) => {
+              const active = m.status === "active";
+              const canEdit = active; // deactivated members are not editable here
+              // Per-workspace role chips so the user can see at a
+              // glance which workspaces a member is in. Mirrors the
+              // `Roles` column on the workspace Team page so the two
+              // surfaces look consistent.
+              const memberRoles = rolesByUser[m.id] ?? {};
+              const assignedWorkspaceIds = Object.keys(memberRoles).filter((wid) => {
+                const list = memberRoles[wid];
+                return Array.isArray(list) && list.length > 0;
+              });
+              return (
+                <li
+                  key={m.id}
+                  className="text-body flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center lg:grid lg:grid-cols-[minmax(170px,1.25fr)_minmax(80px,0.65fr)_minmax(120px,1fr)_80px_minmax(170px,1.2fr)] lg:gap-4"
+                  data-testid={`users-member-row-${m.id}`}
+                >
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="bg-primary-subtle text-primary text-label flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-semibold">
+                      {m.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-fg-primary truncate font-semibold">{m.name}</p>
+                      <p className="text-label text-fg-secondary truncate">{m.email}</p>
+                      <p className="text-label text-fg-muted lg:hidden">
+                        {t("users.memberList.joined", { date: m.joinedAt })}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="hidden min-w-0 lg:block">
+                    {m.isAgencyAdmin ? (
+                      <Badge variant="primary">{t("users.memberList.admin")}</Badge>
+                    ) : (
+                      <span className="text-label text-fg-muted">{t("users.roleNonAdmin")}</span>
+                    )}
+                  </div>
+
+                  <div className="min-w-0 ps-12 sm:ps-0">
+                    <p className="text-label text-fg-muted mb-1 lg:hidden">
+                      {t("users.memberList.colWorkspaceAccess")}
+                    </p>
+                    {assignedWorkspaceIds.length > 0 ? (
+                      <ul
+                        className="mt-1 flex flex-wrap items-center gap-1"
+                        data-testid={`users-member-roles-${m.id}`}
+                      >
+                        {assignedWorkspaceIds.slice(0, 3).map((wid) => {
+                          const wsName = workspaces.find((w) => w.id === wid)?.name ?? "";
+                          const roles = memberRoles[wid] ?? [];
+                          return (
+                            <li key={wid} className="contents">
+                              <Badge
+                                variant="info"
+                                className="font-normal"
+                                title={
+                                  wsName
+                                    ? `${wsName}: ${roles.map(roleName).join(", ")}`
+                                    : roles.map(roleName).join(", ")
+                                }
+                              >
+                                <span className="truncate">
+                                  {wsName
+                                    ? `${wsName}: ${roles.map(roleName).join(", ")}`
+                                    : roles.map(roleName).join(", ")}
+                                </span>
+                              </Badge>
+                            </li>
+                          );
+                        })}
+                        {assignedWorkspaceIds.length > 3 ? (
+                          <Badge variant="default" className="font-normal">
+                            +{assignedWorkspaceIds.length - 3}
+                          </Badge>
+                        ) : null}
+                      </ul>
+                    ) : m.isAgencyAdmin && active ? (
+                      <Badge variant="info" className="font-normal">
+                        {t("users.memberList.allWorkspaces")}
+                      </Badge>
+                    ) : null}
+                  </div>
+
+                  <div className="text-label text-fg-muted hidden lg:block">
+                    {t("users.memberList.joined", { date: m.joinedAt })}
+                  </div>
+
+                  {/* Status pills + action buttons collapse below the
                     member info on narrow viewports (`sm:flex-row`).
                     On wide viewports the row stays a horizontal pill
                     strip aligned to the right. */}
-                <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-                  {m.isAgencyAdmin ? (
-                    <Badge variant="primary">{t("users.memberList.admin")}</Badge>
-                  ) : null}
-                  <Badge variant={active ? "success" : "default"}>
-                    {active ? t("users.memberList.active") : t("users.memberList.deactivated")}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending || !canEdit}
-                    onClick={() => setEditing(m)}
-                    aria-label={t("users.memberList.editAria", { name: m.name })}
-                    data-testid={`users-member-edit-${m.id}`}
-                  >
-                    <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t("users.memberList.edit")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    disabled={pending}
-                    onClick={() => {
-                      start(async () => {
-                        setError(null);
-                        const result = await toggleDeactivationAction(m.id, active);
-                        if ("error" in result && result.error) setError(result.error);
-                      });
-                    }}
-                    aria-label={
-                      active
-                        ? t("users.memberList.deactivateAria", { name: m.name })
-                        : t("users.memberList.reactivateAria", { name: m.name })
-                    }
-                  >
-                    {active ? (
-                      <>
-                        <UserX className="h-3.5 w-3.5" aria-hidden="true" />
-                        {t("users.memberList.deactivate")}
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
-                        {t("users.memberList.reactivate")}
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                  <div className="flex flex-wrap items-center gap-2 ps-12 sm:ps-0 lg:justify-end">
+                    <span className="text-label text-fg-muted me-auto lg:hidden">
+                      {t("users.memberList.colStatus")}
+                    </span>
+                    <Badge variant={active ? "success" : "default"}>
+                      {active ? t("users.memberList.active") : t("users.memberList.deactivated")}
+                    </Badge>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending || !canEdit}
+                      onClick={() => setEditing(m)}
+                      aria-label={t("users.memberList.editAria", { name: m.name })}
+                      data-testid={`users-member-edit-${m.id}`}
+                    >
+                      <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t("users.memberList.edit")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={pending}
+                      onClick={() => {
+                        start(async () => {
+                          setError(null);
+                          const result = await toggleDeactivationAction(m.id, active);
+                          if ("error" in result && result.error) setError(result.error);
+                        });
+                      }}
+                      aria-label={
+                        active
+                          ? t("users.memberList.deactivateAria", { name: m.name })
+                          : t("users.memberList.reactivateAria", { name: m.name })
+                      }
+                    >
+                      {active ? (
+                        <>
+                          <UserX className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t("users.memberList.deactivate")}
+                        </>
+                      ) : (
+                        <>
+                          <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t("users.memberList.reactivate")}
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </>
       )}
       <MemberEditDrawer
         subject={editingSubject}

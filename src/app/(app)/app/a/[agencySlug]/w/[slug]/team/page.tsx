@@ -2,7 +2,16 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { and, desc, eq, inArray } from "drizzle-orm";
-import { Clock, Filter as FilterIcon, Mail, UserPlus, Users } from "lucide-react";
+import {
+  Clock,
+  Filter as FilterIcon,
+  History,
+  Mail,
+  ShieldCheck,
+  UserPlus,
+  Users,
+  UsersRound,
+} from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import {
@@ -13,17 +22,17 @@ import {
   workspaceMemberships,
   workspaceMembershipRoles,
   workspaces,
+  securityAuditEvents,
 } from "@/lib/db/schema";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { DataTable, type DataTableColumnDef } from "@/components/ui/data-table";
 import { DataTableToolbar, FilterChip } from "@/components/ui/data-table-toolbar";
 import { ListPagination } from "@/components/ui/list-pagination";
 import { EmptyState } from "@/components/feedback/empty-state";
 import { IconTile } from "@/components/workspace/icon-button";
-import { PageHeader } from "@/components/workspace/page-header";
 import { hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
@@ -31,6 +40,7 @@ import { buildListHref, hasActiveFilters, paginate, parseListFilters } from "@/l
 import { MemberEditTrigger } from "./member-edit-trigger";
 import { roleKey } from "@/lib/auth/role-labels";
 import { workspaceBasePath } from "@/lib/urls";
+import { AccessHero, AccessStat, RoleDistribution } from "@/components/team/access-surface";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -78,7 +88,11 @@ function teamColumns(args: {
         <div className="flex flex-wrap gap-1">
           {member.isAgencyAdmin ? <Badge variant="info">{args.t("team.agencyAdmin")}</Badge> : null}
           {member.roles.length === 0 ? (
-            <span className="text-fg-muted">&mdash;</span>
+            member.isAgencyAdmin ? (
+              <span className="text-label text-fg-muted">{args.t("team.allAccess")}</span>
+            ) : (
+              <span className="text-fg-muted">&mdash;</span>
+            )
           ) : (
             member.roles.map((role) => <Badge key={role}>{args.t(roleKey(role))}</Badge>)
           )}
@@ -216,6 +230,7 @@ export default async function WorkspaceTeamPage({
       and(
         eq(agencyMemberships.userId, users.id),
         eq(agencyMemberships.agencyId, workspace.agencyId),
+        eq(agencyMemberships.status, "active"),
       ),
     )
     .where(eq(workspaceMemberships.workspaceId, workspace.id));
@@ -317,6 +332,41 @@ export default async function WorkspaceTeamPage({
     if (!wsBucket.includes(r.role)) wsBucket.push(r.role);
   }
 
+  const roleCounts = new Map<string, number>();
+  for (const member of allMembers.values()) {
+    for (const role of member.roles) roleCounts.set(role, (roleCounts.get(role) ?? 0) + 1);
+  }
+
+  const recentActivity =
+    allMembers.size > 0
+      ? await db
+          .select({
+            id: securityAuditEvents.id,
+            action: securityAuditEvents.action,
+            targetId: securityAuditEvents.targetId,
+            createdAt: securityAuditEvents.createdAt,
+            actorName: users.name,
+            actorEmail: users.email,
+          })
+          .from(securityAuditEvents)
+          .leftJoin(users, eq(users.id, securityAuditEvents.actorId))
+          .where(
+            and(
+              eq(securityAuditEvents.targetType, "user"),
+              inArray(securityAuditEvents.targetId, Array.from(allMembers.keys())),
+              inArray(securityAuditEvents.action, [
+                "member_roles_update",
+                "member_promote_admin",
+                "member_demote_admin",
+                "member_deactivate",
+                "member_reactivate",
+              ]),
+            ),
+          )
+          .orderBy(desc(securityAuditEvents.createdAt))
+          .limit(5)
+      : [];
+
   const filterActive = hasActiveFilters(filters);
   const basePath = `${workspaceBasePath(agencySlug, workspace.slug)}/team`;
   const prevHref =
@@ -348,21 +398,23 @@ export default async function WorkspaceTeamPage({
 
   return (
     <div className="space-y-6" data-testid="workspace-team">
-      <PageHeader
-        eyebrow={workspace.name}
-        title={t("team.title")}
+      <AccessHero
+        tone="workspace"
+        scope={t("team.levelWorkspace")}
+        title={t("team.heroTitle")}
         description={
           <>
-            {t("team.description")}
+            {t("team.heroDescription")}
             <span className="text-label text-fg-muted border-border bg-surface-subtle ms-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 font-semibold">
               <Clock className="h-3 w-3" aria-hidden="true" />
               {workspace.timezone}
             </span>
           </>
         }
+        icon={<UsersRound className="h-6 w-6 sm:h-7 sm:w-7" />}
         action={
           canInvite ? (
-            <Button asChild>
+            <Button asChild size="lg">
               <Link href="/app/users" data-testid="team-invite-cta">
                 <UserPlus className="h-4 w-4" aria-hidden="true" />
                 {t("team.invitePeople")}
@@ -371,6 +423,25 @@ export default async function WorkspaceTeamPage({
           ) : null
         }
       />
+
+      <div className="grid gap-3 lg:grid-cols-[220px_minmax(0,1fr)]">
+        <AccessStat
+          label={t("team.teamSize")}
+          value={allMembers.size}
+          detail={t("team.teamSizeDetail")}
+          icon={<Users className="h-4 w-4" aria-hidden="true" />}
+          tone="info"
+        />
+        <RoleDistribution
+          title={t("team.roleDistribution")}
+          emptyLabel={t("team.roleDistributionEmpty")}
+          roles={WORKSPACE_ROLES.map((role, index) => ({
+            label: t(roleKey(role)),
+            count: roleCounts.get(role) ?? 0,
+            tone: (["primary", "success", "warning", "info", "default"] as const)[index % 5]!,
+          })).filter((role) => role.count > 0)}
+        />
+      </div>
 
       {pendingInvitations.length ? (
         <Card padding="none" className="overflow-hidden" data-testid="team-pending-card">
@@ -415,6 +486,13 @@ export default async function WorkspaceTeamPage({
       ) : null}
 
       <Card padding="none" className="overflow-hidden" data-testid="team-members-card">
+        <CardHeader className="border-border mb-0 border-b px-4 py-4 sm:px-5">
+          <div>
+            <CardTitle>{t("team.membersTitle")}</CardTitle>
+            <p className="text-label text-fg-muted mt-1">{t("team.membersSubtitle")}</p>
+          </div>
+          <Badge variant="info">{filterActive ? paginatedArr.total : allMembers.size}</Badge>
+        </CardHeader>
         <DataTableToolbar
           testIdPrefix="team-toolbar"
           searchPlaceholder={t("team.searchPlaceholder")}
@@ -526,6 +604,82 @@ export default async function WorkspaceTeamPage({
           </>
         )}
       </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card padding="none" className="overflow-hidden" data-testid="team-role-presets">
+          <CardHeader className="border-border mb-0 border-b px-4 py-4 sm:px-5">
+            <div>
+              <CardTitle className="inline-flex items-center gap-2">
+                <ShieldCheck className="text-primary h-4 w-4" aria-hidden="true" />
+                {t("team.rolePresetsTitle")}
+              </CardTitle>
+              <p className="text-label text-fg-muted mt-1">{t("team.rolePresetsDescription")}</p>
+            </div>
+            <Badge variant="outline">{t("team.rolePresetsBadge")}</Badge>
+          </CardHeader>
+          <div className="bg-border grid gap-px sm:grid-cols-2">
+            {WORKSPACE_ROLES.map((role) => (
+              <div key={role} className="bg-surface p-4">
+                <p className="text-body text-fg-primary font-semibold">{t(roleKey(role))}</p>
+                <p className="text-label text-fg-muted mt-1">
+                  {t(`team.roleDescriptions.${role}`)}
+                </p>
+                <Badge variant="default" className="mt-3">
+                  {roleCounts.get(role) ?? 0} {t("team.membersCount")}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card padding="none" className="overflow-hidden" data-testid="team-recent-activity">
+          <CardHeader className="border-border mb-0 border-b px-4 py-4 sm:px-5">
+            <div>
+              <CardTitle className="inline-flex items-center gap-2">
+                <History className="text-primary h-4 w-4" aria-hidden="true" />
+                {t("team.activityTitle")}
+              </CardTitle>
+              <p className="text-label text-fg-muted mt-1">{t("team.activityDescription")}</p>
+            </div>
+            <Badge variant="outline">{recentActivity.length}</Badge>
+          </CardHeader>
+          {recentActivity.length === 0 ? (
+            <p className="text-body text-fg-muted p-5">{t("team.activityEmpty")}</p>
+          ) : (
+            <ul className="divide-border divide-y">
+              {recentActivity.map((activity) => {
+                const targetName = activity.targetId
+                  ? (allMembers.get(activity.targetId)?.name ?? t("team.activityMember"))
+                  : t("team.activityMember");
+                const actorName =
+                  activity.actorName ?? activity.actorEmail ?? t("team.activitySystem");
+                const actionKey = `team.activityActions.${activity.action}`;
+                return (
+                  <li
+                    key={String(activity.id)}
+                    className="flex items-center gap-3 px-4 py-3 sm:px-5"
+                  >
+                    <span
+                      className="bg-primary-subtle text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-semibold"
+                      aria-hidden="true"
+                    >
+                      {actorName.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-body text-fg-primary truncate font-medium">
+                        {t(actionKey, { name: targetName })}
+                      </p>
+                      <p className="text-label text-fg-muted">
+                        {actorName} · {formatDate(activity.createdAt, code, DateFormat.short)}
+                      </p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </Card>
+      </div>
     </div>
   );
 }

@@ -40,7 +40,7 @@ export function InvitationList({
   >({});
 
   if (invitations.length === 0) {
-    return <p className="text-body text-fg-muted">{t("users.invitationList.empty")}</p>;
+    return <p className="text-body text-fg-muted p-4">{t("users.invitationList.empty")}</p>;
   }
 
   return (

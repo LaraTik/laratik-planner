@@ -197,6 +197,25 @@ html[data-theme="light"] {
   --text-button--font-weight: 600;
 }
 
+/* Access-management surfaces use the same restrained gradient language as
+ * the current LaraTik reference: colour establishes scope, while the
+ * semantic tokens keep the treatment readable in light and dark themes. */
+.access-hero {
+  background-image: linear-gradient(110deg, var(--access-hero-start), var(--access-hero-end));
+}
+
+.access-hero-agency {
+  --access-hero-start: color-mix(in srgb, var(--primary-subtle) 88%, var(--surface));
+  --access-hero-end: color-mix(in srgb, var(--primary-subtle) 28%, var(--surface));
+  border-color: color-mix(in srgb, var(--primary) 12%, var(--border));
+}
+
+.access-hero-workspace {
+  --access-hero-start: color-mix(in srgb, var(--info-subtle) 88%, var(--surface));
+  --access-hero-end: color-mix(in srgb, var(--info-subtle) 28%, var(--surface));
+  border-color: color-mix(in srgb, var(--info) 12%, var(--border));
+}
+
 /* Legacy filled links and shell controls still carry `text-white` in a few
  * shared compositions. Keep their foreground tied to the theme token so the
  * dark palette remains readable without changing every caller at once. */

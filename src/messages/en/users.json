@@ -1,12 +1,21 @@
 {
   "title": "User Management",
   "description": "Invite team members, pre-create accounts, assign workspace roles, deactivate departures.",
+  "heroTitle": "Agency User Management",
+  "heroDescription": "Manage everyone in your agency, their global roles, and workspace access across all workspaces.",
+  "levelAgency": "Agency-level",
+  "invitePeople": "Invite people",
   "forbiddenTitle": "Forbidden",
   "forbiddenBody": "Only agency admins can manage users.",
   "backToMyWork": "← Back to My Work",
   "kpiActive": "Active users",
   "kpiPending": "Pending invitations",
   "kpiDeactivated": "Deactivated",
+  "kpiActiveUsers": "Active users",
+  "kpiPendingInvitations": "Pending invitations",
+  "kpiAdmins": "Agency admins",
+  "kpiAdminsDetail": "Full agency access",
+  "kpiDeactivatedUsers": "Deactivated users",
   "addUserTitle": "Add a user",
   "searchPlaceholder": "Search by name or email…",
   "searchLabel": "Search members",
@@ -28,7 +37,11 @@
   "tabInvite": "Send invitation",
   "tabAdd": "Add directly",
   "pendingTitle": "Pending invitations",
+  "pendingSubtitle": "Invitations waiting for a response.",
   "membersTitle": "Members",
+  "membersSubtitle": "Manage agency roles and workspace access from one place.",
+  "invitePanelTitle": "Invite people to agency",
+  "invitePanelDescription": "Choose a path, then assign only the access this person needs.",
   "sendInvite": {
     "emailLabel": "Email",
     "emailHint": "We'll send a one-time link to set their password.",
@@ -286,6 +299,12 @@
     "empty": "No pending invitations."
   },
   "memberList": {
+    "colPerson": "Person",
+    "colAgencyRole": "Agency role",
+    "colWorkspaceAccess": "Workspace access",
+    "colLastActive": "Last active",
+    "colStatus": "Status",
+    "colStatusActions": "Status & actions",
     "joined": "Joined {date}",
     "lastActive": "Last active",
     "activeNow": "Active now",
@@ -293,6 +312,7 @@
     "active": "Active",
     "deactivated": "Deactivated",
     "admin": "Admin",
+    "allWorkspaces": "All workspaces",
     "agencyAdmin": "Agency admin",
     "edit": "Edit",
     "editAria": "Edit {name}",
@@ -302,7 +322,7 @@
     "reactivateAria": "Reactivate {name}",
     "role": "Role",
     "member": "Member",
-    "empty": "No members yet."
+    "empty": "No members match the current filters."
   },
   "memberEdit": {
     "title": "Edit {name}",
