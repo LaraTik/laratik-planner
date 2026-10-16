@@ -97,6 +97,10 @@ export function DataTable<T>({
   "data-testid": dataTestId,
 }: DataTableProps<T>) {
   return (
+    // The ONE horizontal scroll container for this table. Do not wrap a
+    // DataTable in another `overflow-x-auto` — that nests two scroll regions,
+    // and CSS forces `overflow-y` to `auto` whenever `overflow-x` is set,
+    // so the inner momentum scroller swallows vertical page drags on mobile.
     <div className="overflow-x-auto" data-testid={`${dataTestId ?? "data-table"}-wrapper`}>
       <table
         className={cn("w-full border-collapse text-start", className)}

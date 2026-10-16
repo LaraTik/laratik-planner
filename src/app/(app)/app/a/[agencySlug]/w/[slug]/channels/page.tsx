@@ -446,7 +446,7 @@ export default async function ChannelsPage({
 
       {rows.length ? (
         <Card padding="none" className="overflow-hidden">
-          <div className="overflow-x-auto">
+          <div>
             <DataTable
               data-testid="channels-table"
               getRowKey={(row) => row.id}
