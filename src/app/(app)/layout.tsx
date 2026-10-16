@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth/config";
 import {
   getActorWorkspaceRoleIndex,
@@ -10,7 +11,11 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { renderNotificationCopy } from "@/lib/notifications/service";
 import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
-import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
+import {
+  getAccessibleWorkspaceAtPath,
+  getClientWorkspaceAtPath,
+  listSwitcherWorkspaces,
+} from "@/lib/workspaces/context";
 import { getPlatformPrincipal } from "@/lib/auth/platform-access";
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import { listActiveGrantsForActor } from "@/lib/support";
@@ -32,6 +37,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import type { AppShellChrome } from "@/components/app-shell/app-shell";
 import { getThemePreference } from "@/lib/theme/server";
 import { canExposeCommunityInboxForAgency } from "@/lib/community/service";
+import { parseWorkspacePath } from "@/lib/urls";
 
 /**
  * Authenticated app shell — wraps every page under (app)/*.
@@ -58,7 +64,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/signin");
   }
   const ctx = await resolveActiveAgencyContext({ actor });
-  const agencyId = ctx?.agencyId ?? null;
+  let agencyId = ctx?.agencyId ?? null;
+
+  // A canonical workspace URL is already tenant-qualified. If the signed
+  // active-agency cookie has expired, validate that URL through the same
+  // membership-gated workspace lookup used by the route layout so the shell
+  // can still render the correct agency/workspace context. This keeps direct
+  // links and workspace switching usable without trusting a client assertion.
+  const requestPath = (await headers()).get("x-pathname") ?? "";
+  const workspacePath = parseWorkspacePath(requestPath);
+  if (!agencyId && workspacePath) {
+    const internalWorkspace = await getAccessibleWorkspaceAtPath(
+      actor,
+      workspacePath.agencySlug,
+      workspacePath.workspaceSlug,
+    );
+    const clientWorkspace = internalWorkspace
+      ? null
+      : await getClientWorkspaceAtPath(
+          actor,
+          workspacePath.agencySlug,
+          workspacePath.workspaceSlug,
+        );
+    agencyId = internalWorkspace?.agencyId ?? clientWorkspace?.agencyId ?? null;
+  }
   const platformPrincipal = await getPlatformPrincipal(actor);
   const platformAccess: PlatformNavigationAccess = {
     canEnter: platformPrincipal?.permissions.has("platform.console.read") === true,
@@ -118,7 +147,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const [notifications, unreadCount, switcher, agencyOptions, themePreference] = await Promise.all([
     getCachedNotificationsForUser(actor, 10),
     getCachedUnreadCount(actor),
-    listSwitcherWorkspaces(actor),
+    listSwitcherWorkspaces(actor, agencyId ?? undefined),
     listActorAgencies(actor),
     getThemePreference(actor.id),
   ]);

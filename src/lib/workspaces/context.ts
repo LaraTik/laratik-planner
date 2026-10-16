@@ -260,9 +260,10 @@ export async function findReachableWorkspacesBySlug(
 
 export async function listSwitcherWorkspaces(
   actor: Actor,
+  requestedAgencyId?: string,
 ): Promise<{ options: SwitcherWorkspace[]; isAdmin: boolean }> {
-  const ctx = await resolveActiveAgencyContext({ actor });
-  const agencyId = ctx?.agencyId ?? null;
+  const ctx = requestedAgencyId ? null : await resolveActiveAgencyContext({ actor });
+  const agencyId = requestedAgencyId ?? ctx?.agencyId ?? null;
   if (!agencyId) return { options: [], isAdmin: false };
   const isAdmin = await isAgencyAdmin(actor, agencyId);
 

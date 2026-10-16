@@ -64,6 +64,7 @@ function readInboundRequestId(req: NextRequest): string | null {
 function withRequestHeaders(req: NextRequest, requestId: string): Headers {
   const requestHeaders = new Headers(req.headers);
   requestHeaders.set("x-request-id", requestId);
+  requestHeaders.set("x-pathname", req.nextUrl.pathname);
   return requestHeaders;
 }
 
