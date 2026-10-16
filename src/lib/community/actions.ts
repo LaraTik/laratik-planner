@@ -1,10 +1,12 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
+import { workspaceBasePath } from "@/lib/urls";
 import {
   CommunityAccessError,
   setAgencyCommunityInboxEnabled,
@@ -45,9 +47,11 @@ export async function toggleWorkspaceCommunityInbox(
   const workspace = await getAccessibleWorkspaceAtPath(actor, agencySlug, workspaceSlug);
   if (!workspace) return { error: "workspace-not-found" };
   const enabled = formData.get("enabled") === "true";
+  const engagementPath = `${workspaceBasePath(agencySlug, workspaceSlug)}/engagement`;
   try {
     await setWorkspaceCommunityInboxEnabled(actor, workspace, enabled);
-    revalidatePath(`${formData.get("basePath") ?? ""}/engagement`);
+    revalidatePath(engagementPath);
+    redirect(engagementPath);
     return { ok: true };
   } catch (error) {
     if (error instanceof CommunityAccessError) return { error: error.message, code: error.code };
