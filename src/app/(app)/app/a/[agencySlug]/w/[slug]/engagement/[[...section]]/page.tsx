@@ -919,14 +919,12 @@ function ConnectionsScreen({
   metrics,
   agencySlug,
   workspaceSlug,
-  basePath,
   canManage,
 }: {
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
   agencySlug: string;
   workspaceSlug: string;
-  basePath: string;
   canManage: boolean;
 }) {
   const operationLabels: Record<(typeof OPERATION_KEYS)[number], string> = {
@@ -954,7 +952,7 @@ function ConnectionsScreen({
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
         <p className="text-label">{communityText(t, "connectionsDescription")}</p>
         <Link
-          href={`${basePath}/channels`}
+          href={`${workspaceBasePath(agencySlug, workspaceSlug)}/channels`}
           className="text-warning text-label ms-auto shrink-0 font-semibold underline underline-offset-2"
         >
           {communityText(t, "reconnectMeta")}
@@ -1418,7 +1416,6 @@ export default async function CommunityEngagementPage({
             metrics={metrics}
             agencySlug={agencySlug}
             workspaceSlug={slug}
-            basePath={basePath}
             canManage={canManage}
           />
         ) : currentSection === "team" ? (
