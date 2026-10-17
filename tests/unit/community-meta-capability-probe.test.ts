@@ -50,8 +50,9 @@ describe("Meta community capability probe", () => {
       state: "unavailable",
       detail: "missing_scope:pages_manage_engagement",
     });
-    expect(calls).toHaveLength(1);
+    expect(calls).toHaveLength(2);
     expect(calls[0]?.pathname).toBe("/v26.0/page-1/feed");
+    expect(calls[1]?.pathname).toBe("/v26.0/page-1/conversations");
     expect(calls[0]?.searchParams.get("access_token")).toBe("secret-token");
   });
 
@@ -73,7 +74,11 @@ describe("Meta community capability probe", () => {
     });
 
     expect(result.operations.read_comments).toEqual({ state: "available" });
-    expect(paths).toEqual(["/v26.0/ig-1/media", "/v26.0/media-1/comments"]);
+    expect(paths).toEqual([
+      "/v26.0/ig-1/media",
+      "/v26.0/media-1/comments",
+      "/v26.0/ig-1/conversations",
+    ]);
   });
 
   it("records permission failures as unavailable", async () => {
@@ -94,7 +99,7 @@ describe("Meta community capability probe", () => {
     });
   });
 
-  it("checks private-message access only after the connection has the messaging scope", async () => {
+  it("checks private-message access live even when persisted scopes may be stale", async () => {
     const paths: string[] = [];
     const result = await probeMetaCommunityCapabilities({
       platform: "facebook",
@@ -117,5 +122,25 @@ describe("Meta community capability probe", () => {
     expect(result.operations.media_context).toEqual({ state: "available" });
     expect(result.operations.conversation_history).toEqual({ state: "available" });
     expect(paths).toEqual(["/v26.0/page-1/feed", "/v26.0/page-1/conversations"]);
+  });
+
+  it("keeps private replies gated when a live read succeeds without the required scope", async () => {
+    const result = await probeMetaCommunityCapabilities({
+      platform: "facebook",
+      accountId: "page-1",
+      accessToken: "secret-token",
+      request: async (url) => {
+        const parsed = new URL(url);
+        return parsed.pathname.endsWith("/feed")
+          ? response({ data: [{ id: "post-1", comments: { data: [] } }] })
+          : response({ data: [] });
+      },
+    });
+
+    expect(result.operations.read_private_messages).toEqual({ state: "available" });
+    expect(result.operations.reply_private_messages).toEqual({
+      state: "unavailable",
+      detail: "missing_scope:pages_messaging",
+    });
   });
 });

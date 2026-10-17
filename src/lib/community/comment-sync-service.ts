@@ -132,7 +132,10 @@ async function persistComment(
       externalConversationId: comment.externalRootId,
       externalRootId: comment.externalRootId,
       externalPostId: comment.externalPostId,
-      state: "open",
+      // A provider-authored comment is already a confirmed reply. This must
+      // also apply to a brand-new conversation; otherwise the reply guard
+      // cannot suppress a duplicate response until a later sync update.
+      state: messageState.conversationState,
       lastMessageAt: comment.postedAt,
       metadata: comment.metadata,
       updatedAt: comment.postedAt,

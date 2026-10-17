@@ -68,19 +68,20 @@ function communityScopeOperations(
       detail: missingScopeDetail(commentReplyScopes),
     };
   }
-  if (hasAnyScope(input, privateMessageScopes)) {
-    operations.read_private_messages = { state: "unknown" };
-    operations.reply_private_messages = { state: "unknown" };
-  } else {
-    operations.read_private_messages = {
-      state: "unavailable",
-      detail: missingScopeDetail(privateMessageScopes),
-    };
-    operations.reply_private_messages = {
-      state: "unavailable",
-      detail: missingScopeDetail(privateMessageScopes),
-    };
-  }
+  // Persisted OAuth scopes can be stale after a customer changes the Meta
+  // app configuration or reconnects an account. Always perform the harmless
+  // conversations read below and use the live provider response as the
+  // source of truth for read access. The scope list still gates reply access
+  // because a successful read is not evidence that a mutation is permitted.
+  operations.read_private_messages = {
+    state: "unknown",
+    ...(!hasAnyScope(input, privateMessageScopes)
+      ? { detail: missingScopeDetail(privateMessageScopes) }
+      : {}),
+  };
+  operations.reply_private_messages = hasAnyScope(input, privateMessageScopes)
+    ? { state: "unknown" }
+    : { state: "unavailable", detail: missingScopeDetail(privateMessageScopes) };
   if (hasAnyScope(input, ["pages_manage_metadata"])) {
     operations.webhooks = { state: "unknown", detail: "webhooks_not_enabled" };
   }
@@ -232,19 +233,28 @@ export async function probeMetaCommunityCapabilities(
     operations.reply_comments = { state: "unknown", detail: "comment_read_not_validated" };
   }
 
-  if (operations.read_private_messages.state === "unknown") {
-    operations.read_private_messages = await probePrivateMessages(input, request, requestIds);
-    operations.reply_private_messages =
-      operations.read_private_messages.state === "available"
-        ? { state: "available" }
-        : operations.read_private_messages.state === "unavailable"
-          ? operations.read_private_messages.detail
-            ? {
-                state: "unavailable",
-                detail: operations.read_private_messages.detail,
-              }
-            : { state: "unavailable" }
-          : { state: "unknown", detail: "private_message_read_not_validated" };
+  const privateMessageScopes =
+    input.platform === "facebook"
+      ? ["pages_messaging"]
+      : ["instagram_manage_messages", "instagram_business_manage_messages"];
+  const privateMessageScopeGranted = hasAnyScope(input, privateMessageScopes);
+  const privateMessageRead = await probePrivateMessages(input, request, requestIds);
+  operations.read_private_messages = privateMessageRead;
+  if (privateMessageRead.state === "available") {
+    operations.reply_private_messages = privateMessageScopeGranted
+      ? { state: "available" }
+      : { state: "unavailable", detail: missingScopeDetail(privateMessageScopes) };
+  } else if (privateMessageRead.state === "unavailable") {
+    operations.reply_private_messages = privateMessageScopeGranted
+      ? privateMessageRead.detail
+        ? { state: "unavailable", detail: privateMessageRead.detail }
+        : { state: "unavailable" }
+      : { state: "unavailable", detail: missingScopeDetail(privateMessageScopes) };
+  } else {
+    operations.reply_private_messages = {
+      state: "unknown",
+      detail: "private_message_read_not_validated",
+    };
   }
   operations.media_context =
     operations.read_comments.state === "available"

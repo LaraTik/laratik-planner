@@ -584,6 +584,7 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
     pushMock.mockReset();
+    refreshMock.mockReset();
   });
 
   async function chooseOtherWorkspace() {
@@ -645,5 +646,13 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
     renderWorkspaceSwitcher();
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/planning");
+  });
+
+  it("preserves the advertising route without refreshing the current page", async () => {
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/analytics/advertising");
+    renderWorkspaceSwitcher();
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/analytics/advertising");
+    expect(refreshMock).not.toHaveBeenCalled();
   });
 });
