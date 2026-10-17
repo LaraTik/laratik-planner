@@ -34,7 +34,11 @@ import {
   canReplyInCommunityInbox,
   getCommunityWorkspaceAccess,
 } from "@/lib/community/service";
-import { firstCapabilityDetail, missingCapabilityScopes } from "@/lib/community/capabilities";
+import {
+  firstCapabilityDetail,
+  mergeCapabilityRows,
+  missingCapabilityScopes,
+} from "@/lib/community/capabilities";
 import { db } from "@/lib/db";
 import {
   communityAutomationRules,
@@ -206,6 +210,8 @@ async function readMetrics(workspaceId: string) {
       .limit(100),
   ]);
 
+  const mergedCapabilityRows = mergeCapabilityRows(capabilityRows);
+
   const inboxItems = Array.from(
     new Map(
       inboxRows.map((row) => [
@@ -229,8 +235,8 @@ async function readMetrics(workspaceId: string) {
     messages: messages[0]?.value ?? 0,
     reviews: reviews[0]?.value ?? 0,
     channels: channels[0]?.value ?? 0,
-    capabilities: capabilityRows.filter((row) => row.state === "available").length,
-    capabilityRows,
+    capabilities: mergedCapabilityRows.filter((row) => row.state === "available").length,
+    capabilityRows: mergedCapabilityRows,
     sends: sends[0]?.value ?? 0,
     syncStates,
     events: events[0]?.value ?? 0,

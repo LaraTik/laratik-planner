@@ -3,6 +3,7 @@ import {
   COMMUNITY_OPERATIONS,
   capabilityAvailability,
   firstCapabilityDetail,
+  mergeCapabilityRows,
   type CommunityCapability,
 } from "@/lib/community/capabilities";
 
@@ -28,5 +29,33 @@ describe("community capability discovery", () => {
     );
     expect(firstCapabilityDetail(" , read_not_implemented ")).toBe("read_not_implemented");
     expect(firstCapabilityDetail(null)).toBeUndefined();
+  });
+
+  it("prefers the newest available result when a workspace has multiple connections", () => {
+    const older = new Date("2026-10-17T04:57:08.000Z");
+    const newer = new Date("2026-10-17T05:06:49.000Z");
+    expect(
+      mergeCapabilityRows([
+        {
+          operation: "reply_comments",
+          state: "unavailable",
+          checkedAt: older,
+          detail: "missing_scope:pages_manage_engagement",
+        },
+        {
+          operation: "reply_comments",
+          state: "available",
+          checkedAt: newer,
+          detail: null,
+        },
+      ]),
+    ).toEqual([
+      {
+        operation: "reply_comments",
+        state: "available",
+        checkedAt: newer,
+        detail: null,
+      },
+    ]);
   });
 });
