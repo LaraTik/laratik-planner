@@ -8,6 +8,7 @@ import {
   agencyMemberships,
   agencyTasks,
   taskActivityEvents,
+  taskAttachments,
   users,
   workspaces,
 } from "@/lib/db/schema";
@@ -166,6 +167,65 @@ describe("agency tasks", () => {
         mimeType: "image/*",
       }),
     ]);
+  });
+
+  it("still lists file attachments when agency storage cannot sign a read URL", async () => {
+    const { agency, creator, other } = await fixture();
+    const task = await createTask(
+      { id: creator.id },
+      { agencyId: agency.id, title: "Review file" },
+    );
+    await db.insert(taskAttachments).values({
+      agencyId: agency.id,
+      taskId: task.id,
+      bucket: "planner-media",
+      objectKey: `agencies/${agency.id}/tasks/${task.id}/brief.pdf`,
+      externalUrl: null,
+      originalName: "brief.pdf",
+      mimeType: "application/pdf",
+      byteSize: 2048,
+      status: "ready",
+      uploadedBy: creator.id,
+    });
+
+    // The fixture never provisions agency storage, so signing must degrade
+    // to an unavailable URL instead of throwing. Throwing here took down the
+    // whole /app/tasks/[id] page for every viewer of a task with an upload.
+    const attachments = await listTaskAttachmentUrls({ id: other.id }, task.id);
+    expect(attachments).toEqual([
+      expect.objectContaining({
+        originalName: "brief.pdf",
+        externalUrl: null,
+        url: null,
+        urlUnavailableReason: "storage_configuration",
+      }),
+    ]);
+  });
+
+  it("keeps external links usable when agency storage cannot sign a read URL", async () => {
+    const { agency, creator, other } = await fixture();
+    const task = await createTask({ id: creator.id }, { agencyId: agency.id, title: "Mixed" });
+    await db.insert(taskAttachments).values({
+      agencyId: agency.id,
+      taskId: task.id,
+      bucket: "planner-media",
+      objectKey: `agencies/${agency.id}/tasks/${task.id}/frame.png`,
+      externalUrl: null,
+      originalName: "frame.png",
+      mimeType: "image/png",
+      byteSize: 1024,
+      status: "ready",
+      uploadedBy: creator.id,
+    });
+    await createTaskAttachmentLink({ id: creator.id }, task.id, {
+      url: "https://example.com/style-guide.pdf",
+    });
+
+    const attachments = await listTaskAttachmentUrls({ id: other.id }, task.id);
+    // One unresolvable file must not cost the link its real URL.
+    expect(attachments.map((a) => a.originalName).sort()).toEqual(["frame.png", "style-guide.pdf"]);
+    expect(attachments.find((a) => a.externalUrl)?.url).toBe("https://example.com/style-guide.pdf");
+    expect(attachments.find((a) => !a.externalUrl)?.url).toBeNull();
   });
 
   it("filters the global calendar by workspace and task assignee", async () => {

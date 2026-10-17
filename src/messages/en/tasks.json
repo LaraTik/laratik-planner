@@ -47,6 +47,8 @@
   "archiveDialogPending": "Archiving…",
   "restore": "Restore task",
   "attachments": "Attachments",
+  "attachmentUnavailable": "Preview unavailable",
+  "attachmentStorageNotConfigured": "Preview unavailable — storage not configured",
   "addAttachment": "Add attachment",
   "uploading": "Uploading…",
   "uploadReady": "Uploaded",

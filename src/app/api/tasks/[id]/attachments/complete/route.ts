@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { completeTaskAttachment } from "@/lib/tasks/attachments";
 import { PermissionDeniedError } from "@/lib/auth/policy";
+import { StorageConfigurationError, StorageUnavailableError } from "@/lib/storage/r2-adapter";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -24,6 +25,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     if (error instanceof PermissionDeniedError)
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    // Storage misconfiguration is a handled state, not a crash. Mirrors
+    // /api/uploads/complete so every upload surface answers 503 the same way
+    // instead of returning a raw 500 for a client-fixable condition.
+    if (error instanceof StorageConfigurationError || error instanceof StorageUnavailableError)
+      return NextResponse.json(
+        { error: "Storage is not configured", code: "storage.unavailable" },
+        { status: 503 },
+      );
     if (error instanceof Error && error.message.startsWith("task."))
       return NextResponse.json({ error: error.message }, { status: 400 });
     throw error;

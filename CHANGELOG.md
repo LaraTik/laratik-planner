@@ -12,6 +12,69 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — opening a task with an uploaded attachment could 500 for the whole agency
+
+The reported symptom was "some users get an exception when opening their own
+tasks". Only _some_: tasks whose attachment list contained an **uploaded
+file** rendered a server error, while tasks with no attachments, or with
+only external links, were fine.
+
+- **Root cause: object storage was treated as a dependency of the task, when
+  it is only a dependency of the attachment's link.**
+  `listTaskAttachmentUrls` resolves the agency storage context in order to
+  sign a read URL, and `getAgencyStorageContext` throws
+  `StorageConfigurationError` whenever the agency has no storage row, the
+  row is disabled, or the platform provider is not healthy. That throw
+  escaped `listTaskAttachmentUrls`, and `/app/tasks/[id]` called it inside an
+  unguarded `Promise.all` — so one un-signable attachment destroyed the
+  entire page: title, status, assignee, description, and full activity
+  history all became a 500. Every other storage-touching route in the repo
+  already caught this and returned a 503 (`/api/uploads/sign`,
+  `/api/uploads/complete`, `/api/uploads/proxy`,
+  `/api/storage/objects/[id]`); the Server Component was the one consumer
+  that did not.
+
+  Fixed at the service layer rather than at the call site, so every current
+  and future caller benefits. A storage failure now degrades that
+  attachment to `url: null` plus a `urlUnavailableReason` of
+  `storage_configuration` or `storage_unavailable` — a union, not a
+  boolean, because the two are reported and described differently. The
+  failure is still reported through `captureError`, so it stays visible to
+  operators instead of being silently swallowed. External links never touch
+  the provider, so they keep their real URL even when storage is entirely
+  unavailable, and one un-signable object no longer costs the other
+  attachments their URLs.
+
+  Making `url` nullable is what forced the UI to handle the state: the
+  detail page now renders an explicit "preview unavailable" row instead of a
+  dead "Open" link, and filters un-resolvable assets out of
+  `MediaAssetGallery` rather than handing `<img src={null}>` a broken tile.
+
+- **Same gap on the write path, generalized to the whole feature.**
+  `/api/tasks/[id]/attachments/sign`, `/complete`, and `/proxy` also
+  re-threw `StorageConfigurationError` straight into a raw 500, while their
+  `/api/uploads/*` siblings returned a clean
+  `503 { code: "storage.unavailable" }`. All three now mirror the
+  established pattern, so storage misconfiguration is one handled state
+  across every upload surface instead of two unrelated failure modes.
+
+- **Second defect on the same page: a blanket `catch { notFound() }` turned
+  real server errors into "not found".**
+  `getTaskDetail` was wrapped in `catch { notFound() }`, which also swallowed
+  database blips and genuine bugs and rendered them as a 404 — hiding
+  incidents from operators behind a plausible-looking "no such task". Only
+  `PermissionDeniedError` now maps to 404 (preserving the anti-enumeration
+  intent: denied and absent stay indistinguishable); anything unexpected is
+  re-thrown to the route's error boundary.
+
+- **`tests/integration/tasks.test.ts`** now covers a task whose file
+  attachment cannot be signed (asserts the degraded shape instead of a
+  throw) and a mixed file + external-link task (asserts the link keeps its
+  URL). The pre-existing external-link test already documented the intended
+  behaviour — "without storage configuration" — and passed throughout,
+  which is precisely why the file path went unnoticed: the guard only ever
+  covered half the cases.
+
 ### Fixed — the Publish tab's Platform preview was frozen on the last saved copy, and showed a permanent warning it could never clear
 
 The reported symptom was "the Platform preview is not working". It was

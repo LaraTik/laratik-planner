@@ -835,6 +835,37 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-17 — a read must not fail because one of its enrichments failed
+
+Opening a task with an uploaded attachment returned a 500 for the whole page.
+`listTaskAttachmentUrls` signs a read URL through `getAgencyStorageContext`,
+which throws `StorageConfigurationError` whenever the agency has no storage
+row, the row is disabled, or the platform provider is unhealthy — and
+`/app/tasks/[id]` called it in an unguarded `Promise.all`. The general rule:
+
+- **Storage is a dependency of the _link_, not of the record.** A signed URL
+  is an enrichment layered onto data that was already read and authorized.
+  When the enrichment fails, return the record with that field degraded
+  (`url: null` + a reason), never throw away the whole read. Every API
+  route already returned 503 here; Server Components must degrade rather than
+  500, because there is no route boundary to catch them.
+- **Degrade with a reason union, not a boolean and not a bare `null`.**
+  `urlUnavailableReason: "storage_configuration" | "storage_unavailable"` is
+  distinguishable at the call site and cannot be renamed into the wrong
+  sense. Returning `null` alone would force every caller to guess.
+- **Unavailable ≠ unauthorized.** `PermissionDeniedError` still throws. An
+  unreadable file is data availability; a denied task is a security decision.
+  The two must never share a signal, and an availability fix must never
+  become an authorization bypass.
+- **A caught error must only be translated when it is the signal you meant.**
+  `catch { notFound() }` also swallowed DB blips and bugs and rendered them
+  as "not found". Map `PermissionDeniedError` → 404 (anti-enumeration: denied
+  and absent stay indistinguishable) and re-throw everything else.
+- **Test the case your guard did not cover.** The suite already had
+  "external task links work without storage configuration". External links
+  bypass the provider, so that test passed forever while the _file_ path was
+  unprotected. When a fix is conditional, test both branches.
+
 ### 2026-10-07 — a share link is never built from the request origin
 
 Production runs behind Traefik with `HOSTNAME=0.0.0.0` (see `Dockerfile`), so

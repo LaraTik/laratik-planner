@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
+  AlertTriangle,
   CalendarClock,
   CheckCircle2,
   Clock3,
@@ -20,6 +21,7 @@ import {
   type TaskStatus,
 } from "@/lib/tasks/service";
 import { listTaskAttachmentUrls } from "@/lib/tasks/attachments";
+import { PermissionDeniedError } from "@/lib/auth/policy";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { PageHeader } from "@/components/workspace/page-header";
@@ -54,18 +56,31 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
   const context = await resolveActiveAgencyContext({ actor });
   if (!context) redirect("/setup");
   const taskId = (await params).id;
-  let task;
+  let task: Awaited<ReturnType<typeof getTaskDetail>>;
   try {
     task = await getTaskDetail(actor, taskId);
-  } catch {
-    notFound();
+  } catch (error) {
+    // Only a genuine "denied or absent" signal becomes a 404. A blanket
+    // `catch { notFound() }` also swallowed database blips and genuine bugs
+    // and rendered them as "not found", which hides real incidents from
+    // operators. Anything unexpected is re-thrown so it reaches the route's
+    // error boundary and the observability stack.
+    if (error instanceof PermissionDeniedError) notFound();
+    throw error;
   }
-  if (!task) notFound();
   const [members, workspaces, attachments] = await Promise.all([
     listAgencyMembers(task.agencyId),
     listAgencyWorkspaces(task.agencyId),
     listTaskAttachmentUrls(actor, task.id),
   ]);
+  // Only attachments that are both previewable *and* actually resolved to a
+  // URL may reach the gallery: an unresolvable storage provider yields
+  // `url: null`, and handing that to <img src> would render a broken tile.
+  const previewable = attachments.filter(
+    (attachment): attachment is typeof attachment & { url: string } =>
+      attachment.url !== null &&
+      (attachment.mimeType.startsWith("image/") || attachment.mimeType.startsWith("video/")),
+  );
   const durationMinutes = taskDurationMinutes(task.startedAt, task.completedAt);
   const durationLabel =
     durationMinutes === null ? t("tasks.notStarted") : formatTaskDuration(durationMinutes, t);
@@ -214,25 +229,15 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
             </div>
             {attachments.length ? (
               <div className="mt-5 space-y-4">
-                {attachments.some(
-                  (attachment) =>
-                    attachment.mimeType.startsWith("image/") ||
-                    attachment.mimeType.startsWith("video/"),
-                ) ? (
+                {previewable.length ? (
                   <MediaAssetGallery
                     title={t("tasks.attachments")}
-                    assets={attachments
-                      .filter(
-                        (attachment) =>
-                          attachment.mimeType.startsWith("image/") ||
-                          attachment.mimeType.startsWith("video/"),
-                      )
-                      .map((attachment) => ({
-                        id: attachment.id,
-                        url: attachment.url,
-                        label: attachment.originalName,
-                        kind: attachment.mimeType.startsWith("video/") ? "video" : "image",
-                      }))}
+                    assets={previewable.map((attachment) => ({
+                      id: attachment.id,
+                      url: attachment.url,
+                      label: attachment.originalName,
+                      kind: attachment.mimeType.startsWith("video/") ? "video" : "image",
+                    }))}
                   />
                 ) : null}
                 <ul className="space-y-2">
@@ -247,15 +252,29 @@ export default async function TaskDetailPage({ params }: { params: Promise<{ id:
                           {attachment.originalName}
                         </bdi>
                       </span>
-                      <a
-                        href={attachment.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-label text-primary inline-flex min-h-9 items-center gap-1 font-semibold underline-offset-4 hover:underline"
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
-                        {t("common.rowActionOpen")}
-                      </a>
+                      {attachment.url ? (
+                        <a
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-label text-primary inline-flex min-h-9 items-center gap-1 font-semibold underline-offset-4 hover:underline"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t("common.rowActionOpen")}
+                        </a>
+                      ) : (
+                        // Storage is unavailable for this file. Say so instead
+                        // of rendering a dead "Open" link — the attachment is
+                        // real, its preview link is not.
+                        <span className="text-label text-fg-muted inline-flex min-h-9 items-center gap-1">
+                          <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+                          {t(
+                            attachment.urlUnavailableReason === "storage_configuration"
+                              ? "tasks.attachmentStorageNotConfigured"
+                              : "tasks.attachmentUnavailable",
+                          )}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>

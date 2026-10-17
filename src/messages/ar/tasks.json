@@ -47,6 +47,8 @@
   "archiveDialogPending": "جارٍ الأرشفة…",
   "restore": "استعادة المهمة",
   "attachments": "المرفقات",
+  "attachmentUnavailable": "المعاينة غير متاحة",
+  "attachmentStorageNotConfigured": "المعاينة غير متاحة — التخزين غير مُهيّأ",
   "addAttachment": "إضافة مرفق",
   "uploading": "جارٍ الرفع…",
   "uploadReady": "تم الرفع",

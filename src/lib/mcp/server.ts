@@ -247,7 +247,11 @@ function safeTaskAttachment(attachment: {
   status: string;
   uploadedBy: string;
   createdAt: Date;
-  url?: string | undefined;
+  // `null` is a real state, not a type error: an attachment whose storage
+  // provider cannot sign a read URL still exists and is still reported, it
+  // simply has no link. The `url` key is then omitted rather than emitted
+  // as null, so MCP clients never receive a half-formed link.
+  url?: string | null | undefined;
 }) {
   return {
     id: attachment.id,
