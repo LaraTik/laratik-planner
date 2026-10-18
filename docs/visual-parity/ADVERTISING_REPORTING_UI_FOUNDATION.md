@@ -9,17 +9,17 @@ for tokens, shell behavior, bilingual support, and accessibility.
 
 ## Parity review
 
-| Reference expectation          | LaraTik implementation                                        | Decision                                                   |
-| ------------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------- |
-| Persistent application sidebar | Existing workspace-aware LaraTik sidebar                      | Keep as the only app-level navigation rail                 |
-| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm   | Match density without importing the reference's dark theme |
-| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency          | Keep objective-aware and unavailable-safe                  |
-| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback | Preserve as a lightweight dependency-free chart foundation |
-| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result | Added to align more closely with the reference             |
-| AI/action insight rail         | Evidence-backed Action Center and intelligence panels         | Keep actions read-only and link to the Campaigns section   |
-| Campaign/ad/ad-set detail      | Separate URL-driven report sections                           | Do not render all explorers as one long page               |
-| Audience and targeting         | Dedicated Audience and Targeting sections                     | Keep provider limitations and unavailable states explicit  |
-| Technical metric detail        | Progressive-disclosure Metric definitions panel               | Keep available without dominating the first scan           |
+| Reference expectation          | LaraTik implementation                                           | Decision                                                                   |
+| ------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch | Keep Advertising sections in the primary rail; use the mobile drawer below |
+| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm      | Match density without importing the reference's dark theme                 |
+| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency             | Keep objective-aware and unavailable-safe                                  |
+| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback    | Preserve as a lightweight dependency-free chart foundation                 |
+| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result    | Added to align more closely with the reference                             |
+| AI/action insight rail         | Evidence-backed Action Center and intelligence panels            | Keep actions read-only and link to the Campaigns section                   |
+| Campaign/ad/ad-set detail      | Separate URL-driven report sections                              | Do not render all explorers as one long page                               |
+| Audience and targeting         | Dedicated Audience and Targeting sections                        | Keep provider limitations and unavailable states explicit                  |
+| Technical metric detail        | Progressive-disclosure Metric definitions panel                  | Keep available without dominating the first scan                           |
 
 ## Section contract
 
@@ -28,14 +28,22 @@ The reporting route uses `?section=` as its local navigation state:
 - `overview` — data health, six KPIs, trend, objective mix, action center,
   campaign snapshot, audience snapshot, and metric definitions.
 - `campaigns` — campaign-level performance table and pagination.
-- `creatives` — ad-set, ad, and promoted-post performance tables.
+- `reporting` — daily account performance and metric-definition status.
+- `campaigns` — campaign-level performance table and pagination.
+- `adsets` — ad-set-level performance table and pagination.
+- `ads` — ad-level performance table and pagination.
+- `creatives` — promoted-post/creative performance with explicit unavailable state.
 - `audience` — provider-returned audience delivery rows and pagination.
 - `targeting` — readable targeting metadata with an explicit unavailable state.
 
-The persistent sidebar remains responsible for moving between application
-destinations. The reporting section nav is a secondary, page-local navigation;
-it must remain deep-linkable, keyboard reachable, and preserve account, date,
-comparison, search, objective, and status state.
+The persistent sidebar owns the Advertising section hierarchy: Overview,
+Reporting, Campaigns, Ad Sets, Ads, Audience, Creatives, and Targeting. Each
+child is URL-driven and keeps the report parent expanded while active. Each
+view renders only its own data set; the route does not use one long scroll to
+present every explorer. On narrower layouts, the same section links are
+available in the mobile navigation drawer; the compact page-local row remains
+only as a tablet fallback and is hidden on wide desktop to avoid duplicate
+navigation.
 
 ## Shared foundation
 
@@ -59,8 +67,8 @@ must remain provider-agnostic.
 
 ## Interaction and accessibility rules
 
-- Every report-local navigation item has a URL, visible label, active state,
-  and visible focus ring.
+- Every Advertising navigation item has a URL, visible label, active state,
+  and visible focus ring in both the desktop rail and mobile drawer.
 - Sticky filters and section navigation must not obscure focused content.
 - Tables keep local horizontal overflow on narrow screens; the document body
   must not gain horizontal overflow.

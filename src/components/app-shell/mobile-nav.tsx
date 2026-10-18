@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
 import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import {
   Activity,
@@ -12,6 +12,7 @@ import {
   CalendarDays,
   ClipboardList,
   Cloud,
+  FileText,
   Gauge,
   HelpCircle,
   Home,
@@ -30,6 +31,7 @@ import {
   Share2,
   Shield,
   ShieldCheck,
+  Tag,
   UserRound,
   Users,
 } from "lucide-react";
@@ -79,6 +81,7 @@ export function MobileNav({
   labels = {},
 }: MobileNavProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const labelFor = (key: string, fallback: string) => labels[key] ?? fallback;
   // Canonical workspace URL carries BOTH segments — a workspace slug is unique
   // only within an agency, so the tenant is part of the identity. See
@@ -404,6 +407,74 @@ export function MobileNav({
                   label={labelFor("advertising", "Advertising")}
                   active={isActivePath(`${wsBase}/analytics/advertising`, pathname)}
                 />
+                <div
+                  className="border-border col-span-2 ms-4 grid grid-cols-2 gap-2 border-s ps-3"
+                  aria-label={labelFor("advertising", "Advertising")}
+                >
+                  {[
+                    {
+                      section: "overview",
+                      labelKey: "advertisingOverview",
+                      fallback: "Overview",
+                      icon: <LayoutDashboard />,
+                    },
+                    {
+                      section: "reporting",
+                      labelKey: "advertisingReporting",
+                      fallback: "Reporting",
+                      icon: <FileText />,
+                    },
+                    {
+                      section: "campaigns",
+                      labelKey: "advertisingCampaigns",
+                      fallback: "Campaigns",
+                      icon: <Briefcase />,
+                    },
+                    {
+                      section: "adsets",
+                      labelKey: "advertisingAdSets",
+                      fallback: "Ad Sets",
+                      icon: <ClipboardList />,
+                    },
+                    {
+                      section: "ads",
+                      labelKey: "advertisingAds",
+                      fallback: "Ads",
+                      icon: <BarChart3 />,
+                    },
+                    {
+                      section: "creatives",
+                      labelKey: "advertisingCreatives",
+                      fallback: "Creatives",
+                      icon: <ImageIcon />,
+                    },
+                    {
+                      section: "audience",
+                      labelKey: "advertisingAudience",
+                      fallback: "Audience",
+                      icon: <Users />,
+                    },
+                    {
+                      section: "targeting",
+                      labelKey: "advertisingTargeting",
+                      fallback: "Targeting",
+                      icon: <Tag />,
+                    },
+                  ].map((item) => (
+                    <MobileMenuLink
+                      key={item.section}
+                      href={`${wsBase}/analytics/advertising?section=${item.section}`}
+                      icon={item.icon}
+                      label={labelFor(item.labelKey, item.fallback)}
+                      active={isAdvertisingSectionActive(
+                        pathname,
+                        searchParams,
+                        wsBase,
+                        item.section,
+                      )}
+                    />
+                  ))}
+                </div>
                 <MobileMenuLink
                   href={`${wsBase}/brand-kit`}
                   icon={<Package />}
@@ -575,6 +646,16 @@ export function MobileNav({
 
 function mobileLink(href: string, label: string, icon: ReactNode, pathname: string, exact = false) {
   return { href, label, icon, active: isActivePath(href, pathname, { exact }) };
+}
+
+function isAdvertisingSectionActive(
+  pathname: string,
+  searchParams: ReadonlyURLSearchParams,
+  wsBase: string,
+  section: string,
+) {
+  if (pathname !== `${wsBase}/analytics/advertising`) return false;
+  return (searchParams.get("section") ?? "overview") === section;
 }
 
 function BottomNavLink({

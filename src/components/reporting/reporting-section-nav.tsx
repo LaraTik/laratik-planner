@@ -28,7 +28,7 @@ export function ReportingSectionNav({
   return (
     <nav
       aria-label={ariaLabel}
-      className="border-border bg-surface sticky top-[4.5rem] z-10 flex gap-1 overflow-x-auto rounded-[var(--radius-card)] border p-1"
+      className="border-border bg-surface sticky top-[4.5rem] z-10 flex gap-1 overflow-x-auto rounded-[var(--radius-card)] border p-1 xl:hidden"
       data-testid={testId}
     >
       {items.map((item) => (

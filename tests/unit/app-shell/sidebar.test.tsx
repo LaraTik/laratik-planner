@@ -277,6 +277,22 @@ describe("Sidebar (workspace-aware)", () => {
     expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
   });
 
+  it("renders the active Advertising report section inside the persistent sidebar", () => {
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/analytics/advertising");
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("section=campaigns"));
+    render(<Sidebar {...baseProps} />);
+
+    expect(screen.getByRole("link", { name: "Advertising" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Campaigns" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Campaigns" })).toHaveAttribute(
+      "href",
+      "/app/a/acme/w/northstar/analytics/advertising?section=campaigns",
+    );
+  });
+
   it("keeps Planning active across its deep-link routes", () => {
     for (const pathname of [
       "/app/a/acme/w/northstar/planning/monthly",

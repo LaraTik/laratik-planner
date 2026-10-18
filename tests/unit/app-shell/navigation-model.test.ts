@@ -118,6 +118,43 @@ describe("buildWorkspaceNavigation", () => {
     expect(allHrefs).toContain(`${wsBase}/analytics/advertising`);
   });
 
+  it("models Advertising as an expandable report workspace with section deep links", () => {
+    const nav = buildWorkspaceNavigation({
+      wsBase,
+      badges: {},
+      canCreateContent: false,
+      canManage: false,
+      canAccessTrendRadar: false,
+    });
+    const advertising = nav.groups
+      .find((group) => group.key === "understand")
+      ?.items.find((item) => item.key === "advertising");
+
+    expect(advertising?.kind).toBe("expandable");
+    if (advertising?.kind === "expandable") {
+      expect(advertising.children.map((child) => child.key)).toEqual([
+        "advertising-overview",
+        "advertising-reporting",
+        "advertising-campaigns",
+        "advertising-adsets",
+        "advertising-ads",
+        "advertising-creatives",
+        "advertising-audience",
+        "advertising-targeting",
+      ]);
+      if (advertising.children[0]?.kind === "link") {
+        expect(advertising.children[0].href).toBe(
+          `${wsBase}/analytics/advertising?section=overview`,
+        );
+      }
+      if (advertising.children[2]?.kind === "link") {
+        expect(advertising.children[2].href).toBe(
+          `${wsBase}/analytics/advertising?section=campaigns`,
+        );
+      }
+    }
+  });
+
   it("uses one Planning destination for list, board, and calendar views", () => {
     const nav = buildWorkspaceNavigation({
       wsBase,

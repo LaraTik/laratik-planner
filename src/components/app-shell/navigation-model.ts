@@ -80,6 +80,15 @@ export type SidebarLinkSpec = {
   exact?: boolean | undefined;
   /** Treat sibling planning views as one navigation destination. */
   activePrefixes?: string[] | undefined;
+  /** Match a query-string view while keeping the destination path stable. */
+  activeQuery?:
+    | {
+        name: string;
+        value: string;
+        /** Mark this item active when the query key is omitted. */
+        defaultWhenMissing?: boolean;
+      }
+    | undefined;
   /** Test id — auto-derived from key when omitted. */
   testId?: string | undefined;
 };
@@ -240,12 +249,95 @@ export function buildWorkspaceNavigation(input: {
           icon: BarChart3,
         },
         {
-          kind: "link",
+          kind: "expandable",
           key: "advertising",
           href: `${wsBase}/analytics/advertising`,
           label: "Advertising",
           labelKey: "sidebar.advertising",
           icon: Megaphone,
+          activePrefixes: [`${wsBase}/analytics/advertising`],
+          children: [
+            {
+              kind: "link",
+              key: "advertising-overview",
+              href: `${wsBase}/analytics/advertising?section=overview`,
+              label: "Overview",
+              labelKey: "sidebar.advertisingOverview",
+              icon: LayoutDashboard,
+              exact: true,
+              activeQuery: { name: "section", value: "overview", defaultWhenMissing: true },
+            },
+            {
+              kind: "link",
+              key: "advertising-reporting",
+              href: `${wsBase}/analytics/advertising?section=reporting`,
+              label: "Reporting",
+              labelKey: "sidebar.advertisingReporting",
+              icon: FileText,
+              exact: true,
+              activeQuery: { name: "section", value: "reporting" },
+            },
+            {
+              kind: "link",
+              key: "advertising-campaigns",
+              href: `${wsBase}/analytics/advertising?section=campaigns`,
+              label: "Campaigns",
+              labelKey: "sidebar.advertisingCampaigns",
+              icon: Briefcase,
+              exact: true,
+              activeQuery: { name: "section", value: "campaigns" },
+            },
+            {
+              kind: "link",
+              key: "advertising-adsets",
+              href: `${wsBase}/analytics/advertising?section=adsets`,
+              label: "Ad Sets",
+              labelKey: "sidebar.advertisingAdSets",
+              icon: ClipboardList,
+              exact: true,
+              activeQuery: { name: "section", value: "adsets" },
+            },
+            {
+              kind: "link",
+              key: "advertising-ads",
+              href: `${wsBase}/analytics/advertising?section=ads`,
+              label: "Ads",
+              labelKey: "sidebar.advertisingAds",
+              icon: BarChart3,
+              exact: true,
+              activeQuery: { name: "section", value: "ads" },
+            },
+            {
+              kind: "link",
+              key: "advertising-creatives",
+              href: `${wsBase}/analytics/advertising?section=creatives`,
+              label: "Creatives",
+              labelKey: "sidebar.advertisingCreatives",
+              icon: ImageIcon,
+              exact: true,
+              activeQuery: { name: "section", value: "creatives" },
+            },
+            {
+              kind: "link",
+              key: "advertising-audience",
+              href: `${wsBase}/analytics/advertising?section=audience`,
+              label: "Audience",
+              labelKey: "sidebar.advertisingAudience",
+              icon: Users,
+              exact: true,
+              activeQuery: { name: "section", value: "audience" },
+            },
+            {
+              kind: "link",
+              key: "advertising-targeting",
+              href: `${wsBase}/analytics/advertising?section=targeting`,
+              label: "Targeting",
+              labelKey: "sidebar.advertisingTargeting",
+              icon: Tag,
+              exact: true,
+              activeQuery: { name: "section", value: "targeting" },
+            },
+          ],
         },
         {
           kind: "link",

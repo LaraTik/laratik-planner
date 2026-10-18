@@ -5,12 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileNav } from "@/components/app-shell/mobile-nav";
 
 const usePathnameMock = vi.fn<() => string>(() => "/app");
+const useSearchParamsMock = vi.fn<() => URLSearchParams>(() => new URLSearchParams());
 const pushMock = vi.fn();
 const refreshMock = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => useSearchParamsMock(),
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
@@ -68,6 +69,8 @@ const ownerAccess = {
 describe("MobileNav", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
+    useSearchParamsMock.mockReset();
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
     pushMock.mockReset();
     refreshMock.mockReset();
   });
@@ -179,6 +182,29 @@ describe("MobileNav", () => {
     }
     expect(screen.queryByRole("link", { name: "Board" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Calendar" })).toBeNull();
+  });
+
+  it("exposes Advertising sub-navigation and preserves the active report view", async () => {
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/analytics/advertising");
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("section=ads"));
+    const user = userEvent.setup();
+    render(<MobileNav {...baseProps} />);
+
+    await user.click(screen.getByTestId("mobile-navigation-more"));
+
+    expect(screen.getByRole("link", { name: "Advertising" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("link", { name: "Reporting" })).toHaveAttribute(
+      "href",
+      "/app/a/acme/w/northstar/analytics/advertising?section=reporting",
+    );
+    expect(screen.getByRole("link", { name: "Ads" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Ad Sets" })).toHaveAttribute(
+      "href",
+      "/app/a/acme/w/northstar/analytics/advertising?section=adsets",
+    );
   });
 
   it("marks the current secondary workspace route active in More", async () => {

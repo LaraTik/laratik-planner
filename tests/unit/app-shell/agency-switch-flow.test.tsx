@@ -16,11 +16,13 @@ import { Sidebar } from "@/components/app-shell/sidebar";
  */
 
 const usePathnameMock = vi.fn<() => string>(() => "/app/workspaces");
+const useSearchParamsMock = vi.fn<() => URLSearchParams>(() => new URLSearchParams());
 const pushMock = vi.fn<(href: string) => void>(() => {});
 const refreshMock = vi.fn<() => void>(() => {});
 
 vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
+  useSearchParams: () => useSearchParamsMock(),
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 
@@ -79,6 +81,8 @@ function makeProps(agencyId: string, agencyName: string) {
 beforeEach(() => {
   usePathnameMock.mockReset();
   usePathnameMock.mockReturnValue("/app/workspaces");
+  useSearchParamsMock.mockReset();
+  useSearchParamsMock.mockReturnValue(new URLSearchParams());
   pushMock.mockReset();
   refreshMock.mockReset();
 });

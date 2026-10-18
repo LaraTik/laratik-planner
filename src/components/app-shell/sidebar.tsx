@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams, type ReadonlyURLSearchParams } from "next/navigation";
 import { ChevronDown, Plus } from "lucide-react";
 import { isActivePath, cn } from "@/lib/utils";
 import { clampBadge } from "@/lib/nav/badge-format";
@@ -94,6 +94,7 @@ export function Sidebar({
   labels?: Record<string, string>;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const labelFor = React.useCallback(
     (key: string, fallback: string) => labels[key] ?? fallback,
     [labels],
@@ -182,6 +183,7 @@ export function Sidebar({
             top={workspaceNav.top}
             groups={workspaceNav.groups}
             pathname={pathname}
+            searchParams={searchParams}
             planningActive={planningActive}
             collapsed={collapsed}
             labels={labels}
@@ -193,6 +195,7 @@ export function Sidebar({
             top={agencyNav.top}
             groups={agencyNav.groups}
             pathname={pathname}
+            searchParams={searchParams}
             collapsed={collapsed}
             onCollapsedChange={onCollapsedChange}
             labels={labels}
@@ -306,6 +309,7 @@ function WorkspaceNavTree({
   top,
   groups,
   pathname,
+  searchParams,
   planningActive,
   collapsed,
   labels = {},
@@ -313,6 +317,7 @@ function WorkspaceNavTree({
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
   pathname: string;
+  searchParams: ReadonlyURLSearchParams;
   planningActive: boolean;
   collapsed: boolean;
   labels?: Record<string, string>;
@@ -335,6 +340,7 @@ function WorkspaceNavTree({
           key={group.key}
           group={group}
           pathname={pathname}
+          searchParams={searchParams}
           planningActive={planningActive}
           collapsed={collapsed}
           labels={labels}
@@ -372,11 +378,13 @@ function AgencyNavTree({
   top,
   groups,
   pathname,
+  searchParams,
   labels = {},
 }: {
   top: SidebarLinkSpec[];
   groups: SidebarGroupSpec[];
   pathname: string;
+  searchParams: ReadonlyURLSearchParams;
   collapsed: boolean;
   onCollapsedChange?: ((next: boolean) => void) | undefined;
   labels?: Record<string, string>;
@@ -396,6 +404,7 @@ function AgencyNavTree({
           key={group.key}
           group={group}
           pathname={pathname}
+          searchParams={searchParams}
           planningActive={false}
           collapsed={false}
           labels={labels}
@@ -409,6 +418,7 @@ function AgencyNavTree({
 function NavGroup({
   group,
   pathname,
+  searchParams,
   planningActive,
   collapsed,
   labels = {},
@@ -416,6 +426,7 @@ function NavGroup({
 }: {
   group: SidebarGroupSpec;
   pathname: string;
+  searchParams: ReadonlyURLSearchParams;
   planningActive: boolean;
   collapsed: boolean;
   labels?: Record<string, string>;
@@ -459,15 +470,38 @@ function NavGroup({
         )
       ) : null}
       <div className="space-y-1">
-        {group.items.map((item) => renderItem(item, pathname, planningActive, collapsed, labels))}
+        {group.items.map((item) =>
+          renderItem(item, pathname, searchParams, planningActive, collapsed, labels),
+        )}
       </div>
     </div>
   );
 }
 
+function isSidebarLinkActive(
+  item: SidebarLinkSpec,
+  pathname: string,
+  searchParams: ReadonlyURLSearchParams,
+): boolean {
+  const pathnameHref = item.href.split(/[?#]/, 1)[0] ?? item.href;
+  const pathActive =
+    item.activePrefixes?.some((prefix) => isActivePath(prefix, pathname)) ??
+    isActivePath(pathnameHref, pathname, item.exact === undefined ? {} : { exact: item.exact });
+  if (!pathActive) return false;
+
+  const queryMatch = item.activeQuery;
+  if (!queryMatch) {
+    return true;
+  }
+
+  const value = searchParams.get(queryMatch.name);
+  return value === queryMatch.value || (value === null && queryMatch.defaultWhenMissing === true);
+}
+
 function renderItem(
   item: SidebarItemSpec,
   pathname: string,
+  searchParams: ReadonlyURLSearchParams,
   planningActive: boolean,
   collapsed: boolean,
   labels: Record<string, string>,
@@ -484,8 +518,7 @@ function renderItem(
       const childHash = hashIndex >= 0 ? item.href.slice(hashIndex + 1) : null;
       const isActive =
         (spiedActiveId !== null && childHash === spiedActiveId) ||
-        (item.activePrefixes?.some((prefix) => isActivePath(prefix, pathname)) ?? false) ||
-        isActivePath(item.href, pathname, item.exact === undefined ? {} : { exact: item.exact });
+        isSidebarLinkActive(item, pathname, searchParams);
       return (
         <SidebarLinkRow
           key={item.key}
@@ -502,6 +535,7 @@ function renderItem(
           key={item.key}
           spec={item}
           pathname={pathname}
+          searchParams={searchParams}
           planningActive={planningActive}
           collapsed={collapsed}
           labels={labels}
@@ -513,6 +547,7 @@ function renderItem(
           key={item.key}
           group={item}
           pathname={pathname}
+          searchParams={searchParams}
           planningActive={planningActive}
           collapsed={collapsed}
           labels={labels}
@@ -590,12 +625,14 @@ function SidebarLinkRow({
 function ExpandableNavGroup({
   spec,
   pathname,
+  searchParams,
   planningActive,
   collapsed,
   labels = {},
 }: {
   spec: SidebarExpandableGroupSpec;
   pathname: string;
+  searchParams: ReadonlyURLSearchParams;
   planningActive: boolean;
   collapsed: boolean;
   labels?: Record<string, string>;
@@ -625,9 +662,7 @@ function ExpandableNavGroup({
   // standard active-predicate (Agency settings, etc.). Either
   // path keeps the group expanded while the user is inside it.
   const childActive = spec.children.some((child) =>
-    child.kind === "link"
-      ? isActivePath(child.href, pathname, child.exact === undefined ? {} : { exact: child.exact })
-      : false,
+    child.kind === "link" ? isSidebarLinkActive(child, pathname, searchParams) : false,
   );
   const active =
     onGroupRoute &&
@@ -692,7 +727,15 @@ function ExpandableNavGroup({
         <ul className="ms-4 hidden space-y-0.5 border-s border-[var(--color-border)] ps-3 xl:block">
           {spec.children.map((child) => (
             <li key={child.key}>
-              {renderItem(child, pathname, planningActive, collapsed, labels, spiedActiveId)}
+              {renderItem(
+                child,
+                pathname,
+                searchParams,
+                planningActive,
+                collapsed,
+                labels,
+                spiedActiveId,
+              )}
             </li>
           ))}
         </ul>
