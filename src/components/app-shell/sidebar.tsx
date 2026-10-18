@@ -9,6 +9,7 @@ import { clampBadge } from "@/lib/nav/badge-format";
 import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
 import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   buildAgencyNavigation,
   buildClientReviewerNavigation,
@@ -506,6 +507,7 @@ function renderItem(
   collapsed: boolean,
   labels: Record<string, string>,
   spiedActiveId: string | null = null,
+  forceLabelVisibility = false,
 ): React.ReactNode {
   switch (item.kind) {
     case "link": {
@@ -525,6 +527,7 @@ function renderItem(
           spec={item}
           active={isActive}
           collapsed={collapsed}
+          forceLabelVisibility={forceLabelVisibility}
           labels={labels}
         />
       );
@@ -570,11 +573,13 @@ function SidebarLinkRow({
   spec,
   active,
   collapsed = false,
+  forceLabelVisibility = false,
   labels = {},
 }: {
   spec: SidebarLinkSpec;
   active: boolean;
   collapsed?: boolean;
+  forceLabelVisibility?: boolean;
   labels?: Record<string, string>;
 }) {
   const Icon = spec.icon;
@@ -608,7 +613,16 @@ function SidebarLinkRow({
       >
         <Icon className="h-4 w-4" />
       </span>
-      {!collapsed ? <span className="hidden min-w-0 flex-1 truncate xl:block">{label}</span> : null}
+      {!collapsed || forceLabelVisibility ? (
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate",
+            forceLabelVisibility ? "inline" : "hidden xl:block",
+          )}
+        >
+          {label}
+        </span>
+      ) : null}
       {badge !== null && !collapsed ? (
         <span
           className="bg-warning-subtle text-warning text-label hidden min-w-[1.5rem] items-center justify-center rounded-full px-1.5 font-semibold xl:inline-flex"
@@ -675,6 +689,60 @@ function ExpandableNavGroup({
   const label = labels[spec.key] ?? spec.label;
   const collapseTemplate = labels["collapseGroup"] ?? "Collapse {label}";
   const expandTemplate = labels["expandGroup"] ?? "Expand {label}";
+
+  if (collapsed) {
+    return (
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label={
+              open
+                ? collapseTemplate.replace("{label}", label)
+                : expandTemplate.replace("{label}", label)
+            }
+            aria-expanded={open}
+            className={cn(
+              "text-body focus-visible:ring-focus-ring flex min-h-11 w-full items-center justify-center rounded-[var(--radius-control)] border-s-4 px-3 font-semibold transition-colors focus:outline-none focus-visible:ring-2",
+              active
+                ? "bg-primary-subtle text-primary border-s-primary"
+                : "text-fg-primary hover:bg-surface-subtle border-s-transparent",
+            )}
+          >
+            <Icon className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent side="right" align="start" className="w-60 p-2">
+          <div className="border-border mb-2 border-b px-2 pb-2">
+            <Link
+              href={spec.href}
+              className="text-body text-fg-primary focus-visible:ring-focus-ring flex min-h-10 items-center gap-2 rounded-[var(--radius-control)] px-2 font-semibold focus:outline-none focus-visible:ring-2"
+            >
+              <Icon className="text-primary h-4 w-4" aria-hidden="true" />
+              <span>{label}</span>
+            </Link>
+          </div>
+          <ul className="space-y-0.5" aria-label={label}>
+            {spec.children.map((child) => (
+              <li key={child.key}>
+                {renderItem(
+                  child,
+                  pathname,
+                  searchParams,
+                  planningActive,
+                  false,
+                  labels,
+                  spiedActiveId,
+                  true,
+                )}
+              </li>
+            ))}
+          </ul>
+        </PopoverContent>
+      </Popover>
+    );
+  }
+
   return (
     <div className="space-y-1">
       <div

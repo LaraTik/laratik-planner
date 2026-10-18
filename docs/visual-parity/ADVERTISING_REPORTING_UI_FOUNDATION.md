@@ -37,12 +37,15 @@ The reporting route uses `?section=` as its local navigation state:
 
 The persistent sidebar owns the Advertising section hierarchy: Overview,
 Reporting, Campaigns, Ad Sets, Ads, Audience, Creatives, and Targeting. Each
-child is URL-driven and keeps the report parent expanded while active. Each
-view renders only its own data set; the route does not use one long scroll to
-present every explorer. On narrower layouts, the same section links are
-available in the mobile navigation drawer; the compact page-local row remains
-only as a tablet fallback and is hidden on wide desktop to avoid duplicate
-navigation.
+child is URL-driven and keeps the report parent expanded while active. If the
+user chooses the collapsed icon rail (or is on a tablet-width rail), the
+Advertising icon opens an accessible portal flyout containing the same child
+links; this preserves the reference hierarchy without forcing a global shell
+preference. Each view renders only its own data set; the route does not use one
+long scroll to present every explorer. On narrower layouts, the same section
+links are also available in the mobile navigation drawer; the compact
+page-local row remains only as a tablet fallback and is hidden on wide desktop
+to avoid duplicate navigation.
 
 ## Shared foundation
 
@@ -67,7 +70,8 @@ must remain provider-agnostic.
 ## Interaction and accessibility rules
 
 - Every Advertising navigation item has a URL, visible label, active state,
-  and visible focus ring in both the desktop rail and mobile drawer.
+  and visible focus ring in the desktop rail, collapsed-rail flyout, and
+  mobile drawer.
 - Sticky filters and section navigation must not obscure focused content.
 - Tables keep local horizontal overflow on narrow screens; the document body
   must not gain horizontal overflow.

@@ -407,6 +407,26 @@ describe("Sidebar (/ui-ux-pro-max refinement)", () => {
     expect(screen.getByTestId("sidebar-collapse-toggle")).toBeInTheDocument();
   });
 
+  it("keeps Advertising section links reachable from the collapsed rail", async () => {
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/analytics/advertising");
+    useSearchParamsMock.mockReturnValue(new URLSearchParams("section=campaigns"));
+    const user = userEvent.setup();
+
+    render(<Sidebar {...baseProps} collapsed={true} />);
+
+    const advertisingTrigger = screen.getByRole("button", { name: "Collapse Advertising" });
+    expect(advertisingTrigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.queryByRole("link", { name: "Campaigns" })).toBeNull();
+
+    await user.click(advertisingTrigger);
+
+    expect(screen.getByRole("link", { name: "Campaigns" })).toHaveAttribute(
+      "href",
+      "/app/a/acme/w/northstar/analytics/advertising?section=campaigns",
+    );
+    expect(screen.getByRole("link", { name: "Targeting" })).toBeInTheDocument();
+  });
+
   it("groups workspace navigation by Plan / Understand / Produce / Manage", () => {
     usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/team");
     render(<Sidebar {...baseProps} />);
