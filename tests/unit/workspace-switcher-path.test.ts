@@ -63,7 +63,19 @@ describe("getWorkspaceSwitchPath", () => {
         "/app/a/acme/w/old/analytics/advertising?accountId=old-account&since=2026-10-01&until=2026-10-16",
         target,
         "acme",
+        "?accountId=old-account&since=2026-10-01&until=2026-10-16",
       ),
     ).toBe(`/app/a/acme/w/${target}/analytics/advertising?since=2026-10-01&until=2026-10-16`);
+  });
+
+  it("preserves the Community & Inbox route and safe view filters", () => {
+    expect(
+      getWorkspaceSwitchPath(
+        "/app/a/acme/w/old/engagement/inbox",
+        target,
+        "acme",
+        "?status=open&conversationId=source-conversation&view=unread",
+      ),
+    ).toBe(`/app/a/acme/w/${target}/engagement/inbox?status=open&view=unread`);
   });
 });

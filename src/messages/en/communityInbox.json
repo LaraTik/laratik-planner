@@ -90,7 +90,7 @@
   "replyFailure": "Reply was not sent. Check the connection and delivery activity.",
   "alreadyReplied": "Meta already replied to this conversation. No additional reply was sent.",
   "replyUnavailable": "Replying is unavailable until the workspace, capability, and safety checks pass.",
-  "inboxLoadedDescription": "Read-only comments imported from validated Meta connections.",
+  "inboxLoadedDescription": "Comments and private messages imported from validated Meta connections.",
   "unknownAuthor": "Unknown author",
   "open": "Open",
   "waiting_customer": "Waiting for customer",

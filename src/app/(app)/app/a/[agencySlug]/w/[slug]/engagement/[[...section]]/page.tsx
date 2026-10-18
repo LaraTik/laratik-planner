@@ -167,6 +167,7 @@ async function readMetrics(workspaceId: string) {
       .where(eq(communitySendAttempts.workspaceId, workspaceId)),
     db
       .select({
+        syncKind: communitySyncStates.syncKind,
         status: communitySyncStates.status,
         lastCompletedAt: communitySyncStates.lastCompletedAt,
         lastErrorCode: communitySyncStates.lastErrorCode,
@@ -964,12 +965,10 @@ function ConnectionsScreen({
   const readCommentsAvailable = metrics.capabilityRows.some(
     (row) => row.operation === "read_comments" && row.state === "available",
   );
-  const lastSync = metrics.syncStates
-    .map((state) => state.lastCompletedAt)
-    .filter((value): value is Date => value instanceof Date)
-    .sort((a, b) => b.getTime() - a.getTime())[0];
-  const syncFailed = metrics.syncStates.some((state) => state.status === "failed");
-  const syncRunning = metrics.syncStates.some((state) => state.status === "running");
+  const syncKinds = [
+    { key: "comments" as const, label: communityText(t, "syncComments") },
+    { key: "private_messages" as const, label: communityText(t, "syncPrivateMessages") },
+  ];
   return (
     <>
       <div className="border-warning/20 bg-warning-subtle text-warning flex items-start gap-3 rounded-[var(--radius-card)] border p-4">
@@ -1013,26 +1012,41 @@ function ConnectionsScreen({
               successLabel={communityText(t, "validationSuccess")}
               errorLabel={communityText(t, "validationFailed")}
             />
-            <div className="border-border bg-surface-subtle mt-4 space-y-1 rounded-[var(--radius-control)] border p-3">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-label text-fg-secondary">
-                  {communityText(t, "syncStatus")}
-                </span>
-                <Badge variant={syncFailed ? "warning" : syncRunning ? "info" : "outline"}>
-                  {communityText(
-                    t,
-                    syncFailed ? "syncFailed" : syncRunning ? "syncRunning" : "syncIdle",
-                  )}
-                </Badge>
-              </div>
-              <p className="text-label text-fg-muted">
-                {lastSync
-                  ? `${communityText(t, "syncLastCompleted")}: ${lastSync.toLocaleString()}`
-                  : communityText(t, "syncNeverRun")}
-              </p>
-              {syncFailed ? (
-                <p className="text-label text-danger">{communityText(t, "syncError")}</p>
-              ) : null}
+            <div className="border-border bg-surface-subtle mt-4 space-y-3 rounded-[var(--radius-control)] border p-3">
+              <p className="text-label text-fg-secondary">{communityText(t, "syncStatus")}</p>
+              {syncKinds.map(({ key, label }) => {
+                const states = metrics.syncStates.filter((state) => state.syncKind === key);
+                const failed = states.some((state) => state.status === "failed");
+                const running = states.some((state) => state.status === "running");
+                const lastCompleted = states
+                  .map((state) => state.lastCompletedAt)
+                  .filter((value): value is Date => value instanceof Date)
+                  .sort((a, b) => b.getTime() - a.getTime())[0];
+                return (
+                  <div
+                    key={key}
+                    className="border-border border-t pt-2 first:border-t-0 first:pt-0"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-label text-fg-primary">{label}</span>
+                      <Badge variant={failed ? "warning" : running ? "info" : "outline"}>
+                        {communityText(
+                          t,
+                          failed ? "syncFailed" : running ? "syncRunning" : "syncIdle",
+                        )}
+                      </Badge>
+                    </div>
+                    <p className="text-label text-fg-muted mt-1">
+                      {lastCompleted
+                        ? `${communityText(t, "syncLastCompleted")}: ${lastCompleted.toLocaleString()}`
+                        : communityText(t, "syncNeverRun")}
+                    </p>
+                    {failed ? (
+                      <p className="text-label text-danger">{communityText(t, "syncError")}</p>
+                    ) : null}
+                  </div>
+                );
+              })}
             </div>
           </div>
         </Card>

@@ -610,6 +610,13 @@
       "when": 1792100700542,
       "tag": "0086_community_inbox_foundation",
       "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1792323180182,
+      "tag": "0087_futuristic_husk",
+      "breakpoints": true
     }
   ]
 }

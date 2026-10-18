@@ -151,6 +151,7 @@ export const communitySyncStates = pgTable(
     socialConnectionId: uuid("social_connection_id")
       .notNull()
       .references(() => socialConnections.id, { onDelete: "cascade" }),
+    syncKind: text("sync_kind").notNull().default("comments"),
     cursor: text("cursor"),
     status: text("status").notNull().default("idle"),
     lastStartedAt: timestamp("last_started_at", { withTimezone: true, mode: "date" }),
@@ -160,8 +161,12 @@ export const communitySyncStates = pgTable(
     ...timestamps,
   },
   (t) => [
-    uniqueIndex("community_sync_state_connection_unique").on(t.socialConnectionId),
-    index("community_sync_state_workspace_idx").on(t.workspaceId, t.status),
+    uniqueIndex("community_sync_state_connection_kind_unique").on(t.socialConnectionId, t.syncKind),
+    index("community_sync_state_workspace_idx").on(t.workspaceId, t.status, t.syncKind),
+    check(
+      "community_sync_state_kind_valid",
+      sql`${t.syncKind} IN ('comments', 'private_messages')`,
+    ),
     check(
       "community_sync_state_status_valid",
       sql`${t.status} IN ('idle', 'running', 'failed', 'paused')`,

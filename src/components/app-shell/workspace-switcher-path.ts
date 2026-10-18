@@ -97,6 +97,7 @@ export function getWorkspaceSwitchPath(
   pathname: string,
   workspaceSlug: string,
   targetAgencySlug: string,
+  search?: string,
 ): string {
   const parsed = parseWorkspacePath(pathname);
   const base = workspaceBasePath(targetAgencySlug, workspaceSlug);
@@ -110,6 +111,6 @@ export function getWorkspaceSwitchPath(
     }
   }
 
-  const query = preserveViewQuery(parsed?.query ?? "");
+  const query = preserveViewQuery(search ?? parsed?.query ?? "");
   return preserved ? `${base}/${preserved}${query}` : `${base}${query}`;
 }

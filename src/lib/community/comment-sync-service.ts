@@ -16,6 +16,7 @@ import { openConnectionCredentials } from "@/lib/social/repository";
 import { SocialProviderError } from "@/lib/social/http";
 import { readMetaCommunityComments } from "./meta-community-reader";
 import { isProviderReply, syncedMessageState } from "./comment-sync-state";
+import { advanceSyncCursor } from "./sync-state";
 
 export type CommunityCommentSyncResult = {
   checkedConnections: number;
@@ -51,12 +52,13 @@ async function markSyncStarted(workspaceId: string, socialConnectionId: string):
     .values({
       workspaceId,
       socialConnectionId,
+      syncKind: "comments",
       status: "running",
       lastStartedAt: now,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: communitySyncStates.socialConnectionId,
+      target: [communitySyncStates.socialConnectionId, communitySyncStates.syncKind],
       set: {
         status: "running",
         lastStartedAt: now,
@@ -90,6 +92,7 @@ async function markSyncCompleted(
       and(
         eq(communitySyncStates.workspaceId, workspaceId),
         eq(communitySyncStates.socialConnectionId, socialConnectionId),
+        eq(communitySyncStates.syncKind, "comments"),
       ),
     );
 }
@@ -107,6 +110,7 @@ async function markSyncFailed(
       and(
         eq(communitySyncStates.workspaceId, workspaceId),
         eq(communitySyncStates.socialConnectionId, socialConnectionId),
+        eq(communitySyncStates.syncKind, "comments"),
       ),
     );
 }
@@ -235,12 +239,13 @@ export async function syncMetaCommunityComments(
   const syncRows = await db
     .select({
       socialConnectionId: communitySyncStates.socialConnectionId,
+      syncKind: communitySyncStates.syncKind,
       cursor: communitySyncStates.cursor,
     })
     .from(communitySyncStates)
     .where(eq(communitySyncStates.workspaceId, workspaceId));
   const cursorByConnection = new Map(
-    syncRows.map((row) => [row.socialConnectionId, row.cursor] as const),
+    syncRows.map((row) => [`${row.socialConnectionId}:${row.syncKind}`, row.cursor] as const),
   );
   const cache = createDekCache(db);
   const byConnection = new Map<string, (typeof channels)[number][]>();
@@ -286,7 +291,7 @@ export async function syncMetaCommunityComments(
           accountId: row.channel.externalAccountId,
           accessToken,
           apiVersion: config.graphApiVersion,
-          since: overlapCursor(cursorByConnection.get(connectionId)),
+          since: overlapCursor(cursorByConnection.get(`${connectionId}:comments`)),
         });
         readChannels += 1;
         for (const comment of result.comments) {
@@ -298,7 +303,11 @@ export async function syncMetaCommunityComments(
       await markSyncCompleted(
         workspaceId,
         connectionId,
-        latestTimestamp?.toISOString() ?? cursorByConnection.get(connectionId) ?? null,
+        advanceSyncCursor(
+          "comments",
+          cursorByConnection.get(`${connectionId}:comments`),
+          latestTimestamp ? [latestTimestamp] : [],
+        ),
       );
     } catch (error) {
       const errorCode = safeErrorCode(error);

@@ -10,10 +10,12 @@ import { WorkspaceSwitcher } from "@/components/app-shell/workspace-switcher";
 // workspace-aware sidebar. useRouter is also stubbed for the
 // standalone workspace switcher contract tests below.
 const usePathnameMock = vi.fn<() => string>(() => "/app");
+const useSearchParamsMock = vi.fn<() => URLSearchParams>(() => new URLSearchParams());
 const pushMock = vi.fn<(href: string) => void>(() => {});
 const refreshMock = vi.fn<() => void>(() => {});
 vi.mock("next/navigation", () => ({
   usePathname: () => usePathnameMock(),
+  useSearchParams: () => useSearchParamsMock(),
   useRouter: () => ({ push: pushMock, refresh: refreshMock }),
 }));
 // next/link is fine in jsdom; nothing extra to stub.
@@ -57,6 +59,8 @@ const ownerAccess = {
 describe("Sidebar (workspace-aware)", () => {
   beforeEach(() => {
     usePathnameMock.mockReset();
+    useSearchParamsMock.mockReset();
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
   });
 
   it("renders the global nav when the user is on a global page", () => {
@@ -654,5 +658,17 @@ describe("Sidebar (workspace switcher — detail-suffix behaviour)", () => {
     await chooseOtherWorkspace();
     expect(pushMock).toHaveBeenCalledWith("/app/a/acme/w/autumn/analytics/advertising");
     expect(refreshMock).not.toHaveBeenCalled();
+  });
+
+  it("preserves safe Community & Inbox view filters when switching workspaces", async () => {
+    usePathnameMock.mockReturnValue("/app/a/acme/w/northstar/engagement/inbox");
+    useSearchParamsMock.mockReturnValue(
+      new URLSearchParams("status=open&conversationId=source-only&view=unread"),
+    );
+    renderWorkspaceSwitcher();
+    await chooseOtherWorkspace();
+    expect(pushMock).toHaveBeenCalledWith(
+      "/app/a/acme/w/autumn/engagement/inbox?status=open&view=unread",
+    );
   });
 });

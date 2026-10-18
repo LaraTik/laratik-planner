@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Briefcase, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Popover, PopoverClose, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -75,6 +75,7 @@ export function WorkspaceSwitcher({
   const listRef = React.useRef<HTMLUListElement | null>(null);
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   // When the popover opens, jump activeIndex to the current workspace
   // (so arrow-key navigation starts at the highlighted row, not index 0).
@@ -101,7 +102,12 @@ export function WorkspaceSwitcher({
   };
 
   const choose = (w: Workspace) => {
-    const targetPath = getWorkspaceSwitchPath(pathname, w.slug, w.agencySlug);
+    const targetPath = getWorkspaceSwitchPath(
+      pathname,
+      w.slug,
+      w.agencySlug,
+      searchParams.toString(),
+    );
     setOpen(false);
     if (w.id === active?.id || targetPath === pathname) return;
     // The destination is canonical and carries the active workspace in its

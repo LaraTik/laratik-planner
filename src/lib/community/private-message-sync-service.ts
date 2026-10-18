@@ -17,6 +17,7 @@ import { openConnectionCredentials } from "@/lib/social/repository";
 import { SocialProviderError } from "@/lib/social/http";
 import { readMetaCommunityPrivateMessages } from "./meta-community-reader";
 import { isProviderReply, syncedMessageState } from "./comment-sync-state";
+import { advanceSyncCursor } from "./sync-state";
 
 const SYNC_OVERLAP_MS = 2 * 60 * 1000;
 
@@ -34,12 +35,13 @@ async function markPrivateSyncStarted(workspaceId: string, socialConnectionId: s
     .values({
       workspaceId,
       socialConnectionId,
+      syncKind: "private_messages",
       status: "running",
       lastStartedAt: now,
       updatedAt: now,
     })
     .onConflictDoUpdate({
-      target: communitySyncStates.socialConnectionId,
+      target: [communitySyncStates.socialConnectionId, communitySyncStates.syncKind],
       set: {
         status: "running",
         lastStartedAt: now,
@@ -181,12 +183,13 @@ export async function syncMetaCommunityPrivateMessages(
   const syncRows = await db
     .select({
       socialConnectionId: communitySyncStates.socialConnectionId,
+      syncKind: communitySyncStates.syncKind,
       cursor: communitySyncStates.cursor,
     })
     .from(communitySyncStates)
     .where(eq(communitySyncStates.workspaceId, workspaceId));
   const cursorByConnection = new Map(
-    syncRows.map((row) => [row.socialConnectionId, row.cursor] as const),
+    syncRows.map((row) => [`${row.socialConnectionId}:${row.syncKind}`, row.cursor] as const),
   );
   const cache = createDekCache(db);
   let readChannels = 0;
@@ -220,7 +223,7 @@ export async function syncMetaCommunityPrivateMessages(
         accountId: row.channel.externalAccountId,
         accessToken,
         apiVersion: config.graphApiVersion,
-        since: overlapCursor(cursorByConnection.get(row.connection.id)),
+        since: overlapCursor(cursorByConnection.get(`${row.connection.id}:private_messages`)),
       });
       readChannels += 1;
       for (const message of result.messages) {
@@ -231,12 +234,11 @@ export async function syncMetaCommunityPrivateMessages(
         .update(communitySyncStates)
         .set({
           status: "idle",
-          cursor:
-            result.messages.length > 0
-              ? new Date(
-                  Math.max(...result.messages.map((message) => message.postedAt.getTime())),
-                ).toISOString()
-              : (cursorByConnection.get(row.connection.id) ?? null),
+          cursor: advanceSyncCursor(
+            "private_messages",
+            cursorByConnection.get(`${row.connection.id}:private_messages`),
+            result.messages.map((message) => message.postedAt),
+          ),
           lastCompletedAt: completedAt,
           lastErrorCode: null,
           updatedAt: completedAt,
@@ -245,6 +247,7 @@ export async function syncMetaCommunityPrivateMessages(
           and(
             eq(communitySyncStates.workspaceId, workspaceId),
             eq(communitySyncStates.socialConnectionId, row.connection.id),
+            eq(communitySyncStates.syncKind, "private_messages"),
           ),
         );
     } catch (error) {
@@ -263,6 +266,7 @@ export async function syncMetaCommunityPrivateMessages(
           and(
             eq(communitySyncStates.workspaceId, workspaceId),
             eq(communitySyncStates.socialConnectionId, row.connection.id),
+            eq(communitySyncStates.syncKind, "private_messages"),
           ),
         );
     }
