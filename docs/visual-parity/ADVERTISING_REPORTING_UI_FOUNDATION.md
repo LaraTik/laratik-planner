@@ -80,17 +80,26 @@ must remain provider-agnostic.
 - Verify 375, 768, 1024, 1280, and 1440px in EN/LTR and AR/RTL before marking
   a visual refinement complete.
 
-## Remaining recommendations
+## Saved views and next recommendations
 
-These are deliberately not bundled into this refinement pass:
+The header **Save view** action now persists a typed, versioned advertising view
+configuration through `/api/advertising/saved-views`. The API reuses the
+existing workspace-scoped `saved_filter` table with the
+`advertising-reporting` surface/version envelope; it does not create a second
+analytics store. Every read and write resolves the authenticated actor, active
+agency, workspace membership, and owner/share scope server-side. The stored
+configuration includes the account, date range, comparison dates, section,
+search filters, chart metrics/granularity, and pagination/explorer state. The
+dialog lists private and workspace-shared views and restores one through the
+existing URL-driven route state.
 
-1. Add a report-level saved-view persistence model and a dedicated share/export
-   metadata contract after the current read-only API shape is finalized.
-2. Add creative preview/detail drawers only when Meta returns a validated
+The remaining recommendations are deliberately separate from this refinement:
+
+1. Add creative preview/detail drawers only when Meta returns a validated
    preview URL and creative metadata; never fabricate thumbnails.
-3. Add a reviewed Stitch capture for this route and record each responsive
+2. Add a reviewed Stitch capture for this route and record each responsive
    baseline in the visual evidence manifest.
-4. Consolidate or retire the now-unmounted legacy
+3. Consolidate or retire the now-unmounted legacy
    `advertising-report-visuals.tsx` component in a separate cleanup after its
    standalone visual test is migrated to the executive dashboard.
 

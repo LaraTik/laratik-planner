@@ -100,6 +100,22 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.locator("#advertising-trend-granularity")).toHaveValue("week");
     await expect(page.locator("#advertising-trend-a")).toHaveValue("impressions");
     await expect(page.locator("#advertising-trend-b")).toHaveValue("clicks");
+    await page.getByRole("button", { name: "Save view" }).click();
+    await expect(page.getByTestId("advertising-save-view-dialog")).toBeVisible();
+    await page.getByLabel("View name").fill("Weekly acquisition review");
+    await page.getByLabel("Who can use this view?").selectOption("workspace");
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByTestId("advertising-save-view-dialog")).toContainText(
+      "View saved for this workspace.",
+    );
+    await expect(page.getByTestId("advertising-save-view-dialog")).toContainText(
+      "Weekly acquisition review",
+    );
+    await page
+      .getByTestId("advertising-save-view-dialog")
+      .getByRole("button", { name: "Cancel", exact: true })
+      .first()
+      .click();
     await expect(page.getByRole("link", { name: "Open client report" })).toHaveAttribute(
       "href",
       /presentation=client/,
@@ -187,6 +203,19 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
+    await page.getByRole("button", { name: "حفظ العرض" }).click();
+    await expect(page.getByTestId("advertising-save-view-dialog")).toBeVisible();
+    await page.getByLabel("اسم العرض").fill("مراجعة الاستحواذ الأسبوعية");
+    await page.getByLabel("من يمكنه استخدام هذا العرض؟").selectOption("workspace");
+    await page.getByRole("button", { name: "حفظ", exact: true }).click();
+    await expect(page.getByTestId("advertising-save-view-dialog")).toContainText(
+      "تم حفظ العرض لمساحة العمل هذه.",
+    );
+    await page
+      .getByTestId("advertising-save-view-dialog")
+      .getByRole("button", { name: "إلغاء", exact: true })
+      .first()
+      .click();
     await expect(page.getByRole("link", { name: "فتح تقرير العميل" })).toHaveAttribute(
       "href",
       /presentation=client/,

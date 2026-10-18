@@ -68,6 +68,8 @@ import {
   AdvertisingReportingDashboard,
   type AdvertisingReportingDashboardLabels,
 } from "./advertising-reporting-dashboard";
+import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
+import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -335,6 +337,17 @@ export default async function AdvertisingAnalyticsPage({
     until,
     presentation: "client",
   }).toString()}`;
+  const currentSearchParams = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    const firstValue = Array.isArray(value) ? value[0] : value;
+    if (firstValue) currentSearchParams.set(key, firstValue);
+  }
+  const savedViewConfig = advertisingReportViewConfigFromSearch({
+    params: currentSearchParams,
+    accountId: selectedAccount.id,
+    since,
+    until,
+  });
   const objectiveOptions = [
     ...new Set(view.campaigns.map((campaign) => campaign.objective).filter(Boolean)),
   ] as string[];
@@ -374,12 +387,28 @@ export default async function AdvertisingAnalyticsPage({
           {t("advertising.reporting.exportReport")}
         </a>
       </Button>
-      <Button asChild size="sm">
-        <Link href={clientReportHref}>
-          <Bookmark className="h-4 w-4" aria-hidden="true" />
-          {t("advertising.reporting.saveView")}
-        </Link>
-      </Button>
+      <AdvertisingSaveViewDialog
+        workspaceSlug={slug}
+        viewConfig={savedViewConfig}
+        labels={{
+          saveView: t("advertising.reporting.saveView"),
+          saveViewTitle: t("advertising.reporting.saveViewTitle"),
+          saveViewDescription: t("advertising.reporting.saveViewDescription"),
+          viewName: t("advertising.reporting.viewName"),
+          viewNamePlaceholder: t("advertising.reporting.viewNamePlaceholder"),
+          shareScope: t("advertising.reporting.shareScope"),
+          private: t("advertising.reporting.privateView"),
+          workspace: t("advertising.reporting.workspaceView"),
+          cancel: t("common.cancel"),
+          save: t("common.save"),
+          saving: t("common.saving"),
+          saveSuccess: t("advertising.reporting.saveViewSuccess"),
+          saveError: t("advertising.reporting.saveViewError"),
+          savedViews: t("advertising.reporting.savedViews"),
+          noSavedViews: t("advertising.reporting.noSavedViews"),
+          loadView: t("advertising.reporting.loadView"),
+        }}
+      />
     </>
   );
 

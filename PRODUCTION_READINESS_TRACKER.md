@@ -1,5 +1,16 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
+> persists a typed, versioned advertising view configuration through the
+> authenticated `/api/advertising/saved-views` route. It reuses the existing
+> workspace-scoped `saved_filter` persistence model, enforces active-agency and
+> workspace membership on reads/writes, supports private/workspace sharing, and
+> restores URL-driven filters and chart settings. Serialization and malformed
+> configuration guards are covered by
+> `tests/unit/advertising-reporting-view-config.test.ts`. This remains
+> **Implemented**, not **Tested/Verified**, until the bilingual responsive
+> visual and authorization evidence is captured at the exact clean commit.
+
 > **2026-10-18 Advertising trend refinement checkpoint** — The executive
 > trend chart now keeps metric pair, day/week/month granularity, and comparison
 > period state in the URL. Complete comparable periods render a dashed
