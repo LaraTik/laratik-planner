@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { COMMUNITY_TEST_LAB_CHANNELS } from "@/lib/community/ai-test-lab";
+import { COMMUNITY_TEST_LAB_CHANNELS } from "@/lib/community/test-lab-contract";
 
 type Copy = {
   title: string;

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { chat, type ChatResult } from "@/lib/ai";
+import { COMMUNITY_TEST_LAB_CHANNELS } from "@/lib/community/test-lab-contract";
 import { z } from "zod";
 
 /**
@@ -8,12 +9,7 @@ import { z } from "zod";
  * The lab is a preview surface: it accepts customer text, but it never
  * accepts a conversation id or a provider action to execute.
  */
-export const COMMUNITY_TEST_LAB_CHANNELS = [
-  "facebook_comments",
-  "facebook_private_messages",
-  "instagram_comments",
-  "instagram_private_messages",
-] as const;
+export { COMMUNITY_TEST_LAB_CHANNELS } from "@/lib/community/test-lab-contract";
 
 export const CommunityTestLabInputSchema = z.object({
   channel: z.enum(COMMUNITY_TEST_LAB_CHANNELS),
