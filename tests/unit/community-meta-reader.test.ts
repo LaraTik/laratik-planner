@@ -154,7 +154,9 @@ describe("Meta community comment reader", () => {
       accountId: "page-1",
       accessToken: "secret-token",
       request: async (url) => {
-        expect(new URL(url).pathname).toBe("/v26.0/page-1/conversations");
+        const parsed = new URL(url);
+        expect(parsed.pathname).toBe("/v26.0/page-1/conversations");
+        expect(parsed.searchParams.get("platform")).toBe("messenger");
         return {
           requestId: "request-2",
           body: JSON.stringify({

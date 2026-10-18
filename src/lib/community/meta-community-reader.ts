@@ -255,14 +255,20 @@ export async function readMetaCommunityPrivateMessages(
 ): Promise<MetaCommunityPrivateReadResult> {
   const request = input.request ?? providerRequest;
   const version = resolveMetaGraphVersion(input.apiVersion);
-  const url = graphUrl(
-    version,
-    `${encodeURIComponent(input.accountId)}/conversations`,
-    "id,updated_time,participants,messages.limit(25){id,message,from,created_time}",
-    input.accessToken,
+  const url = new URL(
+    graphUrl(
+      version,
+      `${encodeURIComponent(input.accountId)}/conversations`,
+      "id,updated_time,participants,messages.limit(25){id,message,from,created_time}",
+      input.accessToken,
+    ),
   );
+  // Keep the ingestion request aligned with the non-mutating capability
+  // probe. A Facebook Page can expose more than one conversation surface;
+  // the Community inbox is specifically the Messenger surface.
+  if (input.platform === "facebook") url.searchParams.set("platform", "messenger");
   const requestIds: string[] = [];
-  const result = await request(url);
+  const result = await request(url.toString());
   if (result.requestId) requestIds.push(result.requestId);
   const messages: MetaCommunityPrivateMessage[] = [];
   for (const conversationValue of dataRows(result.body)) {

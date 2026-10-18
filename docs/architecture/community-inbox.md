@@ -42,6 +42,10 @@ Human public comment replies and private-message replies now use the dedicated
 Meta messaging adapter after a capability check; autonomous provider action
 and publishing remain excluded from this module.
 
+The operator runbook for Facebook Messenger approval, reconnect, capability
+validation, controlled read/reply UAT, and unknown-outcome reconciliation is
+[`docs/production-readiness/COMMUNITY_INBOX_UAT.md`](../production-readiness/COMMUNITY_INBOX_UAT.md).
+
 ## Delivery and safety state
 
 Conversation identity is workspace-scoped and uses the provider root comment or
