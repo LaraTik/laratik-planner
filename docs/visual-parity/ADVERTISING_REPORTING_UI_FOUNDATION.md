@@ -27,7 +27,6 @@ The reporting route uses `?section=` as its local navigation state:
 
 - `overview` — data health, six KPIs, trend, objective mix, action center,
   campaign snapshot, audience snapshot, and metric definitions.
-- `campaigns` — campaign-level performance table and pagination.
 - `reporting` — daily account performance and metric-definition status.
 - `campaigns` — campaign-level performance table and pagination.
 - `adsets` — ad-set-level performance table and pagination.
@@ -87,12 +86,14 @@ These are deliberately not bundled into this refinement pass:
 
 1. Add a report-level saved-view persistence model and a dedicated share/export
    metadata contract after the current read-only API shape is finalized.
-2. Add selectable day/week/month trend granularity and a server-provided
-   comparison trace when comparison-period daily observations are available.
-3. Add creative preview/detail drawers only when Meta returns a validated
+2. Add creative preview/detail drawers only when Meta returns a validated
    preview URL and creative metadata; never fabricate thumbnails.
-4. Add a reviewed Stitch capture for this route and record each responsive
+3. Add a reviewed Stitch capture for this route and record each responsive
    baseline in the visual evidence manifest.
-5. Consolidate or retire the now-unmounted legacy
+4. Consolidate or retire the now-unmounted legacy
    `advertising-report-visuals.tsx` component in a separate cleanup after its
    standalone visual test is migrated to the executive dashboard.
+
+Trend controls are now URL-driven and support day/week/month buckets. When
+both periods are complete, the chart renders a dashed comparison trace;
+missing result points remain unavailable rather than being converted to zero.

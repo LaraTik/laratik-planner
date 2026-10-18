@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
@@ -25,6 +26,11 @@ import type {
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
 import type { CampaignPerformanceInsight } from "@/lib/advertising/intelligence";
+import type {
+  AdvertisingTrendPoint,
+  TrendGranularity,
+  TrendMetricKey,
+} from "@/lib/advertising/reporting-trend";
 
 export type AdvertisingReportingDashboardLabels = {
   dataHealth: string;
@@ -71,20 +77,16 @@ export type AdvertisingReportingDashboardLabels = {
   trendImpressions: string;
   trendClicks: string;
   trendResults: string;
+  trendGranularity: string;
+  trendDay: string;
+  trendWeek: string;
+  trendMonth: string;
+  comparisonTrace: string;
   campaign: string;
   objective: string;
   status: string;
   date: string;
 };
-type DailyMetric = {
-  date: string;
-  spend: number;
-  impressions: number;
-  clicks: number;
-  results: number | null;
-};
-type TrendKey = "spend" | "impressions" | "clicks" | "results";
-
 export function AdvertisingReportingDashboard(props: {
   accountName: string;
   currency: string;
@@ -100,15 +102,27 @@ export function AdvertisingReportingDashboard(props: {
   statuses: readonly MetricStatus[];
   campaigns: readonly AdvertisingCampaignSummary[];
   insights: readonly CampaignPerformanceInsight[];
-  dailyMetrics: readonly DailyMetric[];
+  dailyMetrics: readonly AdvertisingTrendPoint[];
+  comparisonDailyMetrics: readonly AdvertisingTrendPoint[];
+  comparisonComparable: boolean;
+  trendGranularity: TrendGranularity;
+  trendMetricA: TrendMetricKey;
+  trendMetricB: TrendMetricKey;
   audienceCount: number;
   campaignsHref: string;
   labels: AdvertisingReportingDashboardLabels;
 }) {
   const { labels } = props;
-  const [metricA, setMetricA] = useState<TrendKey>("spend");
-  const [metricB, setMetricB] = useState<TrendKey>("results");
+  const router = useRouter();
+  const [metricA, setMetricA] = useState<TrendMetricKey>(props.trendMetricA);
+  const [metricB, setMetricB] = useState<TrendMetricKey>(props.trendMetricB);
+  const [granularity, setGranularity] = useState<TrendGranularity>(props.trendGranularity);
   const [tableOpen, setTableOpen] = useState(false);
+  const updateTrendSetting = (name: string, value: string) => {
+    const params = new URLSearchParams(window.location.search);
+    params.set(name, value);
+    router.push(`${window.location.pathname}?${params.toString()}`);
+  };
   const cards: readonly {
     key: AdvertisingMetricKey;
     label: string;
@@ -206,8 +220,21 @@ export function AdvertisingReportingDashboard(props: {
           {...props}
           metricA={metricA}
           metricB={metricB}
-          setMetricA={setMetricA}
-          setMetricB={setMetricB}
+          comparisonDailyMetrics={props.comparisonDailyMetrics}
+          comparisonComparable={props.comparisonComparable}
+          granularity={granularity}
+          setMetricA={(value) => {
+            setMetricA(value);
+            updateTrendSetting("trendMetricA", value);
+          }}
+          setMetricB={(value) => {
+            setMetricB(value);
+            updateTrendSetting("trendMetricB", value);
+          }}
+          setGranularity={(value) => {
+            setGranularity(value);
+            updateTrendSetting("trendGranularity", value);
+          }}
           tableOpen={tableOpen}
           setTableOpen={setTableOpen}
         />
@@ -381,28 +408,36 @@ function formatLastSync(lastSync: string | null, locale: string, timezone: strin
 }
 function TrendPanel({
   dailyMetrics,
+  comparisonDailyMetrics,
+  comparisonComparable,
   labels,
   locale,
   currency,
   metricA,
   metricB,
+  granularity,
   setMetricA,
   setMetricB,
+  setGranularity,
   tableOpen,
   setTableOpen,
 }: {
-  dailyMetrics: readonly DailyMetric[];
+  dailyMetrics: readonly AdvertisingTrendPoint[];
+  comparisonDailyMetrics: readonly AdvertisingTrendPoint[];
+  comparisonComparable: boolean;
   labels: AdvertisingReportingDashboardLabels;
   locale: string;
   currency: string;
-  metricA: TrendKey;
-  metricB: TrendKey;
-  setMetricA: (value: TrendKey) => void;
-  setMetricB: (value: TrendKey) => void;
+  metricA: TrendMetricKey;
+  metricB: TrendMetricKey;
+  granularity: TrendGranularity;
+  setMetricA: (value: TrendMetricKey) => void;
+  setMetricB: (value: TrendMetricKey) => void;
+  setGranularity: (value: TrendGranularity) => void;
   tableOpen: boolean;
   setTableOpen: (value: boolean) => void;
 }) {
-  const name = (key: TrendKey) =>
+  const name = (key: TrendMetricKey) =>
     key === "spend"
       ? labels.trendSpend
       : key === "impressions"
@@ -411,7 +446,11 @@ function TrendPanel({
           ? labels.trendClicks
           : labels.trendResults;
   const maxA = Math.max(...dailyMetrics.map((day) => day[metricA] ?? 0), 1);
-  const maxB = Math.max(...dailyMetrics.map((day) => day[metricB] ?? 0), 1);
+  const maxB = Math.max(
+    ...dailyMetrics.map((day) => day[metricB] ?? 0),
+    ...(comparisonComparable ? comparisonDailyMetrics.map((day) => day[metricB] ?? 0) : []),
+    1,
+  );
   const chartWidth = 720;
   const chartHeight = 190;
   const plotLeft = 12;
@@ -419,10 +458,15 @@ function TrendPanel({
   const plotTop = 14;
   const plotBottom = chartHeight - 16;
   const step = dailyMetrics.length > 1 ? (plotRight - plotLeft) / (dailyMetrics.length - 1) : 0;
-  const linePoints = (key: TrendKey, seriesMax: number) => {
+  const linePoints = (
+    points: readonly AdvertisingTrendPoint[],
+    key: TrendMetricKey,
+    seriesMax: number,
+  ) => {
     const segments: string[] = [];
     let current: string[] = [];
-    dailyMetrics.forEach((day, index) => {
+    const pointStep = points.length > 1 ? (plotRight - plotLeft) / (points.length - 1) : 0;
+    points.forEach((day, index) => {
       const value = day[key];
       if (value === null) {
         if (current.length > 1) segments.push(current.join(" "));
@@ -430,7 +474,7 @@ function TrendPanel({
         return;
       }
       const y = plotBottom - (value / seriesMax) * (plotBottom - plotTop);
-      current.push(`${plotLeft + index * step},${y}`);
+      current.push(`${points.length > 1 ? plotLeft + index * pointStep : chartWidth / 2},${y}`);
     });
     if (current.length > 1) segments.push(current.join(" "));
     return segments;
@@ -461,13 +505,26 @@ function TrendPanel({
           <select
             id="advertising-trend-a"
             value={metricA}
-            onChange={(event) => setMetricA(event.target.value as TrendKey)}
+            onChange={(event) => setMetricA(event.target.value as TrendMetricKey)}
             className="border-border bg-surface text-label min-h-11 rounded-[var(--radius-control)] border px-2"
           >
             <option value="spend">{labels.trendSpend}</option>
             <option value="impressions">{labels.trendImpressions}</option>
             <option value="clicks">{labels.trendClicks}</option>
             <option value="results">{labels.trendResults}</option>
+          </select>
+          <label className="text-label text-fg-muted" htmlFor="advertising-trend-granularity">
+            {labels.trendGranularity}
+          </label>
+          <select
+            id="advertising-trend-granularity"
+            value={granularity}
+            onChange={(event) => setGranularity(event.target.value as TrendGranularity)}
+            className="border-border bg-surface text-label min-h-11 rounded-[var(--radius-control)] border px-2"
+          >
+            <option value="day">{labels.trendDay}</option>
+            <option value="week">{labels.trendWeek}</option>
+            <option value="month">{labels.trendMonth}</option>
           </select>
           <span className="text-label text-fg-muted">vs.</span>
           <label className="text-label text-fg-muted" htmlFor="advertising-trend-b">
@@ -476,7 +533,7 @@ function TrendPanel({
           <select
             id="advertising-trend-b"
             value={metricB}
-            onChange={(event) => setMetricB(event.target.value as TrendKey)}
+            onChange={(event) => setMetricB(event.target.value as TrendMetricKey)}
             className="border-border bg-surface text-label min-h-11 rounded-[var(--radius-control)] border px-2"
           >
             <option value="results">{labels.trendResults}</option>
@@ -531,7 +588,7 @@ function TrendPanel({
                 />
               );
             })}
-            {linePoints(metricB, maxB).map((points, index) => (
+            {linePoints(dailyMetrics, metricB, maxB).map((points, index) => (
               <polyline
                 key={`line-${index}`}
                 points={points}
@@ -543,6 +600,21 @@ function TrendPanel({
                 vectorEffect="non-scaling-stroke"
               />
             ))}
+            {comparisonComparable
+              ? linePoints(comparisonDailyMetrics, metricB, maxB).map((points, index) => (
+                  <polyline
+                    key={`comparison-line-${index}`}
+                    points={points}
+                    fill="none"
+                    stroke="var(--fg-muted)"
+                    strokeWidth="2"
+                    strokeDasharray="6 5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                ))
+              : null}
             {dailyMetrics.map((day, index) => {
               const x = dailyMetrics.length > 1 ? plotLeft + index * step : chartWidth / 2;
               const value = day[metricB];
@@ -575,6 +647,12 @@ function TrendPanel({
             <span className="bg-chart-secondary h-2.5 w-2.5 rounded-full" />
             {name(metricB)}
           </span>
+          {comparisonComparable ? (
+            <span className="inline-flex items-center gap-2">
+              <span className="bg-fg-muted h-0.5 w-3" />
+              {labels.comparisonTrace}
+            </span>
+          ) : null}
           <span className="ms-auto">
             {dailyMetrics.length} {labels.date}
           </span>
@@ -588,10 +666,13 @@ function TrendPanel({
                   <th className="px-3 py-2 text-start">{labels.date}</th>
                   <th className="px-3 py-2 text-end">{name(metricA)}</th>
                   <th className="px-3 py-2 text-end">{name(metricB)}</th>
+                  {comparisonComparable ? (
+                    <th className="px-3 py-2 text-end">{labels.comparisonTrace}</th>
+                  ) : null}
                 </tr>
               </thead>
               <tbody>
-                {dailyMetrics.map((day) => (
+                {dailyMetrics.map((day, index) => (
                   <tr key={day.date} className="border-border border-t">
                     <th className="px-3 py-2 text-start font-normal">{day.date}</th>
                     <td className="px-3 py-2 text-end tabular-nums">
@@ -600,6 +681,16 @@ function TrendPanel({
                     <td className="px-3 py-2 text-end tabular-nums">
                       {trendValue(day[metricB], metricB, locale, currency)}
                     </td>
+                    {comparisonComparable ? (
+                      <td className="px-3 py-2 text-end tabular-nums">
+                        {trendValue(
+                          comparisonDailyMetrics[index]?.[metricB] ?? null,
+                          metricB,
+                          locale,
+                          currency,
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>
@@ -610,7 +701,7 @@ function TrendPanel({
     </Card>
   );
 }
-function trendValue(value: number | null, key: TrendKey, locale: string, currency: string) {
+function trendValue(value: number | null, key: TrendMetricKey, locale: string, currency: string) {
   if (value === null) return "—";
   return key === "spend"
     ? new Intl.NumberFormat(locale, {

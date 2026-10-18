@@ -45,6 +45,12 @@ import {
   type ComparisonMode,
 } from "@/lib/advertising/reporting-comparison";
 import {
+  aggregateAdvertisingTrend,
+  type AdvertisingTrendPoint,
+  type TrendGranularity,
+  type TrendMetricKey,
+} from "@/lib/advertising/reporting-trend";
+import {
   buildBudgetPacingInsights,
   buildCampaignPerformanceInsights,
   buildCreativeFatigueInsights,
@@ -84,6 +90,9 @@ type SearchParams = {
   compareSince?: string | string[];
   compareUntil?: string | string[];
   section?: string | string[];
+  trendMetricA?: string | string[];
+  trendMetricB?: string | string[];
+  trendGranularity?: string | string[];
 };
 
 type ReportSection =
@@ -277,21 +286,17 @@ export default async function AdvertisingAnalyticsPage({
           comparable: !result.partial && !comparisonResult.partial,
         })
       : null;
-  const dailyGroups = new Map<string, typeof result.report.rows>();
-  for (const row of result.report.rows)
-    dailyGroups.set(row.date, [...(dailyGroups.get(row.date) ?? []), row]);
-  const dailyMetrics = [...dailyGroups.entries()]
-    .map(([date, rows]) => {
-      const metrics = aggregateAdvertisingMetrics(rows);
-      return {
-        date,
-        spend: metrics.spend,
-        impressions: metrics.impressions,
-        clicks: metrics.allClicks,
-        results: metrics.results,
-      };
-    })
-    .sort((left, right) => left.date.localeCompare(right.date));
+  const dailyMetrics = buildDailyTrendPoints(result.report.rows);
+  const comparisonDailyMetrics =
+    comparisonResult?.kind === "ok" ? buildDailyTrendPoints(comparisonResult.report.rows) : [];
+  const trendGranularity = normalizeTrendGranularity(firstQueryValue(query.trendGranularity));
+  const trendMetricA = normalizeTrendMetric(firstQueryValue(query.trendMetricA), "spend");
+  const trendMetricB = normalizeTrendMetric(firstQueryValue(query.trendMetricB), "results");
+  const chartMetrics = aggregateAdvertisingTrend(dailyMetrics, trendGranularity);
+  const comparisonChartMetrics = aggregateAdvertisingTrend(
+    comparisonDailyMetrics,
+    trendGranularity,
+  );
   const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
   const objectiveFilter = firstQueryValue(query.objective) ?? "";
   const statusFilter = firstQueryValue(query.status) ?? "";
@@ -345,6 +350,9 @@ export default async function AdvertisingAnalyticsPage({
     compare: comparisonMode,
     compareSince: firstQueryValue(query.compareSince),
     compareUntil: firstQueryValue(query.compareUntil),
+    trendMetricA,
+    trendMetricB,
+    trendGranularity,
     search: campaignSearch,
     objective: objectiveFilter,
     status: statusFilter,
@@ -418,6 +426,9 @@ export default async function AdvertisingAnalyticsPage({
         data-testid="advertising-reporting-filters"
       >
         <input type="hidden" name="section" value={activeSection} />
+        <input type="hidden" name="trendMetricA" value={trendMetricA} />
+        <input type="hidden" name="trendMetricB" value={trendMetricB} />
+        <input type="hidden" name="trendGranularity" value={trendGranularity} />
         <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
           <select
             name="accountId"
@@ -607,7 +618,12 @@ export default async function AdvertisingAnalyticsPage({
                 statuses={metricStatuses(primaryMetrics)}
                 campaigns={view.campaigns}
                 insights={campaignInsights}
-                dailyMetrics={dailyMetrics}
+                dailyMetrics={chartMetrics}
+                comparisonDailyMetrics={comparisonChartMetrics}
+                comparisonComparable={comparisonSummary?.comparable === true}
+                trendGranularity={trendGranularity}
+                trendMetricA={trendMetricA}
+                trendMetricB={trendMetricB}
                 audienceCount={result.audience.length}
                 campaignsHref={campaignsHref}
                 labels={advertisingReportingDashboardLabels(t)}
@@ -1390,6 +1406,11 @@ function advertisingReportingDashboardLabels(
     trendImpressions: t("advertising.reporting.impressions"),
     trendClicks: t("advertising.reporting.clicks"),
     trendResults: t("advertising.reporting.results"),
+    trendGranularity: t("advertising.reporting.dashboard.trendGranularity"),
+    trendDay: t("advertising.reporting.dashboard.trendDay"),
+    trendWeek: t("advertising.reporting.dashboard.trendWeek"),
+    trendMonth: t("advertising.reporting.dashboard.trendMonth"),
+    comparisonTrace: t("advertising.reporting.dashboard.comparisonTrace"),
     campaign: t("advertising.reporting.campaign"),
     objective: t("advertising.reporting.objective"),
     status: t("advertising.reporting.status"),
@@ -1406,6 +1427,9 @@ function reportSectionItems({
   compare,
   compareSince,
   compareUntil,
+  trendMetricA,
+  trendMetricB,
+  trendGranularity,
   search,
   objective,
   status,
@@ -1418,6 +1442,9 @@ function reportSectionItems({
   compare: ComparisonMode;
   compareSince?: string | undefined;
   compareUntil?: string | undefined;
+  trendMetricA: TrendMetricKey;
+  trendMetricB: TrendMetricKey;
+  trendGranularity: TrendGranularity;
   search: string;
   objective: string;
   status: string;
@@ -1426,6 +1453,9 @@ function reportSectionItems({
     const params = new URLSearchParams({ accountId, since, until, section, compare });
     if (compareSince) params.set("compareSince", compareSince);
     if (compareUntil) params.set("compareUntil", compareUntil);
+    params.set("trendMetricA", trendMetricA);
+    params.set("trendMetricB", trendMetricB);
+    params.set("trendGranularity", trendGranularity);
     if (search) params.set("search", search);
     if (objective) params.set("objective", objective);
     if (status) params.set("status", status);
@@ -1652,6 +1682,37 @@ function normalizeReportSection(value: string | undefined): ReportSection {
 
 function normalizeComparisonMode(value: string | undefined): ComparisonMode {
   return value === "previous_year" || value === "custom" ? value : "previous";
+}
+
+function normalizeTrendGranularity(value: string | undefined): TrendGranularity {
+  return value === "week" || value === "month" ? value : "day";
+}
+
+function normalizeTrendMetric(value: string | undefined, fallback: TrendMetricKey): TrendMetricKey {
+  return value === "impressions" || value === "clicks" || value === "results" || value === "spend"
+    ? value
+    : fallback;
+}
+
+function buildDailyTrendPoints(
+  rows: Parameters<typeof aggregateAdvertisingMetrics>[0],
+): AdvertisingTrendPoint[] {
+  const dailyGroups = new Map<string, typeof rows>();
+  for (const row of rows) {
+    dailyGroups.set(row.date, [...(dailyGroups.get(row.date) ?? []), row]);
+  }
+  return [...dailyGroups.entries()]
+    .map(([date, dailyRows]) => {
+      const metrics = aggregateAdvertisingMetrics(dailyRows);
+      return {
+        date,
+        spend: metrics.spend,
+        impressions: metrics.impressions,
+        clicks: metrics.allClicks,
+        results: metrics.results,
+      };
+    })
+    .sort((left, right) => left.date.localeCompare(right.date));
 }
 
 function validDate(value: string | undefined): boolean {

@@ -384,7 +384,12 @@
       "sample": "Sample",
       "costPerResult": "Cost / result",
       "frequency": "Frequency",
-      "date": "Date"
+      "date": "Date",
+      "trendGranularity": "Group by",
+      "trendDay": "Day",
+      "trendWeek": "Week",
+      "trendMonth": "Month",
+      "comparisonTrace": "Previous period"
     },
     "openClientReport": "Open client report",
     "saveView": "Save view",

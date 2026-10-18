@@ -1,5 +1,14 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-18 Advertising trend refinement checkpoint** — The executive
+> trend chart now keeps metric pair, day/week/month granularity, and comparison
+> period state in the URL. Complete comparable periods render a dashed
+> comparison trace; incomplete result observations remain unavailable. The
+> shared date-only bucketing helper is unit-tested in
+> `tests/unit/advertising-reporting-trend.test.ts`, and the English/Arabic
+> advertising browser contract covers URL-driven controls. This remains
+> **Implemented**, not **Tested/Verified** for the full release visual matrix.
+
 > **2026-10-18 Advertising Reporting 2.0 implementation checkpoint** — The
 > workspace advertising route now has an objective-aware executive dashboard,
 > typed metric definitions and availability states, safe comparison periods,

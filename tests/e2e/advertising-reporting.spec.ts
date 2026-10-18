@@ -94,6 +94,12 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&trendGranularity=week&trendMetricA=impressions&trendMetricB=clicks`,
+    );
+    await expect(page.locator("#advertising-trend-granularity")).toHaveValue("week");
+    await expect(page.locator("#advertising-trend-a")).toHaveValue("impressions");
+    await expect(page.locator("#advertising-trend-b")).toHaveValue("clicks");
     await expect(page.getByRole("link", { name: "Open client report" })).toHaveAttribute(
       "href",
       /presentation=client/,

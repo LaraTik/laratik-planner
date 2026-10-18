@@ -384,7 +384,12 @@
       "sample": "العينة",
       "costPerResult": "التكلفة / النتيجة",
       "frequency": "التكرار",
-      "date": "التاريخ"
+      "date": "التاريخ",
+      "trendGranularity": "تجميع حسب",
+      "trendDay": "اليوم",
+      "trendWeek": "الأسبوع",
+      "trendMonth": "الشهر",
+      "comparisonTrace": "الفترة السابقة"
     },
     "openClientReport": "فتح تقرير العميل",
     "saveView": "حفظ العرض",
