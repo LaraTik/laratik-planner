@@ -146,6 +146,7 @@ const entitlementMock = vi.hoisted(() => ({
     "trend_radar",
     "monthly_planning_copilot",
     "advertising_recommendations",
+    "community_reply_drafts",
   ]) as Set<string>,
 }));
 
@@ -198,6 +199,7 @@ function resetState() {
     "trend_radar",
     "monthly_planning_copilot",
     "advertising_recommendations",
+    "community_reply_drafts",
   ]);
   recordUsageMock.mockReset();
   recordUsageMock.mockResolvedValue(undefined);
