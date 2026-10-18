@@ -21,3 +21,5 @@ Documents:
 - `SECURITY_AUDIT.md` — vulnerabilities, authorization and secret-handling record.
 - `MIGRATION_DEPLOYMENT.md` — forward/rollback, backup and release proof.
 - `UAT_RELEASE.md` — primary journey, owner checks and final verdict.
+- `COMMUNITY_INBOX_UAT.md` — Community-specific Meta, isolation, role,
+  bilingual, accessibility, responsive, and unknown-delivery release gates.
