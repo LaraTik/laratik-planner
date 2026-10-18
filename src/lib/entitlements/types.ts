@@ -64,7 +64,8 @@ export type AiCapability =
   | "completeness_check"
   | "trend_radar"
   | "monthly_planning_copilot"
-  | "advertising_recommendations";
+  | "advertising_recommendations"
+  | "community_reply_drafts";
 
 export type ProductModule = "community_inbox";
 
@@ -86,6 +87,7 @@ export const ALL_AI_CAPABILITIES: ReadonlyArray<AiCapability> = [
   "trend_radar",
   "monthly_planning_copilot",
   "advertising_recommendations",
+  "community_reply_drafts",
 ] as const;
 
 /**
@@ -103,6 +105,7 @@ const AI_CAPABILITY_VALUES = [
   "trend_radar",
   "monthly_planning_copilot",
   "advertising_recommendations",
+  "community_reply_drafts",
 ] as const;
 
 const GRACE_POLICY_VALUES = ["block", "allow_grace"] as const;

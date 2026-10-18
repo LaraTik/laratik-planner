@@ -63,6 +63,16 @@ approval, revision, expiry, and stale-source state. Test Lab is simulation
 only. Controlled Auto and provider sending remain disabled until controlled
 UAT and independent production-readiness verification.
 
+The Test Lab uses the separate agency AI capability
+`community_reply_drafts`; it never reuses `caption_drafts`. The server route
+(`POST /api/community/test-lab`) re-checks the agency plan, Community module
+gates, workspace permission, agency AI switch, capability intersection, rate
+limit, and AI budget before calling MiniMax. Customer message and scenario
+fields are untrusted data, instruction-like input is blocked before provider
+dispatch, and the route records only token/category usage metadata. The route
+does not accept a conversation id, provider action, or send target, and no
+Test Lab result is persisted as a draft or sent to Meta.
+
 ## Persistence
 
 Migration `0086_lyrical_night_thrasher.sql` adds the module switch, workspace

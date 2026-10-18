@@ -11,6 +11,18 @@ The prior goal-by-goal claims were stale and mixed scaffolding, compilation, par
 
 Only an independent reviewer may mark a tracker item `Verified`. Implementation agents stop at `Tested` and attach reproducible evidence.
 
+## 2026-10-18 — Community AI Test Lab foundation
+
+Status: **Implemented; pending independent release verification.** The agency
+AI allowlist now has a separate `community_reply_drafts` capability. The
+simulation route and client flow enforce the Community workspace permission
+and AI governance gates, use the existing MiniMax budget/usage path, reject
+instruction-like untrusted customer text before provider calls, and return a
+structured draft/decision/explanation/safety result. The Test Lab has no
+provider adapter input and cannot send or persist a reply. Focused unit and
+route-gate tests pass; bilingual browser, accessibility, responsive, provider
+UAT, and full release evidence remain open.
+
 ## 2026-10-16 — Community provider operations and inbox reply path
 
 Status: **Implemented; pending release verification.** The Community & Inbox

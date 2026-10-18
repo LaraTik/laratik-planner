@@ -57,6 +57,10 @@
     "advertising_recommendations": {
       "label": "Advertising recommendations",
       "description": "Generate explainable actions from verified, authorized advertising performance."
+    },
+    "community_reply_drafts": {
+      "label": "Community reply drafts",
+      "description": "Create reviewable community replies in a simulation-only test lab."
     }
   }
 }

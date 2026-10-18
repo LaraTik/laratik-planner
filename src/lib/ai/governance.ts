@@ -26,6 +26,7 @@ export const AI_CAPABILITIES = [
   "trend_radar",
   "monthly_planning_copilot",
   "advertising_recommendations",
+  "community_reply_drafts",
 ] as const;
 
 /**

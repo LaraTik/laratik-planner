@@ -39,7 +39,8 @@ export type AiCapabilityId =
   | "completeness_check"
   | "trend_radar"
   | "monthly_planning_copilot"
-  | "advertising_recommendations";
+  | "advertising_recommendations"
+  | "community_reply_drafts";
 
 export interface AiCapabilityMetadata {
   /** Server-side identifier — matches the §15 enum and the `aiFeatureSettings.enabledCapabilities` allowlist. */
@@ -211,6 +212,16 @@ export const AI_CAPABILITY_METADATA: ReadonlyArray<AiCapabilityMetadata> = [
     hint: "Read-only recommendations with source metrics and limitations.",
     willUpdate: [],
     willNotChange: ["campaigns", "budgets", "ads", "publishing"],
+  },
+  {
+    id: "community_reply_drafts",
+    label: "Community reply drafts",
+    adminLabel: "Community reply drafts",
+    description: "Create reviewable community replies in a simulation-only test lab.",
+    enabledOnContentDetail: false,
+    hint: "Drafts never send provider actions and always include a safety explanation.",
+    willUpdate: [],
+    willNotChange: ["conversations", "messages", "provider state", "automation rules"],
   },
 ] as const;
 

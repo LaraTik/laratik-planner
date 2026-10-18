@@ -82,6 +82,10 @@
     "monthly_planning_copilot": {
       "adminLabel": "مساعد التخطيط الشهري",
       "description": "يساعد في الاكتشاف والاستراتيجية والتنفيذ والمراجعة لبناء خطة شهرية متكاملة."
+    },
+    "community_reply_drafts": {
+      "adminLabel": "مسودات ردود المجتمع",
+      "description": "إنشاء ردود مجتمعية قابلة للمراجعة في مختبر محاكاة فقط."
     }
   },
   "managedSecret": {

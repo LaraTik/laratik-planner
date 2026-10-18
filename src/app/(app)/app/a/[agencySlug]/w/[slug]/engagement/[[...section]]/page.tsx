@@ -19,7 +19,6 @@ import {
   MessageCircle,
   MessageSquare,
   PauseCircle,
-  PlayCircle,
   Plus,
   Search,
   Send,
@@ -59,6 +58,7 @@ import { CapabilityValidationButton } from "@/components/community/capability-va
 import { CommentSyncButton } from "@/components/community/comment-sync-button";
 import { CommunityReplyForm } from "@/components/community/community-reply-form";
 import { PrivateMessageSyncButton } from "@/components/community/private-message-sync-button";
+import { CommunityTestLab } from "@/components/community/community-test-lab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -826,51 +826,52 @@ function PlaybooksScreen({
   );
 }
 
-function TestLabScreen({ t }: { t: Translator }) {
+function TestLabScreen({
+  t,
+  agencySlug,
+  workspaceSlug,
+}: {
+  t: Translator;
+  agencySlug: string;
+  workspaceSlug: string;
+}) {
   return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <Card>
-        <CardHeader>
-          <CardTitle>{communityText(t, "testLabTitle")}</CardTitle>
-          <CardDescription>{communityText(t, "testLabDescription")}</CardDescription>
-        </CardHeader>
-        <div className="space-y-4">
-          <div className="bg-surface-subtle rounded-[var(--radius-control)] p-4">
-            <p className="text-label text-fg-muted">{communityText(t, "directMessages")}</p>
-            <p className="text-body text-fg-primary mt-2">{communityText(t, "replyPlaceholder")}</p>
-          </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <p className="text-label text-fg-muted">{communityText(t, "source")}</p>
-              <p className="text-body text-fg-primary mt-1">{communityText(t, "meta")}</p>
-            </div>
-            <div>
-              <p className="text-label text-fg-muted">{communityText(t, "comments")}</p>
-              <p className="text-body text-fg-primary mt-1">{communityText(t, "notValidated")}</p>
-            </div>
-          </div>
-          <Button disabled>
-            <PlayCircle className="h-4 w-4" aria-hidden="true" />
-            {communityText(t, "runSimulation")}
-          </Button>
-        </div>
-      </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>{communityText(t, "simulationOnly")}</CardTitle>
-          <CardDescription>{communityText(t, "noProviderActions")}</CardDescription>
-        </CardHeader>
-        <div className="border-primary/20 bg-primary-subtle rounded-[var(--radius-control)] border p-4">
-          <div className="text-primary flex items-center gap-2">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            <span className="text-body font-semibold">{communityText(t, "aiQuality")}</span>
-          </div>
-          <p className="text-label text-fg-secondary mt-2">
-            {communityText(t, "noDataDescription")}
-          </p>
-        </div>
-      </Card>
-    </div>
+    <CommunityTestLab
+      agencySlug={agencySlug}
+      workspaceSlug={workspaceSlug}
+      copy={{
+        title: communityText(t, "testLabTitle"),
+        description: communityText(t, "testLabDescription"),
+        channel: communityText(t, "testLabChannel"),
+        message: communityText(t, "testLabMessage"),
+        scenario: communityText(t, "testLabScenario"),
+        scenarioHint: communityText(t, "testLabScenarioHint"),
+        messagePlaceholder: communityText(t, "testLabMessagePlaceholder"),
+        scenarioPlaceholder: communityText(t, "testLabScenarioPlaceholder"),
+        run: communityText(t, "testLabRun"),
+        running: communityText(t, "testLabRunning"),
+        result: communityText(t, "testLabResult"),
+        draft: communityText(t, "testLabDraft"),
+        decision: communityText(t, "testLabDecision"),
+        explanation: communityText(t, "testLabExplanation"),
+        safety: communityText(t, "testLabSafety"),
+        noProviderGuarantee: communityText(t, "testLabNoProviderGuarantee"),
+        inputRequired: communityText(t, "testLabInputRequired"),
+        providerUnavailable: communityText(t, "testLabProviderUnavailable"),
+        blocked: communityText(t, "testLabBlocked"),
+        needsReview: communityText(t, "testLabNeedsReview"),
+        draftDecision: communityText(t, "testLabDraftDecision"),
+        escalateDecision: communityText(t, "testLabEscalateDecision"),
+        safe: communityText(t, "testLabSafe"),
+        review: communityText(t, "testLabReview"),
+        safetyBlocked: communityText(t, "testLabSafetyBlocked"),
+        noResult: communityText(t, "testLabNoResult"),
+        channelFacebookComments: communityText(t, "testLabChannelFacebookComments"),
+        channelFacebookPrivateMessages: communityText(t, "testLabChannelFacebookPrivateMessages"),
+        channelInstagramComments: communityText(t, "testLabChannelInstagramComments"),
+        channelInstagramPrivateMessages: communityText(t, "testLabChannelInstagramPrivateMessages"),
+      }}
+    />
   );
 }
 
@@ -1473,7 +1474,7 @@ export default async function CommunityEngagementPage({
         ) : currentSection === "playbooks" ? (
           <PlaybooksScreen t={t} metrics={metrics} />
         ) : currentSection === "test-lab" ? (
-          <TestLabScreen t={t} />
+          <TestLabScreen t={t} agencySlug={agencySlug} workspaceSlug={slug} />
         ) : currentSection === "analytics" ? (
           <AnalyticsScreen t={t} metrics={metrics} />
         ) : currentSection === "connections" ? (

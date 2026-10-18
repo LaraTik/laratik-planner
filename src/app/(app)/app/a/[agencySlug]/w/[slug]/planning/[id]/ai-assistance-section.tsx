@@ -12,6 +12,7 @@ import {
   Globe2,
   Link2,
   Radar,
+  MessageCircle,
   AlertTriangle,
   Check,
   X,
@@ -62,6 +63,7 @@ const ICON_BY_ID = {
   trend_radar: Radar,
   monthly_planning_copilot: Sparkles,
   advertising_recommendations: Lightbulb,
+  community_reply_drafts: MessageCircle,
 } as const;
 
 // The planner-detail surface lists AI capabilities that

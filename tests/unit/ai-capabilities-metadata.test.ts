@@ -33,6 +33,7 @@ describe("AI capabilities metadata (single source of truth)", () => {
       "trend_radar",
       "monthly_planning_copilot",
       "advertising_recommendations",
+      "community_reply_drafts",
     ]);
   });
 
@@ -59,7 +60,8 @@ describe("AI capabilities metadata (single source of truth)", () => {
       if (
         cap.id === "trend_radar" ||
         cap.id === "monthly_planning_copilot" ||
-        cap.id === "advertising_recommendations"
+        cap.id === "advertising_recommendations" ||
+        cap.id === "community_reply_drafts"
       )
         continue;
       expect(cap.enabledOnContentDetail).toBe(true);
