@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { sql } from "drizzle-orm";
 import { renderToStaticMarkup } from "react-dom/server";
+import type { WorkspaceRole } from "@/lib/auth/invitation-command";
 
 if (!process.env.TEST_DATABASE_URL) {
   throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -134,7 +135,7 @@ describe("REPRO: render the planning page after a delivery submit", () => {
       monthlyTarget: 24,
     });
 
-    const roleForUser: Record<string, string> = {
+    const roleForUser: Record<string, WorkspaceRole> = {
       [omar.id]: "content_planner",
       [elena.id]: "designer",
       [jon.id]: "internal_reviewer",
