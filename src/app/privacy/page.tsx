@@ -20,11 +20,11 @@ import { Card } from "@/components/ui/card";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "How laratik-planner (operated by Mohamad Nezam, trading as LaraTik) handles personal data collected through Facebook Login for Business and related integrations.",
+    "How laratik-planner (operated by Mohamad Nezam, trading as LaraTik) handles personal data collected through Facebook Login for Business, Community & Inbox, and related integrations.",
   robots: { index: true, follow: true },
 };
 
-const EFFECTIVE_DATE = "26 August 2026";
+const EFFECTIVE_DATE = "18 October 2026";
 const DATA_CONTROLLER_LEGAL = "Mohamad Nezam";
 const DATA_CONTROLLER_TRADE = "LaraTik";
 const CONTACT_EMAIL = "info@laratik.com";
@@ -149,6 +149,36 @@ export default function PrivacyPage() {
                     — daily account-level insights for the connected Instagram business account
                     (reach, views, engaged accounts, interactions).
                   </li>
+                  <li>
+                    <strong className="text-fg-primary">
+                      Community permissions (when enabled):
+                    </strong>{" "}
+                    depending on the selected Meta login mode and channel, the connection may
+                    request
+                    <code className="bg-surface-subtle text-fg-primary text-label mx-1 rounded px-1.5 py-0.5 font-mono">
+                      pages_manage_engagement
+                    </code>
+                    ,
+                    <code className="bg-surface-subtle text-fg-primary text-label mx-1 rounded px-1.5 py-0.5 font-mono">
+                      pages_manage_metadata
+                    </code>
+                    , and
+                    <code className="bg-surface-subtle text-fg-primary text-label mx-1 rounded px-1.5 py-0.5 font-mono">
+                      pages_messaging
+                    </code>{" "}
+                    for Facebook Page comments, Page metadata, and Page Messenger conversations and
+                    replies. Instagram community operations may use
+                    <code className="bg-surface-subtle text-fg-primary text-label mx-1 rounded px-1.5 py-0.5 font-mono">
+                      instagram_manage_comments
+                    </code>{" "}
+                    and
+                    <code className="bg-surface-subtle text-fg-primary text-label mx-1 rounded px-1.5 py-0.5 font-mono">
+                      instagram_manage_messages
+                    </code>
+                    . These capabilities are available only after the relevant Meta grant and
+                    connection validation; an analytics connection does not automatically grant
+                    messaging access.
+                  </li>
                 </ul>
                 <Callout tone="info">
                   The OAuth <em>code</em> returned by Meta is exchanged once for a long-lived user
@@ -159,7 +189,65 @@ export default function PrivacyPage() {
                 </Callout>
               </SubSection>
 
-              <SubSection title="3.3 Data we receive from TikTok (Login Kit)" accent="primary">
+              <SubSection title="3.3 Community & Inbox data" accent="info">
+                <p>
+                  When an agency enables Community &amp; Inbox for a workspace and a connected Meta
+                  capability has been granted and validated, we receive and store only the data
+                  needed to operate that workspace&apos;s community workflow. This can include:
+                </p>
+                <ul className="list-disc space-y-1 ps-6">
+                  <li>
+                    Facebook Page comments and, when <code>pages_messaging</code> is approved and
+                    available, Facebook Page private-message conversations and messages, including
+                    provider identifiers, message text, sender metadata, timestamps, and the
+                    associated Page, post, or conversation reference.
+                  </li>
+                  <li>
+                    Workspace assignments, staff notes, draft revisions, send-attempt states, sync
+                    diagnostics, capability results, and sanitized activity records. Public replies,
+                    private replies, and internal staff notes are stored and displayed as separate
+                    categories.
+                  </li>
+                </ul>
+                <Callout tone="info">
+                  Community data is workspace-scoped and protected by the same agency and workspace
+                  authorization boundaries as the rest of the Service. Provider access tokens and
+                  secrets are stored separately in encrypted form and are not included in community
+                  messages, AI prompts, audit records, or user-facing responses. The feature does
+                  not receive Facebook private messages while the required Meta capability is
+                  unavailable.
+                </Callout>
+              </SubSection>
+
+              <SubSection title="3.4 Optional Community AI / Test Lab processing" accent="info">
+                <p>
+                  Community AI is optional and controlled by the agency. If an authorized user runs
+                  the Community AI Test Lab while the separate community reply-draft capability is
+                  enabled, the submitted channel, community message, and optional scenario are sent
+                  to MiniMax to produce a simulation-only draft, decision, safety status, and
+                  explanation.
+                </p>
+                <ul className="list-disc space-y-1 ps-6">
+                  <li>
+                    The Test Lab does not send a message to Meta, create a provider action, assign a
+                    conversation, or save a community draft. The result is returned to the
+                    authorized requester, and only usage metadata and safety categories are
+                    recorded.
+                  </li>
+                  <li>
+                    The Test Lab does not send Meta access tokens, provider credentials, or full
+                    conversation history to MiniMax. Instruction-like customer input is blocked
+                    before an AI request is made, and generated instruction-like output is
+                    discarded.
+                  </li>
+                  <li>
+                    If Community AI is disabled, the capability is not granted, or the input is
+                    blocked, the community text is not sent to MiniMax.
+                  </li>
+                </ul>
+              </SubSection>
+
+              <SubSection title="3.5 Data we receive from TikTok (Login Kit)" accent="primary">
                 <p>
                   If you connect a TikTok account we receive your public profile (open id, display
                   name, username, avatar), and account-level counters (follower count, following
@@ -168,7 +256,7 @@ export default function PrivacyPage() {
                 </p>
               </SubSection>
 
-              <SubSection title="3.4 Operational data" accent="primary">
+              <SubSection title="3.6 Operational data" accent="primary">
                 <p>
                   Server logs (IP address, user agent, request path, response status) and security
                   audit events (actor id, action verb, target type, outcome, timestamp). Logs are
@@ -191,6 +279,18 @@ export default function PrivacyPage() {
                   <strong className="text-fg-primary">Social analytics.</strong> To fetch and
                   display the daily snapshot of followers, reach, views, engaged accounts, and
                   interactions for the connected social accounts.
+                </li>
+                <li>
+                  <strong className="text-fg-primary">Community &amp; Inbox.</strong> To ingest
+                  workspace-scoped Facebook Page comments and, only when Meta has granted and
+                  LaraTik has validated the capability, Page private messages; to support human
+                  review, assignment, public or private replies, staff notes, and delivery
+                  reconciliation.
+                </li>
+                <li>
+                  <strong className="text-fg-primary">Optional Community AI.</strong> To provide a
+                  simulation-only Test Lab when an agency has separately enabled the capability and
+                  an authorized user submits community text for a draft and safety decision.
                 </li>
                 <li>
                   <strong className="text-fg-primary">Security and abuse prevention.</strong> To
@@ -264,6 +364,23 @@ export default function PrivacyPage() {
                   lifetime of the workspace; deleted within 30 days of workspace deletion.
                 </li>
                 <li>
+                  <strong className="text-fg-primary">
+                    Community &amp; Inbox operational records:
+                  </strong>{" "}
+                  the workspace setting defaults to 90 days for conversation and message records,
+                  draft revisions, assignments, and delivery metadata. The applicable period is the
+                  retention setting for the workspace; deletion requests and workspace deletion may
+                  remove these records sooner, subject to legally required records and security
+                  audit retention.
+                </li>
+                <li>
+                  <strong className="text-fg-primary">Community AI Test Lab requests:</strong> the
+                  submitted message and scenario are sent only for the requested simulation call.
+                  The Test Lab does not persist the result as a community draft or send it to Meta;
+                  AI usage and safety metadata may be retained with the workspace audit and usage
+                  records.
+                </li>
+                <li>
                   <strong className="text-fg-primary">Security audit events:</strong> 7 years for
                   compliance with applicable commercial and tax law.
                 </li>
@@ -319,6 +436,14 @@ export default function PrivacyPage() {
                   — to receive error and crash reports. Reports are scrubbed of personal data before
                   transmission and we have disabled user-feedback collection.
                 </li>
+                <li>
+                  <strong className="text-fg-primary">MiniMax</strong> — only when an agency has
+                  enabled Community AI and an authorized user runs the optional Community AI Test
+                  Lab. The submitted community message, selected channel, and optional scenario are
+                  sent to MiniMax for the simulation-only reply draft and safety result described
+                  above. MiniMax is not used for Community &amp; Inbox when that capability is
+                  disabled, unavailable, or blocked by the safety boundary.
+                </li>
               </ul>
               <p>
                 We do not sell your personal data. We do not share it with advertising networks,
@@ -336,6 +461,12 @@ export default function PrivacyPage() {
                 standard contractual clauses / EU-US Data Privacy Framework they have in place. If
                 you require a more restricted transfer posture, you can avoid connecting non-EU
                 accounts.
+              </p>
+              <p>
+                Optional Community AI processing is a separate external transfer from our
+                self-hosted German infrastructure. The applicable MiniMax processing location and
+                transfer safeguards depend on the configured service endpoint and should be reviewed
+                by the agency before enabling Community AI for customer conversations.
               </p>
             </Section>
 
