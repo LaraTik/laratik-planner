@@ -65,6 +65,13 @@
   --radius-card: 10px;
   --radius-control: 8px;
 
+  /* Reporting chart roles. Cards remain border-first to match the shared
+   * Stitch system; elevation is reserved for menus, dialogs, and drawers. */
+  --chart-grid: #e9ecf3;
+  --chart-primary: #5846ed;
+  --chart-secondary: #0891b2;
+  --chart-tertiary: #e879f9;
+
   /* Controls */
   --control-standard: 40px;
   --control-compact: 36px;
@@ -103,6 +110,10 @@
     --danger-foreground: #0b1020;
     --info: #38bdf8;
     --info-subtle: #102c42;
+    --chart-grid: #293752;
+    --chart-primary: #a5b4fc;
+    --chart-secondary: #67e8f9;
+    --chart-tertiary: #f0abfc;
   }
 }
 
@@ -166,6 +177,10 @@ html[data-theme="light"] {
   --color-danger-subtle: var(--danger-subtle);
   --color-info: var(--info);
   --color-info-subtle: var(--info-subtle);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-primary: var(--chart-primary);
+  --color-chart-secondary: var(--chart-secondary);
+  --color-chart-tertiary: var(--chart-tertiary);
 
   --radius-card: var(--radius-card);
   --radius-control: var(--radius-control);
@@ -195,6 +210,38 @@ html[data-theme="light"] {
   --text-button: 14px;
   --text-button--line-height: 20px;
   --text-button--font-weight: 600;
+}
+
+/* Scoped premium treatment for decision dashboards. It is intentionally
+ * opt-in so the rest of the product keeps its established flat surfaces. */
+.reporting-dashboard .reporting-card {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.reporting-dashboard .reporting-card:hover {
+  border-color: color-mix(in srgb, var(--primary) 22%, var(--border));
+}
+
+.reporting-dashboard .reporting-kpi {
+  background: var(--surface);
+}
+
+.reporting-dashboard .reporting-chart-surface {
+  background-color: var(--surface-subtle);
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--chart-grid) 80%, transparent) 1px,
+    transparent 1px
+  );
+  background-size: 100% 25%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reporting-dashboard .reporting-card {
+    transition: none;
+  }
 }
 
 /* Access-management surfaces use the same restrained gradient language as

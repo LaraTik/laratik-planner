@@ -1,5 +1,28 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-18 Advertising Reporting 2.0 implementation checkpoint** — The
+> workspace advertising route now has an objective-aware executive dashboard,
+> typed metric definitions and availability states, safe comparison periods,
+> data-health treatment, accessible trend/table fallback, objective mix,
+> evidence-backed action cards, campaign explorer, and bilingual EN/AR copy.
+> Focused unit coverage passes for aggregation, non-summed reach, unavailable
+> actions, comparison boundaries, and lower-cost favorable direction. This is
+> **Implemented**, not **Tested/Verified** for release: full integration,
+> bilingual browser/a11y, visual baselines, export metadata, and production
+> evidence remain required.
+
+> **2026-10-18 Advertising Reporting 2.0 refinement checkpoint** — The
+> reporting surface now uses URL-driven Overview, Campaigns, Creatives,
+> Audience, and Targeting sections so detailed explorers do not render as one
+> long page. The refinement adds the shared reporting section navigation and
+> KPI card foundations, border-first Stitch-aligned light treatment, localized
+> data-health timestamps, explicit partial/complete state text, accessible KPI
+> delta semantics, missing-data chart gaps, objective spend donut, and a
+> parity/future-alignment guide at
+> `docs/visual-parity/ADVERTISING_REPORTING_UI_FOUNDATION.md`. Focused
+> reporting tests and lint pass. This remains **Implemented**, not
+> **Tested/Verified** for the full bilingual responsive visual gate.
+
 > **2026-10-14 Graph-version migration checkpoint** — Exact clean local
 > implementation commit `3a518784a4e977ddf54f08d9f03c314f01bc0c9e` adds the
 > agency-admin path for migrating an existing explicit Meta Graph API pin to

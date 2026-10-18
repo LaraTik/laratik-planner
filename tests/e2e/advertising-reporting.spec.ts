@@ -30,6 +30,12 @@ test.describe("synthetic advertising reporting", () => {
     );
 
     await expect(page.getByTestId("advertising-reporting-page")).toBeVisible();
+    await expect(page.getByTestId("advertising-reporting-dashboard")).toBeVisible();
+    await expect(page.getByTestId("advertising-reporting-data-health")).toContainText(
+      "Data health",
+    );
+    await expect(page.getByTestId("advertising-reporting-performance-trend")).toBeVisible();
+    await expect(page.getByTestId("advertising-reporting-action-center")).toBeVisible();
     await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
     await expect(page.getByTestId("advertising-campaign-signals")).toContainText("Effective");
     await expect(page.getByTestId("advertising-budget-pacing")).toContainText("Budget pacing");
@@ -37,23 +43,40 @@ test.describe("synthetic advertising reporting", () => {
       "href",
       /surface=csv_export/,
     );
+    await expect(page.getByTestId("advertising-reporting-section-nav")).toBeVisible();
+    await expect(page.getByRole("link", { name: "Campaigns" })).toHaveAttribute(
+      "href",
+      /section=campaigns/,
+    );
+    await expect(page.getByTestId("advertising-reporting-campaigns")).toHaveCount(0);
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=campaigns`,
+    );
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-spring",
     );
-    await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
-      "e2e-campaign-retargeting",
+    await expect(page.getByTestId("advertising-reporting-dashboard")).toHaveCount(0);
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=creatives`,
     );
     await expect(page.getByTestId("advertising-reporting-adsets")).toContainText(
       "e2e-adset-spring",
     );
     await expect(page.getByTestId("advertising-reporting-ads")).toContainText("e2e-ad-spring");
-    await expect(page.getByTestId("advertising-reporting-targeting")).toContainText("DE");
     await expect(page.getByTestId("advertising-reporting-promoted-posts")).toContainText(
       "e2e-instagram-0",
     );
-    await expect(page.getByTestId("advertising-reporting-daily-spend")).toContainText("€");
-    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText("Active ads");
-    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText("1");
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=audience`,
+    );
+    await expect(page.getByTestId("advertising-reporting-audience")).toBeVisible();
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=targeting`,
+    );
+    await expect(page.getByTestId("advertising-reporting-targeting")).toContainText("DE");
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=overview`,
+    );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);
     await expect(page.getByRole("link", { name: "Open client report" })).toHaveAttribute(
@@ -90,13 +113,27 @@ test.describe("synthetic advertising reporting", () => {
 
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByTestId("advertising-reporting-page")).toBeVisible();
+    await expect(page.getByTestId("advertising-reporting-dashboard")).toBeVisible();
+    await expect(page.getByTestId("advertising-reporting-data-health")).toContainText(
+      "صحة البيانات",
+    );
     await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
     await expect(page.getByTestId("advertising-campaign-signals")).toContainText("فعّالة");
+    await expect(page.getByTestId("advertising-reporting-section-nav")).toBeVisible();
+    await expect(page.getByRole("link", { name: "الحملات" })).toHaveAttribute(
+      "href",
+      /section=campaigns/,
+    );
+    await expect(page.getByTestId("advertising-reporting-campaigns")).toHaveCount(0);
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=campaigns`,
+    );
     await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
       "e2e-campaign-spring",
     );
-    await expect(page.getByTestId("advertising-reporting-campaigns")).toContainText(
-      "e2e-campaign-retargeting",
+    await expect(page.getByTestId("advertising-reporting-dashboard")).toHaveCount(0);
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=creatives`,
     );
     await expect(page.getByTestId("advertising-reporting-adsets")).toContainText(
       "e2e-adset-spring",
@@ -105,8 +142,12 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-promoted-posts")).toContainText(
       "e2e-instagram-0",
     );
-    await expect(page.getByTestId("advertising-reporting-active-ads")).toContainText(
-      "الإعلانات النشطة",
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=audience`,
+    );
+    await expect(page.getByTestId("advertising-reporting-audience")).toBeVisible();
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02&section=overview`,
     );
     await expect(page.getByTestId("advertising-reporting-partial-warning")).toHaveCount(0);
     await expect(page.getByTestId("advertising-reporting-last-sync")).toHaveText(/.+[:：].+/);

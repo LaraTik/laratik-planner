@@ -53,6 +53,9 @@ export function AdvertisingIntelligencePanel({
   currency,
   locale,
   audienceCount,
+  campaignsHref,
+  creativesHref,
+  audienceHref,
   labels,
 }: {
   campaigns: readonly CampaignPerformanceInsight[];
@@ -61,6 +64,9 @@ export function AdvertisingIntelligencePanel({
   currency: string | null;
   locale: string;
   audienceCount: number;
+  campaignsHref: string;
+  creativesHref: string;
+  audienceHref: string;
   labels: AdvertisingIntelligenceLabels;
 }) {
   const effective = campaigns.filter((item) => item.status === "effective");
@@ -132,7 +138,7 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noComparison}</p>
             ) : null}
           </div>
-          <DecisionAction href="#advertising-reporting-campaigns" label={labels.campaignAction} />
+          <DecisionAction href={campaignsHref} label={labels.campaignAction} />
         </Card>
 
         <Card
@@ -175,7 +181,7 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noBudgetData}</p>
             ) : null}
           </div>
-          <DecisionAction href="#advertising-reporting-campaigns" label={labels.budgetAction} />
+          <DecisionAction href={campaignsHref} label={labels.budgetAction} />
         </Card>
 
         <Card
@@ -206,7 +212,7 @@ export function AdvertisingIntelligencePanel({
               <p className="text-label text-fg-muted">{labels.noFatigueData}</p>
             ) : null}
           </div>
-          <DecisionAction href="#advertising-reporting-ads" label={labels.creativeAction} />
+          <DecisionAction href={creativesHref} label={labels.creativeAction} />
         </Card>
 
         <Card
@@ -234,7 +240,7 @@ export function AdvertisingIntelligencePanel({
           <p className="text-label text-fg-muted mt-3 flex-1">
             {audienceCount > 0 ? labels.audienceOpportunityDescription : labels.noAudienceData}
           </p>
-          <DecisionAction href="#advertising-reporting-audience" label={labels.audienceAction} />
+          <DecisionAction href={audienceHref} label={labels.audienceAction} />
         </Card>
       </div>
 

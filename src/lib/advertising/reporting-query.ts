@@ -390,6 +390,11 @@ export async function loadAdvertisingReport(
         reach: row.reach,
         results: row.results,
         ...(row.resultType ? { resultType: row.resultType } : {}),
+        ...(row.resultActions &&
+        typeof row.resultActions === "object" &&
+        !Array.isArray(row.resultActions)
+          ? { resultActions: row.resultActions as Record<string, unknown> }
+          : {}),
       },
     ];
   });

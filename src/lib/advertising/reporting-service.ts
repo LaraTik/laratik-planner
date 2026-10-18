@@ -20,6 +20,7 @@ export type AdvertisingFact = {
   readonly reach?: number | null | undefined;
   readonly results?: number | null | undefined;
   readonly resultType?: string | null | undefined;
+  readonly resultActions?: Record<string, unknown> | null | undefined;
 };
 
 export type ScopedAdvertisingReport = {
