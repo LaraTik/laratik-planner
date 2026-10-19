@@ -33,27 +33,33 @@ No visual baseline is considered accepted until the route is connected to
 real data or an explicitly labeled empty/loading/error state and the English
 and Arabic RTL checks pass.
 
-## Functional review checkpoint (2026-10-19)
+## Functional review checkpoint (2026-10-20)
 
-| Section             | Current behavior after the local correction                                                                                                      | Remaining product or release gap                                                                      |
-| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Overview            | Workspace counts and priority buckets use stored values; priority rows no longer repeat the total.                                               | The attention summary is not an SLA or response-time dashboard.                                       |
-| Unified inbox       | Search/type filters are URL-backed; selecting a conversation loads its bounded message thread; reply and assignment controls use server actions. | The list is limited to 25 items from the latest 100 conversations and has no pagination yet.          |
-| Post comments       | Synced public conversations are listed and deep-link to the shared inbox thread.                                                                 | Post media/context, deleted-post handling, and dedicated Stitch visual evidence remain.               |
-| Review queue        | Waiting-review conversations are listed and can be opened in the inbox.                                                                          | Community approval/reject/escalate actions are not implemented; disabled controls must stay disabled. |
-| Automations         | Existing rules and their status are shown.                                                                                                       | Rule editing, emergency-stop mutation, and activation are unavailable.                                |
-| Playbooks           | Existing playbook names, revisions, and lifecycle states are shown.                                                                              | Editing, expiry/stale-source workflows, and publishing are unavailable.                               |
-| AI Test Lab         | Simulation-only form and result preview remain available.                                                                                        | Interaction and no-provider-action evidence remains pending.                                          |
-| Analytics           | Displays stored counts and explicitly reports unmeasured metrics; sample chart bars were removed.                                                | Volume charts, SLA, quality, reliability, and export are not implemented.                             |
-| Connections         | Capability status, validation, and bounded sync controls are shown.                                                                              | Real-account read/reply UAT and permission review remain.                                             |
-| Team & routing      | Active workspace members can be assigned to recent conversations; writes are permission-checked and audited.                                     | Automatic routing rules and SLA workload targets are not implemented.                                 |
-| Settings & safety   | Current mode, emergency-stop state, and retention are displayed.                                                                                 | Editable budgets, sync/privacy controls, and emergency-stop mutation are unavailable.                 |
-| Activity & delivery | The latest sanitized community events are listed.                                                                                                | Filtering, delivery reconciliation views, export, and dedicated browser evidence remain.              |
-| Setup wizard        | Steps navigate to Connections, Playbooks, Settings, and workspace enablement.                                                                    | First-run step-by-step and readiness-gate browser evidence remains.                                   |
+| Section             | Current behavior after the local correction                                                                                                      | Remaining product or release gap                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
+| Overview            | Workspace counts and priority buckets use stored values; priority rows no longer repeat the total.                                               | The attention summary is not an SLA or response-time dashboard.                                                    |
+| Unified inbox       | Search/type filters are URL-backed; selecting a conversation loads its bounded message thread; reply and assignment controls use server actions. | The list is limited to 25 items from the latest 100 conversations and has no pagination yet.                       |
+| Post comments       | Synced public conversations are listed and deep-link to the shared inbox thread.                                                                 | Post media/context, deleted-post handling, and dedicated Stitch visual evidence remain.                            |
+| Review queue        | Waiting-review conversations are listed and can be opened in the inbox.                                                                          | Community approval/reject/escalate actions are not implemented; disabled controls must stay disabled.              |
+| Automations         | Existing rules and their status are shown; a manager can stop or resume workspace reply processing with an audited confirmation.                 | Rule editing and activation are unavailable; capability checks and the default-off auto-send gate remain in force. |
+| Playbooks           | Existing playbook names, revisions, and lifecycle states are shown.                                                                              | Editing, expiry/stale-source workflows, and publishing are unavailable.                                            |
+| AI Test Lab         | Simulation-only form and result preview remain available.                                                                                        | Interaction and no-provider-action evidence remains pending.                                                       |
+| Analytics           | Displays stored counts and explicitly reports unmeasured metrics; sample chart bars were removed.                                                | Volume charts, SLA, quality, reliability, and export are not implemented.                                          |
+| Connections         | Capability status, validation, and bounded sync controls are shown.                                                                              | Real-account read/reply UAT and permission review remain.                                                          |
+| Team & routing      | Active workspace members can be assigned to recent conversations; writes are permission-checked and audited.                                     | Automatic routing rules and SLA workload targets are not implemented.                                              |
+| Settings & safety   | Current mode, emergency-stop state, and retention are displayed; a manager can change the stop flag through an audited confirmation.             | Editable budgets, sync/privacy controls, and retention changes are unavailable.                                    |
+| Activity & delivery | The latest sanitized community events are listed.                                                                                                | Filtering, delivery reconciliation views, export, and dedicated browser evidence remain.                           |
+| Setup wizard        | Steps navigate to Connections, Playbooks, Settings, and workspace enablement.                                                                    | First-run step-by-step and readiness-gate browser evidence remains.                                                |
 
 The focused Playwright audit checks all 13 route surfaces in both locales at
 1440, 1280, 1024, 768, and 375 pixels. Each surface passed the serious/critical
 axe check and page-width overflow check. Focused interactions also verify inbox
-selection, comments deep-linking, and Team assignment. This is not a visual
+selection, comments deep-linking, Team assignment, and the manager-only
+emergency stop from both Automations and Settings. The full route/locale/width
+sweep passed before the final copy and manager-fixture adjustment; its latest
+rerun reached the Automations route before the local app server refused a
+connection. The five interaction tests passed with the workspace-manager
+fixture. `pnpm verify` passed with 545 unit files and 4,892 tests; focused
+Community integration passed 5/5. This is working-tree evidence, not a visual
 baseline or provider UAT verdict. The open items above remain gated by the
 evidence contract in `docs/production-readiness/COMMUNITY_INBOX_UAT.md`.

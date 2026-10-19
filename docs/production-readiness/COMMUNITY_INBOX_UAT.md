@@ -30,14 +30,22 @@ synced public conversations and opens them in the same inbox thread. Team &
 routing supports manager/planner assignment to active workspace members and
 records a sanitized assignment event. Missing provider author names are
 presented as unavailable provider metadata. Analytics shows an explicit
-not-measured state instead of sample data; automations and playbooks remain
+not-measured state instead of sample data. A manager can stop or resume
+workspace reply processing from Automations or Settings; the server checks
+the manager permission and records the change, while provider capability and
+human-review gates remain active. Automation rules and playbooks remain
 read-only where their controls are not implemented.
 
 The focused local browser suite is `tests/e2e/community-inbox.spec.ts`. It
-checks inbox selection, comments deep-linking, Team assignment, and all 13
+checks inbox selection, comments deep-linking, Team assignment, manager
+emergency-stop changes from both Automations and Settings, and all 13
 Community routes in English/LTR and Arabic/RTL at 1440, 1280, 1024, 768, and
-375 pixels. All route/locale/viewport cases passed axe serious/critical checks
-and page-width overflow checks on 2026-10-19. This is local UI evidence; it
+375 pixels. A full matrix pass was recorded before the final copy and
+manager-fixture adjustment. The latest rerun passed all five interactions but
+the local app server refused a connection during the 3.4-minute route sweep,
+so a complete rerun remains outstanding. Focused Community integration tests
+passed 5/5 and `pnpm verify` passed 545 unit files / 4,892 tests and the
+production build. This is local working-tree evidence; it
 does not replace approved Stitch visual baselines, workspace-isolation and
 database evidence at the release SHA, or live Meta UAT below.
 

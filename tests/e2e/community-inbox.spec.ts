@@ -33,7 +33,8 @@ async function seedCommunitySession(
     agencySlug: AGENCY_SLUG,
     workspaceName: "Community E2E Workspace",
     workspaceSlug: WORKSPACE_SLUG,
-    agencyAdmin: true,
+    agencyAdmin: false,
+    workspaceRoles: ["workspace_manager"],
     locale: locale as "en" | "ar",
     communityInboxFixture: true,
   });
@@ -85,15 +86,36 @@ test.describe("Community & Inbox", () => {
     await expect(page.getByRole("status").filter({ hasText: "Assignment saved." })).toBeVisible();
   });
 
+  test("workspace manager can stop and resume community actions from both safety surfaces", async ({
+    page,
+  }) => {
+    await seedCommunitySession(page);
+    await page.goto(`${BASE}/automations`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+
+    await page.getByTestId("community-emergency-stop-toggle").click();
+    await expect(page.getByTestId("community-emergency-stop-dialog")).toBeVisible();
+    await page.getByTestId("community-emergency-stop-confirm").click();
+    await expect(page.getByTestId("community-emergency-stop-status")).toHaveText(
+      "Reply processing is active. Provider and review checks still apply.",
+    );
+
+    await page.goto(`${BASE}/settings`, { waitUntil: "domcontentloaded" });
+    await page.waitForLoadState("networkidle");
+    await page.getByTestId("community-emergency-stop-toggle").click();
+    await page.getByTestId("community-emergency-stop-confirm").click();
+    await expect(page.getByTestId("community-emergency-stop-status")).toHaveText(
+      "Reply processing is paused.",
+    );
+  });
+
   test("actions without an implemented or validated write path remain disabled", async ({
     page,
   }) => {
     const guardedActions = [
       ["reviews", "community-review-reject-disabled"],
       ["reviews", "community-review-approve-disabled"],
-      ["automations", "community-automation-emergency-stop-disabled"],
       ["automations", "community-automation-configure-disabled"],
-      ["settings", "community-settings-emergency-stop-disabled"],
       ["activity", "community-activity-export-disabled"],
     ] as const;
 

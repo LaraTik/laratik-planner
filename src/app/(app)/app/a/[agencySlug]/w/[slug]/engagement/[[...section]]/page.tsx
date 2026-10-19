@@ -18,7 +18,6 @@ import {
   Link2,
   MessageCircle,
   MessageSquare,
-  PauseCircle,
   Plus,
   Search,
   Send,
@@ -66,6 +65,7 @@ import { CommunityReplyForm } from "@/components/community/community-reply-form"
 import { PrivateMessageSyncButton } from "@/components/community/private-message-sync-button";
 import { CommunityAssignmentForm } from "@/components/community/community-assignment-form";
 import { CommunityTestLab } from "@/components/community/community-test-lab";
+import { CommunityEmergencyStopControl } from "@/components/community/community-emergency-stop-control";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1018,9 +1018,17 @@ function ReviewsScreen({
 function AutomationsScreen({
   t,
   metrics,
+  access,
+  agencySlug,
+  workspaceSlug,
+  canManage,
 }: {
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
+  access: Awaited<ReturnType<typeof getCommunityWorkspaceAccess>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
 }) {
   return (
     <>
@@ -1036,14 +1044,25 @@ function AutomationsScreen({
             </p>
           </div>
         </div>
-        <Button
-          variant="destructive"
-          disabled
-          data-testid="community-automation-emergency-stop-disabled"
-        >
-          <PauseCircle className="h-4 w-4" aria-hidden="true" />
-          {communityText(t, "disabled")}
-        </Button>
+        <CommunityEmergencyStopControl
+          agencySlug={agencySlug}
+          workspaceSlug={workspaceSlug}
+          emergencyStop={access.emergencyStop}
+          canManage={canManage}
+          stopLabel={communityText(t, "stopCommunityActions")}
+          resumeLabel={communityText(t, "resumeCommunityActions")}
+          stoppedLabel={communityText(t, "communityActionsStopped")}
+          runningLabel={communityText(t, "communityActionsRunning")}
+          stopTitle={communityText(t, "stopCommunityActionsTitle")}
+          stopDescription={communityText(t, "stopCommunityActionsDescription")}
+          resumeTitle={communityText(t, "resumeCommunityActionsTitle")}
+          resumeDescription={communityText(t, "resumeCommunityActionsDescription")}
+          confirmLabel={communityText(t, "confirmSafetyChange")}
+          cancelLabel={communityText(t, "cancel")}
+          closeLabel={communityText(t, "close")}
+          successLabel={communityText(t, "safetyChangeSaved")}
+          failureLabel={communityText(t, "safetyChangeFailed")}
+        />
       </div>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
         <Card>
@@ -1543,9 +1562,15 @@ function TeamScreen({
 function SettingsScreen({
   t,
   access,
+  agencySlug,
+  workspaceSlug,
+  canManage,
 }: {
   t: Translator;
   access: Awaited<ReturnType<typeof getCommunityWorkspaceAccess>>;
+  agencySlug: string;
+  workspaceSlug: string;
+  canManage: boolean;
 }) {
   const modeLabel =
     access.mode === "controlled_auto"
@@ -1595,26 +1620,25 @@ function SettingsScreen({
           <CardHeader>
             <CardTitle>{communityText(t, "emergencyStop")}</CardTitle>
           </CardHeader>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-body text-fg-primary font-medium">
-                {access.emergencyStop
-                  ? communityText(t, "disabled")
-                  : communityText(t, "available")}
-              </p>
-              <p className="text-label text-fg-muted mt-1">
-                {communityText(t, "noProviderActions")}
-              </p>
-            </div>
-            <Button
-              variant="destructive"
-              disabled
-              data-testid="community-settings-emergency-stop-disabled"
-            >
-              <PauseCircle className="h-4 w-4" aria-hidden="true" />
-              {communityText(t, "disabled")}
-            </Button>
-          </div>
+          <CommunityEmergencyStopControl
+            agencySlug={agencySlug}
+            workspaceSlug={workspaceSlug}
+            emergencyStop={access.emergencyStop}
+            canManage={canManage}
+            stopLabel={communityText(t, "stopCommunityActions")}
+            resumeLabel={communityText(t, "resumeCommunityActions")}
+            stoppedLabel={communityText(t, "communityActionsStopped")}
+            runningLabel={communityText(t, "communityActionsRunning")}
+            stopTitle={communityText(t, "stopCommunityActionsTitle")}
+            stopDescription={communityText(t, "stopCommunityActionsDescription")}
+            resumeTitle={communityText(t, "resumeCommunityActionsTitle")}
+            resumeDescription={communityText(t, "resumeCommunityActionsDescription")}
+            confirmLabel={communityText(t, "confirmSafetyChange")}
+            cancelLabel={communityText(t, "cancel")}
+            closeLabel={communityText(t, "close")}
+            successLabel={communityText(t, "safetyChangeSaved")}
+            failureLabel={communityText(t, "safetyChangeFailed")}
+          />
         </Card>
         <Card>
           <CardHeader>
@@ -1660,7 +1684,12 @@ function ActivityScreen({
           <ul className="divide-border divide-y">
             {metrics.recentEvents.map((event) => (
               <li key={event.id} className="py-3 first:pt-0">
-                <p className="text-body text-fg-primary font-medium">{event.detail}</p>
+                <p className="text-body text-fg-primary font-medium">
+                  {event.detail === "community_emergency_stop_enabled" ||
+                  event.detail === "community_emergency_stop_disabled"
+                    ? communityText(t, event.detail)
+                    : event.detail}
+                </p>
                 <p className="text-label text-fg-muted mt-1">
                   {communityText(t, event.kind)} ·{" "}
                   {formatDate(event.createdAt, locale, DateFormat.long)}
@@ -1910,7 +1939,14 @@ export default async function CommunityEngagementPage({
         ) : currentSection === "reviews" ? (
           <ReviewsScreen t={t} basePath={basePath} metrics={metrics} />
         ) : currentSection === "automations" ? (
-          <AutomationsScreen t={t} metrics={metrics} />
+          <AutomationsScreen
+            t={t}
+            metrics={metrics}
+            access={access}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "playbooks" ? (
           <PlaybooksScreen t={t} metrics={metrics} />
         ) : currentSection === "test-lab" ? (
@@ -1935,7 +1971,13 @@ export default async function CommunityEngagementPage({
             metrics={metrics}
           />
         ) : currentSection === "settings" ? (
-          <SettingsScreen t={t} access={access} />
+          <SettingsScreen
+            t={t}
+            access={access}
+            agencySlug={agencySlug}
+            workspaceSlug={slug}
+            canManage={canManage}
+          />
         ) : currentSection === "activity" ? (
           <ActivityScreen t={t} locale={code as LocaleCode} metrics={metrics} />
         ) : (

@@ -39,10 +39,12 @@ vi.mock("@/lib/workspaces/context", () => ({
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
 
 let assignCommunityConversationAction: typeof import("@/lib/community/assignment-actions").assignCommunityConversationAction;
+let setCommunityEmergencyStopAction: typeof import("@/lib/community/safety-actions").setCommunityEmergencyStopAction;
 
 beforeAll(async () => {
   await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
   ({ assignCommunityConversationAction } = await import("@/lib/community/assignment-actions"));
+  ({ setCommunityEmergencyStopAction } = await import("@/lib/community/safety-actions"));
 });
 
 afterAll(async () => {
@@ -239,5 +241,60 @@ describe("Community conversation assignment (integration)", () => {
       .from(communityConversations)
       .where(eq(communityConversations.id, conversation.id));
     expect(unchanged?.assignedTo).toBeNull();
+  });
+});
+
+describe("Community emergency stop (integration)", () => {
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    await db.execute(sql`
+      TRUNCATE
+        community_event, community_message, community_conversation,
+        workspace_membership_role, workspace_membership, workspace_settings,
+        agency_module_setting, agency_membership, agency_entitlement,
+        platform_plan_template, bootstrap_lock, agency, "user"
+      RESTART IDENTITY CASCADE
+    `);
+  });
+
+  it("updates the workspace safety flag and records a localized event code", async () => {
+    const { actor, workspace } = await seed();
+
+    await expect(
+      setCommunityEmergencyStopAction("test-agency", "test-workspace", false),
+    ).resolves.toEqual({ ok: true, emergencyStop: false });
+
+    const [settings] = await db
+      .select({ emergencyStop: workspaceSettings.communityInboxEmergencyStop })
+      .from(workspaceSettings)
+      .where(eq(workspaceSettings.workspaceId, workspace.id));
+    const [event] = await db.select().from(communityEvents);
+    expect(settings?.emergencyStop).toBe(false);
+    expect(event).toMatchObject({
+      workspaceId: workspace.id,
+      actorId: actor.id,
+      kind: "community_emergency_stop_disabled",
+      detail: "community_emergency_stop_disabled",
+      metadata: { emergencyStop: false },
+    });
+    expect(mocks.revalidatePath).toHaveBeenCalledTimes(5);
+  });
+
+  it("rejects an actor without settings permission and does not write", async () => {
+    const { assignee, workspace } = await seed();
+    await db.delete(workspaceMembershipRoles);
+    mocks.currentActor.mockResolvedValue({ id: assignee.id });
+    mocks.auth.mockResolvedValue({ user: { id: assignee.id } });
+    mocks.getAccessibleWorkspaceAtPath.mockResolvedValue({
+      id: workspace.id,
+      agencyId: workspace.agencyId,
+    });
+
+    await expect(
+      setCommunityEmergencyStopAction("test-agency", "test-workspace", false),
+    ).resolves.toEqual({ ok: false, code: "unauthorized" });
+    const events = await db.select().from(communityEvents);
+    expect(events).toHaveLength(0);
+    expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
 });

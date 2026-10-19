@@ -78,6 +78,12 @@ conversations and active member workload counts within that window. Automated
 routing rule editing, SLA measurement, analytics, and automation activation
 are not implemented yet and must remain visibly unavailable.
 
+The emergency stop is manager-only and workspace-scoped. Its server action
+rechecks the Community access gates and `manage_settings` permission, changes
+only `communityInboxEmergencyStop`, and records a sanitized event in the same
+transaction. Resuming does not enable auto-send or skip the reply service's
+capability, workspace, safety, or human-review checks.
+
 AI Assist creates drafts only. Playbooks and knowledge must carry ownership,
 approval, revision, expiry, and stale-source state. Test Lab is simulation
 only. Controlled Auto and provider sending remain disabled until controlled

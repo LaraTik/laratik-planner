@@ -1,5 +1,19 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
+> emergency stop now has an audited, manager-only action on Automations and
+> Settings. Its confirmation flow changes only the existing pause flag; reply
+> capability checks and the default-off auto-send gate remain in force. The
+> focused server-action integration tests passed (5/5), the manager stop/resume
+> flow passed in Chromium, and the focused Community integration tests passed
+> (5/5). `pnpm verify` passed (545 unit files / 4,892 tests and production
+> build). A full 13-route EN/AR five-viewport sweep passed before the final
+> copy and manager-fixture adjustment; the latest manager-role rerun passed
+> all five interaction tests but the local app server refused a connection
+> during the 3.4-minute route sweep, so that rerun is incomplete. Repeat
+> affected gates at the exact clean commit and retain the full evidence bundle
+> and external Meta UAT before calling the feature **Verified**.
+
 > **2026-10-19 Community & Inbox interaction correction checkpoint** — Inbox
 > conversation cards now select a URL-backed thread; Post comments lists the
 > synced public conversations and opens the same thread; Team & routing can
