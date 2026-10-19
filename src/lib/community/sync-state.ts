@@ -27,3 +27,10 @@ export function advanceSyncCursor(
 
   return Number.isFinite(newest) ? new Date(newest).toISOString() : null;
 }
+
+export function classifyCommunitySyncResult(
+  result: { ok: false } | { ok: true; readChannels: number; failures: readonly string[] },
+): "success" | "partial" | "failure" {
+  if (!result.ok || !(result.readChannels > 0)) return "failure";
+  return result.failures.length > 0 ? "partial" : "success";
+}

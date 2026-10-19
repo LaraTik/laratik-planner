@@ -63,9 +63,10 @@ for (const locale of ["en", "ar"] as const) {
     }
 
     const base = `/app/a/${slug}/w/${slug}/engagement`;
+    const main = page.getByRole("main");
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${base}/activity`);
-    await expect(page.getByTestId("community-activity-list")).toBeVisible();
+    await expect(main.getByTestId("community-activity-list")).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
     const overview = page.getByRole("link", {
       name: locale === "en" ? "Overview" : "نظرة عامة",
@@ -74,7 +75,7 @@ for (const locale of ["en", "ar"] as const) {
     await expect(overview).not.toHaveAttribute("aria-current", "page");
     for (const width of [375, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
-      await expect(page.getByTestId("community-activity-list")).toBeVisible();
+      await expect(main.getByTestId("community-activity-list")).toBeVisible();
       await page.screenshot({
         path: testInfo.outputPath(`activity-${locale}-${width}.png`),
         fullPage: true,
@@ -91,7 +92,7 @@ for (const locale of ["en", "ar"] as const) {
     );
 
     await page.goto(`${base}/inbox?q=Synthetic`);
-    const selected = page.locator(`a[href*="conversation=${conversationId}"]`);
+    const selected = main.locator(`a[href*="conversation=${conversationId}"]`);
     await expect(selected).toBeVisible();
     await selected.focus();
     await page.keyboard.press("Enter");
@@ -99,6 +100,12 @@ for (const locale of ["en", "ar"] as const) {
       page.getByRole("textbox", { name: locale === "en" ? "Write a reply…" : "اكتب ردًا…" }),
     ).toBeDisabled();
     await expect(page).toHaveURL(new RegExp(`conversation=${conversationId}`));
+    await expect(
+      main.getByRole("button", {
+        name: locale === "en" ? "Sync private messages" : "مزامنة الرسائل الخاصة",
+        exact: true,
+      }),
+    ).toBeDisabled();
     await expect(
       page.getByRole("textbox", {
         name: locale === "en" ? "Search conversations" : "البحث في المحادثات",

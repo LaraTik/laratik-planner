@@ -12,7 +12,7 @@ provider identifiers, or secrets are recorded here.
 
 | Capability         | Observed result                                                                              | Next step                                                                                          |
 | ------------------ | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| Public comments    | 32 stored conversations; Facebook and Instagram content visible; comment sync has completed  | Use the inbox; polling is bounded, not a real-time webhook service                                 |
+| Public comments    | 32 stored conversations; Facebook and Instagram content visible; comment sync has completed  | Use the inbox; sync is manual and bounded, not a real-time webhook service                         |
 | Comment replies    | Capability marked Available, but workspace emergency stop is active; server rejects delivery | Complete controlled read/reply UAT before an operator releases the safety stop                     |
 | Private messages   | Read/reply Unavailable; missing `pages_messaging`; no completed private-message sync         | Obtain the permission through Meta App Review, reconnect, validate, then controlled read/reply UAT |
 | AI                 | Provider configured, master switch On, last provider check OK; `community_reply_drafts` Off  | Agency administrator enables that capability if desired; use synthetic Test Lab inputs first       |
@@ -21,6 +21,10 @@ provider identifiers, or secrets are recorded here.
 
 ## Reproduced defects and scoped changes
 
+- The header’s generic “Available” badge referred only to module access. It
+  now says “Module enabled”; provider and AI readiness remain separate.
+  Breadcrumbs use translated section titles, and connection timestamps use
+  the shared day-first formatter and workspace timezone.
 - Activity counted events but rendered an empty container whenever the count
   was positive. It now loads the latest 50 workspace-scoped events and renders
   allowlisted bilingual event labels and workspace-timezone timestamps.
@@ -45,6 +49,14 @@ provider identifiers, or secrets are recorded here.
 - Test Lab mapped disabled capability, plan restriction, rate limit, quota,
   and provider failure to “Review required.” It now explains these errors
   separately. Test Lab textareas use content-driven direction.
+- Sync feedback treated every returned result as success, including partial
+  provider failures or no readable channels. Shared result classification now
+  distinguishes success, partial results, and failure. A fresh read-only live
+  comment sync was observed to complete, with its Connections timestamp updated.
+- Sync controls were enabled without validated read permission, and Connections
+  called a blocked sync “Ready.” The controls now respect the operation’s
+  read capability, explain the required setup, and do not claim background
+  polling is active.
 - Emergency-stop copy was ambiguous and the composer remained editable even
   though the server would reject sending. The UI now explains the paused
   state and disables the composer. Server protections remain enforced.

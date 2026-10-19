@@ -57,6 +57,8 @@ import {
 } from "@/lib/db/schema";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { workspaceBasePath } from "@/lib/urls";
+import { formatDate, DateFormat } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
@@ -473,7 +475,7 @@ function InboxScreen({
   query,
 }: {
   query: CommunityInboxQuery;
-  locale: string;
+  locale: LocaleCode;
   emergencyStop: boolean;
   t: Translator;
   basePath: string;
@@ -582,6 +584,11 @@ function InboxScreen({
             </CardDescription>
           </div>
           <CommentSyncButton
+            available={metrics.capabilityRows.some(
+              (row) => row.operation === "read_comments" && row.state === "available",
+            )}
+            unavailableLabel={communityText(t, "syncUnavailable")}
+            partialLabel={communityText(t, "syncPartial")}
             agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             canManage={canManage}
@@ -591,6 +598,11 @@ function InboxScreen({
             failureLabel={communityText(t, "syncFailure")}
           />
           <PrivateMessageSyncButton
+            available={metrics.capabilityRows.some(
+              (row) => row.operation === "read_private_messages" && row.state === "available",
+            )}
+            unavailableLabel={communityText(t, "syncUnavailable")}
+            partialLabel={communityText(t, "syncPartial")}
             agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             canManage={canManage}
@@ -668,7 +680,7 @@ function InboxScreen({
               <span className="text-label font-semibold">{communityText(t, "aiAssist")}</span>
             </div>
             <p className="text-label text-fg-secondary mt-2">
-              {communityText(t, "noProviderActions")}
+              {communityText(t, "aiAssistLabHint")}
             </p>
           </div>
           <Link
@@ -837,7 +849,7 @@ function TestLabScreen({
   workspaceSlug,
   locale,
 }: {
-  locale: string;
+  locale: LocaleCode;
   t: Translator;
   agencySlug: string;
   workspaceSlug: string;
@@ -953,7 +965,11 @@ function ConnectionsScreen({
   agencySlug,
   workspaceSlug,
   canManage,
+  locale,
+  timeZone,
 }: {
+  locale: LocaleCode;
+  timeZone: string;
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
   agencySlug: string;
@@ -1014,7 +1030,13 @@ function ConnectionsScreen({
                 {communityText(t, "lastChecked")}
               </span>
               <span className="text-label text-fg-muted">
-                {metrics.capabilityRows[0]?.checkedAt?.toLocaleString() ?? "—"}
+                {metrics.capabilityRows[0]?.checkedAt
+                  ? formatDate(metrics.capabilityRows[0].checkedAt, locale, {
+                      ...DateFormat.dateTime,
+                      timeZone,
+                      hour12: false,
+                    })
+                  : "—"}
               </span>
             </div>
             <CapabilityValidationButton
@@ -1030,6 +1052,11 @@ function ConnectionsScreen({
               <p className="text-label text-fg-secondary">{communityText(t, "syncStatus")}</p>
               {syncKinds.map(({ key, label }) => {
                 const states = metrics.syncStates.filter((state) => state.syncKind === key);
+                const operation = key === "comments" ? "read_comments" : "read_private_messages";
+                const capabilityState =
+                  metrics.capabilityRows.find((row) => row.operation === operation)?.state ??
+                  "unknown";
+                const available = capabilityState === "available";
                 const failed = states.some((state) => state.status === "failed");
                 const running = states.some((state) => state.status === "running");
                 const lastCompleted = states
@@ -1043,16 +1070,26 @@ function ConnectionsScreen({
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-label text-fg-primary">{label}</span>
-                      <Badge variant={failed ? "warning" : running ? "info" : "outline"}>
+                      <Badge
+                        variant={!available || failed ? "warning" : running ? "info" : "outline"}
+                      >
                         {communityText(
                           t,
-                          failed ? "syncFailed" : running ? "syncRunning" : "syncIdle",
+                          !available
+                            ? capabilityState === "unavailable"
+                              ? "unavailable"
+                              : "notValidated"
+                            : failed
+                              ? "syncFailed"
+                              : running
+                                ? "syncRunning"
+                                : "syncIdle",
                         )}
                       </Badge>
                     </div>
                     <p className="text-label text-fg-muted mt-1">
                       {lastCompleted
-                        ? `${communityText(t, "syncLastCompleted")}: ${lastCompleted.toLocaleString()}`
+                        ? `${communityText(t, "syncLastCompleted")}: ${formatDate(lastCompleted, locale, { ...DateFormat.dateTime, timeZone, hour12: false })}`
                         : communityText(t, "syncNeverRun")}
                     </p>
                     {failed ? (
@@ -1255,7 +1292,7 @@ function ActivityScreen({
   locale,
   timeZone,
 }: {
-  locale: string;
+  locale: LocaleCode;
   timeZone: string;
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
@@ -1346,7 +1383,7 @@ function SetupScreen({
             <CardDescription>{communityText(t, "setupDescription")}</CardDescription>
           </div>
           <Badge variant={access.allowed ? "success" : "warning"}>
-            {access.allowed ? communityText(t, "available") : communityText(t, "notValidated")}
+            {access.allowed ? communityText(t, "moduleEnabled") : communityText(t, "notValidated")}
           </Badge>
         </CardHeader>
         <div className="space-y-3">
@@ -1468,13 +1505,13 @@ export default async function CommunityEngagementPage({
   return (
     <div className="space-y-6 pb-8" data-testid={`community-screen-${currentSection}`}>
       <PageHeader
-        eyebrow={`${communityText(t, "eyebrow")} / ${currentSection.replaceAll("-", " ")}`}
+        eyebrow={`${communityText(t, "eyebrow")} / ${title}`}
         title={title}
         description={description}
         action={
           <Badge variant={access.allowed ? "success" : "outline"}>
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            {access.allowed ? communityText(t, "available") : communityText(t, "notValidated")}
+            {access.allowed ? communityText(t, "moduleEnabled") : communityText(t, "notValidated")}
           </Badge>
         }
       />
@@ -1523,6 +1560,8 @@ export default async function CommunityEngagementPage({
             agencySlug={agencySlug}
             workspaceSlug={slug}
             canManage={canManage}
+            locale={code}
+            timeZone={workspace.timezone}
           />
         ) : currentSection === "team" ? (
           <TeamScreen t={t} metrics={metrics} />

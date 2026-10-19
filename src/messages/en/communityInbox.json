@@ -105,7 +105,7 @@
   "syncingPrivateMessages": "Syncing private messages…",
   "privateSyncSuccess": "Private-message sync completed. New conversations are now in the inbox.",
   "syncSuccess": "Comment sync completed. New items are now in the inbox.",
-  "syncFailure": "Comment sync could not be completed. Provider actions remain paused.",
+  "syncFailure": "Sync could not complete. Check Connections for the required read permissions.",
   "syncStatus": "Sync status",
   "syncIdle": "Ready",
   "syncRunning": "Running",
@@ -156,7 +156,7 @@
   "capabilityDetailMutationUat": "Reply sending remains disabled until a controlled Meta test confirms the exact account and permission path.",
   "capabilityDetailMissingScope": "Required Meta permission(s): {scopes}. Enable and approve them for this app, reconnect Meta, then validate again.",
   "capabilityDetailReadNotImplemented": "Private-message import is not implemented for this connection yet.",
-  "capabilityDetailWebhooks": "Polling is active; webhook delivery will be enabled after operational setup and UAT.",
+  "capabilityDetailWebhooks": "Sync is manual after read permissions are validated. Automatic incoming updates are not enabled yet.",
   "capabilityDetailMediaContext": "Media context enrichment is not implemented for this connection yet.",
   "capabilityDetailConversationHistory": "Conversation history expansion is not implemented for this connection yet.",
   "noRules": "No rules published",
@@ -182,5 +182,9 @@
   "testLabFailed": "The simulation could not run. Try again; if it continues, contact an administrator. No reply was sent.",
   "inboxWindow": "Search and filters cover the latest 25 conversations in the current sync window.",
   "replyPaused": "Outgoing replies are paused by the emergency stop. An operator must complete safety checks before enabling delivery.",
-  "replySafetyReady": "Emergency stop is inactive. Replies still require validated provider permissions."
+  "replySafetyReady": "Emergency stop is inactive. Replies still require validated provider permissions.",
+  "syncUnavailable": "Validate the required read permission in Connections before syncing.",
+  "syncPartial": "Sync completed with errors. Check Connections before relying on these results.",
+  "moduleEnabled": "Module enabled",
+  "aiAssistLabHint": "Preview reply suggestions in the AI Test Lab after an agency administrator enables Community reply drafts."
 }
