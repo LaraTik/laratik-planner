@@ -76,6 +76,14 @@ import {
   AdvertisingTargetingCards,
   type AdvertisingTargetingCardLabels,
 } from "./advertising-targeting-cards";
+import {
+  AdvertisingAudienceExplorer,
+  type AdvertisingAudienceExplorerLabels,
+} from "./advertising-audience-explorer";
+import {
+  AdvertisingHierarchyExplorer,
+  type AdvertisingHierarchyExplorerLabels,
+} from "./advertising-hierarchy-explorer";
 import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
 import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
 
@@ -338,7 +346,6 @@ export default async function AdvertisingAnalyticsPage({
   const campaignPage = paginate(visibleCampaigns, firstQueryValue(query.campaignPage));
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
   const adPage = paginate(view.ads, firstQueryValue(query.adPage));
-  const audiencePage = paginate(result.audience, firstQueryValue(query.audiencePage));
   const clientReportHref = `${basePath}?${new URLSearchParams({
     accountId: selectedAccount.id,
     since,
@@ -380,13 +387,26 @@ export default async function AdvertisingAnalyticsPage({
   });
   const campaignsHref =
     reportSectionNavItems.find((item) => item.key === "campaigns")?.href ?? basePath;
-  const reportExportHref = `/api/advertising/report?${new URLSearchParams({
+  const exportParams = new URLSearchParams({
     accountId: selectedAccount.id,
     workspaceId: workspace.id,
     since,
     until,
     surface: "csv_export",
-  }).toString()}`;
+    compare: comparisonMode,
+    section: activeSection,
+    search: campaignSearch,
+    objective: objectiveFilter,
+    status: statusFilter,
+    trendMetricA,
+    trendMetricB,
+    trendGranularity,
+  });
+  const compareSince = firstQueryValue(query.compareSince);
+  const compareUntil = firstQueryValue(query.compareUntil);
+  if (compareSince) exportParams.set("compareSince", compareSince);
+  if (compareUntil) exportParams.set("compareUntil", compareUntil);
+  const reportExportHref = `/api/advertising/report?${exportParams.toString()}`;
   const reportHeaderActions = (
     <>
       <Button asChild variant="secondary" size="sm">
@@ -781,131 +801,152 @@ export default async function AdvertisingAnalyticsPage({
           ) : null}
 
           {activeSection === "campaigns" ? (
-            <Card
-              id="advertising-reporting-campaigns"
-              padding="none"
-              className="overflow-hidden"
-              data-testid="advertising-reporting-campaigns"
-            >
-              <CardHeader className="px-4 pt-4 sm:px-5 sm:pt-5">
-                <div>
-                  <CardTitle>{t("advertising.reporting.campaignsTitle")}</CardTitle>
-                  <CardDescription>
-                    {t("advertising.reporting.campaignsDescription")}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              <div
-                aria-label={t("advertising.reporting.campaignsTableLabel")}
-                className="overflow-x-auto"
-                role="region"
-                tabIndex={0}
-              >
-                <table className="text-body w-full min-w-[760px] text-start">
-                  <caption className="sr-only">
-                    {t("advertising.reporting.campaignsTableLabel")}
-                  </caption>
-                  <thead className="bg-surface-subtle text-label text-fg-muted">
-                    <tr>
-                      <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="col">
-                        {t("advertising.reporting.campaign")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.ads")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.spend")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.impressions")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.clicks")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.results")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.ctr")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.cpc")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.cpm")}
-                      </th>
-                      <th className="px-4 py-3 text-start font-semibold" scope="col">
-                        {t("advertising.reporting.status")}
-                      </th>
-                      <th className="px-4 py-3 text-start font-semibold" scope="col">
-                        {t("advertising.reporting.objective")}
-                      </th>
-                      <th className="px-4 py-3 text-end font-semibold" scope="col">
-                        {t("advertising.reporting.dailyBudget")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-border divide-y">
-                    {campaignPage.items.map((campaign) => (
-                      <tr key={campaign.campaignId}>
-                        <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="row">
-                          <span className="block">{campaign.name ?? campaign.campaignId}</span>
-                          {campaign.name ? (
-                            <bdi className="text-label text-fg-muted" dir="ltr">
-                              {campaign.campaignId}
-                            </bdi>
-                          ) : null}
-                        </th>
-                        <td className="px-4 py-3 text-end">{number(campaign.adCount, code)}</td>
-                        <td className="px-4 py-3 text-end">
-                          {money(campaign.spend, selectedAccount.currency, code)}
-                        </td>
-                        <td className="px-4 py-3 text-end">{number(campaign.impressions, code)}</td>
-                        <td className="px-4 py-3 text-end">{number(campaign.clicks, code)}</td>
-                        <td className="px-4 py-3 text-end">
-                          {campaign.results === null
-                            ? t("advertising.reporting.notAvailable")
-                            : number(campaign.results, code)}
-                        </td>
-                        <td className="px-4 py-3 text-end">{percent(campaign.ctr, code, t)}</td>
-                        <td className="px-4 py-3 text-end">
-                          {moneyOrUnavailable(campaign.cpc, selectedAccount.currency, code, t)}
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          {moneyOrUnavailable(campaign.cpm, selectedAccount.currency, code, t)}
-                        </td>
-                        <td className="px-4 py-3 text-start">
-                          {campaign.status ?? t("advertising.reporting.notAvailable")}
-                        </td>
-                        <td className="px-4 py-3 text-start">
-                          {campaign.objective ?? t("advertising.reporting.notAvailable")}
-                        </td>
-                        <td className="px-4 py-3 text-end">
-                          {campaign.dailyBudget
-                            ? money(Number(campaign.dailyBudget), selectedAccount.currency, code)
-                            : t("advertising.reporting.notAvailable")}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <ReportPagination
-                page={campaignPage.page}
-                totalPages={campaignPage.totalPages}
-                total={campaignPage.total}
-                from={campaignPage.from}
-                to={campaignPage.to}
-                testId="advertising-reporting-campaigns-pagination"
-                pageParam="campaignPage"
-                basePath={basePath}
-                accountId={selectedAccount.id}
-                since={since}
-                until={until}
-                section={activeSection}
-                t={t}
+            <div className="space-y-3">
+              <AdvertisingHierarchyExplorer
+                campaigns={campaignPage.items}
+                adSets={view.adSets}
+                ads={view.ads}
+                currency={selectedAccount.currency}
+                locale={code}
+                labels={advertisingHierarchyExplorerLabels(t)}
               />
-            </Card>
+              <details className="border-border bg-surface rounded-[var(--radius-card)] border">
+                <summary className="text-label text-fg-primary focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center px-4 py-3 font-semibold focus:outline-none focus-visible:ring-2 sm:px-5">
+                  {t("advertising.reporting.campaignDetails")}
+                </summary>
+                <Card
+                  id="advertising-reporting-campaign-detail-table"
+                  padding="none"
+                  className="overflow-hidden border-0 shadow-none"
+                  data-testid="advertising-reporting-campaign-detail-table"
+                >
+                  <CardHeader className="px-4 pt-4 sm:px-5 sm:pt-5">
+                    <div>
+                      <CardTitle>{t("advertising.reporting.campaignsTitle")}</CardTitle>
+                      <CardDescription>
+                        {t("advertising.reporting.campaignsDescription")}
+                      </CardDescription>
+                    </div>
+                  </CardHeader>
+                  <div
+                    aria-label={t("advertising.reporting.campaignsTableLabel")}
+                    className="overflow-x-auto"
+                    role="region"
+                    tabIndex={0}
+                  >
+                    <table className="text-body w-full min-w-[760px] text-start">
+                      <caption className="sr-only">
+                        {t("advertising.reporting.campaignsTableLabel")}
+                      </caption>
+                      <thead className="bg-surface-subtle text-label text-fg-muted">
+                        <tr>
+                          <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="col">
+                            {t("advertising.reporting.campaign")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.ads")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.spend")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.impressions")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.clicks")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.results")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.ctr")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.cpc")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.cpm")}
+                          </th>
+                          <th className="px-4 py-3 text-start font-semibold" scope="col">
+                            {t("advertising.reporting.status")}
+                          </th>
+                          <th className="px-4 py-3 text-start font-semibold" scope="col">
+                            {t("advertising.reporting.objective")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.dailyBudget")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-border divide-y">
+                        {campaignPage.items.map((campaign) => (
+                          <tr key={campaign.campaignId}>
+                            <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="row">
+                              <span className="block">{campaign.name ?? campaign.campaignId}</span>
+                              {campaign.name ? (
+                                <bdi className="text-label text-fg-muted" dir="ltr">
+                                  {campaign.campaignId}
+                                </bdi>
+                              ) : null}
+                            </th>
+                            <td className="px-4 py-3 text-end">{number(campaign.adCount, code)}</td>
+                            <td className="px-4 py-3 text-end">
+                              {money(campaign.spend, selectedAccount.currency, code)}
+                            </td>
+                            <td className="px-4 py-3 text-end">
+                              {number(campaign.impressions, code)}
+                            </td>
+                            <td className="px-4 py-3 text-end">{number(campaign.clicks, code)}</td>
+                            <td className="px-4 py-3 text-end">
+                              {campaign.results === null
+                                ? t("advertising.reporting.notAvailable")
+                                : number(campaign.results, code)}
+                            </td>
+                            <td className="px-4 py-3 text-end">{percent(campaign.ctr, code, t)}</td>
+                            <td className="px-4 py-3 text-end">
+                              {moneyOrUnavailable(campaign.cpc, selectedAccount.currency, code, t)}
+                            </td>
+                            <td className="px-4 py-3 text-end">
+                              {moneyOrUnavailable(campaign.cpm, selectedAccount.currency, code, t)}
+                            </td>
+                            <td className="px-4 py-3 text-start">
+                              {campaign.status ?? t("advertising.reporting.notAvailable")}
+                            </td>
+                            <td className="px-4 py-3 text-start">
+                              {campaign.objective ?? t("advertising.reporting.notAvailable")}
+                            </td>
+                            <td className="px-4 py-3 text-end">
+                              {campaign.dailyBudget
+                                ? money(
+                                    Number(campaign.dailyBudget),
+                                    selectedAccount.currency,
+                                    code,
+                                  )
+                                : t("advertising.reporting.notAvailable")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <ReportPagination
+                    page={campaignPage.page}
+                    totalPages={campaignPage.totalPages}
+                    total={campaignPage.total}
+                    from={campaignPage.from}
+                    to={campaignPage.to}
+                    testId="advertising-reporting-campaigns-pagination"
+                    pageParam="campaignPage"
+                    basePath={basePath}
+                    accountId={selectedAccount.id}
+                    since={since}
+                    until={until}
+                    section={activeSection}
+                    t={t}
+                  />
+                </Card>
+              </details>
+            </div>
           ) : null}
           {activeSection === "adsets" ? (
             <>
@@ -1200,91 +1241,12 @@ export default async function AdvertisingAnalyticsPage({
             />
           ) : null}
           {activeSection === "audience" ? (
-            <Card id="advertising-reporting-audience" data-testid="advertising-reporting-audience">
-              <CardHeader>
-                <div>
-                  <CardTitle>{t("advertising.reporting.audienceTitle")}</CardTitle>
-                  <CardDescription>
-                    {t("advertising.reporting.audienceDescription")}
-                  </CardDescription>
-                </div>
-              </CardHeader>
-              {result.audience.length === 0 ? (
-                <p className="text-label text-fg-secondary px-4 pb-4 sm:px-5">
-                  {t("advertising.reporting.audienceUnavailable")}
-                </p>
-              ) : (
-                <div
-                  aria-label={t("advertising.reporting.audienceTableLabel")}
-                  className="overflow-x-auto"
-                  role="region"
-                  tabIndex={0}
-                >
-                  <table className="text-body w-full min-w-[720px] text-start">
-                    <caption className="sr-only">
-                      {t("advertising.reporting.audienceTableLabel")}
-                    </caption>
-                    <thead className="bg-surface-subtle text-label text-fg-muted">
-                      <tr>
-                        <th className="px-4 py-3 text-start font-semibold" scope="col">
-                          {t("advertising.reporting.breakdown")}
-                        </th>
-                        <th className="px-4 py-3 text-start font-semibold" scope="col">
-                          {t("advertising.reporting.dimension")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.spend")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.impressions")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.reach")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-border divide-y">
-                      {audiencePage.items.map((row) => (
-                        <tr key={`${row.reportDate}-${row.breakdown}-${row.dimensionValue}`}>
-                          <th className="px-4 py-3 text-start font-semibold" scope="row">
-                            {row.breakdown}
-                          </th>
-                          <td className="px-4 py-3 text-start">{row.dimensionValue}</td>
-                          <td className="px-4 py-3 text-end">
-                            {money(Number(row.spend), selectedAccount.currency, code)}
-                          </td>
-                          <td className="px-4 py-3 text-end">
-                            {row.impressions === null
-                              ? t("advertising.reporting.notAvailable")
-                              : number(row.impressions, code)}
-                          </td>
-                          <td className="px-4 py-3 text-end">
-                            {row.reach === null
-                              ? t("advertising.reporting.notAvailable")
-                              : number(row.reach, code)}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <ReportPagination
-                page={audiencePage.page}
-                totalPages={audiencePage.totalPages}
-                total={audiencePage.total}
-                from={audiencePage.from}
-                to={audiencePage.to}
-                testId="advertising-reporting-audience-pagination"
-                pageParam="audiencePage"
-                basePath={basePath}
-                accountId={selectedAccount.id}
-                since={since}
-                until={until}
-                section={activeSection}
-                t={t}
-              />
-            </Card>
+            <AdvertisingAudienceExplorer
+              rows={result.audience}
+              currency={selectedAccount.currency}
+              locale={code}
+              labels={advertisingAudienceExplorerLabels(t)}
+            />
           ) : null}
         </>
       )}
@@ -1411,6 +1373,56 @@ function advertisingTargetingCardLabels(
     rawDetails: t("advertising.reporting.targetingRawDetails"),
     rawDescription: t("advertising.reporting.targetingRawDescription"),
     moreValues: t("advertising.reporting.targetingMoreValues"),
+  };
+}
+
+function advertisingAudienceExplorerLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingAudienceExplorerLabels {
+  return {
+    title: t("advertising.reporting.audienceTitle"),
+    description: t("advertising.reporting.audienceDescription"),
+    empty: t("advertising.reporting.audienceUnavailable"),
+    age: t("advertising.reporting.audienceAge"),
+    gender: t("advertising.reporting.audienceGender"),
+    country: t("advertising.reporting.audienceCountry"),
+    placement: t("advertising.reporting.audiencePlacement"),
+    metric: t("advertising.reporting.audienceMetric"),
+    spend: t("advertising.reporting.spend"),
+    impressions: t("advertising.reporting.impressions"),
+    reach: t("advertising.reporting.reach"),
+    clicks: t("advertising.reporting.clicks"),
+    shareOfSpend: t("advertising.reporting.audienceShareOfSpend"),
+    showAll: t("advertising.reporting.audienceShowAll"),
+    showTop: t("advertising.reporting.audienceShowTop"),
+    rows: t("advertising.reporting.audienceRows"),
+    noBreakdown: t("advertising.reporting.audienceNoBreakdown"),
+    limitations: t("advertising.reporting.audienceLimitations"),
+    attributionUnavailable: t("advertising.reporting.audienceAttributionUnavailable"),
+    unavailable: t("advertising.reporting.notAvailable"),
+    tableLabel: t("advertising.reporting.audienceTableLabel"),
+  };
+}
+
+function advertisingHierarchyExplorerLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingHierarchyExplorerLabels {
+  return {
+    title: t("advertising.reporting.campaignsTitle"),
+    description: t("advertising.reporting.campaignExplorerDescription"),
+    campaign: t("advertising.reporting.campaign"),
+    adSet: t("advertising.reporting.adSet"),
+    ad: t("advertising.reporting.ad"),
+    spend: t("advertising.reporting.spend"),
+    results: t("advertising.reporting.results"),
+    ctr: t("advertising.reporting.ctr"),
+    delivery: t("advertising.reporting.status"),
+    expand: t("advertising.reporting.expand"),
+    collapse: t("advertising.reporting.collapse"),
+    noChildren: t("advertising.reporting.noChildren"),
+    unavailable: t("advertising.reporting.notAvailable"),
+    tableLabel: t("advertising.reporting.campaignsTableLabel"),
+    active: t("advertising.reporting.active"),
   };
 }
 

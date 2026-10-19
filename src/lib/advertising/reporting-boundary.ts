@@ -5,6 +5,8 @@ import {
   type AdvertisingReportingScope,
   type ScopedAdvertisingReport,
 } from "./reporting-service";
+import type { DataHealthSummary } from "./reporting-health";
+import { ADVERTISING_METRIC_DEFINITIONS } from "./reporting-metrics";
 
 export type AdvertisingReportSurface =
   | "workspace_dashboard"
@@ -75,14 +77,52 @@ export function buildAdvertisingSurfaceReport(args: {
   };
 }
 
+export type AdvertisingCsvExportMetadata = {
+  readonly accountId: string;
+  readonly accountName: string;
+  readonly since: string;
+  readonly until: string;
+  readonly timezone: string | null;
+  readonly currency: string | null;
+  readonly filters: Readonly<Record<string, string | null>>;
+  readonly dataHealth: DataHealthSummary;
+  readonly attributionSettings: string;
+};
+
 /** Export serializers accept only an already-authorized projection. */
-export function advertisingCsvFromReport(report: ScopedAdvertisingSurfaceReport): string {
+export function advertisingCsvFromReport(
+  report: ScopedAdvertisingSurfaceReport,
+  metadata?: AdvertisingCsvExportMetadata,
+): string {
   if (
     !report.authorized ||
     (report.operation !== "export" && report.surface !== "background_report")
   )
     return "";
-  const lines = ["campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks"];
+  const lines = metadata
+    ? [
+        "# LaraTik Advertising Reporting 2.0 export",
+        `# account_id,${csvCell(metadata.accountId)}`,
+        `# account_name,${csvCell(metadata.accountName)}`,
+        `# date_range,${csvCell(`${metadata.since} to ${metadata.until}`)}`,
+        `# timezone,${csvCell(metadata.timezone ?? "Not available")}`,
+        `# currency,${csvCell(metadata.currency ?? "Not available")}`,
+        `# data_health_state,${csvCell(metadata.dataHealth.state)}`,
+        `# data_health_coverage,${csvCell(metadata.dataHealth.coverage)}`,
+        `# data_health_issues,${csvCell(metadata.dataHealth.issues.join("; ") || "none")}`,
+        `# attribution_settings,${csvCell(metadata.attributionSettings)}`,
+        `# metric_definitions,${csvCell(
+          ADVERTISING_METRIC_DEFINITIONS.map(
+            (definition) => `${definition.label} (${definition.key}): ${definition.formula}`,
+          ).join(" | "),
+        )}`,
+        ...Object.entries(metadata.filters).map(
+          ([key, value]) => `# filter_${key},${csvCell(value ?? "All")}`,
+        ),
+        "",
+        "campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks",
+      ]
+    : ["campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks"];
   for (const row of report.rows) {
     lines.push(
       [

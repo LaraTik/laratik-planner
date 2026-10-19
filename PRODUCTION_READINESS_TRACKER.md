@@ -22,6 +22,24 @@
 > **Tested/Verified**, until the bilingual browser, axe, visual, export, and
 > production evidence gates are captured at the exact clean commit.
 
+> **2026-10-19 Audience intelligence refinement checkpoint** — The dedicated
+> Audience section now provides Age, Gender, Country, and Placement views with
+> selectable compatible ranking metrics, top-five progressive disclosure,
+> spend share, responsive table fallback, and explicit Meta privacy and
+> attribution limitations. It continues to use only authorized provider rows;
+> unsupported Results/Cost per Result are not fabricated. Focused type, lint,
+> catalog, and advertising unit checks pass. This remains **Implemented**, not
+> **Tested/Verified**, pending the bilingual browser, axe, visual, and export
+> evidence gates at the exact clean commit.
+
+> **2026-10-19 Export context refinement checkpoint** — Authenticated CSV
+> exports now include a metadata preamble for the authorized account, date
+> range, timezone, currency, selected filters/comparison/trend state, metric
+> definitions, attribution semantics, and data-health state. Boundary and
+> route tests pass. This remains **Implemented**, not **Tested/Verified**, until
+> export scope, bilingual browser, visual, and production evidence are captured
+> at the exact clean commit.
+
 > **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
 > persists a typed, versioned advertising view configuration through the
 > authenticated `/api/advertising/saved-views` route. It reuses the existing

@@ -18,8 +18,9 @@ for tokens, shell behavior, bilingual support, and accessibility.
 | Objective breakdown donut      | Objective spend donut with legend, results, and cost / result    | Added to align more closely with the reference                             |
 | AI/action insight rail         | Evidence-backed Action Center and intelligence panels            | Keep actions read-only and link to the Campaigns section                   |
 | Campaign/ad/ad-set detail      | Separate URL-driven report sections                              | Do not render all explorers as one long page                               |
-| Audience and targeting         | Dedicated Audience and Targeting sections                        | Keep provider limitations and unavailable states explicit                  |
+| Audience and targeting         | Dedicated Audience and Targeting sections                        | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON |
 | Technical metric detail        | Progressive-disclosure Metric definitions panel                  | Keep available without dominating the first scan                           |
+| Report export context          | CSV metadata preamble plus authorized fact rows                  | Preserve filters, comparison, metric, attribution, and health context      |
 
 ## Section contract
 
@@ -34,7 +35,9 @@ The reporting route uses `?section=` as its local navigation state:
 - `creatives` — provider creative cards with real HTTPS previews when available,
   fatigue evidence, and an accessible detail drawer; unavailable previews remain
   explicit, with promoted-post joins below.
-- `audience` — provider-returned audience delivery rows and pagination.
+- `audience` — provider-returned Age, Gender, Country, and Placement tabs with
+  metric ranking, top-five default, show-all disclosure, and explicit
+  attribution/privacy limitations.
 - `targeting` — readable category chips, preserved unknown fields, and a raw
   provider JSON disclosure with an explicit unavailable state.
 

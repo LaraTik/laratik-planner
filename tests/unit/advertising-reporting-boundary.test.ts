@@ -204,4 +204,63 @@ describe("advertising reporting boundary", () => {
     );
     expect(advertisingCsvFromReport(report)).toContain('"campaign,""visible"""');
   });
+
+  it("serializes report context before authorized export rows", () => {
+    const fixture = createAdvertisingIsolationFixture();
+    const report = buildAdvertisingSurfaceReport(
+      baseArgs({
+        surface: "csv_export",
+        scope: {
+          principal: fixture.principals[0]!,
+          account: fixture.accounts[0]!,
+          connection: fixture.connections[0]!,
+          visibilityGrants: [
+            {
+              ...fixture.grants[0]!,
+              capability: "export_reports",
+              campaignIds: null,
+            },
+          ],
+          financialAuthorities: [fixture.financialAuthorities[0]!],
+        },
+        facts: [
+          {
+            accountId: "shared-account",
+            campaignId: "campaign-visible",
+            date: "2026-10-01",
+            spend: 1,
+            impressions: 2,
+            clicks: 1,
+          },
+        ],
+      }),
+    );
+    const csv = advertisingCsvFromReport(report, {
+      accountId: "shared-account",
+      accountName: "Shared account",
+      since: "2026-10-01",
+      until: "2026-10-02",
+      timezone: "Europe/Berlin",
+      currency: "EUR",
+      filters: { section: "campaigns", objective: null },
+      dataHealth: {
+        state: "partial",
+        coverage: "partial",
+        syncStatus: "partial",
+        freshness: "stale",
+        lastSuccessfulSyncAt: "2026-10-02T00:00:00.000Z",
+        since: "2026-10-01",
+        until: "2026-10-02",
+        timezone: "Europe/Berlin",
+        currency: "EUR",
+        issues: ["partial_coverage"],
+      },
+      attributionSettings: "provider resultType",
+    });
+    expect(csv).toContain("# timezone,Europe/Berlin");
+    expect(csv).toContain("# filter_section,campaigns");
+    expect(csv).toContain("# metric_definitions,");
+    expect(csv).toContain("campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks");
+    expect(csv).toContain("campaign-visible");
+  });
 });

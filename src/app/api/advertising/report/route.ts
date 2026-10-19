@@ -7,6 +7,7 @@ import {
   advertisingCsvFromReport,
 } from "@/lib/advertising/reporting-boundary";
 import { loadAdvertisingReport } from "@/lib/advertising/reporting-query";
+import { aggregateAdvertisingMetrics } from "@/lib/advertising/reporting-metrics";
 import { db } from "@/lib/db";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
@@ -20,6 +21,16 @@ const querySchema = z
     workspaceId: z.string().uuid().nullable().optional(),
     since: z.string().date(),
     until: z.string().date(),
+    compare: z.enum(["previous", "previous_year", "custom"]).optional(),
+    compareSince: z.string().date().optional(),
+    compareUntil: z.string().date().optional(),
+    search: z.string().max(200).optional(),
+    objective: z.string().max(100).optional(),
+    status: z.string().max(100).optional(),
+    section: z.string().max(50).optional(),
+    trendMetricA: z.string().max(50).optional(),
+    trendMetricB: z.string().max(50).optional(),
+    trendGranularity: z.string().max(20).optional(),
     surface: z.enum([
       "workspace_dashboard",
       "tenant_dashboard",
@@ -66,6 +77,16 @@ export async function GET(request: NextRequest) {
     workspaceId: request.nextUrl.searchParams.get("workspaceId"),
     since: request.nextUrl.searchParams.get("since"),
     until: request.nextUrl.searchParams.get("until"),
+    compare: request.nextUrl.searchParams.get("compare") ?? undefined,
+    compareSince: request.nextUrl.searchParams.get("compareSince") ?? undefined,
+    compareUntil: request.nextUrl.searchParams.get("compareUntil") ?? undefined,
+    search: request.nextUrl.searchParams.get("search") ?? undefined,
+    objective: request.nextUrl.searchParams.get("objective") ?? undefined,
+    status: request.nextUrl.searchParams.get("status") ?? undefined,
+    section: request.nextUrl.searchParams.get("section") ?? undefined,
+    trendMetricA: request.nextUrl.searchParams.get("trendMetricA") ?? undefined,
+    trendMetricB: request.nextUrl.searchParams.get("trendMetricB") ?? undefined,
+    trendGranularity: request.nextUrl.searchParams.get("trendGranularity") ?? undefined,
     surface: request.nextUrl.searchParams.get("surface"),
   });
   if (!parsed.success) return errorResponse("invalid_report_query", 400);
@@ -91,7 +112,32 @@ export async function GET(request: NextRequest) {
   }
 
   if (parsed.data.surface === "csv_export") {
-    const csv = advertisingCsvFromReport(result.report);
+    const snapshot = aggregateAdvertisingMetrics(result.report.rows);
+    const csv = advertisingCsvFromReport(result.report, {
+      accountId: result.account.id,
+      accountName: result.account.name,
+      since: parsed.data.since,
+      until: parsed.data.until,
+      timezone: result.account.timezone,
+      currency: result.account.currency,
+      filters: {
+        section: parsed.data.section ?? null,
+        search: parsed.data.search ?? null,
+        objective: parsed.data.objective ?? null,
+        status: parsed.data.status ?? null,
+        comparison: parsed.data.compare ?? null,
+        comparisonSince: parsed.data.compareSince ?? null,
+        comparisonUntil: parsed.data.compareUntil ?? null,
+        trendMetricA: parsed.data.trendMetricA ?? null,
+        trendMetricB: parsed.data.trendMetricB ?? null,
+        trendGranularity: parsed.data.trendGranularity ?? null,
+      },
+      dataHealth: result.dataHealth,
+      attributionSettings:
+        snapshot.results === null
+          ? "Objective-aware results unavailable or mixed result types; no heterogeneous totals were combined."
+          : "Objective-aware results use the provider resultType; action metrics use provider resultActions.",
+    });
     if (!csv) return errorResponse("advertising_report_forbidden", 403);
     return new NextResponse(csv, {
       headers: {

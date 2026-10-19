@@ -35,11 +35,19 @@ These states are not converted to zeroes or hidden behind a generic error. Parti
 
 ## Audience, targeting, and provider limitations
 
-Audience rows are provider-returned observations and are not inferred. Targeting is rendered as readable category chips with unknown provider fields preserved and the complete raw JSON available behind a disclosure. Creative metadata remains read-only provider object metadata. Creative presentation fields are retained only when Meta returns them (`thumbnail_url`, `image_url`, `video_id`, headline/body, format, link, CTA, and provider spec payloads); the Creatives section shows validated HTTPS previews and an accessible detail drawer, while missing previews remain unavailable rather than fabricated. Unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
+Audience rows are provider-returned observations and are not inferred. The Audience section presents Age, Gender, Country, and Placement tabs, ranks by a selected compatible metric, defaults to the top five rows, and keeps a show-all disclosure. It explains Meta privacy/permission limits and suppresses Results/Cost per Result when the audience response does not carry compatible objective attribution. Targeting is rendered as readable category chips with unknown provider fields preserved and the complete raw JSON available behind a disclosure. Creative metadata remains read-only provider object metadata. Creative presentation fields are retained only when Meta returns them (`thumbnail_url`, `image_url`, `video_id`, headline/body, format, link, CTA, and provider spec payloads); the Creatives section shows validated HTTPS previews and an accessible detail drawer, while missing previews remain unavailable rather than fabricated. Unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
 
 ## Export and access
 
-Exports continue through the authenticated, tenant-scoped reporting boundary. The selected account and date range remain required; future export extensions should include comparison settings, timezone, currency, attribution notes, metric definitions, and data-health notes alongside the rows.
+Exports continue through the authenticated, tenant-scoped reporting boundary. The
+CSV starts with a documented metadata preamble, followed by the authorized
+fact rows. The preamble includes account identity, selected date range,
+account timezone, currency, active section/search/objective/status filters,
+comparison mode and custom dates when present, trend selections, data-health
+state/coverage/issues, attribution semantics, and the metric dictionary used
+by the report. Metadata is derived from the authorized account/report and is
+never a substitute for authorization. Missing values remain `Not available`;
+they are not converted to zeroes.
 
 ## Responsive and bilingual contract
 
