@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { COMMUNITY_TEST_LAB_CHANNELS } from "@/lib/community/test-lab-contract";
 
 type Copy = {
@@ -28,6 +28,11 @@ type Copy = {
   noProviderGuarantee: string;
   inputRequired: string;
   providerUnavailable: string;
+  aiDisabled: string;
+  notInPlan: string;
+  rateLimited: string;
+  quotaExceeded: string;
+  failed: string;
   blocked: string;
   needsReview: string;
   draftDecision: string;
@@ -46,6 +51,7 @@ type Props = {
   agencySlug: string;
   workspaceSlug: string;
   copy: Copy;
+  locale?: string;
 };
 
 type Result = {
@@ -57,7 +63,7 @@ type Result = {
 
 const initialChannel = COMMUNITY_TEST_LAB_CHANNELS[0];
 
-export function CommunityTestLab({ agencySlug, workspaceSlug, copy }: Props) {
+export function CommunityTestLab({ agencySlug, workspaceSlug, copy, locale }: Props) {
   const [channel, setChannel] =
     useState<(typeof COMMUNITY_TEST_LAB_CHANNELS)[number]>(initialChannel);
   const [message, setMessage] = useState("");
@@ -92,14 +98,19 @@ export function CommunityTestLab({ agencySlug, workspaceSlug, copy }: Props) {
         error?: string;
       } | null;
       if (!response.ok || !payload?.result) {
-        setError(
-          payload?.error === "ai_provider_not_configured" ? copy.providerUnavailable : copy.review,
-        );
+        const errors: Record<string, string> = {
+          ai_provider_not_configured: copy.providerUnavailable,
+          community_reply_drafts_disabled: copy.aiDisabled,
+          community_reply_drafts_not_in_plan: copy.notInPlan,
+          ai_rate_limited: copy.rateLimited,
+          ai_quota_exceeded: copy.quotaExceeded,
+        };
+        setError(errors[payload?.error ?? ""] ?? copy.failed);
         return;
       }
       setResult(payload.result);
     } catch {
-      setError(copy.review);
+      setError(copy.failed);
     } finally {
       setRunning(false);
     }
@@ -149,7 +160,8 @@ export function CommunityTestLab({ agencySlug, workspaceSlug, copy }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="community-test-lab-message">{copy.message}</Label>
-            <Textarea
+            <DirAwareTextarea
+              locale={locale}
               id="community-test-lab-message"
               value={message}
               onChange={(event) => setMessage(event.target.value)}
@@ -164,7 +176,8 @@ export function CommunityTestLab({ agencySlug, workspaceSlug, copy }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="community-test-lab-scenario">{copy.scenario}</Label>
-            <Textarea
+            <DirAwareTextarea
+              locale={locale}
               id="community-test-lab-scenario"
               value={scenario}
               onChange={(event) => setScenario(event.target.value)}
@@ -212,7 +225,7 @@ export function CommunityTestLab({ agencySlug, workspaceSlug, copy }: Props) {
             </div>
             <div className="bg-surface-subtle rounded-[var(--radius-control)] p-4">
               <p className="text-label text-fg-muted">{copy.draft}</p>
-              <p className="text-body text-fg-primary mt-2 whitespace-pre-wrap">
+              <p dir="auto" className="text-body text-fg-primary mt-2 whitespace-pre-wrap">
                 {result.draft || copy.noResult}
               </p>
             </div>

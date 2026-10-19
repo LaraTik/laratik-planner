@@ -165,5 +165,22 @@
   "noEvents": "No delivery events yet",
   "errorTitle": "Community & Inbox could not load",
   "errorDescription": "Try again or return to the Community & Inbox overview. Provider actions remain paused until the connection is healthy.",
-  "backToCommunity": "Back to Community & Inbox"
+  "backToCommunity": "Back to Community & Inbox",
+  "activityRecent": "Latest 50 recorded events.",
+  "activityRecorded": "Activity recorded",
+  "activityCommentsSynced": "Comment sync completed",
+  "activityCommentsPartial": "Comment sync completed with errors",
+  "activityMessagesSynced": "Private-message sync completed",
+  "activityMessagesPartial": "Private-message sync completed with errors",
+  "activityReplyUnknown": "Reply delivery is unconfirmed. Check with an operator before retrying.",
+  "messagesTotal": "Stored messages",
+  "replyAttempts": "Reply attempts",
+  "testLabAiDisabled": "Community reply drafts are disabled. Ask an agency administrator to enable them in Agency Settings → AI configuration.",
+  "testLabNotInPlan": "Your agency plan does not include Community reply drafts. Contact your agency administrator.",
+  "testLabRateLimited": "Too many AI requests. Wait a moment and try again.",
+  "testLabQuotaExceeded": "The agency AI budget has been reached. Ask an administrator to review AI usage.",
+  "testLabFailed": "The simulation could not run. Try again; if it continues, contact an administrator. No reply was sent.",
+  "inboxWindow": "Search and filters cover the latest 25 conversations in the current sync window.",
+  "replyPaused": "Outgoing replies are paused by the emergency stop. An operator must complete safety checks before enabling delivery.",
+  "replySafetyReady": "Emergency stop is inactive. Replies still require validated provider permissions."
 }
