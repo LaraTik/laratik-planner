@@ -53,5 +53,6 @@ export * from "./media";
 export * from "./trends";
 export * from "./research";
 export * from "./advertising";
+export * from "./advertising-signal-feedback";
 export * from "./mcp";
 export * from "./tasks";

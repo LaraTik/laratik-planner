@@ -728,6 +728,8 @@ export default async function AdvertisingAnalyticsPage({
           {activeSection === "overview" ? (
             <>
               <AdvertisingReportingDashboard
+                accountId={selectedAccount.id}
+                workspaceSlug={slug}
                 accountName={selectedAccount.name ?? selectedAccount.id}
                 currency={selectedAccount.currency ?? "EUR"}
                 locale={code}
@@ -1593,6 +1595,21 @@ function advertisingReportingDashboardLabels(
     audienceOpportunity: t("advertising.reporting.audienceOpportunity"),
     noBudgetData: t("advertising.reporting.noBudgetData"),
     noFatigueData: t("advertising.reporting.noFatigueData"),
+    markReviewed: t("advertising.reporting.markReviewed"),
+    dismiss: t("advertising.reporting.dismiss"),
+    snooze: t("advertising.reporting.snooze"),
+    reopen: t("advertising.reporting.reopen"),
+    feedbackReason: t("advertising.reporting.feedbackReason"),
+    selectReason: t("advertising.reporting.selectReason"),
+    reasonNotRelevant: t("advertising.reporting.reasonNotRelevant"),
+    reasonAlreadyHandled: t("advertising.reporting.reasonAlreadyHandled"),
+    reasonDataIncomplete: t("advertising.reporting.reasonDataIncomplete"),
+    saveFeedback: t("advertising.reporting.saveFeedback"),
+    feedbackSaved: t("advertising.reporting.feedbackSaved"),
+    feedbackError: t("advertising.reporting.feedbackError"),
+    reviewed: t("advertising.reporting.reviewed"),
+    dismissed: t("advertising.reporting.dismissed"),
+    snoozed: t("advertising.reporting.snoozed"),
     review: t("advertising.reporting.dashboard.review"),
     campaignExplorer: t("advertising.reporting.dashboard.campaignExplorer"),
     campaignExplorerDescription: t("advertising.reporting.dashboard.campaignExplorerDescription"),

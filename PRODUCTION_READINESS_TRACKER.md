@@ -1,5 +1,16 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-19 Advertising Action Center persistence checkpoint** — Action
+> Center decisions are now durable per authenticated workspace member, ad
+> account, signal, entity, and reporting period. Review, dismiss-with-reason,
+> seven-day snooze, and reopen transitions are validated server-side through
+> the tenant-scoped reporting boundary; each write emits a sanitized security
+> audit event. The additive migration is registered as `0088_secret_thing` and
+> the English/Arabic browser contract now verifies the review interaction.
+> This remains **Implemented**, not **Tested/Verified**, until the exact clean
+> commit has complete migration, browser, accessibility, visual, and release
+> evidence.
+
 > **2026-10-19 Advertising decision-rail refinement checkpoint** — The
 > overview now places the evidence-backed Action Center beside the primary
 > performance trend at wide desktop widths, with the objective mix remaining

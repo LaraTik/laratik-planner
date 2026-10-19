@@ -1,5 +1,45 @@
 # Migration and deployment evidence
 
+## Migration 0088 — advertising signal feedback
+
+`0088_secret_thing.sql` adds the additive `advertising_signal_feedback` table
+used by the Advertising Action Center. A row is scoped to the agency,
+workspace, ad account, authenticated user, signal, entity, and reporting
+period. The database checks the supported entity/state values and prevents an
+invalid period. A unique identity index makes repeated review actions
+idempotent; the application service records the state transition and a
+sanitized security-audit event without storing provider payloads.
+
+Filename: `src/lib/db/migrations/0088_secret_thing.sql`  
+Journal tag: `0088_secret_thing`
+
+Compatibility: older application images do not read this table and continue
+to render the existing read-only Action Center. The new image remains
+compatible with databases where the table is empty. The migration is
+forward-only; a normal application rollback leaves the additive table in
+place, while schema rollback requires an approved restore of the verified
+backup or a reviewed forward fix. Before production rollout, operators must
+take the standard database backup and confirm the migration drill covers
+from-zero, supported upgrade, backup/restore, and failed-migration abort.
+
+Local application verification on 2026-10-19 against disposable PostgreSQL 16
+(`planner_test`) completed with `TEST_DATABASE_URL=… pnpm migration-drill`:
+
+```text
+1. from-zero                 PASS  142 tables; Drizzle ledger 89/89
+2. skipped migration repair  PASS  missing 0025 columns restored; ledger 1
+3. in-place upgrade          PASS  marker add/drop cycle
+4. backup + restore          PASS  ledger 89 before / 89 after; restore verified
+5. failed-migration abort    PASS  schema unchanged after injected failure
+total: 5/5 PASS
+```
+
+Focused signal-feedback unit coverage passed 4/4 and the English/Arabic
+Chromium reporting contract passed 2/2, including a successful persisted
+review transition. This evidence is still **Tested** only after it is tied to
+the exact clean commit below; an independent reviewer must assign
+**Verified**.
+
 ## Migration 0080 — advertising sync dead-letter state
 
 `0080_advertising_sync_dead_letter.sql` widens the advertising sync-state

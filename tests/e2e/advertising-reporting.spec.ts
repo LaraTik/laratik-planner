@@ -45,6 +45,16 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-data-health-details")).toBeHidden();
     await expect(page.getByTestId("advertising-reporting-performance-trend")).toBeVisible();
     await expect(page.getByTestId("advertising-reporting-action-center")).toBeVisible();
+    const actionCenter = page.getByTestId("advertising-reporting-action-center");
+    const feedbackResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/advertising/signal-feedback") &&
+        response.request().method() === "POST" &&
+        response.status() === 200,
+    );
+    await actionCenter.getByRole("button", { name: "Mark reviewed" }).first().click();
+    await feedbackResponse;
+    await expect(actionCenter).toContainText("Reviewed");
     await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
     await expect(page.getByTestId("advertising-campaign-signals")).toContainText("Effective");
     await expect(page.getByTestId("advertising-budget-pacing")).toContainText("Budget pacing");

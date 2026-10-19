@@ -101,6 +101,15 @@ them. At tablet and mobile widths the rail returns to normal document order
 below the trend controls. This preserves the reference's “what changed / what
 to review next” scan without introducing a second navigation system.
 
+Action Center decisions are now progressive and durable: each signal can be
+marked reviewed, dismissed with a reason, snoozed for seven days, or reopened.
+The state is scoped to the authenticated workspace member, selected account,
+signal entity, and report period, so one person's triage does not silently
+rewrite another person's view. Dismissed and currently snoozed signals leave
+the default rail; reviewed signals remain visible with their state shown. The
+server keeps the report authorization boundary as the source of truth and
+records sanitized state changes in the security audit stream.
+
 ## Interaction and accessibility rules
 
 - Every Advertising navigation item has a URL, visible label, active state,

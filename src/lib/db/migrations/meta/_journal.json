@@ -617,6 +617,13 @@
       "when": 1792323180182,
       "tag": "0087_futuristic_husk",
       "breakpoints": true
+    },
+    {
+      "idx": 88,
+      "version": "7",
+      "when": 1792422937930,
+      "tag": "0088_secret_thing",
+      "breakpoints": true
     }
   ]
 }

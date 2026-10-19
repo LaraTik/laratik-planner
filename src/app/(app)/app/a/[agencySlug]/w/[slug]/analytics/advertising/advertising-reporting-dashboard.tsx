@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   AlertTriangle,
@@ -20,6 +20,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -50,6 +51,12 @@ import type {
   TrendGranularity,
   TrendMetricKey,
 } from "@/lib/advertising/reporting-trend";
+import {
+  advertisingSignalFeedbackKey,
+  type AdvertisingSignalEntityType,
+  type AdvertisingSignalFeedbackState,
+  type AdvertisingSignalFeedbackView,
+} from "@/lib/advertising/signal-feedback";
 
 export type AdvertisingReportingDashboardLabels = {
   dataHealth: string;
@@ -109,6 +116,21 @@ export type AdvertisingReportingDashboardLabels = {
   audienceOpportunity: string;
   noBudgetData: string;
   noFatigueData: string;
+  markReviewed: string;
+  dismiss: string;
+  snooze: string;
+  reopen: string;
+  feedbackReason: string;
+  selectReason: string;
+  reasonNotRelevant: string;
+  reasonAlreadyHandled: string;
+  reasonDataIncomplete: string;
+  saveFeedback: string;
+  feedbackSaved: string;
+  feedbackError: string;
+  reviewed: string;
+  dismissed: string;
+  snoozed: string;
   review: string;
   campaignExplorer: string;
   campaignExplorerDescription: string;
@@ -156,6 +178,8 @@ export type AdvertisingReportingDashboardLabels = {
   date: string;
 };
 export function AdvertisingReportingDashboard(props: {
+  accountId: string;
+  workspaceSlug: string;
   accountName: string;
   currency: string;
   locale: string;
@@ -1290,7 +1314,24 @@ function ObjectiveDonut({
     </svg>
   );
 }
+
+type ActionRailItem = {
+  key: string;
+  icon: ReactNode;
+  title: string;
+  detail: string;
+  href: string;
+  hrefLabel: string;
+  signalKey: string;
+  entityType: AdvertisingSignalEntityType;
+  entityId: string;
+  feedbackKey: string;
+  insight: CampaignPerformanceInsight | null;
+};
+
 function ActionCenter({
+  accountId,
+  workspaceSlug,
   insights,
   pacing,
   fatigue,
@@ -1303,6 +1344,8 @@ function ActionCenter({
   creativesHref,
   audienceHref,
 }: {
+  accountId: string;
+  workspaceSlug: string;
   insights: readonly CampaignPerformanceInsight[];
   pacing: readonly BudgetPacingInsight[];
   fatigue: readonly CreativeFatigueInsight[];
@@ -1315,6 +1358,87 @@ function ActionCenter({
   creativesHref: string;
   audienceHref: string;
 }) {
+  const [feedbackByKey, setFeedbackByKey] = useState<Record<string, AdvertisingSignalFeedbackView>>(
+    {},
+  );
+  const [feedbackBusyKey, setFeedbackBusyKey] = useState<string | null>(null);
+  const [dismissKey, setDismissKey] = useState<string | null>(null);
+  const [dismissReason, setDismissReason] = useState("");
+  const [feedbackError, setFeedbackError] = useState(false);
+  const [now] = useState(() => Date.now());
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(
+      `/api/advertising/signal-feedback?workspace=${encodeURIComponent(workspaceSlug)}&accountId=${encodeURIComponent(accountId)}&since=${since}&until=${until}`,
+      { headers: { Accept: "application/json" } },
+    )
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { feedback?: AdvertisingSignalFeedbackView[] };
+      })
+      .then((payload) => {
+        if (cancelled || !payload) return;
+        setFeedbackByKey(
+          Object.fromEntries(
+            (payload.feedback ?? []).map((item) => [
+              advertisingSignalFeedbackKey(item.entityType, item.entityId, item.signalKey),
+              item,
+            ]),
+          ),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setFeedbackError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, since, until, workspaceSlug]);
+
+  const saveFeedback = async (args: {
+    item: ActionRailItem;
+    state: AdvertisingSignalFeedbackState;
+    reason?: string;
+    snoozedUntil?: string;
+  }) => {
+    setFeedbackBusyKey(args.item.key);
+    setFeedbackError(false);
+    try {
+      const response = await fetch("/api/advertising/signal-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workspace: workspaceSlug,
+          accountId,
+          since,
+          until,
+          mutation: {
+            signalKey: args.item.signalKey,
+            entityType: args.item.entityType,
+            entityId: args.item.entityId,
+            state: args.state,
+            ...(args.reason ? { reason: args.reason } : {}),
+            ...(args.snoozedUntil ? { snoozedUntil: args.snoozedUntil } : {}),
+          },
+        }),
+      });
+      if (!response.ok) throw new Error("feedback_failed");
+      const payload = (await response.json()) as { feedback?: AdvertisingSignalFeedbackView };
+      if (!payload.feedback) throw new Error("feedback_missing");
+      setFeedbackByKey((current) => ({
+        ...current,
+        [args.item.feedbackKey]: payload.feedback!,
+      }));
+      setDismissKey(null);
+      setDismissReason("");
+    } catch {
+      setFeedbackError(true);
+    } finally {
+      setFeedbackBusyKey(null);
+    }
+  };
+
   const items = insights
     .filter((insight) => insight.status === "underperforming" || insight.status === "effective")
     .sort((left, right) => {
@@ -1336,6 +1460,9 @@ function ActionCenter({
               : `${budgetItem.name ?? budgetItem.campaignId} · ${Math.round(budgetItem.paceRatio * 100)}%`,
           href: campaignsHref,
           hrefLabel: labels.review,
+          signalKey: "budget_overpace",
+          entityType: "budget" as const,
+          entityId: budgetItem.campaignId,
         }
       : null,
     fatigueItem
@@ -1346,6 +1473,9 @@ function ActionCenter({
           detail: fatigueItem.name ?? fatigueItem.adId,
           href: creativesHref,
           hrefLabel: labels.review,
+          signalKey: "creative_fatigue",
+          entityType: "creative" as const,
+          entityId: fatigueItem.adId,
         }
       : null,
     audienceCount > 0
@@ -1356,10 +1486,13 @@ function ActionCenter({
           detail: `${new Intl.NumberFormat(locale).format(audienceCount)} ${labels.audienceSnapshot}`,
           href: audienceHref,
           hrefLabel: labels.review,
+          signalKey: "audience_opportunity",
+          entityType: "audience" as const,
+          entityId: "account",
         }
       : null,
   ].filter((item): item is NonNullable<typeof item> => item !== null);
-  const railItems = [
+  const allRailItems = [
     ...items.map((insight) => ({
       key: `campaign-${insight.campaignId}`,
       icon:
@@ -1372,10 +1505,24 @@ function ActionCenter({
       detail: `${labels.evidence}: ${insight.reason.replaceAll("_", " ")} · ${labels.sample}: ${new Intl.NumberFormat(locale).format(insight.sampleImpressions)}`,
       href: campaignReviewHref(campaignsHref, insight.campaignId),
       hrefLabel: labels.review,
+      signalKey: `campaign_${insight.status}`,
+      entityType: "campaign" as const,
+      entityId: insight.campaignId,
       insight,
     })),
     ...decisionItems.map((item) => ({ ...item, insight: null })),
-  ].slice(0, 4);
+  ].map((item) => ({
+    ...item,
+    feedbackKey: advertisingSignalFeedbackKey(item.entityType, item.entityId, item.signalKey),
+  })) as ActionRailItem[];
+  const railItems = allRailItems
+    .filter((item) => {
+      const feedback = feedbackByKey[item.feedbackKey];
+      if (!feedback || feedback.state === "open" || feedback.state === "reviewed") return true;
+      if (feedback.state === "dismissed") return false;
+      return !feedback.snoozedUntil || Date.parse(feedback.snoozedUntil) <= now;
+    })
+    .slice(0, 4);
   return (
     <Card
       className="reporting-card flex h-full flex-col"
@@ -1394,6 +1541,7 @@ function ActionCenter({
         ) : (
           railItems.map((item) => {
             const insight = item.insight;
+            const feedback = feedbackByKey[item.feedbackKey];
             return (
               <div
                 key={item.key}
@@ -1403,6 +1551,15 @@ function ActionCenter({
                   {item.icon}
                   {item.title}
                 </div>
+                {feedback && feedback.state !== "open" ? (
+                  <span className="text-label text-fg-muted mt-2 inline-flex rounded-full border px-2 py-1">
+                    {feedback.state === "reviewed"
+                      ? labels.reviewed
+                      : feedback.state === "snoozed"
+                        ? labels.snoozed
+                        : labels.dismissed}
+                  </span>
+                ) : null}
                 <p className="text-label text-fg-muted mt-2">{item.detail}</p>
                 {insight ? (
                   <details className="mt-2">
@@ -1442,11 +1599,90 @@ function ActionCenter({
                   {item.hrefLabel}
                   <ChevronRight className="ms-1 h-4 w-4" aria-hidden="true" />
                 </a>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() =>
+                      void saveFeedback({
+                        item,
+                        state: feedback?.state === "reviewed" ? "open" : "reviewed",
+                      })
+                    }
+                  >
+                    {feedback?.state === "reviewed" ? labels.reopen : labels.markReviewed}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() => {
+                      setDismissKey((current) => (current === item.key ? null : item.key));
+                      setDismissReason("");
+                    }}
+                  >
+                    {labels.dismiss}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={feedbackBusyKey === item.key}
+                    onClick={() =>
+                      void saveFeedback({
+                        item,
+                        state: "snoozed",
+                        snoozedUntil: new Date(Date.now() + 7 * 86_400_000).toISOString(),
+                      })
+                    }
+                  >
+                    {labels.snooze}
+                  </Button>
+                </div>
+                {dismissKey === item.key ? (
+                  <div className="border-border-subtle bg-surface mt-2 space-y-2 rounded-[var(--radius-control)] border p-2">
+                    <label
+                      className="text-label text-fg-primary block font-semibold"
+                      htmlFor={`advertising-dismiss-reason-${item.key}`}
+                    >
+                      {labels.feedbackReason}
+                    </label>
+                    <select
+                      id={`advertising-dismiss-reason-${item.key}`}
+                      value={dismissReason}
+                      onChange={(event) => setDismissReason(event.target.value)}
+                      className="border-border bg-surface text-label text-fg-primary min-h-11 w-full rounded-[var(--radius-control)] border px-2"
+                    >
+                      <option value="">{labels.selectReason}</option>
+                      <option value="not_relevant">{labels.reasonNotRelevant}</option>
+                      <option value="already_handled">{labels.reasonAlreadyHandled}</option>
+                      <option value="data_incomplete">{labels.reasonDataIncomplete}</option>
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={!dismissReason || feedbackBusyKey === item.key}
+                      onClick={() =>
+                        void saveFeedback({ item, state: "dismissed", reason: dismissReason })
+                      }
+                    >
+                      {labels.saveFeedback}
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             );
           })
         )}
       </div>
+      {feedbackError ? (
+        <p className="text-label text-danger px-5 pb-5" role="status">
+          {labels.feedbackError}
+        </p>
+      ) : null}
     </Card>
   );
 }
