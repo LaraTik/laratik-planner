@@ -52,6 +52,11 @@ export function advertisingReportViewConfigFromSearch({
   since: string;
   until: string;
 }): AdvertisingReportViewConfig {
+  const visibleColumns = params
+    .get("visibleColumns")
+    ?.split(",")
+    .map((column) => column.trim())
+    .filter(Boolean);
   return advertisingReportViewConfigSchema.parse({
     surface: "advertising-reporting",
     version: 1,
@@ -72,6 +77,8 @@ export function advertisingReportViewConfigFromSearch({
     ...(params.get("adSetPage") ? { adSetPage: params.get("adSetPage") } : {}),
     ...(params.get("adPage") ? { adPage: params.get("adPage") } : {}),
     ...(params.get("audiencePage") ? { audiencePage: params.get("audiencePage") } : {}),
+    ...(params.get("sort") ? { sort: params.get("sort") } : {}),
+    ...(visibleColumns && visibleColumns.length > 0 ? { visibleColumns } : {}),
   });
 }
 
@@ -81,7 +88,11 @@ export function advertisingReportViewConfigToSearchParams(
   const params = new URLSearchParams();
   const entries = Object.entries(config) as [keyof AdvertisingReportViewConfig, unknown][];
   for (const [key, value] of entries) {
-    if (key === "surface" || key === "version" || key === "visibleColumns") continue;
+    if (key === "surface" || key === "version") continue;
+    if (key === "visibleColumns" && Array.isArray(value)) {
+      if (value.length > 0) params.set(key, value.join(","));
+      continue;
+    }
     if (typeof value === "string" && value.length > 0) params.set(key, value);
   }
   return params;

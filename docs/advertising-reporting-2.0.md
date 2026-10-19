@@ -22,6 +22,17 @@ Every metric definition exposes its source field and formula in the report's pro
 
 The URL-driven comparison selector supports the previous matching period, the previous year, and custom dates. Absolute and percentage deltas are rendered only when both periods contain comparable complete data. Cost metrics treat a decrease as favorable; reach, results, and rate metrics treat an increase as favorable.
 
+## Explainable signals and Action Center
+
+The overview Action Center prioritizes underperforming campaigns before
+effective campaigns and links each affected entity to the authenticated
+Campaigns explorer. Every signal keeps its reason, selected period, impression
+sample, and peer CTR/CPC baseline. The baseline is computed only when at least
+two eligible campaigns meet the comparison threshold; otherwise it remains
+unavailable. Review evidence is progressively disclosed so the default scan
+stays compact while the evidence remains keyboard-accessible. Confidence is
+described as a sample guard, not as fabricated statistical certainty.
+
 ## Data health
 
 The health strip is backed by `DataHealthSummary` from the report query and API. It shows freshness, last successful sync, account timezone, selected coverage, and one of four explicit states:
@@ -48,6 +59,12 @@ state/coverage/issues, attribution semantics, and the metric dictionary used
 by the report. Metadata is derived from the authorized account/report and is
 never a substitute for authorization. Missing values remain `Not available`;
 they are not converted to zeroes.
+
+The Campaigns explorer keeps its sort and visible metric columns in the typed
+URL view configuration. The state survives section navigation, filter submits,
+exports, reloads, and saved-view restoration. At least one metric column must
+remain visible; invalid or unavailable column values fall back to the complete
+safe set.
 
 ## Responsive and bilingual contract
 

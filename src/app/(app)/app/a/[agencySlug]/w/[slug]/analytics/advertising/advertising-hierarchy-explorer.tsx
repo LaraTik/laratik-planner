@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, FolderTree } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import type {
   AdvertisingAdSetSummary,
   AdvertisingAdSummary,
@@ -27,7 +28,17 @@ export type AdvertisingHierarchyExplorerLabels = {
   unavailable: string;
   tableLabel: string;
   active: string;
+  columns: string;
+  sort: string;
+  sortName: string;
+  sortSpend: string;
+  sortResults: string;
+  sortCtr: string;
 };
+
+type HierarchyColumn = "spend" | "results" | "ctr" | "delivery";
+type HierarchySort = "name" | Exclude<HierarchyColumn, "delivery">;
+const HIERARCHY_COLUMNS: readonly HierarchyColumn[] = ["spend", "results", "ctr", "delivery"];
 
 export function AdvertisingHierarchyExplorer({
   campaigns,
@@ -36,6 +47,8 @@ export function AdvertisingHierarchyExplorer({
   currency,
   locale,
   labels,
+  sort,
+  visibleColumns: initialVisibleColumns,
 }: {
   campaigns: readonly AdvertisingCampaignSummary[];
   adSets: readonly AdvertisingAdSetSummary[];
@@ -43,9 +56,25 @@ export function AdvertisingHierarchyExplorer({
   currency: string | null;
   locale: string;
   labels: AdvertisingHierarchyExplorerLabels;
+  sort?: string | undefined;
+  visibleColumns?: readonly string[] | undefined;
 }) {
   const [expandedCampaigns, setExpandedCampaigns] = useState<Set<string>>(new Set());
   const [expandedAdSets, setExpandedAdSets] = useState<Set<string>>(new Set());
+  const [sortBy, setSortBy] = useState<HierarchySort>(() => normalizeHierarchySort(sort));
+  const [visibleColumns, setVisibleColumns] = useState<Set<HierarchyColumn>>(() =>
+    normalizeVisibleColumns(initialVisibleColumns),
+  );
+  const sortedCampaigns = useMemo(
+    () =>
+      [...campaigns].sort((left, right) => {
+        if (sortBy === "name") {
+          return (left.name ?? left.campaignId).localeCompare(right.name ?? right.campaignId);
+        }
+        return hierarchySortValue(right, sortBy) - hierarchySortValue(left, sortBy);
+      }),
+    [campaigns, sortBy],
+  );
   const toggle = (current: Set<string>, id: string, setValue: (value: Set<string>) => void) => {
     const next = new Set(current);
     if (next.has(id)) next.delete(id);
@@ -68,6 +97,60 @@ export function AdvertisingHierarchyExplorer({
           </CardTitle>
           <CardDescription>{labels.description}</CardDescription>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <label
+            className="text-label text-fg-muted font-semibold"
+            htmlFor="advertising-hierarchy-sort"
+          >
+            {labels.sort}
+          </label>
+          <select
+            id="advertising-hierarchy-sort"
+            value={sortBy}
+            onChange={(event) => {
+              const nextSort = normalizeHierarchySort(event.target.value);
+              setSortBy(nextSort);
+              replaceViewParam("sort", nextSort);
+            }}
+            className="border-border bg-surface text-label text-fg-primary focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] border px-2 font-semibold focus:outline-none focus-visible:ring-2"
+          >
+            <option value="spend">{labels.sortSpend}</option>
+            <option value="results">{labels.sortResults}</option>
+            <option value="ctr">{labels.sortCtr}</option>
+            <option value="name">{labels.sortName}</option>
+          </select>
+          <details className="relative">
+            <summary className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 cursor-pointer list-none items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2">
+              {labels.columns}
+            </summary>
+            <div className="border-border bg-surface absolute end-0 z-10 mt-1 grid min-w-44 gap-2 rounded-[var(--radius-control)] border p-3 shadow-md">
+              {HIERARCHY_COLUMNS.map((column) => (
+                <label
+                  key={column}
+                  className="text-label text-fg-primary flex min-h-11 items-center gap-2"
+                >
+                  <Checkbox
+                    checked={visibleColumns.has(column)}
+                    onCheckedChange={(checked) => {
+                      const next = new Set(visibleColumns);
+                      if (checked) next.add(column);
+                      else if (next.size > 1) next.delete(column);
+                      setVisibleColumns(next);
+                      replaceViewParam("visibleColumns", [...next].join(","));
+                    }}
+                  />
+                  {column === "spend"
+                    ? labels.spend
+                    : column === "results"
+                      ? labels.results
+                      : column === "ctr"
+                        ? labels.ctr
+                        : labels.delivery}
+                </label>
+              ))}
+            </div>
+          </details>
+        </div>
       </CardHeader>
       <div aria-label={labels.tableLabel} className="overflow-x-auto" role="region" tabIndex={0}>
         <table className="text-body w-full min-w-[760px] text-start">
@@ -77,22 +160,30 @@ export function AdvertisingHierarchyExplorer({
               <th className="px-4 py-3 text-start font-semibold sm:px-5" scope="col">
                 {labels.campaign}
               </th>
-              <th className="px-4 py-3 text-end font-semibold" scope="col">
-                {labels.spend}
-              </th>
-              <th className="px-4 py-3 text-end font-semibold" scope="col">
-                {labels.results}
-              </th>
-              <th className="px-4 py-3 text-end font-semibold" scope="col">
-                {labels.ctr}
-              </th>
-              <th className="px-4 py-3 text-start font-semibold" scope="col">
-                {labels.delivery}
-              </th>
+              {visibleColumns.has("spend") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.spend}
+                </th>
+              ) : null}
+              {visibleColumns.has("results") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.results}
+                </th>
+              ) : null}
+              {visibleColumns.has("ctr") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.ctr}
+                </th>
+              ) : null}
+              {visibleColumns.has("delivery") ? (
+                <th className="px-4 py-3 text-start font-semibold" scope="col">
+                  {labels.delivery}
+                </th>
+              ) : null}
             </tr>
           </thead>
           <tbody className="divide-border divide-y">
-            {campaigns.map((campaign) => {
+            {sortedCampaigns.map((campaign) => {
               const children = adSets.filter((adSet) => adSet.campaignId === campaign.campaignId);
               const expanded = expandedCampaigns.has(campaign.campaignId);
               return (
@@ -106,6 +197,7 @@ export function AdvertisingHierarchyExplorer({
                   currency={currency}
                   locale={locale}
                   labels={labels}
+                  visibleColumns={visibleColumns}
                   onToggle={() =>
                     toggle(expandedCampaigns, campaign.campaignId, setExpandedCampaigns)
                   }
@@ -132,6 +224,7 @@ function CampaignRows({
   currency,
   locale,
   labels,
+  visibleColumns,
   onToggle,
   onToggleAdSet,
 }: {
@@ -143,6 +236,7 @@ function CampaignRows({
   currency: string | null;
   locale: string;
   labels: AdvertisingHierarchyExplorerLabels;
+  visibleColumns: ReadonlySet<HierarchyColumn>;
   onToggle: () => void;
   onToggleAdSet: (id: string) => void;
 }) {
@@ -161,7 +255,13 @@ function CampaignRows({
             {campaign.campaignId}
           </bdi>
         </th>
-        <MetricCells entity={campaign} currency={currency} locale={locale} labels={labels} />
+        <MetricCells
+          entity={campaign}
+          currency={currency}
+          locale={locale}
+          labels={labels}
+          visibleColumns={visibleColumns}
+        />
       </tr>
       {expanded
         ? adSets.map((adSet) => {
@@ -176,6 +276,7 @@ function CampaignRows({
                 currency={currency}
                 locale={locale}
                 labels={labels}
+                visibleColumns={visibleColumns}
                 onToggle={() => onToggleAdSet(adSet.adSetId)}
               />
             );
@@ -192,6 +293,7 @@ function AdSetRows({
   currency,
   locale,
   labels,
+  visibleColumns,
   onToggle,
 }: {
   adSet: AdvertisingAdSetSummary;
@@ -200,6 +302,7 @@ function AdSetRows({
   currency: string | null;
   locale: string;
   labels: AdvertisingHierarchyExplorerLabels;
+  visibleColumns: ReadonlySet<HierarchyColumn>;
   onToggle: () => void;
 }) {
   return (
@@ -218,7 +321,13 @@ function AdSetRows({
             {adSet.adSetId}
           </bdi>
         </th>
-        <MetricCells entity={adSet} currency={currency} locale={locale} labels={labels} />
+        <MetricCells
+          entity={adSet}
+          currency={currency}
+          locale={locale}
+          labels={labels}
+          visibleColumns={visibleColumns}
+        />
       </tr>
       {expanded
         ? ads.map((ad) => (
@@ -229,7 +338,13 @@ function AdSetRows({
                   {ad.adId}
                 </bdi>
               </th>
-              <MetricCells entity={ad} currency={currency} locale={locale} labels={labels} />
+              <MetricCells
+                entity={ad}
+                currency={currency}
+                locale={locale}
+                labels={labels}
+                visibleColumns={visibleColumns}
+              />
             </tr>
           ))
         : null}
@@ -278,32 +393,79 @@ function MetricCells({
   currency,
   locale,
   labels,
+  visibleColumns,
 }: {
   entity: AdvertisingCampaignSummary | AdvertisingAdSetSummary | AdvertisingAdSummary;
   currency: string | null;
   locale: string;
   labels: AdvertisingHierarchyExplorerLabels;
+  visibleColumns: ReadonlySet<HierarchyColumn>;
 }) {
   return (
     <>
-      <td className="px-4 py-3 text-end tabular-nums">
-        {currency
-          ? formatCurrency(entity.spend, currency, locale as "en" | "ar")
-          : labels.unavailable}
-      </td>
-      <td className="px-4 py-3 text-end tabular-nums">
-        {entity.results === null
-          ? labels.unavailable
-          : formatNumber(entity.results, locale as "en" | "ar")}
-      </td>
-      <td className="px-4 py-3 text-end tabular-nums">
-        {entity.ctr === null
-          ? labels.unavailable
-          : formatPercent(entity.ctr, locale as "en" | "ar")}
-      </td>
-      <td className="px-4 py-3 text-start">
-        {entity.status ? <Badge variant="outline">{entity.status}</Badge> : labels.unavailable}
-      </td>
+      {visibleColumns.has("spend") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {currency
+            ? formatCurrency(entity.spend, currency, locale as "en" | "ar")
+            : labels.unavailable}
+        </td>
+      ) : null}
+      {visibleColumns.has("results") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.results === null
+            ? labels.unavailable
+            : formatNumber(entity.results, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("ctr") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.ctr === null
+            ? labels.unavailable
+            : formatPercent(entity.ctr, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("delivery") ? (
+        <td className="px-4 py-3 text-start">
+          {entity.status ? <Badge variant="outline">{entity.status}</Badge> : labels.unavailable}
+        </td>
+      ) : null}
     </>
+  );
+}
+
+function hierarchySortValue(
+  entity: AdvertisingCampaignSummary,
+  sortBy: Exclude<HierarchySort, "name" | "delivery">,
+): number {
+  return sortBy === "spend"
+    ? entity.spend
+    : sortBy === "results"
+      ? (entity.results ?? -1)
+      : (entity.ctr ?? -1);
+}
+
+function normalizeHierarchySort(value: string | undefined): HierarchySort {
+  return value === "name" || value === "results" || value === "ctr" ? value : "spend";
+}
+
+function normalizeVisibleColumns(values: readonly string[] | undefined): Set<HierarchyColumn> {
+  const selected = new Set(
+    (values ?? []).filter((value): value is HierarchyColumn =>
+      HIERARCHY_COLUMNS.includes(value as HierarchyColumn),
+    ),
+  );
+  return selected.size > 0 ? selected : new Set(HIERARCHY_COLUMNS);
+}
+
+function replaceViewParam(key: "sort" | "visibleColumns", value: string): void {
+  if (typeof window === "undefined") return;
+  const params = new URLSearchParams(window.location.search);
+  if (value) params.set(key, value);
+  else params.delete(key);
+  const query = params.toString();
+  window.history.replaceState(
+    window.history.state,
+    "",
+    `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
   );
 }

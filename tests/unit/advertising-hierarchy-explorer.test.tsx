@@ -18,6 +18,12 @@ const labels = {
   unavailable: "Not available",
   tableLabel: "Campaign performance",
   active: "Active",
+  columns: "Columns",
+  sort: "Sort",
+  sortName: "Name",
+  sortSpend: "Spend",
+  sortResults: "Results",
+  sortCtr: "CTR",
 } as const;
 
 const metrics = {
@@ -68,5 +74,50 @@ describe("AdvertisingHierarchyExplorer", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Expand: Ad set 1" }));
     expect(screen.getByText("Ad 1")).toBeInTheDocument();
+  });
+
+  it("sorts campaigns by the selected metric", () => {
+    render(
+      <AdvertisingHierarchyExplorer
+        campaigns={[
+          { ...metrics, campaignId: "campaign-1", adCount: 0, name: "Lower results", results: 2 },
+          { ...metrics, campaignId: "campaign-2", adCount: 0, name: "Higher results", results: 8 },
+        ]}
+        adSets={[]}
+        ads={[]}
+        currency="EUR"
+        locale="en"
+        labels={labels}
+      />,
+    );
+
+    fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "results" } });
+    const rows = screen.getAllByRole("row");
+    expect(rows[1]).toHaveTextContent("Higher results");
+    expect(rows[2]).toHaveTextContent("Lower results");
+  });
+
+  it("allows columns to be hidden while keeping one metric visible", () => {
+    render(
+      <AdvertisingHierarchyExplorer
+        campaigns={[{ ...metrics, campaignId: "campaign-1", adCount: 0, name: "Campaign 1" }]}
+        adSets={[]}
+        ads={[]}
+        currency="EUR"
+        locale="en"
+        labels={labels}
+      />,
+    );
+
+    fireEvent.click(screen.getByText("Columns"));
+    const spendCheckbox = screen.getByRole("checkbox", { name: "Spend" });
+    fireEvent.click(spendCheckbox);
+    expect(screen.queryByRole("columnheader", { name: "Spend" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "CTR" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Delivery" }));
+    expect(screen.getByRole("columnheader", { name: "Results" })).toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "CTR" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("columnheader", { name: "Delivery" })).not.toBeInTheDocument();
   });
 });

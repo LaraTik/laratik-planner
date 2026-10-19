@@ -2,6 +2,7 @@ import type { AdvertisingFact } from "./reporting-service";
 import type { AdvertisingAdSummary, AdvertisingCampaignSummary } from "./reporting-view";
 
 const MIN_COMPARISON_IMPRESSIONS = 100;
+const STRONG_SAMPLE_IMPRESSIONS = 1_000;
 const ON_TRACK_LOW = 0.9;
 const ON_TRACK_HIGH = 1.1;
 const EFFECTIVE_SCORE = 1.15;
@@ -17,6 +18,7 @@ export type CampaignPerformanceReason =
   | "mixed_efficiency"
   | "insufficient_sample"
   | "limited_comparison";
+export type CampaignPerformanceConfidence = "strong" | "minimum" | "insufficient";
 
 export type CampaignPerformanceInsight = {
   campaignId: string;
@@ -25,6 +27,9 @@ export type CampaignPerformanceInsight = {
   reason: CampaignPerformanceReason;
   score: number | null;
   sampleImpressions: number;
+  baselineCtr: number | null;
+  baselineCpc: number | null;
+  confidence: CampaignPerformanceConfidence;
 };
 
 export type BudgetPacingStatus = "over" | "on_track" | "under" | "unavailable";
@@ -81,6 +86,9 @@ export function buildCampaignPerformanceInsights(
         reason: "insufficient_sample",
         score: null,
         sampleImpressions: campaign.impressions,
+        baselineCtr: null,
+        baselineCpc: null,
+        confidence: "insufficient",
       };
     }
     if (!canCompare || campaign.ctr === null || campaign.cpc === null || campaign.cpc <= 0) {
@@ -91,6 +99,9 @@ export function buildCampaignPerformanceInsights(
         reason: "limited_comparison",
         score: null,
         sampleImpressions: campaign.impressions,
+        baselineCtr: canCompare ? medianCtr : null,
+        baselineCpc: canCompare ? medianCpc : null,
+        confidence: campaign.impressions >= STRONG_SAMPLE_IMPRESSIONS ? "strong" : "minimum",
       };
     }
 
@@ -113,6 +124,9 @@ export function buildCampaignPerformanceInsights(
             : "mixed_efficiency",
       score,
       sampleImpressions: campaign.impressions,
+      baselineCtr: medianCtr,
+      baselineCpc: medianCpc,
+      confidence: campaign.impressions >= STRONG_SAMPLE_IMPRESSIONS ? "strong" : "minimum",
     };
   });
 }

@@ -34,9 +34,21 @@ describe("advertising intelligence", () => {
       },
     ]);
     expect(insights).toEqual([
-      expect.objectContaining({ campaignId: "effective", status: "effective" }),
-      expect.objectContaining({ campaignId: "underperforming", status: "underperforming" }),
+      expect.objectContaining({
+        campaignId: "effective",
+        status: "effective",
+        baselineCpc: 0.6,
+        confidence: "strong",
+      }),
+      expect.objectContaining({
+        campaignId: "underperforming",
+        status: "underperforming",
+        baselineCpc: 0.6,
+        confidence: "strong",
+      }),
     ]);
+    expect(insights[0]?.baselineCtr).toBeCloseTo(0.03);
+    expect(insights[1]?.baselineCtr).toBeCloseTo(0.03);
   });
 
   it("does not invent a lifetime-budget pace without campaign dates", () => {

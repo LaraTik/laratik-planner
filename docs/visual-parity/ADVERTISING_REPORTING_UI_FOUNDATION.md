@@ -9,18 +9,20 @@ for tokens, shell behavior, bilingual support, and accessibility.
 
 ## Parity review
 
-| Reference expectation          | LaraTik implementation                                           | Decision                                                                   |
-| ------------------------------ | ---------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch | Keep Advertising sections in the primary rail; use the mobile drawer below |
-| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm      | Match density without importing the reference's dark theme                 |
-| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency             | Keep objective-aware and unavailable-safe                                  |
-| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback    | Preserve as a lightweight dependency-free chart foundation                 |
-| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result    | Added to align more closely with the reference                             |
-| AI/action insight rail         | Evidence-backed Action Center and intelligence panels            | Keep actions read-only and link to the Campaigns section                   |
-| Campaign/ad/ad-set detail      | Separate URL-driven report sections                              | Do not render all explorers as one long page                               |
-| Audience and targeting         | Dedicated Audience and Targeting sections                        | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON |
-| Technical metric detail        | Progressive-disclosure Metric definitions panel                  | Keep available without dominating the first scan                           |
-| Report export context          | CSV metadata preamble plus authorized fact rows                  | Preserve filters, comparison, metric, attribution, and health context      |
+| Reference expectation          | LaraTik implementation                                            | Decision                                                                   |
+| ------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch  | Keep Advertising sections in the primary rail; use the mobile drawer below |
+| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm       | Match density without importing the reference's dark theme                 |
+| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency              | Keep objective-aware and unavailable-safe                                  |
+| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback     | Preserve as a lightweight dependency-free chart foundation                 |
+| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result     | Added to align more closely with the reference                             |
+| AI/action insight rail         | Evidence-backed Action Center and intelligence panels             | Keep actions read-only and link to the Campaigns section                   |
+| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard | Keep the scan compact; disclose decision evidence on demand                |
+| Campaign/ad/ad-set detail      | Separate URL-driven report sections                               | Do not render all explorers as one long page                               |
+| Audience and targeting         | Dedicated Audience and Targeting sections                         | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON |
+| Technical metric detail        | Progressive-disclosure Metric definitions panel                   | Keep available without dominating the first scan                           |
+| Report export context          | CSV metadata preamble plus authorized fact rows                   | Preserve filters, comparison, metric, attribution, and health context      |
+| Campaign explorer controls     | URL-backed sort and visible-column picker                         | Keep one metric visible and preserve state across section changes          |
 
 ## Section contract
 

@@ -26,7 +26,10 @@ import type {
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
 import type { DataHealthSummary } from "@/lib/advertising/reporting-health";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
-import type { CampaignPerformanceInsight } from "@/lib/advertising/intelligence";
+import type {
+  CampaignPerformanceConfidence,
+  CampaignPerformanceInsight,
+} from "@/lib/advertising/intelligence";
 import type {
   AdvertisingTrendPoint,
   TrendGranularity,
@@ -65,6 +68,12 @@ export type AdvertisingReportingDashboardLabels = {
   noSignals: string;
   sample: string;
   evidence: string;
+  baseline: string;
+  period: string;
+  confidence: string;
+  confidenceGuarded: string;
+  confidenceLimited: string;
+  reviewEvidence: string;
   metricSpend: string;
   metricResults: string;
   metricCostPerResult: string;
@@ -873,15 +882,23 @@ function ActionCenter({
   insights,
   labels,
   locale,
+  since,
+  until,
   campaignsHref,
 }: {
   insights: readonly CampaignPerformanceInsight[];
   labels: AdvertisingReportingDashboardLabels;
   locale: string;
+  since: string;
+  until: string;
   campaignsHref: string;
 }) {
   const items = insights
     .filter((insight) => insight.status === "underperforming" || insight.status === "effective")
+    .sort((left, right) => {
+      if (left.status === right.status) return right.sampleImpressions - left.sampleImpressions;
+      return left.status === "underperforming" ? -1 : 1;
+    })
     .slice(0, 3);
   return (
     <Card className="reporting-card" data-testid="advertising-reporting-action-center">
@@ -913,6 +930,35 @@ function ActionCenter({
                 {labels.evidence}: {insight.reason.replaceAll("_", " ")} · {labels.sample}:{" "}
                 {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
               </p>
+              <details className="mt-2">
+                <summary className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 cursor-pointer items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2">
+                  {labels.reviewEvidence}
+                </summary>
+                <dl className="text-label text-fg-secondary mt-2 grid gap-1">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt>{labels.period}</dt>
+                    <dd dir="ltr">{`${since} – ${until}`}</dd>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt>{labels.sample}</dt>
+                    <dd className="tabular-nums">
+                      {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt>{labels.baseline}</dt>
+                    <dd className="text-end tabular-nums">
+                      {insight.baselineCtr === null || insight.baselineCpc === null
+                        ? labels.unavailable
+                        : `${formatPercentValue(insight.baselineCtr, locale)} CTR · ${formatNumberValue(insight.baselineCpc, locale)} CPC`}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <dt>{labels.confidence}</dt>
+                    <dd>{confidenceLabel(insight.confidence, labels)}</dd>
+                  </div>
+                </dl>
+              </details>
               <a
                 href={campaignsHref}
                 className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
@@ -927,6 +973,25 @@ function ActionCenter({
     </Card>
   );
 }
+
+function formatPercentValue(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatNumberValue(value: number, locale: string): string {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 4 }).format(value);
+}
+
+function confidenceLabel(
+  confidence: CampaignPerformanceConfidence,
+  labels: AdvertisingReportingDashboardLabels,
+) {
+  return confidence === "strong" ? labels.confidenceGuarded : labels.confidenceLimited;
+}
+
 function CampaignExplorer({
   campaigns,
   labels,

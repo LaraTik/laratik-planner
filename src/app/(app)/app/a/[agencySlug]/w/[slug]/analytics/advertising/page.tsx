@@ -111,6 +111,8 @@ type SearchParams = {
   trendMetricA?: string | string[];
   trendMetricB?: string | string[];
   trendGranularity?: string | string[];
+  sort?: string | string[];
+  visibleColumns?: string | string[];
 };
 
 type ReportSection =
@@ -343,7 +345,20 @@ export default async function AdvertisingAnalyticsPage({
   const syncLabel = result.syncStatus
     ? t(`advertising.syncStatus.${result.syncStatus}`)
     : t("advertising.reporting.notAvailable");
-  const campaignPage = paginate(visibleCampaigns, firstQueryValue(query.campaignPage));
+  const hierarchySort = firstQueryValue(query.sort);
+  const sortedVisibleCampaigns = [...visibleCampaigns].sort((left, right) => {
+    if (hierarchySort === "name") {
+      return (left.name ?? left.campaignId).localeCompare(right.name ?? right.campaignId);
+    }
+    const value = (campaign: (typeof visibleCampaigns)[number]) =>
+      hierarchySort === "results"
+        ? (campaign.results ?? -1)
+        : hierarchySort === "ctr"
+          ? (campaign.ctr ?? -1)
+          : campaign.spend;
+    return value(right) - value(left);
+  });
+  const campaignPage = paginate(sortedVisibleCampaigns, firstQueryValue(query.campaignPage));
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
   const adPage = paginate(view.ads, firstQueryValue(query.adPage));
   const clientReportHref = `${basePath}?${new URLSearchParams({
@@ -381,6 +396,8 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricA,
     trendMetricB,
     trendGranularity,
+    sort: savedViewConfig.sort,
+    visibleColumns: savedViewConfig.visibleColumns,
     search: campaignSearch,
     objective: objectiveFilter,
     status: statusFilter,
@@ -402,6 +419,10 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricB,
     trendGranularity,
   });
+  if (savedViewConfig.sort) exportParams.set("sort", savedViewConfig.sort);
+  if (savedViewConfig.visibleColumns?.length) {
+    exportParams.set("visibleColumns", savedViewConfig.visibleColumns.join(","));
+  }
   const compareSince = firstQueryValue(query.compareSince);
   const compareUntil = firstQueryValue(query.compareUntil);
   if (compareSince) exportParams.set("compareSince", compareSince);
@@ -486,6 +507,16 @@ export default async function AdvertisingAnalyticsPage({
         <input type="hidden" name="trendMetricA" value={trendMetricA} />
         <input type="hidden" name="trendMetricB" value={trendMetricB} />
         <input type="hidden" name="trendGranularity" value={trendGranularity} />
+        {savedViewConfig.sort ? (
+          <input type="hidden" name="sort" value={savedViewConfig.sort} />
+        ) : null}
+        {savedViewConfig.visibleColumns?.length ? (
+          <input
+            type="hidden"
+            name="visibleColumns"
+            value={savedViewConfig.visibleColumns.join(",")}
+          />
+        ) : null}
         <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
           <select
             name="accountId"
@@ -803,12 +834,15 @@ export default async function AdvertisingAnalyticsPage({
           {activeSection === "campaigns" ? (
             <div className="space-y-3">
               <AdvertisingHierarchyExplorer
+                key={`${savedViewConfig.sort ?? "spend"}:${savedViewConfig.visibleColumns?.join(",") ?? "all"}`}
                 campaigns={campaignPage.items}
                 adSets={view.adSets}
                 ads={view.ads}
                 currency={selectedAccount.currency}
                 locale={code}
                 labels={advertisingHierarchyExplorerLabels(t)}
+                sort={savedViewConfig.sort}
+                visibleColumns={savedViewConfig.visibleColumns}
               />
               <details className="border-border bg-surface rounded-[var(--radius-card)] border">
                 <summary className="text-label text-fg-primary focus-visible:ring-focus-ring flex min-h-11 cursor-pointer list-none items-center px-4 py-3 font-semibold focus:outline-none focus-visible:ring-2 sm:px-5">
@@ -1307,6 +1341,12 @@ function advertisingIntelligenceLabels(
     sample: t("advertising.reporting.sample"),
     actual: t("advertising.reporting.actual"),
     expected: t("advertising.reporting.expected"),
+    baseline: t("advertising.reporting.baseline"),
+    period: t("advertising.reporting.period"),
+    confidence: t("advertising.reporting.confidence"),
+    confidenceGuarded: t("advertising.reporting.confidenceGuarded"),
+    confidenceLimited: t("advertising.reporting.confidenceLimited"),
+    reviewEvidence: t("advertising.reporting.reviewEvidence"),
     change: t("advertising.reporting.change"),
     cpc: t("advertising.reporting.cpc"),
     audienceOpportunity: t("advertising.reporting.audienceOpportunity"),
@@ -1423,6 +1463,12 @@ function advertisingHierarchyExplorerLabels(
     unavailable: t("advertising.reporting.notAvailable"),
     tableLabel: t("advertising.reporting.campaignsTableLabel"),
     active: t("advertising.reporting.active"),
+    columns: t("advertising.reporting.columns"),
+    sort: t("advertising.reporting.sort"),
+    sortName: t("advertising.reporting.sortName"),
+    sortSpend: t("advertising.reporting.sortSpend"),
+    sortResults: t("advertising.reporting.sortResults"),
+    sortCtr: t("advertising.reporting.sortCtr"),
   };
 }
 
@@ -1461,6 +1507,12 @@ function advertisingReportingDashboardLabels(
     noSignals: t("advertising.reporting.dashboard.noSignals"),
     sample: t("advertising.reporting.dashboard.sample"),
     evidence: t("advertising.reporting.evidence"),
+    baseline: t("advertising.reporting.baseline"),
+    period: t("advertising.reporting.period"),
+    confidence: t("advertising.reporting.confidence"),
+    confidenceGuarded: t("advertising.reporting.confidenceGuarded"),
+    confidenceLimited: t("advertising.reporting.confidenceLimited"),
+    reviewEvidence: t("advertising.reporting.reviewEvidence"),
     metricSpend: t("advertising.reporting.spend"),
     metricResults: t("advertising.reporting.results"),
     metricCostPerResult: t("advertising.reporting.dashboard.costPerResult"),
@@ -1499,6 +1551,8 @@ function reportSectionItems({
   trendMetricA,
   trendMetricB,
   trendGranularity,
+  sort,
+  visibleColumns,
   search,
   objective,
   status,
@@ -1514,6 +1568,8 @@ function reportSectionItems({
   trendMetricA: TrendMetricKey;
   trendMetricB: TrendMetricKey;
   trendGranularity: TrendGranularity;
+  sort?: string | undefined;
+  visibleColumns?: readonly string[] | undefined;
   search: string;
   objective: string;
   status: string;
@@ -1525,6 +1581,8 @@ function reportSectionItems({
     params.set("trendMetricA", trendMetricA);
     params.set("trendMetricB", trendMetricB);
     params.set("trendGranularity", trendGranularity);
+    if (sort) params.set("sort", sort);
+    if (visibleColumns?.length) params.set("visibleColumns", visibleColumns.join(","));
     if (search) params.set("search", search);
     if (objective) params.set("objective", objective);
     if (status) params.set("status", status);

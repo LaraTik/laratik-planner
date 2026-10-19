@@ -34,6 +34,12 @@ export type AdvertisingIntelligenceLabels = {
   sample: string;
   actual: string;
   expected: string;
+  baseline: string;
+  period: string;
+  confidence: string;
+  confidenceGuarded: string;
+  confidenceLimited: string;
+  reviewEvidence: string;
   change: string;
   cpc: string;
   audienceOpportunity: string;

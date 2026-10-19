@@ -8,7 +8,7 @@ describe("advertising report view configuration", () => {
   it("serializes URL-driven filters and chart settings without tenant data", () => {
     const config = advertisingReportViewConfigFromSearch({
       params: new URLSearchParams(
-        "section=campaigns&compare=custom&compareSince=2026-09-01&compareUntil=2026-09-30&search=retargeting&trendMetricA=impressions&trendMetricB=clicks&trendGranularity=week",
+        "section=campaigns&compare=custom&compareSince=2026-09-01&compareUntil=2026-09-30&search=retargeting&trendMetricA=impressions&trendMetricB=clicks&trendGranularity=week&sort=results&visibleColumns=results,ctr",
       ),
       accountId: "act_123",
       since: "2026-10-01",
@@ -25,6 +25,8 @@ describe("advertising report view configuration", () => {
       trendMetricA: "impressions",
       trendMetricB: "clicks",
       trendGranularity: "week",
+      sort: "results",
+      visibleColumns: ["results", "ctr"],
     });
     expect(config).not.toHaveProperty("workspaceId");
     expect(config).not.toHaveProperty("agencyId");
@@ -42,6 +44,7 @@ describe("advertising report view configuration", () => {
     expect(params.get("accountId")).toBe("act_456");
     expect(params.get("section")).toBe("audience");
     expect(params.get("audiencePage")).toBe("2");
+    expect(params.get("visibleColumns")).toBeNull();
     expect(params.get("surface")).toBeNull();
     expect(params.get("version")).toBeNull();
   });

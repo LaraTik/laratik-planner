@@ -40,6 +40,23 @@
 > export scope, bilingual browser, visual, and production evidence are captured
 > at the exact clean commit.
 
+> **2026-10-19 Action Center evidence refinement checkpoint** — Overview
+> signals now prioritize underperforming campaigns and retain peer CTR/CPC
+> baselines in the typed insight model. Each action exposes an accessible
+> evidence disclosure with period, sample size, baseline, and sample-guard
+> confidence in EN/AR. Focused intelligence, catalog, lint, and type checks
+> pass. This remains **Implemented**, not **Tested/Verified**, until the
+> bilingual browser, axe, visual, and production evidence gates are captured.
+
+> **2026-10-19 Advertising explorer controls checkpoint** — Campaign sorting
+> and visible metric columns are now backed by the typed URL view configuration,
+> retained through filter submits, section navigation, exports, reloads, and
+> saved-view restoration. The column picker uses the shared accessible Checkbox
+> primitive and prevents an empty metric table. Focused hierarchy/configuration,
+> catalog, lint, and type checks pass. This remains **Implemented**, not
+> **Tested/Verified**, until bilingual browser, axe, visual, export, and
+> production evidence are captured at the exact clean commit.
+
 > **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
 > persists a typed, versioned advertising view configuration through the
 > authenticated `/api/advertising/saved-views` route. It reuses the existing
