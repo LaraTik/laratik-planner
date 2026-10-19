@@ -1,6 +1,6 @@
 # Food Game Community & Inbox audit — 2026-10-19
 
-Status: implementation and verification in progress; not independently Verified.
+Status: local baseline and focused Community checks Tested; full release gates pending; not independently Verified.
 
 ## Live findings
 
@@ -64,8 +64,9 @@ provider identifiers, or secrets are recorded here.
   though the server would reject sending. The UI now explains the paused
   state and disables the composer. Server protections remain enforced.
 
-No schema migration, production-data write, new API/MCP tool, scope, or
-transport behavior is introduced. No plan or safety gate is loosened.
+No schema migration, new API/MCP tool, scope, or transport behavior is introduced.
+The manual read-only provider sync reused existing ingestion and updated its
+local sync evidence. No plan or safety gate is loosened.
 
 ## Remaining product work
 
@@ -91,3 +92,54 @@ Required commands: `pnpm verify`, `NODE_ENV=test pnpm migration-drill`,
 full browser/visual checks before merge. Record results against the exact clean
 commit. External Meta UAT, native Arabic editorial review, and independent
 verification remain open; local compilation cannot close those gates.
+
+## Local evidence — frozen code candidate
+
+Date: 2026-10-19. Operator: Codex. Code candidate:
+`2f9fbbb54fe14f836de9cfe0c9b1933a97221eac`, clean worktree for the runs below.
+Subsequent evidence-only commits do not change the application or tests.
+
+| Gate                      | Command                                                                                                                                                                   | Result                                                                                                                            |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Baseline                  | `VITEST_MAX_FORKS=2 VITEST_MIN_FORKS=1 VITEST_MAX_THREADS=2 VITEST_MIN_THREADS=1 pnpm verify`                                                                             | Exit 0: formatting, lint, typecheck, 545 unit files / 4,901 tests, production webpack build                                       |
+| Migration drill           | `NODE_ENV=test pnpm migration-drill` with `TEST_DATABASE_URL` set to the isolated `planner_community_ci_test` database                                                    | Exit 0: all five checks; ledger 88/88                                                                                             |
+| Integration               | `pnpm test:integration` against that same disposable database                                                                                                             | Exit 0: 41 files / 326 tests                                                                                                      |
+| Community browser         | `pnpm test:e2e:isolated -- tests/e2e/community-inbox-audit.spec.ts --project=chromium --project=firefox --project=webkit --project=mobile-chrome --project=mobile-safari` | Exit 0: 10/10 EN/AR cases, five widths per case, keyboard selection, serious/critical axe checks, disabled send/sync restrictions |
+| Independent static review | `/root/community_review`, including the final enabled-channel label delta                                                                                                 | No actionable findings; Arabic meaning/clarity assessed, not native human sign-off                                                |
+
+Browser tests ran as the non-root user in the official Playwright 1.62.1
+Linux image matching the installed package. They used synthetic data and a
+separate PostgreSQL 16 database; no production tokens or customer messages
+were copied into the runner. Local evidence logs remain outside the repository.
+
+An earlier unrestricted parallel baseline timed out in one existing Meta
+callback test. That test passed 3/3 in isolation and in the complete final
+baseline with fewer workers. No assertion, timeout, or test was weakened.
+
+The full `pnpm test:e2e:release` gate has **not passed**. The first local attempt
+lost its development server to the Docker VM OOM killer (`oom_kill=1`);
+the following bounded-heap attempt hit Next's memory-triggered restart and
+lost the server. Both runs were stopped after the cause was confirmed;
+connection-refused failures are not treated as release evidence. A successful
+targeted run does not replace the full five-browser and visual release gate.
+
+The repository's GitHub `advisory-quality.yml` release-candidate workflow can
+run the full gate, but its dependency job also creates a GitHub issue. Approval
+for that side effect is pending. Merge and deployment remain on hold.
+
+The emergency-stop button in Settings & safety is disabled/unimplemented;
+there is no working self-service release control in that screen. Complete the
+controlled provider UAT and an authorized safety-control implementation before
+promising that a workspace manager can enable sending. Do not bypass it with
+a database edit. Meta App Review/reconnection, AI capability enablement, and
+native Arabic sign-off remain separate external steps.
+
+### Synthetic visual evidence
+
+These captures are from the disposable test workspace, not Food Game customer
+conversations. Screenshots accompany the behavioral/authorization assertions
+above and are not refreshed visual baselines.
+
+- [Activity, EN at 1440px](evidence/food-game-community-2026-10-19/activity-en-1440.png)
+- [Inbox, EN at 1440px](evidence/food-game-community-2026-10-19/inbox-en-1440.png)
+- [Inbox, AR/RTL at 375px](evidence/food-game-community-2026-10-19/inbox-ar-375.png)

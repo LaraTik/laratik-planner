@@ -1853,3 +1853,11 @@ and remaining release/UAT gates are recorded in
 Production reply delivery remains blocked by the active workspace emergency
 stop; private messaging also requires the Meta permission grant. No safety
 gate or production setting was changed during this audit.
+
+The frozen Community code candidate `2f9fbbb54fe14f836de9cfe0c9b1933a97221eac`
+passed the local baseline (545 files / 4,901 tests + production build), 41
+integration files / 326 tests, all five migration-drill checks, and 10/10
+focused bilingual five-browser cases. The audit report contains commands,
+synthetic captures, independent static-review notes, and failed local full-release
+attempts. Full release/visual evidence, native Arabic sign-off, and provider UAT
+remain open; no merge/deployment or independent Verified claim is made.
