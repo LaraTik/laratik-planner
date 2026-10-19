@@ -96,6 +96,7 @@
   "disableSync": "تعطيل المزامنة",
   "syncStatus": {
     "idle": "مجدولة",
+    "succeeded": "ناجحة",
     "running": "قيد التشغيل",
     "partial": "نتيجة جزئية",
     "failed": "فشلت؛ إعادة المحاولة متاحة",
@@ -331,6 +332,9 @@
     "partial": "بيانات جزئية",
     "complete": "عينة مكتملة",
     "syncStatus": "المزامنة",
+    "filtersButton": "الفلاتر",
+    "filtersTitle": "فلاتر التقرير",
+    "filtersDescription": "اضبط الحساب والفترة والمقارنة وفلاتر المستكشف.",
     "summaryTitle": "ملخص الأداء",
     "summaryDescription": "النتائج المصرح بها للحساب {account} خلال الفترة المحددة.",
     "sectionOverview": "نظرة عامة",

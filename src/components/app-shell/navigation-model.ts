@@ -309,16 +309,6 @@ export function buildWorkspaceNavigation(input: {
             },
             {
               kind: "link",
-              key: "advertising-creatives",
-              href: `${wsBase}/analytics/advertising?section=creatives`,
-              label: "Creatives",
-              labelKey: "sidebar.advertisingCreatives",
-              icon: ImageIcon,
-              exact: true,
-              activeQuery: { name: "section", value: "creatives" },
-            },
-            {
-              kind: "link",
               key: "advertising-audience",
               href: `${wsBase}/analytics/advertising?section=audience`,
               label: "Audience",
@@ -326,6 +316,16 @@ export function buildWorkspaceNavigation(input: {
               icon: Users,
               exact: true,
               activeQuery: { name: "section", value: "audience" },
+            },
+            {
+              kind: "link",
+              key: "advertising-creatives",
+              href: `${wsBase}/analytics/advertising?section=creatives`,
+              label: "Creatives",
+              labelKey: "sidebar.advertisingCreatives",
+              icon: ImageIcon,
+              exact: true,
+              activeQuery: { name: "section", value: "creatives" },
             },
             {
               kind: "link",

@@ -138,8 +138,8 @@ describe("buildWorkspaceNavigation", () => {
         "advertising-campaigns",
         "advertising-adsets",
         "advertising-ads",
-        "advertising-creatives",
         "advertising-audience",
+        "advertising-creatives",
         "advertising-targeting",
       ]);
       if (advertising.children[0]?.kind === "link") {

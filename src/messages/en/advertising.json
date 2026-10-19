@@ -96,6 +96,7 @@
   "disableSync": "Disable sync",
   "syncStatus": {
     "idle": "Scheduled",
+    "succeeded": "Succeeded",
     "running": "Running",
     "partial": "Partial result",
     "failed": "Failed; retry available",
@@ -331,6 +332,9 @@
     "partial": "Partial data",
     "complete": "Complete sample",
     "syncStatus": "Sync",
+    "filtersButton": "Filters",
+    "filtersTitle": "Report filters",
+    "filtersDescription": "Adjust the account, period, comparison, and explorer filters.",
     "summaryTitle": "Performance summary",
     "summaryDescription": "Authorized results for {account} in the selected period.",
     "sectionOverview": "Overview",

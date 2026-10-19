@@ -45,6 +45,20 @@ test.describe("synthetic advertising reporting", () => {
     );
     await expect(page.getByTestId("advertising-reporting-section-nav")).toBeHidden();
     await expect(page.getByTestId("sidebar-advertising-reporting")).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02`,
+    );
+    await expect(page.getByTestId("advertising-reporting-filter-drawer-trigger")).toBeVisible();
+    await page.getByRole("button", { name: "Filters" }).click();
+    await expect(page.getByTestId("advertising-reporting-filter-drawer")).toBeVisible();
+    await expect(page.getByRole("dialog")).toContainText("Report filters");
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByTestId("advertising-reporting-filter-drawer")).toBeHidden();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02`,
+    );
     await expect(page.getByTestId("sidebar-advertising-campaigns")).toHaveAttribute(
       "href",
       /section=campaigns/,
@@ -158,6 +172,20 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-campaign-signals")).toContainText("فعّالة");
     await expect(page.getByTestId("advertising-reporting-section-nav")).toBeHidden();
     await expect(page.getByTestId("sidebar-advertising-reporting")).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02`,
+    );
+    await expect(page.getByTestId("advertising-reporting-filter-drawer-trigger")).toBeVisible();
+    await page.getByRole("button", { name: "الفلاتر" }).click();
+    await expect(page.getByTestId("advertising-reporting-filter-drawer")).toBeVisible();
+    await expect(page.getByRole("dialog")).toContainText("فلاتر التقرير");
+    await page.getByRole("button", { name: "إغلاق" }).click();
+    await expect(page.getByTestId("advertising-reporting-filter-drawer")).toBeHidden();
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      `/app/a/${agencySlug}/w/${workspaceSlug}/analytics/advertising?since=2026-10-01&until=2026-10-02`,
+    );
     await expect(page.getByTestId("sidebar-advertising-campaigns")).toHaveAttribute(
       "href",
       /section=campaigns/,

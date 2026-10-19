@@ -89,6 +89,10 @@ must remain provider-agnostic.
 - Every Advertising navigation item has a URL, visible label, active state,
   and visible focus ring in the desktop rail, collapsed-rail flyout, and
   mobile drawer.
+- On mobile, report filters collapse into one labeled button that opens an
+  accessible dialog drawer; desktop keeps the filter surface sticky and
+  visible. Both views submit the same URL-driven configuration so deep links
+  and back/forward navigation remain stable.
 - Sticky filters and section navigation must not obscure focused content.
 - Tables keep local horizontal overflow on narrow screens; the document body
   must not gain horizontal overflow.

@@ -960,7 +960,7 @@ function ActionCenter({
                 </dl>
               </details>
               <a
-                href={campaignsHref}
+                href={campaignReviewHref(campaignsHref, insight.campaignId)}
                 className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
               >
                 {labels.review}
@@ -972,6 +972,13 @@ function ActionCenter({
       </div>
     </Card>
   );
+}
+
+function campaignReviewHref(href: string, campaignId: string): string {
+  const [path, query = ""] = href.split("?");
+  const params = new URLSearchParams(query);
+  params.set("search", campaignId);
+  return `${path}?${params.toString()}`;
 }
 
 function formatPercentValue(value: number, locale: string): string {

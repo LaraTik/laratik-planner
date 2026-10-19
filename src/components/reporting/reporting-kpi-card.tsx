@@ -25,7 +25,7 @@ export function ReportingKpiCard({
     <Card className="reporting-card reporting-kpi">
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
-          <p className="text-label text-fg-muted truncate">{label}</p>
+          <p className="text-label text-fg-muted min-h-8 leading-4">{label}</p>
           {icon ? (
             <span className="bg-primary-subtle text-primary flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-control)]">
               {icon}

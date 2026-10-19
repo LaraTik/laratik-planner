@@ -85,6 +85,7 @@ import {
   type AdvertisingHierarchyExplorerLabels,
 } from "./advertising-hierarchy-explorer";
 import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
+import { AdvertisingFilterDrawer } from "./advertising-filter-drawer";
 import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -494,132 +495,149 @@ export default async function AdvertisingAnalyticsPage({
     );
   }
 
+  const renderFilterFields = (idPrefix: string) => (
+    <>
+      <input type="hidden" name="section" value={activeSection} />
+      <input type="hidden" name="trendMetricA" value={trendMetricA} />
+      <input type="hidden" name="trendMetricB" value={trendMetricB} />
+      <input type="hidden" name="trendGranularity" value={trendGranularity} />
+      {savedViewConfig.sort ? (
+        <input type="hidden" name="sort" value={savedViewConfig.sort} />
+      ) : null}
+      {savedViewConfig.visibleColumns?.length ? (
+        <input
+          type="hidden"
+          name="visibleColumns"
+          value={savedViewConfig.visibleColumns.join(",")}
+        />
+      ) : null}
+      <FormField id={`${idPrefix}-account`} label={t("advertising.reporting.account")}>
+        <select
+          name="accountId"
+          defaultValue={selectedAccount.id}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          {accounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-since`} label={t("advertising.reporting.from")}>
+        <Input name="since" type="date" defaultValue={since} />
+      </FormField>
+      <FormField id={`${idPrefix}-until`} label={t("advertising.reporting.to")}>
+        <Input name="until" type="date" defaultValue={until} />
+      </FormField>
+      <FormField id={`${idPrefix}-search`} label={t("advertising.reporting.search")}>
+        <div className="relative">
+          <Search
+            className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
+            aria-hidden="true"
+          />
+          <Input
+            name="search"
+            defaultValue={campaignSearch}
+            placeholder={t("advertising.reporting.searchPlaceholder")}
+            className="ps-9"
+          />
+        </div>
+      </FormField>
+      <FormField id={`${idPrefix}-objective`} label={t("advertising.reporting.objective")}>
+        <select
+          name="objective"
+          defaultValue={objectiveFilter}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="">{t("advertising.reporting.allObjectives")}</option>
+          {objectiveOptions.map((objective) => (
+            <option key={objective} value={objective}>
+              {objective}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-status`} label={t("advertising.reporting.status")}>
+        <select
+          name="status"
+          defaultValue={statusFilter}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="">{t("advertising.reporting.allStatuses")}</option>
+          {statusOptions.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </FormField>
+      <FormField id={`${idPrefix}-comparison`} label={t("advertising.reporting.comparisonMode")}>
+        <select
+          name="compare"
+          defaultValue={comparisonMode}
+          className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
+        >
+          <option value="previous">{t("advertising.reporting.previousPeriod")}</option>
+          <option value="previous_year">{t("advertising.reporting.previousYear")}</option>
+          <option value="custom">{t("advertising.reporting.customComparison")}</option>
+        </select>
+      </FormField>
+      {comparisonMode === "custom" ? (
+        <>
+          <FormField
+            id={`${idPrefix}-compare-since`}
+            label={t("advertising.reporting.compareSince")}
+          >
+            <Input
+              name="compareSince"
+              type="date"
+              defaultValue={firstQueryValue(query.compareSince)}
+            />
+          </FormField>
+          <FormField
+            id={`${idPrefix}-compare-until`}
+            label={t("advertising.reporting.compareUntil")}
+          >
+            <Input
+              name="compareUntil"
+              type="date"
+              defaultValue={firstQueryValue(query.compareUntil)}
+            />
+          </FormField>
+        </>
+      ) : null}
+    </>
+  );
+
   return (
     <div className="space-y-6" data-testid="advertising-reporting-page">
       {renderHeading(reportHeaderActions)}
+      <AdvertisingFilterDrawer
+        action={basePath}
+        buttonLabel={t("advertising.reporting.filtersButton")}
+        title={t("advertising.reporting.filtersTitle")}
+        description={t("advertising.reporting.filtersDescription")}
+        applyLabel={t("advertising.reporting.apply")}
+        closeLabel={t("common.close")}
+      >
+        {renderFilterFields("advertising-report-mobile")}
+        <a
+          href={reportExportHref}
+          className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-4 font-semibold focus:outline-none focus-visible:ring-2"
+          download
+        >
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.reporting.exportCsv")}
+        </a>
+      </AdvertisingFilterDrawer>
       <form
         method="get"
         action={basePath}
-        className="border-border bg-surface sticky top-16 z-20 grid gap-4 rounded-[var(--radius-card)] border p-4 shadow-sm sm:grid-cols-2 xl:grid-cols-6 xl:items-end"
+        className="border-border bg-surface sticky top-16 z-20 hidden gap-4 rounded-[var(--radius-card)] border p-4 shadow-sm sm:grid sm:grid-cols-2 xl:grid-cols-6 xl:items-end"
         data-testid="advertising-reporting-filters"
       >
-        <input type="hidden" name="section" value={activeSection} />
-        <input type="hidden" name="trendMetricA" value={trendMetricA} />
-        <input type="hidden" name="trendMetricB" value={trendMetricB} />
-        <input type="hidden" name="trendGranularity" value={trendGranularity} />
-        {savedViewConfig.sort ? (
-          <input type="hidden" name="sort" value={savedViewConfig.sort} />
-        ) : null}
-        {savedViewConfig.visibleColumns?.length ? (
-          <input
-            type="hidden"
-            name="visibleColumns"
-            value={savedViewConfig.visibleColumns.join(",")}
-          />
-        ) : null}
-        <FormField id="advertising-report-account" label={t("advertising.reporting.account")}>
-          <select
-            name="accountId"
-            defaultValue={selectedAccount.id}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField id="advertising-report-since" label={t("advertising.reporting.from")}>
-          <Input name="since" type="date" defaultValue={since} />
-        </FormField>
-        <FormField id="advertising-report-until" label={t("advertising.reporting.to")}>
-          <Input name="until" type="date" defaultValue={until} />
-        </FormField>
-        <FormField id="advertising-report-search" label={t("advertising.reporting.search")}>
-          <div className="relative">
-            <Search
-              className="text-fg-muted pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2"
-              aria-hidden="true"
-            />
-            <Input
-              id="advertising-report-search"
-              name="search"
-              defaultValue={campaignSearch}
-              placeholder={t("advertising.reporting.searchPlaceholder")}
-              className="ps-9"
-            />
-          </div>
-        </FormField>
-        <FormField id="advertising-report-objective" label={t("advertising.reporting.objective")}>
-          <select
-            id="advertising-report-objective"
-            name="objective"
-            defaultValue={objectiveFilter}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="">{t("advertising.reporting.allObjectives")}</option>
-            {objectiveOptions.map((objective) => (
-              <option key={objective} value={objective}>
-                {objective}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField id="advertising-report-status" label={t("advertising.reporting.status")}>
-          <select
-            id="advertising-report-status"
-            name="status"
-            defaultValue={statusFilter}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="">{t("advertising.reporting.allStatuses")}</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status}
-              </option>
-            ))}
-          </select>
-        </FormField>
-        <FormField
-          id="advertising-report-comparison"
-          label={t("advertising.reporting.comparisonMode")}
-        >
-          <select
-            id="advertising-report-comparison"
-            name="compare"
-            defaultValue={comparisonMode}
-            className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring min-h-11 w-full rounded-[var(--radius-control)] border px-3 focus:outline-none focus-visible:ring-2"
-          >
-            <option value="previous">{t("advertising.reporting.previousPeriod")}</option>
-            <option value="previous_year">{t("advertising.reporting.previousYear")}</option>
-            <option value="custom">{t("advertising.reporting.customComparison")}</option>
-          </select>
-        </FormField>
-        {comparisonMode === "custom" ? (
-          <>
-            <FormField
-              id="advertising-report-compare-since"
-              label={t("advertising.reporting.compareSince")}
-            >
-              <Input
-                name="compareSince"
-                type="date"
-                defaultValue={firstQueryValue(query.compareSince)}
-              />
-            </FormField>
-            <FormField
-              id="advertising-report-compare-until"
-              label={t("advertising.reporting.compareUntil")}
-            >
-              <Input
-                name="compareUntil"
-                type="date"
-                defaultValue={firstQueryValue(query.compareUntil)}
-              />
-            </FormField>
-          </>
-        ) : null}
+        {renderFilterFields("advertising-report-desktop")}
         <button
           type="submit"
           className="bg-primary text-label focus-visible:ring-focus-ring min-h-11 rounded-[var(--radius-control)] px-4 font-semibold text-white focus:outline-none focus-visible:ring-2"
@@ -1597,8 +1615,8 @@ function reportSectionItems({
     { key: "campaigns", label: t("advertising.reporting.sectionCampaigns") },
     { key: "adsets", label: t("advertising.reporting.sectionAdSets") },
     { key: "ads", label: t("advertising.reporting.sectionAds") },
-    { key: "creatives", label: t("advertising.reporting.sectionCreatives") },
     { key: "audience", label: t("advertising.reporting.sectionAudience") },
+    { key: "creatives", label: t("advertising.reporting.sectionCreatives") },
     { key: "targeting", label: t("advertising.reporting.sectionTargeting") },
   ];
   return sections.map((section) => ({ ...section, href: hrefFor(section.key) }));
