@@ -6,7 +6,7 @@
   "inboxTitle": "Unified inbox",
   "inboxDescription": "Keep comments and private messages in one workspace-scoped queue.",
   "commentsTitle": "Post comments",
-  "commentsDescription": "Review root comments and their replies with the publication context beside them.",
+  "commentsDescription": "Browse imported public comments. Open a conversation to review the latest message and reply when delivery is enabled.",
   "reviewsTitle": "Review queue",
   "reviewsDescription": "Approve response drafts only when the reason, source, and policy are clear.",
   "automationsTitle": "Automations",

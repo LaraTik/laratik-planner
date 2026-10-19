@@ -39,7 +39,7 @@ for (const locale of ["en", "ar"] as const) {
         [seeded.agencyId],
       );
       await client.query(
-        `UPDATE workspace_settings SET community_inbox_enabled=true WHERE workspace_id=$1`,
+        `INSERT INTO workspace_settings (workspace_id,community_inbox_enabled) VALUES ($1,true) ON CONFLICT (workspace_id) DO UPDATE SET community_inbox_enabled=true`,
         [seeded.workspaceId],
       );
       const conversation = await client.query<{ id: string }>(
@@ -92,7 +92,8 @@ for (const locale of ["en", "ar"] as const) {
     await page.goto(`${base}/inbox?q=Synthetic`);
     const selected = page.locator(`a[href*="conversation=${conversationId}"]`);
     await expect(selected).toBeVisible();
-    await selected.click();
+    await selected.focus();
+    await page.keyboard.press("Enter");
     await expect(
       page.getByRole("textbox", { name: locale === "en" ? "Write a reply…" : "اكتب ردًا…" }),
     ).toBeDisabled();
@@ -102,6 +103,34 @@ for (const locale of ["en", "ar"] as const) {
         name: locale === "en" ? "Search conversations" : "البحث في المحادثات",
       }),
     ).toHaveValue("Synthetic");
+    for (const width of [375, 768, 1024, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await expect(selected).toBeVisible();
+      const syncBounds = await page
+        .getByRole("button", {
+          name: locale === "en" ? "Sync private messages" : "مزامنة الرسائل الخاصة",
+          exact: true,
+        })
+        .boundingBox();
+      expect(syncBounds).not.toBeNull();
+      expect(syncBounds!.x).toBeGreaterThanOrEqual(0);
+      expect(syncBounds!.x + syncBounds!.width).toBeLessThanOrEqual(width);
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+      ).toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`inbox-${locale}-${width}.png`),
+        fullPage: true,
+      });
+    }
+    const inboxAxe = await new AxeBuilder({ page })
+      .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+      .analyze();
+    expect(
+      inboxAxe.violations.filter((v) => ["serious", "critical"].includes(v.impact ?? "")),
+    ).toEqual([]);
+    await page.goto(`${base}/comments`);
+    await expect(page.locator(`a[href*="conversation=${conversationId}"]`)).toBeVisible();
     await page.goto(`${base}/inbox?filter=private`);
     await expect(
       page.getByRole("button", {

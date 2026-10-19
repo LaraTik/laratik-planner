@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Database,
   FileCheck2,
-  Filter,
   Inbox,
   Link2,
   MessageCircle,
@@ -573,8 +572,8 @@ function InboxScreen({
         </div>
       </Card>
       <Card padding="none" className="flex min-w-0 flex-col">
-        <div className="border-border flex items-center justify-between border-b p-4">
-          <div>
+        <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b p-4">
+          <div className="w-full min-w-0">
             <CardTitle>{communityText(t, "inboxTitle")}</CardTitle>
             <CardDescription>
               {metrics.inboxItems.length > 0
@@ -679,50 +678,6 @@ function InboxScreen({
             {communityText(t, "validate")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
-      </Card>
-    </div>
-  );
-}
-
-function CommentsScreen({
-  t,
-  metrics,
-}: {
-  t: Translator;
-  metrics: Awaited<ReturnType<typeof readMetrics>>;
-}) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.42fr)_minmax(0,1fr)]">
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>{communityText(t, "source")}</CardTitle>
-            <CardDescription>{communityText(t, "commentsTitle")}</CardDescription>
-          </div>
-          <Badge variant="outline">{metrics.messages}</Badge>
-        </CardHeader>
-        <div className="bg-surface-subtle flex aspect-[4/3] items-center justify-center rounded-[var(--radius-control)]">
-          <MessageCircle className="text-fg-muted h-10 w-10" aria-hidden="true" />
-        </div>
-        <div className="mt-4 space-y-2">
-          <div className="text-body text-fg-primary font-medium">
-            {communityText(t, "noDataTitle")}
-          </div>
-          <p className="text-label text-fg-muted">{communityText(t, "noDataDescription")}</p>
-        </div>
-      </Card>
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>{communityText(t, "commentsTitle")}</CardTitle>
-            <CardDescription>{communityText(t, "commentsDescription")}</CardDescription>
-          </div>
-          <Button variant="secondary" disabled>
-            <Filter className="h-4 w-4" aria-hidden="true" />
-            {communityText(t, "allConversations")}
-          </Button>
-        </CardHeader>
-        <EmptyCommunity t={t} icon={<MessageCircle className="h-6 w-6" />} />
       </Card>
     </div>
   );
@@ -1538,7 +1493,7 @@ export default async function CommunityEngagementPage({
       (access.workspaceEnabled || currentSection === "setup") ? (
         currentSection === "overview" ? (
           <Overview t={t} basePath={basePath} metrics={metrics} />
-        ) : currentSection === "inbox" ? (
+        ) : currentSection === "inbox" || currentSection === "comments" ? (
           <InboxScreen
             t={t}
             basePath={basePath}
@@ -1549,10 +1504,8 @@ export default async function CommunityEngagementPage({
             canReply={canReply}
             emergencyStop={access.emergencyStop}
             locale={code}
-            query={query}
+            query={currentSection === "comments" ? { ...query, filter: "public" } : query}
           />
-        ) : currentSection === "comments" ? (
-          <CommentsScreen t={t} metrics={metrics} />
         ) : currentSection === "reviews" ? (
           <ReviewsScreen t={t} metrics={metrics} />
         ) : currentSection === "automations" ? (

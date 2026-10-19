@@ -30,10 +30,15 @@ provider identifiers, or secrets are recorded here.
   messages”; no invented daily time window is implied.
 - “Delivery reliability” showed 100 after any send attempt. The tile now shows
   the actual reply-attempt count and makes no success-rate claim.
+- Post comments showed an empty placeholder despite imported comments. It now
+  reuses the public-comment inbox view without claiming full post context.
 - Conversation cards, filters, and search had no interaction. They now use
   URL-backed selection, visibility filters, and search within the loaded
   window. The 25-conversation limit is visible. Reply state resets when the
   selected conversation changes.
+- The mobile inbox sync toolbar clipped its private-message button at 375px.
+  The toolbar now wraps; browser coverage checks button bounds as well as
+  document overflow.
 - Descending message rows were deduplicated with last-write-wins, replacing
   the newest message with an older message. Deduplication now retains the
   first/newest row.
@@ -49,7 +54,7 @@ transport behavior is introduced. No plan or safety gate is loosened.
 
 ## Remaining product work
 
-Post comments, review queue, playbooks, routing, automation, export, and advanced
+Review queue, playbooks, routing, automation, export, and advanced
 analytics still contain foundation/disabled surfaces. They must not be
 presented as completed operations. Full conversation history, post context,
 pagination beyond the bounded inbox window, per-connection readiness, and
