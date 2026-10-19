@@ -12,6 +12,16 @@
 > **Tested/Verified**, until the full disposable-database, bilingual browser,
 > accessibility, visual, export, and production evidence gates are captured.
 
+> **2026-10-19 Advertising explorer refinement checkpoint** — The dedicated
+> Creatives section now uses provider-returned HTTPS preview metadata, explicit
+> unavailable-preview states, fatigue evidence, and an accessible details
+> drawer. The Targeting section now renders normalized age, gender, location,
+> language, placement, audience, exclusion, and unknown-provider chips while
+> retaining raw targeting JSON behind disclosure. Focused view/normalization
+> tests and type/lint checks pass. This remains **Implemented**, not
+> **Tested/Verified**, until the bilingual browser, axe, visual, export, and
+> production evidence gates are captured at the exact clean commit.
+
 > **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
 > persists a typed, versioned advertising view configuration through the
 > authenticated `/api/advertising/saved-views` route. It reuses the existing

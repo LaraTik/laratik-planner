@@ -35,7 +35,7 @@ These states are not converted to zeroes or hidden behind a generic error. Parti
 
 ## Audience, targeting, and provider limitations
 
-Audience rows are provider-returned observations and are not inferred. Targeting and creative metadata remain read-only provider object metadata. Creative presentation fields are retained only when Meta returns them (`thumbnail_url`, `image_url`, `video_id`, headline/body, format, link, CTA, and provider spec payloads); missing creative previews are unavailable rather than fabricated. Unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
+Audience rows are provider-returned observations and are not inferred. Targeting is rendered as readable category chips with unknown provider fields preserved and the complete raw JSON available behind a disclosure. Creative metadata remains read-only provider object metadata. Creative presentation fields are retained only when Meta returns them (`thumbnail_url`, `image_url`, `video_id`, headline/body, format, link, CTA, and provider spec payloads); the Creatives section shows validated HTTPS previews and an accessible detail drawer, while missing previews remain unavailable rather than fabricated. Unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
 
 ## Export and access
 
@@ -43,4 +43,4 @@ Exports continue through the authenticated, tenant-scoped reporting boundary. Th
 
 ## Responsive and bilingual contract
 
-The executive dashboard uses the current light tokens, logical spacing, compact cards, 44px controls, keyboard-visible focus, SVG icons, and a table fallback for the trend chart. English/LTR and Arabic/RTL use the same route and centralized advertising message catalog. Existing detailed campaign, ad set, ad, audience, and targeting tables remain below the executive layer for drill-down continuity.
+The executive dashboard uses the current light tokens, logical spacing, compact cards, 44px controls, keyboard-visible focus, SVG icons, and a table fallback for the trend chart. English/LTR and Arabic/RTL use the same route and centralized advertising message catalog. Campaign, ad set, ad, creative, audience, and targeting explorers are separate URL-driven sections so each view presents only its relevant information.

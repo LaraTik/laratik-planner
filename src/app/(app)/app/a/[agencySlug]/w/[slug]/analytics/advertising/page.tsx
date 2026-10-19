@@ -68,6 +68,14 @@ import {
   AdvertisingReportingDashboard,
   type AdvertisingReportingDashboardLabels,
 } from "./advertising-reporting-dashboard";
+import {
+  AdvertisingCreativeExplorer,
+  type AdvertisingCreativeExplorerLabels,
+} from "./advertising-creative-explorer";
+import {
+  AdvertisingTargetingCards,
+  type AdvertisingTargetingCardLabels,
+} from "./advertising-targeting-cards";
 import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
 import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
 
@@ -1084,150 +1092,112 @@ export default async function AdvertisingAnalyticsPage({
             </Card>
           ) : null}
           {activeSection === "creatives" ? (
-            <Card data-testid="advertising-reporting-promoted-posts">
-              <CardHeader>
-                <div>
-                  <CardTitle>{t("advertising.reporting.promotedPostsTitle")}</CardTitle>
-                  <CardDescription>
-                    {t("advertising.reporting.promotedPostsDescription")}
-                  </CardDescription>
-                </div>
-                <Badge variant="outline">{t("advertising.reporting.paidOrganicCombined")}</Badge>
-              </CardHeader>
-              {view.promotedPosts?.length ? (
-                <div
-                  aria-label={t("advertising.reporting.promotedPostsTableLabel")}
-                  className="overflow-x-auto"
-                  role="region"
-                  tabIndex={0}
-                >
-                  <table className="text-body w-full min-w-[640px] text-start">
-                    <caption className="sr-only">
-                      {t("advertising.reporting.promotedPostsTableLabel")}
-                    </caption>
-                    <thead className="bg-surface-subtle text-label text-fg-muted">
-                      <tr>
-                        <th className="px-4 py-3 text-start font-semibold" scope="col">
-                          {t("advertising.reporting.postId")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.ads")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.spend")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.impressions")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.organicViews")}
-                        </th>
-                        <th className="px-4 py-3 text-end font-semibold" scope="col">
-                          {t("advertising.reporting.combinedViews")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-border divide-y">
-                      {view.promotedPosts.map((post) => (
-                        <tr key={post.postId}>
-                          <th className="px-4 py-3 text-start font-semibold" scope="row">
-                            <bdi dir="ltr">{post.postId}</bdi>
+            <div className="space-y-4">
+              <AdvertisingCreativeExplorer
+                ads={view.ads}
+                fatigue={creativeFatigue}
+                currency={selectedAccount.currency}
+                locale={code}
+                labels={advertisingCreativeExplorerLabels(t)}
+              />
+              <Card data-testid="advertising-reporting-promoted-posts">
+                <CardHeader>
+                  <div>
+                    <CardTitle>{t("advertising.reporting.promotedPostsTitle")}</CardTitle>
+                    <CardDescription>
+                      {t("advertising.reporting.promotedPostsDescription")}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline">{t("advertising.reporting.paidOrganicCombined")}</Badge>
+                </CardHeader>
+                {view.promotedPosts?.length ? (
+                  <div
+                    aria-label={t("advertising.reporting.promotedPostsTableLabel")}
+                    className="overflow-x-auto"
+                    role="region"
+                    tabIndex={0}
+                  >
+                    <table className="text-body w-full min-w-[640px] text-start">
+                      <caption className="sr-only">
+                        {t("advertising.reporting.promotedPostsTableLabel")}
+                      </caption>
+                      <thead className="bg-surface-subtle text-label text-fg-muted">
+                        <tr>
+                          <th className="px-4 py-3 text-start font-semibold" scope="col">
+                            {t("advertising.reporting.postId")}
                           </th>
-                          <td className="px-4 py-3 text-end">{number(post.adCount, code)}</td>
-                          <td className="px-4 py-3 text-end">
-                            {money(post.spend, selectedAccount.currency, code)}
-                          </td>
-                          <td className="px-4 py-3 text-end">{number(post.impressions, code)}</td>
-                          <td className="px-4 py-3 text-end">
-                            {organicByPostId.get(post.postId)?.views === null ||
-                            !organicByPostId.get(post.postId)
-                              ? t("advertising.reporting.notAvailable")
-                              : number(organicByPostId.get(post.postId)?.views ?? 0, code)}
-                          </td>
-                          <td className="px-4 py-3 text-end">
-                            {combinedMetric(
-                              post.impressions,
-                              organicByPostId.get(post.postId)?.views,
-                            ) === null
-                              ? t("advertising.reporting.notAvailable")
-                              : number(
-                                  combinedMetric(
-                                    post.impressions,
-                                    organicByPostId.get(post.postId)?.views,
-                                  )!,
-                                  code,
-                                )}
-                          </td>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.ads")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.spend")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.impressions")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.organicViews")}
+                          </th>
+                          <th className="px-4 py-3 text-end font-semibold" scope="col">
+                            {t("advertising.reporting.combinedViews")}
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-label text-fg-secondary px-4 pb-4 sm:px-5">
-                  {t("advertising.reporting.notAvailable")}
-                </p>
-              )}
-            </Card>
-          ) : null}
-          {activeSection === "targeting" ? (
-            <Card data-testid="advertising-reporting-targeting">
-              <CardHeader>
-                <CardTitle>{t("advertising.reporting.targetingTitle")}</CardTitle>
-                <CardDescription>{t("advertising.reporting.targetingDescription")}</CardDescription>
-              </CardHeader>
-              {result.objects.some(
-                (object) => object.objectType === "adset" && object.metadata?.targeting,
-              ) ? (
-                <div
-                  className="overflow-x-auto"
-                  role="region"
-                  tabIndex={0}
-                  aria-label={t("advertising.reporting.targetingTableLabel")}
-                >
-                  <table className="text-body w-full min-w-[640px] text-start">
-                    <caption className="sr-only">
-                      {t("advertising.reporting.targetingTableLabel")}
-                    </caption>
-                    <thead className="bg-surface-subtle text-label text-fg-muted">
-                      <tr>
-                        <th className="px-4 py-3 text-start font-semibold" scope="col">
-                          {t("advertising.reporting.adSet")}
-                        </th>
-                        <th className="px-4 py-3 text-start font-semibold" scope="col">
-                          {t("advertising.reporting.targetingTitle")}
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-border divide-y">
-                      {result.objects
-                        .filter(
-                          (object) => object.objectType === "adset" && object.metadata?.targeting,
-                        )
-                        .map((object) => (
-                          <tr key={object.externalObjectId}>
+                      </thead>
+                      <tbody className="divide-border divide-y">
+                        {view.promotedPosts.map((post) => (
+                          <tr key={post.postId}>
                             <th className="px-4 py-3 text-start font-semibold" scope="row">
-                              <span className="block">
-                                {object.name ?? object.externalObjectId}
-                              </span>
-                              <bdi className="text-label text-fg-muted" dir="ltr">
-                                {object.externalObjectId}
-                              </bdi>
+                              <bdi dir="ltr">{post.postId}</bdi>
                             </th>
-                            <td className="px-4 py-3 text-start">
-                              {formatTargeting(object.metadata?.targeting)}
+                            <td className="px-4 py-3 text-end">{number(post.adCount, code)}</td>
+                            <td className="px-4 py-3 text-end">
+                              {money(post.spend, selectedAccount.currency, code)}
+                            </td>
+                            <td className="px-4 py-3 text-end">{number(post.impressions, code)}</td>
+                            <td className="px-4 py-3 text-end">
+                              {organicByPostId.get(post.postId)?.views === null ||
+                              !organicByPostId.get(post.postId)
+                                ? t("advertising.reporting.notAvailable")
+                                : number(organicByPostId.get(post.postId)?.views ?? 0, code)}
+                            </td>
+                            <td className="px-4 py-3 text-end">
+                              {combinedMetric(
+                                post.impressions,
+                                organicByPostId.get(post.postId)?.views,
+                              ) === null
+                                ? t("advertising.reporting.notAvailable")
+                                : number(
+                                    combinedMetric(
+                                      post.impressions,
+                                      organicByPostId.get(post.postId)?.views,
+                                    )!,
+                                    code,
+                                  )}
                             </td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <p className="text-label text-fg-secondary px-4 pb-4 sm:px-5">
-                  {t("advertising.reporting.notAvailable")}
-                </p>
-              )}
-            </Card>
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p className="text-label text-fg-secondary px-4 pb-4 sm:px-5">
+                    {t("advertising.reporting.notAvailable")}
+                  </p>
+                )}
+              </Card>
+            </div>
+          ) : null}
+          {activeSection === "targeting" ? (
+            <AdvertisingTargetingCards
+              rows={result.objects
+                .filter((object) => object.objectType === "adset")
+                .map((object) => ({
+                  adSetId: object.externalObjectId,
+                  name: object.name,
+                  targeting: object.metadata?.targeting,
+                }))}
+              labels={advertisingTargetingCardLabels(t)}
+            />
           ) : null}
           {activeSection === "audience" ? (
             <Card id="advertising-reporting-audience" data-testid="advertising-reporting-audience">
@@ -1385,6 +1355,62 @@ function advertisingIntelligenceLabels(
     budgetAction: t("advertising.reporting.budgetAction"),
     creativeAction: t("advertising.reporting.creativeAction"),
     audienceAction: t("advertising.reporting.audienceAction"),
+  };
+}
+
+function advertisingCreativeExplorerLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingCreativeExplorerLabels {
+  return {
+    title: t("advertising.reporting.creativeExplorerTitle"),
+    description: t("advertising.reporting.creativeExplorerDescription"),
+    empty: t("advertising.reporting.creativeExplorerEmpty"),
+    unavailablePreview: t("advertising.reporting.creativeExplorerUnavailablePreview"),
+    openDetails: t("advertising.reporting.creativeExplorerOpenDetails"),
+    detailsTitle: t("advertising.reporting.creativeExplorerDetailsTitle"),
+    detailsDescription: t("advertising.reporting.creativeExplorerDetailsDescription"),
+    format: t("advertising.reporting.creativeExplorerFormat"),
+    headline: t("advertising.reporting.creativeExplorerHeadline"),
+    body: t("advertising.reporting.creativeExplorerBody"),
+    link: t("advertising.reporting.creativeExplorerLink"),
+    campaign: t("advertising.reporting.campaign"),
+    status: t("advertising.reporting.status"),
+    spend: t("advertising.reporting.spend"),
+    results: t("advertising.reporting.results"),
+    costPerResult: t("advertising.reporting.dashboard.costPerResult"),
+    healthSignal: t("advertising.reporting.creativeHealth"),
+    stable: t("advertising.reporting.stable"),
+    fatiguing: t("advertising.reporting.fatiguing"),
+    insufficientData: t("advertising.reporting.insufficient"),
+    unavailable: t("advertising.reporting.notAvailable"),
+    image: t("advertising.reporting.creativeExplorerImage"),
+    video: t("advertising.reporting.creativeExplorerVideo"),
+    reel: t("advertising.reporting.creativeExplorerReel"),
+    carousel: t("advertising.reporting.creativeExplorerCarousel"),
+    noHeadline: t("advertising.reporting.creativeExplorerNoHeadline"),
+    noBody: t("advertising.reporting.creativeExplorerNoBody"),
+    close: t("common.close"),
+  };
+}
+
+function advertisingTargetingCardLabels(
+  t: (key: string, values?: Record<string, string | number>) => string,
+): AdvertisingTargetingCardLabels {
+  return {
+    title: t("advertising.reporting.targetingTitle"),
+    description: t("advertising.reporting.targetingDescription"),
+    empty: t("advertising.reporting.notAvailable"),
+    age: t("advertising.reporting.targetingAge"),
+    gender: t("advertising.reporting.targetingGender"),
+    locations: t("advertising.reporting.targetingLocations"),
+    languages: t("advertising.reporting.targetingLanguages"),
+    placements: t("advertising.reporting.targetingPlacements"),
+    audience: t("advertising.reporting.targetingAudience"),
+    exclusions: t("advertising.reporting.targetingExclusions"),
+    unknown: t("advertising.reporting.targetingUnknown"),
+    rawDetails: t("advertising.reporting.targetingRawDetails"),
+    rawDescription: t("advertising.reporting.targetingRawDescription"),
+    moreValues: t("advertising.reporting.targetingMoreValues"),
   };
 }
 
@@ -1563,14 +1589,6 @@ function advertisingClientReportLabels(
       unavailable: t("advertising.reporting.recommendationsUnavailable"),
     },
   };
-}
-
-function formatTargeting(value: unknown): string {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return "—";
-  return Object.entries(value as Record<string, unknown>)
-    .slice(0, 8)
-    .map(([key, entry]) => `${key}: ${typeof entry === "string" ? entry : JSON.stringify(entry)}`)
-    .join(" · ");
 }
 
 type OrganicPromotedPost = {

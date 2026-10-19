@@ -51,6 +51,7 @@ export type AdvertisingAdSummary = AdvertisingMetricTotals & {
   campaignId: string | null;
   name?: string | null;
   status?: string | null;
+  creativeMetadata?: Record<string, unknown> | null;
 };
 
 export type AdvertisingReportView = {
@@ -169,7 +170,18 @@ export function buildAdvertisingReportView(
         adSetId,
         campaignId: adSet?.parentExternalObjectId ?? adFacts[0]?.campaignId ?? null,
         ...totals(adFacts),
-        ...(object ? { name: object.name, status: object.status } : {}),
+        ...(object
+          ? {
+              name: object.name,
+              status: object.status,
+              creativeMetadata:
+                objects.find(
+                  (candidate) =>
+                    candidate.objectType === "creative" &&
+                    candidate.parentExternalObjectId === adId,
+                )?.metadata ?? null,
+            }
+          : {}),
       };
     })
     .sort((left, right) => right.spend - left.spend || left.adId.localeCompare(right.adId));

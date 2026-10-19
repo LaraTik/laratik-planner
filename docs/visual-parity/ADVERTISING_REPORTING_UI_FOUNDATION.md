@@ -31,9 +31,12 @@ The reporting route uses `?section=` as its local navigation state:
 - `campaigns` — campaign-level performance table and pagination.
 - `adsets` — ad-set-level performance table and pagination.
 - `ads` — ad-level performance table and pagination.
-- `creatives` — promoted-post/creative performance with explicit unavailable state.
+- `creatives` — provider creative cards with real HTTPS previews when available,
+  fatigue evidence, and an accessible detail drawer; unavailable previews remain
+  explicit, with promoted-post joins below.
 - `audience` — provider-returned audience delivery rows and pagination.
-- `targeting` — readable targeting metadata with an explicit unavailable state.
+- `targeting` — readable category chips, preserved unknown fields, and a raw
+  provider JSON disclosure with an explicit unavailable state.
 
 The persistent sidebar owns the Advertising section hierarchy: Overview,
 Reporting, Campaigns, Ad Sets, Ads, Audience, Creatives, and Targeting. Each
@@ -108,11 +111,9 @@ existing URL-driven route state.
 
 The remaining recommendations are deliberately separate from this refinement:
 
-1. Add creative preview/detail drawers only when Meta returns a validated
-   preview URL and creative metadata; never fabricate thumbnails.
-2. Add a reviewed Stitch capture for this route and record each responsive
+1. Add a reviewed Stitch capture for this route and record each responsive
    baseline in the visual evidence manifest.
-3. Consolidate or retire the now-unmounted legacy
+2. Consolidate or retire the now-unmounted legacy
    `advertising-report-visuals.tsx` component in a separate cleanup after its
    standalone visual test is migrated to the executive dashboard.
 

@@ -145,6 +145,22 @@ describe("advertising reporting view", () => {
           promotedPostId: "post-1",
         },
         {
+          objectType: "creative",
+          externalObjectId: "creative-a",
+          parentExternalObjectId: "ad-a",
+          name: "Boundaries carousel",
+          status: null,
+          objective: null,
+          dailyBudget: null,
+          lifetimeBudget: null,
+          promotedPostId: null,
+          metadata: {
+            format: "carousel",
+            previewUrl: "https://cdn.example.test/creative-a.jpg",
+            headline: "Set better boundaries",
+          },
+        },
+        {
           objectType: "ad",
           externalObjectId: "ad-b",
           parentExternalObjectId: "adset",
@@ -160,6 +176,11 @@ describe("advertising reporting view", () => {
     expect(view.promotedPosts).toEqual([
       expect.objectContaining({ postId: "post-1", adCount: 2, spend: 30, impressions: 300 }),
     ]);
+    expect(view.ads.find((ad) => ad.adId === "ad-a")?.creativeMetadata).toEqual({
+      format: "carousel",
+      previewUrl: "https://cdn.example.test/creative-a.jpg",
+      headline: "Set better boundaries",
+    });
     expect(view.activeAdCount).toBe(2);
   });
 });
