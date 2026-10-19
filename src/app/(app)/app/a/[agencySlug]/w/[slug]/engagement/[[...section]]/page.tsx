@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  communityInboxView,
+  latestInboxConversations,
+  type CommunityInboxQuery,
+} from "@/lib/community/inbox-view";
+import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 import { notFound, redirect } from "next/navigation";
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
@@ -13,7 +19,6 @@ import {
   ChevronRight,
   Database,
   FileCheck2,
-  Filter,
   Inbox,
   Link2,
   MessageCircle,
@@ -52,12 +57,15 @@ import {
 } from "@/lib/db/schema";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { workspaceBasePath } from "@/lib/urls";
+import { formatDate, DateFormat } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { CommunityWorkspaceToggle } from "@/components/community/community-workspace-toggle";
 import { CapabilityValidationButton } from "@/components/community/capability-validation-button";
 import { CommentSyncButton } from "@/components/community/comment-sync-button";
 import { CommunityReplyForm } from "@/components/community/community-reply-form";
 import { PrivateMessageSyncButton } from "@/components/community/private-message-sync-button";
+import { CommunityActivity } from "@/components/community/community-activity";
 import { CommunityTestLab } from "@/components/community/community-test-lab";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -175,9 +183,16 @@ async function readMetrics(workspaceId: string) {
       .from(communitySyncStates)
       .where(eq(communitySyncStates.workspaceId, workspaceId)),
     db
-      .select({ value: count() })
+      .select({
+        id: communityEvents.id,
+        kind: communityEvents.kind,
+        detail: communityEvents.detail,
+        createdAt: communityEvents.createdAt,
+      })
       .from(communityEvents)
-      .where(eq(communityEvents.workspaceId, workspaceId)),
+      .where(eq(communityEvents.workspaceId, workspaceId))
+      .orderBy(desc(communityEvents.createdAt), desc(communityEvents.id))
+      .limit(50),
     db
       .select({ value: count() })
       .from(communityAutomationRules)
@@ -213,23 +228,16 @@ async function readMetrics(workspaceId: string) {
 
   const mergedCapabilityRows = mergeCapabilityRows(capabilityRows);
 
-  const inboxItems = Array.from(
-    new Map(
-      inboxRows.map((row) => [
-        row.id,
-        {
-          id: row.id,
-          channelType: row.channelType,
-          lastMessageAt: row.lastMessageAt,
-          state: row.state,
-          body: row.body ?? "",
-          authorName: row.authorName,
-          direction: row.direction,
-          visibility: row.visibility,
-        },
-      ]),
-    ).values(),
-  ).slice(0, 25);
+  const inboxItems = latestInboxConversations(inboxRows).map((row) => ({
+    id: row.id,
+    channelType: row.channelType,
+    lastMessageAt: row.lastMessageAt,
+    state: row.state,
+    body: row.body ?? "",
+    authorName: row.authorName,
+    direction: row.direction,
+    visibility: row.visibility,
+  }));
 
   return {
     conversations: conversations[0]?.value ?? 0,
@@ -240,7 +248,7 @@ async function readMetrics(workspaceId: string) {
     capabilityRows: mergedCapabilityRows,
     sends: sends[0]?.value ?? 0,
     syncStates,
-    events: events[0]?.value ?? 0,
+    events,
     rules: rules[0]?.value ?? 0,
     playbooks: playbooks[0]?.value ?? 0,
     inboxItems,
@@ -269,19 +277,18 @@ function SectionKpis({
       />
       <KpiTile
         icon={<MessageSquare className="h-4 w-4" />}
-        label={communityText(t, "messagesToday")}
+        label={communityText(t, "messagesTotal")}
         value={metrics.messages}
       />
       <KpiTile
         icon={<Link2 className="h-4 w-4" />}
-        label={communityText(t, "connectedChannels")}
+        label={communityText(t, "enabledChannels")}
         value={metrics.channels}
       />
       <KpiTile
         icon={<Send className="h-4 w-4" />}
-        label={communityText(t, "reliability")}
-        value={metrics.sends > 0 ? 100 : 0}
-        tone={metrics.sends > 0 ? "success" : "default"}
+        label={communityText(t, "replyAttempts")}
+        value={metrics.sends}
       />
     </div>
   );
@@ -417,7 +424,7 @@ function Overview({
           <CardHeader>
             <div>
               <CardTitle>{communityText(t, "channelHealth")}</CardTitle>
-              <CardDescription>{communityText(t, "connectedChannels")}</CardDescription>
+              <CardDescription>{communityText(t, "enabledChannels")}</CardDescription>
             </div>
             <Link
               href={`${basePath}/connections`}
@@ -463,7 +470,13 @@ function InboxScreen({
   workspaceSlug,
   canManage,
   canReply,
+  emergencyStop,
+  locale,
+  query,
 }: {
+  query: CommunityInboxQuery;
+  locale: LocaleCode;
+  emergencyStop: boolean;
   t: Translator;
   basePath: string;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
@@ -472,7 +485,14 @@ function InboxScreen({
   canManage: boolean;
   canReply: boolean;
 }) {
-  const selectedConversation = metrics.inboxItems[0] ?? null;
+  const { items, selected: selectedConversation } = communityInboxView(metrics.inboxItems, query);
+  function inboxHref(filter: string, conversation?: string) {
+    const params = new URLSearchParams();
+    if (filter === "private" || filter === "public") params.set("filter", filter);
+    if (query.q) params.set("q", query.q);
+    if (conversation) params.set("conversation", conversation);
+    return `${basePath}/inbox?${params}`;
+  }
   return (
     <div
       className="grid min-h-[560px] gap-3 xl:grid-cols-[250px_minmax(0,1fr)_280px]"
@@ -481,27 +501,55 @@ function InboxScreen({
       <Card padding="none" className="min-w-0">
         <div className="border-border flex items-center justify-between border-b p-4">
           <CardTitle>{communityText(t, "inboxTitle")}</CardTitle>
-          <Button size="icon" variant="ghost" aria-label={communityText(t, "searchConversations")}>
+        </div>
+        <form action={`${basePath}/inbox`} className="flex gap-1 p-2" role="search">
+          {query.filter ? <input type="hidden" name="filter" value={query.filter} /> : null}
+          <DirAwareInput
+            locale={locale}
+            name="q"
+            defaultValue={query.q ?? ""}
+            aria-label={communityText(t, "searchConversations")}
+            className="min-w-0 flex-1"
+          />
+          <Button
+            size="icon"
+            variant="ghost"
+            type="submit"
+            aria-label={communityText(t, "searchConversations")}
+          >
             <Search className="h-4 w-4" aria-hidden="true" />
           </Button>
-        </div>
+        </form>
+        <p className="text-label text-fg-muted px-3">{communityText(t, "inboxWindow")}</p>
         <div className="border-border flex gap-1 overflow-x-auto border-b p-2">
-          <Button size="sm" variant="secondary">
-            {communityText(t, "allConversations")}
-          </Button>
-          <Button size="sm" variant="ghost">
-            {communityText(t, "directMessages")}
-          </Button>
-          <Button size="sm" variant="ghost">
-            {communityText(t, "comments")}
-          </Button>
+          {[
+            ["all", "allConversations"],
+            ["private", "directMessages"],
+            ["public", "comments"],
+          ].map(([filter, label]) => (
+            <Button
+              key={filter}
+              size="sm"
+              variant={(query.filter ?? "all") === filter ? "secondary" : "ghost"}
+              asChild
+            >
+              <Link
+                href={inboxHref(filter!)}
+                aria-current={(query.filter ?? "all") === filter ? "page" : undefined}
+              >
+                {communityText(t, label!)}
+              </Link>
+            </Button>
+          ))}
         </div>
         <div className="space-y-2 p-3">
-          {metrics.inboxItems.length > 0 ? (
-            metrics.inboxItems.map((item) => (
-              <div
+          {items.length > 0 ? (
+            items.map((item) => (
+              <Link
+                href={inboxHref(query.filter ?? "all", item.id)}
+                aria-current={selectedConversation?.id === item.id ? "true" : undefined}
                 key={item.id}
-                className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                className="border-border bg-surface-subtle focus-visible:ring-focus-ring block rounded-[var(--radius-control)] border p-3 focus-visible:ring-2"
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-label text-fg-muted uppercase">{item.channelType}</span>
@@ -512,11 +560,13 @@ function InboxScreen({
                     )}
                   </Badge>
                 </div>
-                <p className="text-body text-fg-primary mt-2 line-clamp-2">{item.body}</p>
+                <p dir="auto" className="text-body text-fg-primary mt-2 line-clamp-2">
+                  {item.body}
+                </p>
                 <p className="text-label text-fg-muted mt-2">
                   {item.authorName ?? communityText(t, "unknownAuthor")}
                 </p>
-              </div>
+              </Link>
             ))
           ) : (
             <EmptyCommunity t={t} />
@@ -524,8 +574,8 @@ function InboxScreen({
         </div>
       </Card>
       <Card padding="none" className="flex min-w-0 flex-col">
-        <div className="border-border flex items-center justify-between border-b p-4">
-          <div>
+        <div className="border-border flex flex-wrap items-start justify-between gap-3 border-b p-4">
+          <div className="w-full min-w-0">
             <CardTitle>{communityText(t, "inboxTitle")}</CardTitle>
             <CardDescription>
               {metrics.inboxItems.length > 0
@@ -534,6 +584,11 @@ function InboxScreen({
             </CardDescription>
           </div>
           <CommentSyncButton
+            available={metrics.capabilityRows.some(
+              (row) => row.operation === "read_comments" && row.state === "available",
+            )}
+            unavailableLabel={communityText(t, "syncUnavailable")}
+            partialLabel={communityText(t, "syncPartial")}
             agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             canManage={canManage}
@@ -543,6 +598,11 @@ function InboxScreen({
             failureLabel={communityText(t, "syncFailure")}
           />
           <PrivateMessageSyncButton
+            available={metrics.capabilityRows.some(
+              (row) => row.operation === "read_private_messages" && row.state === "available",
+            )}
+            unavailableLabel={communityText(t, "syncUnavailable")}
+            partialLabel={communityText(t, "syncPartial")}
             agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             canManage={canManage}
@@ -568,7 +628,7 @@ function InboxScreen({
                   )}
                 </Badge>
               </div>
-              <p className="text-body text-fg-primary mt-4 whitespace-pre-wrap">
+              <p dir="auto" className="text-body text-fg-primary mt-4 whitespace-pre-wrap">
                 {selectedConversation.body}
               </p>
               <p className="text-label text-fg-muted mt-3">
@@ -583,10 +643,11 @@ function InboxScreen({
         </div>
         <div className="border-border border-t p-4">
           <CommunityReplyForm
+            key={selectedConversation?.id ?? "empty"}
             agencySlug={agencySlug}
             workspaceSlug={workspaceSlug}
             conversationId={selectedConversation?.id ?? null}
-            canReply={canReply}
+            canReply={canReply && !emergencyStop}
             visibility={selectedConversation?.visibility === "private" ? "private" : "public"}
             placeholder={communityText(t, "replyPlaceholder")}
             sendLabel={communityText(t, "sendReply")}
@@ -594,7 +655,7 @@ function InboxScreen({
             successLabel={communityText(t, "replySuccess")}
             failureLabel={communityText(t, "replyFailure")}
             alreadyRepliedLabel={communityText(t, "alreadyReplied")}
-            disabledLabel={communityText(t, "replyUnavailable")}
+            disabledLabel={communityText(t, emergencyStop ? "replyPaused" : "replyUnavailable")}
           />
         </div>
       </Card>
@@ -619,7 +680,7 @@ function InboxScreen({
               <span className="text-label font-semibold">{communityText(t, "aiAssist")}</span>
             </div>
             <p className="text-label text-fg-secondary mt-2">
-              {communityText(t, "noProviderActions")}
+              {communityText(t, "aiAssistLabHint")}
             </p>
           </div>
           <Link
@@ -629,50 +690,6 @@ function InboxScreen({
             {communityText(t, "validate")} <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
         </div>
-      </Card>
-    </div>
-  );
-}
-
-function CommentsScreen({
-  t,
-  metrics,
-}: {
-  t: Translator;
-  metrics: Awaited<ReturnType<typeof readMetrics>>;
-}) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(260px,0.42fr)_minmax(0,1fr)]">
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>{communityText(t, "source")}</CardTitle>
-            <CardDescription>{communityText(t, "commentsTitle")}</CardDescription>
-          </div>
-          <Badge variant="outline">{metrics.messages}</Badge>
-        </CardHeader>
-        <div className="bg-surface-subtle flex aspect-[4/3] items-center justify-center rounded-[var(--radius-control)]">
-          <MessageCircle className="text-fg-muted h-10 w-10" aria-hidden="true" />
-        </div>
-        <div className="mt-4 space-y-2">
-          <div className="text-body text-fg-primary font-medium">
-            {communityText(t, "noDataTitle")}
-          </div>
-          <p className="text-label text-fg-muted">{communityText(t, "noDataDescription")}</p>
-        </div>
-      </Card>
-      <Card>
-        <CardHeader>
-          <div>
-            <CardTitle>{communityText(t, "commentsTitle")}</CardTitle>
-            <CardDescription>{communityText(t, "commentsDescription")}</CardDescription>
-          </div>
-          <Button variant="secondary" disabled>
-            <Filter className="h-4 w-4" aria-hidden="true" />
-            {communityText(t, "allConversations")}
-          </Button>
-        </CardHeader>
-        <EmptyCommunity t={t} icon={<MessageCircle className="h-6 w-6" />} />
       </Card>
     </div>
   );
@@ -830,13 +847,16 @@ function TestLabScreen({
   t,
   agencySlug,
   workspaceSlug,
+  locale,
 }: {
+  locale: LocaleCode;
   t: Translator;
   agencySlug: string;
   workspaceSlug: string;
 }) {
   return (
     <CommunityTestLab
+      locale={locale}
       agencySlug={agencySlug}
       workspaceSlug={workspaceSlug}
       copy={{
@@ -858,6 +878,11 @@ function TestLabScreen({
         noProviderGuarantee: communityText(t, "testLabNoProviderGuarantee"),
         inputRequired: communityText(t, "testLabInputRequired"),
         providerUnavailable: communityText(t, "testLabProviderUnavailable"),
+        aiDisabled: communityText(t, "testLabAiDisabled"),
+        notInPlan: communityText(t, "testLabNotInPlan"),
+        rateLimited: communityText(t, "testLabRateLimited"),
+        quotaExceeded: communityText(t, "testLabQuotaExceeded"),
+        failed: communityText(t, "testLabFailed"),
         blocked: communityText(t, "testLabBlocked"),
         needsReview: communityText(t, "testLabNeedsReview"),
         draftDecision: communityText(t, "testLabDraftDecision"),
@@ -940,7 +965,11 @@ function ConnectionsScreen({
   agencySlug,
   workspaceSlug,
   canManage,
+  locale,
+  timeZone,
 }: {
+  locale: LocaleCode;
+  timeZone: string;
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
   agencySlug: string;
@@ -1001,7 +1030,13 @@ function ConnectionsScreen({
                 {communityText(t, "lastChecked")}
               </span>
               <span className="text-label text-fg-muted">
-                {metrics.capabilityRows[0]?.checkedAt?.toLocaleString() ?? "—"}
+                {metrics.capabilityRows[0]?.checkedAt
+                  ? formatDate(metrics.capabilityRows[0].checkedAt, locale, {
+                      ...DateFormat.dateTime,
+                      timeZone,
+                      hour12: false,
+                    })
+                  : "—"}
               </span>
             </div>
             <CapabilityValidationButton
@@ -1017,6 +1052,11 @@ function ConnectionsScreen({
               <p className="text-label text-fg-secondary">{communityText(t, "syncStatus")}</p>
               {syncKinds.map(({ key, label }) => {
                 const states = metrics.syncStates.filter((state) => state.syncKind === key);
+                const operation = key === "comments" ? "read_comments" : "read_private_messages";
+                const capabilityState =
+                  metrics.capabilityRows.find((row) => row.operation === operation)?.state ??
+                  "unknown";
+                const available = capabilityState === "available";
                 const failed = states.some((state) => state.status === "failed");
                 const running = states.some((state) => state.status === "running");
                 const lastCompleted = states
@@ -1030,16 +1070,26 @@ function ConnectionsScreen({
                   >
                     <div className="flex items-center justify-between gap-3">
                       <span className="text-label text-fg-primary">{label}</span>
-                      <Badge variant={failed ? "warning" : running ? "info" : "outline"}>
+                      <Badge
+                        variant={!available || failed ? "warning" : running ? "info" : "outline"}
+                      >
                         {communityText(
                           t,
-                          failed ? "syncFailed" : running ? "syncRunning" : "syncIdle",
+                          !available
+                            ? capabilityState === "unavailable"
+                              ? "unavailable"
+                              : "notValidated"
+                            : failed
+                              ? "syncFailed"
+                              : running
+                                ? "syncRunning"
+                                : "syncIdle",
                         )}
                       </Badge>
                     </div>
                     <p className="text-label text-fg-muted mt-1">
                       {lastCompleted
-                        ? `${communityText(t, "syncLastCompleted")}: ${lastCompleted.toLocaleString()}`
+                        ? `${communityText(t, "syncLastCompleted")}: ${formatDate(lastCompleted, locale, { ...DateFormat.dateTime, timeZone, hour12: false })}`
                         : communityText(t, "syncNeverRun")}
                     </p>
                     {failed ? (
@@ -1207,9 +1257,7 @@ function SettingsScreen({
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-body text-fg-primary font-medium">
-                {access.emergencyStop
-                  ? communityText(t, "disabled")
-                  : communityText(t, "available")}
+                {communityText(t, access.emergencyStop ? "replyPaused" : "replySafetyReady")}
               </p>
               <p className="text-label text-fg-muted mt-1">
                 {communityText(t, "noProviderActions")}
@@ -1241,7 +1289,11 @@ function SettingsScreen({
 function ActivityScreen({
   t,
   metrics,
+  locale,
+  timeZone,
 }: {
+  locale: LocaleCode;
+  timeZone: string;
   t: Translator;
   metrics: Awaited<ReturnType<typeof readMetrics>>;
 }) {
@@ -1259,11 +1311,25 @@ function ActivityScreen({
             {communityText(t, "export")}
           </Button>
         </CardHeader>
-        {metrics.events > 0 ? (
-          <div className="space-y-3" />
-        ) : (
-          <EmptyCommunity t={t} icon={<Activity className="h-6 w-6" />} />
-        )}
+        <p className="text-label text-fg-muted">{communityText(t, "activityRecent")}</p>
+        <CommunityActivity
+          events={metrics.events}
+          locale={locale}
+          timeZone={timeZone}
+          emptyLabel={communityText(t, "noEvents")}
+          fallbackLabel={communityText(t, "activityRecorded")}
+          labels={Object.fromEntries(
+            [
+              ["community_comments_sync_completed", "activityCommentsSynced"],
+              ["community_comments_sync_completed_with_errors", "activityCommentsPartial"],
+              ["community_private_messages_sync_completed", "activityMessagesSynced"],
+              ["community_private_messages_sync_completed_with_errors", "activityMessagesPartial"],
+              ["community_reply_sent", "replySuccess"],
+              ["community_reply_failed", "replyFailure"],
+              ["community_reply_unknown_outcome", "activityReplyUnknown"],
+            ].map(([event, key]) => [event, communityText(t, key!)]),
+          )}
+        />
       </Card>
     </>
   );
@@ -1317,7 +1383,7 @@ function SetupScreen({
             <CardDescription>{communityText(t, "setupDescription")}</CardDescription>
           </div>
           <Badge variant={access.allowed ? "success" : "warning"}>
-            {access.allowed ? communityText(t, "available") : communityText(t, "notValidated")}
+            {access.allowed ? communityText(t, "moduleEnabled") : communityText(t, "notValidated")}
           </Badge>
         </CardHeader>
         <div className="space-y-3">
@@ -1387,15 +1453,24 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function CommunityEngagementPage({
   params,
+  searchParams,
 }: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
   params: Promise<{ agencySlug: string; slug: string; section?: string[] }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/signin");
   const { agencySlug, slug, section } = await params;
+  const search = (await searchParams) ?? {};
+  const query = Object.fromEntries(
+    ["conversation", "filter", "q"].map((key) => [
+      key,
+      typeof search[key] === "string" ? search[key] : undefined,
+    ]),
+  ) as CommunityInboxQuery;
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
   if (!workspace) notFound();
-  const { t } = await tForActive();
+  const { t, code } = await tForActive();
   const basePath = `${workspaceBasePath(agencySlug, slug)}/engagement`;
   const requested = section?.[0] ?? "overview";
   const currentSection = (
@@ -1418,7 +1493,7 @@ export default async function CommunityEngagementPage({
         capabilityRows: [],
         sends: 0,
         syncStates: [],
-        events: 0,
+        events: [],
         rules: 0,
         playbooks: 0,
         inboxItems: [],
@@ -1430,13 +1505,13 @@ export default async function CommunityEngagementPage({
   return (
     <div className="space-y-6 pb-8" data-testid={`community-screen-${currentSection}`}>
       <PageHeader
-        eyebrow={`${communityText(t, "eyebrow")} / ${currentSection.replaceAll("-", " ")}`}
+        eyebrow={`${communityText(t, "eyebrow")} / ${title}`}
         title={title}
         description={description}
         action={
           <Badge variant={access.allowed ? "success" : "outline"}>
             <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-            {access.allowed ? communityText(t, "available") : communityText(t, "notValidated")}
+            {access.allowed ? communityText(t, "moduleEnabled") : communityText(t, "notValidated")}
           </Badge>
         }
       />
@@ -1455,7 +1530,7 @@ export default async function CommunityEngagementPage({
       (access.workspaceEnabled || currentSection === "setup") ? (
         currentSection === "overview" ? (
           <Overview t={t} basePath={basePath} metrics={metrics} />
-        ) : currentSection === "inbox" ? (
+        ) : currentSection === "inbox" || currentSection === "comments" ? (
           <InboxScreen
             t={t}
             basePath={basePath}
@@ -1464,9 +1539,10 @@ export default async function CommunityEngagementPage({
             workspaceSlug={slug}
             canManage={canManage}
             canReply={canReply}
+            emergencyStop={access.emergencyStop}
+            locale={code}
+            query={currentSection === "comments" ? { ...query, filter: "public" } : query}
           />
-        ) : currentSection === "comments" ? (
-          <CommentsScreen t={t} metrics={metrics} />
         ) : currentSection === "reviews" ? (
           <ReviewsScreen t={t} metrics={metrics} />
         ) : currentSection === "automations" ? (
@@ -1474,7 +1550,7 @@ export default async function CommunityEngagementPage({
         ) : currentSection === "playbooks" ? (
           <PlaybooksScreen t={t} metrics={metrics} />
         ) : currentSection === "test-lab" ? (
-          <TestLabScreen t={t} agencySlug={agencySlug} workspaceSlug={slug} />
+          <TestLabScreen t={t} agencySlug={agencySlug} workspaceSlug={slug} locale={code} />
         ) : currentSection === "analytics" ? (
           <AnalyticsScreen t={t} metrics={metrics} />
         ) : currentSection === "connections" ? (
@@ -1484,13 +1560,15 @@ export default async function CommunityEngagementPage({
             agencySlug={agencySlug}
             workspaceSlug={slug}
             canManage={canManage}
+            locale={code}
+            timeZone={workspace.timezone}
           />
         ) : currentSection === "team" ? (
           <TeamScreen t={t} metrics={metrics} />
         ) : currentSection === "settings" ? (
           <SettingsScreen t={t} access={access} />
         ) : currentSection === "activity" ? (
-          <ActivityScreen t={t} metrics={metrics} />
+          <ActivityScreen t={t} metrics={metrics} locale={code} timeZone={workspace.timezone} />
         ) : (
           <SetupScreen
             t={t}

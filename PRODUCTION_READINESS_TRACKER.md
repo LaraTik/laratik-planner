@@ -1843,3 +1843,21 @@ UAT, and authenticated MCP smoke evidence remain release gates.
 | M9.1 | Implemented | Agency-scoped tasks with optional workspace relation, creator/assignee/admin policy, lifecycle checks, automatic cycle timing, pagination, filters, append-only activity, bilingual list/detail/create UI, and accessible archive confirmation.                                                  | Unit workflow/time coverage, authorization and transaction integration coverage, authenticated bilingual browser/a11y journeys, responsive visual review, and exact-clean evidence. | `src/lib/tasks/`, `/app/tasks`, `tests/unit/tasks/{workflow,time}.test.ts`, ADR 0016; release evidence pending. |
 | M9.2 | Implemented | Direct-to-R2 task attachment intents with allowlisted type/size, pending-to-ready metadata verification, and signed downloads.                                                                                                                                                                   | Unauthorized signing/completion is denied; invalid metadata never becomes downloadable; upload errors are announced in the UI.                                                      | `src/lib/tasks/attachments.ts`, task attachment API routes; integration/browser evidence pending.               |
 | M9.3 | Implemented | Agency global calendar combining all visible planned content and dated tasks with agency-timezone month boundaries, Today jump/current-day highlight, workspace/assignee/status filters, independent Plans/Tasks visibility, unscheduled-task visibility, desktop month grid, and mobile agenda. | Admin cross-workspace visibility, filter persistence, empty states, deep links, Arabic/RTL, responsive and a11y checks.                                                             | `src/lib/planning/calendar.ts`, `/app/calendar`, `tests/integration/tasks.test.ts`; release evidence pending.   |
+
+# Food Game Community audit follow-up — 2026-10-19
+
+Community usability corrections are implemented and under validation, not
+independently Verified. Scope, observed production blockers, regression tests,
+and remaining release/UAT gates are recorded in
+`docs/production-readiness/FOOD_GAME_COMMUNITY_AUDIT_2026-10-19.md`.
+Production reply delivery remains blocked by the active workspace emergency
+stop; private messaging also requires the Meta permission grant. No safety
+gate or production setting was changed during this audit.
+
+The frozen Community code candidate `2f9fbbb54fe14f836de9cfe0c9b1933a97221eac`
+passed the local baseline (545 files / 4,901 tests + production build), 41
+integration files / 326 tests, all five migration-drill checks, and 10/10
+focused bilingual five-browser cases. The audit report contains commands,
+synthetic captures, independent static-review notes, and failed local full-release
+attempts. Full release/visual evidence, native Arabic sign-off, and provider UAT
+remain open; no merge/deployment or independent Verified claim is made.

@@ -448,6 +448,7 @@ export function buildWorkspaceNavigation(input: {
                   kind: "link" as const,
                   key: key as string,
                   href: `${wsBase}/${path}`,
+                  exact: key === "community-overview",
                   label: label as string,
                   labelKey: `sidebar.${labelKey as string}`,
                   icon: icon as IconComponent,
