@@ -1,5 +1,22 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-19 Community & Inbox interaction correction checkpoint** — Inbox
+> conversation cards now select a URL-backed thread; Post comments lists the
+> synced public conversations and opens the same thread; Team & routing can
+> assign a conversation to an active workspace member through the existing
+> server-side permission gate and writes an audit event. Priority and send
+> attempt summaries now reflect stored counts, Activity renders stored events,
+> and Analytics no longer presents sample bars as live measurements. The
+> Planner MCP remains read-only with respect to Community & Inbox, documented
+> in the API contract. `pnpm verify` and the full disposable-database
+> `pnpm test:integration` suite passed in this worktree; focused assignment,
+> catalog, and API-boundary unit checks also passed. The focused Community
+> Playwright suite now passes inbox selection, comments deep-linking, audited
+> Team assignment, and all 13 routes at 1440/1280/1024/768/375px in both
+> locales with no serious axe violations or horizontal overflow. This remains
+> **Implemented**, not **Tested/Verified**: current Stitch visual baselines,
+> exact clean-commit evidence, and external Meta UAT are still outstanding.
+
 > **2026-10-19 Advertising Reporting P3 completion checkpoint** — Reporting
 > exports now include a server-generated XLSX alongside CSV, with the selected
 > filters, metric definitions, data-health notes, attribution semantics, and

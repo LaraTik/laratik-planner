@@ -165,6 +165,7 @@ export async function devSeed(
     includeDeliveryMediaFixture?: boolean;
     enableTrendRadar?: boolean;
     visualFixture?: boolean;
+    communityInboxFixture?: boolean;
     advertisingReportingFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {
@@ -192,6 +193,7 @@ export async function devSeed(
         ...(options.enableTrendRadar ? { enableTrendRadar: true } : {}),
         ...(options.visualFixture ? { visualFixture: true } : {}),
         ...(options.advertisingReportingFixture ? { advertisingReportingFixture: true } : {}),
+        ...(options.communityInboxFixture ? { communityInboxFixture: true } : {}),
       },
       // Lower the request timeout in capture mode so a hung seed
       // does not eat the entire per-test budget. The compare step
@@ -260,6 +262,7 @@ export async function bootstrapTestSession(
     socialAnalyticsFixture?: boolean;
     enableTrendRadar?: boolean;
     visualFixture?: boolean;
+    communityInboxFixture?: boolean;
     advertisingReportingFixture?: boolean;
   } = {},
 ): Promise<SeedResult> {

@@ -92,6 +92,11 @@ The Zod schemas referenced above are in `src/lib/validation/` (one per domain) a
 
 ## Related documents
 
+- Community & Inbox actions are authenticated web application actions, not
+  `/api` routes or Planner MCP tools; see
+  [`Community & Inbox architecture`](../architecture/community-inbox.md) and
+  the [MCP capability boundary](./mcp.md#community-inbox-boundary).
+
 - [`docs/api/mcp.md`](./mcp.md) — Planner MCP endpoint, tools, scopes, structured `format_payload` content contract, and client setup.
 - [`docs/operations/mcp-maintenance.md`](../operations/mcp-maintenance.md) — mandatory synchronization and release checklist for MCP changes.
 - [`docs/architecture/authorization.md`](../architecture/authorization.md) — auth policy and the `(actor, agencyId)` rule.

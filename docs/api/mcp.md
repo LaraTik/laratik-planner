@@ -60,6 +60,15 @@ token is refused.
 
 ## Tools
 
+### Community & Inbox boundary
+
+Community & Inbox currently exposes human inbox, comment, reply, and team
+routing flows through the authenticated Planner web application. The Planner
+MCP does not expose conversation reads, provider replies, assignment/routing,
+connection validation, automation, or playbook mutations. No existing token
+scope grants those operations. Keep this boundary until a separately reviewed
+MCP contract delegates to the existing Community permission and service layer.
+
 ### Planning and brand kit
 
 | Tool                                     | Scope           | Purpose                                                                                                                                                                                                                                                                                                             |

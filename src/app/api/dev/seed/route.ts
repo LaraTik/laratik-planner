@@ -5,6 +5,7 @@ import {
   agencies,
   agencyEntitlements,
   agencyMemberships,
+  agencyModuleSettings,
   agencySocialDek,
   advertisingConnections,
   advertisingProviderObjects,
@@ -12,6 +13,8 @@ import {
   advertisingSyncStates,
   advertisingVisibilityGrants,
   bootstrapLocks,
+  communityConversations,
+  communityMessages,
   contentItemChannels,
   contentItems,
   platformAdministrators,
@@ -126,6 +129,8 @@ type SeedBody = {
   visualFixture?: boolean;
   /** Seed canonical, synthetic advertising facts for the populated reporting E2E. */
   advertisingReportingFixture?: boolean;
+  /** Seed an isolated, enabled Community & Inbox fixture for browser tests. */
+  communityInboxFixture?: boolean;
 };
 
 const PlatformRoleSchema = z.enum(PLATFORM_ROLE_VALUES);
@@ -193,6 +198,7 @@ export async function POST(req: NextRequest) {
     enableTrendRadar: body.enableTrendRadar ?? false,
     visualFixture: body.visualFixture ?? false,
     advertisingReportingFixture: body.advertisingReportingFixture ?? false,
+    communityInboxFixture: body.communityInboxFixture ?? false,
   };
 
   try {
@@ -233,6 +239,7 @@ async function seedInternal(f: {
   enableTrendRadar: boolean;
   visualFixture: boolean;
   advertisingReportingFixture: boolean;
+  communityInboxFixture: boolean;
 }) {
   // ─── User ────────────────────────────────────────────────────────────────
   let userId: string;
@@ -312,10 +319,11 @@ async function seedInternal(f: {
   // Production agency creation always assigns a plan. The dev fixture
   // mirrors that invariant so platform-admin detail routes exercise the
   // real entitlement surface instead of failing on an impossible row shape.
+  const defaultPlanSlug = f.communityInboxFixture ? "enterprise" : "growth";
   const [defaultPlan] = await db
     .select({ id: platformPlanTemplates.id })
     .from(platformPlanTemplates)
-    .where(eq(platformPlanTemplates.slug, "growth"))
+    .where(eq(platformPlanTemplates.slug, defaultPlanSlug))
     .limit(1);
   const [fallbackPlan] = defaultPlan
     ? [defaultPlan]
@@ -328,6 +336,31 @@ async function seedInternal(f: {
       .onConflictDoUpdate({
         target: agencyEntitlements.agencyId,
         set: { planTemplateId: plan.id },
+      });
+  }
+  if (f.communityInboxFixture) {
+    await db
+      .update(platformPlanTemplates)
+      .set({
+        defaultLimits: sql`jsonb_set(
+          COALESCE(${platformPlanTemplates.defaultLimits}, '{}'::jsonb),
+          '{enabled_modules}',
+          '["community_inbox"]'::jsonb,
+          true
+        )`,
+        updatedAt: new Date(),
+      })
+      .where(eq(platformPlanTemplates.slug, "enterprise"));
+    await db
+      .update(agencyEntitlements)
+      .set({ overrides: { enabled_modules: ["community_inbox"] } })
+      .where(eq(agencyEntitlements.agencyId, agencyId));
+    await db
+      .insert(agencyModuleSettings)
+      .values({ agencyId, module: "community_inbox", enabled: true, updatedBy: userId })
+      .onConflictDoUpdate({
+        target: [agencyModuleSettings.agencyId, agencyModuleSettings.module],
+        set: { enabled: true, updatedBy: userId, updatedAt: new Date() },
       });
   }
 
@@ -440,6 +473,125 @@ async function seedInternal(f: {
         target: workspaceSettings.workspaceId,
         set: { approvalMode: f.approvalMode, updatedAt: new Date() },
       });
+  }
+  if (f.communityInboxFixture) {
+    await db
+      .insert(workspaceSettings)
+      .values({ workspaceId, communityInboxEnabled: true })
+      .onConflictDoUpdate({
+        target: workspaceSettings.workspaceId,
+        set: { communityInboxEnabled: true, updatedAt: new Date() },
+      });
+    const assigneeEmail = `community-assignee-${f.agencySlug}@laratik.local`;
+    const [existingAssignee] = await db
+      .select({ id: users.id })
+      .from(users)
+      .where(sql`lower(${users.email}) = ${assigneeEmail}`)
+      .limit(1);
+    const [createdAssignee] = existingAssignee
+      ? [existingAssignee]
+      : await db
+          .insert(users)
+          .values({
+            email: assigneeEmail,
+            name: "Community Assignee",
+            displayName: "Community Assignee",
+            role: "user",
+            locale: f.locale,
+          })
+          .onConflictDoNothing()
+          .returning({ id: users.id });
+    const assignee = createdAssignee
+      ? createdAssignee
+      : (
+          await db
+            .select({ id: users.id })
+            .from(users)
+            .where(sql`lower(${users.email}) = ${assigneeEmail}`)
+            .limit(1)
+        )[0];
+    if (!assignee) throw new Error("Community assignee fixture insert failed");
+    await db
+      .insert(agencyMemberships)
+      .values({ agencyId, userId: assignee.id, status: "active", isAgencyAdmin: false })
+      .onConflictDoUpdate({
+        target: [agencyMemberships.agencyId, agencyMemberships.userId],
+        set: { status: "active", isAgencyAdmin: false },
+      });
+    await db
+      .insert(workspaceMemberships)
+      .values({ workspaceId, userId: assignee.id, status: "active" })
+      .onConflictDoNothing();
+
+    const externalConversationId = `e2e-community-${workspaceId}`;
+    const [existingConversation] = await db
+      .select({ id: communityConversations.id })
+      .from(communityConversations)
+      .where(
+        and(
+          eq(communityConversations.workspaceId, workspaceId),
+          eq(communityConversations.externalConversationId, externalConversationId),
+        ),
+      )
+      .limit(1);
+    let conversationId = existingConversation?.id;
+    if (!conversationId) {
+      const [createdConversation] = await db
+        .insert(communityConversations)
+        .values({
+          workspaceId,
+          provider: "meta",
+          channelType: "facebook",
+          externalConversationId,
+          externalRootId: externalConversationId,
+          externalPostId: "e2e-community-post",
+          state: "open",
+          priority: "normal",
+          lastMessageAt: new Date("2026-10-01T12:00:00.000Z"),
+          metadata: { platform: "facebook", fixture: true },
+        })
+        .onConflictDoNothing()
+        .returning({ id: communityConversations.id });
+      if (createdConversation) {
+        conversationId = createdConversation.id;
+      } else {
+        const [racedConversation] = await db
+          .select({ id: communityConversations.id })
+          .from(communityConversations)
+          .where(
+            and(
+              eq(communityConversations.workspaceId, workspaceId),
+              eq(communityConversations.externalConversationId, externalConversationId),
+            ),
+          )
+          .limit(1);
+        if (!racedConversation) throw new Error("Community conversation fixture insert failed");
+        conversationId = racedConversation.id;
+      }
+    }
+    // Each browser project shares the disposable E2E database. Reset this
+    // synthetic row so assignment tests start from the same unassigned state.
+    await db
+      .update(communityConversations)
+      .set({ assignedTo: null, updatedAt: new Date() })
+      .where(eq(communityConversations.id, conversationId));
+    await db
+      .insert(communityMessages)
+      .values({
+        workspaceId,
+        conversationId,
+        provider: "meta",
+        externalMessageId: externalConversationId,
+        direction: "incoming",
+        visibility: "public",
+        body: "Could you share this with our youth team?",
+        authorName: null,
+        authorExternalId: "e2e-community-author",
+        deliveryState: "received",
+        postedAt: new Date("2026-10-01T12:00:00.000Z"),
+        metadata: { platform: "facebook", fixture: true },
+      })
+      .onConflictDoNothing();
   }
 
   // ─── Workspace membership (manager) ─────────────────────────────────────
