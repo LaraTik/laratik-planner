@@ -366,26 +366,6 @@ export function AdvertisingReportingDashboard(props: {
         </div>
         <ActionCenter {...props} />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
-        <CampaignExplorer {...props} />
-        <Card className="reporting-card">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Database className="text-primary h-4 w-4" aria-hidden="true" />
-              {labels.audienceSnapshot}
-            </CardTitle>
-            <CardDescription>{labels.audienceSnapshotDescription}</CardDescription>
-          </CardHeader>
-          <div className="px-5 pb-5">
-            <p className="text-fg-primary text-3xl font-semibold tabular-nums">
-              {new Intl.NumberFormat(props.locale).format(props.audienceCount)}
-            </p>
-            <p className="text-label text-fg-muted mt-1">
-              {props.audienceCount ? labels.available : labels.noAudienceData}
-            </p>
-          </div>
-        </Card>
-      </div>
       <details className="reporting-card border-border bg-surface rounded-[var(--radius-card)] border">
         <summary className="text-body text-fg-primary focus-visible:outline-primary flex min-h-11 cursor-pointer list-none items-center gap-2 px-4 py-3 font-semibold focus-visible:outline-2">
           <CircleHelp className="text-primary h-4 w-4" aria-hidden="true" />
@@ -1714,72 +1694,4 @@ function confidenceLabel(
 
 function resultLabel(label: string, definitionLabel: string, resultType: string | null): string {
   return resultType ? `${label} · ${definitionLabel}: ${resultType}` : label;
-}
-
-function CampaignExplorer({
-  campaigns,
-  labels,
-  locale,
-  currency,
-}: {
-  campaigns: readonly AdvertisingCampaignSummary[];
-  labels: AdvertisingReportingDashboardLabels;
-  locale: string;
-  currency: string;
-}) {
-  return (
-    <Card className="reporting-card" id="advertising-reporting-campaign-explorer">
-      <CardHeader>
-        <CardTitle>{labels.campaignExplorer}</CardTitle>
-        <CardDescription>{labels.campaignExplorerDescription}</CardDescription>
-      </CardHeader>
-      <div className="overflow-x-auto">
-        <table className="text-label w-full min-w-[620px] text-start">
-          <caption className="sr-only">{labels.campaignExplorer}</caption>
-          <thead className="bg-surface-subtle text-fg-muted">
-            <tr>
-              <th className="px-5 py-3 text-start">{labels.campaign}</th>
-              <th className="px-3 py-3 text-end">{labels.objective}</th>
-              <th className="px-3 py-3 text-end">{labels.metricSpend}</th>
-              <th className="px-3 py-3 text-end">{labels.metricResults}</th>
-              <th className="px-5 py-3 text-start">{labels.status}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {campaigns.slice(0, 8).map((campaign) => (
-              <tr key={campaign.campaignId} className="border-border border-t">
-                <th className="text-fg-primary max-w-[220px] px-5 py-3 text-start font-medium">
-                  <span className="block truncate">{campaign.name ?? campaign.campaignId}</span>
-                  <bdi className="text-label text-fg-muted" dir="ltr">
-                    {campaign.campaignId}
-                  </bdi>
-                </th>
-                <td className="px-3 py-3 text-end">{campaign.objective ?? "—"}</td>
-                <td className="px-3 py-3 text-end tabular-nums">
-                  {new Intl.NumberFormat(locale, {
-                    style: "currency",
-                    currency: currency || "EUR",
-                    maximumFractionDigits: 2,
-                  }).format(campaign.spend)}
-                </td>
-                <td className="px-3 py-3 text-end tabular-nums">
-                  <span className="block">
-                    {campaign.results === null
-                      ? labels.unavailable
-                      : new Intl.NumberFormat(locale).format(campaign.results)}
-                  </span>
-                  {campaign.resultType ? (
-                    <bdi className="text-label text-fg-muted block" dir="ltr">
-                      {campaign.resultType}
-                    </bdi>
-                  ) : null}
-                </td>
-                <td className="px-5 py-3 text-start">{campaign.status ?? labels.unavailable}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  );
 }
