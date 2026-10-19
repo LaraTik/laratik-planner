@@ -38,6 +38,9 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
       "Metric status",
     );
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
+      "All clicks",
+    );
     await page.getByRole("button", { name: "Close" }).click();
     await expect(page.getByTestId("advertising-reporting-data-health-details")).toBeHidden();
     await expect(page.getByTestId("advertising-reporting-performance-trend")).toBeVisible();
@@ -186,6 +189,9 @@ test.describe("synthetic advertising reporting", () => {
     await page.getByTestId("advertising-reporting-data-health-details-trigger").click();
     await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
       "حالة المقاييس",
+    );
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
+      "كل النقرات",
     );
     await page.getByRole("button", { name: "إغلاق" }).click();
     await expect(page.getByTestId("advertising-reporting-data-health-details")).toBeHidden();

@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-19 Advertising decision-rail refinement checkpoint** — The
+> overview now places the evidence-backed Action Center beside the primary
+> performance trend at wide desktop widths, with the objective mix remaining
+> in the main reading column and responsive stacking below the desktop
+> breakpoint. Metric dictionary surfaces now resolve metric names through the
+> active EN/AR catalog instead of exposing raw keys or English-only labels.
+> Focused type, browser, and five-viewport visual checks pass. This remains
+> **Implemented**, not **Tested/Verified**, until the exact clean commit is
+> covered by the full release evidence bundle.
+
 > **2026-10-18 Advertising reporting safety checkpoint** — Objective-aware
 > ingestion and every campaign/ad/report rollup now refuse to manufacture a
 > heterogeneous result total: mixed result types remain unavailable while the

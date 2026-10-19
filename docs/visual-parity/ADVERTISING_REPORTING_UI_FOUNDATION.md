@@ -9,20 +9,20 @@ for tokens, shell behavior, bilingual support, and accessibility.
 
 ## Parity review
 
-| Reference expectation          | LaraTik implementation                                            | Decision                                                                                          |
-| ------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch  | Keep Advertising sections in the primary rail; use the mobile drawer below                        |
-| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm       | Match density without importing the reference's dark theme                                        |
-| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency              | Keep objective-aware and unavailable-safe                                                         |
-| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback     | Preserve as a lightweight dependency-free chart foundation                                        |
-| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result     | Added to align more closely with the reference                                                    |
-| AI/action insight rail         | Evidence-backed Action Center and intelligence panels             | Keep actions read-only and link to the Campaigns section                                          |
-| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard | Keep the scan compact; disclose decision evidence on demand                                       |
-| Campaign/ad/ad-set detail      | Separate URL-driven report sections                               | Do not render all explorers as one long page                                                      |
-| Audience and targeting         | Dedicated Audience and Targeting sections                         | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON                        |
-| Technical metric detail        | Progressive-disclosure Metric definitions panel                   | Keep available without dominating the first scan                                                  |
-| Report export context          | CSV metadata preamble plus authorized fact rows                   | Preserve filters, comparison, metric, attribution, and health context                             |
-| Campaign explorer controls     | URL-backed hierarchy, sort, and visible-column picker             | Keep delivery and core efficiency columns available while preserving state across section changes |
+| Reference expectation          | LaraTik implementation                                                  | Decision                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch        | Keep Advertising sections in the primary rail; use the mobile drawer below                        |
+| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm             | Match density without importing the reference's dark theme                                        |
+| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency                    | Keep objective-aware and unavailable-safe                                                         |
+| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback           | Preserve as a lightweight dependency-free chart foundation                                        |
+| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result           | Added to align more closely with the reference                                                    |
+| AI/action insight rail         | Evidence-backed Action Center in the trend row plus intelligence panels | Keep the highest-priority review action beside the trend; keep actions read-only                  |
+| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard       | Keep the scan compact; disclose decision evidence on demand                                       |
+| Campaign/ad/ad-set detail      | Separate URL-driven report sections                                     | Do not render all explorers as one long page                                                      |
+| Audience and targeting         | Dedicated Audience and Targeting sections                               | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON                        |
+| Technical metric detail        | Progressive-disclosure Metric definitions panel                         | Keep available without dominating the first scan                                                  |
+| Report export context          | CSV metadata preamble plus authorized fact rows                         | Preserve filters, comparison, metric, attribution, and health context                             |
+| Campaign explorer controls     | URL-backed hierarchy, sort, and visible-column picker                   | Keep delivery and core efficiency columns available while preserving state across section changes |
 
 ## Section contract
 
@@ -93,6 +93,13 @@ Do not create a second analytics token file, a second dashboard store, a
 second navigation rail, or page-local raw colors. Feature-specific data
 aggregation stays in `src/lib/advertising`; shared presentation components
 must remain provider-agnostic.
+
+The overview's decision row is intentionally asymmetric at wide desktop
+widths: the trend and objective-mix panels occupy the primary reading column,
+while the evidence-backed Action Center stays in a compact review rail beside
+them. At tablet and mobile widths the rail returns to normal document order
+below the trend controls. This preserves the reference's “what changed / what
+to review next” scan without introducing a second navigation system.
 
 ## Interaction and accessibility rules
 

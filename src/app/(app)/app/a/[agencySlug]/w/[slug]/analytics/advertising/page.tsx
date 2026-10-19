@@ -745,6 +745,8 @@ export default async function AdvertisingAnalyticsPage({
                 statuses={reportMetricStatuses}
                 campaigns={view.campaigns}
                 insights={campaignInsights}
+                pacing={budgetPacing}
+                fatigue={creativeFatigue}
                 dailyMetrics={chartMetrics}
                 comparisonDailyMetrics={comparisonChartMetrics}
                 comparisonComparable={comparisonSummary?.comparable === true}
@@ -753,6 +755,12 @@ export default async function AdvertisingAnalyticsPage({
                 trendMetricB={trendMetricB}
                 audienceCount={result.audience.length}
                 campaignsHref={campaignsHref}
+                creativesHref={
+                  reportSectionNavItems.find((item) => item.key === "creatives")?.href ?? basePath
+                }
+                audienceHref={
+                  reportSectionNavItems.find((item) => item.key === "audience")?.href ?? basePath
+                }
                 labels={advertisingReportingDashboardLabels(t)}
               />
               <AdvertisingIntelligencePanel
@@ -1580,6 +1588,11 @@ function advertisingReportingDashboardLabels(
     objectiveMixDescription: t("advertising.reporting.dashboard.objectiveMixDescription"),
     actionCenter: t("advertising.reporting.dashboard.actionCenter"),
     actionCenterDescription: t("advertising.reporting.dashboard.actionCenterDescription"),
+    budgetPacing: t("advertising.reporting.budgetPacing"),
+    creativeHealth: t("advertising.reporting.creativeHealth"),
+    audienceOpportunity: t("advertising.reporting.audienceOpportunity"),
+    noBudgetData: t("advertising.reporting.noBudgetData"),
+    noFatigueData: t("advertising.reporting.noFatigueData"),
     review: t("advertising.reporting.dashboard.review"),
     campaignExplorer: t("advertising.reporting.dashboard.campaignExplorer"),
     campaignExplorerDescription: t("advertising.reporting.dashboard.campaignExplorerDescription"),

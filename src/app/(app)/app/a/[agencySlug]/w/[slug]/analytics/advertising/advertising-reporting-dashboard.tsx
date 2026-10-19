@@ -11,10 +11,13 @@ import {
   CircleDollarSign,
   Database,
   Eye,
+  Gauge,
   Percent,
   RefreshCw,
   Target,
+  TriangleAlert,
   TrendingUp,
+  UsersRound,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,8 +40,10 @@ import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
 import type { DataHealthSummary } from "@/lib/advertising/reporting-health";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
 import type {
+  BudgetPacingInsight,
   CampaignPerformanceConfidence,
   CampaignPerformanceInsight,
+  CreativeFatigueInsight,
 } from "@/lib/advertising/intelligence";
 import type {
   AdvertisingTrendPoint,
@@ -99,6 +104,11 @@ export type AdvertisingReportingDashboardLabels = {
   objectiveMixDescription: string;
   actionCenter: string;
   actionCenterDescription: string;
+  budgetPacing: string;
+  creativeHealth: string;
+  audienceOpportunity: string;
+  noBudgetData: string;
+  noFatigueData: string;
   review: string;
   campaignExplorer: string;
   campaignExplorerDescription: string;
@@ -163,6 +173,8 @@ export function AdvertisingReportingDashboard(props: {
   statuses: readonly MetricStatus[];
   campaigns: readonly AdvertisingCampaignSummary[];
   insights: readonly CampaignPerformanceInsight[];
+  pacing: readonly BudgetPacingInsight[];
+  fatigue: readonly CreativeFatigueInsight[];
   dailyMetrics: readonly AdvertisingTrendPoint[];
   comparisonDailyMetrics: readonly AdvertisingTrendPoint[];
   comparisonComparable: boolean;
@@ -171,6 +183,8 @@ export function AdvertisingReportingDashboard(props: {
   trendMetricB: TrendMetricKey;
   audienceCount: number;
   campaignsHref: string;
+  creativesHref: string;
+  audienceHref: string;
   labels: AdvertisingReportingDashboardLabels;
 }) {
   const { labels } = props;
@@ -301,31 +315,33 @@ export function AdvertisingReportingDashboard(props: {
         />
       </section>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
-        <TrendPanel
-          {...props}
-          metricA={metricA}
-          metricB={metricB}
-          comparisonDailyMetrics={props.comparisonDailyMetrics}
-          comparisonComparable={props.comparisonComparable}
-          granularity={granularity}
-          setMetricA={(value) => {
-            setMetricA(value);
-            updateTrendSetting("trendMetricA", value);
-          }}
-          setMetricB={(value) => {
-            setMetricB(value);
-            updateTrendSetting("trendMetricB", value);
-          }}
-          setGranularity={(value) => {
-            setGranularity(value);
-            updateTrendSetting("trendGranularity", value);
-          }}
-          tableOpen={tableOpen}
-          setTableOpen={setTableOpen}
-        />
-        <ObjectiveMix {...props} />
+        <div className="space-y-4">
+          <TrendPanel
+            {...props}
+            metricA={metricA}
+            metricB={metricB}
+            comparisonDailyMetrics={props.comparisonDailyMetrics}
+            comparisonComparable={props.comparisonComparable}
+            granularity={granularity}
+            setMetricA={(value) => {
+              setMetricA(value);
+              updateTrendSetting("trendMetricA", value);
+            }}
+            setMetricB={(value) => {
+              setMetricB(value);
+              updateTrendSetting("trendMetricB", value);
+            }}
+            setGranularity={(value) => {
+              setGranularity(value);
+              updateTrendSetting("trendGranularity", value);
+            }}
+            tableOpen={tableOpen}
+            setTableOpen={setTableOpen}
+          />
+          <ObjectiveMix {...props} />
+        </div>
+        <ActionCenter {...props} />
       </div>
-      <ActionCenter {...props} />
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(280px,0.6fr)]">
         <CampaignExplorer {...props} />
         <Card className="reporting-card">
@@ -359,7 +375,9 @@ export function AdvertisingReportingDashboard(props: {
               className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-label text-fg-primary font-semibold">{status.label}</span>
+                <span className="text-label text-fg-primary font-semibold">
+                  {metricDisplayLabel(status.key, labels)}
+                </span>
                 <span className="text-label text-fg-muted font-semibold">
                   {metricAvailabilityLabel(status.availability, labels)}
                 </span>
@@ -607,7 +625,7 @@ function DataHealth({
                     >
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-label text-fg-primary font-semibold">
-                          {status.label}
+                          {metricDisplayLabel(status.key, labels)}
                         </span>
                         <span className="text-label text-fg-muted">
                           {metricAvailabilityLabel(status.availability, labels)}
@@ -718,6 +736,44 @@ function metricStatus(
   return status
     ? { label: metricAvailabilityLabel(status.availability, labels), tone: status.availability }
     : undefined;
+}
+
+function metricDisplayLabel(
+  key: AdvertisingMetricKey,
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  switch (key) {
+    case "spend":
+      return labels.metricSpend;
+    case "impressions":
+      return labels.metricImpressions;
+    case "reach":
+      return labels.metricReach;
+    case "frequency":
+      return labels.metricFrequency;
+    case "allClicks":
+      return labels.metricAllClicks;
+    case "linkClicks":
+      return labels.metricLinkClicks;
+    case "outboundClicks":
+      return labels.metricOutboundClicks;
+    case "landingPageViews":
+      return labels.metricLandingPageViews;
+    case "results":
+      return labels.metricResults;
+    case "costPerResult":
+      return labels.metricCostPerResult;
+    case "ctrAll":
+      return labels.metricCtrAll;
+    case "ctrLink":
+      return labels.metricCtr;
+    case "cpcAll":
+      return labels.metricCpcAll;
+    case "cpcLink":
+      return labels.metricCpcLink;
+    case "cpm":
+      return labels.metricCpm;
+  }
 }
 
 function metricAvailabilityLabel(
@@ -1236,18 +1292,28 @@ function ObjectiveDonut({
 }
 function ActionCenter({
   insights,
+  pacing,
+  fatigue,
+  audienceCount,
   labels,
   locale,
   since,
   until,
   campaignsHref,
+  creativesHref,
+  audienceHref,
 }: {
   insights: readonly CampaignPerformanceInsight[];
+  pacing: readonly BudgetPacingInsight[];
+  fatigue: readonly CreativeFatigueInsight[];
+  audienceCount: number;
   labels: AdvertisingReportingDashboardLabels;
   locale: string;
   since: string;
   until: string;
   campaignsHref: string;
+  creativesHref: string;
+  audienceHref: string;
 }) {
   const items = insights
     .filter((insight) => insight.status === "underperforming" || insight.status === "effective")
@@ -1256,8 +1322,65 @@ function ActionCenter({
       return left.status === "underperforming" ? -1 : 1;
     })
     .slice(0, 3);
+  const budgetItem = pacing.find((item) => item.status === "over") ?? null;
+  const fatigueItem = fatigue.find((item) => item.status === "fatiguing") ?? null;
+  const decisionItems = [
+    budgetItem
+      ? {
+          key: `budget-${budgetItem.campaignId}`,
+          icon: <Gauge className="text-warning h-4 w-4" aria-hidden="true" />,
+          title: labels.budgetPacing,
+          detail:
+            budgetItem.paceRatio === null
+              ? labels.noBudgetData
+              : `${budgetItem.name ?? budgetItem.campaignId} · ${Math.round(budgetItem.paceRatio * 100)}%`,
+          href: campaignsHref,
+          hrefLabel: labels.review,
+        }
+      : null,
+    fatigueItem
+      ? {
+          key: `fatigue-${fatigueItem.adId}`,
+          icon: <TriangleAlert className="text-warning h-4 w-4" aria-hidden="true" />,
+          title: labels.creativeHealth,
+          detail: fatigueItem.name ?? fatigueItem.adId,
+          href: creativesHref,
+          hrefLabel: labels.review,
+        }
+      : null,
+    audienceCount > 0
+      ? {
+          key: "audience-opportunity",
+          icon: <UsersRound className="text-primary h-4 w-4" aria-hidden="true" />,
+          title: labels.audienceOpportunity,
+          detail: `${new Intl.NumberFormat(locale).format(audienceCount)} ${labels.audienceSnapshot}`,
+          href: audienceHref,
+          hrefLabel: labels.review,
+        }
+      : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
+  const railItems = [
+    ...items.map((insight) => ({
+      key: `campaign-${insight.campaignId}`,
+      icon:
+        insight.status === "underperforming" ? (
+          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
+        ) : (
+          <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
+        ),
+      title: insight.name ?? insight.campaignId,
+      detail: `${labels.evidence}: ${insight.reason.replaceAll("_", " ")} · ${labels.sample}: ${new Intl.NumberFormat(locale).format(insight.sampleImpressions)}`,
+      href: campaignReviewHref(campaignsHref, insight.campaignId),
+      hrefLabel: labels.review,
+      insight,
+    })),
+    ...decisionItems.map((item) => ({ ...item, insight: null })),
+  ].slice(0, 4);
   return (
-    <Card className="reporting-card" data-testid="advertising-reporting-action-center">
+    <Card
+      className="reporting-card flex h-full flex-col"
+      data-testid="advertising-reporting-action-center"
+    >
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="text-primary h-4 w-4" aria-hidden="true" />
@@ -1265,65 +1388,63 @@ function ActionCenter({
         </CardTitle>
         <CardDescription>{labels.actionCenterDescription}</CardDescription>
       </CardHeader>
-      <div className="grid gap-3 px-5 pb-5 md:grid-cols-3">
-        {items.length === 0 ? (
+      <div className="grid flex-1 content-start gap-3 px-5 pb-5 md:grid-cols-3 xl:grid-cols-1">
+        {railItems.length === 0 ? (
           <p className="text-label text-fg-muted md:col-span-3">{labels.noSignals}</p>
         ) : (
-          items.map((insight) => (
-            <div
-              key={insight.campaignId}
-              className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-            >
-              <div className="text-label text-fg-primary flex items-center gap-2 font-semibold">
-                {insight.status === "underperforming" ? (
-                  <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
-                ) : (
-                  <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
-                )}
-                {insight.name ?? insight.campaignId}
-              </div>
-              <p className="text-label text-fg-muted mt-2">
-                {labels.evidence}: {insight.reason.replaceAll("_", " ")} · {labels.sample}:{" "}
-                {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
-              </p>
-              <details className="mt-2">
-                <summary className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 cursor-pointer items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2">
-                  {labels.reviewEvidence}
-                </summary>
-                <dl className="text-label text-fg-secondary mt-2 grid gap-1">
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.period}</dt>
-                    <dd dir="ltr">{`${since} – ${until}`}</dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.sample}</dt>
-                    <dd className="tabular-nums">
-                      {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
-                    </dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.baseline}</dt>
-                    <dd className="text-end tabular-nums">
-                      {insight.baselineCtr === null || insight.baselineCpc === null
-                        ? labels.unavailable
-                        : `${formatPercentValue(insight.baselineCtr, locale)} CTR · ${formatNumberValue(insight.baselineCpc, locale)} CPC`}
-                    </dd>
-                  </div>
-                  <div className="flex flex-wrap justify-between gap-2">
-                    <dt>{labels.confidence}</dt>
-                    <dd>{confidenceLabel(insight.confidence, labels)}</dd>
-                  </div>
-                </dl>
-              </details>
-              <a
-                href={campaignReviewHref(campaignsHref, insight.campaignId)}
-                className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+          railItems.map((item) => {
+            const insight = item.insight;
+            return (
+              <div
+                key={item.key}
+                className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
               >
-                {labels.review}
-                <ChevronRight className="ms-1 h-4 w-4" aria-hidden="true" />
-              </a>
-            </div>
-          ))
+                <div className="text-label text-fg-primary flex items-center gap-2 font-semibold">
+                  {item.icon}
+                  {item.title}
+                </div>
+                <p className="text-label text-fg-muted mt-2">{item.detail}</p>
+                {insight ? (
+                  <details className="mt-2">
+                    <summary className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 cursor-pointer items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2">
+                      {labels.reviewEvidence}
+                    </summary>
+                    <dl className="text-label text-fg-secondary mt-2 grid gap-1">
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.period}</dt>
+                        <dd dir="ltr">{`${since} – ${until}`}</dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.sample}</dt>
+                        <dd className="tabular-nums">
+                          {new Intl.NumberFormat(locale).format(insight.sampleImpressions)}
+                        </dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.baseline}</dt>
+                        <dd className="text-end tabular-nums">
+                          {insight.baselineCtr === null || insight.baselineCpc === null
+                            ? labels.unavailable
+                            : `${formatPercentValue(insight.baselineCtr, locale)} CTR · ${formatNumberValue(insight.baselineCpc, locale)} CPC`}
+                        </dd>
+                      </div>
+                      <div className="flex flex-wrap justify-between gap-2">
+                        <dt>{labels.confidence}</dt>
+                        <dd>{confidenceLabel(insight.confidence, labels)}</dd>
+                      </div>
+                    </dl>
+                  </details>
+                ) : null}
+                <a
+                  href={item.href}
+                  className="text-label text-primary focus-visible:outline-primary mt-3 inline-flex min-h-11 items-center font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+                >
+                  {item.hrefLabel}
+                  <ChevronRight className="ms-1 h-4 w-4" aria-hidden="true" />
+                </a>
+              </div>
+            );
+          })
         )}
       </div>
     </Card>
