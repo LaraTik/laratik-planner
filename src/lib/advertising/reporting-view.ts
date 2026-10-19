@@ -1,4 +1,5 @@
 import type { AdvertisingFact } from "./reporting-service";
+import { aggregateAdvertisingMetrics } from "./reporting-metrics";
 
 type AdvertisingReportObject = {
   objectType: "campaign" | "adset" | "ad" | "creative";
@@ -19,8 +20,13 @@ export type AdvertisingMetricTotals = {
   clicks: number;
   results: number | null;
   ctr: number | null;
+  ctrLink?: number | null;
   cpc: number | null;
+  costPerResult?: number | null;
   cpm: number | null;
+  reach?: number | null;
+  frequency?: number | null;
+  resultType?: string | null;
 };
 
 export type AdvertisingDailySpend = { date: string; spend: number };
@@ -70,23 +76,22 @@ export type AdvertisingPromotedPostSummary = AdvertisingMetricTotals & {
 };
 
 function totals(rows: readonly AdvertisingFact[]): AdvertisingMetricTotals {
-  const spend = rows.reduce((sum, row) => sum + row.spend, 0);
-  const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
-  const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
+  const metrics = aggregateAdvertisingMetrics(rows);
   const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
   const resultTypes = new Set(resultRows.map((row) => row.resultType ?? null));
-  const comparableResults =
-    resultRows.length === rows.length && resultRows.length > 0 && resultTypes.size <= 1;
   return {
-    spend,
-    impressions,
-    clicks,
-    results: comparableResults
-      ? resultRows.reduce((sum, row) => sum + (row.results ?? 0), 0)
-      : null,
-    ctr: impressions > 0 ? clicks / impressions : null,
-    cpc: clicks > 0 ? spend / clicks : null,
-    cpm: impressions > 0 ? (spend / impressions) * 1000 : null,
+    spend: metrics.spend,
+    impressions: metrics.impressions,
+    clicks: metrics.allClicks,
+    results: metrics.results,
+    ctr: metrics.ctrAll,
+    ctrLink: metrics.ctrLink,
+    cpc: metrics.cpcAll,
+    costPerResult: metrics.costPerResult,
+    cpm: metrics.cpm,
+    reach: metrics.reach,
+    frequency: metrics.frequency,
+    resultType: resultTypes.size === 1 ? ([...resultTypes][0] ?? null) : null,
   };
 }
 

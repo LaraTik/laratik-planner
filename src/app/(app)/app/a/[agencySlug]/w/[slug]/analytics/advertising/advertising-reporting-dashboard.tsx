@@ -17,10 +17,19 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { ReportingKpiCard } from "@/components/reporting/reporting-kpi-card";
 import type {
   AdvertisingMetricKey,
   AdvertisingMetricSnapshot,
+  MetricAvailability,
   MetricStatus,
 } from "@/lib/advertising/reporting-metrics";
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
@@ -42,6 +51,30 @@ export type AdvertisingReportingDashboardLabels = {
   timezone: string;
   coverage: string;
   retry: string;
+  details: string;
+  close: string;
+  detailsTitle: string;
+  detailsDescription: string;
+  lastSuccessfulSync: string;
+  currency: string;
+  healthState: string;
+  freshnessLabel: string;
+  syncStatus: string;
+  issues: string;
+  noIssues: string;
+  metricStatus: string;
+  source: string;
+  formula: string;
+  denominator: string;
+  attributionWindow: string;
+  notSet: string;
+  statusEstimated: string;
+  issueNoSuccessfulSync: string;
+  issuePartialCoverage: string;
+  issueSyncRunning: string;
+  issueSyncFailed: string;
+  issueSyncDeadLetter: string;
+  issueStaleData: string;
   primaryMetrics: string;
   comparison: string;
   noComparison: string;
@@ -104,6 +137,7 @@ export function AdvertisingReportingDashboard(props: {
   locale: string;
   timezone: string;
   freshness: string;
+  syncStatus: string;
   partial: boolean;
   dataHealth: DataHealthSummary;
   lastSync: string | null;
@@ -141,12 +175,14 @@ export function AdvertisingReportingDashboard(props: {
     value: number | null;
     kind: "money" | "number" | "percent";
     icon: ReactNode;
+    status: ReturnType<typeof metricStatus>;
   }[] = [
     {
       key: "spend",
       label: labels.metricSpend,
       value: props.metrics.spend,
       kind: "money",
+      status: metricStatus(props.statuses, "spend", labels),
       icon: <CircleDollarSign className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -154,6 +190,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricResults,
       value: props.metrics.results,
       kind: "number",
+      status: metricStatus(props.statuses, "results", labels),
       icon: <Target className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -161,6 +198,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricCostPerResult,
       value: props.metrics.costPerResult,
       kind: "money",
+      status: metricStatus(props.statuses, "costPerResult", labels),
       icon: <CircleDollarSign className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -168,6 +206,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricReach,
       value: props.metrics.reach,
       kind: "number",
+      status: metricStatus(props.statuses, "reach", labels),
       icon: <Eye className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -175,6 +214,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricCtr,
       value: props.metrics.ctrLink,
       kind: "percent",
+      status: metricStatus(props.statuses, "ctrLink", labels),
       icon: <Percent className="h-4 w-4" aria-hidden="true" />,
     },
     {
@@ -182,6 +222,7 @@ export function AdvertisingReportingDashboard(props: {
       label: labels.metricFrequency,
       value: props.metrics.frequency,
       kind: "number",
+      status: metricStatus(props.statuses, "frequency", labels),
       icon: <TrendingUp className="h-4 w-4" aria-hidden="true" />,
     },
   ];
@@ -220,6 +261,7 @@ export function AdvertisingReportingDashboard(props: {
                 labels.unavailable,
               )}
               icon={card.icon}
+              status={card.status}
               delta={formatDelta(props.comparison?.deltas[card.key]?.percent, props.locale)}
               deltaState={deltaState(props.comparison?.deltas[card.key]?.favorable)}
               deltaLabel={deltaLabel(props.comparison?.deltas[card.key]?.favorable, labels)}
@@ -312,6 +354,8 @@ function DataHealth({
   timezone,
   since,
   until,
+  syncStatus,
+  statuses,
   labels,
 }: {
   freshness: string;
@@ -322,53 +366,174 @@ function DataHealth({
   timezone: string;
   since: string;
   until: string;
+  syncStatus: string;
+  statuses: readonly MetricStatus[];
   labels: AdvertisingReportingDashboardLabels;
 }) {
   return (
-    <aside
-      className="reporting-card border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3"
-      aria-label={labels.dataHealth}
-      data-testid="advertising-reporting-data-health"
-    >
-      <div className="text-fg-primary flex items-center gap-2 font-semibold">
-        <Database className="text-primary h-4 w-4" aria-hidden="true" />
-        {labels.dataHealth}
-      </div>
-      <span className="text-label text-fg-secondary">
-        {labels.synced}: <span data-timestamp>{formatLastSync(lastSync, locale, timezone)}</span>
-      </span>
-      <span className="text-label text-fg-secondary">
-        {labels.timezone}: {timezone}
-      </span>
-      <span className="text-label text-fg-secondary">
-        {labels.coverage}: {since} – {until}
-      </span>
-      <span className="text-label ms-auto inline-flex items-center gap-2 font-medium">
-        {dataHealth.state === "complete" && !partial ? (
-          <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
-        ) : (
-          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
-        )}
-        <span>
-          {dataHealth.state === "unavailable"
-            ? labels.unavailable
-            : dataHealth.state === "complete" && !partial
-              ? labels.complete
-              : dataHealth.state === "delayed"
-                ? labels.delayed
-                : labels.partial}
-        </span>
-        <span className="text-fg-muted">{freshness}</span>
-      </span>
-      <button
-        type="button"
-        className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
-        onClick={() => window.location.reload()}
+    <div className="space-y-2">
+      <aside
+        className="reporting-card border-border bg-surface-subtle flex flex-wrap items-center gap-3 rounded-[var(--radius-card)] border px-4 py-3"
+        aria-label={labels.dataHealth}
+        data-testid="advertising-reporting-data-health"
       >
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
-        {labels.retry}
-      </button>
-    </aside>
+        <div className="text-fg-primary flex items-center gap-2 font-semibold">
+          <Database className="text-primary h-4 w-4" aria-hidden="true" />
+          {labels.dataHealth}
+        </div>
+        <span className="text-label text-fg-secondary">
+          {labels.synced}: <span data-timestamp>{formatLastSync(lastSync, locale, timezone)}</span>
+        </span>
+        <span className="text-label text-fg-secondary">
+          {labels.timezone}: {timezone}
+        </span>
+        <span className="text-label text-fg-secondary">
+          {labels.coverage}: {since} – {until}
+        </span>
+        <span className="text-label ms-auto inline-flex items-center gap-2 font-medium">
+          {dataHealth.state === "complete" && !partial ? (
+            <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
+          ) : (
+            <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
+          )}
+          <span>
+            {dataHealth.state === "unavailable"
+              ? labels.unavailable
+              : dataHealth.state === "complete" && !partial
+                ? labels.complete
+                : dataHealth.state === "delayed"
+                  ? labels.delayed
+                  : labels.partial}
+          </span>
+          <span className="text-fg-muted">{freshness}</span>
+        </span>
+        <button
+          type="button"
+          className="text-label text-primary focus-visible:outline-primary inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 font-semibold underline-offset-4 hover:underline focus-visible:outline-2"
+          onClick={() => window.location.reload()}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          {labels.retry}
+        </button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <button
+              type="button"
+              className="text-label text-fg-primary border-border focus-visible:ring-focus-ring inline-flex min-h-11 items-center rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+              data-testid="advertising-reporting-data-health-details-trigger"
+            >
+              {labels.details}
+            </button>
+          </DialogTrigger>
+          <DialogContent
+            closeAriaLabel={labels.close}
+            className="max-h-[min(90vh,760px)] max-w-2xl overflow-y-auto"
+            data-testid="advertising-reporting-data-health-details"
+          >
+            <DialogHeader>
+              <DialogTitle>{labels.detailsTitle}</DialogTitle>
+              <DialogDescription>{labels.detailsDescription}</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-5">
+              <dl className="grid gap-3 sm:grid-cols-2">
+                <HealthDetail
+                  label={labels.healthState}
+                  value={healthStateLabel(dataHealth.state, labels)}
+                />
+                <HealthDetail label={labels.freshnessLabel} value={freshness} />
+                <HealthDetail label={labels.syncStatus} value={syncStatus} />
+                <HealthDetail
+                  label={labels.lastSuccessfulSync}
+                  value={formatLastSync(lastSync, locale, timezone)}
+                />
+                <HealthDetail
+                  label={labels.timezone}
+                  value={dataHealth.timezone ?? labels.unavailable}
+                />
+                <HealthDetail
+                  label={labels.currency}
+                  value={dataHealth.currency ?? labels.unavailable}
+                />
+                <HealthDetail
+                  label={labels.coverage}
+                  value={`${dataHealth.since} – ${dataHealth.until}`}
+                />
+              </dl>
+              <div>
+                <h3 className="text-body text-fg-primary font-semibold">{labels.issues}</h3>
+                {dataHealth.issues.length > 0 ? (
+                  <ul className="text-label text-fg-secondary mt-2 list-disc space-y-1 ps-5">
+                    {dataHealth.issues.map((issue) => (
+                      <li key={issue}>{healthIssueLabel(issue, labels)}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-label text-fg-muted mt-2">{labels.noIssues}</p>
+                )}
+              </div>
+              <div>
+                <h3 className="text-body text-fg-primary font-semibold">{labels.metricStatus}</h3>
+                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {statuses.map((status) => (
+                    <div
+                      key={status.key}
+                      className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-label text-fg-primary font-semibold">
+                          {status.label}
+                        </span>
+                        <span className="text-label text-fg-muted">
+                          {metricAvailabilityLabel(status.availability, labels)}
+                        </span>
+                      </div>
+                      <p className="text-label text-fg-muted mt-2">{status.note}</p>
+                      <dl className="text-label text-fg-secondary mt-2 space-y-1">
+                        <div className="flex justify-between gap-2">
+                          <dt>{labels.source}</dt>
+                          <dd className="text-end" dir="ltr">
+                            {status.sourceField}
+                          </dd>
+                        </div>
+                        <div className="flex justify-between gap-2">
+                          <dt>{labels.formula}</dt>
+                          <dd className="text-end" dir="ltr">
+                            {status.formula}
+                          </dd>
+                        </div>
+                        {status.denominator ? (
+                          <div className="flex justify-between gap-2">
+                            <dt>{labels.denominator}</dt>
+                            <dd className="text-end" dir="ltr">
+                              {status.denominator}
+                            </dd>
+                          </div>
+                        ) : null}
+                        {status.attributionWindow ? (
+                          <div className="flex justify-between gap-2">
+                            <dt>{labels.attributionWindow}</dt>
+                            <dd className="text-end">{status.attributionWindow}</dd>
+                          </div>
+                        ) : null}
+                      </dl>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </aside>
+    </div>
+  );
+}
+
+function HealthDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3">
+      <dt className="text-label text-fg-muted">{label}</dt>
+      <dd className="text-body text-fg-primary mt-1 font-medium">{value}</dd>
+    </div>
   );
 }
 function formatMetricValue(
@@ -416,6 +581,57 @@ function deltaLabel(
     : favorable === false
       ? labels.deltaDeclined
       : labels.deltaUnchanged;
+}
+
+function metricStatus(
+  statuses: readonly MetricStatus[],
+  key: AdvertisingMetricKey,
+  labels: AdvertisingReportingDashboardLabels,
+): { label: string; tone: MetricAvailability } | undefined {
+  const status = statuses.find((item) => item.key === key);
+  return status
+    ? { label: metricAvailabilityLabel(status.availability, labels), tone: status.availability }
+    : undefined;
+}
+
+function metricAvailabilityLabel(
+  availability: MetricAvailability,
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  if (availability === "available") return labels.available;
+  if (availability === "partial") return labels.partial;
+  if (availability === "delayed") return labels.delayed;
+  if (availability === "estimated") return labels.statusEstimated;
+  return labels.unavailable;
+}
+
+function healthStateLabel(
+  state: DataHealthSummary["state"],
+  labels: AdvertisingReportingDashboardLabels,
+): string {
+  if (state === "complete") return labels.complete;
+  if (state === "partial") return labels.partial;
+  if (state === "delayed") return labels.delayed;
+  return labels.unavailable;
+}
+
+function healthIssueLabel(issue: string, labels: AdvertisingReportingDashboardLabels): string {
+  switch (issue) {
+    case "no_successful_sync":
+      return labels.issueNoSuccessfulSync;
+    case "partial_coverage":
+      return labels.issuePartialCoverage;
+    case "sync_running":
+      return labels.issueSyncRunning;
+    case "sync_failed":
+      return labels.issueSyncFailed;
+    case "sync_dead_letter":
+      return labels.issueSyncDeadLetter;
+    case "stale_data":
+      return labels.issueStaleData;
+    default:
+      return issue;
+  }
 }
 
 function formatLastSync(lastSync: string | null, locale: string, timezone: string) {

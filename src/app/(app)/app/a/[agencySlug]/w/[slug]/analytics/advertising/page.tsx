@@ -277,6 +277,9 @@ export default async function AdvertisingAnalyticsPage({
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
   const primaryMetrics = aggregateAdvertisingMetrics(result.report.rows);
+  const reportMetricStatuses = metricStatuses(primaryMetrics, {
+    healthState: result.dataHealth.state,
+  });
   const comparisonMode = normalizeComparisonMode(firstQueryValue(query.compare));
   const requestedComparisonRange = comparisonRange({
     since,
@@ -354,9 +357,19 @@ export default async function AdvertisingAnalyticsPage({
     const value = (campaign: (typeof visibleCampaigns)[number]) =>
       hierarchySort === "results"
         ? (campaign.results ?? -1)
-        : hierarchySort === "ctr"
-          ? (campaign.ctr ?? -1)
-          : campaign.spend;
+        : hierarchySort === "costPerResult"
+          ? (campaign.costPerResult ?? -1)
+          : hierarchySort === "reach"
+            ? (campaign.reach ?? -1)
+            : hierarchySort === "frequency"
+              ? (campaign.frequency ?? -1)
+              : hierarchySort === "ctrLink"
+                ? (campaign.ctrLink ?? -1)
+                : hierarchySort === "cpm"
+                  ? (campaign.cpm ?? -1)
+                  : hierarchySort === "ctr"
+                    ? (campaign.ctr ?? -1)
+                    : campaign.spend;
     return value(right) - value(left);
   });
   const campaignPage = paginate(sortedVisibleCampaigns, firstQueryValue(query.campaignPage));
@@ -715,6 +728,7 @@ export default async function AdvertisingAnalyticsPage({
                 locale={code}
                 timezone={selectedAccount.timezone ?? workspace.timezone}
                 freshness={freshnessLabel}
+                syncStatus={syncLabel}
                 partial={result.partial}
                 dataHealth={result.dataHealth}
                 lastSync={result.lastSuccessfulSyncAt}
@@ -722,7 +736,7 @@ export default async function AdvertisingAnalyticsPage({
                 until={until}
                 metrics={primaryMetrics}
                 comparison={comparisonSummary}
-                statuses={metricStatuses(primaryMetrics)}
+                statuses={reportMetricStatuses}
                 campaigns={view.campaigns}
                 insights={campaignInsights}
                 dailyMetrics={chartMetrics}
@@ -826,7 +840,7 @@ export default async function AdvertisingAnalyticsPage({
                   </CardDescription>
                 </CardHeader>
                 <div className="space-y-2 px-4 pb-4 sm:px-5 sm:pb-5">
-                  {metricStatuses(primaryMetrics).map((status) => (
+                  {reportMetricStatuses.map((status) => (
                     <div
                       key={status.key}
                       className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
@@ -1475,7 +1489,12 @@ function advertisingHierarchyExplorerLabels(
     ad: t("advertising.reporting.ad"),
     spend: t("advertising.reporting.spend"),
     results: t("advertising.reporting.results"),
+    costPerResult: t("advertising.reporting.dashboard.costPerResult"),
+    reach: t("advertising.reporting.reach"),
+    frequency: t("advertising.reporting.dashboard.frequency"),
     ctr: t("advertising.reporting.ctr"),
+    ctrLink: t("advertising.reporting.dashboard.ctrLink"),
+    cpm: t("advertising.reporting.cpm"),
     delivery: t("advertising.reporting.status"),
     expand: t("advertising.reporting.expand"),
     collapse: t("advertising.reporting.collapse"),
@@ -1489,6 +1508,11 @@ function advertisingHierarchyExplorerLabels(
     sortSpend: t("advertising.reporting.sortSpend"),
     sortResults: t("advertising.reporting.sortResults"),
     sortCtr: t("advertising.reporting.sortCtr"),
+    sortCostPerResult: t("advertising.reporting.sortCostPerResult"),
+    sortReach: t("advertising.reporting.sortReach"),
+    sortFrequency: t("advertising.reporting.sortFrequency"),
+    sortCtrLink: t("advertising.reporting.sortCtrLink"),
+    sortCpm: t("advertising.reporting.sortCpm"),
   };
 }
 
@@ -1501,6 +1525,30 @@ function advertisingReportingDashboardLabels(
     timezone: t("advertising.reporting.dashboard.timezone"),
     coverage: t("advertising.reporting.dashboard.coverage"),
     retry: t("advertising.reporting.dashboard.retry"),
+    details: t("advertising.reporting.dashboard.details"),
+    close: t("common.close"),
+    detailsTitle: t("advertising.reporting.dashboard.detailsTitle"),
+    detailsDescription: t("advertising.reporting.dashboard.detailsDescription"),
+    lastSuccessfulSync: t("advertising.reporting.dashboard.lastSuccessfulSync"),
+    currency: t("advertising.reporting.dashboard.currency"),
+    healthState: t("advertising.reporting.dashboard.healthState"),
+    freshnessLabel: t("advertising.reporting.dashboard.freshnessLabel"),
+    syncStatus: t("advertising.reporting.dashboard.syncStatus"),
+    issues: t("advertising.reporting.dashboard.issues"),
+    noIssues: t("advertising.reporting.dashboard.noIssues"),
+    metricStatus: t("advertising.reporting.dashboard.metricStatus"),
+    source: t("advertising.reporting.dashboard.source"),
+    formula: t("advertising.reporting.dashboard.formula"),
+    denominator: t("advertising.reporting.dashboard.denominator"),
+    attributionWindow: t("advertising.reporting.dashboard.attributionWindow"),
+    notSet: t("advertising.reporting.dashboard.notSet"),
+    statusEstimated: t("advertising.reporting.dashboard.statusEstimated"),
+    issueNoSuccessfulSync: t("advertising.reporting.dashboard.issueNoSuccessfulSync"),
+    issuePartialCoverage: t("advertising.reporting.dashboard.issuePartialCoverage"),
+    issueSyncRunning: t("advertising.reporting.dashboard.issueSyncRunning"),
+    issueSyncFailed: t("advertising.reporting.dashboard.issueSyncFailed"),
+    issueSyncDeadLetter: t("advertising.reporting.dashboard.issueSyncDeadLetter"),
+    issueStaleData: t("advertising.reporting.dashboard.issueStaleData"),
     primaryMetrics: t("advertising.reporting.dashboard.primaryMetrics"),
     comparison: t("advertising.reporting.dashboard.comparison"),
     noComparison: t("advertising.reporting.dashboard.noComparison"),

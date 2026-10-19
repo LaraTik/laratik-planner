@@ -20,7 +20,12 @@ export type AdvertisingHierarchyExplorerLabels = {
   ad: string;
   spend: string;
   results: string;
+  costPerResult?: string;
+  reach?: string;
+  frequency?: string;
   ctr: string;
+  ctrLink?: string;
+  cpm?: string;
   delivery: string;
   expand: string;
   collapse: string;
@@ -34,11 +39,35 @@ export type AdvertisingHierarchyExplorerLabels = {
   sortSpend: string;
   sortResults: string;
   sortCtr: string;
+  sortCostPerResult?: string;
+  sortReach?: string;
+  sortFrequency?: string;
+  sortCtrLink?: string;
+  sortCpm?: string;
 };
 
-type HierarchyColumn = "spend" | "results" | "ctr" | "delivery";
+type HierarchyColumn =
+  | "spend"
+  | "results"
+  | "costPerResult"
+  | "reach"
+  | "frequency"
+  | "ctr"
+  | "ctrLink"
+  | "cpm"
+  | "delivery";
 type HierarchySort = "name" | Exclude<HierarchyColumn, "delivery">;
-const HIERARCHY_COLUMNS: readonly HierarchyColumn[] = ["spend", "results", "ctr", "delivery"];
+const HIERARCHY_COLUMNS: readonly HierarchyColumn[] = [
+  "spend",
+  "results",
+  "costPerResult",
+  "reach",
+  "frequency",
+  "ctr",
+  "ctrLink",
+  "cpm",
+  "delivery",
+];
 
 export function AdvertisingHierarchyExplorer({
   campaigns,
@@ -116,7 +145,16 @@ export function AdvertisingHierarchyExplorer({
           >
             <option value="spend">{labels.sortSpend}</option>
             <option value="results">{labels.sortResults}</option>
+            <option value="costPerResult">{labels.sortCostPerResult ?? labels.sortResults}</option>
+            <option value="reach">{labels.sortReach ?? labels.reach ?? labels.sortResults}</option>
+            <option value="frequency">
+              {labels.sortFrequency ?? labels.frequency ?? labels.sortResults}
+            </option>
             <option value="ctr">{labels.sortCtr}</option>
+            <option value="ctrLink">
+              {labels.sortCtrLink ?? labels.ctrLink ?? labels.sortCtr}
+            </option>
+            <option value="cpm">{labels.sortCpm ?? labels.cpm ?? labels.sortSpend}</option>
             <option value="name">{labels.sortName}</option>
           </select>
           <details className="relative">
@@ -143,9 +181,19 @@ export function AdvertisingHierarchyExplorer({
                     ? labels.spend
                     : column === "results"
                       ? labels.results
-                      : column === "ctr"
-                        ? labels.ctr
-                        : labels.delivery}
+                      : column === "costPerResult"
+                        ? (labels.costPerResult ?? labels.results)
+                        : column === "reach"
+                          ? (labels.reach ?? labels.results)
+                          : column === "frequency"
+                            ? (labels.frequency ?? labels.results)
+                            : column === "ctr"
+                              ? labels.ctr
+                              : column === "ctrLink"
+                                ? (labels.ctrLink ?? labels.ctr)
+                                : column === "cpm"
+                                  ? (labels.cpm ?? labels.spend)
+                                  : labels.delivery}
                 </label>
               ))}
             </div>
@@ -170,9 +218,34 @@ export function AdvertisingHierarchyExplorer({
                   {labels.results}
                 </th>
               ) : null}
+              {visibleColumns.has("costPerResult") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.costPerResult ?? labels.results}
+                </th>
+              ) : null}
+              {visibleColumns.has("reach") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.reach ?? labels.results}
+                </th>
+              ) : null}
+              {visibleColumns.has("frequency") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.frequency ?? labels.results}
+                </th>
+              ) : null}
               {visibleColumns.has("ctr") ? (
                 <th className="px-4 py-3 text-end font-semibold" scope="col">
                   {labels.ctr}
+                </th>
+              ) : null}
+              {visibleColumns.has("ctrLink") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.ctrLink ?? labels.ctr}
+                </th>
+              ) : null}
+              {visibleColumns.has("cpm") ? (
+                <th className="px-4 py-3 text-end font-semibold" scope="col">
+                  {labels.cpm ?? labels.spend}
                 </th>
               ) : null}
               {visibleColumns.has("delivery") ? (
@@ -417,11 +490,46 @@ function MetricCells({
             : formatNumber(entity.results, locale as "en" | "ar")}
         </td>
       ) : null}
+      {visibleColumns.has("costPerResult") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.costPerResult == null || !currency
+            ? labels.unavailable
+            : formatCurrency(entity.costPerResult, currency, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("reach") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.reach == null
+            ? labels.unavailable
+            : formatNumber(entity.reach, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("frequency") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.frequency == null
+            ? labels.unavailable
+            : formatNumber(entity.frequency, locale as "en" | "ar")}
+        </td>
+      ) : null}
       {visibleColumns.has("ctr") ? (
         <td className="px-4 py-3 text-end tabular-nums">
           {entity.ctr === null
             ? labels.unavailable
             : formatPercent(entity.ctr, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("ctrLink") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.ctrLink == null
+            ? labels.unavailable
+            : formatPercent(entity.ctrLink, locale as "en" | "ar")}
+        </td>
+      ) : null}
+      {visibleColumns.has("cpm") ? (
+        <td className="px-4 py-3 text-end tabular-nums">
+          {entity.cpm === null || !currency
+            ? labels.unavailable
+            : formatCurrency(entity.cpm, currency, locale as "en" | "ar")}
         </td>
       ) : null}
       {visibleColumns.has("delivery") ? (
@@ -437,15 +545,37 @@ function hierarchySortValue(
   entity: AdvertisingCampaignSummary,
   sortBy: Exclude<HierarchySort, "name" | "delivery">,
 ): number {
-  return sortBy === "spend"
-    ? entity.spend
-    : sortBy === "results"
-      ? (entity.results ?? -1)
-      : (entity.ctr ?? -1);
+  switch (sortBy) {
+    case "spend":
+      return entity.spend;
+    case "results":
+      return entity.results ?? -1;
+    case "costPerResult":
+      return entity.costPerResult ?? -1;
+    case "reach":
+      return entity.reach ?? -1;
+    case "frequency":
+      return entity.frequency ?? -1;
+    case "ctr":
+      return entity.ctr ?? -1;
+    case "ctrLink":
+      return entity.ctrLink ?? -1;
+    case "cpm":
+      return entity.cpm ?? -1;
+  }
 }
 
 function normalizeHierarchySort(value: string | undefined): HierarchySort {
-  return value === "name" || value === "results" || value === "ctr" ? value : "spend";
+  return value === "name" ||
+    value === "results" ||
+    value === "costPerResult" ||
+    value === "reach" ||
+    value === "frequency" ||
+    value === "ctr" ||
+    value === "ctrLink" ||
+    value === "cpm"
+    ? value
+    : "spend";
 }
 
 function normalizeVisibleColumns(values: readonly string[] | undefined): Set<HierarchyColumn> {

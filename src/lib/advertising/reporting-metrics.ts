@@ -16,7 +16,7 @@ export type AdvertisingMetricKey =
   | "cpcAll"
   | "cpcLink"
   | "cpm";
-export type MetricAvailability = "available" | "partial" | "unavailable";
+export type MetricAvailability = "available" | "partial" | "unavailable" | "delayed" | "estimated";
 export type MetricDefinition = {
   readonly key: AdvertisingMetricKey;
   readonly label: string;
@@ -45,10 +45,14 @@ export type AdvertisingMetricSnapshot = {
 };
 export type MetricStatus = {
   readonly key: AdvertisingMetricKey;
+  readonly label: string;
   readonly availability: MetricAvailability;
   readonly reason: string | null;
   readonly sourceField: string;
   readonly formula: string;
+  readonly denominator: string | null;
+  readonly attributionWindow: string | null;
+  readonly note: string;
 };
 
 export const ADVERTISING_METRIC_DEFINITIONS: readonly MetricDefinition[] = [
@@ -231,15 +235,13 @@ export function aggregateAdvertisingMetrics(
       actionValue(row, ["landing_page_view", "landing_page_views", "landingPageViews"]),
     ),
   );
-  const resultTypes = new Set(
-    rows.map((row) => row.resultType).filter((value): value is string => Boolean(value)),
-  );
-  const compatibleResults = resultTypes.size <= 1;
-  const resultValues = rows.map((row) => row.results);
+  const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
+  const resultTypes = new Set(resultRows.map((row) => row.resultType ?? null));
+  const compatibleResults =
+    resultRows.length === rows.length && resultRows.length > 0 && resultTypes.size === 1;
+  const resultValues = resultRows.map((row) => row.results);
   const results =
-    compatibleResults &&
-    resultValues.every((value) => typeof value === "number") &&
-    resultValues.length > 0
+    compatibleResults && resultValues.every((value) => typeof value === "number")
       ? resultValues.reduce((sum, value) => sum + (value ?? 0), 0)
       : null;
   const reach = uniqueReach(rows);
@@ -262,15 +264,39 @@ export function aggregateAdvertisingMetrics(
   };
 }
 
-export function metricStatuses(snapshot: AdvertisingMetricSnapshot): readonly MetricStatus[] {
+export function metricStatuses(
+  snapshot: AdvertisingMetricSnapshot,
+  options: {
+    healthState?: "complete" | "partial" | "delayed" | "unavailable";
+  } = {},
+): readonly MetricStatus[] {
   return ADVERTISING_METRIC_DEFINITIONS.map((definition) => {
     const value = snapshot[definition.key];
+    const availability: MetricAvailability =
+      value === null || options.healthState === "unavailable"
+        ? "unavailable"
+        : options.healthState === "delayed"
+          ? "delayed"
+          : options.healthState === "partial"
+            ? "partial"
+            : "available";
     return {
       key: definition.key,
-      availability: value === null ? "unavailable" : "available",
-      reason: value === null ? definition.note : null,
+      label: definition.label,
+      availability,
+      reason:
+        availability === "unavailable"
+          ? definition.note
+          : availability === "partial"
+            ? "report_partial"
+            : availability === "delayed"
+              ? "report_delayed"
+              : null,
       sourceField: definition.sourceField,
       formula: definition.formula,
+      denominator: definition.denominator,
+      attributionWindow: definition.attributionWindow,
+      note: definition.note,
     };
   });
 }

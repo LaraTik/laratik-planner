@@ -9,20 +9,20 @@ for tokens, shell behavior, bilingual support, and accessibility.
 
 ## Parity review
 
-| Reference expectation          | LaraTik implementation                                            | Decision                                                                   |
-| ------------------------------ | ----------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch  | Keep Advertising sections in the primary rail; use the mobile drawer below |
-| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm       | Match density without importing the reference's dark theme                 |
-| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency              | Keep objective-aware and unavailable-safe                                  |
-| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback     | Preserve as a lightweight dependency-free chart foundation                 |
-| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result     | Added to align more closely with the reference                             |
-| AI/action insight rail         | Evidence-backed Action Center and intelligence panels             | Keep actions read-only and link to the Campaigns section                   |
-| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard | Keep the scan compact; disclose decision evidence on demand                |
-| Campaign/ad/ad-set detail      | Separate URL-driven report sections                               | Do not render all explorers as one long page                               |
-| Audience and targeting         | Dedicated Audience and Targeting sections                         | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON |
-| Technical metric detail        | Progressive-disclosure Metric definitions panel                   | Keep available without dominating the first scan                           |
-| Report export context          | CSV metadata preamble plus authorized fact rows                   | Preserve filters, comparison, metric, attribution, and health context      |
-| Campaign explorer controls     | URL-backed sort and visible-column picker                         | Keep one metric visible and preserve state across section changes          |
+| Reference expectation          | LaraTik implementation                                            | Decision                                                                                          |
+| ------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Persistent application sidebar | Workspace-aware LaraTik sidebar with expanded Advertising branch  | Keep Advertising sections in the primary rail; use the mobile drawer below                        |
+| Dense reporting workspace      | Light, border-first cards with compact KPI and table rhythm       | Match density without importing the reference's dark theme                                        |
+| Six primary KPIs               | Spend, Results, Cost / result, Reach, CTR, Frequency              | Keep objective-aware and unavailable-safe                                                         |
+| Trend chart with comparison    | SVG bar + line chart with localized values and table fallback     | Preserve as a lightweight dependency-free chart foundation                                        |
+| Objective breakdown donut      | Objective spend donut with legend, results, and cost / result     | Added to align more closely with the reference                                                    |
+| AI/action insight rail         | Evidence-backed Action Center and intelligence panels             | Keep actions read-only and link to the Campaigns section                                          |
+| Evidence disclosure            | Prioritized signals with period, sample, peer baseline, and guard | Keep the scan compact; disclose decision evidence on demand                                       |
+| Campaign/ad/ad-set detail      | Separate URL-driven report sections                               | Do not render all explorers as one long page                                                      |
+| Audience and targeting         | Dedicated Audience and Targeting sections                         | Audience tabs rank compact provider rows; targeting keeps chips + raw JSON                        |
+| Technical metric detail        | Progressive-disclosure Metric definitions panel                   | Keep available without dominating the first scan                                                  |
+| Report export context          | CSV metadata preamble plus authorized fact rows                   | Preserve filters, comparison, metric, attribution, and health context                             |
+| Campaign explorer controls     | URL-backed hierarchy, sort, and visible-column picker             | Keep delivery and core efficiency columns available while preserving state across section changes |
 
 ## Section contract
 
@@ -60,8 +60,10 @@ to avoid duplicate navigation.
 The data-health strip is backed by the same typed state used by the report API:
 `complete`, `partial`, `delayed`, or `unavailable`. It shows the selected
 coverage window, account timezone, localized sync time, freshness, and an
-explicit status label. A missing or stale provider value remains unavailable or
-delayed; it is never rendered as a zero or a fabricated estimate. Objective
+explicit status label. Each primary KPI repeats its availability state, and the
+health details dialog exposes metric lineage, source, formula, denominator, and
+attribution window without crowding the first scan. A missing or stale provider
+value remains unavailable or delayed; it is never rendered as a zero or a fabricated estimate. Objective
 results follow the same rule: rollups only sum rows sharing one result type,
 while mixed objective actions keep their raw evidence and show an unavailable
 aggregate.
@@ -76,6 +78,9 @@ New reporting surfaces should reuse:
   neutral delta state with accessible text.
 - `Card`, `CardHeader`, `CardTitle`, `CardDescription`, and `Button` from the
   existing UI primitives before introducing another card or control variant.
+- `src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/advertising/advertising-hierarchy-explorer.tsx`
+  for campaign → ad set → ad exploration. Keep cost/result, reach, frequency,
+  CTR(Link), and CPM unavailable-safe and URL-backed when adding future columns.
 - Semantic tokens from `src/app/globals.css`; reporting cards are
   border-first, while elevation remains reserved for transient surfaces.
 

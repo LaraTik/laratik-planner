@@ -34,6 +34,12 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-data-health")).toContainText(
       "Data health",
     );
+    await page.getByTestId("advertising-reporting-data-health-details-trigger").click();
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
+      "Metric status",
+    );
+    await page.getByRole("button", { name: "Close" }).click();
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toBeHidden();
     await expect(page.getByTestId("advertising-reporting-performance-trend")).toBeVisible();
     await expect(page.getByTestId("advertising-reporting-action-center")).toBeVisible();
     await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
@@ -63,6 +69,8 @@ test.describe("synthetic advertising reporting", () => {
       "href",
       /section=campaigns/,
     );
+    await expect(page.getByTestId("sidebar-advertising-campaigns")).toBeVisible();
+    await expect(page.getByTestId("sidebar-advertising-audience")).toBeVisible();
     await expect(page.getByTestId("sidebar-advertising-reporting")).toHaveAttribute(
       "href",
       /section=reporting/,
@@ -168,6 +176,12 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.getByTestId("advertising-reporting-data-health")).toContainText(
       "صحة البيانات",
     );
+    await page.getByTestId("advertising-reporting-data-health-details-trigger").click();
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toContainText(
+      "حالة المقاييس",
+    );
+    await page.getByRole("button", { name: "إغلاق" }).click();
+    await expect(page.getByTestId("advertising-reporting-data-health-details")).toBeHidden();
     await expect(page.getByTestId("advertising-intelligence")).toBeVisible();
     await expect(page.getByTestId("advertising-campaign-signals")).toContainText("فعّالة");
     await expect(page.getByTestId("advertising-reporting-section-nav")).toBeHidden();
