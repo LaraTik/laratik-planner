@@ -160,7 +160,7 @@ describe("Meta advertising provider", () => {
     });
   });
 
-  it("reads stable creative identity through the configured Graph API version", async () => {
+  it("reads bounded creative presentation fields through the configured Graph API version", async () => {
     const get = vi.fn().mockResolvedValue({ id: "creative_123" });
     const provider = createMetaAdvertisingProvider(
       { resolve: vi.fn().mockResolvedValue({ accessToken: "secret-token" }) },
@@ -170,7 +170,8 @@ describe("Meta advertising provider", () => {
     await provider.readCreatives(connection, "creative_123");
 
     expect(get).toHaveBeenCalledWith("creative_123", {
-      fields: "id",
+      fields:
+        "id,name,title,body,link_url,thumbnail_url,image_url,video_id,call_to_action_type,object_story_spec,asset_feed_spec",
     });
   });
 

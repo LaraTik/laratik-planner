@@ -80,6 +80,18 @@ describe("GET /api/advertising/report", () => {
       syncStatus: "succeeded",
       partial: false,
       freshness: "fresh",
+      dataHealth: {
+        state: "complete",
+        coverage: "complete",
+        syncStatus: "succeeded",
+        freshness: "fresh",
+        lastSuccessfulSyncAt: "2026-10-02T00:00:00.000Z",
+        since: "2026-10-01",
+        until: "2026-10-02",
+        timezone: "UTC",
+        currency: "EUR",
+        issues: [],
+      },
     });
 
     const response = await GET(request("workspace_dashboard"));
@@ -89,6 +101,7 @@ describe("GET /api/advertising/report", () => {
       objects: [{ externalObjectId: "ad-visible" }],
       audience: [{ dimensionValue: "25-34" }],
       partial: false,
+      dataHealth: { state: "complete", coverage: "complete" },
     });
     expect(mocks.load).toHaveBeenCalledWith(
       expect.anything(),

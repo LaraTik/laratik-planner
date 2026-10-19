@@ -1,5 +1,17 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-18 Advertising reporting safety checkpoint** — Objective-aware
+> ingestion and every campaign/ad/report rollup now refuse to manufacture a
+> heterogeneous result total: mixed result types remain unavailable while the
+> original action evidence is preserved. Provider creative reads are bounded to
+> fields Meta actually returns and sanitized presentation metadata is retained
+> without fabricated previews. A typed `DataHealthSummary` now flows from the
+> persisted sync state through the authenticated report API and dashboard,
+> distinguishing complete, partial, delayed, and unavailable coverage. Focused
+> unit, route, and strict type checks pass. This remains **Implemented**, not
+> **Tested/Verified**, until the full disposable-database, bilingual browser,
+> accessibility, visual, export, and production evidence gates are captured.
+
 > **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
 > persists a typed, versioned advertising view configuration through the
 > authenticated `/api/advertising/saved-views` route. It reuses the existing

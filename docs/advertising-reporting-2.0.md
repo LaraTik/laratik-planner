@@ -24,11 +24,18 @@ The URL-driven comparison selector supports the previous matching period, the pr
 
 ## Data health
 
-The health strip shows freshness, last successful sync, account timezone, selected coverage, and partial state. Partial or stale data is labelled explicitly and remains available for inspection, but should be reviewed before financial decisions.
+The health strip is backed by `DataHealthSummary` from the report query and API. It shows freshness, last successful sync, account timezone, selected coverage, and one of four explicit states:
+
+- `complete` — a fresh successful sync with complete coverage;
+- `partial` — the provider or sync run reports incomplete coverage;
+- `delayed` — the latest data is stale, failed, or still running;
+- `unavailable` — no successful sync exists for the account.
+
+These states are not converted to zeroes or hidden behind a generic error. Partial, delayed, or unavailable data remains inspectable but should be reviewed before financial decisions.
 
 ## Audience, targeting, and provider limitations
 
-Audience rows are provider-returned observations and are not inferred. Targeting and creative metadata remain read-only provider object metadata. Missing creative previews, unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
+Audience rows are provider-returned observations and are not inferred. Targeting and creative metadata remain read-only provider object metadata. Creative presentation fields are retained only when Meta returns them (`thumbnail_url`, `image_url`, `video_id`, headline/body, format, link, CTA, and provider spec payloads); missing creative previews are unavailable rather than fabricated. Unsupported breakdowns, unavailable reach, and incomplete action arrays must render as unavailable states. No campaign editing, publishing, provider scraping, or estimated reach is introduced by this redesign.
 
 ## Export and access
 

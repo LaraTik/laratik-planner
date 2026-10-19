@@ -358,6 +358,7 @@
       "timezone": "Account timezone",
       "coverage": "Coverage",
       "retry": "Retry sync",
+      "delayed": "Delayed",
       "primaryMetrics": "Executive overview",
       "comparison": "Compared with",
       "noComparison": "Insufficient comparison data",

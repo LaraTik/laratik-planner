@@ -184,8 +184,14 @@ function normalizeResults(value: Record<string, unknown>): {
       actions: Object.keys(actions).length ? actions : null,
     };
   if (Object.keys(actions).length === 0) return { results: null, resultType: null, actions: null };
-  const total = Object.values(actions).reduce((sum, value) => sum + value, 0);
-  return { results: total, resultType: explicitType ?? "provider_actions", actions };
+  const actionTypes = Object.keys(actions);
+  // Meta can return several action events for the same row. Without an
+  // explicit result/result_type, there is no safe way to decide whether those
+  // events belong to one objective. Keep the action breakdown for explainable
+  // metrics, but never manufacture a heterogeneous result total.
+  if (actionTypes.length !== 1) return { results: null, resultType: null, actions };
+  const resultType = actionTypes[0]!;
+  return { results: actions[resultType] ?? null, resultType, actions };
 }
 
 function parseMicros(value: string): bigint {

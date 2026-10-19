@@ -76,6 +76,38 @@ describe("advertising reporting view", () => {
     });
   });
 
+  it("keeps campaign results unavailable when provider result types are mixed", () => {
+    const view = buildAdvertisingReportView([
+      {
+        accountId: "account",
+        campaignId: "campaign",
+        adSetId: "adset",
+        adId: "ad-a",
+        date: "2026-10-01",
+        spend: 10,
+        impressions: 100,
+        clicks: 5,
+        results: 2,
+        resultType: "lead",
+      },
+      {
+        accountId: "account",
+        campaignId: "campaign",
+        adSetId: "adset",
+        adId: "ad-b",
+        date: "2026-10-01",
+        spend: 20,
+        impressions: 200,
+        clicks: 10,
+        results: 1,
+        resultType: "purchase",
+      },
+    ]);
+
+    expect(view.campaigns[0]?.results).toBeNull();
+    expect(view.ads.every((ad) => ad.results !== null)).toBe(true);
+  });
+
   it("deduplicates multiple ads that promote the same exact post", () => {
     const view = buildAdvertisingReportView(
       [

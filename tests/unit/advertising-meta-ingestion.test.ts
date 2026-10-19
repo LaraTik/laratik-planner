@@ -70,7 +70,7 @@ describe("Meta ad-level ingestion normalization", () => {
     expect(result).toEqual({ observations: [], skippedRows: 1, partial: true });
   });
 
-  it("normalizes explicit and action-based provider results without guessing a result type", () => {
+  it("normalizes explicit and single-type action results without guessing heterogeneous totals", () => {
     const result = normalizeMetaAdInsights(
       {
         data: [
@@ -97,6 +97,18 @@ describe("Meta ad-level ingestion normalization", () => {
               { action_type: "lead", value: "1" },
             ],
           },
+          {
+            ad_id: "ad_3",
+            campaign_id: "campaign_1",
+            date_start: "2026-10-01",
+            spend: "6",
+            impressions: "30",
+            clicks: "3",
+            actions: [
+              { action_type: "lead", value: "2" },
+              { action_type: "purchase", value: "1" },
+            ],
+          },
         ],
       },
       context,
@@ -108,8 +120,13 @@ describe("Meta ad-level ingestion normalization", () => {
     });
     expect(result.observations[1]).toMatchObject({
       results: 3,
-      resultType: "provider_actions",
+      resultType: "lead",
       resultActions: { lead: 3 },
+    });
+    expect(result.observations[2]).toMatchObject({
+      results: null,
+      resultType: null,
+      resultActions: { lead: 2, purchase: 1 },
     });
   });
 

@@ -469,6 +469,7 @@ export async function persistAdvertisingProviderObjects(
           ...(row.creative ? { creative: row.creative } : {}),
           ...(row.effective_status ? { effective_status: row.effective_status } : {}),
           ...(row.targeting ? { targeting: row.targeting } : {}),
+          ...providerPresentationMetadata(row),
         }),
         observedAt: new Date(),
         updatedAt: new Date(),
@@ -504,6 +505,38 @@ export async function persistAdvertisingProviderObjects(
     })
     .returning({ id: advertisingProviderObjects.id });
   return { written: inserted.length };
+}
+
+/**
+ * Preserve only provider-returned creative presentation facts. These fields
+ * are intentionally optional: Meta can omit them by account, permission, or
+ * creative format, and the UI must show an unavailable state instead of
+ * inventing a preview.
+ */
+function providerPresentationMetadata(row: Record<string, unknown>): SanitizedMetadata {
+  const previewUrl = firstText(row.thumbnail_url, row.image_url);
+  const headline = firstText(row.title, row.headline, row.name);
+  const body = firstText(row.body, row.message, row.description);
+  const format = firstText(row.media_type, row.object_type, row.video_id ? "video" : null);
+  const linkUrl = firstText(row.link_url, row.website_url);
+  const callToAction = firstText(row.call_to_action_type, row.call_to_action);
+  return {
+    ...(previewUrl ? { previewUrl } : {}),
+    ...(headline ? { headline } : {}),
+    ...(body ? { body } : {}),
+    ...(format ? { format } : {}),
+    ...(linkUrl ? { linkUrl } : {}),
+    ...(callToAction ? { callToAction } : {}),
+    ...(row.object_story_spec ? { objectStorySpec: row.object_story_spec } : {}),
+    ...(row.asset_feed_spec ? { assetFeedSpec: row.asset_feed_spec } : {}),
+  };
+}
+
+function firstText(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim().slice(0, 500);
+  }
+  return null;
 }
 
 export async function recordAdvertisingValidation(

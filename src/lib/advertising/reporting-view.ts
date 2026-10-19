@@ -73,14 +73,16 @@ function totals(rows: readonly AdvertisingFact[]): AdvertisingMetricTotals {
   const impressions = rows.reduce((sum, row) => sum + row.impressions, 0);
   const clicks = rows.reduce((sum, row) => sum + row.clicks, 0);
   const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
+  const resultTypes = new Set(resultRows.map((row) => row.resultType ?? null));
+  const comparableResults =
+    resultRows.length === rows.length && resultRows.length > 0 && resultTypes.size <= 1;
   return {
     spend,
     impressions,
     clicks,
-    results:
-      resultRows.length === rows.length && rows.length > 0
-        ? resultRows.reduce((sum, row) => sum + (row.results ?? 0), 0)
-        : null,
+    results: comparableResults
+      ? resultRows.reduce((sum, row) => sum + (row.results ?? 0), 0)
+      : null,
     ctr: impressions > 0 ? clicks / impressions : null,
     cpc: clicks > 0 ? spend / clicks : null,
     cpm: impressions > 0 ? (spend / impressions) * 1000 : null,

@@ -49,6 +49,15 @@ to avoid duplicate navigation.
 
 ## Shared foundation
 
+The data-health strip is backed by the same typed state used by the report API:
+`complete`, `partial`, `delayed`, or `unavailable`. It shows the selected
+coverage window, account timezone, localized sync time, freshness, and an
+explicit status label. A missing or stale provider value remains unavailable or
+delayed; it is never rendered as a zero or a fabricated estimate. Objective
+results follow the same rule: rollups only sum rows sharing one result type,
+while mixed objective actions keep their raw evidence and show an unavailable
+aggregate.
+
 New reporting surfaces should reuse:
 
 - `src/components/reporting/reporting-section-nav.tsx` for deep-linkable local

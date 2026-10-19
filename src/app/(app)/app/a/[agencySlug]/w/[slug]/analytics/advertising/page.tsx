@@ -639,6 +639,7 @@ export default async function AdvertisingAnalyticsPage({
                 timezone={selectedAccount.timezone ?? workspace.timezone}
                 freshness={freshnessLabel}
                 partial={result.partial}
+                dataHealth={result.dataHealth}
                 lastSync={result.lastSuccessfulSyncAt}
                 since={since}
                 until={until}
@@ -1417,6 +1418,7 @@ function advertisingReportingDashboardLabels(
     unavailable: t("advertising.reporting.notAvailable"),
     partial: t("advertising.reporting.partial"),
     complete: t("advertising.reporting.complete"),
+    delayed: t("advertising.reporting.dashboard.delayed"),
     definition: t("advertising.reporting.dashboard.definition"),
     noSignals: t("advertising.reporting.dashboard.noSignals"),
     sample: t("advertising.reporting.dashboard.sample"),

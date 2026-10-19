@@ -126,6 +126,7 @@ export async function GET(request: NextRequest) {
       syncStatus: result.syncStatus,
       partial: result.partial,
       freshness: result.freshness,
+      dataHealth: result.dataHealth,
     },
     { headers: mutatingApiHeaders() },
   );

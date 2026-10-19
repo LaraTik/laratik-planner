@@ -24,6 +24,7 @@ import type {
   MetricStatus,
 } from "@/lib/advertising/reporting-metrics";
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
+import type { DataHealthSummary } from "@/lib/advertising/reporting-health";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
 import type { CampaignPerformanceInsight } from "@/lib/advertising/intelligence";
 import type {
@@ -59,6 +60,7 @@ export type AdvertisingReportingDashboardLabels = {
   unavailable: string;
   partial: string;
   complete: string;
+  delayed: string;
   definition: string;
   noSignals: string;
   sample: string;
@@ -94,6 +96,7 @@ export function AdvertisingReportingDashboard(props: {
   timezone: string;
   freshness: string;
   partial: boolean;
+  dataHealth: DataHealthSummary;
   lastSync: string | null;
   since: string;
   until: string;
@@ -294,6 +297,7 @@ export function AdvertisingReportingDashboard(props: {
 function DataHealth({
   freshness,
   partial,
+  dataHealth,
   lastSync,
   locale,
   timezone,
@@ -303,6 +307,7 @@ function DataHealth({
 }: {
   freshness: string;
   partial: boolean;
+  dataHealth: DataHealthSummary;
   lastSync: string | null;
   locale: string;
   timezone: string;
@@ -330,12 +335,20 @@ function DataHealth({
         {labels.coverage}: {since} – {until}
       </span>
       <span className="text-label ms-auto inline-flex items-center gap-2 font-medium">
-        {partial ? (
-          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
-        ) : (
+        {dataHealth.state === "complete" && !partial ? (
           <CheckCircle2 className="text-success h-4 w-4" aria-hidden="true" />
+        ) : (
+          <AlertTriangle className="text-warning h-4 w-4" aria-hidden="true" />
         )}
-        <span>{partial ? labels.partial : labels.complete}</span>
+        <span>
+          {dataHealth.state === "unavailable"
+            ? labels.unavailable
+            : dataHealth.state === "complete" && !partial
+              ? labels.complete
+              : dataHealth.state === "delayed"
+                ? labels.delayed
+                : labels.partial}
+        </span>
         <span className="text-fg-muted">{freshness}</span>
       </span>
       <button

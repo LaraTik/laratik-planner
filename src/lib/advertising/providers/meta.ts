@@ -271,10 +271,11 @@ export function createMetaAdvertisingProvider(
     },
     async readCreatives(connection, creativeId) {
       return (await clientFor(connection)).get(creativeId, {
-        // Keep the validation probe to the identity field guaranteed by the
-        // AdCreative edge. Optional fields can vary by Graph version and
-        // account asset, while reporting only needs the stable creative ID.
-        fields: "id",
+        // Keep the read bounded to presentation fields that Meta may return.
+        // Missing fields stay absent and are rendered as unavailable; the
+        // reporting surface never fabricates a preview or headline.
+        fields:
+          "id,name,title,body,link_url,thumbnail_url,image_url,video_id,call_to_action_type,object_story_spec,asset_feed_spec",
       });
     },
     async readDailyInsights(connection, account, context) {

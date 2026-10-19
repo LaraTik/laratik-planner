@@ -96,6 +96,48 @@ describe("advertising reporting authorization seam", () => {
     });
   });
 
+  it("does not aggregate results across incompatible provider result types", () => {
+    const fixture = createAdvertisingIsolationFixture();
+    const account = fixture.accounts[0]!;
+    const connection = fixture.connections[0]!;
+    const principal = fixture.principals[0]!;
+    const grant = fixture.grants[0]!;
+    const report = buildScopedAdvertisingReport(
+      {
+        principal,
+        account,
+        connection,
+        visibilityGrants: [grant],
+        financialAuthorities: [],
+      },
+      [
+        {
+          accountId: account.id,
+          campaignId: "campaign-a",
+          date: "2026-10-01",
+          spend: 10,
+          impressions: 100,
+          clicks: 5,
+          results: 2,
+          resultType: "lead",
+        },
+        {
+          accountId: account.id,
+          campaignId: "campaign-a",
+          date: "2026-10-01",
+          spend: 20,
+          impressions: 200,
+          clicks: 10,
+          results: 1,
+          resultType: "purchase",
+        },
+      ],
+      { operation: "report_read", now: "2026-10-02T00:00:00.000Z" },
+    );
+
+    expect(report.totals.results).toBeNull();
+  });
+
   it("changes cache identity when a grant revision is revoked", () => {
     const common = {
       agencyId: "agency",

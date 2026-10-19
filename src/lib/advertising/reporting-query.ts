@@ -32,6 +32,11 @@ import type {
   AdvertisingPrincipal,
   AdvertisingVisibilityGrant,
 } from "./types";
+import {
+  buildDataHealthSummary,
+  type DataHealthSummary,
+  type AdvertisingSyncStatus,
+} from "./reporting-health";
 
 type Db = typeof appDb;
 
@@ -99,6 +104,7 @@ export type AdvertisingReportQueryResult =
       syncStatus: "succeeded" | "partial" | "failed" | "dead_letter" | "running" | null;
       partial: boolean;
       freshness: "fresh" | "stale" | "unknown";
+      dataHealth: DataHealthSummary;
     };
 
 export type AdvertisingReportAccount = {
@@ -533,6 +539,17 @@ export async function loadAdvertisingReport(
       ? "fresh"
       : "stale"
     : "unknown";
+  const partialReport = partial || latestSync?.partial === true;
+  const dataHealth = buildDataHealthSummary({
+    syncStatus: syncStatus as AdvertisingSyncStatus,
+    partial: partialReport,
+    freshness,
+    lastSuccessfulSyncAt,
+    since: args.since,
+    until: args.until,
+    timezone: account.timezone || null,
+    currency: account.currency || null,
+  });
   return {
     kind: "ok",
     report,
@@ -553,8 +570,9 @@ export async function loadAdvertisingReport(
     },
     lastSuccessfulSyncAt,
     syncStatus,
-    partial: partial || latestSync?.partial === true,
+    partial: partialReport,
     freshness,
+    dataHealth,
   };
 }
 
