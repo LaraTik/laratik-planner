@@ -282,7 +282,7 @@ function SectionKpis({
       />
       <KpiTile
         icon={<Link2 className="h-4 w-4" />}
-        label={communityText(t, "connectedChannels")}
+        label={communityText(t, "enabledChannels")}
         value={metrics.channels}
       />
       <KpiTile
@@ -424,7 +424,7 @@ function Overview({
           <CardHeader>
             <div>
               <CardTitle>{communityText(t, "channelHealth")}</CardTitle>
-              <CardDescription>{communityText(t, "connectedChannels")}</CardDescription>
+              <CardDescription>{communityText(t, "enabledChannels")}</CardDescription>
             </div>
             <Link
               href={`${basePath}/connections`}

@@ -56,7 +56,7 @@
   "setupTitle": "إعداد المجتمع",
   "setupDescription": "صِل الحسابات وتحقق من القدرات وفعّل مساحة العمل بعناية.",
   "attention": "بحاجة إلى انتباه",
-  "connectedChannels": "القنوات المتصلة",
+  "enabledChannels": "القنوات المفعّلة",
   "automationReadiness": "جاهزية الأتمتة",
   "openConversations": "المحادثات المفتوحة",
   "pendingReviews": "المراجعات المعلقة",

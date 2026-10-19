@@ -4,9 +4,9 @@ Status: implementation and verification in progress; not independently Verified.
 
 ## Live findings
 
-Read-only Chrome inspection covered Activity, Connections, Unified inbox,
+Chrome inspection and a read-only provider sync covered Activity, Connections, Unified inbox,
 AI Test Lab, Settings & safety, and agency AI configuration. One synthetic
-Test Lab request was made. No customer reply, permission change, safety-switch
+Test Lab request and one manual public-comment sync were made. No customer reply, permission change, safety-switch
 change, or provider credential change was performed. No private message text,
 provider identifiers, or secrets are recorded here.
 
@@ -30,6 +30,9 @@ provider identifiers, or secrets are recorded here.
   allowlisted bilingual event labels and workspace-timezone timestamps.
   Provider details and metadata are never rendered directly.
 - Overview matched all nested engagement routes. It now uses exact matching.
+- “Connected channels” counted enabled workspace channel records, including
+  those without a validated provider connection. It now says “Enabled channels”;
+  Connections remains the source of provider permission readiness.
 - “Messages today” counted all stored messages. The label now says “Stored
   messages”; no invented daily time window is implied.
 - “Delivery reliability” showed 100 after any send attempt. The tile now shows

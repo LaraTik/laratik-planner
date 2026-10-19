@@ -56,7 +56,7 @@
   "setupTitle": "Community setup",
   "setupDescription": "Connect accounts, validate capabilities, and activate the workspace deliberately.",
   "attention": "Needs attention",
-  "connectedChannels": "Connected channels",
+  "enabledChannels": "Enabled channels",
   "automationReadiness": "Automation readiness",
   "openConversations": "Open conversations",
   "pendingReviews": "Pending reviews",
