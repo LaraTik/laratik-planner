@@ -8,7 +8,7 @@ describe("advertising report view configuration", () => {
   it("serializes URL-driven filters and chart settings without tenant data", () => {
     const config = advertisingReportViewConfigFromSearch({
       params: new URLSearchParams(
-        "section=campaigns&compare=custom&compareSince=2026-09-01&compareUntil=2026-09-30&search=retargeting&trendMetricA=impressions&trendMetricB=clicks&trendGranularity=week&sort=results&visibleColumns=results,ctr",
+        "section=campaigns&compare=custom&compareSince=2026-09-01&compareUntil=2026-09-30&search=retargeting&supplementaryMetric=ctrAll&trendMetricA=impressions&trendMetricB=clicks&trendGranularity=week&sort=results&visibleColumns=results,ctr",
       ),
       accountId: "act_123",
       since: "2026-10-01",
@@ -22,6 +22,7 @@ describe("advertising report view configuration", () => {
       section: "campaigns",
       compare: "custom",
       search: "retargeting",
+      supplementaryMetric: "ctrAll",
       trendMetricA: "impressions",
       trendMetricB: "clicks",
       trendGranularity: "week",
@@ -30,6 +31,20 @@ describe("advertising report view configuration", () => {
     });
     expect(config).not.toHaveProperty("workspaceId");
     expect(config).not.toHaveProperty("agencyId");
+  });
+
+  it("defaults the supplementary metric without changing older saved views", () => {
+    const config = advertisingReportViewConfigFromSearch({
+      params: new URLSearchParams("section=overview"),
+      accountId: "act_123",
+      since: "2026-10-01",
+      until: "2026-10-30",
+    });
+
+    expect(config.supplementaryMetric).toBe("impressions");
+    expect(advertisingReportViewConfigToSearchParams(config).get("supplementaryMetric")).toBe(
+      "impressions",
+    );
   });
 
   it("round-trips a saved view back into URL parameters", () => {

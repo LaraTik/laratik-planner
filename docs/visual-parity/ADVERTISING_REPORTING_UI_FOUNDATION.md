@@ -68,7 +68,10 @@ results follow the same rule: rollups only sum rows sharing one result type,
 while mixed objective actions keep their raw evidence and show an unavailable
 aggregate. The result definition is carried into the KPI label and explorer
 rows when the provider supplies one, so “Results” is never presented as an
-unqualified heterogeneous total.
+unqualified heterogeneous total. The six-card executive strip also exposes a
+URL-driven supplementary metric picker for impressions, click variants,
+landing-page views, CTR/CPC variants, and CPM; its comparison delta and
+availability state use the same aggregate numerators and metric dictionary.
 
 New reporting surfaces should reuse:
 
@@ -121,7 +124,8 @@ existing workspace-scoped `saved_filter` table with the
 analytics store. Every read and write resolves the authenticated actor, active
 agency, workspace membership, and owner/share scope server-side. The stored
 configuration includes the account, date range, comparison dates, section,
-search filters, chart metrics/granularity, and pagination/explorer state. The
+search filters, supplementary metric, chart metrics/granularity, and
+pagination/explorer state. The
 dialog lists private and workspace-shared views and restores one through the
 existing URL-driven route state.
 

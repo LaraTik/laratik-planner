@@ -112,6 +112,7 @@ type SearchParams = {
   trendMetricA?: string | string[];
   trendMetricB?: string | string[];
   trendGranularity?: string | string[];
+  supplementaryMetric?: string | string[];
   sort?: string | string[];
   visibleColumns?: string | string[];
 };
@@ -392,6 +393,7 @@ export default async function AdvertisingAnalyticsPage({
     since,
     until,
   });
+  const supplementaryMetric = savedViewConfig.supplementaryMetric;
   const objectiveOptions = [
     ...new Set(view.campaigns.map((campaign) => campaign.objective).filter(Boolean)),
   ] as string[];
@@ -410,6 +412,7 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricA,
     trendMetricB,
     trendGranularity,
+    supplementaryMetric,
     sort: savedViewConfig.sort,
     visibleColumns: savedViewConfig.visibleColumns,
     search: campaignSearch,
@@ -432,6 +435,7 @@ export default async function AdvertisingAnalyticsPage({
     trendMetricA,
     trendMetricB,
     trendGranularity,
+    supplementaryMetric,
   });
   if (savedViewConfig.sort) exportParams.set("sort", savedViewConfig.sort);
   if (savedViewConfig.visibleColumns?.length) {
@@ -514,6 +518,7 @@ export default async function AdvertisingAnalyticsPage({
       <input type="hidden" name="trendMetricA" value={trendMetricA} />
       <input type="hidden" name="trendMetricB" value={trendMetricB} />
       <input type="hidden" name="trendGranularity" value={trendGranularity} />
+      <input type="hidden" name="supplementaryMetric" value={supplementaryMetric} />
       {savedViewConfig.sort ? (
         <input type="hidden" name="sort" value={savedViewConfig.sort} />
       ) : null}
@@ -735,6 +740,7 @@ export default async function AdvertisingAnalyticsPage({
                 since={since}
                 until={until}
                 metrics={primaryMetrics}
+                supplementaryMetric={supplementaryMetric}
                 comparison={comparisonSummary}
                 statuses={reportMetricStatuses}
                 campaigns={view.campaigns}
@@ -1550,6 +1556,20 @@ function advertisingReportingDashboardLabels(
     issueSyncDeadLetter: t("advertising.reporting.dashboard.issueSyncDeadLetter"),
     issueStaleData: t("advertising.reporting.dashboard.issueStaleData"),
     primaryMetrics: t("advertising.reporting.dashboard.primaryMetrics"),
+    supplementaryMetric: t("advertising.reporting.dashboard.supplementaryMetric"),
+    supplementaryMetricDescription: t(
+      "advertising.reporting.dashboard.supplementaryMetricDescription",
+    ),
+    selectSupplementaryMetric: t("advertising.reporting.dashboard.selectSupplementaryMetric"),
+    metricImpressions: t("advertising.reporting.impressions"),
+    metricAllClicks: t("advertising.reporting.dashboard.metricAllClicks"),
+    metricLinkClicks: t("advertising.reporting.dashboard.metricLinkClicks"),
+    metricOutboundClicks: t("advertising.reporting.dashboard.metricOutboundClicks"),
+    metricLandingPageViews: t("advertising.reporting.dashboard.metricLandingPageViews"),
+    metricCtrAll: t("advertising.reporting.dashboard.metricCtrAll"),
+    metricCpcAll: t("advertising.reporting.dashboard.metricCpcAll"),
+    metricCpcLink: t("advertising.reporting.dashboard.metricCpcLink"),
+    metricCpm: t("advertising.reporting.cpm"),
     comparison: t("advertising.reporting.dashboard.comparison"),
     noComparison: t("advertising.reporting.dashboard.noComparison"),
     performanceTrend: t("advertising.reporting.dashboard.performanceTrend"),
@@ -1620,6 +1640,7 @@ function reportSectionItems({
   trendMetricA,
   trendMetricB,
   trendGranularity,
+  supplementaryMetric,
   sort,
   visibleColumns,
   search,
@@ -1637,6 +1658,7 @@ function reportSectionItems({
   trendMetricA: TrendMetricKey;
   trendMetricB: TrendMetricKey;
   trendGranularity: TrendGranularity;
+  supplementaryMetric: string;
   sort?: string | undefined;
   visibleColumns?: readonly string[] | undefined;
   search: string;
@@ -1650,6 +1672,7 @@ function reportSectionItems({
     params.set("trendMetricA", trendMetricA);
     params.set("trendMetricB", trendMetricB);
     params.set("trendGranularity", trendGranularity);
+    params.set("supplementaryMetric", supplementaryMetric);
     if (sort) params.set("sort", sort);
     if (visibleColumns?.length) params.set("visibleColumns", visibleColumns.join(","));
     if (search) params.set("search", search);

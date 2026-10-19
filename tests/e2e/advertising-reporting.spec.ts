@@ -122,6 +122,13 @@ test.describe("synthetic advertising reporting", () => {
     await expect(page.locator("#advertising-trend-granularity")).toHaveValue("week");
     await expect(page.locator("#advertising-trend-a")).toHaveValue("impressions");
     await expect(page.locator("#advertising-trend-b")).toHaveValue("clicks");
+    await expect(page.locator("#advertising-supplementary-metric")).toHaveValue("impressions");
+    await page.locator("#advertising-supplementary-metric").selectOption("ctrAll");
+    await expect(page.locator("#advertising-supplementary-metric")).toHaveValue("ctrAll");
+    await expect(page).toHaveURL(/supplementaryMetric=ctrAll/);
+    await expect(page.getByTestId("advertising-reporting-supplementary-metric")).toContainText(
+      "CTR (all)",
+    );
     await page.getByRole("button", { name: "Save view" }).click();
     await expect(page.getByTestId("advertising-save-view-dialog")).toBeVisible();
     await page.getByLabel("View name").fill("Weekly acquisition review");

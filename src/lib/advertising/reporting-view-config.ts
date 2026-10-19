@@ -11,6 +11,22 @@ export const advertisingReportSectionSchema = z.enum([
   "targeting",
 ]);
 
+export const advertisingSupplementaryMetricSchema = z.enum([
+  "impressions",
+  "allClicks",
+  "linkClicks",
+  "outboundClicks",
+  "landingPageViews",
+  "ctrAll",
+  "cpcAll",
+  "cpcLink",
+  "cpm",
+]);
+
+export type AdvertisingSupplementaryMetricKey = z.infer<
+  typeof advertisingSupplementaryMetricSchema
+>;
+
 export const advertisingReportViewConfigSchema = z
   .object({
     surface: z.literal("advertising-reporting"),
@@ -25,6 +41,7 @@ export const advertisingReportViewConfigSchema = z
     search: z.string().max(200).optional(),
     objective: z.string().max(120).optional(),
     status: z.string().max(120).optional(),
+    supplementaryMetric: advertisingSupplementaryMetricSchema.default("impressions"),
     trendMetricA: z.enum(["spend", "impressions", "clicks", "results"]),
     trendMetricB: z.enum(["spend", "impressions", "clicks", "results"]),
     trendGranularity: z.enum(["day", "week", "month"]),
@@ -70,6 +87,7 @@ export function advertisingReportViewConfigFromSearch({
     ...(params.get("search") ? { search: params.get("search") } : {}),
     ...(params.get("objective") ? { objective: params.get("objective") } : {}),
     ...(params.get("status") ? { status: params.get("status") } : {}),
+    supplementaryMetric: valueOrDefault(params.get("supplementaryMetric"), "impressions"),
     trendMetricA: valueOrDefault(params.get("trendMetricA"), "spend"),
     trendMetricB: valueOrDefault(params.get("trendMetricB"), "results"),
     trendGranularity: valueOrDefault(params.get("trendGranularity"), "day"),

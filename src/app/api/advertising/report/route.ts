@@ -31,6 +31,7 @@ const querySchema = z
     trendMetricA: z.string().max(50).optional(),
     trendMetricB: z.string().max(50).optional(),
     trendGranularity: z.string().max(20).optional(),
+    supplementaryMetric: z.string().max(50).optional(),
     surface: z.enum([
       "workspace_dashboard",
       "tenant_dashboard",
@@ -87,6 +88,7 @@ export async function GET(request: NextRequest) {
     trendMetricA: request.nextUrl.searchParams.get("trendMetricA") ?? undefined,
     trendMetricB: request.nextUrl.searchParams.get("trendMetricB") ?? undefined,
     trendGranularity: request.nextUrl.searchParams.get("trendGranularity") ?? undefined,
+    supplementaryMetric: request.nextUrl.searchParams.get("supplementaryMetric") ?? undefined,
     surface: request.nextUrl.searchParams.get("surface"),
   });
   if (!parsed.success) return errorResponse("invalid_report_query", 400);
@@ -131,6 +133,7 @@ export async function GET(request: NextRequest) {
         trendMetricA: parsed.data.trendMetricA ?? null,
         trendMetricB: parsed.data.trendMetricB ?? null,
         trendGranularity: parsed.data.trendGranularity ?? null,
+        supplementaryMetric: parsed.data.supplementaryMetric ?? null,
       },
       dataHealth: result.dataHealth,
       attributionSettings:

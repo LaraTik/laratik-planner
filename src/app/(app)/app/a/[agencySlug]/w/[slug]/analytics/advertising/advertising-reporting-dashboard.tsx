@@ -32,6 +32,7 @@ import type {
   MetricAvailability,
   MetricStatus,
 } from "@/lib/advertising/reporting-metrics";
+import type { AdvertisingSupplementaryMetricKey } from "@/lib/advertising/reporting-view-config";
 import type { ComparisonSummary } from "@/lib/advertising/reporting-comparison";
 import type { DataHealthSummary } from "@/lib/advertising/reporting-health";
 import type { AdvertisingCampaignSummary } from "@/lib/advertising/reporting-view";
@@ -76,6 +77,18 @@ export type AdvertisingReportingDashboardLabels = {
   issueSyncDeadLetter: string;
   issueStaleData: string;
   primaryMetrics: string;
+  supplementaryMetric: string;
+  supplementaryMetricDescription: string;
+  selectSupplementaryMetric: string;
+  metricImpressions: string;
+  metricAllClicks: string;
+  metricLinkClicks: string;
+  metricOutboundClicks: string;
+  metricLandingPageViews: string;
+  metricCtrAll: string;
+  metricCpcAll: string;
+  metricCpcLink: string;
+  metricCpm: string;
   comparison: string;
   noComparison: string;
   performanceTrend: string;
@@ -145,6 +158,7 @@ export function AdvertisingReportingDashboard(props: {
   since: string;
   until: string;
   metrics: AdvertisingMetricSnapshot;
+  supplementaryMetric: AdvertisingSupplementaryMetricKey;
   comparison: ComparisonSummary | null;
   statuses: readonly MetricStatus[];
   campaigns: readonly AdvertisingCampaignSummary[];
@@ -164,6 +178,9 @@ export function AdvertisingReportingDashboard(props: {
   const [metricA, setMetricA] = useState<TrendMetricKey>(props.trendMetricA);
   const [metricB, setMetricB] = useState<TrendMetricKey>(props.trendMetricB);
   const [granularity, setGranularity] = useState<TrendGranularity>(props.trendGranularity);
+  const [supplementaryMetric, setSupplementaryMetric] = useState<AdvertisingSupplementaryMetricKey>(
+    props.supplementaryMetric,
+  );
   const [tableOpen, setTableOpen] = useState(false);
   const updateTrendSetting = (name: string, value: string) => {
     const params = new URLSearchParams(window.location.search);
@@ -269,6 +286,19 @@ export function AdvertisingReportingDashboard(props: {
             />
           ))}
         </div>
+        <SupplementaryMetricCard
+          metric={supplementaryMetric}
+          metrics={props.metrics}
+          comparison={props.comparison}
+          statuses={props.statuses}
+          locale={props.locale}
+          currency={props.currency}
+          labels={labels}
+          onChange={(value) => {
+            setSupplementaryMetric(value);
+            updateTrendSetting("supplementaryMetric", value);
+          }}
+        />
       </section>
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.85fr)]">
         <TrendPanel
@@ -340,6 +370,103 @@ export function AdvertisingReportingDashboard(props: {
           ))}
         </div>
       </details>
+    </div>
+  );
+}
+
+type SupplementaryMetricKind = "money" | "number" | "percent";
+
+type SupplementaryMetricDefinition = {
+  key: AdvertisingSupplementaryMetricKey;
+  label: string;
+  kind: SupplementaryMetricKind;
+};
+
+function supplementaryMetricDefinitions(
+  labels: AdvertisingReportingDashboardLabels,
+): readonly SupplementaryMetricDefinition[] {
+  return [
+    { key: "impressions", label: labels.metricImpressions, kind: "number" },
+    { key: "allClicks", label: labels.metricAllClicks, kind: "number" },
+    { key: "linkClicks", label: labels.metricLinkClicks, kind: "number" },
+    { key: "outboundClicks", label: labels.metricOutboundClicks, kind: "number" },
+    { key: "landingPageViews", label: labels.metricLandingPageViews, kind: "number" },
+    { key: "ctrAll", label: labels.metricCtrAll, kind: "percent" },
+    { key: "cpcAll", label: labels.metricCpcAll, kind: "money" },
+    { key: "cpcLink", label: labels.metricCpcLink, kind: "money" },
+    { key: "cpm", label: labels.metricCpm, kind: "money" },
+  ];
+}
+
+function SupplementaryMetricCard({
+  metric,
+  metrics,
+  comparison,
+  statuses,
+  locale,
+  currency,
+  labels,
+  onChange,
+}: {
+  metric: AdvertisingSupplementaryMetricKey;
+  metrics: AdvertisingMetricSnapshot;
+  comparison: ComparisonSummary | null;
+  statuses: readonly MetricStatus[];
+  locale: string;
+  currency: string;
+  labels: AdvertisingReportingDashboardLabels;
+  onChange: (value: AdvertisingSupplementaryMetricKey) => void;
+}) {
+  const options = supplementaryMetricDefinitions(labels);
+  const definition = options.find((option) => option.key === metric) ?? options[0]!;
+  const status = metricStatus(statuses, metric, labels);
+  const delta = comparison?.deltas[metric];
+  return (
+    <div
+      className="border-border-subtle bg-surface-subtle flex flex-col gap-3 rounded-[var(--radius-control)] border p-3 sm:flex-row sm:items-center sm:justify-between"
+      data-testid="advertising-reporting-supplementary-metric"
+    >
+      <div className="min-w-0">
+        <p className="text-label text-fg-primary font-semibold">{labels.supplementaryMetric}</p>
+        <p className="text-label text-fg-muted mt-1">{labels.supplementaryMetricDescription}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-3 sm:justify-end">
+        <label className="sr-only" htmlFor="advertising-supplementary-metric">
+          {labels.selectSupplementaryMetric}
+        </label>
+        <select
+          id="advertising-supplementary-metric"
+          value={metric}
+          onChange={(event) => onChange(event.target.value as AdvertisingSupplementaryMetricKey)}
+          className="border-border bg-surface text-label text-fg-primary focus-visible:ring-focus-ring min-h-11 min-w-[12rem] rounded-[var(--radius-control)] border px-3 font-semibold focus:outline-none focus-visible:ring-2"
+        >
+          {options.map((option) => (
+            <option key={option.key} value={option.key}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <div className="min-w-[9rem] text-end">
+          <p className="text-label text-fg-muted">{definition.label}</p>
+          <p className="text-title-card text-fg-primary font-semibold tabular-nums">
+            {formatMetricValue(
+              metrics[metric],
+              definition.kind,
+              locale,
+              currency,
+              labels.unavailable,
+            )}
+          </p>
+          <div className="text-label mt-1 flex flex-wrap items-center justify-end gap-2">
+            <span className="text-fg-muted">{status?.label ?? labels.unavailable}</span>
+            {delta ? (
+              <span className={deltaState(delta.favorable)}>
+                {formatDelta(delta.percent, locale)} {deltaLabel(delta.favorable, labels)}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

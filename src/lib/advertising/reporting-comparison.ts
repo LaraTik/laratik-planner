@@ -53,10 +53,16 @@ export function buildComparisonSummary(args: {
   const keys: readonly AdvertisingMetricKey[] = [
     "spend",
     "impressions",
+    "allClicks",
+    "linkClicks",
+    "outboundClicks",
+    "landingPageViews",
     "results",
     "costPerResult",
     "ctrAll",
+    "ctrLink",
     "cpcAll",
+    "cpcLink",
     "cpm",
     "reach",
     "frequency",
@@ -68,7 +74,9 @@ export function buildComparisonSummary(args: {
     const absolute = current - previous;
     const percent = absolute / Math.abs(previous);
     const favorable =
-      key === "costPerResult" || key === "cpcAll" || key === "cpm" ? percent <= 0 : percent >= 0;
+      key === "costPerResult" || key === "cpcAll" || key === "cpcLink" || key === "cpm"
+        ? percent <= 0
+        : percent >= 0;
     deltas[key] = { absolute, percent, favorable };
   }
   return {
