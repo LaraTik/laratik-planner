@@ -109,6 +109,43 @@ test.describe("Community & Inbox", () => {
     );
   });
 
+  test("emergency-stop surfaces are accessible and fit at supported widths in both locales", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    for (const locale of ["en", "ar"] as const) {
+      await seedCommunitySession(page, locale);
+      for (const width of [1440, 1280, 1024, 768, 375]) {
+        await page.setViewportSize({ width, height: width === 375 ? 812 : 900 });
+        for (const section of ["automations", "settings"] as const) {
+          const route = `${BASE}/${section}`;
+          await page.goto(route, { waitUntil: "domcontentloaded" });
+          await page.waitForLoadState("networkidle");
+          await expect(page.locator("main")).toBeVisible();
+          await expect(page.locator("html")).toHaveAttribute("lang", locale);
+          await expect(page.locator("html")).toHaveAttribute(
+            "dir",
+            locale === "ar" ? "rtl" : "ltr",
+          );
+          await expect(page.getByTestId("community-emergency-stop-toggle")).toBeVisible();
+
+          const overflow = await page.evaluate(
+            () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+          );
+          expect(overflow, `${route} overflows at ${width}px (${locale})`).toBe(false);
+
+          const results = await new AxeBuilder({ page })
+            .withTags(["wcag2a", "wcag2aa", "wcag22aa"])
+            .analyze();
+          const serious = results.violations.filter(
+            (violation) => violation.impact === "critical" || violation.impact === "serious",
+          );
+          expect(serious, `${route} has serious accessibility issues (${locale})`).toEqual([]);
+        }
+      }
+    }
+  });
+
   test("actions without an implemented or validated write path remain disabled", async ({
     page,
   }) => {
