@@ -60,6 +60,25 @@ by the report. Metadata is derived from the authorized account/report and is
 never a substitute for authorization. Missing values remain `Not available`;
 they are not converted to zeroes.
 
+The export menu also provides XLSX. It is generated server-side from the same
+authorized projection as CSV and keeps the metadata preamble, metric
+definitions, data-health notes, and local taxonomy columns in the first
+worksheet. The XLSX writer is intentionally dependency-free and bounded to a
+single report sheet.
+
+Report sharing creates a short-lived token whose SHA-256 digest is stored in
+the tenant database. The link is only a locator: the recipient must still be
+signed in, belong to the workspace, and hold an internal reporting role. An
+expired, revoked, cross-agency, or malformed share resolves to the same
+not-found boundary as other protected report routes.
+
+Local taxonomy labels are workspace-owned metadata, never provider mutations.
+Campaigns, ad sets, ads, and creatives can receive `brand`, `platform`,
+`objective`, `topic`, `language`, or `month` labels. The creative explorer
+exposes the first editing surface for these labels; search and exports retain
+the labels as context. Provider names and delivery state are not silently
+rewritten.
+
 The Campaigns explorer keeps its sort and visible metric columns in the typed
 URL view configuration. The state survives section navigation, filter submits,
 exports, reloads, and saved-view restoration. At least one metric column must

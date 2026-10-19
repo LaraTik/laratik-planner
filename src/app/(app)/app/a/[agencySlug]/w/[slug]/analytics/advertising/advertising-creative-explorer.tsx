@@ -17,6 +17,10 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { formatCurrency, formatPercent } from "@/lib/i18n/format-locale";
 import type { CreativeFatigueInsight } from "@/lib/advertising/intelligence";
 import type { AdvertisingAdSummary } from "@/lib/advertising/reporting-view";
+import {
+  AdvertisingTaxonomyEditor,
+  type AdvertisingLocalTagView,
+} from "./advertising-taxonomy-editor";
 
 export type AdvertisingCreativeExplorerLabels = {
   title: string;
@@ -47,6 +51,17 @@ export type AdvertisingCreativeExplorerLabels = {
   noHeadline: string;
   noBody: string;
   close: string;
+  taxonomyTitle: string;
+  taxonomyAdd: string;
+  taxonomyRemove: string;
+  taxonomyPlaceholder: string;
+  taxonomyTopic: string;
+  taxonomyBrand: string;
+  taxonomyPlatform: string;
+  taxonomyObjective: string;
+  taxonomyLanguage: string;
+  taxonomyMonth: string;
+  taxonomyError: string;
 };
 
 export function AdvertisingCreativeExplorer({
@@ -55,12 +70,18 @@ export function AdvertisingCreativeExplorer({
   currency,
   locale,
   labels,
+  workspaceSlug,
+  accountId,
+  localTagsByEntity,
 }: {
   ads: readonly AdvertisingAdSummary[];
   fatigue: readonly CreativeFatigueInsight[];
   currency: string | null;
   locale: string;
   labels: AdvertisingCreativeExplorerLabels;
+  workspaceSlug: string;
+  accountId: string;
+  localTagsByEntity: Readonly<Record<string, readonly AdvertisingLocalTagView[]>>;
 }) {
   const [selectedAdId, setSelectedAdId] = useState<string | null>(null);
   const fatigueByAdId = useMemo(
@@ -94,6 +115,9 @@ export function AdvertisingCreativeExplorer({
                   currency={currency}
                   locale={locale}
                   labels={labels}
+                  workspaceSlug={workspaceSlug}
+                  accountId={accountId}
+                  localTags={localTagsByEntity[`ad:${ad.adId}`] ?? []}
                   onOpen={() => setSelectedAdId(ad.adId)}
                 />
               );
@@ -135,6 +159,9 @@ function CreativeCard({
   currency,
   locale,
   labels,
+  workspaceSlug,
+  accountId,
+  localTags,
   onOpen,
 }: {
   ad: AdvertisingAdSummary;
@@ -142,6 +169,9 @@ function CreativeCard({
   currency: string | null;
   locale: string;
   labels: AdvertisingCreativeExplorerLabels;
+  workspaceSlug: string;
+  accountId: string;
+  localTags: readonly AdvertisingLocalTagView[];
   onOpen: () => void;
 }) {
   const metadata = ad.creativeMetadata;
@@ -178,6 +208,26 @@ function CreativeCard({
           {labels.openDetails}
         </Button>
       </div>
+      <AdvertisingTaxonomyEditor
+        workspaceSlug={workspaceSlug}
+        accountId={accountId}
+        entityType="ad"
+        entityId={ad.adId}
+        initialTags={localTags}
+        labels={{
+          title: labels.taxonomyTitle,
+          add: labels.taxonomyAdd,
+          remove: labels.taxonomyRemove,
+          placeholder: labels.taxonomyPlaceholder,
+          topic: labels.taxonomyTopic,
+          brand: labels.taxonomyBrand,
+          platform: labels.taxonomyPlatform,
+          objective: labels.taxonomyObjective,
+          language: labels.taxonomyLanguage,
+          month: labels.taxonomyMonth,
+          error: labels.taxonomyError,
+        }}
+      />
     </article>
   );
 }

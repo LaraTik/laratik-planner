@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import {
   advertisingReportCacheKey,
   buildScopedAdvertisingReport,
@@ -7,6 +8,7 @@ import {
 } from "./reporting-service";
 import type { DataHealthSummary } from "./reporting-health";
 import { ADVERTISING_METRIC_DEFINITIONS } from "./reporting-metrics";
+import { rowsToXlsx } from "@/lib/exports/xlsx";
 
 export type AdvertisingReportSurface =
   | "workspace_dashboard"
@@ -15,6 +17,7 @@ export type AdvertisingReportSurface =
   | "ad_detail"
   | "aggregate"
   | "csv_export"
+  | "xlsx_export"
   | "pdf_export"
   | "background_report"
   | "ai_context"
@@ -29,6 +32,7 @@ const SURFACE_OPERATIONS: Record<AdvertisingReportSurface, SurfaceOperation> = {
   ad_detail: "report_read",
   aggregate: "report_read",
   csv_export: "export",
+  xlsx_export: "export",
   pdf_export: "export",
   background_report: "report_read",
   ai_context: "ai_context",
@@ -87,6 +91,7 @@ export type AdvertisingCsvExportMetadata = {
   readonly filters: Readonly<Record<string, string | null>>;
   readonly dataHealth: DataHealthSummary;
   readonly attributionSettings: string;
+  readonly localTagsByEntity?: Readonly<Record<string, readonly string[]>>;
 };
 
 /** Export serializers accept only an already-authorized projection. */
@@ -120,9 +125,9 @@ export function advertisingCsvFromReport(
           ([key, value]) => `# filter_${key},${csvCell(value ?? "All")}`,
         ),
         "",
-        "campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks",
+        "campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks,campaign_tags,ad_tags",
       ]
-    : ["campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks"];
+    : ["campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks,campaign_tags,ad_tags"];
   for (const row of report.rows) {
     lines.push(
       [
@@ -133,12 +138,72 @@ export function advertisingCsvFromReport(
         row.spend,
         row.impressions,
         row.clicks,
+        metadata?.localTagsByEntity?.[`campaign:${row.campaignId}`]?.join("; ") ?? "",
+        row.adId ? (metadata?.localTagsByEntity?.[`ad:${row.adId}`]?.join("; ") ?? "") : "",
       ]
         .map(csvCell)
         .join(","),
     );
   }
   return lines.join("\n");
+}
+
+/** XLSX export uses the same authorized rows and metadata as CSV. */
+export function advertisingXlsxFromReport(
+  report: ScopedAdvertisingSurfaceReport,
+  metadata: AdvertisingCsvExportMetadata,
+): Buffer {
+  if (
+    !report.authorized ||
+    (report.operation !== "export" && report.surface !== "background_report")
+  ) {
+    return Buffer.alloc(0);
+  }
+  const rows: (string | number | null)[][] = [
+    ["LaraTik Advertising Reporting 2.0 export"],
+    ["Account ID", metadata.accountId],
+    ["Account name", metadata.accountName],
+    ["Date range", `${metadata.since} to ${metadata.until}`],
+    ["Timezone", metadata.timezone ?? "Not available"],
+    ["Currency", metadata.currency ?? "Not available"],
+    ["Data health", metadata.dataHealth.state],
+    ["Coverage", metadata.dataHealth.coverage],
+    ["Data health issues", metadata.dataHealth.issues.join("; ") || "none"],
+    ["Attribution settings", metadata.attributionSettings],
+    [
+      "Metric definitions",
+      ADVERTISING_METRIC_DEFINITIONS.map(
+        (definition) => `${definition.label} (${definition.key}): ${definition.formula}`,
+      ).join(" | "),
+    ],
+    ...Object.entries(metadata.filters).map(([key, value]) => [`Filter: ${key}`, value ?? "All"]),
+    [],
+    [
+      "campaign_id",
+      "ad_set_id",
+      "ad_id",
+      "date",
+      "spend",
+      "impressions",
+      "clicks",
+      "campaign_tags",
+      "ad_tags",
+    ],
+  ];
+  rows.push(
+    ...report.rows.map((row) => [
+      row.campaignId,
+      row.adSetId ?? "",
+      row.adId ?? "",
+      row.date,
+      row.spend,
+      row.impressions,
+      row.clicks,
+      metadata.localTagsByEntity?.[`campaign:${row.campaignId}`]?.join("; ") ?? "",
+      row.adId ? (metadata.localTagsByEntity?.[`ad:${row.adId}`]?.join("; ") ?? "") : "",
+    ]),
+  );
+  return rowsToXlsx(rows);
 }
 
 export function advertisingAiContextFromReport(report: ScopedAdvertisingSurfaceReport) {

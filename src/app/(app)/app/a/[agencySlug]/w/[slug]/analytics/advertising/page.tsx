@@ -85,8 +85,11 @@ import {
   type AdvertisingHierarchyExplorerLabels,
 } from "./advertising-hierarchy-explorer";
 import { AdvertisingSaveViewDialog } from "./advertising-save-view-dialog";
+import { AdvertisingShareDialog } from "./advertising-share-dialog";
+import type { AdvertisingLocalTagView } from "./advertising-taxonomy-editor";
 import { AdvertisingFilterDrawer } from "./advertising-filter-drawer";
 import { advertisingReportViewConfigFromSearch } from "@/lib/advertising/reporting-view-config";
+import { listAdvertisingLocalTags } from "@/lib/advertising/reporting-metadata-service";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -277,6 +280,25 @@ export default async function AdvertisingAnalyticsPage({
   }
 
   const view = buildAdvertisingReportView(result.report.rows, result.objects);
+  const activeSection = normalizeReportSection(firstQueryValue(query.section));
+  const localTags =
+    activeSection === "campaigns" || activeSection === "creatives"
+      ? await listAdvertisingLocalTags({
+          workspaceId: workspace.id,
+          accountId: selectedAccount.id,
+        })
+      : [];
+  const localTagsByEntity: Record<string, AdvertisingLocalTagView[]> = {};
+  for (const tag of localTags) {
+    const key = `${tag.entityType}:${tag.entityId}`;
+    (localTagsByEntity[key] ??= []).push({
+      id: tag.id,
+      entityType: tag.entityType as AdvertisingLocalTagView["entityType"],
+      entityId: tag.entityId,
+      labelType: tag.labelType as AdvertisingLocalTagView["labelType"],
+      tagValue: tag.tagValue,
+    });
+  }
   const primaryMetrics = aggregateAdvertisingMetrics(result.report.rows);
   const reportMetricStatuses = metricStatuses(primaryMetrics, {
     healthState: result.dataHealth.state,
@@ -325,13 +347,15 @@ export default async function AdvertisingAnalyticsPage({
   const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
   const objectiveFilter = firstQueryValue(query.objective) ?? "";
   const statusFilter = firstQueryValue(query.status) ?? "";
-  const activeSection = normalizeReportSection(firstQueryValue(query.section));
   const visibleCampaigns = view.campaigns.filter((campaign) => {
     const searchMatch =
       campaignSearch.length === 0 ||
       (String(campaign.name ?? "") + " " + campaign.campaignId)
         .toLowerCase()
-        .includes(campaignSearch);
+        .includes(campaignSearch) ||
+      (localTagsByEntity[`campaign:${campaign.campaignId}`] ?? []).some((tag) =>
+        tag.tagValue.toLowerCase().includes(campaignSearch),
+      );
     const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
     const statusMatch = !statusFilter || campaign.status === statusFilter;
     return searchMatch && objectiveMatch && statusMatch;
@@ -375,7 +399,16 @@ export default async function AdvertisingAnalyticsPage({
   });
   const campaignPage = paginate(sortedVisibleCampaigns, firstQueryValue(query.campaignPage));
   const adSetPage = paginate(view.adSets, firstQueryValue(query.adSetPage));
-  const adPage = paginate(view.ads, firstQueryValue(query.adPage));
+  const visibleAds = view.ads.filter((ad) => {
+    if (!campaignSearch) return true;
+    return (
+      `${ad.name ?? ""} ${ad.adId}`.toLowerCase().includes(campaignSearch) ||
+      (localTagsByEntity[`ad:${ad.adId}`] ?? []).some((tag) =>
+        tag.tagValue.toLowerCase().includes(campaignSearch),
+      )
+    );
+  });
+  const adPage = paginate(visibleAds, firstQueryValue(query.adPage));
   const clientReportHref = `${basePath}?${new URLSearchParams({
     accountId: selectedAccount.id,
     since,
@@ -426,7 +459,7 @@ export default async function AdvertisingAnalyticsPage({
     workspaceId: workspace.id,
     since,
     until,
-    surface: "csv_export",
+    surface: "xlsx_export",
     compare: comparisonMode,
     section: activeSection,
     search: campaignSearch,
@@ -446,14 +479,42 @@ export default async function AdvertisingAnalyticsPage({
   if (compareSince) exportParams.set("compareSince", compareSince);
   if (compareUntil) exportParams.set("compareUntil", compareUntil);
   const reportExportHref = `/api/advertising/report?${exportParams.toString()}`;
+  const csvExportParams = new URLSearchParams(exportParams);
+  csvExportParams.set("surface", "csv_export");
+  const csvExportHref = `/api/advertising/report?${csvExportParams.toString()}`;
   const reportHeaderActions = (
     <>
       <Button asChild variant="secondary" size="sm">
-        <a href={reportExportHref} download>
+        <a href={csvExportHref} download>
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("advertising.reporting.exportReport")}
+          {t("advertising.reporting.exportCsv")}
         </a>
       </Button>
+      <Button asChild variant="secondary" size="sm">
+        <a href={reportExportHref} download>
+          <Download className="h-4 w-4" aria-hidden="true" />
+          {t("advertising.reporting.exportXlsx")}
+        </a>
+      </Button>
+      <AdvertisingShareDialog
+        workspaceSlug={slug}
+        viewConfig={savedViewConfig}
+        labels={{
+          share: t("advertising.reporting.shareReport"),
+          title: t("advertising.reporting.shareReportTitle"),
+          description: t("advertising.reporting.shareReportDescription"),
+          expires: t("advertising.reporting.shareExpires"),
+          sevenDays: t("advertising.reporting.shareSevenDays"),
+          thirtyDays: t("advertising.reporting.shareThirtyDays"),
+          cancel: t("common.cancel"),
+          create: t("advertising.reporting.createShareLink"),
+          creating: t("common.saving"),
+          copy: t("advertising.reporting.copyShareLink"),
+          copied: t("advertising.reporting.shareLinkCopied"),
+          error: t("advertising.reporting.shareError"),
+          authenticated: t("advertising.reporting.shareAuthenticated"),
+        }}
+      />
       <AdvertisingSaveViewDialog
         workspaceSlug={slug}
         viewConfig={savedViewConfig}
@@ -641,7 +702,7 @@ export default async function AdvertisingAnalyticsPage({
       >
         {renderFilterFields("advertising-report-mobile")}
         <a
-          href={reportExportHref}
+          href={csvExportHref}
           className="border-border text-label text-fg-primary focus-visible:ring-focus-ring inline-flex min-h-11 items-center justify-center rounded-[var(--radius-control)] border px-4 font-semibold focus:outline-none focus-visible:ring-2"
           download
         >
@@ -668,7 +729,7 @@ export default async function AdvertisingAnalyticsPage({
           download
         >
           <Download className="h-4 w-4" aria-hidden="true" />
-          {t("advertising.reporting.exportCsv")}
+          {t("advertising.reporting.exportXlsx")}
         </a>
       </form>
       <p className="text-label text-fg-muted -mt-3 inline-flex items-center gap-2">
@@ -885,7 +946,7 @@ export default async function AdvertisingAnalyticsPage({
                 key={`${savedViewConfig.sort ?? "spend"}:${savedViewConfig.visibleColumns?.join(",") ?? "all"}`}
                 campaigns={campaignPage.items}
                 adSets={view.adSets}
-                ads={view.ads}
+                ads={visibleAds}
                 currency={selectedAccount.currency}
                 locale={code}
                 labels={advertisingHierarchyExplorerLabels(t)}
@@ -1222,6 +1283,9 @@ export default async function AdvertisingAnalyticsPage({
                 currency={selectedAccount.currency}
                 locale={code}
                 labels={advertisingCreativeExplorerLabels(t)}
+                workspaceSlug={slug}
+                accountId={selectedAccount.id}
+                localTagsByEntity={localTagsByEntity}
               />
               <Card data-testid="advertising-reporting-promoted-posts">
                 <CardHeader>
@@ -1442,6 +1506,17 @@ function advertisingCreativeExplorerLabels(
     noHeadline: t("advertising.reporting.creativeExplorerNoHeadline"),
     noBody: t("advertising.reporting.creativeExplorerNoBody"),
     close: t("common.close"),
+    taxonomyTitle: t("advertising.reporting.taxonomyTitle"),
+    taxonomyAdd: t("advertising.reporting.taxonomyAdd"),
+    taxonomyRemove: t("advertising.reporting.taxonomyRemove"),
+    taxonomyPlaceholder: t("advertising.reporting.taxonomyPlaceholder"),
+    taxonomyTopic: t("advertising.reporting.taxonomyTopic"),
+    taxonomyBrand: t("advertising.reporting.taxonomyBrand"),
+    taxonomyPlatform: t("advertising.reporting.taxonomyPlatform"),
+    taxonomyObjective: t("advertising.reporting.taxonomyObjective"),
+    taxonomyLanguage: t("advertising.reporting.taxonomyLanguage"),
+    taxonomyMonth: t("advertising.reporting.taxonomyMonth"),
+    taxonomyError: t("advertising.reporting.taxonomyError"),
   };
 }
 

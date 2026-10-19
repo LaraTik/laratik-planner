@@ -1,5 +1,17 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-19 Advertising Reporting P3 completion checkpoint** — Reporting
+> exports now include a server-generated XLSX alongside CSV, with the selected
+> filters, metric definitions, data-health notes, attribution semantics, and
+> local taxonomy labels preserved in the export. Authenticated tenant-scoped
+> share links resolve only for signed-in workspace members with reporting
+> access. Workspace-owned local labels support brand, platform, objective,
+> topic, language, and month classification without changing Meta objects; the
+> Creatives section provides the first accessible label editor. Migration 0089
+> adds the tag and share persistence with replay-safe DDL. This remains
+> **Implemented**, not **Tested/Verified**, until the exact clean commit has
+> migration, bilingual browser, accessibility, visual, and release evidence.
+
 > **2026-10-19 Advertising Action Center persistence checkpoint** — Action
 > Center decisions are now durable per authenticated workspace member, ad
 > account, signal, entity, and reporting period. Review, dismiss-with-reason,

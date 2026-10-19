@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   advertisingAiContextFromReport,
   advertisingCsvFromReport,
+  advertisingXlsxFromReport,
   buildAdvertisingSurfaceReport,
 } from "@/lib/advertising/reporting-boundary";
 import { createAdvertisingIsolationFixture } from "@/lib/advertising/fixtures";
@@ -262,5 +263,57 @@ describe("advertising reporting boundary", () => {
     expect(csv).toContain("# metric_definitions,");
     expect(csv).toContain("campaign_id,ad_set_id,ad_id,date,spend,impressions,clicks");
     expect(csv).toContain("campaign-visible");
+  });
+
+  it("exports the same authorized projection as XLSX with local-label columns", () => {
+    const fixture = createAdvertisingIsolationFixture();
+    const report = buildAdvertisingSurfaceReport(
+      baseArgs({
+        surface: "xlsx_export",
+        scope: {
+          principal: fixture.principals[0]!,
+          account: fixture.accounts[0]!,
+          connection: fixture.connections[0]!,
+          visibilityGrants: [
+            { ...fixture.grants[0]!, capability: "export_reports", campaignIds: null },
+          ],
+          financialAuthorities: [fixture.financialAuthorities[0]!],
+        },
+        facts: [
+          {
+            accountId: "shared-account",
+            campaignId: "campaign-visible",
+            date: "2026-10-01",
+            spend: 1,
+            impressions: 2,
+            clicks: 1,
+          },
+        ],
+      }),
+    );
+    const xlsx = advertisingXlsxFromReport(report, {
+      accountId: "shared-account",
+      accountName: "Shared account",
+      since: "2026-10-01",
+      until: "2026-10-02",
+      timezone: "Europe/Berlin",
+      currency: "EUR",
+      filters: {},
+      dataHealth: {
+        state: "complete",
+        coverage: "complete",
+        syncStatus: "succeeded",
+        freshness: "fresh",
+        lastSuccessfulSyncAt: "2026-10-02T00:00:00.000Z",
+        since: "2026-10-01",
+        until: "2026-10-02",
+        timezone: "Europe/Berlin",
+        currency: "EUR",
+        issues: [],
+      },
+      attributionSettings: "provider resultType",
+      localTagsByEntity: { "campaign:campaign-visible": ["Boundaries"] },
+    });
+    expect(xlsx.subarray(0, 2).toString()).toBe("PK");
   });
 });

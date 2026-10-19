@@ -5,12 +5,14 @@ import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import {
   advertisingAiContextFromReport,
   advertisingCsvFromReport,
+  advertisingXlsxFromReport,
 } from "@/lib/advertising/reporting-boundary";
 import { loadAdvertisingReport } from "@/lib/advertising/reporting-query";
 import { aggregateAdvertisingMetrics } from "@/lib/advertising/reporting-metrics";
 import { db } from "@/lib/db";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
+import { listAdvertisingLocalTags } from "@/lib/advertising/reporting-metadata-service";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -39,6 +41,7 @@ const querySchema = z
       "ad_detail",
       "aggregate",
       "csv_export",
+      "xlsx_export",
       "ai_context",
       "financial_dashboard",
     ]),
@@ -115,7 +118,18 @@ export async function GET(request: NextRequest) {
 
   if (parsed.data.surface === "csv_export") {
     const snapshot = aggregateAdvertisingMetrics(result.report.rows);
-    const csv = advertisingCsvFromReport(result.report, {
+    const localTags = parsed.data.workspaceId
+      ? await listAdvertisingLocalTags({
+          workspaceId: parsed.data.workspaceId,
+          accountId: result.account.id,
+        })
+      : [];
+    const localTagsByEntity: Record<string, string[]> = {};
+    for (const tag of localTags) {
+      const key = `${tag.entityType}:${tag.entityId}`;
+      (localTagsByEntity[key] ??= []).push(tag.tagValue);
+    }
+    const metadata = {
       accountId: result.account.id,
       accountName: result.account.name,
       since: parsed.data.since,
@@ -140,13 +154,66 @@ export async function GET(request: NextRequest) {
         snapshot.results === null
           ? "Objective-aware results unavailable or mixed result types; no heterogeneous totals were combined."
           : "Objective-aware results use the provider resultType; action metrics use provider resultActions.",
-    });
+      localTagsByEntity,
+    };
+    const csv = advertisingCsvFromReport(result.report, metadata);
     if (!csv) return errorResponse("advertising_report_forbidden", 403);
     return new NextResponse(csv, {
       headers: {
         ...mutatingApiHeaders(),
         "Content-Type": "text/csv; charset=utf-8",
         "Content-Disposition": `attachment; filename="advertising-${parsed.data.since}-${parsed.data.until}.csv"`,
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
+  }
+
+  if (parsed.data.surface === "xlsx_export") {
+    const snapshot = aggregateAdvertisingMetrics(result.report.rows);
+    const localTags = parsed.data.workspaceId
+      ? await listAdvertisingLocalTags({
+          workspaceId: parsed.data.workspaceId,
+          accountId: result.account.id,
+        })
+      : [];
+    const localTagsByEntity: Record<string, string[]> = {};
+    for (const tag of localTags) {
+      const key = `${tag.entityType}:${tag.entityId}`;
+      (localTagsByEntity[key] ??= []).push(tag.tagValue);
+    }
+    const xlsx = advertisingXlsxFromReport(result.report, {
+      accountId: result.account.id,
+      accountName: result.account.name,
+      since: parsed.data.since,
+      until: parsed.data.until,
+      timezone: result.account.timezone,
+      currency: result.account.currency,
+      filters: {
+        section: parsed.data.section ?? null,
+        search: parsed.data.search ?? null,
+        objective: parsed.data.objective ?? null,
+        status: parsed.data.status ?? null,
+        comparison: parsed.data.compare ?? null,
+        comparisonSince: parsed.data.compareSince ?? null,
+        comparisonUntil: parsed.data.compareUntil ?? null,
+        trendMetricA: parsed.data.trendMetricA ?? null,
+        trendMetricB: parsed.data.trendMetricB ?? null,
+        trendGranularity: parsed.data.trendGranularity ?? null,
+        supplementaryMetric: parsed.data.supplementaryMetric ?? null,
+      },
+      dataHealth: result.dataHealth,
+      attributionSettings:
+        snapshot.results === null
+          ? "Objective-aware results unavailable or mixed result types; no heterogeneous totals were combined."
+          : "Objective-aware results use the provider resultType; action metrics use provider resultActions.",
+      localTagsByEntity,
+    });
+    if (!xlsx.length) return errorResponse("advertising_report_forbidden", 403);
+    return new NextResponse(new Uint8Array(xlsx), {
+      headers: {
+        ...mutatingApiHeaders(),
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename="advertising-${parsed.data.since}-${parsed.data.until}.xlsx"`,
         "Cache-Control": "no-store, max-age=0",
       },
     });
