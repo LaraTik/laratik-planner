@@ -387,6 +387,7 @@
       "issueStaleData": "The latest successful synchronization is outside the freshness window.",
       "delayed": "Delayed",
       "primaryMetrics": "Executive overview",
+      "resultDefinition": "Definition",
       "comparison": "Compared with",
       "noComparison": "Insufficient comparison data",
       "performanceTrend": "Performance over time",

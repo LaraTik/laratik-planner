@@ -77,8 +77,6 @@ export type AdvertisingPromotedPostSummary = AdvertisingMetricTotals & {
 
 function totals(rows: readonly AdvertisingFact[]): AdvertisingMetricTotals {
   const metrics = aggregateAdvertisingMetrics(rows);
-  const resultRows = rows.filter((row) => row.results !== null && row.results !== undefined);
-  const resultTypes = new Set(resultRows.map((row) => row.resultType ?? null));
   return {
     spend: metrics.spend,
     impressions: metrics.impressions,
@@ -91,7 +89,7 @@ function totals(rows: readonly AdvertisingFact[]): AdvertisingMetricTotals {
     cpm: metrics.cpm,
     reach: metrics.reach,
     frequency: metrics.frequency,
-    resultType: resultTypes.size === 1 ? ([...resultTypes][0] ?? null) : null,
+    resultType: metrics.resultType,
   };
 }
 

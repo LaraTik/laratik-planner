@@ -66,7 +66,9 @@ attribution window without crowding the first scan. A missing or stale provider
 value remains unavailable or delayed; it is never rendered as a zero or a fabricated estimate. Objective
 results follow the same rule: rollups only sum rows sharing one result type,
 while mixed objective actions keep their raw evidence and show an unavailable
-aggregate.
+aggregate. The result definition is carried into the KPI label and explorer
+rows when the provider supplies one, so “Results” is never presented as an
+unqualified heterogeneous total.
 
 New reporting surfaces should reuse:
 

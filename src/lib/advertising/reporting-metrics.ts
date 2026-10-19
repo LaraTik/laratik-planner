@@ -36,6 +36,7 @@ export type AdvertisingMetricSnapshot = {
   readonly outboundClicks: number | null;
   readonly landingPageViews: number | null;
   readonly results: number | null;
+  readonly resultType: string | null;
   readonly costPerResult: number | null;
   readonly ctrAll: number | null;
   readonly ctrLink: number | null;
@@ -244,6 +245,7 @@ export function aggregateAdvertisingMetrics(
     compatibleResults && resultValues.every((value) => typeof value === "number")
       ? resultValues.reduce((sum, value) => sum + (value ?? 0), 0)
       : null;
+  const resultType = compatibleResults ? ([...resultTypes][0] ?? null) : null;
   const reach = uniqueReach(rows);
   return {
     spend,
@@ -255,6 +257,7 @@ export function aggregateAdvertisingMetrics(
     outboundClicks,
     landingPageViews,
     results,
+    resultType,
     costPerResult: results && results > 0 ? spend / results : null,
     ctrAll: impressions > 0 ? allClicks / impressions : null,
     ctrLink: linkClicks !== null && impressions > 0 ? linkClicks / impressions : null,

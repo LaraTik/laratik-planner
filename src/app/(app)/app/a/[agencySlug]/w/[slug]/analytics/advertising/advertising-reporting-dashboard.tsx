@@ -109,6 +109,7 @@ export type AdvertisingReportingDashboardLabels = {
   reviewEvidence: string;
   metricSpend: string;
   metricResults: string;
+  resultDefinition: string;
   metricCostPerResult: string;
   metricReach: string;
   metricCtr: string;
@@ -187,7 +188,7 @@ export function AdvertisingReportingDashboard(props: {
     },
     {
       key: "results",
-      label: labels.metricResults,
+      label: resultLabel(labels.metricResults, labels.resultDefinition, props.metrics.resultType),
       value: props.metrics.results,
       kind: "number",
       status: metricStatus(props.statuses, "results", labels),
@@ -328,11 +329,9 @@ export function AdvertisingReportingDashboard(props: {
               className="border-border-subtle bg-surface-subtle rounded-[var(--radius-control)] border p-3"
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="text-label text-fg-primary font-semibold">{status.key}</span>
-                <span
-                  className={`text-label font-semibold ${status.availability === "available" ? "text-success" : "text-fg-muted"}`}
-                >
-                  {status.availability === "available" ? labels.available : labels.unavailable}
+                <span className="text-label text-fg-primary font-semibold">{status.label}</span>
+                <span className="text-label text-fg-muted font-semibold">
+                  {metricAvailabilityLabel(status.availability, labels)}
                 </span>
               </div>
               <p className="text-label text-fg-muted mt-2">{status.formula}</p>
@@ -961,16 +960,30 @@ function ObjectiveMix({
   currency: string;
 }) {
   const total = campaigns.reduce((sum, campaign) => sum + campaign.spend, 0);
-  const values = new Map<string, { spend: number; results: number | null }>();
+  const values = new Map<
+    string,
+    { spend: number; results: number | null; resultType: string | null }
+  >();
   for (const campaign of campaigns) {
     const key = campaign.objective ?? labels.unknownObjective;
-    const current = values.get(key) ?? { spend: 0, results: 0 };
+    const current = values.get(key);
+    if (!current) {
+      values.set(key, {
+        spend: campaign.spend,
+        results: campaign.results ?? null,
+        resultType: campaign.resultType ?? null,
+      });
+      continue;
+    }
+    const compatibleResultType =
+      current.resultType !== null && current.resultType === (campaign.resultType ?? null);
     values.set(key, {
       spend: current.spend + campaign.spend,
       results:
-        current.results === null || campaign.results === null
-          ? null
-          : current.results + campaign.results,
+        compatibleResultType && current.results !== null && campaign.results !== null
+          ? current.results + campaign.results
+          : null,
+      resultType: compatibleResultType ? current.resultType : null,
     });
   }
   return (
@@ -1027,7 +1040,7 @@ function ObjectiveMix({
                         {value.results === null
                           ? labels.unavailable
                           : `${new Intl.NumberFormat(locale).format(value.results)} ${labels.metricResults}`}{" "}
-                        ·{" "}
+                        {value.resultType ? <bdi dir="ltr">· {value.resultType}</bdi> : null} ·{" "}
                         {costPerResult === null
                           ? labels.unavailable
                           : new Intl.NumberFormat(locale, {
@@ -1052,7 +1065,7 @@ function ObjectiveDonut({
   values,
   total,
 }: {
-  values: readonly [string, { spend: number; results: number | null }][];
+  values: readonly [string, { spend: number; results: number | null; resultType: string | null }][];
   total: number;
 }) {
   const radius = 34;
@@ -1215,6 +1228,10 @@ function confidenceLabel(
   return confidence === "strong" ? labels.confidenceGuarded : labels.confidenceLimited;
 }
 
+function resultLabel(label: string, definitionLabel: string, resultType: string | null): string {
+  return resultType ? `${label} · ${definitionLabel}: ${resultType}` : label;
+}
+
 function CampaignExplorer({
   campaigns,
   labels,
@@ -1262,9 +1279,16 @@ function CampaignExplorer({
                   }).format(campaign.spend)}
                 </td>
                 <td className="px-3 py-3 text-end tabular-nums">
-                  {campaign.results === null
-                    ? labels.unavailable
-                    : new Intl.NumberFormat(locale).format(campaign.results)}
+                  <span className="block">
+                    {campaign.results === null
+                      ? labels.unavailable
+                      : new Intl.NumberFormat(locale).format(campaign.results)}
+                  </span>
+                  {campaign.resultType ? (
+                    <bdi className="text-label text-fg-muted block" dir="ltr">
+                      {campaign.resultType}
+                    </bdi>
+                  ) : null}
                 </td>
                 <td className="px-5 py-3 text-start">{campaign.status ?? labels.unavailable}</td>
               </tr>

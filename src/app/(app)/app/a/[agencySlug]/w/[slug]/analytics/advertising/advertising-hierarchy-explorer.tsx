@@ -485,9 +485,16 @@ function MetricCells({
       ) : null}
       {visibleColumns.has("results") ? (
         <td className="px-4 py-3 text-end tabular-nums">
-          {entity.results === null
-            ? labels.unavailable
-            : formatNumber(entity.results, locale as "en" | "ar")}
+          <span className="block">
+            {entity.results === null
+              ? labels.unavailable
+              : formatNumber(entity.results, locale as "en" | "ar")}
+          </span>
+          {entity.resultType ? (
+            <bdi className="text-label text-fg-muted block" dir="ltr">
+              {entity.resultType}
+            </bdi>
+          ) : null}
         </td>
       ) : null}
       {visibleColumns.has("costPerResult") ? (

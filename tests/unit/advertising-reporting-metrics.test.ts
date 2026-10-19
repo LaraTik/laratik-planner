@@ -29,6 +29,7 @@ describe("advertising reporting metrics", () => {
     expect(metrics.cpm).toBe(10);
     expect(metrics.reach).toBe(500);
     expect(metrics.frequency).toBe(6);
+    expect(metrics.resultType).toBe("link_click");
   });
 
   it("keeps objective-aware results and action metrics explainable", () => {

@@ -1583,6 +1583,7 @@ function advertisingReportingDashboardLabels(
     reviewEvidence: t("advertising.reporting.reviewEvidence"),
     metricSpend: t("advertising.reporting.spend"),
     metricResults: t("advertising.reporting.results"),
+    resultDefinition: t("advertising.reporting.dashboard.resultDefinition"),
     metricCostPerResult: t("advertising.reporting.dashboard.costPerResult"),
     metricReach: t("advertising.reporting.reach"),
     metricCtr: t("advertising.reporting.ctr"),
