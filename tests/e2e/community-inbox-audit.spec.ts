@@ -63,6 +63,7 @@ for (const locale of ["en", "ar"] as const) {
     }
 
     const base = `/app/a/${slug}/w/${slug}/engagement`;
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(`${base}/activity`);
     await expect(page.getByTestId("community-activity-list")).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("dir", locale === "ar" ? "rtl" : "ltr");
