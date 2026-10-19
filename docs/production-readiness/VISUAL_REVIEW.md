@@ -44,6 +44,19 @@ This proves the automated gate and candidate-file portability. It does not
 replace the reviewer comparison against the Stitch PNG/HTML or the manual
 keyboard/screen-reader sign-off below.
 
+### Advertising Reporting 2.0 responsive baseline evidence (2026-10-19)
+
+The populated, authenticated advertising reporting route was added to the
+app-only visual inventory using the canonical tenant-scoped URL and the
+synthetic advertising fixture. The requested responsive matrix passed **5/5**
+in strict Chromium comparison at 375, 768, 1024, 1280, and 1440px. The wide
+capture shows the expanded Advertising sidebar branch; the mobile capture
+shows the compact section navigation without document-level horizontal
+overflow. Live sync timestamps are masked through the shared dynamic-data
+contract. This is automated `Tested` evidence; the reference screenshot is
+the supplied product image rather than a live Stitch screen, so independent
+visual review remains required before `Verified`.
+
 ### Planning responsive baseline evidence (2026-10-03; `ef0c2754`)
 
 After the planning UI changes were committed, the reviewed planning-list

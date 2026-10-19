@@ -57,6 +57,15 @@
 > **Tested/Verified**, until bilingual browser, axe, visual, export, and
 > production evidence are captured at the exact clean commit.
 
+> **2026-10-19 Advertising Reporting visual baseline checkpoint** — The
+> populated canonical advertising route is now in the app-only visual inventory
+> with five responsive baselines at 375, 768, 1024, 1280, and 1440px. The
+> strict Chromium slice passes 5/5, including the expanded desktop Advertising
+> sidebar branch and the mobile section navigation. Sync timestamps are marked
+> as dynamic data for stable captures. This is **Tested** visual evidence, not
+> **Verified** release evidence; the supplied reference image still requires
+> independent visual review and the broader advertising release gates remain.
+
 > **2026-10-18 Advertising saved-view checkpoint** — The reporting header now
 > persists a typed, versioned advertising view configuration through the
 > authenticated `/api/advertising/saved-views` route. It reuses the existing

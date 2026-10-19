@@ -72,6 +72,30 @@ const VIEWPORTS: Record<StitchViewport, { width: number; height: number }> = {
   tablet: { width: 768, height: 1024 },
 };
 
+/**
+ * Advertising Reporting is an app-only visual surface until it receives a
+ * reviewed live Stitch capture. Keep the route query stable so the visual
+ * baseline exercises the populated, decision-oriented report rather than the
+ * empty-state fallback.
+ */
+export const ADVERTISING_REPORTING_SURFACE =
+  "/app/a/test-agency/w/acme/analytics/advertising?since=2026-10-01&until=2026-10-02";
+
+export const ADVERTISING_REPORTING_VIEWPORTS = [
+  { name: "mobile-s", width: 375, height: 812 },
+  { name: "tablet", width: 768, height: 1024 },
+  { name: "laptop", width: 1024, height: 768 },
+  { name: "desktop", width: 1280, height: 800 },
+  { name: "wide", width: 1440, height: 900 },
+] as const;
+
+export function isAdvertisingReportingSurface(surface: string): boolean {
+  return (
+    surface.startsWith("/app/a/test-agency/w/acme/analytics/advertising") ||
+    surface.startsWith("/app/w/acme/analytics/advertising")
+  );
+}
+
 const artifact = (id: string, slug: string, extension: "png" | "html"): string =>
   `designs/stitch-current/${id}_${slug}.${extension}`;
 
@@ -148,6 +172,7 @@ export function viewportsForSurface(surface: string): readonly {
   width: number;
   height: number;
 }[] {
+  if (isAdvertisingReportingSurface(surface)) return ADVERTISING_REPORTING_VIEWPORTS;
   if (surface === "/app/w/acme/research") return RESEARCH_VIEWPORTS;
   if (surface.startsWith("/app/w/acme/planning")) return PLANNING_DETAIL_VIEWPORTS;
   return REGRESSION_VIEWPORTS;
@@ -249,6 +274,7 @@ export const APP_ONLY_SURFACES = [
   "/signin/forgot-password",
   "/signin/verify",
   "/app/w/acme/channels",
+  ADVERTISING_REPORTING_SURFACE,
   "/app/w/acme/research",
   "/app/w/acme/client/calendar",
   "/app/w/acme/library",

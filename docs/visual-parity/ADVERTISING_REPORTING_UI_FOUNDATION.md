@@ -1,6 +1,6 @@
 # Advertising reporting UI foundation
 
-Updated: 2026-10-18
+Updated: 2026-10-19
 
 This document records the final refinement pass for the Advertising Reporting
 2.0 route. The attached product reference is used for information hierarchy
@@ -114,13 +114,17 @@ search filters, chart metrics/granularity, and pagination/explorer state. The
 dialog lists private and workspace-shared views and restores one through the
 existing URL-driven route state.
 
-The remaining recommendations are deliberately separate from this refinement:
+The remaining recommendation is deliberately separate from this refinement:
 
-1. Add a reviewed Stitch capture for this route and record each responsive
-   baseline in the visual evidence manifest.
-2. Consolidate or retire the now-unmounted legacy
+1. Consolidate or retire the now-unmounted legacy
    `advertising-report-visuals.tsx` component in a separate cleanup after its
    standalone visual test is migrated to the executive dashboard.
+
+The app-only visual inventory now covers the populated canonical advertising
+route at 375, 768, 1024, 1280, and 1440px. The five responsive baselines are
+committed under `tests/e2e/visual-regression.spec.ts-snapshots/responsive/` and
+the strict visual slice passes 5/5. Sync timestamps are marked as dynamic data
+in the report markup so captures remain comparable across runs.
 
 Trend controls are now URL-driven and support day/week/month buckets. When
 both periods are complete, the chart renders a dashed comparison trace;

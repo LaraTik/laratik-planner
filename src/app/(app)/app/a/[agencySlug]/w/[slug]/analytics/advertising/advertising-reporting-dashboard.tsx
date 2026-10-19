@@ -335,7 +335,7 @@ function DataHealth({
         {labels.dataHealth}
       </div>
       <span className="text-label text-fg-secondary">
-        {labels.synced}: {formatLastSync(lastSync, locale, timezone)}
+        {labels.synced}: <span data-timestamp>{formatLastSync(lastSync, locale, timezone)}</span>
       </span>
       <span className="text-label text-fg-secondary">
         {labels.timezone}: {timezone}

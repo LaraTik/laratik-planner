@@ -3,6 +3,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   CANONICAL_SURFACES,
+  ADVERTISING_REPORTING_SURFACE,
+  ADVERTISING_REPORTING_VIEWPORTS,
   PLANNING_DETAIL_VIEWPORTS,
   RESEARCH_VIEWPORTS,
   REGRESSION_VIEWPORTS,
@@ -122,10 +124,14 @@ describe("visual regression harness contract (Task 7)", () => {
     expect(widths).toEqual([375, 768, 1024, 1440]);
   });
 
-  it("routes Research to its 5-viewport bilingual matrix, planning to M5, and other surfaces to the 3-viewport legacy", () => {
+  it("routes Research and Advertising Reporting to 5-viewport matrices, planning to M5, and other surfaces to the 3-viewport legacy", () => {
     const researchViewports = viewportsForSurface("/app/w/acme/research");
     expect(researchViewports).toBe(RESEARCH_VIEWPORTS);
     expect(researchViewports.map((v) => v.width)).toEqual([375, 768, 1024, 1280, 1440]);
+
+    const advertisingViewports = viewportsForSurface(ADVERTISING_REPORTING_SURFACE);
+    expect(advertisingViewports).toBe(ADVERTISING_REPORTING_VIEWPORTS);
+    expect(advertisingViewports.map((v) => v.width)).toEqual([375, 768, 1024, 1280, 1440]);
 
     // Every /planning surface (prefix match) uses the M5 4-viewport
     // matrix, including list / detail / batch / new.

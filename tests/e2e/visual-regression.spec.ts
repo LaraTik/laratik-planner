@@ -12,6 +12,7 @@ import {
   responsiveScreenshotName,
   resolveStitchRoute,
   RESEARCH_VIEWPORTS,
+  isAdvertisingReportingSurface,
   screenshotNameFor,
   type StitchCase,
   type RegressionViewport,
@@ -34,10 +35,11 @@ import { setupTrendsLiveState } from "./stitch-state-helpers";
  *   2. **Responsive matrix** — one screenshot per canonical and app-only
  *      surface at the viewports
  *      selected by `viewportsForSurface()`: non-planning surfaces use
- *      360 / 768 / 1440, Research uses 375 / 768 / 1024 / 1280 / 1440,
- *      while planning surfaces use 375 / 768 / 1024 / 1440.
- *      The current matrix covers 20 canonical and 51 app-only surfaces
- *      (222 English responsive baselines, plus five Research Arabic/RTL
+ *      360 / 768 / 1440, Research and Advertising Reporting use
+ *      375 / 768 / 1024 / 1280 / 1440, while planning surfaces use
+ *      375 / 768 / 1024 / 1440.
+ *      The current matrix covers 20 canonical and 52 app-only surfaces
+ *      (227 English responsive baselines, plus five Research Arabic/RTL
  *      baselines). The
  *      `operational-states` evidence group is not a route and is
  *      reviewed directly against the captured PNG/HTML. App-only surfaces
@@ -105,9 +107,13 @@ function sessionOptionsFor(entry: StitchCase): {
   authRole?: "agency_admin" | "user";
   enableTrendRadar?: boolean;
   visualFixture: true;
+  advertisingReportingFixture?: true;
 } {
   return {
     visualFixture: true,
+    ...(entry.route && isAdvertisingReportingSurface(entry.route)
+      ? { advertisingReportingFixture: true }
+      : {}),
     ...(entry.route === "/app/w/acme/client" || entry.route === "/app/w/acme/client/calendar"
       ? {
           agencyAdmin: false,
@@ -522,7 +528,9 @@ test.describe("visual regression (responsive matrix)", () => {
                 : surface === "/app/w/acme/trends" ||
                     surface === "/app/agency-settings/trend-sources"
                   ? { enableTrendRadar: true, visualFixture: true }
-                  : { visualFixture: true },
+                  : isAdvertisingReportingSurface(surface)
+                    ? { advertisingReportingFixture: true, visualFixture: true }
+                    : { visualFixture: true },
           );
         });
       }
@@ -570,7 +578,9 @@ test.describe("visual regression (responsive matrix)", () => {
                     : surface === "/app/w/acme/trends" ||
                         surface === "/app/agency-settings/trend-sources"
                       ? { enableTrendRadar: true, visualFixture: true }
-                      : { visualFixture: true },
+                      : isAdvertisingReportingSurface(surface)
+                        ? { advertisingReportingFixture: true, visualFixture: true }
+                        : { visualFixture: true },
               );
             }
             if (surface === "/app/w/acme/trends") {

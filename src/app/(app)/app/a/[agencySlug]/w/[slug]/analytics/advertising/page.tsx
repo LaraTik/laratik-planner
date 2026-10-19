@@ -1286,13 +1286,15 @@ export default async function AdvertisingAnalyticsPage({
       )}
       <p className="text-label text-fg-muted" data-testid="advertising-reporting-last-sync">
         {t("advertising.reporting.lastSync")}:{" "}
-        {result.lastSuccessfulSyncAt
-          ? formatDate(new Date(result.lastSuccessfulSyncAt), code, {
-              timeZone: selectedAccount.timezone ?? workspace.timezone,
-              dateStyle: "medium",
-              timeStyle: "short",
-            })
-          : t("advertising.reporting.notAvailable")}
+        <span data-timestamp>
+          {result.lastSuccessfulSyncAt
+            ? formatDate(new Date(result.lastSuccessfulSyncAt), code, {
+                timeZone: selectedAccount.timezone ?? workspace.timezone,
+                dateStyle: "medium",
+                timeStyle: "short",
+              })
+            : t("advertising.reporting.notAvailable")}
+        </span>
       </p>
     </div>
   );
