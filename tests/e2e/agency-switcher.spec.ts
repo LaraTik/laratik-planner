@@ -1,5 +1,11 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { bootstrapTestSession, devSeed, devSignIn } from "./_helpers";
+
+async function openApp(page: Page, path = "/app") {
+  await page.goto(path, { waitUntil: "domcontentloaded" });
+  await expect(page.getByTestId("topbar-agency-switcher-trigger")).toBeVisible();
+  await page.waitForLoadState("networkidle");
+}
 
 /**
  * Agency switcher (M1.5) — end-to-end coverage of the header
@@ -24,7 +30,7 @@ import { bootstrapTestSession, devSeed, devSignIn } from "./_helpers";
 test.describe("Agency switcher (header) — M1.5", () => {
   test("trigger is visible in the header with the seeded agency name", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.locator('[data-testid="topbar-agency-switcher-trigger"]');
     await expect(trigger).toBeVisible();
@@ -33,7 +39,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
 
   test("trigger exposes a stable test id usable by other specs", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.locator('[data-testid="topbar-agency-switcher-trigger"]');
     await expect(trigger).toBeVisible();
@@ -82,7 +88,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
       },
     ]);
 
-    await page.goto("/app", { waitUntil: "domcontentloaded" });
+    await openApp(page);
     await expect(page).toHaveURL(/\/app(?:$|\?)/);
     await expect(page).not.toHaveURL(/\/setup/);
     await expect(page.getByTestId("topbar-agency-switcher-trigger")).toBeVisible();
@@ -90,7 +96,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
 
   test("clicking the trigger opens a listbox containing the seeded agency", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.locator('[data-testid="topbar-agency-switcher-trigger"]');
     await trigger.click();
@@ -105,7 +111,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
 
   test("Escape closes the popover and returns focus to the trigger", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.locator('[data-testid="topbar-agency-switcher-trigger"]');
     await trigger.click();
@@ -118,7 +124,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
 
   test("outside click closes the popover", async ({ page }) => {
     await bootstrapTestSession(page);
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.locator('[data-testid="topbar-agency-switcher-trigger"]');
     await trigger.click();
@@ -146,7 +152,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
     });
     await devSignIn(page.request, { email });
 
-    await page.goto("/app");
+    await openApp(page);
     await page.getByTestId("topbar-agency-switcher-trigger").click();
 
     const listbox = page.getByRole("listbox", { name: "Agencies" });
@@ -171,7 +177,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
       workspaceSlug: "selectable-workspace-two",
     });
     await devSignIn(page.request, { email });
-    await page.goto("/app");
+    await openApp(page);
 
     const trigger = page.getByTestId("topbar-agency-switcher-trigger");
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency Two/);
@@ -190,7 +196,9 @@ test.describe("Agency switcher (header) — M1.5", () => {
     // slug in the address bar and a browser-back could resurrect
     // a cross-tenant 404. Pin the new contract here so a future
     // refactor that re-introduces the `/app` push fails this test.
-    await expect(page).toHaveURL(/\/app\/w\/selectable-workspace-one/, { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/app\/a\/selectable-agency-one\/w\/selectable-workspace-one/, {
+      timeout: 15_000,
+    });
     await expect(page).not.toHaveURL(/selectable-workspace-two/);
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency One/);
     const after = await page.context().cookies();
@@ -217,7 +225,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
       workspaceSlug: "workspace-two",
     });
     await devSignIn(page.request, { email });
-    await page.goto("/app/w/workspace-one");
+    await openApp(page, "/app/w/workspace-one");
 
     const trigger = page.getByTestId("topbar-workspace-switcher-trigger");
     await expect(trigger).toHaveAttribute("aria-label", /Active workspace: Workspace One/);
@@ -227,7 +235,7 @@ test.describe("Agency switcher (header) — M1.5", () => {
       .getByRole("option", { name: "Workspace Two" })
       .click();
 
-    await expect(page).toHaveURL(/\/app\/w\/workspace-two/);
+    await expect(page).toHaveURL(/\/app\/a\/workspace-switcher-agency\/w\/workspace-two/);
     await expect(page.getByTestId("topbar-workspace-switcher-trigger")).toHaveAttribute(
       "aria-label",
       /Active workspace: Workspace Two/,
@@ -255,13 +263,15 @@ test.describe("Agency switcher (header) — M1.5", () => {
  *  - When the switch is refused (not-a-member / no-secret),
  *    the URL is unchanged and the cookie is not written.
  *  - The workspace switcher drops detail-page suffixes:
- *    `/app/w/old/planning/123` → `/app/w/new/planning` (not
+ *    `/app/a/old-agency/w/old/planning/123` →
+ *    `/app/a/new-agency/w/new/planning` (not
  *    a stale cross-tenant 404).
  */
 test.describe("Agency switcher — atomic navigation (P0.2)", () => {
   test("switching agency from a workspace URL lands on the new agency's first workspace", async ({
     page,
   }) => {
+    await page.setViewportSize({ width: 1280, height: 900 });
     const email = "agency-switch-atomic@laratik.local";
     const a = await devSeed(page.request, {
       email,
@@ -288,26 +298,34 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
     });
     await devSignIn(page.request, { email });
 
-    // Start in agency A on a workspace-scoped URL.
-    await page.goto(`/app/w/${a.workspaceSlug}/planning`);
+    // Start in agency A on its canonical workspace-scoped URL.
+    await page.goto(`/app/a/atomic-agency-a/w/${a.workspaceSlug}/planning`);
     await expect(page.getByTestId("app-sidebar")).toBeVisible();
+    await page.waitForLoadState("networkidle");
 
     // Switch to agency B. The new contract: navigate
     // atomically to the new agency's first workspace —
-    // `/app/w/atomic-workspace-b1` — never leave the old
+    // `/app/a/atomic-agency-b/w/atomic-workspace-b1` — never leave the old
     // slug in the address bar.
     const trigger = page.getByTestId("topbar-agency-switcher-trigger");
     await trigger.click();
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    const switchResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/agency/switch") && response.request().method() === "POST",
+    );
     await page
       .getByRole("listbox", { name: "Agencies" })
       .getByRole("option", { name: /Atomic Agency B/ })
       .click();
+    const switched = await switchResponse;
+    expect(switched.status()).toBe(200);
 
     // The URL after switch must be the new workspace —
     // not /app, not the old slug. The old slug
     // (`atomic-workspace-a1`) must NOT appear in the
     // current address bar at any point.
-    await expect(page).toHaveURL(/\/app\/w\/atomic-workspace-b1/);
+    await expect(page).toHaveURL(/\/app\/a\/atomic-agency-b\/w\/atomic-workspace-b1/);
     await expect(page).not.toHaveURL(/atomic-workspace-a1/);
 
     // The active agency label on the sidebar trigger has
@@ -344,6 +362,8 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
     await devSignIn(page.request, { email });
 
     await page.goto("/app");
+    await expect(page.getByTestId("topbar-agency-switcher-trigger")).toBeVisible();
+    await page.waitForLoadState("networkidle");
 
     const trigger = page.getByTestId("topbar-agency-switcher-trigger");
     await trigger.click();
@@ -354,6 +374,6 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
 
     // From `/app` the user lands on the new agency's
     // first workspace, not the global landing.
-    await expect(page).toHaveURL(/\/app\/w\/fromapp-workspace-b1/);
+    await expect(page).toHaveURL(/\/app\/a\/fromapp-agency-b\/w\/fromapp-workspace-b1/);
   });
 });

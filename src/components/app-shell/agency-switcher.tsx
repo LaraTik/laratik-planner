@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Building2, Check, ChevronsUpDown, Plus, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -73,7 +72,6 @@ export function AgencySwitcher({
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [pending, setPending] = React.useState(false);
   const listRef = React.useRef<HTMLUListElement | null>(null);
-  const router = useRouter();
 
   // When the popover opens, jump activeIndex to the current agency
   // (so arrow-key navigation starts at the highlighted row, not
@@ -127,14 +125,11 @@ export function AgencySwitcher({
         );
         return;
       }
-      // The POST response has committed the signed cookie. Navigate only
-      // after that response completes so the destination request resolves
-      // the new agency/workspace context on the server.
-      router.push(result.redirectTo);
-      // The app shell layout persists across workspace navigation. Refresh
-      // it after the cookie-setting POST so the sidebar reflects the new
-      // agency instead of retaining the previous shell props.
-      router.refresh();
+      // The POST response has committed the signed cookie. Load the target
+      // document only after that response completes so the destination shell
+      // and page resolve together from the new agency context. Combining a
+      // client push with an immediate refresh can leave the old route active.
+      window.location.assign(result.redirectTo);
     } catch (error) {
       console.error("agency switch failed", error);
       toast.error(copy.switchFailedShort);
