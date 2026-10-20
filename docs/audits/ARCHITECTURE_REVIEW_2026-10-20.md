@@ -143,6 +143,37 @@ existing rich-content prop contract. A component regression test rejects the
 invalid nesting, and the media accessibility route test asserts the
 breadcrumb renders without the hydration warning.
 
+### A8 — Brand Kit mutations did not refresh server-rendered lists
+
+**Priority: P1 — user-visible stale state.** Brand Kit server actions mutated
+assets, rules, and resources, but the page's server-rendered lists were not
+revalidated. A successful create could return success while the newly saved
+record remained absent until a manual reload. The actions now invalidate the
+workspace Brand Kit index and affected section after successful create,
+archive, restore, and template operations. The administration browser journey
+covers the create/archive/list behavior and cross-workspace scoping.
+
+### A9 — Agency switching raced cookie and client navigation
+
+**Priority: P1 — tenant-context consistency.** The agency switch POST commits
+the signed agency cookie, while the component immediately issued a client
+route push and refresh. Browser evidence showed the old route could remain
+active after the successful response, leaving the shell and URL out of sync
+with the selected agency. The switch now performs a full document navigation
+to the server-provided destination after the POST completes. E2E coverage
+asserts the successful switch response, canonical agency-qualified URL, and
+updated shell context.
+
+### A10 — Playwright could begin before the cold Auth.js route was ready
+
+**Priority: P2 — test reliability.** The dev server readiness endpoint could
+respond before the first `/api/auth/session` request had a usable App Router
+manifest. On a cold server this produced a transient 500 and left some browser
+journeys on a loading boundary. Playwright global setup now retries the
+session endpoint until it returns JSON or times out, before any browser test
+starts. The release run must verify this handshake in the supported test
+environment.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
@@ -161,15 +192,16 @@ breadcrumb renders without the hydration warning.
 
 CodeGraph was used for module and call-path discovery. The Trends policy gate
 was changed without changing source keys, persisted data, or provider response
-contracts. `pnpm verify` passed on 2026-10-20: formatting, lint, typecheck,
-550 unit-test files / 4,950 tests, and production build. The focused Trends
-policy, route, UI, and bilingual-catalog checks also passed (4 files / 19
-tests).
+contracts. The initial baseline passed `pnpm verify`, all 44 integration
+files, and the five-scenario migration drill. The targeted Trends, PageHeader,
+Brand Kit, and agency-switcher checks passed, including English/Arabic cases
+where applicable. A full release browser run exposed the A7–A9 findings and
+was stopped while defects were triaged; the final release run and exact-clean-
+commit evidence remain outstanding.
 
-Browser evidence remains outstanding: `TEST_DATABASE_URL` was unset, so the
-isolated browser suite was not run. The starting worktree already contained
-user changes, and remains dirty; results therefore are not evidence against an
-exact clean commit and do not assign independent `Verified` status. The route,
-domain, database, integration, and historical-finding inventory is still an
-active audit queue; this initial review is not a claim that every route has
-received manual review.
+The original working tree contained user changes, captured as the review
+baseline; implementation work is isolated on `codex/architecture-review`.
+The route, domain, database, integration, and historical-finding inventory
+remains an active audit queue. This first pass does not claim that every route
+has received manual review or that independent `Verified` status has been
+assigned.
