@@ -117,6 +117,7 @@
     "subtitle": "Choose 4 or more sources to start. You can change these any time from the source settings page.",
     "requiresKey": "Requires API key",
     "noKey": "No key needed",
+    "reviewRequired": "Provider review is required before this source can be enabled.",
     "selected": "{count} of 4 selected",
     "minimum": "Select at least 4 sources to continue.",
     "readOnlyTitle": "Trend sources are not configured yet",
@@ -166,12 +167,15 @@
     "tabEnabled": "Enabled",
     "tabPaid": "Paid",
     "tabGrey": "Grey-area",
+    "reviewRequired": "Provider review is required before this source can be enabled.",
+    "greyAreaAcknowledgement": "Grey-area source — ToS acknowledgement required",
     "statusEnabled": "Enabled",
     "statusDisabled": "Disabled",
     "hasKey": "Key set",
     "apiKeyLabel": "API key",
     "error": {
       "api_key_required": "Add an API key before enabling this source.",
+      "source_review_required": "Provider review is required before this source can be enabled.",
       "request_failed": "Could not update this source. Try again.",
       "key_save_failed": "Could not save the API key. Try again.",
       "tos_acknowledgement_required": "Terms acknowledgement is required before enabling this source."

@@ -1,15 +1,18 @@
 /**
  * Trend Radar — source catalog.
  *
- * TypeScript mirror of `services/trends/app/extractor/catalog.py`. The
- * Python file is the source of truth (the scheduler runs there); this
- * mirror is the contract the Next.js UI consumes. Both files must be
- * updated together — the e2e tests pin source keys to the values below.
+ * UI projection of `services/trends/app/extractor/catalog.py`. The Python
+ * catalog is authoritative because the scheduler runs there; this projection
+ * adds UI-only grouping and copy while sharing source keys, cost tiers,
+ * cadence, credential requirements, and ToS class. Platform grouping and
+ * display labels can intentionally differ. The parity test protects the
+ * fields with identical meaning from drift.
  *
  * Source tiers
  * ------------
- * - `free`  : no API key required, no per-call cost.
- * - `paid`  : requires an API key + metered cost. The scheduler
+ * - `free`  : no per-call usage cost; some sources still require API keys.
+ * - `paid`  : metered per-call or subscription cost; these sources require
+ *   credentials. The scheduler
  *   enforces a per-agency monthly cap (entitlement
  *   `trend_radar_cost_cents_per_month`).
  * - `experimental` : not surfaced in the UI; reserved.
@@ -55,8 +58,10 @@ export type SourceDefinition = {
 };
 
 /**
- * 18-source catalog. Keep in sync with
- * `services/trends/app/extractor/catalog.py:SOURCES`.
+ * UI projection of the 18-source catalog. Keep source keys, tiers, ToS class,
+ * cadence, and key requirements in sync with
+ * `services/trends/app/extractor/catalog.py:SOURCES`; display labels,
+ * platform grouping, descriptions, and regions are UI-owned.
  */
 export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
   {
@@ -85,7 +90,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "youtube_data_api",
     displayName: "YouTube Data API v3",
     platform: "youtube",
-    tier: "paid",
+    tier: "free",
     tosClass: "clean",
     cadence: "6h",
     requiresApiKey: true,
@@ -110,7 +115,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     tier: "free",
     tosClass: "clean",
     cadence: "6h",
-    requiresApiKey: false,
+    requiresApiKey: true,
     blurb: "Authenticated PRAW client. Higher rate limits than JSON.",
     region: "global",
   },
@@ -118,7 +123,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "meta_ads_library",
     displayName: "Meta Ad Library",
     platform: "meta_ads",
-    tier: "paid",
+    tier: "free",
     tosClass: "clean",
     cadence: "24h",
     requiresApiKey: true,
@@ -129,7 +134,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "threads_api",
     displayName: "Threads API",
     platform: "threads",
-    tier: "paid",
+    tier: "free",
     tosClass: "clean",
     cadence: "12h",
     requiresApiKey: true,
@@ -140,7 +145,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "spotify_web_api",
     displayName: "Spotify Web API",
     platform: "spotify",
-    tier: "paid",
+    tier: "free",
     tosClass: "clean",
     cadence: "24h",
     requiresApiKey: true,
@@ -152,7 +157,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     displayName: "Google Trends (SerpAPI)",
     platform: "google_trends",
     tier: "paid",
-    tosClass: "clean",
+    tosClass: "grey",
     cadence: "24h",
     requiresApiKey: true,
     blurb: "SerpAPI wrapper for Google Trends. Real-time interest over time.",
@@ -165,7 +170,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     tier: "free",
     tosClass: "grey",
     cadence: "6h",
-    requiresApiKey: false,
+    requiresApiKey: true,
     blurb: "Unofficial scraper. Acknowledgement required.",
     region: "global",
   },
@@ -186,7 +191,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     platform: "instagram",
     tier: "free",
     tosClass: "grey",
-    cadence: "6h",
+    cadence: "12h",
     requiresApiKey: false,
     blurb: "Unofficial scraper. Acknowledgement required.",
     region: "global",
@@ -195,8 +200,8 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "instagram_graph_api",
     displayName: "Instagram Graph API",
     platform: "instagram",
-    tier: "paid",
-    tosClass: "clean",
+    tier: "free",
+    tosClass: "review_required",
     cadence: "6h",
     requiresApiKey: true,
     blurb: "Official Meta Graph API. Business account required.",
@@ -209,7 +214,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     tier: "free",
     tosClass: "grey",
     cadence: "12h",
-    requiresApiKey: false,
+    requiresApiKey: true,
     blurb: "Unofficial scraper. Acknowledgement required.",
     region: "global",
   },
@@ -217,9 +222,9 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "linkedin_marketing_api",
     displayName: "LinkedIn Marketing API",
     platform: "linkedin",
-    tier: "paid",
+    tier: "free",
     tosClass: "review_required",
-    cadence: "12h",
+    cadence: "24h",
     requiresApiKey: true,
     blurb: "Official API. App Review required before production read.",
     region: "global",
@@ -228,7 +233,7 @@ export const TREND_SOURCE_CATALOG: ReadonlyArray<SourceDefinition> = [
     key: "pinterest_api_v5",
     displayName: "Pinterest API v5",
     platform: "pinterest",
-    tier: "paid",
+    tier: "free",
     tosClass: "clean",
     cadence: "24h",
     requiresApiKey: true,

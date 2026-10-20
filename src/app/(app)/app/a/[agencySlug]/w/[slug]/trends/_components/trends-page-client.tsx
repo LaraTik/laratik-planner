@@ -14,7 +14,7 @@ import { TrendsBoardsTab } from "./boards-tab";
 import { TrendsBriefsTab } from "./briefs-tab";
 import { TrendSourceTosModal } from "@/components/ai/trend-source-tos-modal";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import type { SourceDefinition } from "@/lib/trends/source-catalog";
+import type { SourceDefinition } from "@/features/trends";
 import { workspaceBasePath } from "@/lib/urls";
 
 function ReadOnlyTrendSetup() {

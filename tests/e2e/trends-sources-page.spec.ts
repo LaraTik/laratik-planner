@@ -9,7 +9,7 @@ import { bootstrapTestSession } from "./_helpers";
  *   2. Visit the trend sources page.
  *   3. The page shows 12+ source cards.
  *   4. Enable a free source with one click.
- *   5. Configure a paid source — its form reveals a key-input field.
+ *   5. Configure an API-key source — its form reveals a key-input field.
  */
 
 test.describe("Trend Radar — Sources admin page", () => {
@@ -40,7 +40,8 @@ test.describe("Trend Radar — Sources admin page", () => {
       timeout: 5_000,
     });
 
-    // 5. Configure a paid source — its form should reveal a key input.
+    // 5. YouTube is free-tier but still requires credentials. Configure
+    //    it to verify the API-key requirement rather than the cost tier.
     const paidCard = page.getByTestId("source-card-youtube_data_api");
     const configure = paidCard.getByRole("button", { name: /configure/i });
     await configure.click();

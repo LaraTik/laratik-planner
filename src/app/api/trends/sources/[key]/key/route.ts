@@ -8,7 +8,7 @@ import { isAgencyAdmin } from "@/lib/auth/policy";
 import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
-import { TREND_SOURCE_CATALOG } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG } from "@/features/trends";
 import { encryptForAgency } from "@/lib/security/secrets";
 
 /**

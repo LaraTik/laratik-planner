@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import { TREND_SOURCE_CATALOG, type SourceDefinition } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG, type SourceDefinition } from "@/features/trends";
 
 type SourceRow = {
   key: string;
@@ -61,6 +61,11 @@ export function TrendSourcesAdmin({
   const handleToggle = async (def: SourceDefinition) => {
     const current = byKey.get(def.key);
     const isEnabling = !current?.enabled;
+
+    if (isEnabling && def.tosClass === "review_required") {
+      setErrors((prev) => ({ ...prev, [def.key]: "source_review_required" }));
+      return;
+    }
 
     // Grey-area source requires ToS acknowledgement first.
     if (isEnabling && def.tosClass === "grey" && !current?.tosAcknowledgedAt) {
@@ -206,12 +211,24 @@ export function TrendSourcesAdmin({
                           {def.tier} · {def.cadence} · {def.platform}
                         </p>
                       </div>
-                      {def.tosClass === "grey" ? (
-                        <span title="Grey-area source — ToS acknowledgement required">
+                      {def.tosClass === "grey" || def.tosClass === "review_required" ? (
+                        <span
+                          title={
+                            def.tosClass === "review_required"
+                              ? t("trends.admin.reviewRequired") ||
+                                "Provider review is required before this source can be enabled."
+                              : t("trends.admin.greyAreaAcknowledgement") ||
+                                "Grey-area source — ToS acknowledgement required"
+                          }
+                        >
                           <ShieldAlert
                             className="text-warning h-4 w-4"
                             aria-hidden="true"
-                            data-testid="admin-source-tos"
+                            data-testid={
+                              def.tosClass === "review_required"
+                                ? "admin-source-review-required"
+                                : "admin-source-tos"
+                            }
                           />
                         </span>
                       ) : (
@@ -219,6 +236,12 @@ export function TrendSourcesAdmin({
                       )}
                     </header>
                     <p className="text-body text-fg-secondary text-sm">{def.blurb}</p>
+                    {def.tosClass === "review_required" ? (
+                      <p className="text-label text-warning" data-testid="admin-source-review-note">
+                        {t("trends.admin.reviewRequired") ||
+                          "Provider review is required before this source can be enabled."}
+                      </p>
+                    ) : null}
 
                     <div
                       className="text-label text-fg-muted flex items-center gap-2 text-xs"
@@ -258,7 +281,9 @@ export function TrendSourcesAdmin({
                         size="sm"
                         variant={row?.enabled ? "outline" : "default"}
                         onClick={() => handleToggle(def)}
-                        disabled={isPending}
+                        disabled={
+                          isPending || (!row?.enabled && def.tosClass === "review_required")
+                        }
                         data-testid={`admin-source-toggle-${def.key}`}
                       >
                         {row?.enabled

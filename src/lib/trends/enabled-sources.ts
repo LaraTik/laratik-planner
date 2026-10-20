@@ -3,7 +3,7 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { trendSources, workspaceSourceOptouts } from "@/lib/db/schema";
-import { TREND_SOURCE_CATALOG } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG } from "@/features/trends";
 
 /**
  * Resolve the set of source keys that are enabled for a workspace.

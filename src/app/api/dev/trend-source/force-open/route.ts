@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 import { trendSourceHealth, trendSources } from "@/lib/db/schema";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
-import { TREND_SOURCE_CATALOG } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG } from "@/features/trends";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

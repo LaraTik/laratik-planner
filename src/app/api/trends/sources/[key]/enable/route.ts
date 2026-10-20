@@ -9,7 +9,7 @@ import { isAgencyAdmin } from "@/lib/auth/policy";
 import { captureError } from "@/lib/observability/sentry";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
-import { TREND_SOURCE_CATALOG } from "@/lib/trends/source-catalog";
+import { TREND_SOURCE_CATALOG } from "@/features/trends";
 
 /**
  * POST /api/trends/sources/{key}/enable
@@ -62,6 +62,15 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ key: strin
       return NextResponse.json(
         { error: "forbidden" },
         { status: 403, headers: mutatingApiHeaders() },
+      );
+    }
+
+    // Sources awaiting provider App Review must stay disabled until the
+    // catalog is deliberately updated after that review is approved.
+    if (parsed.data.enabled && def.tosClass === "review_required") {
+      return NextResponse.json(
+        { error: "source_review_required" },
+        { status: 409, headers: mutatingApiHeaders() },
       );
     }
 
