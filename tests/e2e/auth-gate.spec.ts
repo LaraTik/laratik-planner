@@ -131,7 +131,7 @@ test.describe("auth gate: callbackUrl edge cases", () => {
     });
     await devSignIn(page.request, { email: outsiderEmail, role: "user" });
 
-    const res = await page.goto("/app/w/auth-gate-protected", {
+    const res = await page.goto("/app/a/auth-gate-agency/w/auth-gate-protected", {
       waitUntil: "domcontentloaded",
     });
     // Workspace lookup deliberately masks inaccessible tenants as not found.

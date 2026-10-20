@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { FileText, FolderOpen, Package, Search, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -122,6 +123,7 @@ export function DeliverySection({
   canSetMediaRequired?: boolean;
 }) {
   const t = useLocaleT();
+  const router = useRouter();
   const previousAssetIds = deliveries[0] ? deliveryAssetIds(deliveries[0]) : [];
   const [open, setOpen] = useState(deliveries.length === 0);
   const [pending, start] = useTransition();
@@ -457,6 +459,7 @@ export function DeliverySection({
                       setFormError(res.error);
                     } else {
                       setOpen(false);
+                      router.refresh();
                     }
                   } catch (e) {
                     setFormError((e as Error).message);

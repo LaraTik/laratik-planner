@@ -11,6 +11,9 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   submitDeliveryAction: vi.fn(),
   setMediaRequiredAction: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 vi.mock("@/components/media/media-upload-form", () => ({
   MediaUploadForm: () => null,
 }));

@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render } from "@testing-library/react";
+import { fireEvent, render, waitFor } from "@testing-library/react";
 import { ALL_STATUSES } from "@/lib/content/status";
 import { WorkflowRail } from "@/components/planning/workflow-rail";
+import { assignDesignerAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
+
+const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
 
 vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   transitionAction: vi.fn(),
@@ -11,7 +14,7 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ refresh: vi.fn() }),
+  useRouter: () => ({ refresh: routerRefresh }),
 }));
 
 /**
@@ -81,6 +84,29 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
 
     expect(getByTestId("workflow-designer-assignment")).toHaveTextContent("Designer Name");
     expect(getByTestId("assign-designer-trigger")).toHaveTextContent("Change designer");
+  });
+
+  it("refreshes the server-rendered workflow after assigning a designer", async () => {
+    vi.mocked(assignDesignerAction).mockResolvedValue({ ok: true });
+    routerRefresh.mockClear();
+
+    const { getByTestId } = render(
+      <WorkflowRail
+        workspaceSlug="acme"
+        contentItemId="ci-1"
+        status="approved_for_design"
+        blockedReason={null}
+        cancellationReason={null}
+        roles={{ ...baseRoles, isManager: true }}
+        approvals={[]}
+        designers={[{ id: "designer-1", label: "Designer Name" }]}
+      />,
+    );
+
+    fireEvent.click(getByTestId("assign-designer-trigger"));
+    fireEvent.click(getByTestId("assign-designer-confirm"));
+
+    await waitFor(() => expect(routerRefresh).toHaveBeenCalledOnce());
   });
 
   it("keeps manager-only destructive actions collapsed by default", () => {

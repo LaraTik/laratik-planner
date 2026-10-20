@@ -174,6 +174,19 @@ session endpoint until it returns JSON or times out, before any browser test
 starts. The release run must verify this handshake in the supported test
 environment.
 
+### A11 — Successful workflow mutations left server-rendered views stale
+
+**Priority: P1 — workflow correctness and user confidence.** Browser evidence
+showed that assigning a designer advanced the server workflow but left the
+workflow rail at its previous state; submitting a delivery closed the form
+without updating delivery history or status; and recording a publication
+outcome left the channel card at `ready_to_publish`. The successful client
+paths now call `router.refresh()` after assignment, claim, delivery submit,
+and publication outcome saves. The workflow assignment has a focused unit
+regression, and the §23 Playwright journey verifies the full progression to
+published. The planning-stage filter test also now checks its returned status
+contract without assuming a pristine shared workspace database.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
@@ -193,11 +206,11 @@ environment.
 CodeGraph was used for module and call-path discovery. The Trends policy gate
 was changed without changing source keys, persisted data, or provider response
 contracts. The initial baseline passed `pnpm verify`, all 44 integration
-files, and the five-scenario migration drill. The targeted Trends, PageHeader,
-Brand Kit, and agency-switcher checks passed, including English/Arabic cases
-where applicable. A full release browser run exposed the A7–A9 findings and
-was stopped while defects were triaged; the final release run and exact-clean-
-commit evidence remain outstanding.
+files, and the five-scenario migration drill. Targeted Trends, PageHeader,
+Brand Kit, agency-switcher, and content-flow checks passed, including the full
+§23 Chromium journey. A full release browser run exposed the A7–A9 findings
+and was stopped while defects were triaged; full five-browser and visual gates
+and exact-clean-commit evidence remain outstanding.
 
 The original working tree contained user changes, captured as the review
 baseline; implementation work is isolated on `codex/architecture-review`.

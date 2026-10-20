@@ -687,7 +687,11 @@ function WorkflowRailBody({
                           onClaim={async () => {
                             setActionError(null);
                             const result = await claimAction({ workspaceSlug, contentItemId });
-                            if (result?.error) setActionError(result.error);
+                            if (result?.error) {
+                              setActionError(result.error);
+                            } else {
+                              router.refresh();
+                            }
                           }}
                           onAssignDesigner={async (designerId) => {
                             setActionError(null);
@@ -696,7 +700,11 @@ function WorkflowRailBody({
                               contentItemId,
                               designerId,
                             });
-                            if (result?.error) setActionError(result.error);
+                            if (result?.error) {
+                              setActionError(result.error);
+                            } else {
+                              router.refresh();
+                            }
                           }}
                           {...(canonicalAction?.type
                             ? { canonicalActionType: canonicalAction.type }

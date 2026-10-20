@@ -12,6 +12,9 @@ import { LocaleProvider } from "@/components/i18n/locale-provider";
 vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
   recordPublicationAction: vi.fn(),
 }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
 
 const { ChannelPublishingCard } = await import("@/components/planning/channel-publishing-card");
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import {
   Check,
   Clock,
@@ -139,6 +140,7 @@ export function ChannelPublishingCard({
   defaultOpen = false,
   publishPackageHref,
 }: ChannelPublishingCardProps) {
+  const router = useRouter();
   const t = useLocaleT();
   const locale = useLocaleCode();
   const [open, setOpen] = React.useState(defaultOpen);
@@ -425,6 +427,7 @@ export function ChannelPublishingCard({
                   setError(result.error);
                 } else {
                   setOpen(false);
+                  router.refresh();
                 }
               });
             }}

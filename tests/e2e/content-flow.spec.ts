@@ -40,7 +40,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await bootstrapTestSession(page);
 
     // Navigate to Quick Create
-    await page.goto("/app/w/acme/planning/new");
+    await page.goto("/app/a/test-agency/w/acme/planning/new");
     await expect(page.getByRole("heading", { name: /Quick Create|Create/i }).first()).toBeVisible();
 
     // Fill the form
@@ -50,10 +50,13 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     await page.getByRole("button", { name: /Create draft/i }).click();
 
     // Server action redirects to the content detail page
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-      timeout: 20_000,
-      waitUntil: "load",
-    });
+    await page.waitForURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+      {
+        timeout: 20_000,
+        waitUntil: "load",
+      },
+    );
 
     // The detail page shows the title + status badge "draft"
     await expect(page.getByRole("heading", { name: uniqueTitle })).toBeVisible();
@@ -77,16 +80,19 @@ test.describe("Content: Quick Create + workflow transitions", () => {
   test("Arabic Quick Create explains the new draft and next step on mobile", async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 });
     await bootstrapTestSession(page, { locale: "ar" });
-    await page.goto("/app/w/acme/planning/new");
+    await page.goto("/app/a/test-agency/w/acme/planning/new");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
     await page.getByLabel("العنوان").first().fill("فكرة عربية جديدة");
     await page.getByRole("button", { name: /إنشاء مسودة/ }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+\?created=1(?:#overview)?$/, {
-      timeout: 20_000,
-      waitUntil: "load",
-    });
+    await page.waitForURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+\?created=1(?:#overview)?$/,
+      {
+        timeout: 20_000,
+        waitUntil: "load",
+      },
+    );
 
     const banner = page.getByTestId("content-created-banner");
     await expect(banner).toContainText("تم إنشاء المسودة");
@@ -102,28 +108,33 @@ test.describe("Content: Quick Create + workflow transitions", () => {
   test("the new draft appears in the planning list", async ({ page }) => {
     await bootstrapTestSession(page);
     // First create a draft
-    await page.goto("/app/w/acme/planning/new");
+    await page.goto("/app/a/test-agency/w/acme/planning/new");
     const title = `List test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-      timeout: 20_000,
-      waitUntil: "load",
-    });
+    await page.waitForURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+      {
+        timeout: 20_000,
+        waitUntil: "load",
+      },
+    );
     // WebKit can resolve the URL commitment before the server-action
     // redirect has finished painting the detail page. Wait for its stable
     // landmark before starting the second navigation.
     await expect(page.getByRole("heading", { name: title })).toBeVisible();
-    await expect(page).toHaveURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?#overview$/);
+    await expect(page).toHaveURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?#overview$/,
+    );
 
     // Navigate back through the product's own detail-page link. This
     // waits for the action redirect to settle before the list navigation,
     // which is important in WebKit where a hard navigation can race the
     // final server-action redirect.
     await page.getByTestId("planning-header-breadcrumb").click();
-    await expect(page).toHaveURL(/\/app\/w\/acme\/planning(?:\?.*)?$/);
+    await expect(page).toHaveURL(/\/app\/a\/test-agency\/w\/acme\/planning(?:\?.*)?$/);
     await page.getByTestId("planning-search-input").fill(title);
-    await expect(page).toHaveURL(/\/app\/w\/acme\/planning\?[^#]*search=/);
+    await expect(page).toHaveURL(/\/app\/a\/test-agency\/w\/acme\/planning\?[^#]*search=/);
     await expect(page.getByText(title).first()).toBeVisible();
   });
 
@@ -134,14 +145,17 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const seeded: SeedResult = await bootstrapRoleSession(page, "content_planner");
 
     // ─── Planner creates a draft via the Quick Create UI ───
-    await page.goto("/app/w/acme/planning/new");
+    await page.goto("/app/a/test-agency/w/acme/planning/new");
     const title = `E2E full path ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-      timeout: 20_000,
-      waitUntil: "commit",
-    });
+    await page.waitForURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+      {
+        timeout: 20_000,
+        waitUntil: "commit",
+      },
+    );
     const createdUrl = new URL(page.url());
     const detailUrl = `${createdUrl.origin}${createdUrl.pathname}`;
     const itemId = createdUrl.pathname.split("/").pop()!;
@@ -215,12 +229,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       await bootstrapRoleSession(plannerPage, "content_planner", "acme", {
         approvalMode: "simple",
       });
-      await plannerPage.goto("/app/w/acme/planning/new");
+      await plannerPage.goto("/app/a/test-agency/w/acme/planning/new");
       const title = `E2E §23 full ${Date.now()}`;
       await plannerPage.getByLabel(/Title/i).first().fill(title);
       await plannerPage.getByRole("button", { name: /Create draft/i }).click();
       await plannerPage.waitForURL(
-        /\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+        /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
         {
           timeout: 20_000,
           waitUntil: "commit",
@@ -335,7 +349,11 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         "true",
         { timeout: 10_000 },
       );
-      await expect(designerPage.getByTestId("workspace-tab-panel-delivery")).toBeVisible({
+      // The outer Create tab and its nested production panels are separate
+      // stateful controls. Select Assets explicitly so the test does not
+      // depend on hash initialization timing after the outer tab mounts.
+      await designerPage.getByTestId("create-workspace-tab-assets").click();
+      await expect(designerPage.getByTestId("create-workspace-panel-assets")).toBeVisible({
         timeout: 10_000,
       });
       // The delivery form starts open when the content is in_design and no
@@ -390,7 +408,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         // reviewers use the client-safe portal rather than the Planning
         // detail route.
         await bootstrapRoleSession(clientPage, "client_reviewer");
-        await clientPage.goto("/app/w/acme/client");
+        await clientPage.goto("/app/a/test-agency/w/acme/client");
         const clientReviewCard = clientPage.getByTestId("workspace-client-review");
         await expect(clientReviewCard).toBeVisible({ timeout: 10_000 });
         const approveClientCreativeBtn = clientReviewCard.getByRole("button", {
@@ -498,14 +516,17 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     // Quick Create form auto-selects all of them and the detail page
     // lists them. Verify by creating a draft and checking the Channels
     // section.
-    await page.goto("/app/w/acme/planning/new");
+    await page.goto("/app/a/test-agency/w/acme/planning/new");
     const title = `Channels test ${Date.now()}`;
     await page.getByLabel(/Title/i).first().fill(title);
     await page.getByRole("button", { name: /Create draft/i }).click();
-    await page.waitForURL(/\/app\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/, {
-      timeout: 20_000,
-      waitUntil: "commit",
-    });
+    await page.waitForURL(
+      /\/app\/a\/test-agency\/w\/acme\/planning\/[0-9a-f-]+(?:\?created=1)?(?:#overview)?$/,
+      {
+        timeout: 20_000,
+        waitUntil: "commit",
+      },
+    );
 
     // The "Channels" section should list at least 3 channels
     await expect(page.getByText(/Channels:\s*3/i).first()).toBeVisible();
@@ -526,14 +547,18 @@ test.describe("Content: Quick Create + workflow transitions", () => {
   test("planning URL filters narrow the list and survive view changes", async ({ page }) => {
     const seeded = await bootstrapTestSession(page);
 
-    // The fixture is a draft. A different workflow stage must therefore
-    // produce the filtered empty state; this catches a page that renders
-    // the controls but silently ignores the stage query parameter.
-    await page.goto("/app/w/acme/planning?stage=creative_review");
-    await expect(page.getByTestId("planning-empty-clear-filters")).toBeVisible();
-    await expect(page.getByTestId("planning-list-item")).toHaveCount(0);
+    // Other workflow tests share the seeded workspace and may leave
+    // creative-review items behind. Assert the stage filter's actual
+    // contract instead of assuming the entire workspace is empty.
+    await page.goto("/app/a/test-agency/w/acme/planning?stage=creative_review");
+    const creativeReviewItems = page.getByTestId("planning-list-item");
+    const filteredStatuses = await creativeReviewItems.evaluateAll((items) =>
+      items.map((item) => item.getAttribute("data-status")),
+    );
+    expect(filteredStatuses.every((status) => status === "creative_review")).toBe(true);
+    await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toHaveCount(0);
 
-    const filteredUrl = `/app/w/acme/planning?stage=draft&channel=${seeded.channelIds[0]}&owner=${seeded.userId}`;
+    const filteredUrl = `/app/a/test-agency/w/acme/planning?stage=draft&channel=${seeded.channelIds[0]}&owner=${seeded.userId}`;
     await page.goto(filteredUrl);
     await expect(page.getByText("Autumn Blend Reveal", { exact: true })).toBeVisible();
     await expect(page.getByTestId("planning-status-filter")).toHaveValue("");
@@ -545,7 +570,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const boardHref = await boardLink.getAttribute("href");
     expect(boardHref).toBeTruthy();
     const boardUrl = new URL(boardHref!, "http://planner.test");
-    expect(boardUrl.pathname).toBe("/app/w/acme/board");
+    expect(boardUrl.pathname).toBe("/app/a/test-agency/w/acme/board");
     expect(boardUrl.searchParams.get("stage")).toBe("draft");
     expect(boardUrl.searchParams.get("channel")).toBe(seeded.channelIds[0]);
     expect(boardUrl.searchParams.get("owner")).toBe(seeded.userId);
