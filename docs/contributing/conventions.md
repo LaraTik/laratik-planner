@@ -56,7 +56,22 @@ Format-specific structured fields (Hook, Main message, CTA, scenes, captions, re
 
 The same rule applies to any new jsonb-shaped surface: a new `*_settings` table, a new `*_metadata` jsonb column, a new `*_config` row. The schema is the source of truth; the jsonb is the storage; the service enforces the schema at the boundary.
 
-## 6. Do not / always cheat sheet
+## 6. Feature ownership and extraction
+
+Feature-oriented ownership is the gradual target; it does not require a
+repo-wide file move. Follow
+[`../architecture/module-ownership.md`](../architecture/module-ownership.md)
+for the target layout, shared-code threshold, route responsibilities, test
+seams, and page quality contract. Existing `src/lib/<domain>/` modules remain
+valid until a bounded feature migration moves their canonical implementation.
+Do not create duplicate service or UI implementations to make the directory
+tree appear feature-oriented.
+
+The master prompt's usual file sizes are review triggers, not automatic split
+requirements. Extract code only when the module has a coherent shared behavior
+or responsibility and the extraction improves locality for callers and tests.
+
+## 7. Do not / always cheat sheet
 
 A condensed version of the patterns above, mirroring the `AGENTS.md` Hard Rules but at the code-pattern level. Pair this with the per-migration author checklist in `docs/architecture/migrations.md:6`.
 
