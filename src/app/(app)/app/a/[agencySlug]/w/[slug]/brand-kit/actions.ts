@@ -1,6 +1,6 @@
 "use server";
 import { and, eq, isNull } from "drizzle-orm";
-import {} from "next/cache";
+import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -12,6 +12,7 @@ import {
   BrandVoiceRuleCommandSchema,
 } from "@/lib/brand/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
+import { workspaceHref } from "@/lib/urls";
 import {
   createColorAsset,
   createFontAsset,
@@ -63,6 +64,11 @@ function readString(formData: FormData, key: string): string {
   return typeof v === "string" ? v : "";
 }
 
+function revalidateBrandKit(workspace: { agencySlug: string; slug: string }, section: string) {
+  revalidatePath(workspaceHref(workspace.agencySlug, workspace.slug, "brand-kit"));
+  revalidatePath(workspaceHref(workspace.agencySlug, workspace.slug, `brand-kit/${section}`));
+}
+
 export async function createColorAssetAction(
   slug: string,
   _previous: unknown,
@@ -96,6 +102,7 @@ export async function createColorAssetAction(
     hex,
     colorRole: parsed.data.colorRole,
   });
+  revalidateBrandKit(workspace, "colors");
   return { success: true };
 }
 
@@ -110,6 +117,7 @@ export async function archiveColorAssetAction(slug: string, assetId: string): Pr
     .update(brandAssets)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspace.id)));
+  revalidateBrandKit(workspace, "colors");
 }
 
 export async function createLogoAssetAction(
@@ -145,6 +153,7 @@ export async function createLogoAssetAction(
     storagePath: parsed.data.storagePath,
     ...(parsed.data.storageObjectId ? { storageObjectId: parsed.data.storageObjectId } : {}),
   });
+  revalidateBrandKit(workspace, "logos");
   return { success: true };
 }
 
@@ -159,6 +168,7 @@ export async function archiveLogoAssetAction(slug: string, assetId: string): Pro
     .update(brandAssets)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspace.id)));
+  revalidateBrandKit(workspace, "logos");
 }
 
 export async function createFontAssetAction(
@@ -197,6 +207,7 @@ export async function createFontAssetAction(
     weight: parsed.data.value.weight,
     role: parsed.data.value.role,
   });
+  revalidateBrandKit(workspace, "typography");
   return { success: true };
 }
 
@@ -211,6 +222,7 @@ export async function archiveFontAssetAction(slug: string, assetId: string): Pro
     .update(brandAssets)
     .set({ archivedAt: new Date(), updatedAt: new Date() })
     .where(and(eq(brandAssets.id, assetId), eq(brandAssets.workspaceId, workspace.id)));
+  revalidateBrandKit(workspace, "typography");
 }
 
 export async function createVoiceRuleAction(
@@ -238,6 +250,7 @@ export async function createVoiceRuleAction(
     content: parsed.data.content,
     sortOrder: "0",
   });
+  revalidateBrandKit(workspace, "voice");
   return { success: true };
 }
 
@@ -249,6 +262,7 @@ export async function archiveVoiceRuleAction(slug: string, ruleId: string): Prom
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
   await archiveBrandVoiceRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidateBrandKit(workspace, "voice");
 }
 
 // ─── Publishing rules (Task 4) ─────────────────────────────────────────
@@ -280,6 +294,7 @@ export async function createPublishingRuleAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
 
   await createBrandPublishingRule({ id: session.user.id }, workspace.id, parsed.data);
+  revalidateBrandKit(workspace, "publishing");
   return { success: true };
 }
 
@@ -291,6 +306,7 @@ export async function archivePublishingRuleAction(slug: string, ruleId: string):
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await archiveBrandPublishingRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidateBrandKit(workspace, "publishing");
 }
 
 // ─── Linked resources (Task 4) ─────────────────────────────────────────
@@ -317,6 +333,7 @@ export async function createLinkedResourceAction(
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? "Check the form." };
 
   await createBrandLinkedResource({ id: session.user.id }, workspace.id, parsed.data);
+  revalidateBrandKit(workspace, "linked");
   return { success: true };
 }
 
@@ -328,6 +345,7 @@ export async function archiveLinkedResourceAction(slug: string, resourceId: stri
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await archiveBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
+  revalidateBrandKit(workspace, "linked");
 }
 
 // ─── Restore actions (Round 4) ────────────────────────────────────────────
@@ -350,6 +368,7 @@ export async function restoreColorAssetAction(slug: string, assetId: string): Pr
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
   await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidateBrandKit(workspace, "colors");
 }
 
 export async function restoreLogoAssetAction(slug: string, assetId: string): Promise<void> {
@@ -360,6 +379,7 @@ export async function restoreLogoAssetAction(slug: string, assetId: string): Pro
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
   await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidateBrandKit(workspace, "logos");
 }
 
 export async function restoreFontAssetAction(slug: string, assetId: string): Promise<void> {
@@ -370,6 +390,7 @@ export async function restoreFontAssetAction(slug: string, assetId: string): Pro
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
   await restoreBrandAsset({ id: session.user.id }, workspace.id, assetId);
+  revalidateBrandKit(workspace, "typography");
 }
 
 export async function restoreVoiceRuleAction(slug: string, ruleId: string): Promise<void> {
@@ -380,6 +401,7 @@ export async function restoreVoiceRuleAction(slug: string, ruleId: string): Prom
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, ["workspace_manager"])))
     return;
   await restoreBrandVoiceRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidateBrandKit(workspace, "voice");
 }
 
 export async function restorePublishingRuleAction(slug: string, ruleId: string): Promise<void> {
@@ -390,6 +412,7 @@ export async function restorePublishingRuleAction(slug: string, ruleId: string):
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await restoreBrandPublishingRule({ id: session.user.id }, workspace.id, ruleId);
+  revalidateBrandKit(workspace, "publishing");
 }
 
 export async function restoreLinkedResourceAction(slug: string, resourceId: string): Promise<void> {
@@ -400,6 +423,7 @@ export async function restoreLinkedResourceAction(slug: string, resourceId: stri
   if (!(await hasWorkspaceRole({ id: session.user.id }, workspace.id, [...BRAND_MANAGER_ROLES])))
     return;
   await restoreBrandLinkedResource({ id: session.user.id }, workspace.id, resourceId);
+  revalidateBrandKit(workspace, "linked");
 }
 
 // ─── Content pillars (Phase 8 — C-5.4) ──────────────────────────────────
@@ -447,6 +471,7 @@ export async function createPillarAction(
     if (err instanceof Error) return { error: err.message };
     return { error: "Failed to add pillar." };
   }
+  revalidateBrandKit(workspace, "pillars");
   return { success: true };
 }
 
@@ -468,6 +493,7 @@ export async function archivePillarAction(slug: string, pillarId: string): Promi
     // Best-effort: the undo toast re-fetches the page, so a failure
     // surfaces as the row reappearing.
   }
+  revalidateBrandKit(workspace, "pillars");
 }
 
 export async function restorePillarAction(slug: string, pillarId: string): Promise<void> {
@@ -487,6 +513,7 @@ export async function restorePillarAction(slug: string, pillarId: string): Promi
   } catch {
     // Same idempotent semantics as archive — a no-op is acceptable.
   }
+  revalidateBrandKit(workspace, "pillars");
 }
 
 // ─── Voice rule suggestions (Phase 8 / Phase 9) ──────────────────────────
@@ -622,6 +649,7 @@ export async function addVoiceTemplateAction(
     content: parsed.data.content,
     sortOrder: "0",
   });
+  revalidateBrandKit(workspace, "voice");
   return { ok: true, added: 1 };
 }
 
@@ -650,6 +678,7 @@ export async function addPillarTemplateAction(
       ...(tpl.color ? { color: tpl.color } : {}),
       description: tpl.description,
     });
+    revalidateBrandKit(workspace, "pillars");
     return { ok: true, added: 1 };
   } catch (err) {
     if (err instanceof Error) {
@@ -703,6 +732,7 @@ export async function addColorPaletteAction(
     });
     added++;
   }
+  if (added > 0) revalidateBrandKit(workspace, "colors");
   return { ok: true, added };
 }
 
@@ -746,6 +776,7 @@ export async function addTypographyTemplateAction(
     });
     added++;
   }
+  if (added > 0) revalidateBrandKit(workspace, "typography");
   return { ok: true, added };
 }
 
@@ -774,6 +805,7 @@ export async function addPublishingTemplateAction(
       title: tpl.title,
       content: tpl.content,
     });
+    revalidateBrandKit(workspace, "publishing");
     return { ok: true, added: 1 };
   } catch (err) {
     if (err instanceof Error) return { ok: false, error: err.message };
