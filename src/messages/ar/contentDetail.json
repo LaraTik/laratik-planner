@@ -565,7 +565,14 @@
     "staleOverride": "تجاوز مخصص — تغيّرت النسخة المشتركة",
     "publishHandoff": "من النشر تختار لغة كل قناة، وتضيف الوجهات والإفصاحات، وتعتمد النسخة النهائية.",
     "approvedBeforeLaterEdits": "تمت الموافقة قبل تعديلات لاحقة. تظل الموافقة سارية وفقًا لسياسة مساحة العمل.",
-    "backToPlanning": "العودة إلى التخطيط"
+    "backToPlanning": "العودة إلى التخطيط",
+    "perChannelMetaLabel": "ملخّص نسخ القنوات",
+    "languageShort": "اللغة",
+    "charactersShort": "الأحرف",
+    "hashtagsShort": "الوسوم",
+    "channelsCount": "قناة",
+    "overridesCount": "بنسخ مخصّصة",
+    "staleCount": "محدّثة كقديمة"
   },
   "createNavigator": {
     "label": "أقسام الإنشاء"
@@ -864,7 +871,8 @@
     "assigning": "جارٍ التعيين…",
     "noDesigners": "لا يوجد مصممون في مساحة العمل بعد. ادعُ مصممًا من الإعدادات أو انتظر حتى يستلم أحد المصممين العنصر بنفسه.",
     "closeWorkflow": "إغلاق سير العمل",
-    "close": "إغلاق"
+    "close": "إغلاق",
+    "approvalFailed": "فشل إجراء الموافقة."
   },
   "deliveries": {
     "title": "التسليمات",
@@ -980,6 +988,10 @@
       "figma": "Figma",
       "canva": "Canva",
       "other": "أخرى"
+    },
+    "submitError": {
+      "notAssignedDesigner": "هذا التسليم يخص مصممًا آخر. يمكن للمصمم المكلَّف فقط تقديمه.",
+      "updateFailed": "تعذّر تقديم التسليم. حاول مرة أخرى."
     }
   },
   "preview": {

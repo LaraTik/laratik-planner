@@ -12,8 +12,10 @@ import {
   submitDeliveryAction,
   setMediaRequiredAction,
   type SetMediaRequiredErrorCode,
+  type SubmitDeliveryErrorCode,
 } from "../actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+
 import { type MediaUploadResult } from "@/components/media/media-upload-form";
 import { MediaSourcePicker } from "@/components/media/media-source-picker";
 import {
@@ -21,6 +23,13 @@ import {
   type DeliveryVersion,
 } from "@/components/workspace/delivery-version-card";
 import { deliveryAssetIds } from "@/lib/deliveries/presentation";
+
+/** The codes `submitDeliveryAction` may return; anything else is a
+ *  pre-existing message and is rendered verbatim. */
+const SUBMIT_DELIVERY_ERROR_CODES: readonly SubmitDeliveryErrorCode[] = [
+  "notAssignedDesigner",
+  "updateFailed",
+];
 
 type DeliveryMediaAsset = {
   id: string;
@@ -59,8 +68,10 @@ export function DeliverySection({
   workspaceSlug,
   contentItemId,
   contentStatus,
+  changeRequestGate,
   isDesigner,
   isManager,
+  isAssignedDesigner = false,
   deliveries,
   mediaAssets = [],
   folderOptions = [],
@@ -75,8 +86,20 @@ export function DeliverySection({
   workspaceSlug: string;
   contentItemId: string;
   contentStatus: string;
+  /**
+   * `content_item.change_request_gate` — which gate asked for the
+   * current revision. A delivery may only be re-submitted while a
+   * CREATIVE-gate request is open; a content-gate request means the
+   * brief is being rewritten, not the design.
+   */
+  changeRequestGate?: string | null;
   isDesigner: boolean;
   isManager: boolean;
+  /**
+   * Whether the viewer is the designer ASSIGNED to this item. A
+   * designer may only deliver their own assignment.
+   */
+  isAssignedDesigner?: boolean;
   deliveries: DeliveryVersion[];
   mediaAssets?: DeliveryMediaAsset[];
   folderOptions?: DeliveryFolder[];
@@ -153,11 +176,19 @@ export function DeliverySection({
           : t("contentDetail.deliveries.reviewerPending");
   const reviewStatusLabel = t(`contentDetail.deliveries.reviewHandoffStatus.${reviewStatus}`);
   const nextStep = t(`contentDetail.deliveries.reviewHandoffNext.${reviewStatus}`);
+  // Mirrors `submitDelivery` exactly: a delivery may be submitted
+  // while the item is in design, or while a CREATIVE-gate change
+  // request is open. `creative_review` is not a submittable state
+  // (the work is already with the reviewers), and a CONTENT-gate
+  // change request goes back to the brief, not to the designer.
+  const isCreativeRevision =
+    contentStatus === "changes_requested" &&
+    (changeRequestGate === "creative_internal" || changeRequestGate === "creative_client");
+  // A designer may only deliver on the item assigned to them; a
+  // manager may deliver any item. The server enforces the same split.
   const canSubmit =
-    (isDesigner || isManager) &&
-    (contentStatus === "in_design" ||
-      contentStatus === "creative_review" ||
-      contentStatus === "changes_requested");
+    (isManager || (isDesigner && isAssignedDesigner)) &&
+    (contentStatus === "in_design" || isCreativeRevision);
 
   useEffect(() => {
     if (wasMediaSearchOpen.current && !showMediaSearch) {
@@ -766,7 +797,9 @@ export function DeliverySection({
 
               {formError ? (
                 <p role="alert" className="text-body text-danger">
-                  {formError}
+                  {SUBMIT_DELIVERY_ERROR_CODES.includes(formError as SubmitDeliveryErrorCode)
+                    ? t(`contentDetail.deliveries.submitError.${formError}`)
+                    : formError}
                 </p>
               ) : null}
 

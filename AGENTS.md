@@ -835,6 +835,106 @@ Agency and workspace context is a P0 invariant. The current implementation has m
 
 ## Changelog
 
+### 2026-10-20 — a permission is one table, checked twice, not two lists
+
+A full review of user permission assignment found the planning flow's
+role model had drifted from master prompt §9 in six independent ways,
+and the same class of drift in seven whole-application write paths.
+None of the failures was exotic: every one was a **second copy** of a
+rule that had fallen behind the first.
+
+- **A role is a table, not a list.** `WORKFLOW_RULES` is the engine's
+  authority table and the master prompt §9 matrix is the contract.
+  When they disagree, the engine is wrong. `approve_content` listed
+  `workspace_manager`, so the person who submitted content for review
+  could also approve it — the gate they submitted into was one they
+  controlled. Fix the table, not the symptom.
+
+- **The UI must be derived from the table, and the server must not
+  trust the UI.** The workflow rail hard-coded its own action→role
+  map, so it offered a manager a "Request changes" button the server
+  rejected, and a planner an "Assign designer" button that assigned
+  the designer and _then_ failed the transition — stranding the item
+  with a designer nobody could claim. Where a second copy exists, the
+  two drift. Where a second copy is unavoidable, add a test that
+  asserts the two agree.
+
+- **A guard that exists only in the UI is not a guard.** The
+  workspace's `workflow_scenario` was read by two pages and by nothing
+  else: `resolveWorkflowTransition` accepts a scenario and filters
+  with it, and the MCP tool's own description promised the filter
+  applied — but no server path ever passed one. Master prompt §9: "Every
+  server command repeats authorization even if the UI hides the
+  action." A shipped tool description is a contract; make it true.
+
+- **Enforcing a guard can expose the bug it was hiding.** Wiring the
+  scenario into the server revealed that `lightweight` had no path out
+  of `draft` at all: `approve_content` is the only rule that reaches
+  `approved_for_design`, so filtering the submit action out of the
+  table stranded every item. The fix was not to soften the filter but
+  to make an omitted stage **skipped** rather than blocked — and to
+  stop creating an approval request for a gate that does not exist. A
+  guard that turns a broken path into a visibly broken path is doing
+  its job.
+
+- **A source-stage filter is a trap wearing a guard's clothes.**
+  Rejecting a transition whose SOURCE stage the scenario omits
+  rejects _every_ action out of that status — including `cancel` and
+  `block`, which are exactly the escape hatches. A workspace that
+  switches scenario mid-flight strands its items with no way forward
+  and no way out, which is the opposite of what the filter looks like
+  it does. **Filter on the TARGET**: refuse a move _into_ a stage the
+  scenario omits, and let an item that is already in an omitted stage
+  be _finished_. Ask of every filter: "if the item is already here,
+  what does the user get to do?" — and if the answer is "nothing",
+  the filter is a trap.
+
+- **A role permits; an assignment scopes.** §9 gives the designer "W"
+  — work on assigned or owned items. `submitDelivery` checked the
+  `designer` role and never the assignment (`designer_id` was not even
+  selected), so any designer could submit another designer's delivery.
+  `updateFormatPayload` already had this right for the brief copy:
+  the class was half-closed, and one door fixed is not a fix at the
+  class.
+
+- **An admin override belongs at the gate, not in the role set.** The
+  agency admin holds "F" on every approval gate but no
+  `client_reviewer` role — deliberately, since that role also carries
+  the restricted client-surface read access. Encoding the override as
+  an explicit check at the gate (`canDecideClientCreative`) keeps both
+  facts true; widening the admin's role set would have silently
+  changed what the team screen shows about them.
+
+- **A union of every rule is not a statement about the next step.**
+  `responsibleRolesForStatus` unioned the roles of all rules leaving a
+  status — including `cancel` and `block`, which are legal from
+  everywhere and belong to the manager. So the manager was reported as
+  owning the next step on every row. Cancelling is always available;
+  it is not what the item is waiting on. Exclude the destructive rules
+  from a "who acts next" derivation.
+
+- **A read gate is not a write gate.** Seven write paths gated on
+  `INTERNAL_WORKSPACE_ROLES`, which includes `viewer`, because they
+  reused the scope check that reads need. A write needs
+  `WRITE_CAPABLE_ROLES` — and anything that publishes to the whole
+  workspace is a workspace _setting_, which is manager-only.
+
+- **A missing key must be visible, and the fallback must actually
+  work.** The translator returns `[key]`, never the bare key, so ten
+  call sites guarded with `value === key` never fell back and rendered
+  `[contentDetail.workflow.approvalFailed]` on screen. Use the shared
+  `isMissingTranslation` helper. And the catalog-completeness test
+  scanned `t(...)` but not `tr(...)` — extend the pattern when you add
+  a call form, or the gate has a hole in it.
+
+The executable form of §9 now lives in
+`tests/unit/planning-permission-assignment.test.ts` (pure engine
+calls, no mocks), with the service-level contracts in
+`tests/unit/content-service.test.ts`,
+`tests/unit/deliveries-service.test.ts`,
+`tests/unit/auth-policy.test.ts` and
+`tests/unit/media/collection-service-revoke.test.ts`.
+
 ### 2026-10-17 — a read must not fail because one of its enrichments failed
 
 Opening a task with an uploaded attachment returned a 500 for the whole page.

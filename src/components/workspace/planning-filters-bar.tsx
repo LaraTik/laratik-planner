@@ -9,6 +9,7 @@ import { ALL_FORMATS, ALL_STATUSES, humanFormat, humanStatus } from "@/lib/conte
 import { ATTENTION_HEALTHS, type HealthSnapshot } from "@/lib/dashboard/health";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { canonicalPlanningStageValue, PLANNING_STAGE_VALUES } from "@/lib/planning/filter-params";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * PlanningFiltersBar — instant-update filter bar for the planning
@@ -60,7 +61,7 @@ export function PlanningFiltersBar({
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const router = useRouter();
   const pathname = usePathname();

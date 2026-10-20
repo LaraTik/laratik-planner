@@ -16,6 +16,7 @@ import {
   KNOWN_FAMILY_NAMES,
 } from "@/lib/brand/typography-families";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * TypographyForm — create form for the brand-kit Typography section.
@@ -76,7 +77,7 @@ export function TypographyForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(
     createFontAssetAction.bind(null, slug),

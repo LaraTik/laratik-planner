@@ -42,6 +42,7 @@ import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/wor
 import type { PlanningPresentation } from "@/lib/planning/presentation";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 type Role =
   | "isManager"
@@ -49,7 +50,15 @@ type Role =
   | "isDesigner"
   | "isInternalReviewer"
   | "isClientReviewer"
-  | "isPublisher";
+  | "isPublisher"
+  /**
+   * The agency admin is not a workspace role — it is a membership
+   * flag on the actor — but it is carried alongside the role flags
+   * because the admin holds approval authority that no single
+   * workspace role carries (master prompt §9: the admin has "F" on
+   * every gate).
+   */
+  | "isAgencyAdmin";
 
 type AssignedDesigner = { id: string; label: string };
 
@@ -201,7 +210,7 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [collapsed, setCollapsed] = useState<boolean>(false);
   const [hydrated, setHydrated] = useState<boolean>(false);
@@ -391,7 +400,7 @@ function WorkflowRailBody({
   const router = useRouter();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -430,18 +439,19 @@ function WorkflowRailBody({
     }
   })();
 
-  const roleFlagByName: Record<WorkspaceRole, Role> = {
+  const roleFlagByName: Partial<Record<WorkspaceRole, Role>> = {
     workspace_manager: "isManager",
     content_planner: "isPlanner",
     designer: "isDesigner",
     internal_reviewer: "isInternalReviewer",
     client_reviewer: "isClientReviewer",
     publisher: "isPublisher",
-    viewer: "isPlanner",
   };
   const currentEligibleRoles: Role[] = responsibleRolesForStatus(
     status as Parameters<typeof responsibleRolesForStatus>[0],
-  ).map((role) => roleFlagByName[role]);
+  )
+    .map((role) => roleFlagByName[role])
+    .filter((flag): flag is Role => flag !== undefined);
   const canActOnCurrentStep = currentEligibleRoles.some((r) => roles[r]);
   const currentRoleLabels = (currentStep?.responsibleRoles ?? []).map((r) => r.label);
   const canonicalAction = planningPresentation?.nextAction;
@@ -451,10 +461,9 @@ function WorkflowRailBody({
   const condition = status === "blocked" || status === "cancelled" ? status : null;
   const hasAnyButton =
     (status === "draft" && can(["isManager", "isPlanner"])) ||
-    (status === "content_review" && can(["isInternalReviewer", "isManager"])) ||
+    (status === "content_review" && can(["isInternalReviewer"])) ||
     (status === "changes_requested" && can(["isManager", "isPlanner"])) ||
-    (status === "approved_for_design" &&
-      (roles.isDesigner || roles.isManager || roles.isPlanner)) ||
+    (status === "approved_for_design" && (roles.isDesigner || roles.isManager)) ||
     (status === "blocked" && roles.isManager) ||
     ([
       "draft",
@@ -744,6 +753,7 @@ function WorkflowRailBody({
               isManager: roles.isManager,
               isInternalReviewer: roles.isInternalReviewer,
               isClientReviewer: roles.isClientReviewer,
+              isAgencyAdmin: roles.isAgencyAdmin,
             }}
             disabled={pending}
             onApprove={(approvalRequestId) =>
@@ -1002,7 +1012,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.submitForReview", "Submit for review")}
         </Button>
       ) : null}
-      {status === "content_review" && can(["isInternalReviewer", "isManager"]) ? (
+      {status === "content_review" && can(["isInternalReviewer"]) ? (
         <>
           <Button
             size="default"
@@ -1043,7 +1053,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.resubmitForReview", "Resubmit for review")}
         </Button>
       ) : null}
-      {status === "approved_for_design" && isDesigner ? (
+      {status === "approved_for_design" && isDesigner && !designer ? (
         <Button
           size="default"
           onClick={() => {
@@ -1056,8 +1066,7 @@ function ActionButtons({
           {tr("contentDetail.workflow.claimAsDesigner", "Claim as designer")}
         </Button>
       ) : null}
-      {(status === "approved_for_design" || status === "in_design") &&
-      can(["isManager", "isPlanner"]) ? (
+      {(status === "approved_for_design" || status === "in_design") && can(["isManager"]) ? (
         <AssignDesignerDialog
           designers={designers}
           {...(designer?.id ? { currentDesignerId: designer.id } : {})}
@@ -1082,6 +1091,9 @@ function ActionButtons({
         "in_design",
         "creative_review",
         "ready_to_publish",
+        // A blocked item can still be cancelled — `WORKFLOW_RULES.cancel`
+        // accepts `blocked` as a source status.
+        "blocked",
       ].includes(status) && isManager ? (
         <details
           className="border-border rounded-[var(--radius-control)] border"
@@ -1188,7 +1200,7 @@ function AssignDesignerDialog({
   const t = useLocaleT();
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [open, setOpen] = useState(false);
   const initialDesignerId =
@@ -1337,7 +1349,7 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
   const t = useLocaleT();
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [open, setOpen] = useState(false);
   const triggerRef = React.useRef<HTMLButtonElement | null>(null);
@@ -1362,18 +1374,20 @@ export function WorkflowSheet(props: WorkflowRailBodyProps) {
   const currentStage = planningStageForStatus(
     props.status as Parameters<typeof planningStageForStatus>[0],
   );
-  const roleFlagByName: Record<WorkspaceRole, Role> = {
+  const roleFlagByName: Partial<Record<WorkspaceRole, Role>> = {
     workspace_manager: "isManager",
     content_planner: "isPlanner",
     designer: "isDesigner",
     internal_reviewer: "isInternalReviewer",
     client_reviewer: "isClientReviewer",
     publisher: "isPublisher",
-    viewer: "isPlanner",
   };
   const canAct = responsibleRolesForStatus(
     props.status as Parameters<typeof responsibleRolesForStatus>[0],
-  ).some((role) => props.roles[roleFlagByName[role]]);
+  )
+    .map((role) => roleFlagByName[role])
+    .filter((flag): flag is Role => flag !== undefined)
+    .some((role) => props.roles[role]);
   const condition =
     props.status === "blocked" || props.status === "cancelled" ? props.status : null;
 

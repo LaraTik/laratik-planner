@@ -155,3 +155,89 @@ calling out the scenario filter so MCP clients know to call
   relationship has been downgraded.
 - Surface the audit log entry on the workspace's activity feed so managers
   can see exactly when a scenario was last applied and by whom.
+
+## Amendment — 2026-10-20: the scenario is enforced on the server, and an omitted stage is skipped
+
+**Status:** accepted (amends the "Engine refactor" and "MCP surface"
+sections above).
+
+### What was wrong
+
+Two things, and the second was hidden by the first.
+
+1. **The scenario was a UI-only guard.** The planning detail page and
+   the board read `workspace_settings.workflow_scenario` and rendered
+   only the stages the scenario includes. Nothing else did.
+   `resolveWorkflowTransition` has always accepted an optional
+   `scenario` argument and filtered the transition table with it, and
+   this ADR says the pages and the MCP server "all pass the
+   workspace's active scenario in" — but the content service never
+   did, so the filter was dead on every server path. The MCP tool
+   description advertised the behaviour ("Transitions that target a
+   stage excluded by the workspace's active scenario are also
+   rejected") while the implementation could not honour it.
+
+   The service now reads the workspace's scenario and passes it to the
+   engine, so the scenario is enforced identically for the planning
+   server action, the inline-update path and the MCP tool.
+
+2. **Enforcing it stranded every `lightweight` item.** `lightweight`
+   omits the `content_review` stage, and `approve_content` is the ONLY
+   rule whose target is `approved_for_design`. Filtering
+   `submit_content_review` out of the table therefore removed the only
+   way out of `draft` — the scenario's own product copy promises
+   "Planning → Design → Creative approval → Publishing setup →
+   Published" with "No pre-design content review", and none of that
+   spine was reachable. ADR 0014 requires the opposite: "a scenario
+   switch can never trap an in-flight item."
+
+### What changed
+
+- **An omitted stage is SKIPPED, not blocked.** When a rule's target
+  stage is excluded by the scenario, the action lands on the bypass
+  target (`content_review` → `approved_for_design`) instead of being
+  rejected. The action's role set is unchanged: under `lightweight`
+  the submitter hands the item to design, which is precisely what "no
+  pre-design content review" means.
+- **The scenario filter applies to the TARGET only.** The original
+  engine filtered on the source stage as well, and that turned out to
+  be a trap rather than a protection: rejecting an excluded SOURCE
+  rejects _every_ action out of that status, including `cancel` and
+  `block` — the escape hatches. A workspace switched to `lightweight`
+  while an item sat in `content_review` would have stranded it with no
+  way forward and no way out, which this ADR forbids ("a scenario
+  switch can never trap an in-flight item"). The target filter is the
+  one that matters:
+  - a move INTO a stage the scenario omits is still refused;
+  - an item already in an omitted stage is _finished_ —
+    `approve_content` lands on `approved_for_design`, and `cancel` /
+    `block` land on conditions, which are always reachable;
+  - the board's "Outside current workflow" section still lists such
+    items, and its copy — "Open each one to finish or reset it" — is
+    now true.
+- **No approval request for a gate that does not exist.** A content
+  approval request is created only when the item actually entered
+  `content_review`. A request nobody can decide is a permanently
+  pending approval.
+- **`changes_requested` is exempt from the target filter.** It is a
+  _derived_ status: it records that work went back to a gate
+  (`statusReturnTarget` = `content_review` for a content-gate
+  revision, `in_design` for a creative-gate one), it does not own a
+  stage. `STATUS_TO_STAGE` maps it to `content_review` for rail
+  display only. Gating it on that fixed mapping made a creative
+  revision impossible to request _and_ impossible to re-deliver in a
+  workspace that skips content review.
+- **`unblock` falls back to `draft`** when the item's return target
+  sits in a stage the scenario omits, so a blocked item is never
+  unblocked into a state the scenario cannot reach.
+- **`effectiveTransitions()` was aligned** with the same semantics, so
+  the function this ADR names as the filter does not disagree with the
+  resolver it feeds.
+
+### Compatibility
+
+`standard`, `two_gate_client` and `self_publish` include every stage,
+so the filter is a no-op for them and their behaviour is unchanged
+byte-for-byte. Only `lightweight` — which must be chosen explicitly by
+a manager — changes, and it changes into the behaviour its product copy
+already promised.

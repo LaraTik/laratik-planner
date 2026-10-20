@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
+import { canWriteToWorkspace, INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { loadAdvertisingReport } from "@/lib/advertising/reporting-query";
@@ -29,6 +29,15 @@ export async function POST(request: NextRequest) {
   if (!agency) return errorResponse("agency_context_unavailable", 404);
   const workspace = await getAccessibleWorkspace(actor, parsed.data.workspaceSlug, agency.agencyId);
   if (!workspace || !(await hasWorkspaceRole(actor, workspace.id, [...INTERNAL_WORKSPACE_ROLES]))) {
+    return errorResponse("workspace_not_accessible", 403);
+  }
+  // Minting a share link persists a durable, workspace-wide record —
+  // it is a write, not a read. The scope above admits `viewer`, so
+  // the write needs its own gate. (The link itself exposes nothing
+  // the viewer cannot already read: following it still requires
+  // workspace access and re-loads the report under the follower's own
+  // advertising grants.)
+  if (!(await canWriteToWorkspace(actor, workspace.id))) {
     return errorResponse("workspace_not_accessible", 403);
   }
   const report = await loadAdvertisingReport(db, {

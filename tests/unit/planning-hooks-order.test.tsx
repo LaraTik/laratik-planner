@@ -102,6 +102,7 @@ describe("planning detail components — hooks order guard", () => {
             isInternalReviewer: false,
             isClientReviewer: false,
             isPublisher: false,
+            isAgencyAdmin: false,
           }}
           approvals={[]}
           designers={[]}
@@ -126,6 +127,7 @@ describe("planning detail components — hooks order guard", () => {
               isInternalReviewer: true,
               isClientReviewer: false,
               isPublisher: false,
+              isAgencyAdmin: false,
             }}
             approvals={[
               {

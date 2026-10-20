@@ -137,6 +137,49 @@ export async function canAccessClientWorkspace(
 }
 
 /**
+ * Is the actor an agency admin for the agency that owns this workspace?
+ *
+ * `isAgencyAdmin` needs an agencyId; callers that only hold a
+ * workspaceId (content services, delivery services) need this
+ * indirection. Agency admins are deliberately NOT given the
+ * `client_reviewer` role — that role carries the restricted
+ * client-surface read access, and the master prompt §9 rule is that
+ * "client_reviewer never grants internal visibility" in the other
+ * direction too: an admin's authority comes from the admin flag, not
+ * from impersonating a client reviewer.
+ */
+export async function isAgencyAdminForWorkspace(
+  actor: Actor,
+  workspaceId: string,
+): Promise<boolean> {
+  const [ws] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  if (!ws) return false;
+  return isAgencyAdmin(actor, ws.agencyId);
+}
+
+/**
+ * Master prompt §9 gives the agency admin "F" (full) on client
+ * creative review, and §10 lists "assigned client reviewer, admin"
+ * as the authorised parties for `approve_client_creative`.
+ *
+ * The admin does not hold the `client_reviewer` role, so a plain role
+ * check denies them — which is how the admin ended up unable to
+ * decide a client-gate approval that the spec says they own. This
+ * helper encodes the admin override explicitly, at the gate, instead
+ * of widening the admin's role set (which would also grant the
+ * restricted client-surface read access and change what the team
+ * screen displays about an admin).
+ */
+export async function canDecideClientCreative(actor: Actor, workspaceId: string): Promise<boolean> {
+  if (await hasWorkspaceRole(actor, workspaceId, ["client_reviewer"])) return true;
+  return isAgencyAdminForWorkspace(actor, workspaceId);
+}
+
+/**
  * FEAT-16 (GAP-FULL-REVIEW-2026-08-25) — explicit read-only gate for
  * write API routes. Returns true when the actor holds a role that
  * may mutate workspace state (any of WRITE_CAPABLE_ROLES), false for
@@ -455,8 +498,10 @@ export async function canReview(
   if (gate === "creative_internal") {
     return hasWorkspaceRole(actor, workspaceId, ["internal_reviewer"]);
   }
-  // creative_client
-  return hasWorkspaceRole(actor, workspaceId, ["client_reviewer"]);
+  // creative_client — the agency admin holds full authority on this
+  // gate (master prompt §9), so this is the one gate where the admin
+  // override applies.
+  return canDecideClientCreative(actor, workspaceId);
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────

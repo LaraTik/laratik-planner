@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * `NavigableArrayField` — a structured list editor with two
@@ -196,7 +197,7 @@ export function NavigableArrayField({
   const tr = (key: string, fallback: string, params?: Record<string, string | number>): string => {
     if (!t) return fallback;
     const value = t(key, params);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
 
   // Clamp the active index when the row count changes

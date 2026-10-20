@@ -20,6 +20,7 @@ import contentDetail from "./contentDetail.json";
 import emails from "./emails.json";
 import errors from "./errors.json";
 import formatEditor from "./formatEditor.json";
+import forms from "./forms.json";
 import languageSwitcher from "./languageSwitcher.json";
 import myWork from "./myWork.json";
 import media from "./media.json";
@@ -70,6 +71,7 @@ export default {
   emails,
   errors,
   formatEditor,
+  forms,
   languageSwitcher,
   myWork,
   media,

@@ -42,6 +42,10 @@ const baseProps = {
   contentStatus: "in_design",
   isDesigner: true,
   isManager: false,
+  // The designer in these tests is the one ASSIGNED to the item, so
+  // the delivery form is available to them. A designer who is not the
+  // assignee is covered separately.
+  isAssignedDesigner: true,
   deliveries: [],
 };
 

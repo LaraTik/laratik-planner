@@ -204,6 +204,24 @@ export type WorkflowTransitionInput = {
 const CONDITION_STATUSES: ReadonlySet<ContentStatus> = new Set(["blocked", "cancelled"]);
 
 /**
+ * `changes_requested` is a DERIVED status: it does not own a stage of
+ * its own, it records that work went back to a gate
+ * (`statusReturnTarget` = `content_review` for a content-gate
+ * revision, `in_design` for a creative-gate one). `STATUS_TO_STAGE`
+ * maps it to `content_review` for rail-display purposes only.
+ *
+ * Gating it on that fixed mapping would break two real paths:
+ *  - a creative-gate revision could not be re-submitted in a
+ *    workspace that skips content review;
+ *  - a creative-gate revision could not even be REQUESTED, because
+ *    the target status would be judged against a stage the scenario
+ *    omits.
+ *
+ * So it is exempt from the scenario stage checks in both directions.
+ */
+const DERIVED_STATUSES: ReadonlySet<ContentStatus> = new Set(["changes_requested"]);
+
+/**
  * Map a `ContentStatus` to its scenario `WorkflowScenarioStage`.
  * Multi-status stages (e.g. `content_review` covers both
  * `content_review` and `changes_requested`) follow the
@@ -230,6 +248,28 @@ export function stageIncluded(status: ContentStatus, spec: ScenarioSpec): boolea
 }
 
 /**
+ * When a scenario omits a stage, the GATE that stage represents is
+ * SKIPPED rather than blocking the item.
+ *
+ * `lightweight` omits `content_review` — its product copy promises
+ * "Planning → Design → Creative approval → Publishing setup →
+ * Published" with "No pre-design content review". `approve_content`
+ * is the only rule that reaches `approved_for_design`, so simply
+ * filtering `submit_content_review` out of the transition table would
+ * strand every lightweight item at `draft`. ADR 0014 requires the
+ * opposite: "a scenario switch can never trap an in-flight item".
+ *
+ * So an action whose target stage the scenario omits lands on the
+ * bypass target instead of being rejected. The action's role set is
+ * unchanged — under `lightweight` the submitter is the one who
+ * hands the item to design, which is exactly what "no pre-design
+ * content review" means.
+ */
+const SCENARIO_STAGE_BYPASS: Partial<Record<ContentStatus, ContentStatus>> = {
+  content_review: "approved_for_design",
+};
+
+/**
  * `effectiveTransitions` — filter `WORKFLOW_RULES` down to the
  * transitions that the active scenario allows.
  *
@@ -248,17 +288,21 @@ export function effectiveTransitions(
   spec: ScenarioSpec,
 ): ReadonlyArray<{ action: Exclude<WorkflowAction, "unblock">; rule: WorkflowRule }> {
   const out: { action: Exclude<WorkflowAction, "unblock">; rule: WorkflowRule }[] = [];
-  const sourceStageIncluded = CONDITION_STATUSES.has(status) || stageIncluded(status, spec);
-  if (!sourceStageIncluded) return out;
   for (const [action, rule] of Object.entries(WORKFLOW_RULES) as Array<
     [Exclude<WorkflowAction, "unblock">, WorkflowRule]
   >) {
     if (!rule.from.includes(status)) continue;
-    if (CONDITION_STATUSES.has(rule.to)) {
+    if (CONDITION_STATUSES.has(rule.to) || DERIVED_STATUSES.has(rule.to)) {
       out.push({ action, rule });
       continue;
     }
-    if (!stageIncluded(rule.to, spec)) continue;
+    if (!stageIncluded(rule.to, spec)) {
+      // A stage the scenario omits is SKIPPED, not blocked: the
+      // action lands on the bypass target instead of being
+      // unreachable. See `SCENARIO_STAGE_BYPASS`.
+      const bypass = SCENARIO_STAGE_BYPASS[rule.to];
+      if (!bypass || !stageIncluded(bypass, spec)) continue;
+    }
     out.push({ action, rule });
   }
   return out;
@@ -278,7 +322,7 @@ export const WORKFLOW_RULES: Record<Exclude<WorkflowAction, "unblock">, Workflow
     to: "content_review",
   },
   approve_content: {
-    roles: ["workspace_manager", "internal_reviewer"],
+    roles: ["internal_reviewer"],
     from: ["content_review"],
     to: "approved_for_design",
   },
@@ -360,12 +404,21 @@ export const WORKFLOW_RULES: Record<Exclude<WorkflowAction, "unblock">, Workflow
  * does not maintain a second copy of the workflow permission table. The
  * result is descriptive only; transition authorization still happens in
  * resolveWorkflowTransition and the server service.
+ *
+ * The DESTRUCTIVE rules (`cancel`, `block`) are excluded on purpose.
+ * They are legal from almost every status and their only role is the
+ * workspace manager, so including them made EVERY status report the
+ * manager as the role that owns the next step — which is how a manager
+ * ended up shown as "you can act" on a content-review row whose actual
+ * action belongs to the internal reviewer. Cancelling an item is always
+ * available to a manager; it is not the step the item is waiting on.
  */
 export function responsibleRolesForStatus(status: ContentStatus): WorkspaceRole[] {
   if (status === "approved_for_design") return ["workspace_manager", "designer"];
   if (status === "blocked") return ["workspace_manager"];
   const roles = new Set<WorkspaceRole>();
-  for (const rule of Object.values(WORKFLOW_RULES)) {
+  for (const [action, rule] of Object.entries(WORKFLOW_RULES)) {
+    if (action === "cancel" || action === "block") continue;
     if (rule.from.includes(status)) {
       for (const role of rule.roles) roles.add(role);
     }
@@ -398,7 +451,9 @@ export function resolveWorkflowTransition(input: WorkflowTransitionInput): {
       throw new DomainError("unauthorized", "Workspace manager role required");
     }
     const target =
-      input.statusReturnTarget && SAFE_RETURN_TARGETS.has(input.statusReturnTarget)
+      input.statusReturnTarget &&
+      SAFE_RETURN_TARGETS.has(input.statusReturnTarget) &&
+      stageIncluded(input.statusReturnTarget, scenario)
         ? input.statusReturnTarget
         : "draft";
     return {
@@ -419,24 +474,45 @@ export function resolveWorkflowTransition(input: WorkflowTransitionInput): {
       `Cannot ${input.action} from ${input.currentStatus}`,
     );
   }
-  // Scenario filter: the source status (when it maps to a stage
-  // included in the scenario) AND the target stage must be in the
-  // active scenario. Conditions (blocked / cancelled) always pass
-  // through.
+  // Scenario filter — on the TARGET only.
+  //
+  // The target's stage must be in the active scenario. When the
+  // scenario omits that stage the gate it represents is SKIPPED and
+  // the action lands on the bypass target instead of being rejected
+  // (see `SCENARIO_STAGE_BYPASS`).
+  //
+  // There is deliberately NO source-stage check. A source-stage check
+  // looks like it is protecting something, but it is what TRAPS an
+  // item: a workspace switched to `lightweight` while an item sits in
+  // `content_review` (a stage the new scenario omits) would reject
+  // EVERY action out of that status — including `cancel` and
+  // `block`, which are exactly the escape hatches. ADR 0014 requires
+  // the opposite: "a scenario switch can never trap an in-flight
+  // item."
+  //
+  // With the target-only filter, such an item is FINISHED rather
+  // than trapped:
+  //   - `approve_content` lands on `approved_for_design` (included),
+  //   - `cancel` / `block` land on conditions (always reachable),
+  //   - `request_content_changes` lands on the derived
+  //     `changes_requested`, whose `statusReturnTarget` says where
+  //     the work goes back to.
+  // The only thing the filter still refuses is a move INTO a stage
+  // the scenario omits, which is the rule that matters.
+  let resolvedTo = rule.to;
   if (
-    !CONDITION_STATUSES.has(input.currentStatus) &&
-    !stageIncluded(input.currentStatus, scenario)
+    !CONDITION_STATUSES.has(rule.to) &&
+    !DERIVED_STATUSES.has(rule.to) &&
+    !stageIncluded(rule.to, scenario)
   ) {
-    throw new DomainError(
-      "invalid_transition",
-      `Action ${input.action} starts from stage excluded by scenario ${scenario.id}`,
-    );
-  }
-  if (!CONDITION_STATUSES.has(rule.to) && !stageIncluded(rule.to, scenario)) {
-    throw new DomainError(
-      "invalid_transition",
-      `Action ${input.action} targets stage excluded by scenario ${scenario.id}`,
-    );
+    const bypass = SCENARIO_STAGE_BYPASS[rule.to];
+    if (!bypass || !stageIncluded(bypass, scenario)) {
+      throw new DomainError(
+        "invalid_transition",
+        `Action ${input.action} targets stage excluded by scenario ${scenario.id}`,
+      );
+    }
+    resolvedTo = bypass;
   }
   if (!rule.roles.some((role) => input.actorRoles.includes(role))) {
     throw new DomainError("unauthorized", `Not authorized to ${input.action}`);
@@ -481,7 +557,7 @@ export function resolveWorkflowTransition(input: WorkflowTransitionInput): {
   }
 
   return {
-    to: rule.to,
+    to: resolvedTo,
     changeRequestGate: null,
     statusReturnTarget: null,
     blockedReason: null,

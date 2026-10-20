@@ -11,7 +11,13 @@ import {
   storageObjects,
   workspaces,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, isAgencyAdmin, isAgencyMember, type Actor } from "@/lib/auth/policy";
+import {
+  canWriteToWorkspace,
+  hasWorkspaceRole,
+  isAgencyAdmin,
+  isAgencyMember,
+  type Actor,
+} from "@/lib/auth/policy";
 import { fetchStorageObject } from "@/lib/storage/read-service";
 import { exportMediaAssetsZip, type MediaZipSource } from "@/lib/exports/media-assets-zip";
 import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
@@ -191,24 +197,27 @@ export async function createMediaShareCollection(input: {
 
 export async function revokeMediaShareCollection(actor: Actor, collectionId: string) {
   const [collection] = await db
-    .select({ id: mediaShareCollections.id, workspaceId: mediaShareCollections.workspaceId })
-    .from(mediaShareCollections)
-    .where(eq(mediaShareCollections.id, collectionId))
-    .limit(1);
-  if (!collection) return { revoked: false };
-  const agency = await db
     .select({
+      id: mediaShareCollections.id,
       agencyId: mediaShareCollections.agencyId,
+      workspaceId: mediaShareCollections.workspaceId,
       createdBy: mediaShareCollections.createdBy,
     })
     .from(mediaShareCollections)
     .where(eq(mediaShareCollections.id, collectionId))
     .limit(1);
-  const allowed = agency[0]
-    ? agency[0].createdBy === actor.id ||
-      (await isAgencyAdmin(actor, agency[0].agencyId)) ||
-      (await isAgencyMember(actor, agency[0].agencyId))
-    : false;
+  if (!collection) return { revoked: false };
+  // Revoking a public share link is a write, so it is scoped to the
+  // collection's OWN workspace. The previous gate accepted any active
+  // agency member, which let a read-only `viewer` in one workspace
+  // tear down a client-facing link another workspace's manager had
+  // published. The creator and the agency admin keep their access.
+  const allowed =
+    collection.createdBy === actor.id ||
+    (await isAgencyAdmin(actor, collection.agencyId)) ||
+    (collection.workspaceId
+      ? await canWriteToWorkspace(actor, collection.workspaceId)
+      : await isAgencyMember(actor, collection.agencyId));
   if (!allowed) throw new MediaPermissionError();
   const [updated] = await db
     .update(mediaShareCollections)

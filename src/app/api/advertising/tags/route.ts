@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
+import { canWriteToWorkspace, INTERNAL_WORKSPACE_ROLES, hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { loadAdvertisingReport } from "@/lib/advertising/reporting-query";
@@ -71,6 +71,13 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) return response("invalid_body", 400);
   const scope = await resolveScope(parsed.data.workspace, parsed.data.accountId);
   if ("error" in scope) return response(scope.error, scope.status ?? 500);
+  // Tagging is a WRITE to the workspace's advertising metadata. The
+  // read scope admits `viewer`, so the write needs its own gate — a
+  // viewer must not be able to tag or untag campaigns in a workspace
+  // they may only read.
+  if (!(await canWriteToWorkspace(scope.actor, scope.workspace.id))) {
+    return response("workspace_not_accessible", 403);
+  }
   const tag = await addAdvertisingLocalTag({
     agencyId: scope.agencyId,
     workspaceId: scope.workspace.id,
@@ -89,6 +96,9 @@ export async function DELETE(request: NextRequest) {
   if (!parsed.success) return response("invalid_body", 400);
   const scope = await resolveScope(parsed.data.workspace, parsed.data.accountId);
   if ("error" in scope) return response(scope.error, scope.status ?? 500);
+  if (!(await canWriteToWorkspace(scope.actor, scope.workspace.id))) {
+    return response("workspace_not_accessible", 403);
+  }
   const tag = await removeAdvertisingLocalTag({
     workspaceId: scope.workspace.id,
     accountId: parsed.data.accountId,

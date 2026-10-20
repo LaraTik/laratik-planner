@@ -26,11 +26,13 @@ import {
   canAccessInternalWorkspace,
   hasWorkspaceRole,
   INTERNAL_WORKSPACE_ROLES,
+  isAgencyAdminForWorkspace,
   requirePolicy,
   type Actor,
 } from "@/lib/auth/policy";
 import {
   WORKFLOW_RULES,
+  getActiveScenario,
   resolveWorkflowTransition,
   type WorkflowAction,
   type WorkspaceRole,
@@ -1436,12 +1438,45 @@ export async function transitionContent(
     )
   ).filter((role): role is WorkspaceRole => role !== null);
 
+  // Master prompt §9 gives the agency admin "F" (full) on client
+  // creative review and §10 lists "assigned client reviewer, admin"
+  // as the authorised parties for `approve_client_creative`. The admin
+  // does not hold the `client_reviewer` role, so without this the
+  // intersection above is empty for them and the admin is refused a
+  // decision the spec says they own.
+  if (
+    input.action === "approve_client_creative" &&
+    !actorRoles.includes("client_reviewer") &&
+    (await isAgencyAdminForWorkspace(actor, item.workspaceId))
+  ) {
+    actorRoles.push("client_reviewer");
+  }
+
+  // The workspace's active workflow scenario filters the transition
+  // table. This used to be a UI-only guard: the planning rail hid the
+  // stages a scenario omits, but the server accepted the transition
+  // anyway, so the scenario could be bypassed from the server action
+  // or the MCP tool.
+  const [settingsRow] = await db
+    .select({
+      workflowScenario: workspaceSettings.workflowScenario,
+      approvalMode: workspaceSettings.approvalMode,
+    })
+    .from(workspaceSettings)
+    .where(eq(workspaceSettings.workspaceId, item.workspaceId))
+    .limit(1);
+  const scenario = getActiveScenario({
+    workflowScenario: settingsRow?.workflowScenario ?? "standard",
+    approvalMode: settingsRow?.approvalMode ?? "simple",
+  });
+
   const transition = resolveWorkflowTransition({
     action: input.action,
     currentStatus: item.status,
     actorRoles,
     ...(input.reason ? { reason: input.reason } : {}),
     statusReturnTarget: item.statusReturnTarget,
+    scenario,
   });
 
   if (input.action === "assign_designer" && !item.designerId) {
@@ -1462,7 +1497,15 @@ export async function transitionContent(
 
     await tx.update(contentItems).set(update).where(eq(contentItems.id, input.contentItemId));
 
-    if (input.action === "submit_content_review" || input.action === "resubmit_content") {
+    // A content approval request exists only when the item actually
+    // entered the content-review gate. Under a scenario that omits
+    // that stage the submit action is routed straight to design, so
+    // creating a request here would leave a permanently-pending
+    // approval nobody can decide.
+    if (
+      (input.action === "submit_content_review" || input.action === "resubmit_content") &&
+      transition.to === "content_review"
+    ) {
       await tx.insert(approvalRequests).values({
         contentItemId: input.contentItemId,
         gate: "content",
@@ -1712,7 +1755,7 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
     .limit(1);
   if (!item) throw new Error("Content item not found");
   await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager"]),
     "assign_designer",
   );
   if (item.designerId === parsed.data.designerId) return; // idempotent
@@ -1895,7 +1938,13 @@ export async function assignContentOwner(actor: Actor, input: AssignContentOwner
 /**
  * Planner releases a designer's hold on an item. Sets designer_id to
  * null and rolls the item back to `approved_for_design` so it shows
- * up in the unassigned queue. workspace_manager / content_planner.
+ * up in the unassigned queue.
+ *
+ * `workspace_manager` only. Master prompt §9 grants "Assign/reassign
+ * designer" to the agency admin (F) and the workspace manager (M) and
+ * denies the planner (-), so releasing a designer's hold is a
+ * manager action too — a planner could otherwise push an item into
+ * the unassigned queue that no planner is allowed to fill.
  */
 export const ReleaseDesignTaskSchema = z.object({
   contentItemId: z.string().uuid(),
@@ -1919,7 +1968,7 @@ export async function releaseDesignTask(actor: Actor, input: ReleaseDesignTaskIn
     .limit(1);
   if (!item) throw new Error("Content item not found");
   await requirePolicy(
-    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
+    hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager"]),
     "release_design_task",
   );
   if (!item.designerId) {

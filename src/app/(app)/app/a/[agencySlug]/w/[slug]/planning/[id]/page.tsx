@@ -221,6 +221,12 @@ export default async function ContentDetailPage({
     .limit(1);
 
   const roles = await getWorkspaceRoles(actor, ws.id);
+  // The agency admin is not a workspace role — it is a membership flag
+  // on the actor — but it carries authority that no single workspace
+  // role carries (master prompt §9: the admin holds "F" on every
+  // approval gate). Resolved once, here, because both the role flags
+  // and the publish form's final-copy approval need it.
+  const actorIsAgencyAdmin = await isAgencyAdmin(actor, ws.agencyId);
   const actorRoles = {
     isManager: roles.has("workspace_manager"),
     isPlanner: roles.has("content_planner"),
@@ -228,6 +234,8 @@ export default async function ContentDetailPage({
     isInternalReviewer: roles.has("internal_reviewer"),
     isClientReviewer: roles.has("client_reviewer"),
     isPublisher: roles.has("publisher"),
+    isViewer: roles.has("viewer"),
+    isAgencyAdmin: actorIsAgencyAdmin,
   };
 
   const [
@@ -243,7 +251,6 @@ export default async function ContentDetailPage({
     channelPayloads,
     channelPayloadStates,
     canConfirmReadiness,
-    canApproveFinalCopy,
     linkedMediaAssets,
     mediaFolders,
   ] = await Promise.all([
@@ -276,7 +283,6 @@ export default async function ContentDetailPage({
     // moving into the Publishing tab, the checks now live
     // here so the form can render with the right affordances.
     hasWorkspaceRole(actor, ws.id, ["workspace_manager", "content_planner", "publisher"]),
-    isAgencyAdmin(actor, ws.agencyId),
     listMediaAssetsForContentItem(actor, {
       agencyId: ws.agencyId,
       workspaceId: ws.id,
@@ -435,19 +441,26 @@ export default async function ContentDetailPage({
     canEditProduction && !canEditAll ? designerEditableFieldsFor(item.format) : undefined;
   // Canonical copy remains editable by managers and planners after approval.
   const canEditCopy = (actorRoles.isManager || actorRoles.isPlanner) && item.status !== "cancelled";
+  // Discussion is the ONE write a viewer holds: master prompt §9 gives
+  // the viewer "V/comment" on both internal and client-visible
+  // discussion, and the discussions service accepts any workspace
+  // member. The composer was hidden from viewers, so a read-only
+  // member could not use the one thing their role allows.
   const canPostInternal =
     actorRoles.isManager ||
     actorRoles.isPlanner ||
     actorRoles.isDesigner ||
     actorRoles.isInternalReviewer ||
-    actorRoles.isPublisher;
+    actorRoles.isPublisher ||
+    actorRoles.isViewer;
   const canPostClientVisible =
     actorRoles.isClientReviewer ||
     actorRoles.isManager ||
     actorRoles.isPlanner ||
     actorRoles.isDesigner ||
     actorRoles.isInternalReviewer ||
-    actorRoles.isPublisher;
+    actorRoles.isPublisher ||
+    actorRoles.isViewer;
 
   const channelConfigs = item.channels.map((ch) => {
     const payload = (channelPayloads as Record<string, unknown>)[ch.socialChannelId];
@@ -1234,8 +1247,10 @@ export default async function ContentDetailPage({
                     workspaceSlug={slug}
                     contentItemId={item.id}
                     contentStatus={item.status}
+                    changeRequestGate={item.changeRequestGate}
                     isDesigner={actorRoles.isDesigner}
                     isManager={actorRoles.isManager}
+                    isAssignedDesigner={Boolean(item.designerId) && item.designerId === actor.id}
                     viewerIsClient={actorRoles.isClientReviewer}
                     mediaAssets={linkedMediaAssets.map((row) => ({
                       id: row.asset.id,
@@ -1622,7 +1637,7 @@ export default async function ContentDetailPage({
                           item.status === "partially_published" ||
                           item.status === "published"
                         }
-                        canApproveFinalCopy={canApproveFinalCopy}
+                        canApproveFinalCopy={actorIsAgencyAdmin}
                         canConfirmReadiness={canConfirmReadiness}
                         canExcludeChannel={
                           (actorRoles.isPublisher || actorRoles.isManager) &&

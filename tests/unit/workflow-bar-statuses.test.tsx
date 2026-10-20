@@ -27,6 +27,7 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
     isInternalReviewer: false,
     isClientReviewer: false,
     isPublisher: false,
+    isAgencyAdmin: false,
   };
 
   it("renders a primary current badge for active statuses and a condition for blocked/cancelled", () => {

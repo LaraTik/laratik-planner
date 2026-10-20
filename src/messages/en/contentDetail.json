@@ -565,7 +565,14 @@
     "staleOverride": "Custom override — shared copy changed",
     "publishHandoff": "Publishing is where you choose each channel language, add destinations and disclosures, and approve the final copy.",
     "approvedBeforeLaterEdits": "Approved before later edits. Approval remains valid according to workspace policy.",
-    "backToPlanning": "Back to planning"
+    "backToPlanning": "Back to planning",
+    "perChannelMetaLabel": "Channel copy summary",
+    "languageShort": "Lang",
+    "charactersShort": "Chars",
+    "hashtagsShort": "Tags",
+    "channelsCount": "channels",
+    "overridesCount": "with custom override",
+    "staleCount": "marked stale"
   },
   "createNavigator": {
     "label": "Create sections"
@@ -864,7 +871,8 @@
     "assigning": "Assigning…",
     "noDesigners": "No designers in this workspace yet. Invite one from Settings, or wait for a designer to claim the item themselves.",
     "closeWorkflow": "Close workflow",
-    "close": "Close"
+    "close": "Close",
+    "approvalFailed": "The approval action failed."
   },
   "deliveries": {
     "title": "Deliveries",
@@ -980,6 +988,10 @@
       "figma": "Figma",
       "canva": "Canva",
       "other": "Other"
+    },
+    "submitError": {
+      "notAssignedDesigner": "This delivery belongs to another designer. Only the assigned designer can submit it.",
+      "updateFailed": "The delivery could not be submitted. Try again."
     }
   },
   "preview": {

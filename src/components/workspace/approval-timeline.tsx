@@ -6,6 +6,7 @@ import { humanize } from "@/lib/content/status";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * ApprovalTimeline — the "Approval requests" list under the workflow
@@ -37,6 +38,16 @@ export type ApprovalTimelineRoles = {
   isManager: boolean;
   isInternalReviewer: boolean;
   isClientReviewer: boolean;
+  /**
+   * The agency admin holds full authority on every approval gate
+   * (master prompt §9) but is not an `internal_reviewer` or a
+   * `client_reviewer`, so the admin override has to be carried
+   * explicitly. The plain workspace manager holds NO approval
+   * authority at all — §9 gives content approval to the internal
+   * reviewer and client creative review to the assigned client
+   * reviewer — so `isManager` is not an override here.
+   */
+  isAgencyAdmin: boolean;
 };
 
 export interface ApprovalTimelineProps {
@@ -60,9 +71,23 @@ export interface ApprovalTimelineProps {
 }
 
 function canActorDecide(request: ApprovalRequest, roles: ApprovalTimelineRoles): boolean {
-  if (request.gate === "creative_internal") return roles.isInternalReviewer || roles.isManager;
-  if (request.gate === "creative_client") return roles.isClientReviewer || roles.isManager;
-  if (request.gate === "content") return roles.isInternalReviewer || roles.isManager;
+  if (request.gate === "creative_internal") {
+    return roles.isInternalReviewer || roles.isAgencyAdmin;
+  }
+  if (request.gate === "creative_client") {
+    return roles.isClientReviewer || roles.isAgencyAdmin;
+  }
+  if (request.gate === "content") {
+    // The content gate is decided by the WORKFLOW command, not by
+    // this timeline: `decideApproval` refuses a content-gate request
+    // outright ("Content approvals must use the content workflow
+    // command"), because the content transition also owns the item's
+    // status change. Rendering Approve / Request changes here would
+    // offer a button that can only ever fail. The rail's own
+    // "Approve content" / "Request changes" actions — gated to the
+    // internal reviewer — are the working path.
+    return false;
+  }
   return false;
 }
 
@@ -84,7 +109,7 @@ export function ApprovalTimeline({
   const localeT = useLocaleT();
   const tr = (key: string, fallback: string) => {
     const value = t ? t(key) : localeT(key);
-    return value.startsWith(`[${key}]`) ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const translateKnown = (key: string, fallback: string) => {
     return tr(key, fallback);

@@ -15,7 +15,13 @@ import {
   workspaces,
   workspaceSettings,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import {
+  hasWorkspaceRole,
+  requirePolicy,
+  canDecideClientCreative,
+  PermissionDeniedError,
+  type Actor,
+} from "@/lib/auth/policy";
 import { z } from "zod";
 import {} from "next/cache";
 import { deriveCreativeApprovalOutcome } from "@/lib/deliveries/approval-workflow";
@@ -72,6 +78,7 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
       status: contentItems.status,
       changeRequestGate: contentItems.changeRequestGate,
       mediaRequired: contentItems.mediaRequired,
+      designerId: contentItems.designerId,
     })
     .from(contentItems)
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
@@ -83,6 +90,27 @@ export async function submitDelivery(actor: Actor, input: SubmitDeliveryInput) {
     hasWorkspaceRole(actor, item.workspaceId, ["designer", "workspace_manager"]),
     "submit_delivery",
   );
+
+  // A designer may only submit work on items ASSIGNED TO THEM.
+  // Master prompt §9 gives the designer "W" on "Submit delivery" and
+  // "W on assigned item" on "Edit production details" — the role
+  // permits the work, the assignment scopes it. Without this check
+  // any designer in the workspace could submit (and thereby claim)
+  // another designer's delivery, overwriting the work the assigned
+  // designer produced. `updateFormatPayload` already enforces the
+  // same rule for the brief copy, so this closes the second door on
+  // the same class rather than leaving it half-open.
+  if (
+    (await hasWorkspaceRole(actor, item.workspaceId, ["designer"])) &&
+    !(await hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager"]))
+  ) {
+    if (item.designerId !== actor.id) {
+      // A typed, code-bearing error: the action turns it into a stable
+      // code and the client translates it, so an Arabic user never
+      // reads an English sentence. See `SubmitDeliveryErrorCode`.
+      throw new PermissionDeniedError("submit_delivery_not_assigned");
+    }
+  }
 
   // The media floor. Most posts must ship creative; a caption-only
   // announcement or a thread post legitimately has none, and that
@@ -320,7 +348,15 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
         ? ["internal_reviewer"]
         : ["client_reviewer"];
 
-  await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, role), "decide_approval");
+  if (req.gate === "creative_client") {
+    // The agency admin holds full authority on the client creative
+    // gate (master prompt §9 "Client creative review | F") but does
+    // not hold the `client_reviewer` role, so the plain role check
+    // below would refuse them a decision the spec says they own.
+    await requirePolicy(canDecideClientCreative(actor, item.workspaceId), "decide_approval");
+  } else {
+    await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, role), "decide_approval");
+  }
 
   return await db.transaction(async (tx) => {
     await tx.execute(sql`SELECT id FROM approval_request WHERE id = ${req.id} FOR UPDATE`);

@@ -366,7 +366,10 @@
     "saving": "Saving…",
     "filterWorkspaces": "Filter {count} workspaces",
     "filterWorkspacesAria": "Filter workspaces by name",
-    "noWorkspaceMatches": "No workspace matches “{filter}”."
+    "noWorkspaceMatches": "No workspace matches “{filter}”.",
+    "auditTitle": "Recent changes",
+    "auditEmpty": "No prior access changes on file. The first change you make will appear here for the team to audit later.",
+    "auditBy": "by {name}"
   },
   "colorForm": {
     "nameLabel": "Color name",

@@ -7,6 +7,7 @@ import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * PublishingRuleForm — inline create form for the brand-kit
@@ -77,7 +78,7 @@ export function PublishingRuleForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(
     createPublishingRuleAction.bind(null, slug),

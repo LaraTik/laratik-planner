@@ -366,7 +366,10 @@
     "saving": "جارٍ الحفظ…",
     "filterWorkspaces": "تصفية {count} مساحات عمل",
     "filterWorkspacesAria": "تصفية مساحات العمل بالاسم",
-    "noWorkspaceMatches": "لا توجد مساحة عمل تطابق «{filter}»."
+    "noWorkspaceMatches": "لا توجد مساحة عمل تطابق «{filter}».",
+    "auditTitle": "التغييرات الأخيرة",
+    "auditEmpty": "لا توجد تغييرات سابقة في الصلاحيات. أول تغيير تقوم به سيظهر هنا ليتمكّن الفريق من مراجعته لاحقًا.",
+    "auditBy": "بواسطة {name}"
   },
   "colorForm": {
     "nameLabel": "اسم اللون",

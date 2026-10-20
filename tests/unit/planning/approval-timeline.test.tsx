@@ -18,7 +18,12 @@ describe("ApprovalTimeline", () => {
               deliveryVersionId: null,
             },
           ]}
-          roles={{ isManager: true, isInternalReviewer: true, isClientReviewer: false }}
+          roles={{
+            isManager: true,
+            isInternalReviewer: true,
+            isClientReviewer: false,
+            isAgencyAdmin: false,
+          }}
           onApprove={vi.fn()}
           onRequestChanges={vi.fn()}
         />

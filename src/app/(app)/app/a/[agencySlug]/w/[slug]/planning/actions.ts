@@ -518,6 +518,17 @@ export async function assignDesignerAction(input: {
 }
 
 // ─── Submit delivery ──────────────────────────────────────────────────
+/**
+ * Stable failure codes for the delivery submission.
+ *
+ * The action returns a CODE, never a sentence: AGENTS.md's bilingual
+ * contract requires the client boundary to translate, and an Arabic
+ * user must not read an English error. `notAssignedDesigner` is the
+ * case where a designer who is not the item's assignee tried to
+ * submit a delivery on it.
+ */
+export type SubmitDeliveryErrorCode = "notAssignedDesigner" | "updateFailed";
+
 export async function submitDeliveryAction(
   workspaceSlug: string,
   contentItemId: string,
@@ -542,7 +553,23 @@ export async function submitDeliveryAction(
       return { error: String(result.error) };
     }
   } catch (error) {
-    return actionFailure<SubmitDeliveryFields>(error, "The delivery could not be submitted.");
+    // The action returns a CODE, not a sentence: AGENTS.md's bilingual
+    // contract requires the client boundary to translate, and an Arabic
+    // user must not read an English error. The service distinguishes
+    // "you are not the designer this delivery belongs to" with a typed
+    // `PermissionDeniedError` carrying a stable action name; everything
+    // else shares `updateFailed`.
+    console.error("[submitDelivery] submission failed", {
+      workspaceSlug,
+      contentItemId,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return {
+      error:
+        error instanceof PermissionDeniedError && error.action === "submit_delivery_not_assigned"
+          ? "notAssignedDesigner"
+          : "updateFailed",
+    };
   }
   return { ok: true };
 }

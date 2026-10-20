@@ -12,6 +12,193 @@ copied from `git log <prev>..<tag>` at tag time.
 
 ## [Unreleased]
 
+### Fixed — a full review of user permission assignment across the planning flow (and the rest of the app)
+
+A review of who may do what, measured against the master prompt §9 role
+capability matrix and the §10 transition table, found that the planning
+flow's permission model had drifted from its own specification in six
+distinct ways, and that the same class of drift existed in seven
+whole-application write paths. Every finding below is a case where the
+UI, the server, or the two together disagreed with the spec — not a
+matter of taste.
+
+**Planning flow — the role model had drifted from master prompt §9**
+
+- **The workspace manager could approve content.** §9 gives content
+  approval to the agency admin (F) and the internal reviewer (R), and
+  denies the workspace manager (—). `WORKFLOW_RULES.approve_content`
+  still listed `workspace_manager`, so the person who _submitted_ the
+  content for review could also approve it — the review gate the
+  manager submitted into was one the manager controlled. The rule is now
+  `["internal_reviewer"]`; the agency admin still passes through the
+  existing admin shortcut, which grants the internal role set.
+
+- **The same manager was offered a "Request changes" button the server
+  rejected.** `request_content_changes` was correctly restricted to the
+  internal reviewer, but the workflow rail rendered the button for
+  `isManager` too. Clicking it returned `Not authorized to
+request_content_changes`. The rail's gate is now the reviewer.
+
+- **A content planner could assign a designer, and the item got stuck.**
+  The rail offered "Assign designer" to planners and `assignDesigner`
+  allowed them; the `assign_designer` _transition_ then rejected them,
+  because only a manager may run it. The net effect was the worst of
+  both: the designer was assigned, the item stayed in
+  `approved_for_design`, the planner saw a generic failure, and the
+  assigned designer's "Claim as designer" then failed with "Already
+  assigned to a designer" — an item nobody could move. Assigning and
+  releasing a designer's hold are now manager-only, matching §9
+  ("Assign/reassign designer | F | M | —").
+
+- **Any designer in the workspace could submit another designer's
+  delivery.** `submitDelivery` checked the `designer` _role_ but never
+  the assignment — `designer_id` was not even selected. §9 gives the
+  designer "W" (work on assigned or owned items); the role permits the
+  work, the assignment scopes it. A delivery now requires the actor to
+  be the assigned designer, or a manager. `updateFormatPayload` already
+  enforced this for the brief copy, so this closes the second door on
+  the same class. The refusal is a typed `PermissionDeniedError`
+  carrying a stable action name, which the server action turns into a
+  code (`notAssignedDesigner`) that the client translates — the
+  bilingual contract forbids surfacing an English sentence in an Arabic
+  UI, and the delivery form renders the message verbatim.
+
+- **The agency admin could not decide a client-gate approval.** §9 gives
+  the admin "F" on client creative review and §10 lists "assigned client
+  reviewer, admin" as the authorised parties for `approve_client_creative`.
+  The admin holds no `client_reviewer` role — deliberately, since that
+  role also carries the restricted client-surface read access — so the
+  plain role check denied them a decision the spec says they own. The
+  override is now explicit at the gate (`canDecideClientCreative`) rather
+  than implicit in the role set, and it is applied to the workflow
+  transition and the approval decision alike.
+
+- **The manager was shown a "decide" button on approvals the server
+  always refuses.** The approval timeline granted the workspace manager
+  Approve and Request-changes on all three gates. The server accepted
+  none of them. The timeline now mirrors the server exactly: the
+  internal reviewer owns the content and internal-creative gates, the
+  assigned client reviewer owns the client gate, and the agency admin
+  may act on any of them. The **content** gate renders no buttons at
+  all, because that gate is decided by the workflow command
+  (`decideApproval` refuses a content-gate request outright), so the
+  button could only ever fail.
+
+**Planning flow — the scenario was a UI-only guard**
+
+`workspace_settings.workflow_scenario` was read by the planning detail
+page and the board, and by nothing else. `resolveWorkflowTransition`
+accepts a `scenario` argument and filters the transition table with it,
+and ADR 0014 says the MCP server and the pages "all pass the
+workspace's active scenario in" — but the service never did, so the
+scenario was enforced nowhere. The MCP tool description promised
+otherwise: "Transitions that target a stage excluded by the workspace's
+active scenario are also rejected." That promise was false. The service
+now reads the workspace's scenario and passes it to the engine, so the
+scenario is enforced on the server action and on the MCP tool alike.
+
+Enforcing it exposed a second defect that the UI-only guard had been
+hiding: `lightweight` omits the `content_review` stage, and
+`approve_content` is the _only_ rule that reaches `approved_for_design`.
+Filtering `submit_content_review` out of the table therefore stranded
+every lightweight item at `draft` — the opposite of what the scenario
+promises ("Planning → Design → Creative approval → Publishing setup →
+Published", "No pre-design content review"). A stage a scenario omits is
+now **skipped** rather than blocked: the submit action lands on the
+next spine stage, and no content approval request is created for a gate
+that does not exist.
+
+Wiring the scenario into the server also exposed a trap in the filter
+itself. The engine's scenario filter checked BOTH the source and the
+target stage, and rejecting an excluded SOURCE turns out to be the
+opposite of what it looks like: it rejects _every_ action out of that
+status — including `cancel` and `block`, which are exactly the escape
+hatches. A workspace switched to `lightweight` while an item sat in
+`content_review` would have stranded it with no way forward and no way
+out, which ADR 0014 explicitly forbids ("a scenario switch can never
+trap an in-flight item"). The filter now applies to the **target**
+only:
+
+- a move INTO a stage the scenario omits is still refused;
+- an item already in an omitted stage is _finished_ — `approve_content`
+  lands on `approved_for_design`, and `cancel` / `block` land on
+  conditions, which are always reachable;
+- `changes_requested` is a derived status — it records that work went
+  _back_ to a gate — so it is exempt from the filter as a target, and
+  a creative-gate revision can be requested and re-delivered in a
+  workspace that skips content review.
+
+**Planning flow — the "who owns the next step" union was polluted**
+
+`responsibleRolesForStatus` is what the planning list and the workflow
+rail use to decide whether a row is actionable. It unioned the roles of
+_every_ rule leaving a status, including `cancel` and `block` — whose
+only role is the workspace manager, and which are legal from almost
+every status. The result was that the manager was reported as the role
+owning the next step on every row, so a manager saw "you can act" on a
+content-review item whose real action belonged to the internal
+reviewer. The destructive rules are now excluded: cancelling is always
+available to a manager, but it is not the step the item is waiting on.
+
+**Whole application — write paths that used a read gate**
+
+- `DELETE /api/media/share-collections/[id]` accepted any active
+  _agency_ member, so a read-only `viewer` in one workspace could
+  revoke the client-facing media share link a manager in another
+  workspace had published. The check is now scoped to the collection's
+  own workspace.
+- `POST /api/advertising/share`, `POST|DELETE /api/advertising/tags`,
+  `POST /api/advertising/saved-views` and
+  `POST /api/advertising/signal-feedback` gated their writes with
+  `INTERNAL_WORKSPACE_ROLES`, which includes `viewer`. Each write now
+  requires a write-capable role. (A shared saved view is a shared
+  convenience in its own table, not a `workspace_settings` setting, so
+  a write-capable role is the bar — the share scope itself stays the
+  author's choice.)
+- `POST /api/trends/sources/[key]/acknowledge-tos` was gated on agency
+  membership, while every sibling route on the same resource is
+  agency-admin only. The ToS acknowledgement is the administrative
+  precondition for enabling a source, so it is admin-only now.
+- `laratik_planner_apply_workflow_scenario` resolved its documented
+  `workspace_id` UUID through a slug lookup, so every call failed with
+  "Workspace not found" — the tool was gated on a lookup bug rather
+  than on a role. It resolves by id now, and checks the manager role it
+  advertises.
+
+**Audited and deliberately left unchanged:** `POST /api/tasks` is gated on
+agency membership, not on a workspace write role. The task board is an
+agency-wide collaboration surface — filing a task grants no access to the
+workspace it is attached to, and the calendar already filters by workspace
+membership for non-admins — so a workspace-role gate would contradict both
+the documented policy in `docs/architecture/authorization.md` and the MCP
+`create_task` contract. An earlier draft of this change applied a
+write-capability gate there and the integration suite caught it. The
+decision is now recorded in the authorization doc so it is not re-litigated
+on the next audit.
+
+**i18n — the missing-key fallback never fired**
+
+The translator returns a missing key as `[key]` or `[key] English
+fallback`, never as the bare key. Ten call sites guarded with
+`value === key`, so the guard never fired and the English fallback
+literal was dead code: a missing key rendered on screen as
+`[contentDetail.workflow.approvalFailed]` — in the error banner of the
+approval path, exactly where a failure is most confusing to read. A
+shared `isMissingTranslation` helper now carries the wrapper shape, and
+the catalog-completeness test scans `tr(...)` as well as `t(...)` — it
+previously only scanned `t(...)`, which is how
+`contentDetail.workflow.approvalFailed` shipped with no catalog entry
+at all.
+
+Thirteen catalog keys were missing from **both** `en` and `ar` and
+have been added in both locales, and a new `forms` namespace
+(`src/messages/{en,ar}/forms.json`) was created for
+`forms.errorSummary.*`, which had no namespace to live in.
+
+`src/messages/en/common.json` also carried a duplicated `"close": "Close"`
+key — two identical entries, of which only the second was ever read.
+The duplicate is gone.
+
 ### Fixed — opening a task with an uploaded attachment could 500 for the whole agency
 
 The reported symptom was "some users get an exception when opening their own

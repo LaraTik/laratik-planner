@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
+import { canWriteToWorkspace } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { loadAdvertisingReport } from "@/lib/advertising/reporting-query";
@@ -87,6 +88,13 @@ export async function POST(request: NextRequest) {
   try {
     const scope = await resolveScope(parsed.data);
     if ("error" in scope) return errorResponse(scope.error, scope.status ?? 500);
+    // Recording a signal is a write that steers the agency's ad
+    // intelligence. The scope resolution only proves workspace
+    // access, which a `viewer` has, so the write needs its own
+    // write-capable gate.
+    if (!(await canWriteToWorkspace(scope.actor, scope.workspace.id))) {
+      return errorResponse("workspace_not_accessible", 403);
+    }
     const mutation: AdvertisingSignalFeedbackMutation = parsed.data.mutation;
     const feedback = await saveAdvertisingSignalFeedback({
       agencyId: scope.agencyId,

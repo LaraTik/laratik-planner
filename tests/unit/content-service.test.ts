@@ -140,6 +140,8 @@ vi.mock("@/lib/publishing/materiality", () => ({
 const policyMock = vi.hoisted(() => ({
   hasWorkspaceRole: vi.fn(async () => true as boolean),
   canAccessInternalWorkspace: vi.fn(async () => true as boolean),
+  isAgencyAdminForWorkspace: vi.fn(async () => false as boolean),
+  canDecideClientCreative: vi.fn(async () => true as boolean),
   requirePolicy: vi.fn(async (predicate: Promise<boolean>, action: string) => {
     if (!(await predicate)) {
       const err = new Error(`Permission denied: ${action}`);
@@ -170,6 +172,7 @@ const {
   claimAsDesigner,
   assignDesigner,
   assignContentOwner,
+  releaseDesignTask,
   AssignDesignerSchema,
   listWorkspaceDesigners,
   UPDATEABLE_STATUSES,
@@ -755,6 +758,104 @@ describe("bulkArchiveContentItems (FEAT-14)", () => {
 });
 
 describe("transitionContent", () => {
+  it("applies the workspace's workflow scenario on the SERVER, not only in the UI", async () => {
+    // The scenario used to be a UI-only guard: the rail hid the stages
+    // a scenario omits, but the server action and the MCP tool
+    // accepted the transition anyway. Now the service reads the
+    // workspace's scenario and hands it to the engine, so a
+    // `lightweight` workspace cannot be pushed into a content-review
+    // gate its own spine omits.
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    // the workspace's active scenario
+    dbMock.state.selectResults.push([{ workflowScenario: "lightweight", approvalMode: "simple" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "submit_content_review",
+    });
+    // Lightweight omits the content-review stage, so the item is handed
+    // to design directly instead of being parked in a gate the
+    // scenario does not have.
+    expect(result.to).toBe("approved_for_design");
+    // …and no content approval request is created, because there is no
+    // content gate left for anyone to decide. A request nobody can
+    // decide is a permanently pending approval.
+    const approvalReq = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["gate"] === "content",
+    );
+    expect(approvalReq).toBeUndefined();
+  });
+
+  it("keeps the standard scenario's behaviour byte-for-byte", async () => {
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "submit_content_review",
+    });
+    expect(result.to).toBe("content_review");
+    const approvalReq = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["gate"] === "content",
+    );
+    expect(approvalReq).toBeDefined();
+  });
+
+  it("finishes an in-flight content_review item under lightweight instead of trapping it", async () => {
+    // A workspace can switch to `lightweight` while an item sits in
+    // `content_review` — a stage the new scenario omits. ADR 0014 requires
+    // that "a scenario switch can never trap an in-flight item", so the
+    // item must still be FINISHABLE.
+    //
+    // This test used to assert a REJECTION ("rejects a content-review
+    // transition the workspace's scenario omits"). That expectation encoded
+    // the source-stage filter, which is the trap itself: rejecting every
+    // action out of an omitted stage also rejects `cancel` and `block`, so
+    // the item would be stranded with no way forward and no way out. The
+    // engine now applies the scenario filter to the TARGET only, and the
+    // item lands on the next included stage.
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "content_review",
+        designerId: null,
+        statusReturnTarget: null,
+      },
+    ]);
+    dbMock.state.selectResults.push([{ workflowScenario: "lightweight", approvalMode: "simple" }]);
+    // the pending content approval request the item entered the gate with
+    dbMock.state.selectResults.push([{ id: "apr-1" }]);
+
+    const result = await transitionContent(actor, {
+      contentItemId,
+      action: "approve_content",
+      reason: "LGTM",
+    });
+    expect(result.to).toBe("approved_for_design");
+    // the gate is still DECIDED, not left pending forever
+    const decision = dbMock.state.insertCalls.find(
+      (c) => (c.values as Record<string, unknown>)["decision"] === "approved",
+    );
+    expect(decision).toBeDefined();
+  });
+
   it("throws when the content item is missing", async () => {
     dbMock.state.selectResults.push([]);
     await expect(
@@ -772,6 +873,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole for workspace_manager check
     dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
     dbMock.state.selectResults.push([{ isAdmin: true }]);
@@ -790,6 +894,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole is mocked; no more selects needed
 
     const result = await transitionContent(actor, {
@@ -813,6 +920,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // pending approval request lookup (hasWorkspaceRole is mocked)
     dbMock.state.selectResults.push([{ id: "apr-1" }]);
 
@@ -838,6 +948,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // pending request (only other select — hasWorkspaceRole is mocked)
     dbMock.state.selectResults.push([{ id: "apr-1" }]);
 
@@ -863,6 +976,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // No pending request — empty result row triggers the throw.
     dbMock.state.selectResults.push([]);
 
@@ -885,6 +1001,9 @@ describe("transitionContent", () => {
         statusReturnTarget: null,
       },
     ]);
+    // the workspace's active workflow scenario (read by the service so the
+    // scenario filter is enforced server-side, not only in the UI)
+    dbMock.state.selectResults.push([{ workflowScenario: "standard", approvalMode: "simple" }]);
     // hasWorkspaceRole is mocked; no more selects needed
 
     const result = await transitionContent(actor, {
@@ -1014,6 +1133,52 @@ describe("assignDesigner (FEAT-FULL-REVIEW-2026-08-26)", () => {
       (c) => (c.values as Record<string, unknown>)["kind"] === "assignment",
     );
     expect(activityInsert).toBeDefined();
+  });
+});
+
+describe("designer assignment authority (master prompt §9)", () => {
+  const designerId = "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb";
+
+  it("assignDesigner authorises the workspace manager only — not the planner", async () => {
+    // §9 "Assign/reassign designer": Agency Admin F, Workspace Manager
+    // M, Planner -. A planner who could assign a designer would set
+    // the designer, then be rejected by the `assign_designer`
+    // TRANSITION (manager-only), leaving the item in
+    // `approved_for_design` with a designer attached that nobody can
+    // claim.
+    dbMock.state.selectResults.push([{ workspaceId, designerId, title: "Spring teaser" }]);
+    await assignDesigner(actor, { contentItemId, designerId });
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls.at(-1) as unknown as [
+      unknown,
+      unknown,
+      string[],
+    ];
+    expect(roleCall[2]).toEqual(["workspace_manager"]);
+  });
+
+  it("assignDesigner refuses an actor who holds no manager role", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    dbMock.state.selectResults.push([{ workspaceId, designerId, title: "Spring teaser" }]);
+    await expect(assignDesigner(actor, { contentItemId, designerId })).rejects.toThrow(
+      /permission denied/i,
+    );
+  });
+
+  it("releaseDesignTask authorises the workspace manager only — not the planner", async () => {
+    // Releasing a designer's hold puts the item back in the
+    // unassigned queue, which only a manager may fill — so a planner
+    // who could release would push work nobody but a manager can
+    // complete.
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId, status: "in_design", title: "Spring teaser" },
+    ]);
+    await releaseDesignTask(actor, { contentItemId });
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls.at(-1) as unknown as [
+      unknown,
+      unknown,
+      string[],
+    ];
+    expect(roleCall[2]).toEqual(["workspace_manager"]);
   });
 });
 

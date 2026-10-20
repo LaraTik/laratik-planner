@@ -87,8 +87,10 @@ export function PlanningListActions({
   const [archivePending, startArchiveTransition] = React.useTransition();
   const [duplicatePending, startDuplicateTransition] = React.useTransition();
   const [ownerDialogOpen, setOwnerDialogOpen] = React.useState(false);
-  const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
-    t(key, params) === key ? fallback : t(key, params);
+  const tr = (key: string, fallback: string, params?: Record<string, string | number>) => {
+    const value = t(key, params);
+    return isMissingTranslation(value, key) ? fallback : value;
+  };
   const detailHref = `${workspaceBasePath(agencySlug, workspaceSlug)}/planning/${itemId}`;
   const isDraft = status === "draft";
   const isChangesRequested = status === "changes_requested";
@@ -246,3 +248,4 @@ export function PlanningListActions({
 }
 
 import { workspaceBasePath } from "@/lib/urls";
+import { isMissingTranslation } from "@/messages";

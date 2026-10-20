@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CharacterCountInput } from "@/components/workspace/character-count-input";
 import { useLocaleT } from "@/components/i18n/locale-provider";
+import { isMissingTranslation } from "@/messages";
 
 /**
  * PillarForm — inline create form for the brand-kit Pillars
@@ -58,7 +59,7 @@ export function PillarForm({
   const t = tProp ?? localeT;
   const tr = (key: string, fallback: string) => {
     const value = t(key);
-    return value === key ? fallback : value;
+    return isMissingTranslation(value, key) ? fallback : value;
   };
   const [state, action] = useActionState(createPillarAction.bind(null, slug), {} as FormState);
   const [color, setColor] = React.useState("#6366F1");

@@ -282,6 +282,78 @@ describe("canReview", () => {
   });
 });
 
+describe("canDecideClientCreative", () => {
+  // Master prompt §9: "Client creative review | Agency Admin F |
+  // Workspace Manager - | ... | Client Reviewer C assigned
+  // submissions". The admin holds no `client_reviewer` role, so the
+  // plain role check used to deny them a decision the spec says they
+  // own — the admin could not decide a client-gate approval.
+  it("returns true for a client_reviewer", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "client_reviewer" }]);
+    expect(await policy.canDecideClientCreative(actor, "ws-1")).toBe(true);
+  });
+
+  it("returns true for the agency admin, who does not hold the client_reviewer role", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: true }]);
+    // The admin shortcut grants INTERNAL_WORKSPACE_ROLES only — no
+    // client_reviewer — so the role check misses and the admin
+    // override resolves it.
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: true }]);
+    expect(await policy.canDecideClientCreative(actor, "ws-1")).toBe(true);
+  });
+
+  it("returns false for a plain workspace manager", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "workspace_manager" }]);
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    expect(await policy.canDecideClientCreative(actor, "ws-1")).toBe(false);
+  });
+
+  it("returns false for an internal reviewer, who owns the other creative gate", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "internal_reviewer" }]);
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    expect(await policy.canDecideClientCreative(actor, "ws-1")).toBe(false);
+  });
+});
+
+describe("isAgencyAdminForWorkspace", () => {
+  it("returns true when the actor administers the workspace's agency", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: true }]);
+    expect(await policy.isAgencyAdminForWorkspace(actor, "ws-1")).toBe(true);
+  });
+
+  it("returns false when the workspace does not exist", async () => {
+    dbMock.state.selectResults.push([]);
+    expect(await policy.isAgencyAdminForWorkspace(actor, "ws-1")).toBe(false);
+  });
+
+  it("returns false for a non-admin agency member", async () => {
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    expect(await policy.isAgencyAdminForWorkspace(actor, "ws-1")).toBe(false);
+  });
+});
+
+describe("canReview — creative_client gate", () => {
+  it("follows the client-gate authority check, not the plain role check", async () => {
+    dbMock.state.selectResults.push([{ workspaceId: "ws-1" }]);
+    dbMock.state.selectResults.push([{ agencyId: "agency-1" }]);
+    dbMock.state.selectResults.push([{ isAdmin: false }]);
+    dbMock.state.selectResults.push([{ role: "client_reviewer" }]);
+    expect(await policy.canReview(actor, "ci-1", "creative_client")).toBe(true);
+  });
+});
+
 describe("firstAgencyForBootstrap", () => {
   it("returns the most-recently-created agency id when at least one exists", async () => {
     dbMock.state.selectResults.push([{ id: "agency-1" }]);

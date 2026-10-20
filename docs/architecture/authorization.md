@@ -43,6 +43,15 @@ content is filtered by active workspace membership for non-admins; admins see
 all active content in the agency. The server services remain authoritative for
 all of these checks; hidden UI controls are only a usability layer.
 
+Task creation is deliberately gated on **agency membership, not a workspace
+role**. The task board is an agency-wide collaboration surface, not workspace
+state: filing a task grants no access to the workspace it is attached to, and
+the calendar already filters by workspace membership for non-admins. Requiring
+a write-capable workspace role would contradict this policy and the MCP
+`create_task` contract ("Create an agency task, optionally linked to a
+workspace and assigned to an active agency member"). Audited 2026-10-20; the
+agency-membership gate is intentional.
+
 Platform implementation:
 
 - `src/lib/auth/platform-access.ts` — closed role-to-permission matrix,
@@ -105,6 +114,40 @@ The database assignment is one role per identity. Custom or composed roles are
 not supported. Role changes serialize and cannot remove the final active
 Owner. UI capability booleans omit unauthorized controls, while the service
 must independently enforce the exact permission.
+
+### 1.2 Workspace role gates in the planning flow
+
+The seven workspace roles (`workspace_manager`, `content_planner`, `designer`,
+`internal_reviewer`, `client_reviewer`, `publisher`, `viewer`) are governed by
+the master prompt §9 capability matrix. Three rules govern how that matrix is
+applied in the planning flow, and each of them was a live defect before
+2026-10-20:
+
+- **One table.** `src/lib/content/workflow.ts` → `WORKFLOW_RULES` is the
+  engine's authority table and the §9 matrix is the contract. Where they
+  disagreed, the engine was wrong — `approve_content` listed
+  `workspace_manager`, which let the person who submitted content for review
+  also approve it.
+- **A role permits; an assignment scopes.** §9 gives the designer "W" (work on
+  assigned or owned items). A designer may therefore submit a delivery only on
+  the item assigned to them; a manager may submit any. The assignment check
+  belongs next to the role check, in the same service, because a role check
+  without it is a permission the role does not actually have.
+- **An admin override belongs at the gate, not in the role set.** The agency
+  admin holds "F" on every approval gate but does not hold the
+  `client_reviewer` role — deliberately, because that role also carries the
+  restricted client-surface read access. The client gate therefore has an
+  explicit check, `canDecideClientCreative(actor, workspaceId)`
+  (`src/lib/auth/policy.ts`), rather than an admin-implied role.
+
+The same matrix also decides which UI affordances render. The UI must mirror
+the server exactly, and the executable form of the matrix lives in
+`tests/unit/planning-permission-assignment.test.ts`.
+
+The workspace's `workflow_scenario` is a second, independent axis: it decides
+which stages the workspace's spine contains, and it is enforced by the
+content service (not only by the pages that render the rail). See
+[`../decisions/0014-workflow-scenarios.md`](../decisions/0014-workflow-scenarios.md).
 
 ## 2. The `Actor` shape
 

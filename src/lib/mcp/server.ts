@@ -22,7 +22,12 @@ import {
   workspaceMemberships,
   workspaceSettings as workspaceSettingsTable,
 } from "@/lib/db/schema";
-import { canAccessInternalWorkspace, PermissionDeniedError, type Actor } from "@/lib/auth/policy";
+import {
+  canAccessInternalWorkspace,
+  hasWorkspaceRole,
+  PermissionDeniedError,
+  type Actor,
+} from "@/lib/auth/policy";
 import {
   getAppErrorById,
   getAppErrorDiagnostics,
@@ -1319,17 +1324,26 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
     async ({ workspace_id, scenario_id, response_format }) => {
       try {
         requireScope(context, "content:write");
+        // The scenario action now takes the explicit (agencySlug, workspaceSlug)
+        // pair so the tenant comes from an identified context rather than the
+        // active-agency cookie. The MCP surface resolves the same pair.
+        //
+        // The workspace is resolved BY ID here. It used to be resolved with
+        // `getAccessibleWorkspace`, which looks a workspace up by SLUG — so
+        // every call with the documented UUID failed with "Workspace not
+        // found" and the tool was, in effect, gated on a lookup bug.
+        const ws = await requireWorkspace(context, workspace_id);
+        // Manager-only, as the tool description promises. Checked here so
+        // the tool fails closed on its own contract rather than relying on
+        // a downstream action to refuse.
+        if (!(await hasWorkspaceRole(context.actor, ws.id, ["workspace_manager"]))) {
+          throw new McpToolError("forbidden", "Workspace manager role required.");
+        }
         // Reuse the same permission gate as the Settings UI to
         // avoid duplicating role checks across the MCP surface.
         const { applyWorkflowScenarioAction } =
           await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/templates-actions");
-        const { getAccessibleWorkspace, findAgencySlugById } =
-          await import("@/lib/workspaces/context");
-        const ws = await getAccessibleWorkspace(context.actor, workspace_id);
-        if (!ws) return errorResult(new Error("Workspace not found"));
-        // The scenario action now takes the explicit (agencySlug, workspaceSlug)
-        // pair so the tenant comes from an identified context rather than the
-        // active-agency cookie. The MCP surface resolves the same pair.
+        const { findAgencySlugById } = await import("@/lib/workspaces/context");
         const agencySlug = await findAgencySlugById(ws.agencyId);
         if (!agencySlug) return errorResult(new Error("Workspace agency not found"));
         const outcome = await applyWorkflowScenarioAction(agencySlug, ws.slug, scenario_id);
