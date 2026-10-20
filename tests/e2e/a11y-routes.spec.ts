@@ -119,10 +119,21 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
   });
 
   test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
+    const invalidNestingWarnings: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        message.text().includes("<nav> cannot be a descendant of <p>")
+      ) {
+        invalidNestingWarnings.push(message.text());
+      }
+    });
     const seeded = await bootstrapTestSession(page);
     const route = workspaceRoute(seeded, "media");
     await page.goto(route);
     await expectClean(route, page);
+    await expect(page.getByRole("navigation", { name: "Folder path" })).toBeVisible();
+    expect(invalidNestingWarnings).toEqual([]);
   });
 
   test("@a11y /app/w/[slug]/planning (planning list) has no critical violations", async ({

@@ -64,9 +64,9 @@ export function PageHeader({
           {title}
         </h1>
         {description ? (
-          <p dir="auto" className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">
+          <div dir="auto" className="text-body text-fg-secondary mt-1 max-w-3xl text-pretty">
             {description}
-          </p>
+          </div>
         ) : null}
       </div>
       {action ? (

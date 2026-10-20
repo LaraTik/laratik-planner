@@ -27,4 +27,16 @@ describe("PageHeader", () => {
     expect(screen.getByRole("heading", { name: "عنوان عربي" })).toHaveAttribute("dir", "auto");
     expect(screen.getByText("وصف عربي")).toHaveAttribute("dir", "auto");
   });
+
+  it("allows semantic block content such as a breadcrumb in the description", () => {
+    const { container } = render(
+      <PageHeader
+        title="Media"
+        description={<nav aria-label="Folder path">Workspace / Folder</nav>}
+      />,
+    );
+
+    expect(screen.getByRole("navigation", { name: "Folder path" })).toBeInTheDocument();
+    expect(container.querySelector("p nav")).toBeNull();
+  });
 });
