@@ -14,6 +14,7 @@ type DrizzleState = {
   insertCalls: { table: unknown; values: unknown }[];
   insertReturningIds: { id: string; [k: string]: unknown }[];
   updateCalls: { table: unknown; set: unknown; where: unknown }[];
+  updateReturnEmpty: boolean;
   deleteCalls: { table: unknown; where: unknown }[];
   transactionCalls: number;
 };
@@ -84,7 +85,13 @@ function makeDrizzleMock(state: DrizzleState) {
   updateChain.where = vi.fn((where: unknown) => {
     state.updateCalls.push({ table: "update", set: lastSet, where });
     lastSet = undefined;
-    return Promise.resolve();
+    const returningChain: Record<string, unknown> = {
+      returning: vi.fn(() =>
+        Promise.resolve(state.updateReturnEmpty ? [] : [{ id: "updated-id" }]),
+      ),
+      then: (resolve: (value: undefined) => void) => resolve(undefined),
+    };
+    return returningChain;
   });
   updateChain.returning = vi.fn(() => Promise.resolve([{ revision: 1 }]));
   const update = vi.fn(() => updateChain);
@@ -121,6 +128,7 @@ const dbMock = vi.hoisted(() => {
     insertCalls: [],
     insertReturningIds: [],
     updateCalls: [],
+    updateReturnEmpty: false,
     deleteCalls: [],
     transactionCalls: 0,
   };
@@ -192,6 +200,7 @@ beforeEach(() => {
   dbMock.state.insertCalls = [];
   dbMock.state.insertReturningIds = [];
   dbMock.state.updateCalls = [];
+  dbMock.state.updateReturnEmpty = false;
   dbMock.state.deleteCalls = [];
   dbMock.state.transactionCalls = 0;
   policyMock.hasWorkspaceRole.mockReset();
@@ -1094,6 +1103,16 @@ describe("claimAsDesigner", () => {
       (c) => (c.set as Record<string, unknown>)["designerId"] === actor.id,
     );
     expect(update).toBeDefined();
+  });
+
+  it("atomically refuses a claim if another designer wins the race", async () => {
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: null, status: "approved_for_design" },
+    ]);
+    dbMock.state.updateReturnEmpty = true;
+
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/already assigned/i);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
   });
 });
 

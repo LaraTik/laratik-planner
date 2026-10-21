@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentAssignments, contentItems } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
@@ -34,10 +34,20 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
   }
 
   await db.transaction(async (tx) => {
-    await tx
+    const claimed = await tx
       .update(contentItems)
       .set({ designerId: actor.id, status: "in_design", updatedAt: new Date() })
-      .where(eq(contentItems.id, contentItemId));
+      .where(
+        and(
+          eq(contentItems.id, contentItemId),
+          isNull(contentItems.designerId),
+          inArray(contentItems.status, ["approved_for_design", "in_design"]),
+        ),
+      )
+      .returning({ id: contentItems.id });
+    if (claimed.length === 0) {
+      throw new Error("Already assigned to a designer or status changed; refresh and try again");
+    }
     await tx.insert(contentAssignments).values({
       contentItemId,
       assignmentType: "designer",
