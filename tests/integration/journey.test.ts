@@ -430,6 +430,66 @@ describe("primary acceptance journey (§23, service-level)", () => {
     expect(created).toHaveLength(0);
   });
 
+  it("content updates reject a foreign channel without changing existing links", async () => {
+    const { contentItemChannels, contentItems, socialChannels, workspaces } =
+      await import("@/lib/db/schema");
+    const itemId = await content.quickCreateContentItem(
+      { id: omar.id },
+      {
+        workspaceId,
+        title: "Update channel ownership check",
+        format: "static_post",
+        brief: "Keep the original channel if a foreign one is submitted.",
+        plannedPublishAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        channelIds: [channelIds[0]!],
+      },
+    );
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({
+        agencyId,
+        name: "Update test workspace",
+        slug: `update-test-${crypto.randomUUID()}`,
+        createdBy: maya.id,
+      })
+      .returning({ id: workspaces.id });
+    expect(otherWorkspace).toBeDefined();
+    const [foreignChannel] = await db
+      .insert(socialChannels)
+      .values({
+        workspaceId: otherWorkspace!.id,
+        platform: "instagram",
+        accountName: "Foreign update channel",
+      })
+      .returning({ id: socialChannels.id });
+    expect(foreignChannel).toBeDefined();
+
+    await expect(
+      content.updateContentItem(
+        { id: omar.id },
+        {
+          contentItemId: itemId,
+          title: "Should not update",
+          format: "static_post",
+          brief: "Rejected before any write.",
+          plannedPublishAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          channelIds: [foreignChannel!.id],
+        },
+      ),
+    ).rejects.toThrow(/channel selection for this workspace/i);
+
+    const [savedItem] = await db
+      .select({ title: contentItems.title })
+      .from(contentItems)
+      .where(eq(contentItems.id, itemId));
+    const savedLinks = await db
+      .select({ socialChannelId: contentItemChannels.socialChannelId })
+      .from(contentItemChannels)
+      .where(eq(contentItemChannels.contentItemId, itemId));
+    expect(savedItem?.title).toBe("Update channel ownership check");
+    expect(savedLinks.map((link) => link.socialChannelId)).toEqual([channelIds[0]]);
+  });
+
   // ── §23 step 10 + 11: Quick Create applies defaults + all 4 channels ──
   it("§23 step 10/11: Quick Create applies workspace settings defaults (designer, reviewers, 4 channels)", async () => {
     const itemId = await content.quickCreateContentItem(

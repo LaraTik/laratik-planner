@@ -6,6 +6,10 @@ import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
+import {
+  assertWorkspaceChannelSelection,
+  getActiveWorkspaceChannelIds,
+} from "./channel-selection.server";
 import { z } from "zod";
 
 export const UpdateContentSchema = z.object({
@@ -68,6 +72,15 @@ export async function updateContentItem(
   if (item.status === "cancelled") {
     throw new Error(
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
+    );
+  }
+
+  if (input.channelIds !== undefined) {
+    const activeChannelIds = await getActiveWorkspaceChannelIds(item.workspaceId);
+    assertWorkspaceChannelSelection(
+      input.channelIds,
+      activeChannelIds,
+      "Invalid or inactive channel selection for this workspace",
     );
   }
 
