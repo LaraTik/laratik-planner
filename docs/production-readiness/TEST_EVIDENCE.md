@@ -1,5 +1,29 @@
 # Test and coverage evidence
 
+## Quick Create workspace-channel isolation — 2026-10-22, implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`
+
+Quick Create now validates every explicit channel selection against the
+active, unarchived channels in the requested workspace. Previously the
+database's independent content-item and social-channel foreign keys allowed
+a caller with write access in workspace A to link a channel from workspace
+B. The command rejects the selection before inserting any rows. The database
+schema and public API contract are unchanged.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused Quick Create unit suite                   | **Pass** — 65 tests, including rejection before insert.                                               |
+| Postgres acceptance journey                       | **Pass** — 31 tests, including a second-workspace channel attempt and no-item-created assertion.      |
+| `TEST_DATABASE_URL=… pnpm test:integration`       | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`        | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+
+The fix is committed as `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a` and was
+verified on that clean implementation commit. No migration or provider UAT
+was needed. Full route review, release browser/visual coverage, and independent
+review remain open. AD-002 remains **In Progress**; this work is **Tested**,
+not **Verified**.
+
 ## Content Quick Create feature ownership — 2026-10-22, implementation SHA `1b072f169c9287a2878357dea9a0dc05bd4af896`
 
 Moved `QuickCreateSchema`, `QuickCreateInput`, and

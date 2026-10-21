@@ -1,6 +1,6 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-22 Architecture review verification checkpoint — implementation SHA `1b072f169c9287a2878357dea9a0dc05bd4af896`** — `pnpm verify` passed with 562 unit files / 5,014 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. The checkpoint includes the authenticated deadline-reminder cron path and Quick Create's migration behind the content feature boundary. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-22 Architecture review verification checkpoint — implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. The checkpoint includes the authenticated deadline-reminder cron path, Quick Create's feature-boundary migration, and the fix preventing a workspace from linking another workspace's channel. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
@@ -2541,4 +2541,25 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - No route, API, permission, workflow, or schema contract changed. Other
   content commands remain in the incremental ownership queue. Route-by-route
   review, release browser/visual coverage, and independent review remain open;
+  `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Reject cross-workspace channels during Quick Create
+
+- Review confirmed that Quick Create accepted any existing `social_channel`
+  ID, although the database only has separate foreign keys for the new item
+  and channel. A caller with write permission in one workspace could therefore
+  link a channel owned by another workspace. The command now verifies every
+  explicit selection against the active, unarchived channels of the target
+  workspace before beginning the insert transaction.
+- Added a Postgres regression that creates a channel in a second workspace,
+  attempts to use it in Quick Create, and verifies that no content item is
+  created. Focused unit coverage also verifies invalid selections are rejected
+  before any insert.
+- On clean implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`,
+  `pnpm verify` passed (562 unit files / 5,015 tests and production build),
+  the full integration suite passed, and the migration drill passed 5/5 with
+  90/90 ledger checks. No schema migration was needed. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- The role gate and public contracts remain unchanged. Route-by-route review,
+  release browser/visual coverage, and independent verification remain open;
   `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.

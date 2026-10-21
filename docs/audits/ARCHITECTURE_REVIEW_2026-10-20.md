@@ -487,6 +487,23 @@ the evidence log records the exact checks. Production cron installation
 still needs the normal VPS operations step. Route-by-route manual review,
 release browser/visual coverage, and independent review remain open.
 
+### A33 — Quick Create accepted a channel from another workspace
+
+**Priority: P1 — tenant isolation.** Quick Create validated the actor's role
+for the requested workspace but did not validate explicitly supplied channel
+IDs. Since `content_item_channel` has independent foreign keys to the content
+item and social channel, Postgres allowed a content item in workspace A to
+reference an active channel in workspace B. The command now loads active,
+unarchived channels for the requested workspace and rejects any selected ID
+outside that set before opening the insert transaction. Both the planning
+action and MCP command use this same service path. A Postgres regression
+creates a second workspace and proves the foreign-channel attempt creates no
+content item; the focused unit regression verifies early rejection. `pnpm
+verify`, the full disposable-Postgres integration suite, and the five-scenario
+migration drill passed on clean implementation SHA
+`09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`. No schema migration or public
+contract change was required.
+
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 
 **Priority: P1 — hydration and cross-browser correctness.** The media page
