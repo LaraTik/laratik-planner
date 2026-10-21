@@ -221,9 +221,10 @@ projection is now a pure `src/lib/media/folder-tree.ts` module; the broad
 service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
 tree has disposable-Postgres read-path coverage. The remaining media service
-still has multiple responsibilities; listing/filtering, duplicate queries,
-upload registration, asset links, and reconciliation remain responsibility
-review candidates. Workspace Media now
+still has multiple responsibilities; listing/filtering and reconciliation
+remain responsibility review candidates. Duplicate lookup and content-item
+asset links have since moved behind feature-owned query/command modules.
+Workspace Media now
 has English and Arabic/RTL responsive screenshots at all five documented
 widths; strict visual comparison passed all six browser cases, including
 critical accessibility checks across the Arabic matrix.
@@ -936,6 +937,24 @@ Single-asset tag, rename, and visibility commands now share one manager-only
 asset lookup in the media feature module. The rename and visibility commands
 no longer remain in the legacy service. Focused unit/ownership tests pass
 18/18 and the media Postgres integration passes 14/14 on exact clean SHA
-`b8323114d288665b6f1f5ef40c0eca0cbfa83655`. Main listing, duplicate
-advisory queries, asset-link reads, and reconciliation remain in the legacy
-service and stay in the review queue.
+`b8323114d288665b6f1f5ef40c0eca0cbfa83655`. Main listing and reconciliation
+remain in the legacy service and stay in the review queue.
+
+### Media duplicate and asset-link ownership; pagination correction — 2026-10-21
+
+Duplicate advisory reads now live with media feature queries. Content-item
+asset linking and linked-target projection now live in the server-only media
+feature boundary, and upload registration calls that feature-owned command.
+The listing and count paths now share one authorization/filter builder. A
+Postgres regression confirmed the prior count omitted agency-shared rows that
+the workspace listing displayed; the shared builder also keeps descendant
+folder, kind, text, visibility, and asset-id filters aligned. No route, API,
+permission, or persisted-data contract changed.
+
+The media integration suite passes 17/17, including duplicate visibility and
+priority, link idempotency and canonical destination, agency-shared pagination
+totals, and descendant-folder totals. TypeScript, targeted ESLint, Prettier,
+and diff checks pass on exact clean implementation SHA
+`9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`. Full repository verification,
+all integration files, migration drill, route review, release browser matrix,
+and independent review remain open.

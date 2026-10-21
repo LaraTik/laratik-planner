@@ -1,5 +1,25 @@
 # Test and coverage evidence
 
+## Media query/link ownership and pagination correction — 2026-10-21, exact clean implementation SHA `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`
+
+Duplicate advisory reads now belong to the media feature query module. Content-item
+asset linking and linked-target projection now belong to the server-only media
+feature boundary. Listing and pagination count share the same scope and filter
+builder. A regression first reproduced the old undercount for agency-shared
+assets; the correction also aligns descendant-folder, kind, text, visibility,
+and asset-id filters. No schema migration or route/API contract changed.
+
+| Check                                                 | Result                                                                                                       |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Disposable Postgres media integration                 | **Pass** — 17/17, including duplicate advisory, link idempotency, shared pagination count, and folder count. |
+| Registration recovery and module-ownership unit tests | **Pass** — 9/9.                                                                                              |
+| `pnpm typecheck`                                      | **Pass** — no TypeScript errors.                                                                             |
+| Targeted ESLint, Prettier, and `git diff --check`     | **Pass**, zero lint warnings.                                                                                |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route review,
+release browser matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
 ## Media manager command ownership — 2026-10-21, exact clean implementation SHA `b8323114d288665b6f1f5ef40c0eca0cbfa83655`
 
 Moved single-asset rename and visibility changes into

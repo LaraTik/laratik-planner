@@ -2209,6 +2209,23 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   implementation-SHA evidence is recorded above and in the test evidence log.
   Do not advance `Tested` or `Verified` from this local evidence alone.
 
+## 2026-10-21 — Media query ownership and pagination correction
+
+- Duplicate advisory reads and content-item asset-link operations now have
+  feature-owned server modules. Upload registration uses the feature-owned
+  content-link command; existing feature facade exports preserve callers.
+- The media library listing and count use the same tenant, visibility, folder,
+  status, kind, text, and asset-id filters. A regression test proved workspace
+  pagination undercounted agency-shared assets; the correction also covers
+  descendant-folder counts. No schema or public API change was made.
+- Focused disposable-Postgres media integration passes 17/17, focused unit and
+  ownership checks pass 9/9, and strict type/lint/format checks pass on exact
+  clean SHA `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- Full `pnpm verify`, all integration files, migration drill, full route
+  review, release browser matrix, and independent review remain open. AD-002
+  remains **In Progress**; no independent `Verified` status is assigned.
+
 ## 2026-10-21 — Move media sharing behind the feature boundary
 
 - Moved public media share lifecycle and single-asset folder assignment into
