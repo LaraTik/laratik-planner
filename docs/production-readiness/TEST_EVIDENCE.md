@@ -1,5 +1,31 @@
 # Test and coverage evidence
 
+## Content command ownership and channel isolation — 2026-10-22, implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`
+
+Moved the update and batch-create commands from the legacy content utility
+module into `src/features/content/`, alongside Quick Create; all three use a
+single active-channel selection check. During the move, review confirmed that
+updates could link an active channel from another workspace. The update command
+now rejects that selection before writes. Its Postgres regression confirms
+that both the item and its previous channel links remain unchanged after
+rejection. The changes preserve route, permission, workflow, and persistence
+contracts and add no migration.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused content unit tests                        | **Pass** — 70/70.                                                                                     |
+| Postgres acceptance journey                       | **Pass** — 32 tests, including create and update cross-workspace channel guards.                      |
+| `TEST_DATABASE_URL=… pnpm test:integration`       | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`        | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+
+The feature-boundary migration is commit `5a8558c`; the separate tenant fix
+is commit `3347bad1d00d75c3e288039b92283487eb5e66b2`. All full gates above
+passed on the clean tenant-fix implementation commit. Manual route review,
+release browser/visual coverage, and independent verification remain open.
+AD-002 remains **In Progress**; this work is **Tested**, not **Verified**.
+
 ## Quick Create workspace-channel isolation — 2026-10-22, implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`
 
 Quick Create now validates every explicit channel selection against the

@@ -164,6 +164,16 @@ integration suite, and migration drill pass on implementation SHA
 `1b072f169c9287a2878357dea9a0dc05bd4af896`. The remaining commands in the
 legacy content service are still under the incremental ownership review.
 
+**Content command ownership follow-up (2026-10-22).** The update schema and
+command now live in `src/features/content/update-content.server.ts`; batch
+creation lives in `src/features/content/batch-create.server.ts`. Planning
+actions, the monthly-planning route, and MCP use the content feature entry
+point. Active-channel lookup and selection validation are shared by Quick
+Create, update, and batch creation. Update and batch transaction behavior,
+role checks, and public contracts are preserved. The legacy content service
+no longer owns these write commands; its remaining utility exports are still
+review candidates for a later bounded move.
+
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 
 **Priority: P1 — operator safety and provider-policy correctness.** The
@@ -314,13 +324,18 @@ media integration passes 11/11, `pnpm verify` passes on exact clean SHA
 snapshot. R2 production UAT, manual review of every route, the full
 five-browser matrix, and independent review remain open.
 
-**Content command ownership (2026-10-22).** Quick Create was the first
-command migrated from `src/lib/content/service.ts` into a responsibility-
-specific content feature module. Its input schema moved with it, and both the
-planning action and MCP caller now depend on the feature entry point. The
-legacy service no longer owns item creation with research provenance and
-workspace defaults. Remaining update, batch-create, and archive commands
-stay in the review queue until each has a clear, bounded owner.
+**Content command ownership (2026-10-22).** Quick Create, update, and batch
+creation now live in responsibility-specific content feature modules and are
+exported through the content server entry point. The archive commands were
+already feature-owned. Planning actions, monthly planning, and MCP no longer
+import these commands from `src/lib/content/service.ts`; active-channel
+validation is shared across all three write paths. The legacy service now
+contains only utility exports and is a candidate for a later bounded cleanup.
+The same review confirmed that update accepted an active channel from another
+workspace. It now checks the content item's workspace before changing fields
+or links. Postgres regression coverage proves a rejected attempt preserves the
+item and its existing channel links. Evidence is recorded on implementation
+SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`.
 
 ### A6 — Historical audit findings need status reconciliation
 
@@ -503,6 +518,21 @@ verify`, the full disposable-Postgres integration suite, and the five-scenario
 migration drill passed on clean implementation SHA
 `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`. No schema migration or public
 contract change was required.
+
+### A34 — Content updates accepted a channel from another workspace
+
+**Priority: P1 — tenant isolation.** `updateContentItem` replaced an item's
+channel links using caller-provided IDs without checking that each active
+channel belonged to the item's workspace. A caller could therefore alter an
+authorized content item to reference a channel in another workspace. The
+command now validates supplied IDs against active, unarchived channels in the
+item's workspace before opening its write transaction; rejected requests leave
+the item and its existing links unchanged. The shared selection check is used
+by Quick Create, update, and batch creation. Postgres coverage proves the
+foreign-channel attempt preserves the prior title and channel link. Full
+verification, integration, and migration drill passed on implementation SHA
+`3347bad1d00d75c3e288039b92283487eb5e66b2`. No schema or public contract
+change was required.
 
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 

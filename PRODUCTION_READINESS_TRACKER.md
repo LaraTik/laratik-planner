@@ -1,6 +1,6 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-22 Architecture review verification checkpoint — implementation SHA `09d1ab9ff427f0ef7cca8bcf7474f380cf9d935a`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. The checkpoint includes the authenticated deadline-reminder cron path, Quick Create's feature-boundary migration, and the fix preventing a workspace from linking another workspace's channel. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-22 Architecture review verification checkpoint — implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. This checkpoint includes the authenticated deadline-reminder cron path, content command ownership behind the feature entry point, and tenant-scoped channel validation in create and update paths. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
@@ -2563,3 +2563,34 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - The role gate and public contracts remain unchanged. Route-by-route review,
   release browser/visual coverage, and independent verification remain open;
   `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Move content update and batch commands behind the feature boundary
+
+- Moved `UpdateContentSchema`, `updateContentItem`, and the update status
+  constants into `src/features/content/update-content.server.ts`; moved
+  `batchCreateContentItems` into `src/features/content/batch-create.server.ts`.
+  Planning actions, monthly planning, and MCP now import these commands through
+  `src/features/content/server.ts`. A shared server helper supplies active
+  workspace channels and validates selected IDs across Quick Create, update,
+  and batch creation. No route, permission, workflow, or schema contract
+  changed as part of the ownership migration.
+- Focused content unit tests passed 70/70. The migration is commit `5a8558c`;
+  the combined implementation gates are recorded below on `3347bad`.
+
+## 2026-10-22 — Reject cross-workspace channels during content updates
+
+- Review found that `updateContentItem` could replace channel links with an
+  active channel from another workspace. The command now validates channel
+  ownership before opening the write transaction. The Postgres regression
+  confirms a rejected update preserves both the original item title and its
+  existing channel link.
+- On implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`, the full
+  `pnpm verify` passed (562 unit files / 5,015 tests and production build),
+  the full `pnpm test:integration` suite passed, and `pnpm migration-drill`
+  passed all 5 scenarios, including the 90/90 from-zero and restored ledger
+  checks. No schema migration was needed. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- Role gates and public contracts remain unchanged. Route-by-route review,
+  release browser/visual coverage, and independent verification remain open;
+  `AD-002` remains **In Progress**, and this work is **Tested**, not
+  **Verified**.
