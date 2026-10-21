@@ -1,5 +1,13 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { bootstrapTestSession, setAuthCookie } from "../_helpers";
+
+async function openAddDirectlyTab(page: Page) {
+  await page.goto("/app/users");
+  await page.waitForLoadState("networkidle");
+  const tab = page.getByTestId("users-tab-add");
+  await tab.click();
+  await expect(tab).toHaveAttribute("aria-selected", "true");
+}
 
 /**
  * E2E tests for the "Add directly" tab on /app/users.
@@ -20,7 +28,10 @@ test.describe("User Management — Add directly flow", () => {
     await expect(page.getByRole("heading", { name: "User Management" })).toBeVisible();
 
     // The "Send invitation" tab is the default; "Add directly" is a sibling trigger.
-    await page.getByTestId("users-tab-add").click();
+    await page.waitForLoadState("networkidle");
+    const addTab = page.getByTestId("users-tab-add");
+    await addTab.click();
+    await expect(addTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("add-directly-form")).toBeVisible();
     await expect(page.getByTestId("add-directly-generate")).toBeVisible();
     await expect(page.getByTestId("add-directly-must-change")).toBeChecked();
@@ -31,8 +42,7 @@ test.describe("User Management — Add directly flow", () => {
   }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `e2e-add-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -63,8 +73,7 @@ test.describe("User Management — Add directly flow", () => {
   test("admin can assign multiple workspace roles and Agency Admin access", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `e2e-multi-admin-${Date.now()}@laratik.local`;
     const newName = "E2E Multi Role Admin";
@@ -114,8 +123,7 @@ test.describe("User Management — Add directly flow", () => {
   test("submitting without a strong password shows a server-side error", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     await page.getByRole("textbox", { name: /^Email/i }).fill(`weak-${Date.now()}@laratik.local`);
     // Type a password that the form-level meter would reject.
@@ -145,8 +153,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // in as the new user, verify the redirect to /set-password.
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `redirect-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -189,8 +196,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // get to /set-password (mustChangePassword=true).
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const newEmail = `signout-${Date.now()}@laratik.local`;
     await page.getByRole("textbox", { name: /^Email/i }).fill(newEmail);
@@ -224,8 +230,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // so a future refactor doesn't strip it.
     await bootstrapTestSession(page);
 
-    await page.goto("/app/users");
-    await page.getByTestId("users-tab-add").click();
+    await openAddDirectlyTab(page);
 
     const checkbox = page.getByTestId("add-directly-grants-admin");
     await expect(checkbox).toBeVisible();
