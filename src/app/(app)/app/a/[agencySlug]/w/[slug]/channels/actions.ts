@@ -217,9 +217,13 @@ export async function finalizeMetaSelectionAction(
       const linked: string[] = [];
       const linkedByProviderAccount = new Map<string, string>();
       for (const profile of parsed.data.profiles) {
-        const existing = candidates.find((c) => c.externalAccountId === profile.providerAccountId);
+        const existing = candidates.find(
+          (c) =>
+            c.externalAccountId === profile.providerAccountId && c.platform === profile.platform,
+        );
         const result = await linkProfile(tx, {
           connectionId: parsed.data.connectionId,
+          workspaceId: workspace.id,
           agencyId: context.agencyId,
           profile: profile as ConnectedProfile,
           ...(existing?.id ? { existingChannelId: existing.id } : {}),
