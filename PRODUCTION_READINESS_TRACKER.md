@@ -1510,15 +1510,17 @@ media integration, and migration-drill evidence are recorded in
 route review, the full five-browser release matrix, and independent review
 remain open before `Tested`.
 
-**AD-002 MCP task-tool split (2026-10-22):** The ten task and task-attachment
-registrations moved behind `src/features/mcp/task-tools.ts`; the server
-factory composes this with the Brand Kit and diagnostics registrars through
-shared MCP contracts. Tool names, schemas, scopes, and response behavior are
-unchanged. Exact implementation commit `d1e6d93` passes targeted format, ESLint,
-typecheck, and 37 focused MCP tests; the tool catalog asserts all ten task
-tools and remains at 34. No database or external MCP contract changed. The
-full `pnpm verify`, database gates where required, route/browser review, and
-independent verification remain open; AD-002 is still **In Progress**.
+**AD-002 MCP registration splits (2026-10-22):** Ten task and
+task-attachment registrations moved behind `src/features/mcp/task-tools.ts`
+(`d1e6d93`), followed by nine planning content registrations behind
+`src/features/mcp/content-tools.ts` (`251e32a`). The server factory composes
+these with the Brand Kit and diagnostics registrars through shared MCP
+contracts. Tool names, schemas, scopes, and response behavior are unchanged.
+Targeted format, ESLint, typecheck, and 37 focused MCP tests pass; catalog
+coverage asserts all 19 extracted tools and the total remains 34. No database
+or external MCP contract changed. Full `pnpm verify`, database gates where
+required, route/browser review, and independent verification remain open;
+AD-002 is still **In Progress**.
 
 ## M1 — Multi-agency tenancy and authorization
 

@@ -1361,3 +1361,20 @@ the registered tool catalog. No persistence or API contract changed. The
 broader repository verification, full bilingual route review, browser and
 visual release evidence, and independent review remain open; AD-002 remains
 **In Progress**.
+
+## MCP planning content tool ownership — 2026-10-22
+
+The nine content list/read/create/update/reschedule/owner/transition/archive/
+duplicate registrations now live in `src/features/mcp/content-tools.ts`, with
+their schemas, safe projection, and status/action catalogs. The server factory
+passes the shared workspace access, scope, and response helpers into this
+feature registrar. The existing 34-tool catalog test asserts all nine content
+tool names; no tool contract, authorization rule, or persisted behavior
+changed.
+
+Exact implementation commit `251e32a` passes targeted formatting, ESLint,
+TypeScript typecheck, and 37 focused MCP unit tests, including the task
+behavior tests and the catalog checks. The extraction adds an ownership seam;
+it does not claim complete coverage of content tool behavior. Full repository
+verification and the remaining route/browser/visual and independent review
+gates remain open; AD-002 remains **In Progress**.
