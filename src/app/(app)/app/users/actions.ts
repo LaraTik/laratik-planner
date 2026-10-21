@@ -512,6 +512,7 @@ export async function updateMemberRolesAction(
         metadata: {
           workspaceCount: grantByWorkspace.size,
           roleCount: totalRoles,
+          workspaceIds: Array.from(grantByWorkspace.keys()),
         },
       });
     });

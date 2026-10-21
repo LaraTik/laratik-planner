@@ -190,8 +190,14 @@ describe("workspace_membership.updated_at + touch_updated_at trigger", () => {
     // broken per-role shape would now be handled correctly).
     const { updateMemberRolesAction } = await import("@/app/(app)/app/users/actions");
     const { db } = await import("@/lib/db");
-    const { agencyMemberships, users, workspaceMembershipRoles, workspaceMemberships, workspaces } =
-      await import("@/lib/db/schema");
+    const {
+      agencyMemberships,
+      securityAuditEvents,
+      users,
+      workspaceMembershipRoles,
+      workspaceMemberships,
+      workspaces,
+    } = await import("@/lib/db/schema");
 
     const [ws] = await db
       .insert(workspaces)
@@ -245,6 +251,13 @@ describe("workspace_membership.updated_at + touch_updated_at trigger", () => {
       .where(eq(workspaceMemberships.userId, target.id));
     const roleSet = new Set(persisted.map((r) => r.role));
     expect(roleSet).toEqual(new Set(["designer", "publisher", "internal_reviewer"]));
+
+    const [audit] = await db
+      .select({ metadata: securityAuditEvents.metadata })
+      .from(securityAuditEvents)
+      .where(eq(securityAuditEvents.targetId, target.id))
+      .limit(1);
+    expect(audit?.metadata).toMatchObject({ workspaceIds: [ws.id] });
   });
 
   it("updateMemberRolesAction: legacy per-role shape is also accumulated (defence in depth)", async () => {

@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { isAgencyAdmin, hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
@@ -46,9 +45,11 @@ export default async function TrendsPage({
   const actor = await currentActor();
   if (!actor) redirect("/signin");
 
-  const ctx = await resolveActiveAgencyContext({ actor });
-  const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) redirect("/setup");
+  const ws = await getAccessibleWorkspaceAtPath(actor, agencySlug, slug);
+  if (!ws) redirect("/app");
+  // The URL workspace is authoritative. A user's active-agency cookie may
+  // refer to a different tenant when they belong to multiple agencies.
+  const agencyId = ws.agencyId;
   const [feature] = await db
     .select({ enabled: aiFeatureSettings.enabled })
     .from(aiFeatureSettings)
@@ -58,8 +59,6 @@ export default async function TrendsPage({
   const capabilities = await loadEnabledCapabilities(agencyId);
   if (!capabilities.has("trend_radar")) redirect("/app");
 
-  const ws = await getAccessibleWorkspaceAtPath(actor, agencySlug, slug);
-  if (!ws) redirect("/app");
   const canView = await hasWorkspaceRole(actor, ws.id, [
     "workspace_manager",
     "content_planner",
