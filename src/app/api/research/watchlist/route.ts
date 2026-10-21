@@ -17,8 +17,12 @@ const sourceUrl = z
   .url()
   .max(2_000)
   .refine((value) => {
-    const parsed = new URL(value);
-    return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username;
+    try {
+      const parsed = new URL(value);
+      return (parsed.protocol === "http:" || parsed.protocol === "https:") && !parsed.username;
+    } catch {
+      return false;
+    }
   }, "source_url_invalid");
 const createSchema = z.object({
   workspaceSlug: z.string().trim().min(1).max(120),
