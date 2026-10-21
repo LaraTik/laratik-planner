@@ -2296,6 +2296,13 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   hook pass on code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database
   integration and full `pnpm verify` remain pending. No schema migration.
 
+- Content archive lifecycle ownership: extracted single archive, restore, and
+  bulk archive into the content feature module; planning, design queue, and MCP
+  callers use the feature entry point. Focused behavior and ownership tests
+  pass 62/62; typecheck, targeted lint, formatting, diff checks, and commit
+  hook pass on code SHA `5e780a58651f9518e5fe5e718cebbcd21b5db840`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.
+
 ## 2026-10-21 — Move media import workflows behind the feature boundary
 
 - Moved single-file public import and folder-import batching into

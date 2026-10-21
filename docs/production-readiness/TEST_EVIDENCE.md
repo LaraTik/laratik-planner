@@ -1556,3 +1556,18 @@ Implementation SHA: `488c3273165c0efbb57635edefdc5fed8699e06f`
 The feature extraction preserves role gates, assignment history, activity,
 notifications, and workflow side effects. Database-backed integration and
 full `pnpm verify` remain pending. No schema migration was introduced.
+
+## Content archive lifecycle extraction
+
+Implementation SHA: `5e780a58651f9518e5fe5e718cebbcd21b5db840`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 62/62. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+Added schema and authorization coverage for archive/restore; bulk archive
+coverage remains in the content-service suite. Database-backed integration and
+full `pnpm verify` remain pending. No schema migration was introduced.

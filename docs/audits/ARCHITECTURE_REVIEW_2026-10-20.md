@@ -1004,13 +1004,27 @@ Designer claim, assign, reassign, release, and content-owner assignment
 commands now live in `src/features/content/assignments.server.ts` and are
 exported through the content feature entry point. Planning and MCP callers use
 that boundary. Role gates, assignment history, activity events, notification
-outbox writes, and workflow status effects remain together. Bulk archive stays
-in the existing service because it has distinct semantics. No route,
-permission, workflow, or persisted-data contract changed.
+outbox writes, and workflow status effects remain together. Bulk archive now
+uses the same feature boundary while retaining its distinct bulk contract. No
+route, permission, workflow, or persisted-data contract changed.
 
 Focused content-service and module-ownership checks pass 60/60; typecheck,
 targeted ESLint, formatting, diff checks, and the commit hook pass on exact
 code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database-backed
+integration and full `pnpm verify` remain open; no migration was introduced.
+
+### Content archive lifecycle ownership
+
+Single-item archive, restore, and bulk archive now live in
+`src/features/content/archive.server.ts` and are exported from the content
+feature server entry point. Planning, design-queue, and MCP callers use that
+boundary. The commands retain their existing role checks, soft-archive state,
+idempotency behavior, and distinct activity records. Added focused validation
+and role-gate coverage for single-item archive and restore.
+
+Focused content-service and module-ownership checks pass 62/62; typecheck,
+targeted ESLint, formatting, diff checks, and the commit hook pass on exact
+code SHA `5e780a58651f9518e5fe5e718cebbcd21b5db840`. Database-backed
 integration and full `pnpm verify` remain open; no migration was introduced.
 
 ### Media asset listing and access ownership — 2026-10-21
