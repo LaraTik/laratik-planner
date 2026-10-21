@@ -117,15 +117,27 @@ describe("diagnostics tool registration", () => {
   it("keeps the content and diagnostics tools plus the research shelf", async () => {
     const client = await connect([READ]);
     const { tools } = await client.listTools();
-    // 15 content/brand tools + 5 diagnostics + 1 read-only research tool
-    // + 1 read-only Command Center reader + 1 thumbnail backfill
-    // + 11 agency task and task-attachment tools.
+    // Keep the complete catalog count stable across feature-level registrations.
     expect(tools).toHaveLength(34);
-    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
-    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_get_command_center");
-    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_backfill_thumbnails");
-    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_export_brand_kit");
-    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_import_brand_kit");
+    expect(tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining([
+        "laratik_planner_list_research",
+        "laratik_planner_get_command_center",
+        "laratik_planner_backfill_thumbnails",
+        "laratik_planner_export_brand_kit",
+        "laratik_planner_import_brand_kit",
+        "laratik_planner_list_tasks",
+        "laratik_planner_get_task",
+        "laratik_planner_create_task",
+        "laratik_planner_update_task",
+        "laratik_planner_archive_task",
+        "laratik_planner_restore_task",
+        "laratik_planner_list_task_attachments",
+        "laratik_planner_create_task_attachment_intent",
+        "laratik_planner_complete_task_attachment",
+        "laratik_planner_link_task_attachment",
+      ]),
+    );
   });
 
   it("marks the thumbnail backfill as a WRITE, not a read", async () => {
