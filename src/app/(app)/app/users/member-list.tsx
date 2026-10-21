@@ -200,9 +200,11 @@ export function MemberList({
                           );
                         })}
                         {assignedWorkspaceIds.length > 3 ? (
-                          <Badge variant="default" className="font-normal">
-                            +{assignedWorkspaceIds.length - 3}
-                          </Badge>
+                          <li>
+                            <Badge variant="default" className="font-normal">
+                              +{assignedWorkspaceIds.length - 3}
+                            </Badge>
+                          </li>
                         ) : null}
                       </ul>
                     ) : m.isAgencyAdmin && active ? (

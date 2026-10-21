@@ -67,12 +67,10 @@ describe("MemberList — round-3 UI/UX", () => {
 
     const row = screen.getByTestId("users-member-row-u1");
     const chipList = within(row).getByTestId("users-member-roles-u1");
-    // The chip container holds up to 3 role chips (each wrapped in
-    // a `contents` `<li>`) plus an optional `+N` overflow Badge
-    // rendered as a direct child of the `<ul>`. We assert on the
-    // total rendered text so the test is robust against the wrapper
-    // choice (the production renderer uses Badge primitives whose
-    // final DOM node is a single `<span>`).
+    // Every direct child of the role list must remain a list item,
+    // including the overflow badge, so assistive technology gets a
+    // valid list structure when a member has more than three workspaces.
+    expect(within(chipList).getAllByRole("listitem")).toHaveLength(4);
     expect(chipList.textContent ?? "").toMatch(/\+1$/);
   });
 
