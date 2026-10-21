@@ -6,7 +6,7 @@ test.describe("account theme preference", () => {
     await bootstrapRoleSession(page, "workspace_manager", "shell-theme", {
       email: `e2e-shell-theme-${testInfo.project.name}@laratik.local`,
     });
-    await page.goto("/app/w/acme");
+    await page.goto("/app/a/test-agency/w/shell-theme");
 
     await page.getByRole("button", { name: "Color theme" }).first().click();
     await expect(page.getByRole("menuitemradio", { name: "Dark" })).toBeVisible();

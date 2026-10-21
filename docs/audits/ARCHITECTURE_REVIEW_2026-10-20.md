@@ -187,6 +187,16 @@ regression, and the §23 Playwright journey verifies the full progression to
 published. The planning-stage filter test also now checks its returned status
 contract without assuming a pristine shared workspace database.
 
+### A12 — Theme shell test seeded one workspace and opened another
+
+**Priority: P2 — browser-suite reliability.** The account-theme shell test
+seeded a workspace named `shell-theme` but navigated to the legacy `/app/w/acme`
+route, so it rendered the unavailable-workspace boundary before testing the
+theme menu. The test now opens the seeded workspace through its canonical
+agency-qualified route. The corrected test passes in Chromium; Firefox could
+not start the first test in this environment and remained at full CPU without
+emitting a result, so the remaining browser matrix is still unverified.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
@@ -207,10 +217,12 @@ CodeGraph was used for module and call-path discovery. The Trends policy gate
 was changed without changing source keys, persisted data, or provider response
 contracts. The initial baseline passed `pnpm verify`, all 44 integration
 files, and the five-scenario migration drill. Targeted Trends, PageHeader,
-Brand Kit, agency-switcher, and content-flow checks passed, including the full
-§23 Chromium journey. A full release browser run exposed the A7–A9 findings
-and was stopped while defects were triaged; full five-browser and visual gates
-and exact-clean-commit evidence remain outstanding.
+Brand Kit, agency-switcher, content-flow, and account-theme checks passed in
+Chromium, including the full §23 journey. The release browser run passed its
+first 52 Chromium cases except for the A12 stale route in the theme shell test;
+that fixture path is corrected. The isolated Firefox rerun then hung before
+the first test result with its browser process at full CPU. Full five-browser
+and visual gates and exact-clean-commit evidence remain outstanding.
 
 The original working tree contained user changes, captured as the review
 baseline; implementation work is isolated on `codex/architecture-review`.
