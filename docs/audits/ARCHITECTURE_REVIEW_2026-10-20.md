@@ -1102,3 +1102,18 @@ Focused content-service and module-ownership tests pass 66/66; typecheck,
 targeted ESLint, formatting, diff checks, and the commit hook pass on exact
 code SHA `6f928e093874bc8690e65738279a34db27fc5041`. Database-backed
 integration and full `pnpm verify` remain open; no migration was introduced.
+
+## Batched verification milestone — 2026-10-21
+
+`pnpm verify` passes on exact clean implementation SHA
+`65cec551460865b9a1ca3c2f508ea61570884093`: Prettier, repository-wide ESLint,
+typecheck, 562 unit files / 5,009 tests, and the production build. The first
+verification attempt found a stale fan-out guard allowlist after the workflow
+transition moved to its feature module; the documented bounded exception was
+updated and the full verification passed on the corrected commit.
+
+Database integration and the migration drill remain pending:
+`TEST_DATABASE_URL` is not configured, and the local Docker daemon does not
+respond. No schema migration was introduced. Manual route review, the release
+browser matrix, and independent verification also remain open. `AD-002` stays
+**In Progress**.

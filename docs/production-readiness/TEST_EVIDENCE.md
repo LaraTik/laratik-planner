@@ -1599,3 +1599,22 @@ Implementation SHA: `6f928e093874bc8690e65738279a34db27fc5041`
 Added input validation, authorization, and unchanged-date coverage. The media
 folder reconciliation remains best-effort. Database integration and full
 `pnpm verify` remain pending. No schema migration was introduced.
+
+## Batched repository verification
+
+Implementation SHA: `65cec551460865b9a1ca3c2f508ea61570884093`
+
+| Check               | Result                          |
+| ------------------- | ------------------------------- |
+| `pnpm format:check` | Pass.                           |
+| `pnpm lint`         | Pass with zero warnings.        |
+| `pnpm typecheck`    | Pass.                           |
+| `pnpm test:unit`    | Pass — 562 files / 5,009 tests. |
+| `pnpm build`        | Pass.                           |
+
+The stale read-path guard allowlist was corrected for the moved workflow
+transition command; the full verification rerun passed on this SHA. Database
+integration and migration drill are pending because `TEST_DATABASE_URL` is not
+configured and Docker is unavailable. No schema migration was introduced.
+Manual route review, release browser matrix, and independent verification
+remain open.
