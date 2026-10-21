@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PatchAudienceCopySchema } from "@/lib/content/service";
+import { PatchAudienceCopySchema } from "@/features/content/server";
 
 /**
  * Compatibility schema tests for the legacy partial caption /
