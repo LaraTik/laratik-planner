@@ -1322,6 +1322,17 @@ mobile capture expected 1,835px and rendered 1,557px. Review current UI state
 against the current approved design source before changing either the page or
 its baseline.
 
+**Visual failure triage (2026-10-22).** Inspection of two retained failure
+artifacts found capture-contract mismatches, not confirmed page defects. The
+platform agency-detail test runs with `platform_owner` (the route's intended
+privileged view), while its 900px expected image shows the forbidden state.
+The responsive `/app/agency-settings/trend-sources` expected image displays
+Agency AI settings, while the actual capture displays Trend Sources. The
+approved Stitch manifest does not contain a Trend Sources screen. Keep these
+as fixture/reference reconciliation items; do not alter page behavior or
+approved captures to make the comparisons pass. The complete visual matrix and
+current-source review remain open.
+
 ## Media lifecycle responsibility split — 2026-10-21
 
 The former `src/lib/media/service.ts` mixed feature behavior with broad

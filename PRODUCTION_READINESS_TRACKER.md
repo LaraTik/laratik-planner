@@ -1542,6 +1542,13 @@ The combined MCP batch passes `pnpm verify` on exact clean HEAD
 production build). Page/browser/visual review and independent verification
 remain open.
 
+Visual triage found two invalid prior comparisons: the platform agency-detail
+case expects a forbidden-state image while its fixture grants `platform_owner`,
+and the Trend Sources responsive snapshot contains Agency AI settings. These
+are capture/reference reconciliation findings, not confirmed UI defects. The
+approved captures remain unchanged pending an upstream design update; see
+`docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`.
+
 ## M1 — Multi-agency tenancy and authorization
 
 > **2026-08-22** — Milestone 1 of the M1 program lands on `feat/m1-multi-agency`. The schema, runtime, and policy layer are no longer single-agency: a second agency can coexist with the production agency, two agencies with the same workspace slug don't collide, cross-tenant reads are denied with `404` (anti-IDOR), and platform authority is disjoint from agency authority. The cookie is HMAC-signed, the resolver is fail-closed, and the singleton invariant is gone. Sub-task evidence below; architecture is documented in `docs/architecture/authorization.md`, `docs/architecture/data-model.md`, and `docs/architecture/overview.md`.
