@@ -2629,3 +2629,8 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   from `src/features/mcp/diagnostic-tools.ts`; the factory supplies its shared
   authorization and response helpers. Tool names, schemas, scopes, and response
   contracts remain unchanged. No MCP contract changes were made.
+- Shared page-state review confirms the existing `EmptyState` (33 callers),
+  `RouteErrorState` (used by route error boundaries), and `Skeleton` (11
+  callers) already centralize their respective presentation patterns. Do not
+  add another generic state component based on superficial similarity; the
+  remaining route-by-route state and localization review is still open.
