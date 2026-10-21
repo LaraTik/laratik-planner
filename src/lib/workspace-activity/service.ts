@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, ilike, sql } from "drizzle-orm";
+import { and, desc, eq, ilike, inArray, notInArray, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { workspaceBasePath } from "@/lib/urls";
 import {
@@ -35,8 +35,10 @@ import { listRecentBrandUpdates } from "@/lib/brand/service";
  *   - `before` : optional Date — only include events at-or-before this point
  *                (used for date-range affordances; `all-time` keeps it open)
  *   - `limit`  : rows to return (page size + 1 to detect "hasNext")
+ *   - `offset` : zero-based offset across the merged sources for numbered
+ *                pages; each source fetches enough rows to produce that slice
  *   - `cursor` : optional `createdAt` ISO timestamp — events strictly
- *                older than this; key-set pagination, no OFFSET
+ *                older than this for key-set consumers
  */
 
 export type ActivityScope =
@@ -85,6 +87,8 @@ export interface ListWorkspaceActivityFilters {
   before?: Date;
   /** Page size. */
   limit?: number;
+  /** Zero-based row offset across the merged feed. */
+  offset?: number;
   /** Cursor — return events with `at < cursor`. */
   cursor?: Date;
 }
@@ -173,7 +177,9 @@ export async function listWorkspaceActivity(
   workspace: { id: string; slug: string; agencySlug: string },
   filters: ListWorkspaceActivityFilters = {},
 ): Promise<ListWorkspaceActivityResult> {
-  const limit = Math.max(1, Math.min(filters.limit ?? DEFAULT_LIMIT, 200));
+  const limit = Math.max(1, Math.min(filters.limit ?? DEFAULT_LIMIT, 5_000));
+  const offset = Math.max(0, Math.floor(filters.offset ?? 0));
+  const fetchLimit = Math.min(offset + limit + 1, 5_001);
   const cursor = filters.cursor ?? null;
 
   // ── Source A: activity_event ──────────────────────────────────────────
@@ -192,37 +198,65 @@ export async function listWorkspaceActivity(
   if (filters.before) {
     aeConditions.push(sql`${activityEvents.createdAt} <= ${filters.before.toISOString()}`);
   }
+  if (filters.scope === "review") {
+    aeConditions.push(
+      inArray(activityEvents.kind, ["review", "approval", "approval_reset", "changes_requested"]),
+    );
+  } else if (filters.scope === "planning") {
+    aeConditions.push(eq(activityEvents.kind, "assignment"));
+  } else if (filters.scope === "publication") {
+    aeConditions.push(inArray(activityEvents.kind, ["delivery", "publication"]));
+  } else if (filters.scope === "content") {
+    aeConditions.push(
+      notInArray(activityEvents.kind, [
+        "review",
+        "approval",
+        "approval_reset",
+        "changes_requested",
+        "assignment",
+        "delivery",
+        "publication",
+      ]),
+    );
+  }
   if (cursor) {
     aeConditions.push(sql`${activityEvents.createdAt} < ${cursor.toISOString()}`);
   }
 
-  const aeRowsPromise = db
-    .select({
-      id: activityEvents.id,
-      kind: activityEvents.kind,
-      summary: activityEvents.summary,
-      contentItemId: activityEvents.contentItemId,
-      actorId: activityEvents.actorId,
-      actorName: users.displayName,
-      actorEmail: users.email,
-      createdAt: activityEvents.createdAt,
-      contentItemTitle: contentItems.title,
-      // Structured payload — the formatter consumes these to
-      // render the before → after diff and the channel label.
-      beforeData: activityEvents.beforeData,
-      afterData: activityEvents.afterData,
-      metadata: activityEvents.metadata,
-    })
-    .from(activityEvents)
-    .leftJoin(users, eq(users.id, activityEvents.actorId))
-    .leftJoin(contentItems, eq(contentItems.id, activityEvents.contentItemId))
-    .where(and(...aeConditions))
-    .orderBy(desc(activityEvents.createdAt))
-    .limit(limit + 1);
+  const aeRowsPromise =
+    filters.scope === "brand_kit"
+      ? Promise.resolve([])
+      : db
+          .select({
+            id: activityEvents.id,
+            kind: activityEvents.kind,
+            summary: activityEvents.summary,
+            contentItemId: activityEvents.contentItemId,
+            actorId: activityEvents.actorId,
+            actorName: users.displayName,
+            actorEmail: users.email,
+            createdAt: activityEvents.createdAt,
+            contentItemTitle: contentItems.title,
+            // Structured payload — the formatter consumes these to
+            // render the before → after diff and the channel label.
+            beforeData: activityEvents.beforeData,
+            afterData: activityEvents.afterData,
+            metadata: activityEvents.metadata,
+          })
+          .from(activityEvents)
+          .leftJoin(users, eq(users.id, activityEvents.actorId))
+          .leftJoin(contentItems, eq(contentItems.id, activityEvents.contentItemId))
+          .where(and(...aeConditions))
+          .orderBy(desc(activityEvents.createdAt))
+          .limit(fetchLimit);
 
   // ── Source B: brand-kit aggregate (kept as a separate source so a
   //    future 'brand_kit' scope can be filtered to just this source) ─
-  const brandKitPromise = listRecentBrandUpdates(workspace.id, limit + 1).then((rows) =>
+  const brandKitPromise = (
+    filters.scope && filters.scope !== "all" && filters.scope !== "brand_kit"
+      ? Promise.resolve([])
+      : listRecentBrandUpdates(workspace.id, fetchLimit)
+  ).then((rows) =>
     rows.map<WorkspaceActivityRow>((r) => ({
       id: `brand:${r.kind}:${r.updatedAt.toISOString()}:${r.description}`,
       at: r.updatedAt,
@@ -287,15 +321,15 @@ export async function listWorkspaceActivity(
   }));
 
   const combined = [...aeMerged, ...brandFiltered];
-  combined.sort((a, b) => b.at.getTime() - a.at.getTime());
+  combined.sort((a, b) => b.at.getTime() - a.at.getTime() || a.id.localeCompare(b.id));
 
   const scoped =
     filters.scope && filters.scope !== "all"
       ? combined.filter((row) => row.scope === filters.scope)
       : combined;
 
-  const rows = scoped.slice(0, limit);
-  const hasNext = scoped.length > limit;
+  const rows = scoped.slice(offset, offset + limit);
+  const hasNext = scoped.length > offset + limit;
   // Indexing `rows` directly returns `T | undefined` under
   // `noUncheckedIndexedAccess`; the explicit nullish escape makes the
   // cursor accessible even when `rows` is empty.

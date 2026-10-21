@@ -17,7 +17,6 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import {
   buildListHref,
   hasActiveFilters,
-  paginate,
   parseListFilters,
   type AllowedPageSize,
   type ListFilters,
@@ -171,6 +170,7 @@ export default async function WorkspaceActivityPage({
   const serviceFilters: ListWorkspaceActivityFilters = {
     scope: validScope,
     limit: filters.size,
+    offset: (filters.page - 1) * filters.size,
   };
   if (filters.q) serviceFilters.query = filters.q;
   if (actorId) serviceFilters.actorId = actorId;
@@ -284,19 +284,12 @@ export default async function WorkspaceActivityPage({
     const scope = scopeByKind(spec.kind);
     specScopeLabels.set(spec.id, scopeLabelMap.get(scope) ?? scope);
   }
-  // Wrap into the existing `paginate` helper so the toolbar's pagination
-  // contract stays identical to the Team & Access lists.
-  const total = counts.all;
-  const rowCount = feed.hasNext ? rows.length + 1 : rows.length;
-  const totalPages = Math.max(1, Math.ceil(rowCount / filters.size));
-  const paginated = paginate(rows, filters.page, filters.size);
-  // Override the paginated math to reflect the cursor-based reality:
-  // we asked for at most `limit` rows, but the source may have had
-  // more. Compose the final "page" view here.
-  const finalRows = paginated.rows;
-  const finalFrom = paginated.from;
-  const finalTo = paginated.to;
-  const finalTotal = feed.hasNext ? rows.length + 1 : rows.length;
+  const total = counts[validScope as keyof typeof counts];
+  const totalPages = Math.max(1, Math.ceil(total / filters.size));
+  const finalRows = rows;
+  const finalFrom = finalRows.length ? (filters.page - 1) * filters.size + 1 : 0;
+  const finalTo = finalRows.length ? finalFrom + finalRows.length - 1 : 0;
+  const finalTotal = total;
   const currentHrefFilters: ActivityUrlFilters = {
     q: filters.q,
     status: filters.status,
@@ -474,8 +467,8 @@ export default async function WorkspaceActivityPage({
         {finalRows.length > 0 ? (
           <ListPagination
             testId="activity-pagination"
-            page={paginated.page}
-            totalPages={Math.max(totalPages, paginated.totalPages)}
+            page={filters.page}
+            totalPages={totalPages}
             total={finalTotal}
             from={finalFrom}
             to={finalTo}
@@ -490,8 +483,8 @@ export default async function WorkspaceActivityPage({
             prevLabel={t("activity.paginationPrev")}
             nextLabel={t("activity.paginationNext")}
             pageIndicator={t("activity.paginationPageOf", {
-              page: paginated.page,
-              total: Math.max(totalPages, paginated.totalPages),
+              page: filters.page,
+              total: totalPages,
             })}
           />
         ) : null}
