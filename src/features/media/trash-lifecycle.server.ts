@@ -7,6 +7,7 @@ import { mediaAssets, storageObjects } from "@/lib/db/schema";
 import { releaseCapacityAmount } from "@/lib/entitlements";
 import { assertWithinBulkCap } from "@/lib/media/bulk-cap";
 import { MediaPermissionError } from "@/lib/media/errors";
+import { logWarn } from "@/lib/observability/logger";
 
 /**
  * Expunge trashed media assets whose retention window has passed.
@@ -129,11 +130,7 @@ export async function expungeExpiredTrashedMedia(
       });
     } catch (err) {
       // One corrupt row must not poison the rest of the batch.
-      console.warn(
-        "[media] expunge failed for trashed asset",
-        row.assetId,
-        err instanceof Error ? err.message : String(err),
-      );
+      logWarn("media.trash_expunge_failed", { assetId: row.assetId, err });
     }
   }
   return { media: mediaCount, storageObjects: storageObjectCount, bytesReleased };

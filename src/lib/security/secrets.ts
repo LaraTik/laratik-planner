@@ -4,6 +4,7 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSy
 import { readFile as readFileAsync } from "node:fs/promises";
 import path from "node:path";
 import { serverEnv } from "@/lib/validation/env";
+import { logError, logWarn } from "@/lib/observability/logger";
 import { deriveDevKey } from "./dev-key";
 
 /**
@@ -274,12 +275,11 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
       const filePath = writeKekFileSync(newKey.toString("base64"));
       fileKeyCache = newKey;
       if (!loggedFileFallback) {
-        console.warn(
-          `[security.secrets] AI_SECRET_ENCRYPTION_KEY not set in environment. ` +
-            `Auto-generated KEK and persisted to ${filePath} (mode 0600). ` +
-            `BACK THIS FILE UP — losing it locks out all stored AI provider keys. ` +
-            `To override, set AI_SECRET_ENCRYPTION_KEY in the environment.`,
-        );
+        logWarn("security.secrets.kek_file_auto_generated", {
+          filePath,
+          fileMode: "0600",
+          backupRequired: true,
+        });
         loggedFileFallback = true;
       }
       return newKey;
@@ -296,10 +296,7 @@ function readKey(version: number = CURRENT_KEY_VERSION): Buffer {
   // 4. Dev / test fallback (preserved from prior behavior so tests
   //    remain hermetic — no leftover KEK file in test sandboxes).
   if (!loggedDevFallback) {
-    console.error(
-      "[security.secrets] AI_SECRET_ENCRYPTION_KEY is not set; using a derived dev key. " +
-        "DO NOT deploy this configuration.",
-    );
+    logError("security.secrets.dev_key_fallback", { deploymentAllowed: false });
     loggedDevFallback = true;
   }
   return deriveDevKey();

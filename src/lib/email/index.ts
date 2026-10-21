@@ -10,6 +10,7 @@ import nodemailer, { type Transporter } from "nodemailer";
 import { serverEnv } from "@/lib/validation/env";
 import { tFor } from "@/messages";
 import { SUPPORTED_LOCALES, type LocaleCode } from "@/lib/i18n/locales";
+import { logWarn } from "@/lib/observability/logger";
 
 // STUDIOFLOW_MASTER_PROMPT.md §1 — system-generated email
 // copy. The magic-link verification email is sent before
@@ -119,7 +120,9 @@ export interface SendEmailInput {
 export async function sendEmail(input: SendEmailInput): Promise<{ id: string } | null> {
   const mailer = getMailer();
   if (!mailer) {
-    console.warn("[email] SMTP not configured, dropping email to", input.to);
+    logWarn("email.smtp_unconfigured", {
+      recipientCount: Array.isArray(input.to) ? input.to.length : 1,
+    });
     return null;
   }
   const info = await mailer.sendMail({

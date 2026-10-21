@@ -17,6 +17,7 @@ import {
 import { setUser } from "@/lib/observability/sentry";
 import { SUPPORTED_LOCALES } from "@/lib/i18n/locales";
 import { setPublicLocale } from "@/lib/i18n/cookie";
+import { logError } from "@/lib/observability/logger";
 import {
   issueMcpAccessToken,
   revokeMcpAccessToken,
@@ -258,7 +259,7 @@ export async function setNotificationPreferencesAction(
       dailyDigest: formData.get("dailyDigest") === "on",
     });
   } catch (e) {
-    console.error("Failed to save notification preferences", e);
+    logError("account.notification_preferences.save_failed", { err: e });
     return { errorCode: "savePreferencesFailed" };
   }
   revalidatePath("/app/account");

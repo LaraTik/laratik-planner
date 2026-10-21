@@ -79,7 +79,9 @@ describe("safeGetSignedDownloadUrl", () => {
     // broken-image fallback and logs one warning per render.
     expect(safeGetSignedDownloadUrl("legacy-no-prefix")).toBeNull();
     expect(console.warn).toHaveBeenCalledTimes(1);
-    expect(console.warn).toHaveBeenCalledWith(expect.stringContaining("safeGetSignedDownloadUrl"));
+    const warning = String(vi.mocked(console.warn).mock.calls[0]?.[0]);
+    expect(warning).toContain('"event":"storage.invalid_workspace_prefix"');
+    expect(warning).not.toContain("legacy-no-prefix");
   });
 
   it("does NOT throw on any malformed input — UI render paths must never crash", async () => {

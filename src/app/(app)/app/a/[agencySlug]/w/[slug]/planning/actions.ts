@@ -66,6 +66,7 @@ import {
   ResolveCommentSchema,
 } from "@/lib/discussions/service";
 import { actionFailure, fieldErrorsFromZod, type ActionState } from "@/lib/validation/action-state";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * Per-action field maps (plan §4 — "Per-action field map").
@@ -561,10 +562,10 @@ export async function submitDeliveryAction(
     // "you are not the designer this delivery belongs to" with a typed
     // `PermissionDeniedError` carrying a stable action name; everything
     // else shares `updateFailed`.
-    console.error("[submitDelivery] submission failed", {
+    logError("content.submit_delivery.failed", {
       workspaceSlug,
       contentItemId,
-      message: error instanceof Error ? error.message : String(error),
+      err: error,
     });
     return {
       error:
@@ -618,10 +619,10 @@ export async function setMediaRequiredAction(
     // the service's "not found" and status-guard paths throw plain
     // `Error`, and guessing between them by message would be a lie the
     // user then sees, so they share `updateFailed`.
-    console.error("[setMediaRequired] update failed", {
+    logError("content.set_media_required.failed", {
       workspaceSlug,
       contentItemId,
-      message: error instanceof Error ? error.message : String(error),
+      err: error,
     });
     return {
       ok: false,

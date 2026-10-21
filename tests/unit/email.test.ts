@@ -167,6 +167,10 @@ describe("getMailer / sendEmail when SMTP is not configured", () => {
     expect(result).toBeNull();
     expect(sendMailMock).not.toHaveBeenCalled();
     expect(warn).toHaveBeenCalled();
+    const warning = String(warn.mock.calls[0]?.[0]);
+    expect(warning).toContain('"event":"email.smtp_unconfigured"');
+    expect(warning).toContain('"recipientCount":1');
+    expect(warning).not.toContain("alice@example.com");
     warn.mockRestore();
   });
 });

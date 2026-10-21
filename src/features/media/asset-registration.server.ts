@@ -13,6 +13,7 @@ import {
 import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/validation";
 import { quarantineMediaObject } from "@/lib/media/quarantine";
 import { MediaPermissionError } from "@/lib/media/errors";
+import { logWarn } from "@/lib/observability/logger";
 import {
   sanitizeAssetTitle,
   type MediaDimensions,
@@ -291,9 +292,9 @@ export async function registerUploadedMediaAsset(input: {
           // (unsupported mime, decode error, R2 outage); anything
           // that bubbles here is a real bug, but the asset row is
           // already committed, so logging is the right balance.
-          console.warn("[media] preview generation failed; asset registered without variant", {
+          logWarn("media.preview_generation_failed", {
             assetId: asset.id,
-            err: previewError instanceof Error ? previewError.message : String(previewError),
+            err: previewError,
           });
         }
       }
