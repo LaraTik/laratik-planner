@@ -1966,3 +1966,19 @@ build. No migration or stored data changed.
 This narrow batch is **Tested**, not **Verified**. Full repository
 verification, route/browser/visual review, and independent review remain
 separate open gates; AD-002 remains **In Progress**.
+
+## Architecture review verification milestone — 2026-10-22
+
+Exact clean HEAD: `92da4ed981e983374666611db696202ed35dd342`
+
+| Command / check           | Result                                                                                  |
+| ------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm verify`             | Pass — formatting, lint, typecheck, 562 unit files / 5,020 tests, and production build. |
+| `git status` before run   | Clean at the exact HEAD above.                                                          |
+| E2E test database         | Not available; `TEST_DATABASE_URL` is unset.                                            |
+| Docker availability probe | Did not respond; the CLI was interrupted after 16 seconds.                              |
+
+This verifies the current code and build at the recorded clean HEAD. The full
+disposable-Postgres integration/migration drill, release browser and visual
+matrix, route-by-route review, and independent review remain open. This is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.

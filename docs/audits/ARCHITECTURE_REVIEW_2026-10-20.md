@@ -1444,3 +1444,12 @@ passes 26 focused migration-report and concurrent-migration tests, TypeScript,
 targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
 visual, route-by-route, and independent review gates remain open; AD-002
 remains **In Progress**.
+
+## Full verification milestone — 2026-10-22
+
+`pnpm verify` passes at exact clean HEAD
+`92da4ed981e983374666611db696202ed35dd342`: formatting, lint, typecheck, 562
+unit files / 5,020 tests, and production build. The E2E/Postgres gates could
+not start because `TEST_DATABASE_URL` is unset and the Docker CLI did not
+respond during a bounded availability check. The route/browser/visual review
+and independent verification remain open; this is **Tested**, not **Verified**.
