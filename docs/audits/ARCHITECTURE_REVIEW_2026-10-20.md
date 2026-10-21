@@ -189,16 +189,17 @@ contracts are not sufficiently stable to justify another shared module.
 
 ### A4 — Scheduled route wrappers repeat transport scaffolding
 
-**Priority: P2 — consistency and testability.** Six cron routes share
+**Priority: P2 — consistency and testability.** Seven cron routes now share
 authorization and response-header behavior; several also repeat timing,
 unauthorized-response, and GET/POST delegation code. Their business work,
 failure response shapes, and side effects differ, so a broad generic runner
 must not hide meaningful behavior. The shared `authorizeCronRequest` helper
 now owns only the bearer authorization check and the uniform 401/no-store
 response. Job-specific timing, flags, history, execution, and failure handling
-remain in each route. `tests/unit/cron-routes-auth.test.ts` covers all six
-routes and every supported GET/POST method (11 cases), asserting that
-unauthorized requests do not invoke job or history side effects.
+remain in each route. `tests/unit/cron-routes-auth.test.ts` covers all seven
+routes and their supported GET/POST methods, asserting that unauthorized
+requests do not invoke job or history side effects. The deadline-reminder
+route also has success and sanitized-failure cases.
 
 ### A5 — Several modules warrant responsibility review
 
