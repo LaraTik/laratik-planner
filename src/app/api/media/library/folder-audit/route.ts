@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import { mediaFolderReconcileLogs, users } from "@/lib/db/schema";
-import { isAgencyMember } from "@/lib/auth/policy";
+import { accessibleWorkspaceIdsForActor } from "@/lib/media/accessible-workspaces";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,7 +35,8 @@ export async function GET(req: NextRequest) {
   });
   if (!parsed.success) return NextResponse.json({ error: "Invalid query" }, { status: 400 });
 
-  if (!(await isAgencyMember(actor, parsed.data.agencyId))) {
+  const accessibleWorkspaceIds = await accessibleWorkspaceIdsForActor(actor, parsed.data.agencyId);
+  if (!accessibleWorkspaceIds.includes(parsed.data.workspaceId)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   const limit = parsed.data.limit ?? 20;
