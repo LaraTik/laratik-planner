@@ -2638,11 +2638,12 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   in that directory. Future production-critical indexes use the guarded
   outside-journal path. `TEST_DATABASE_URL` is missing, so database gates for
   this operational change remain unverified.
-- A5 now records the 34-tool, 2,834-line MCP server-factory inventory and a
-  bounded split queue by tool domain. The five diagnostics tools now register
-  from `src/features/mcp/diagnostic-tools.ts`; the factory supplies its shared
-  authorization and response helpers. Tool names, schemas, scopes, and response
-  contracts remain unchanged. No MCP contract changes were made.
+- A5 records the initial 34-tool MCP server-factory inventory and a bounded
+  split queue by tool domain. The five diagnostics tools and the two Brand Kit
+  export/import tools now register from feature modules. Shared context,
+  response-format, error, and result-envelope types live in one MCP contract
+  module. Tool names, schemas, scopes, and response contracts remain unchanged.
+  No MCP contract changes were made.
 - Shared page-state review confirms the existing `EmptyState` (33 callers),
   `RouteErrorState` (used by route error boundaries), and `Skeleton` (11
   callers) already centralize their respective presentation patterns. Do not

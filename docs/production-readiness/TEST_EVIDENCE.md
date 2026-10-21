@@ -1900,3 +1900,24 @@ historic journal was not edited.
 Database gates could not be run because `TEST_DATABASE_URL` is missing; the
 Docker availability probe stalled. No schema migration was introduced. The
 full repository and browser release gates remain open.
+
+## Brand Kit MCP registration boundary — 2026-10-22
+
+Implementation SHA: `e4f56f7ba3ce1831cb211283bfe6486bc23f217b`
+
+Brand Kit export/import schemas, conflict strategy, logo-transfer helpers, and
+tool registrations now live in `src/features/mcp/brand-kit-tools.ts`. Shared
+MCP context, response format, errors, and result envelopes are centralized in
+`src/features/mcp/tool-contracts.ts`. The 34-tool catalog and existing tool
+contracts are unchanged.
+
+| Check                                     | Result        |
+| ----------------------------------------- | ------------- |
+| MCP tool-catalog and diagnostics suite    | Pass — 30/30. |
+| TypeScript                                | Pass.         |
+| Targeted ESLint, Prettier, and diff check | Pass.         |
+| Brand Kit Postgres integration suite      | Not run.      |
+
+The Brand Kit integration suite requires `TEST_DATABASE_URL`, which is
+currently missing. No schema migration or API contract change was introduced.
+Full repository and browser release gates remain open.
