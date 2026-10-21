@@ -189,6 +189,8 @@ const {
   ArchiveContentItemSchema,
   archiveContentItem,
   restoreContentItem,
+  RescheduleContentItemSchema,
+  rescheduleContentItem,
 } = await import("@/features/content/server");
 
 const actor = { id: "user-1" };
@@ -1112,6 +1114,62 @@ describe("claimAsDesigner", () => {
     dbMock.state.updateReturnEmpty = true;
 
     await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/already assigned/i);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+});
+
+describe("rescheduleContentItem", () => {
+  const plannedPublishAt = new Date("2026-10-21T12:00:00.000Z");
+
+  it("coerces a valid date and rejects invalid dates", () => {
+    expect(
+      RescheduleContentItemSchema.safeParse({
+        contentItemId,
+        plannedPublishAt: plannedPublishAt.toISOString(),
+      }).success,
+    ).toBe(true);
+    expect(
+      RescheduleContentItemSchema.safeParse({ contentItemId, plannedPublishAt: "not-a-date" })
+        .success,
+    ).toBe(false);
+  });
+
+  it("requires a workspace manager or content planner", async () => {
+    dbMock.state.selectResults.push([
+      {
+        workspaceId,
+        plannedPublishAt: new Date("2026-10-20T12:00:00.000Z"),
+        designerId: null,
+        contentOwnerId: actor.id,
+        title: "Post",
+        format: "static_post",
+        agencyId: "agency-1",
+      },
+    ]);
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+
+    await expect(rescheduleContentItem(actor, { contentItemId, plannedPublishAt })).rejects.toThrow(
+      /permission denied/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+  });
+
+  it("does not create a transaction when the scheduled date is unchanged", async () => {
+    dbMock.state.selectResults.push([
+      {
+        workspaceId,
+        plannedPublishAt,
+        designerId: null,
+        contentOwnerId: actor.id,
+        title: "Post",
+        format: "static_post",
+        agencyId: "agency-1",
+      },
+    ]);
+
+    await rescheduleContentItem(actor, { contentItemId, plannedPublishAt });
+
+    expect(dbMock.state.transactionCalls).toBe(0);
     expect(dbMock.state.insertCalls).toHaveLength(0);
   });
 });

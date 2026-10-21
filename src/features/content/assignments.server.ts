@@ -76,11 +76,9 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
 
 // ─── FEAT-07 — §14 required commands (GAP-FULL-REVIEW-2026-08-25) ──────────
 //
-// `assignDesigner` / `releaseDesignTask` / `rescheduleContentItem` are
-// the §14 contract names. `claimAsDesigner` (the designer's
-// self-claim) was the only one in place; assign and release are the
-// planner-driven paths the workspace manager uses to move a task
-// off a stuck designer or rotate it to a different one.
+// `assignDesigner` / `releaseDesignTask` are the §14 contract names.
+// `claimAsDesigner` (the designer's self-claim) is the designer-driven
+// path; assign and release are manager-driven paths to rotate a task.
 
 /**
  * Planner assigns a specific designer to a content item. Workspace

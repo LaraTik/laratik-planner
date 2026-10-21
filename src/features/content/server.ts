@@ -53,3 +53,9 @@ export {
   type ArchiveContentItemInput,
   type BulkArchiveInput,
 } from "./archive.server";
+
+export {
+  RescheduleContentItemSchema,
+  rescheduleContentItem,
+  type RescheduleContentItemInput,
+} from "./reschedule.server";
