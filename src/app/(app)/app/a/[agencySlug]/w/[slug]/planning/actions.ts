@@ -19,8 +19,6 @@ import {
   type UpdateContentInput,
   batchCreateContentItems,
   mergeAiDraftIntoBrief,
-  archiveContentItem,
-  restoreContentItem,
 } from "@/lib/content/service";
 import {
   updateFormatPayload,
@@ -36,6 +34,8 @@ import {
   assignContentOwner,
   AssignContentOwnerSchema,
   claimAsDesigner,
+  archiveContentItem,
+  restoreContentItem,
 } from "@/features/content/server";
 import {
   BatchClientRowSchema,

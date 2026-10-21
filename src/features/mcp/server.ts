@@ -45,9 +45,9 @@ import {
   listWorkspaceContent,
   transitionContent,
   assignContentOwner,
+  archiveContentItem,
 } from "@/features/content/server";
 import {
-  archiveContentItem,
   quickCreateContentItem,
   rescheduleContentItem,
   updateContentItem,

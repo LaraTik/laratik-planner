@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth/config";
-import { bulkArchiveContentItems, BulkArchiveSchema } from "@/lib/content/service";
+import { bulkArchiveContentItems, BulkArchiveSchema } from "@/features/content/server";
 
 /**
  * Design-queue bulk actions (FEAT-14, GAP-FULL-REVIEW-2026-08-25).

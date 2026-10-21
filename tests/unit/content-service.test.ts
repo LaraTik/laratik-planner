@@ -162,8 +162,6 @@ const {
   quickCreateContentItem,
   updateContentItem,
   batchCreateContentItems,
-  bulkArchiveContentItems,
-  BulkArchiveSchema,
   UPDATEABLE_STATUSES,
 } = await import("@/lib/content/service");
 const {
@@ -178,6 +176,11 @@ const {
   assignContentOwner,
   releaseDesignTask,
   AssignDesignerSchema,
+  bulkArchiveContentItems,
+  BulkArchiveSchema,
+  ArchiveContentItemSchema,
+  archiveContentItem,
+  restoreContentItem,
 } = await import("@/features/content/server");
 
 const actor = { id: "user-1" };
@@ -751,6 +754,30 @@ describe("bulkArchiveContentItems (FEAT-14)", () => {
     // activity insert may not have run — assert the schema
     // accepts the input and the gate succeeded, which is the
     // contract the FEAT-14 brief asks us to verify.
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(
+      actor,
+      workspaceId,
+      expect.arrayContaining(["workspace_manager", "content_planner"]),
+    );
+  });
+});
+
+describe("archive lifecycle feature boundary", () => {
+  it("validates the single-item archive and restore input", () => {
+    expect(ArchiveContentItemSchema.safeParse({ workspaceId, contentItemId }).success).toBe(true);
+    expect(
+      ArchiveContentItemSchema.safeParse({ workspaceId, contentItemId: "bad-id" }).success,
+    ).toBe(false);
+  });
+
+  it("keeps archive and restore restricted to planners and workspace managers", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValue(false);
+    const input = { workspaceId, contentItemId };
+
+    await expect(archiveContentItem(actor, input)).rejects.toThrow(/permission denied/i);
+    await expect(restoreContentItem(actor, input)).rejects.toThrow(/permission denied/i);
+
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledTimes(2);
     expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith(
       actor,
       workspaceId,

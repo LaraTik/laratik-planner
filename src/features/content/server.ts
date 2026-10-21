@@ -43,3 +43,13 @@ export {
   type AssignDesignerInput,
   type ReleaseDesignTaskInput,
 } from "./assignments.server";
+
+export {
+  ArchiveContentItemSchema,
+  BulkArchiveSchema,
+  archiveContentItem,
+  bulkArchiveContentItems,
+  restoreContentItem,
+  type ArchiveContentItemInput,
+  type BulkArchiveInput,
+} from "./archive.server";
