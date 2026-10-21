@@ -1,5 +1,6 @@
 import {
   DeleteObjectCommand,
+  CopyObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   PutObjectCommand,
@@ -136,6 +137,25 @@ export class R2ObjectStorageAdapter implements ObjectStorageAdapter {
       return metadataFromHead(input.objectKey, output);
     } catch {
       throw new StorageUnavailableError("Storage object metadata could not be read");
+    }
+  }
+
+  async copyObject(input: { sourceObjectKey: string; objectKey: string }): Promise<void> {
+    const encodedSource = input.sourceObjectKey
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    try {
+      await this.client.send(
+        new CopyObjectCommand({
+          Bucket: this.config.bucket,
+          Key: input.objectKey,
+          CopySource: `${this.config.bucket}/${encodedSource}`,
+          MetadataDirective: "COPY",
+        }),
+      );
+    } catch {
+      throw new StorageUnavailableError("Storage object could not be copied");
     }
   }
 

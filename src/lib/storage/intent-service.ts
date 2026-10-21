@@ -266,6 +266,162 @@ export async function completeStorageUpload(input: {
 }
 
 /**
+ * Create a separately owned storage object with the same bytes as an active
+ * object. The copy uses a reserved upload intent so quota, verification, and
+ * failure cleanup follow the normal upload lifecycle.
+ */
+export async function copyStorageObject(input: {
+  agencyId: string;
+  workspaceId: string;
+  userId: string;
+  sourceObjectId: string;
+}) {
+  const [source] = await db
+    .select()
+    .from(storageObjects)
+    .where(
+      and(
+        eq(storageObjects.id, input.sourceObjectId),
+        eq(storageObjects.agencyId, input.agencyId),
+        eq(storageObjects.workspaceId, input.workspaceId),
+        eq(storageObjects.status, "active"),
+      ),
+    )
+    .limit(1);
+  if (!source) {
+    throw new StorageIntentError(
+      "storage.object_verification_failed",
+      "Source object is unavailable",
+    );
+  }
+
+  const context = await getAgencyStorageContext(input.agencyId);
+  if (source.bucket !== context.bucket) {
+    throw new StorageIntentError(
+      "storage.object_verification_failed",
+      "Source object is not in the active storage bucket",
+    );
+  }
+
+  const extension = extensionForContentType(source.mimeType);
+  const intent = await createStorageUploadIntent({
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    userId: input.userId,
+    kind: source.kind as UploadKind,
+    extension,
+    contentType: source.mimeType,
+    expectedByteSize: source.byteSize,
+    ...(source.checksumSha256 ? { checksumSha256: source.checksumSha256 } : {}),
+    ...(source.originalName ? { originalName: source.originalName } : {}),
+  });
+  const [reservedIntent] = await db
+    .select({ objectKey: storageUploadIntents.objectKey })
+    .from(storageUploadIntents)
+    .where(eq(storageUploadIntents.id, intent.uploadIntentId))
+    .limit(1);
+  if (!reservedIntent) {
+    await abortStorageUpload({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      intentId: intent.uploadIntentId,
+    });
+    throw new StorageIntentError("storage.intent_not_found", "Copy intent not found");
+  }
+
+  try {
+    await context.adapter.copyObject({
+      sourceObjectKey: source.objectKey,
+      objectKey: reservedIntent.objectKey,
+    });
+    await db
+      .update(storageUploadIntents)
+      .set({ status: "uploaded", updatedAt: new Date() })
+      .where(
+        and(
+          eq(storageUploadIntents.id, intent.uploadIntentId),
+          eq(storageUploadIntents.status, "reserved"),
+        ),
+      );
+    const completed = await completeStorageUpload({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      intentId: intent.uploadIntentId,
+    });
+    await db
+      .update(storageObjects)
+      .set({
+        width: source.width,
+        height: source.height,
+        durationMs: source.durationMs,
+        updatedAt: new Date(),
+      })
+      .where(eq(storageObjects.id, completed.objectId));
+    return completed;
+  } catch (error) {
+    await abortStorageUpload({
+      agencyId: input.agencyId,
+      workspaceId: input.workspaceId,
+      intentId: intent.uploadIntentId,
+    });
+    throw error;
+  }
+}
+
+/**
+ * Discard an object copied for a media command that failed before linking it.
+ * The caller must invoke this only while the new object is still unattached.
+ */
+export async function discardUnattachedStorageObjectCopy(input: {
+  agencyId: string;
+  workspaceId: string;
+  userId: string;
+  objectId: string;
+}): Promise<void> {
+  const objectKey = await db.transaction(async (tx) => {
+    const [object] = await tx
+      .select({
+        id: storageObjects.id,
+        objectKey: storageObjects.objectKey,
+        byteSize: storageObjects.byteSize,
+      })
+      .from(storageObjects)
+      .where(
+        and(
+          eq(storageObjects.id, input.objectId),
+          eq(storageObjects.agencyId, input.agencyId),
+          eq(storageObjects.workspaceId, input.workspaceId),
+          eq(storageObjects.createdBy, input.userId),
+          eq(storageObjects.status, "active"),
+        ),
+      )
+      .for("update")
+      .limit(1);
+    if (!object) return null;
+    await releaseCapacityAmount(tx, input.agencyId, [
+      { resource: "storage_bytes", increase: object.byteSize },
+    ]);
+    await tx
+      .update(storageObjects)
+      .set({ status: "soft_deleted", deleteAfter: new Date(), updatedAt: new Date() })
+      .where(eq(storageObjects.id, object.id));
+    return object.objectKey;
+  });
+  if (!objectKey) return;
+
+  try {
+    const context = await getAgencyStorageContext(input.agencyId);
+    await context.adapter.deleteObject({ objectKey });
+    await db
+      .update(storageObjects)
+      .set({ status: "deleted", deletedAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(storageObjects.id, input.objectId), eq(storageObjects.status, "soft_deleted")));
+  } catch {
+    // The scheduled soft-delete purge retries provider cleanup.
+  }
+}
+
+/**
  * Same-origin fallback for browsers that cannot PUT directly to the configured
  * private bucket because its CORS policy is missing or stale. The body remains
  * a stream, so the fallback does not buffer a large video in application memory.

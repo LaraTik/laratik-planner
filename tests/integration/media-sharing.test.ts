@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq, sql } from "drizzle-orm";
@@ -18,10 +18,14 @@ import { hashMediaShareToken } from "@/lib/media/share-token";
 import {
   archiveMediaFolder,
   activeMediaShareForActor,
+  bulkMoveMediaAssets,
   bulkRestoreMediaAssets,
+  bulkSetMediaAssetTags,
+  bulkSetMediaAssetVisibility,
   bulkTrashMediaAssets,
   createPublicMediaShare,
   createMediaFolder,
+  duplicateMediaAssets,
   expungeExpiredTrashedMedia,
   listMediaFolders,
   listMediaFoldersTree,
@@ -30,9 +34,48 @@ import {
   renameMediaFolder,
   restoreMediaAsset,
   revokePublicMediaShare,
+  setMediaAssetTags,
   trashMediaAsset,
 } from "@/features/media/server";
 import { expectPgConstraint } from "./_db-error";
+
+vi.mock("@/lib/storage/intent-service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/storage/intent-service")>();
+  return {
+    ...actual,
+    copyStorageObject: vi.fn(async (input: { sourceObjectId: string; userId: string }) => {
+      const { db: database } = await import("@/lib/db");
+      const { storageObjects: objects } = await import("@/lib/db/schema");
+      const [source] = await database
+        .select()
+        .from(objects)
+        .where(eq(objects.id, input.sourceObjectId));
+      if (!source) throw new Error("Source object not found");
+      const [copy] = await database
+        .insert(objects)
+        .values({
+          agencyId: source.agencyId,
+          workspaceId: source.workspaceId,
+          provider: source.provider,
+          bucket: source.bucket,
+          objectKey: `${source.objectKey}-copy-${Date.now()}`,
+          status: source.status,
+          kind: source.kind,
+          originalName: source.originalName,
+          mimeType: source.mimeType,
+          byteSize: source.byteSize,
+          checksumSha256: source.checksumSha256,
+          width: source.width,
+          height: source.height,
+          durationMs: source.durationMs,
+          createdBy: input.userId,
+        })
+        .returning();
+      return { objectId: copy!.id, objectKey: copy!.objectKey, size: copy!.byteSize };
+    }),
+    discardUnattachedStorageObjectCopy: vi.fn(async () => undefined),
+  };
+});
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -363,5 +406,79 @@ describe("media sharing and folder database contract", () => {
     await expect(
       bulkTrashMediaAssets({ id: outsider!.id }, { assetIds: [assetId] }),
     ).resolves.toEqual({ trashed: 0, failures: [{ assetId, reason: "forbidden" }] });
+  });
+
+  it("moves, tags, and changes visibility through the library commands", async () => {
+    const actor = { id: userId };
+    const folder = await createMediaFolder(actor, { agencyId, workspaceId, name: "Campaign" });
+    await expect(
+      bulkMoveMediaAssets(actor, { assetIds: [assetId], folderId: folder!.id }),
+    ).resolves.toEqual({ moved: 1, failures: [] });
+
+    await expect(
+      setMediaAssetTags(actor, assetId, [" hero ", "hero", " campaign "]),
+    ).resolves.toMatchObject({ tags: ["hero", "campaign"] });
+    await expect(
+      bulkSetMediaAssetTags(actor, {
+        assetIds: [assetId],
+        add: ["campaign", "calendar"],
+        remove: ["hero"],
+      }),
+    ).resolves.toEqual({ updated: 1, failures: [] });
+    await expect(
+      bulkSetMediaAssetVisibility(actor, { assetIds: [assetId], visibility: "agency" }),
+    ).resolves.toEqual({ updated: 1, failures: [] });
+
+    const [original] = await db.select().from(mediaAssets).where(eq(mediaAssets.id, assetId));
+    expect(original).toMatchObject({
+      folderId: folder!.id,
+      tags: ["campaign", "calendar"],
+      visibility: "agency",
+    });
+
+    expect(original).toBeDefined();
+  });
+
+  it("does not move an asset into a folder owned by another workspace", async () => {
+    const [foreignWorkspace] = await db
+      .insert(workspaces)
+      .values({ agencyId, name: "Foreign", slug: "foreign", createdBy: userId })
+      .returning();
+    const [foreignFolder] = await db
+      .insert(mediaFolders)
+      .values({
+        agencyId,
+        workspaceId: foreignWorkspace!.id,
+        name: "Private",
+        createdBy: userId,
+      })
+      .returning();
+
+    await expect(
+      bulkMoveMediaAssets({ id: userId }, { assetIds: [assetId], folderId: foreignFolder!.id }),
+    ).resolves.toEqual({ moved: 0, failures: [{ assetId, reason: "forbidden" }] });
+    const [asset] = await db
+      .select({ folderId: mediaAssets.folderId })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, assetId));
+    expect(asset?.folderId).toBeNull();
+  });
+
+  it("duplicates metadata while creating a separately owned storage object", async () => {
+    await expect(duplicateMediaAssets({ id: userId }, { assetIds: [assetId] })).resolves.toEqual({
+      duplicated: 1,
+      failures: [],
+    });
+    const [original] = await db.select().from(mediaAssets).where(eq(mediaAssets.id, assetId));
+    const [copy] = await db
+      .select()
+      .from(mediaAssets)
+      .where(eq(mediaAssets.supersedesAssetId, assetId));
+    expect(copy).toMatchObject({
+      title: "Shared image (Copy)",
+      folderId: original!.folderId,
+      tags: original!.tags,
+    });
+    expect(copy?.storageObjectId).not.toBe(original?.storageObjectId);
   });
 });

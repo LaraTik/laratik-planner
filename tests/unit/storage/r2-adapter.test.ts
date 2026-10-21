@@ -68,7 +68,7 @@ describe("R2 object storage adapter", () => {
   });
 
   it("streams a same-origin fallback upload through the configured bucket", async () => {
-    const send = vi.fn(async () => ({}));
+    const send = vi.fn();
     const adapter = new R2ObjectStorageAdapter(
       {
         accountId: "account-1",
@@ -90,6 +90,38 @@ describe("R2 object storage adapter", () => {
 
     expect(send).toHaveBeenCalledTimes(1);
     expect(JSON.stringify(send.mock.calls)).not.toContain("secret-key");
+  });
+
+  it("copies an object within the configured private bucket", async () => {
+    const send = vi.fn(async (command: unknown) => {
+      void command;
+      return {};
+    });
+    const adapter = new R2ObjectStorageAdapter(
+      {
+        accountId: "account-1",
+        endpoint: "https://account-1.r2.cloudflarestorage.com",
+        bucket: "planner-media",
+        accessKeyId: "access-key",
+        secretAccessKey: "secret-key",
+        storageClass: "standard",
+      },
+      { client: { send }, signUrl: vi.fn() },
+    );
+
+    await adapter.copyObject({
+      sourceObjectKey: "agencies/a/source image.png",
+      objectKey: "agencies/a/copy image.png",
+    });
+
+    expect(send).toHaveBeenCalledTimes(1);
+    const command = send.mock.calls[0]![0] as { input: Record<string, unknown> };
+    expect(command.input).toMatchObject({
+      Bucket: "planner-media",
+      Key: "agencies/a/copy image.png",
+      CopySource: "planner-media/agencies/a/source%20image.png",
+      MetadataDirective: "COPY",
+    });
   });
 
   it("clamps upload and read URL lifetimes to the provider-safe range", async () => {

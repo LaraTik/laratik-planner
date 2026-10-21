@@ -35,6 +35,10 @@ export {
   bulkSetMediaAssetTags,
   bulkSetMediaAssetVisibility,
   duplicateMediaAssets,
+  sanitizeMediaTags,
+  setMediaAssetTags,
+} from "./library-commands.server";
+export {
   ensureBrandMediaFolderPath,
   ensurePlanningMediaFolderPathPublic,
   findDuplicateMediaAssets,

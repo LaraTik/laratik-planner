@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sanitizeMediaTags } from "@/lib/media/service";
+import { sanitizeMediaTags } from "@/features/media/server";
 import { MAX_TAGS_PER_ASSET, MAX_TAG_LENGTH } from "@/lib/media/bulk-cap";
 
 describe("sanitizeMediaTags", () => {
