@@ -21,6 +21,7 @@
 import { describe, expect, it } from "vitest";
 import {
   extractIndexName,
+  formatConcurrentMigrationError,
   isInsideDirectory,
   splitStatements,
   validateConcurrentIndexStatements,
@@ -159,6 +160,27 @@ describe("migrate-concurrent — index name extraction", () => {
 
   it("returns null for a non-matching statement", () => {
     expect(extractIndexName("ALTER TABLE foo ADD COLUMN bar text;")).toBeNull();
+  });
+});
+
+describe("migrate-concurrent — safe operator diagnostics", () => {
+  it("keeps database message details out of retained logs while preserving the error code", () => {
+    const error = Object.assign(new Error("duplicate value: private-customer@example.test"), {
+      code: "23505",
+    });
+
+    const diagnostic = formatConcurrentMigrationError(error);
+    expect(diagnostic).toBe("Error (code 23505)");
+    expect(diagnostic).not.toContain("private-customer@example.test");
+  });
+
+  it("rejects untrusted error names and codes", () => {
+    const error = Object.assign(new Error("sensitive detail"), {
+      name: "Bad Name: secret",
+      code: "SQLSTATE=secret",
+    });
+
+    expect(formatConcurrentMigrationError(error)).toBe("Error");
   });
 });
 

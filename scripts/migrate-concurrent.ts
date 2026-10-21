@@ -46,6 +46,7 @@ import { config as loadEnv } from "dotenv";
 import { Client } from "pg";
 import {
   extractIndexName,
+  formatConcurrentMigrationError,
   isInsideDirectory,
   splitStatements,
   validateConcurrentIndexStatements,
@@ -170,7 +171,7 @@ async function runWithRetry(statement: string): Promise<RunResult> {
         return { ok: false, permanent: true, error: lastError };
       }
       console.warn(
-        `[migrate-concurrent] attempt ${attempt}/${args.maxRetries} failed (transient): ${msg}`,
+        `[migrate-concurrent] attempt ${attempt}/${args.maxRetries} failed (transient): ${formatConcurrentMigrationError(lastError)}`,
       );
       if (attempt < args.maxRetries) {
         await new Promise((r) => setTimeout(r, args.waitMs));
@@ -197,7 +198,7 @@ async function main() {
       const result = await runWithRetry(statement);
       if (!result.ok) {
         console.error(
-          `[migrate-concurrent] (${i + 1}/${statements.length}) FAILED: ${result.error.message}`,
+          `[migrate-concurrent] (${i + 1}/${statements.length}) FAILED: ${formatConcurrentMigrationError(result.error)}`,
         );
         if (indexName) {
           console.error(
@@ -214,6 +215,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(`[migrate-concurrent] unexpected error: ${(err as Error).message}`);
+  console.error(`[migrate-concurrent] unexpected error: ${formatConcurrentMigrationError(err)}`);
   process.exit(1);
 });
