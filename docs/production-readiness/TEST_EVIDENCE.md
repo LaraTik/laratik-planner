@@ -1,5 +1,31 @@
 # Test and coverage evidence
 
+## Content Quick Create feature ownership — 2026-10-22, implementation SHA `1b072f169c9287a2878357dea9a0dc05bd4af896`
+
+Moved `QuickCreateSchema`, `QuickCreateInput`, and
+`quickCreateContentItem` from the legacy content library service into
+`src/features/content/quick-create.server.ts`, exposed via the content
+feature server entry point. The planning action and MCP command now use the
+feature boundary. Authorization, transaction boundaries, workspace defaults,
+active channel selection, structured payload validation, and trend/research
+provenance behavior are preserved. No route, API, permission, workflow, or
+schema contract changed.
+
+| Check                                         | Result                                                                                                |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                 | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,014 tests, and production build. |
+| Focused Quick Create unit tests               | **Pass** — 69 tests across content service and update-schema suites.                                  |
+| Focused Postgres acceptance tests             | **Pass** — 30 journey tests and 1 page-render regression.                                             |
+| `TEST_DATABASE_URL=… pnpm test:integration`   | **Pass** — every integration spec completed successfully.                                             |
+| `TEST_DATABASE_URL=… pnpm migration-drill`    | **Pass** — 5/5 scenarios; from-zero and restored ledgers are 90/90.                                   |
+| Targeted lint, format, and `git diff --check` | **Pass**.                                                                                             |
+
+The implementation commit is `1b072f169c9287a2878357dea9a0dc05bd4af896`.
+Other content commands remain in the incremental review queue. Full route
+review, the complete release browser/visual matrix, and independent review
+remain open. AD-002 remains **In Progress**; this work is **Tested**, not
+**Verified**.
+
 ## Content deadline reminder activation — 2026-10-21, implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`
 
 Moved the unused deadline dispatcher into the content feature boundary and

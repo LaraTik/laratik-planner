@@ -1,6 +1,6 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-21 Architecture review verification checkpoint — implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`** — `pnpm verify`, the full disposable-Postgres integration suite, and all five migration-drill scenarios passed. The pass includes the new authenticated, scheduled deadline-reminder path and its transaction, concurrency, deduplication, state-filter, and route-auth regressions. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-22 Architecture review verification checkpoint — implementation SHA `1b072f169c9287a2878357dea9a0dc05bd4af896`** — `pnpm verify` passed with 562 unit files / 5,014 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. The checkpoint includes the authenticated deadline-reminder cron path and Quick Create's migration behind the content feature boundary. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
@@ -2523,3 +2523,22 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   integration and migration drill remain pending because the disposable test
   database is unavailable. Manual route/visual review and independent
   verification remain open; `AD-002` is **In Progress**.
+
+## 2026-10-22 — Move Quick Create behind the content feature boundary
+
+- Moved `QuickCreateSchema`, its input type, and `quickCreateContentItem`
+  into the server-only `src/features/content/quick-create.server.ts` module
+  and exported them through `src/features/content/server.ts`. The planning
+  action and MCP command now call the feature entry point. Research provenance,
+  default assignments, channel selection, role gates, and transactional
+  creation behavior are unchanged.
+- The 69 focused content-service/schema unit tests, the 30-case acceptance
+  journey, and the page-render regression passed. `pnpm verify` passed with
+  562 unit files / 5,014 tests and production build; the full integration
+  suite and five-scenario migration drill also passed on implementation SHA
+  `1b072f169c9287a2878357dea9a0dc05bd4af896`. See
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- No route, API, permission, workflow, or schema contract changed. Other
+  content commands remain in the incremental ownership queue. Route-by-route
+  review, release browser/visual coverage, and independent review remain open;
+  `AD-002` remains **In Progress** and this work is **Tested**, not **Verified**.

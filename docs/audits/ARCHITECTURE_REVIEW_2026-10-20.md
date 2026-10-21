@@ -154,6 +154,16 @@ TypeScript passes. `pnpm verify` also passed on exact clean SHA
 `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`; evidence is recorded in
 `docs/production-readiness/TEST_EVIDENCE.md`.
 
+**Content Quick Create feature boundary (2026-10-22).** The Quick Create
+schema and transactional command now live in the server-only
+`src/features/content/quick-create.server.ts` module and are exported through
+the content feature entry point. Planning and MCP callers use that entry
+point; role checks, channel selection, workspace defaults, research
+provenance, and atomic inserts are preserved. The full verification,
+integration suite, and migration drill pass on implementation SHA
+`1b072f169c9287a2878357dea9a0dc05bd4af896`. The remaining commands in the
+legacy content service are still under the incremental ownership review.
+
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 
 **Priority: P1 — operator safety and provider-policy correctness.** The
@@ -303,6 +313,14 @@ media integration passes 11/11, `pnpm verify` passes on exact clean SHA
 5/5. The full integration suite also passed on the pre-commit implementation
 snapshot. R2 production UAT, manual review of every route, the full
 five-browser matrix, and independent review remain open.
+
+**Content command ownership (2026-10-22).** Quick Create was the first
+command migrated from `src/lib/content/service.ts` into a responsibility-
+specific content feature module. Its input schema moved with it, and both the
+planning action and MCP caller now depend on the feature entry point. The
+legacy service no longer owns item creation with research provenance and
+workspace defaults. Remaining update, batch-create, and archive commands
+stay in the review queue until each has a clear, bounded owner.
 
 ### A6 — Historical audit findings need status reconciliation
 
