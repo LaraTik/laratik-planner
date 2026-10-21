@@ -8,6 +8,15 @@ import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/val
 
 export { moveMediaAsset } from "./asset-management.server";
 export { linkMediaAssetToContentItem, linkedTargetsForMediaAsset } from "./asset-links.server";
+export {
+  countMediaAssets,
+  listMediaAssets,
+  listMediaAssetsForContentItem,
+  listMediaAssetsPage,
+  MEDIA_PAGE_SIZE,
+  MEDIA_PAGE_SIZE_OPTIONS,
+  parseMediaPageSize,
+} from "./asset-library-queries.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
 export { importPublicMediaAsset } from "./import.server";
 export { registerUploadedMediaAsset, type RegisteredMediaAsset } from "./asset-registration.server";
@@ -51,14 +60,9 @@ export {
 export {
   ensureBrandMediaFolderPath,
   ensurePlanningMediaFolderPathPublic,
-  listMediaAssets,
-  listMediaAssetsForContentItem,
-  listMediaAssetsPage,
   mediaAssetForActor,
-  MEDIA_PAGE_SIZE_OPTIONS,
-  parseMediaPageSize,
 } from "@/lib/media/service";
-export type { MediaSort } from "@/lib/media/service";
+export type { MediaSort } from "./asset-library-queries.server";
 
 /** Promote uploads that were left pending after a transient storage read. */
 export async function processPendingMediaAssets(limit = 50) {

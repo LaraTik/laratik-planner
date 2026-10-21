@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { MEDIA_PAGE_SIZE, MEDIA_PAGE_SIZE_OPTIONS, parseMediaPageSize } from "@/lib/media/service";
+import {
+  MEDIA_PAGE_SIZE,
+  MEDIA_PAGE_SIZE_OPTIONS,
+  parseMediaPageSize,
+} from "@/features/media/asset-library-queries.server";
 
 /**
  * Guards symptom 1 of the media-library rework: the first page carried more

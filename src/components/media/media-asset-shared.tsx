@@ -1,6 +1,6 @@
 import { FileText, Image as ImageIcon, Video } from "lucide-react";
 import type { MediaKind } from "@/lib/media/contract";
-import type { listMediaAssets } from "@/lib/media/service";
+import type { MediaLibraryItem } from "@/lib/media/types";
 
 /**
  * Renders the glyph for a media kind.
@@ -28,7 +28,7 @@ export function MediaKindIcon({
  * tile, and the lightbox. It lives here rather than in `media-library-page.tsx`
  * so the client components can import it without pulling the page in.
  */
-export type MediaLibraryRow = Awaited<ReturnType<typeof listMediaAssets>>[number] & {
+export type MediaLibraryRow = MediaLibraryItem & {
   /**
    * Short-lived R2 signed URL pointing directly at the preview variant. When
    * present the tile and viewer emit it so the bytes flow R2 → browser without
