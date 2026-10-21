@@ -29,3 +29,4 @@ export {
   applyWorkflowScenario,
   type ApplyWorkflowScenarioResult,
 } from "./workflow-scenario.server";
+export { transitionContent, type WorkflowAction } from "./workflow-transition.server";

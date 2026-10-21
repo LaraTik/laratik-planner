@@ -164,7 +164,6 @@ const {
   batchCreateContentItems,
   bulkArchiveContentItems,
   BulkArchiveSchema,
-  transitionContent,
   claimAsDesigner,
   assignDesigner,
   assignContentOwner,
@@ -177,6 +176,7 @@ const {
   listUnassignedDesignWork,
   listWorkspaceContent,
   listWorkspaceDesigners,
+  transitionContent,
   updateFormatPayload,
 } = await import("@/features/content/server");
 

@@ -43,13 +43,13 @@ import {
   applyWorkflowScenario,
   getContentItem,
   listWorkspaceContent,
+  transitionContent,
 } from "@/features/content/server";
 import {
   archiveContentItem,
   assignContentOwner,
   quickCreateContentItem,
   rescheduleContentItem,
-  transitionContent,
   updateContentItem,
 } from "@/lib/content/service";
 import { duplicateContentItem } from "@/lib/planning/content-clone";
