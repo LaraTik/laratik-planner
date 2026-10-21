@@ -30,7 +30,7 @@ baseline and were not treated as authored by this review.
 
 ### Static route inventory refreshed 2026-10-21
 
-The current tree still contains 91 pages, 105 route handlers, 42 loading
+The current tree still contains 91 pages, 106 route handlers, 42 loading
 surfaces, and 9 error boundaries. Page counts below group the agency-qualified
 workspace route tree by its first feature segment; they are a filesystem
 inventory, not a claim that each route has passed a manual quality review.
@@ -57,28 +57,30 @@ inventory, not a claim that each route has passed a manual quality review.
 | users              |     1 | workspace-home  |     2 |
 | workspaces         |     2 |                 |       |
 
-The 105 route handlers are API handlers. Their current first-level ownership
+The 106 route handlers are API handlers. Their current first-level ownership
 groups are:
 
-| API group            | Count | API group             | Count |
-| -------------------- | ----: | --------------------- | ----: |
-| advertising          |     6 | agencies              |     5 |
-| agency               |     2 | ai                    |     2 |
-| auth                 |     1 | bootstrap             |     2 |
-| community            |     1 | cron/advertising-sync |     1 |
-| cron/email-dispatch  |     1 | cron/error-retention  |     1 |
-| cron/outbox          |     1 | cron/social-metrics   |     1 |
-| cron/storage-cleanup |     1 | deliveries            |     1 |
-| dev                  |     6 | export                |     2 |
-| health               |     3 | mcp                   |     1 |
-| media                |    24 | mentions              |     1 |
-| reports              |     1 | research              |     9 |
-| sentry-probe         |     1 | share                 |     3 |
-| social               |     7 | storage               |     1 |
-| tasks                |     6 | trends                |     9 |
-| uploads              |     5 |                       |       |
+| API group               | Count | API group             | Count |
+| ----------------------- | ----: | --------------------- | ----: |
+| advertising             |     6 | agencies              |     5 |
+| agency                  |     2 | ai                    |     2 |
+| auth                    |     1 | bootstrap             |     2 |
+| community               |     1 | cron/advertising-sync |     1 |
+| cron/deadline-reminders |     1 | cron/email-dispatch   |     1 |
+| cron/error-retention    |     1 | cron/outbox           |     1 |
+| cron/social-metrics     |     1 | cron/storage-cleanup  |     1 |
+| deliveries              |     1 | dev                   |     6 |
+| export                  |     2 | health                |     3 |
+| mcp                     |     1 | media                 |    24 |
+| mentions                |     1 | reports               |     1 |
+| research                |     9 | sentry-probe          |     1 |
+| share                   |     3 | social                |     7 |
+| storage                 |     1 | tasks                 |     6 |
+| trends                  |     9 | uploads               |     5 |
 
-The route-to-test ownership map now covers all 91 page files: every page change
+The affected-test map also places `/api/cron/deadline-reminders` with the
+content domain and selects its route-auth and Postgres regressions. The
+route-to-test ownership map covers all 91 page files: every page change
 selects a focused browser-validation area in `scripts/test-ownership.ts`. A
 regression checks the complete page-file inventory, so a newly added unmapped
 route cannot silently escalate to the full suite. The manual review of each
@@ -445,6 +447,26 @@ placeholder. The component unit test still asserts the real prefix, and the
 product UI continues to display it. Workspace Media's English responsive and
 Arabic/RTL matrices now pass strict comparison at all five widths; the Arabic
 matrix also checks critical accessibility and overflow.
+
+### A32 — Deadline reminders had no invocation path
+
+**Priority: P1 — required notification behavior was unreachable.** The
+deadline event type, localized copy, and dispatcher function existed, but the
+function had no caller and the VPS cron installer had no corresponding job.
+The master prompt requires deadline notifications to enter the transactional
+outbox, so the feature was silently inactive. The dispatcher now belongs to
+`src/features/content/deadline-reminders.server.ts` and is invoked by an
+authenticated `/api/cron/deadline-reminders` route scheduled hourly by
+`scripts/vps/install-cron.sh`. Its candidates and outbox writes share one
+transaction, concurrent ticks are serialized by a PostgreSQL advisory lock,
+recent events are deduplicated for 24 hours, and duplicate owner/designer IDs
+are collapsed. Focused integration coverage includes open/closed/archived and
+out-of-window states, repeat runs, and overlapping ticks. `pnpm verify`, the
+full disposable-Postgres integration suite, and the five-scenario migration
+drill passed on implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`;
+the evidence log records the exact checks. Production cron installation
+still needs the normal VPS operations step. Route-by-route manual review,
+release browser/visual coverage, and independent review remain open.
 
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 

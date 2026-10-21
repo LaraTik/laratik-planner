@@ -1,5 +1,30 @@
 # Test and coverage evidence
 
+## Content deadline reminder activation — 2026-10-21, implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`
+
+Moved the unused deadline dispatcher into the content feature boundary and
+added the authenticated cron route and hourly VPS caller. The dispatch
+transaction locks scheduling work, selects open items due within 24 hours,
+checks the 24-hour event dedupe window, and queues recipient events
+transactionally. The owner and designer are deduplicated when they are the
+same user. No schema migration was needed.
+
+| Check                                                                              | Result                                                                                                           |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                      | **Pass** — formatting, ESLint, strict TypeScript, unit suite, and production build.                              |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                        | **Pass** — every integration spec completed successfully, including all three new deadline-reminder regressions. |
+| `TEST_DATABASE_URL=… pnpm migration-drill`                                         | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90.                                      |
+| Focused cron route-auth and ownership unit suites                                  | **Pass** — authorization, success, sanitized failure, and affected-test ownership checks.                        |
+| Cron installer dry-run, targeted lint/format, shell syntax, and `git diff --check` | **Pass**.                                                                                                        |
+
+The implementation was committed as `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`;
+the verification ran against that implementation tree. No schema or public
+route response contract changed. The VPS cron still requires installation
+through the normal operations procedure. Full five-browser release coverage,
+complete visual reconciliation, route-by-route manual review, and independent
+review remain open. AD-002 remains **In Progress**; this implementation is
+**Tested**, not **Verified**.
+
 ## Media planning-folder lifecycle ownership — 2026-10-21, exact clean implementation SHA `a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`
 
 Moved planning-folder path creation and content-item folder reconciliation

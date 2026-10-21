@@ -1,6 +1,6 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-21 Architecture review verification checkpoint — SHA `a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`** — `pnpm verify` passed: formatting, repository ESLint, strict TypeScript, 562 unit files / 5,010 tests, and production build. The focused media-sharing integration suite passed 20/20 against disposable `planner_test`; focused ownership/media unit suites passed 22/22. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. The media service now delegates planning-folder lifecycle operations to a responsibility-specific module. Manual review of all routes and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green.
+> **2026-10-21 Architecture review verification checkpoint — implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`** — `pnpm verify`, the full disposable-Postgres integration suite, and all five migration-drill scenarios passed. The pass includes the new authenticated, scheduled deadline-reminder path and its transaction, concurrency, deduplication, state-filter, and route-auth regressions. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
@@ -2244,6 +2244,27 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - Full `pnpm verify`, all integration files, migration drill, route review,
   release browser matrix, and independent review remain open. AD-002 remains
   **In Progress**; no independent `Verified` status is assigned.
+
+## 2026-10-21 — Activate content deadline reminders
+
+- Confirmed that the deadline notification dispatcher had no caller and no
+  VPS schedule despite the product contract requiring deadline events through
+  the transactional outbox. Moved it behind the content feature boundary and
+  added an authenticated cron route plus an hourly VPS schedule.
+- Candidate selection and outbox writes now share a transaction; advisory
+  locking prevents overlapping dispatches, recent events are deduplicated,
+  and duplicate owner/designer recipients collapse to one notification.
+  Added focused Postgres tests for repeat runs, competing ticks, state and
+  archive filters, and route tests for authorization and sanitized failures.
+- On implementation SHA `98c7040ca1327000283d2b6eeba8aaa379ca8d6a`,
+  `pnpm verify`, the full `pnpm test:integration` suite, and
+  `pnpm migration-drill` passed. The cron installer dry-run and focused
+  ownership/lint/format checks passed as well. Exact results are recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`.
+- No schema migration or user-facing route contract changed. Installing the
+  new cron on the VPS, complete manual route review, release browser/visual
+  coverage, and independent review remain open. AD-002 remains **In
+  Progress**; this work is **Tested**, not **Verified**.
 
 ## 2026-10-21 — Move media sharing behind the feature boundary
 
