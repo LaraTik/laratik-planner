@@ -2611,3 +2611,18 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - Route-by-route review, release browser/visual coverage, and independent
   verification remain open. `AD-002` remains **In Progress**; this work is
   **Tested**, not **Verified**.
+
+## 2026-10-22 — Reconcile additional historical architecture findings
+
+- Current source and tests show historical OTHER-02, OTHER-04, and OTHER-05
+  no longer match the original claims: workspace role reads are request-cached,
+  the proxy mints and propagates correlation IDs, and sign-in error capture is
+  server-only. The regression suites cover these boundaries.
+- Historical TEST-03 is stale about the visual harness: it is runnable and
+  assert-based, while final browser/visual comparison and exact-HEAD release
+  evidence remain incomplete. Historical FEAT-01/02 describe a dispatcher and
+  caller that now exist, but live cron installation and operations evidence
+  remain open. OTHER-03 log-call coverage and OTHER-10 migration index-lock
+  risk remain to be reviewed against current source.
+- A5 now records the 34-tool, 2,834-line MCP server-factory inventory and a
+  bounded split queue by tool domain. No MCP contract changes were made.

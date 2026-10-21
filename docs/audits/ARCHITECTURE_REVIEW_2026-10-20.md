@@ -224,11 +224,22 @@ route also has success and sanitized-failure cases.
 ### A5 — Several modules warrant responsibility review
 
 **Priority: P2 — audit queue, not a defect finding.** Initial size inventory
-flags `src/lib/mcp/server.ts`, `src/lib/media/service.ts`,
-`src/lib/content/service.ts`, Meta provider handling, the planning detail and
+flags the MCP tool server, media and content modules, Meta provider handling,
+the planning detail and
 publish pages, and advertising/engagement surfaces. Large modules are only
 review targets: split them only when responsibilities, change reasons, or
 test seams are demonstrably mixed.
+
+**MCP tool ownership inventory (2026-10-22).** `src/features/mcp/server.ts` is
+2,834 lines and registers 34 tools inside one server factory. The tools span
+workspace/member/agency access, tasks and attachments, Command Center and
+research, planning/content workflows, Brand Kit import/export, and platform
+error diagnostics. This mixes transport setup, shared scope/error handling,
+and several domain command surfaces in one change unit. The next split should
+move one tool group at a time behind registration modules while retaining the
+same tool names, input schemas, scope gates, response envelopes, and MCP docs.
+This is an evidence-backed P2 responsibility review, not a line-count defect;
+no split is adopted until tests establish a stable boundary.
 
 **Media responsibility review (2026-10-21).** `src/lib/media/service.ts` was
 2,674 lines and owned list/filter/duplicate queries, upload registration,
