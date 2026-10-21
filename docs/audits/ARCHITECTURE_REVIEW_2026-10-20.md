@@ -132,11 +132,18 @@ including the delivery/review/publish lifecycle. The old `TEST-04` claim is
 also stale: `tests/integration/bootstrap-concurrency.test.ts` races five real
 Postgres transactions and asserts exactly one admin wins, plus sequential and
 invalid-token cases. Both suites passed in the current integration run.
-The focused reconciliation does not certify the rest of the historical
-findings: review `TEST-02`, `TEST-03`, `FEAT-01`, `FEAT-02`, and the remaining
-security and feature findings against current code before closing them. Keep
-only gaps that reproduce and record their current evidence and owner/acceptance
-test.
+The historical TEST-02 zero-assertion E2E has since been replaced by visible
+channel-page assertions, but one remaining test title incorrectly claimed to
+exercise a successful disconnect despite only checking the empty-state form.
+That title now describes the actual contract, and the component suite asserts
+that the Disconnect control calls the workspace-scoped server action. The
+repository integration suite separately verifies stored disconnect behavior;
+the E2E seed still has no connected provider profile, so the browser test does
+not claim the full external-provider flow. The focused reconciliation does
+not certify the rest of the historical findings: review TEST-03, FEAT-01,
+FEAT-02, and the remaining security and feature findings against current code
+before closing them. Keep only gaps that reproduce and record their current
+evidence and owner/acceptance test.
 
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 
@@ -292,11 +299,28 @@ CI browser environment or repair the local harness before relying on local
 full-matrix output; visual regression did not run because the E2E command
 stopped first.
 
+### A21 — Social connection finalization did not enforce connection tenant scope
+
+**Priority: P1 — tenant isolation and data integrity.** The finalization action
+accepts `connectionId` from the client payload. Its candidate-channel query was
+workspace-scoped, but the domain `linkProfile` function neither checked that
+the pending connection belonged to that workspace nor received an explicit
+workspace ID. Its existing-channel predicate compared `workspace_id` to itself,
+and its new-channel insert derived the workspace from the caller-provided
+connection ID. A workspace manager could therefore submit another workspace's
+connection ID and attach a local channel to it or create a channel under the
+other workspace. The repository now locks and validates the pending connection
+using both connection and workspace IDs, scopes existing-channel select/update
+by workspace, and writes the explicit authorized workspace on insert. The
+action also matches existing channels by provider account ID and platform.
+Disposable-Postgres coverage proves same-workspace linking still succeeds and a
+foreign connection is rejected without changing the channel.
+
 ## Next work, ordered
 
-1. Complete the route, domain, database, integration, and test coverage map;
-   inspect all high-risk historical findings and their regression evidence
-   against current code. Do not treat the 2026-08-25 P0 count as current.
+1. Inspect the remaining high-risk historical findings and their regression
+   evidence against current code. Do not treat the 2026-08-25 P0 count as
+   current; record newly found issues with current source and test evidence.
 2. Continue with the next bounded feature slice after the Trends catalog pilot;
    the feature ownership, import direction, and page-review rules now live in
    [`../architecture/module-ownership.md`](../architecture/module-ownership.md)
@@ -416,3 +440,14 @@ cases across every supported GET/POST method and proves no job/history side
 effect runs when authorization fails. This change does not touch persistence,
 provider behavior, or user-facing routes; the full repository verification is
 still required at the resulting clean commit.
+
+### Social connection tenant-boundary follow-up — 2026-10-21
+
+The finalization path now supplies the authorized workspace ID to
+`linkProfile`; the repository locks and validates the pending connection in
+that workspace, scopes existing-channel writes, and uses the explicit
+workspace for new rows. Existing-channel matching also requires the provider
+platform. The focused social repository integration suite passes 15/15,
+including valid same-workspace linking and rejection of a foreign connection
+without mutation. The connection action unit suite passes 11/11. No schema or
+migration changed; run `pnpm verify` on the final clean code commit.
