@@ -1013,6 +1013,20 @@ targeted ESLint, formatting, diff checks, and the commit hook pass on exact
 code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database-backed
 integration and full `pnpm verify` remain open; no migration was introduced.
 
+### Confirmed defect — concurrent designer self-claim
+
+Review found that `claimAsDesigner` read an unassigned item, then updated it
+inside a later transaction using only the item ID. Two designers could both
+pass the read and write competing assignment rows. The update now atomically
+requires the item to remain unassigned and in a claimable status; a losing
+claim aborts before assignment history or notification writes. The route and
+role contract remain unchanged.
+
+The focused content-service suite passes 60/60, including a losing-claim
+regression; typecheck, targeted ESLint, formatting, diff checks, and the commit
+hook pass on code SHA `e2f50c62d7f9bfbc75d92c710dabe70a8212eeae`. Database-backed
+integration and full `pnpm verify` remain open; no migration was introduced.
+
 ### Content archive lifecycle ownership
 
 Single-item archive, restore, and bulk archive now live in

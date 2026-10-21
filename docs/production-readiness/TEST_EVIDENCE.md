@@ -1557,6 +1557,19 @@ The feature extraction preserves role gates, assignment history, activity,
 notifications, and workflow side effects. Database-backed integration and
 full `pnpm verify` remain pending. No schema migration was introduced.
 
+## Atomic designer self-claim fix
+
+Implementation SHA: `e2f50c62d7f9bfbc75d92c710dabe70a8212eeae`
+
+| Check                                             | Result                                         |
+| ------------------------------------------------- | ---------------------------------------------- |
+| Focused content-service tests                     | Pass — 60/60, including the losing-claim case. |
+| `pnpm typecheck`                                  | Pass.                                          |
+| Targeted ESLint, Prettier, and `git diff --check` | Pass.                                          |
+| Commit hook                                       | Pass.                                          |
+
+No database schema changed. Integration and full `pnpm verify` remain open.
+
 ## Content archive lifecycle extraction
 
 Implementation SHA: `5e780a58651f9518e5fe5e718cebbcd21b5db840`

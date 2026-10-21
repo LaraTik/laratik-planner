@@ -2296,6 +2296,14 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   hook pass on code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database
   integration and full `pnpm verify` remain pending. No schema migration.
 
+- Confirmed concurrency defect: designer self-claim now uses a conditional
+  database update requiring an unassigned item in a claimable status. A losing
+  claim cannot create a competing active assignment or notification. The
+  focused content-service suite passes 60/60; typecheck, targeted lint,
+  formatting, diff checks, and commit hook pass on code SHA
+  `e2f50c62d7f9bfbc75d92c710dabe70a8212eeae`. Database integration and full
+  `pnpm verify` remain pending; no schema migration.
+
 - Content archive lifecycle ownership: extracted single archive, restore, and
   bulk archive into the content feature module; planning, design queue, and MCP
   callers use the feature entry point. Focused behavior and ownership tests
