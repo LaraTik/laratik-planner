@@ -22,7 +22,6 @@ import {
   transitionContent,
   claimAsDesigner,
   updateContentItem,
-  updateFormatPayload,
   patchAudienceCopy,
   updateAudienceCopy,
   UpdateAudienceCopySchema,
@@ -32,9 +31,12 @@ import {
   mergeAiDraftIntoBrief,
   archiveContentItem,
   restoreContentItem,
+} from "@/lib/content/service";
+import {
+  updateFormatPayload,
   applyResearchTeardownToFormatPayload,
   ApplyResearchTeardownSchema,
-} from "@/lib/content/service";
+} from "@/features/content/server";
 import {
   BatchClientRowSchema,
   BatchCreateSchema,

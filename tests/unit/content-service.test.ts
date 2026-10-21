@@ -161,7 +161,6 @@ const {
   UpdateContentSchema,
   quickCreateContentItem,
   updateContentItem,
-  updateFormatPayload,
   batchCreateContentItems,
   getContentItem,
   listWorkspaceContent,
@@ -177,6 +176,7 @@ const {
   listWorkspaceDesigners,
   UPDATEABLE_STATUSES,
 } = await import("@/lib/content/service");
+const { updateFormatPayload } = await import("@/features/content/server");
 
 const actor = { id: "user-1" };
 const workspaceId = "95e9ea6d-8d71-4f7f-8fc8-7eef95c7a6fa";

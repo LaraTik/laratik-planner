@@ -52,7 +52,6 @@ import {
   audienceCopyFromPayload,
   mergeAudienceCopy,
 } from "@/lib/content/audience-copy";
-import { designerEditableFieldsFor } from "@/lib/content/production-fields";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import {
   enqueueApprovalNotification,
@@ -65,7 +64,6 @@ import {
   enqueueReviewRequestNotification,
 } from "@/lib/notifications/service";
 import { reconcileContentItemMediaFolders } from "@/lib/media/service";
-import { applyResearchTeardownToPayload, ResearchTeardownSchema } from "@/lib/research/teardown";
 
 /**
  * Content service — the heart of the app.
@@ -423,181 +421,6 @@ export async function updateContentItem(
       // is set.
     }
   }
-}
-
-/**
- * Update only the `formatPayload` (jsonb) of a content item.
- *
- * Distinct from `updateContentItem` (which also changes title /
- * format / brief / schedule) so the per-format "More details"
- * editor can save structured creative fields without forcing
- * the planner to round-trip the full edit form. The
- * editability guard is the same as `updateContentItem` for managers and
- * planners: only `draft` and `changes_requested` items are editable. An
- * assigned designer may update only the production-field allowlist while an
- * item is `in_design` or `changes_requested`, per master prompt §10. Beyond that, the function is
- * schema-driven: the per-format Zod schema is the source of
- * truth, and unknown fields are silently dropped on parse
- * (forward-compat — adding a key to the schema is a no-op
- * for older rows).
- *
- * The stored `formatPayload` is the *parsed* value, not the
- * raw form data. The service normalises the input (fills in
- * the `schemaVersion` key, drops empty optional fields) so a
- * quick re-save after a feature add doesn't leave stale
- * `null` values in the JSONB.
- *
- * The activity event records only the field-set change (e.g.
- * `format_payload_updated`), not the diff — JSONB diffs are
- * noisy and not actionable in audit. The before/afterData
- * records the key set so audit can answer "which fields did
- * the planner touch this week" without re-parsing the row.
- */
-export const UpdateFormatPayloadSchema = z.object({
-  contentItemId: z.string().uuid(),
-  format: z.enum([
-    "static_post",
-    "carousel",
-    "story",
-    "short_form_video",
-    "long_form_video",
-    "live_content",
-    "article",
-    "other",
-  ]) satisfies z.ZodType<ContentFormat>,
-  formatPayload: z.record(z.string(), z.unknown()),
-});
-export type UpdateFormatPayloadInput = z.infer<typeof UpdateFormatPayloadSchema>;
-
-export async function updateFormatPayload(actor: Actor, input: UpdateFormatPayloadInput) {
-  const parsed = UpdateFormatPayloadSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
-  }
-  const [item] = await db
-    .select({
-      id: contentItems.id,
-      workspaceId: contentItems.workspaceId,
-      status: contentItems.status,
-      format: contentItems.format,
-      designerId: contentItems.designerId,
-      formatPayload: contentItems.formatPayload,
-    })
-    .from(contentItems)
-    .where(eq(contentItems.id, parsed.data.contentItemId))
-    .limit(1);
-  if (!item) throw new Error("Content item not found");
-
-  const isManagerOrPlanner = await hasWorkspaceRole(actor, item.workspaceId, [
-    "workspace_manager",
-    "content_planner",
-  ]);
-  const isAssignedDesigner =
-    item.designerId === actor.id && (await hasWorkspaceRole(actor, item.workspaceId, ["designer"]));
-  await requirePolicy(Promise.resolve(isManagerOrPlanner || isAssignedDesigner), "update_content");
-
-  if (item.status === "cancelled") {
-    throw new Error(
-      `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
-    );
-  }
-
-  // The format of the *content item* is the source of truth
-  // for which per-format schema we apply. We accept the
-  // format in the input so the editor can pre-validate
-  // before save, but we re-read it from the DB so a stale
-  // form post (e.g. user changed format then changed
-  // formatPayload) doesn't write the wrong shape.
-  const submitted = parseFormatPayload(item.format, parsed.data.formatPayload) as Record<
-    string,
-    unknown
-  >;
-  const current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
-  const next = isAssignedDesigner ? { ...current } : submitted;
-  if (isAssignedDesigner) {
-    for (const key of designerEditableFieldsFor(item.format)) {
-      if (Object.prototype.hasOwnProperty.call(submitted, key)) next[key] = submitted[key];
-      else delete next[key];
-    }
-  }
-  const stored = parseFormatPayload(item.format, next);
-
-  // Snapshot the previous key set for the activity event.
-  const beforeKeys = Object.keys(current).sort();
-
-  await db.transaction(async (tx) => {
-    await tx
-      .update(contentItems)
-      .set({ formatPayload: stored, updatedAt: new Date() })
-      .where(eq(contentItems.id, parsed.data.contentItemId));
-
-    await tx.insert(activityEvents).values({
-      workspaceId: item.workspaceId,
-      contentItemId: item.id,
-      actorId: actor.id,
-      kind: "content_updated",
-      summary: `Updated creative details: ${item.format}`,
-      beforeData: { formatPayloadKeys: beforeKeys },
-      afterData: { formatPayloadKeys: Object.keys(stored as object).sort() },
-    });
-  });
-}
-
-export const ApplyResearchTeardownSchema = z.object({
-  workspaceId: z.string().uuid(),
-  contentItemId: z.string().uuid(),
-  researchTeardownId: z.string().uuid(),
-});
-export type ApplyResearchTeardownInput = z.infer<typeof ApplyResearchTeardownSchema>;
-
-/**
- * Apply only blank, schema-supported creative fields from a linked teardown.
- * Existing planner values win; the normal format-payload service remains the
- * single write path for editability, validation, and activity history.
- */
-export async function applyResearchTeardownToFormatPayload(
-  actor: Actor,
-  input: ApplyResearchTeardownInput,
-) {
-  const parsed = ApplyResearchTeardownSchema.parse(input);
-  const [source] = await db
-    .select({
-      contentItemId: contentItems.id,
-      format: contentItems.format,
-      formatPayload: contentItems.formatPayload,
-      result: researchTeardowns.result,
-    })
-    .from(contentResearchTeardownLinks)
-    .innerJoin(contentItems, eq(contentItems.id, contentResearchTeardownLinks.contentItemId))
-    .innerJoin(
-      researchTeardowns,
-      eq(researchTeardowns.id, contentResearchTeardownLinks.researchTeardownId),
-    )
-    .where(
-      and(
-        eq(contentResearchTeardownLinks.workspaceId, parsed.workspaceId),
-        eq(contentResearchTeardownLinks.contentItemId, parsed.contentItemId),
-        eq(contentResearchTeardownLinks.researchTeardownId, parsed.researchTeardownId),
-      ),
-    )
-    .limit(1);
-  if (!source) throw new Error("Research teardown is not linked to this content item");
-
-  const teardown = ResearchTeardownSchema.safeParse(source.result);
-  if (!teardown.success) throw new Error("Saved research teardown is invalid");
-  const applied = applyResearchTeardownToPayload({
-    format: source.format as ContentFormat,
-    current: source.formatPayload,
-    teardown: teardown.data,
-  });
-  if (applied.fields.length === 0) return applied.fields;
-
-  await updateFormatPayload(actor, {
-    contentItemId: source.contentItemId,
-    format: source.format as ContentFormat,
-    formatPayload: applied.payload,
-  });
-  return applied.fields;
 }
 
 /** Canonical audience copy update. Copy is material even when the item is
