@@ -1618,3 +1618,31 @@ integration and migration drill are pending because `TEST_DATABASE_URL` is not
 configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
+
+## Assignment-target authorization fix
+
+Implementation SHA: `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`
+
+| Check                                             | Result                                              |
+| ------------------------------------------------- | --------------------------------------------------- |
+| Focused content-service tests                     | Pass — 64/64, including non-designer target denial. |
+| `pnpm typecheck`                                  | Pass.                                               |
+| Targeted ESLint, Prettier, and `git diff --check` | Pass.                                               |
+| Commit hook                                       | Pass.                                               |
+
+## Final `pnpm verify`
+
+Implementation SHA: `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`
+
+| Check                | Result                          |
+| -------------------- | ------------------------------- |
+| Formatting           | Pass.                           |
+| Repository-wide lint | Pass with zero warnings.        |
+| TypeScript           | Pass.                           |
+| Unit suite           | Pass — 562 files / 5,010 tests. |
+| Production build     | Pass.                           |
+
+Database integration and migration drill could not run: `TEST_DATABASE_URL`
+was not configured, and the local Docker daemon did not respond. No schema
+migration was introduced. Full manual route/visual review and independent
+verification remain open.

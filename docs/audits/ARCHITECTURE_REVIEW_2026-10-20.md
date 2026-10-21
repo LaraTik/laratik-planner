@@ -1117,3 +1117,27 @@ Database integration and the migration drill remain pending:
 respond. No schema migration was introduced. Manual route review, the release
 browser matrix, and independent verification also remain open. `AD-002` stays
 **In Progress**.
+
+### Confirmed defect — designer assignment target authorization
+
+`assignDesigner` already required a workspace manager but trusted the submitted
+designer ID. A crafted request could assign a non-member/non-designer and send
+that user assignment notifications. The command now verifies that a changed
+target has the `designer` role in the same workspace before opening its write
+transaction. Idempotent same-target requests remain no-ops. Regression coverage
+confirms unauthorized targets produce no assignment or notification writes.
+
+Focused content-service tests pass 64/64; typecheck, targeted ESLint,
+formatting, diff checks, and the commit hook pass on code SHA
+`2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`.
+
+## Final batched verification — 2026-10-21
+
+`pnpm verify` passes on exact clean implementation SHA
+`2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`: Prettier, repository-wide ESLint,
+typecheck, 562 unit files / 5,010 tests, and the production build. The unit
+suite includes the read-path fan-out exception update and the designer-target
+authorization regression. Database integration and the migration drill remain
+pending because `TEST_DATABASE_URL` is absent and the Docker daemon does not
+respond. Manual release route/visual review and independent verification remain
+open. `AD-002` stays **In Progress**.

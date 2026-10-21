@@ -2488,3 +2488,15 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   `TEST_DATABASE_URL` is not configured and Docker is unavailable. No schema
   changes were introduced. Manual route review, release browser matrix, and
   independent verification remain open; `AD-002` remains **In Progress**.
+
+- Confirmed assignment-target authorization defect: `assignDesigner` now checks
+  that a changed target is a designer in the item's workspace before writing
+  assignment history or notifications. Focused content-service tests pass
+  64/64; typecheck, targeted lint, formatting, diff checks, and commit hook pass
+  on code SHA `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`.
+- Final `pnpm verify` passes on exact clean implementation SHA
+  `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`: format, repository lint,
+  typecheck, 562 unit files / 5,010 tests, and production build. Database
+  integration and migration drill remain pending because the disposable test
+  database is unavailable. Manual route/visual review and independent
+  verification remain open; `AD-002` is **In Progress**.
