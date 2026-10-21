@@ -895,3 +895,14 @@ The route inventory is now grouped by page family and API ownership group in
 the static inventory section above. The route-to-owner/test mapping and
 per-route review of loading, empty, error, permission, bilingual, responsive,
 and accessibility states remain open.
+
+### Media folder audit workspace authorization — 2026-10-21
+
+The folder-audit route checked agency membership but did not verify that the
+actor could access the requested workspace. An agency member could request
+reconciliation metadata for another workspace in the same agency. The route
+now uses the shared `accessibleWorkspaceIdsForActor` policy and denies the
+request before querying the audit log. A focused regression test covers the
+denial and proves the database is not queried. This fix preserves the route
+response and requires no schema change. Broader media-route ownership review
+remains open.

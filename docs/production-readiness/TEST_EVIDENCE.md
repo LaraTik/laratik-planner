@@ -1,5 +1,20 @@
 # Test and coverage evidence
 
+## Media folder audit workspace authorization — 2026-10-21, exact clean implementation SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`
+
+The folder-audit route now uses the shared workspace-access policy before
+reading reconciliation metadata. An agency member without access to the
+requested workspace receives 403 and cannot query that workspace's audit log.
+The API response and persistence contract are unchanged.
+
+| Check                                                              | Result                                                 |
+| ------------------------------------------------------------------ | ------------------------------------------------------ |
+| `pnpm exec vitest run tests/unit/media/folder-audit-route.test.ts` | **Pass** — 1/1; verifies denial and no database query. |
+| Targeted ESLint, Prettier, and `git diff --check`                  | **Pass**.                                              |
+
+The full repository verification, route review, release browser matrix, and
+independent review remain open. AD-002 remains **In Progress**.
+
 ## Media library command ownership and confirmed defect fixes — 2026-10-21, exact clean implementation SHA `6ba5c4c7ea1d5678705e170e58f2757dc330ee29`
 
 Media bulk move, tag, visibility, and duplication commands now belong to

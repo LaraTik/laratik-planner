@@ -2300,3 +2300,15 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   Evidence is recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; the manual page review, full browser
   matrix, and independent review remain open.
+
+## 2026-10-21 — Enforce workspace access for media folder audit
+
+- The folder-audit route now checks the requested workspace against the
+  actor's accessible workspace IDs before reading reconciliation metadata.
+  This closes an agency-member cross-workspace disclosure path without
+  changing the API response or schema.
+- The focused route regression passes, including the no-query-on-denial
+  assertion; targeted ESLint and formatting checks pass. The fix is recorded
+  at exact code SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`.
+- `AD-002` remains **In Progress**; full repository verification, the complete
+  route review, browser release matrix, and independent review remain open.
