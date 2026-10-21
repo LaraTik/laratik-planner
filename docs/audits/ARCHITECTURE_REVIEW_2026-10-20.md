@@ -913,8 +913,9 @@ The filter-facet and folder-audit handlers contained tenant-scoped SQL and
 workspace authorization inside transport files. Both reads now live in a
 server-only media feature query module, while route adapters retain HTTP
 validation and response behavior. Focused unit and ownership tests pass; a
-Postgres regression is written but pending because the disposable test
-database is not available in this environment. Continue the review across the
+Postgres regression was added and the media integration suite subsequently
+passed 14/14 on exact clean code SHA
+`d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`. Continue the review across the
 remaining media routes and feature services.
 
 ### Media upload registration ownership — 2026-10-21
@@ -925,5 +926,6 @@ workflow now calls that feature-owned command. Six pre-existing focused
 recovery tests continue to pass against the moved implementation. Planning
 folder creation and content-item linking still come from the legacy media
 service and remain explicit follow-up seams; no pass-through compatibility
-export was added. Disposable-Postgres integration remains pending because the
-test database is unavailable in the current environment.
+export was added. The same Postgres checkpoint verifies idempotent
+registration and persisted status through the feature entry point; the
+repository-wide integration suite remains open.

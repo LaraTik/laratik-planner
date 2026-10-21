@@ -2336,7 +2336,9 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - The registration, folder-import, and module-ownership suites pass 14/14;
   strict TypeScript, targeted ESLint, formatting, and diff checks pass on
   exact clean code SHA `ab66308ed0c9383376e7cb5d11f8e5f4be4b6901`.
-- Disposable Postgres integration and full `pnpm verify` remain pending.
-  `TEST_DATABASE_URL` is unavailable and local Docker did not respond. The
-  route review, browser release matrix, and independent review also remain
-  open; `AD-002` remains **In Progress**.
+- A follow-up on clean SHA `d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`
+  verified planner_test and passed the media Postgres integration suite
+  14/14, including workspace denial, authorized facets, and idempotent upload
+  registration. Full integration, `pnpm verify`, migration drill, route
+  review, browser release matrix, and independent review remain open;
+  `AD-002` remains **In Progress**.

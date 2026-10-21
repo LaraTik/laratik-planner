@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Media Postgres read and registration follow-up — 2026-10-21, exact clean implementation SHA `d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`
+
+The disposable database was verified to be planner_test. The media integration
+suite passed 14/14 on this exact clean SHA. It now covers inaccessible
+same-agency folder-audit denial, authorized tag/uploader facets, and
+idempotent upload registration with the persisted status contract, in addition
+to the existing media sharing, folders, lifecycle, and bulk command cases.
+
+| Check                                  | Result                                               |
+| -------------------------------------- | ---------------------------------------------------- |
+| Disposable Postgres media integration  | **Pass** — 14/14; migration runner completed.        |
+| Focused media and ownership unit tests | **Pass** — 15/15 in the previous feature checkpoint. |
+
+This resolves the pending media integration notes below for their current
+feature set. Full repository integration, pnpm verify, migration drill, route
+review, release browser matrix, and independent review remain open. AD-002
+remains **In Progress**.
+
 ## Media upload registration ownership — 2026-10-21, exact clean implementation SHA ab66308ed0c9383376e7cb5d11f8e5f4be4b6901
 
 Moved registerUploadedMediaAsset, its return projection, and transient
