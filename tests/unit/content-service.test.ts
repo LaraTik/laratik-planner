@@ -1240,6 +1240,19 @@ describe("assignDesigner (FEAT-FULL-REVIEW-2026-08-26)", () => {
     );
     expect(activityInsert).toBeDefined();
   });
+
+  it("refuses to assign a user who is not a designer in the workspace", async () => {
+    policyMock.hasWorkspaceRole.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: otherDesignerId, title: "Spring teaser" },
+    ]);
+
+    await expect(assignDesigner(actor, { contentItemId, designerId })).rejects.toThrow(
+      /permission denied/i,
+    );
+    expect(dbMock.state.transactionCalls).toBe(0);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
 });
 
 describe("designer assignment authority (master prompt §9)", () => {
@@ -1252,14 +1265,19 @@ describe("designer assignment authority (master prompt §9)", () => {
     // TRANSITION (manager-only), leaving the item in
     // `approved_for_design` with a designer attached that nobody can
     // claim.
-    dbMock.state.selectResults.push([{ workspaceId, designerId, title: "Spring teaser" }]);
+    dbMock.state.selectResults.push([
+      { workspaceId, designerId: "cccccccc-cccc-cccc-cccc-cccccccccccc", title: "Spring teaser" },
+    ]);
     await assignDesigner(actor, { contentItemId, designerId });
-    const roleCall = policyMock.hasWorkspaceRole.mock.calls.at(-1) as unknown as [
+    const roleCall = policyMock.hasWorkspaceRole.mock.calls[0] as unknown as [
       unknown,
       unknown,
       string[],
     ];
     expect(roleCall[2]).toEqual(["workspace_manager"]);
+    expect(policyMock.hasWorkspaceRole).toHaveBeenCalledWith({ id: designerId }, workspaceId, [
+      "designer",
+    ]);
   });
 
   it("assignDesigner refuses an actor who holds no manager role", async () => {

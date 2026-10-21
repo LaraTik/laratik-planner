@@ -110,6 +110,10 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
     "assign_designer",
   );
   if (item.designerId === parsed.data.designerId) return; // idempotent
+  await requirePolicy(
+    hasWorkspaceRole({ id: parsed.data.designerId }, item.workspaceId, ["designer"]),
+    "assign_designer_target",
+  );
   const previousDesigner = item.designerId;
   await db.transaction(async (tx) => {
     await tx
