@@ -198,6 +198,13 @@ laratik-planner/
 
 ## Hard rules
 
+Architecture ownership, import direction, shared-code extraction criteria,
+and the touched-page review checklist are defined in
+[`docs/architecture/module-ownership.md`](docs/architecture/module-ownership.md)
+and summarized in [`docs/contributing/conventions.md`](docs/contributing/conventions.md).
+Apply those rules during incremental feature migrations; do not move the repo
+in one pass or extract code only to reduce file length.
+
 - ❌ Never commit `.env` — gitignored, only `.env.example` is committed
 - ❌ Never run `docker compose down -v` on prod — destroys the Postgres volume
 - ❌ Never paste real secrets into source, examples, fixtures, screenshots, or PR descriptions

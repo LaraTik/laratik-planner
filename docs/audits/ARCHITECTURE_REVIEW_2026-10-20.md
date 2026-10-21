@@ -86,12 +86,14 @@ review is complete.
 ### A3 — Repeated form behavior is only partly centralized
 
 **Priority: P2 — consistency.** Brand Kit forms already use shared `FormField`,
-`FormSubmitButton`, and `useSuccessReset`, but at least two forms still repeat
-the same control class, action-state shape, and alert markup. Their field
-semantics differ, so first review the whole form family and extract only
-shared interaction/presentation behavior. Several of these files were already
-modified in the starting working tree; defer edits until those changes are
-stable and coordinate against their current diff.
+`FormSubmitButton`, and `useSuccessReset`, but at least two forms repeated the
+same form-action alert markup and accessible role. The alert presentation now
+lives in `src/components/forms/form-action-error.tsx`, adopted by the linked
+resource, voice, and publishing-rule forms. A focused component test preserves
+the alert role, existing polite announcement variants, and form-owned styling;
+the three form suites pass. The repeated field-control class and action-state
+shape remain local because current use is limited and their visual/typed
+contracts are not sufficiently stable to justify another shared module.
 
 ### A4 — Scheduled route wrappers repeat transport scaffolding
 
@@ -268,15 +270,36 @@ list item. The badge now lives inside `<li>`, and the component regression
 asserts every direct child is a list item. The `/app/users` axe route check
 passes with the corrected component.
 
+### A20 — The local full browser matrix is unstable under the Next dev server
+
+**Priority: P2 — verification reliability, not a confirmed product defect.**
+The 1,632-case release command was run with a 16 GB Node heap. Next's dev
+server still crossed its memory threshold and restarted during Chromium, after
+which one Arabic shell check reached an empty `/setup` shell and an Add Directly
+journey received `ECONNRESET`. Fresh Chromium reruns passed the Arabic shell,
+multi-role/Agency Admin assignment, and the affected sign-out flow (the first
+targeted batch had 8 passes and one transient reset; the isolated sign-out
+rerun passed 1/1). The first Firefox case then failed at launch and the retry
+consumed a CPU core without browser progress; the same Firefox Nightly launch
+hang is recorded in the prior review evidence. Treat those failures as harness
+instability unless an isolated rerun reproduces them. Do not weaken the cases
+or count this as release evidence. Run the complete matrix in the supported
+CI browser environment or repair the local harness before relying on local
+full-matrix output; visual regression did not run because the E2E command
+stopped first.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
    inspect all high-risk historical findings and their regression evidence
    against current code. Do not treat the 2026-08-25 P0 count as current.
-2. Establish the module rules in
+2. Continue with the next bounded feature slice after the Trends catalog pilot;
+   the feature ownership, import direction, and page-review rules now live in
    [`../architecture/module-ownership.md`](../architecture/module-ownership.md)
-   and align contributor guidance with that target.
-3. Select the next low-risk feature slice after the Trends catalog pilot.
+   and are linked from contributor guidance and `AGENTS.md`.
+3. Add route-level unauthorized-response tests for the six cron adapters, then
+   decide whether the repeated 401 response merits the narrow shared helper in
+   A4.
 4. Tackle confirmed security, tenant, workflow, transaction, privacy, provider,
    or shared-rendering bugs as isolated regression-tested changes.
 5. Review pages and shared UI in route groups, recording bilingual, responsive,
@@ -350,3 +373,30 @@ captures alone. A fresh `mobile-chrome` run then passed the More-sheet journey
 `The destination stream closed early` server error. The full five-browser
 matrix and visual suite remain open; no `Tested` or `Verified` release status
 is claimed from this run.
+
+### Shared form feedback follow-up — 2026-10-21
+
+`FormActionError` now owns the common form-action alert semantics used by three
+Brand Kit forms. It preserves the prior alert text, class variants, and explicit
+polite live regions. The focused shared-component and form tests pass 27/27.
+This is a presentation-only change with no route, action, permission, or data
+contract change. Full repository and release evidence must still be recorded
+against the final clean commit; no production-readiness status is advanced by
+this focused result.
+
+### Verification follow-up — 2026-10-21
+
+`pnpm verify` passes on the implementation tree: formatting, ESLint, strict
+TypeScript, 551 unit files / 4,955 tests, and the production build. The strict
+`pnpm test:e2e:release` attempt used the disposable `planner_test` database and
+stopped before the visual suite: Next restarted after its dev-server memory
+threshold during Chromium, then Firefox Nightly timed out during launch after
+180 seconds and consumed one CPU core. Failure artifacts identify the
+Chromium misses as an empty shell / `ECONNRESET`, not a feature assertion.
+Fresh Chromium runs passed the Arabic shell and the multi-role/Agency Admin
+case; the first focused Add Directly batch passed 8/9 before one seed request
+reset, and that remaining sign-out case passed 1/1 on its own. No database or
+provider code changed, so integration tests and the migration drill were not
+rerun for this presentation-only change. The complete five-browser and visual
+gates remain open; this evidence does not advance any route or release to
+`Tested` or `Verified`.
