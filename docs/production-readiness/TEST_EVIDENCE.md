@@ -1,5 +1,26 @@
 # Test and coverage evidence
 
+## Remove the legacy content service — 2026-10-22, implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`
+
+Moved the pure brief-draft merge and content-cursor helpers into
+`src/features/content/` and exported them through the feature server entry
+point. The planning action and the unit and integration callers now depend on
+the content feature instead of `src/lib/content/service.ts`; the empty legacy
+module was removed. No public behavior or data contract changed.
+
+| Check                                             | Result                                                                                                |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, ESLint, strict TypeScript, 562 unit files / 5,015 tests, and production build. |
+| Focused helper and content unit tests             | **Pass** — 81/81.                                                                                     |
+| Postgres acceptance journey + page render         | **Pass** — 33/33 across the two affected integration specs.                                           |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                             |
+| Full integration + migration drill                | **Pass on preceding implementation SHA `3347bad`; not rerun for this helper-only move.**              |
+
+The source change is commit `6b33f42f582ecac15814966a6c2fd5c070c5adf3`. No
+schema, route, permission, workflow, or API contract changed. Route-by-route
+review, release browser/visual coverage, and independent verification remain
+open. AD-002 remains **In Progress**; this work is **Tested**, not **Verified**.
+
 ## Content command ownership and channel isolation — 2026-10-22, implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`
 
 Moved the update and batch-create commands from the legacy content utility

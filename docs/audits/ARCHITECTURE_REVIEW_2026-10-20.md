@@ -171,8 +171,8 @@ actions, the monthly-planning route, and MCP use the content feature entry
 point. Active-channel lookup and selection validation are shared by Quick
 Create, update, and batch creation. Update and batch transaction behavior,
 role checks, and public contracts are preserved. The legacy content service
-no longer owns these write commands; its remaining utility exports are still
-review candidates for a later bounded move.
+was removed after its remaining brief-draft and cursor helpers moved into
+feature-owned modules.
 
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 
@@ -329,9 +329,9 @@ creation now live in responsibility-specific content feature modules and are
 exported through the content server entry point. The archive commands were
 already feature-owned. Planning actions, monthly planning, and MCP no longer
 import these commands from `src/lib/content/service.ts`; active-channel
-validation is shared across all three write paths. The legacy service now
-contains only utility exports and is a candidate for a later bounded cleanup.
-The same review confirmed that update accepted an active channel from another
+validation is shared across all three write paths. The legacy service module
+was removed after its brief-draft and cursor helpers moved into feature-owned
+modules. The same review confirmed that update accepted an active channel from another
 workspace. It now checks the content item's workspace before changing fields
 or links. Postgres regression coverage proves a rejected attempt preserves the
 item and its existing channel links. Evidence is recorded on implementation

@@ -1,6 +1,6 @@
 # StudioFlow Production-Readiness Tracker
 
-> **2026-10-22 Architecture review verification checkpoint — implementation SHA `3347bad1d00d75c3e288039b92283487eb5e66b2`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. This checkpoint includes the authenticated deadline-reminder cron path, content command ownership behind the feature entry point, and tenant-scoped channel validation in create and update paths. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
+> **2026-10-22 Architecture review verification checkpoint — implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`** — `pnpm verify` passed with 562 unit files / 5,015 tests and production build; the full disposable-Postgres integration suite and all five migration-drill scenarios passed. This checkpoint includes the authenticated deadline-reminder cron path, content command and utility ownership behind the feature entry point, removal of the legacy content service, and tenant-scoped channel validation in create and update paths. The preceding browser checkpoint on SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75` remains partial: Chromium completed 278 cases with 6 timeouts; four focused reruns passed; Firefox could not launch under macOS permissions; visuals passed 208/264, with 56 comparisons requiring reconciliation. Production cron installation on the VPS, manual review of all routes, and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
@@ -2594,3 +2594,20 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   release browser/visual coverage, and independent verification remain open;
   `AD-002` remains **In Progress**, and this work is **Tested**, not
   **Verified**.
+
+## 2026-10-22 — Remove the legacy content service module
+
+- Moved the brief-draft merge helper and planning cursor encode/decode helpers
+  into feature-owned content modules, exported them through the content server
+  entry point, and removed `src/lib/content/service.ts`. The planning action
+  and unit/integration callers now use the feature boundary. No route, API,
+  workflow, permission, or data contract changed.
+- On implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`,
+  `pnpm verify` passed with 562 unit files / 5,015 tests and production build.
+  The focused helper unit suites passed 81/81, and the Postgres journey plus
+  page-render integration suites passed 33/33. The full integration suite and
+  migration drill passed on the preceding content-boundary implementation
+  SHA; this cleanup made no persistence or schema changes.
+- Route-by-route review, release browser/visual coverage, and independent
+  verification remain open. `AD-002` remains **In Progress**; this work is
+  **Tested**, not **Verified**.
