@@ -225,7 +225,10 @@ export function selectedBrowserArgs(browser: BrowserSelection[]): string[] {
   const greps = browser
     .map((selection) => selection.grep)
     .filter((grep): grep is string => Boolean(grep));
-  const args = ["--", ...projects.flatMap((project) => ["--project", project]), ...specs];
+  // Playwright's --project option consumes a variadic list. Use the equals
+  // form so the following positional spec filters cannot be parsed as more
+  // project names.
+  const args = ["--", ...projects.map((project) => `--project=${project}`), ...specs];
   if (greps.length > 0) args.push("--grep", `(?:${greps.join(")|(?:")})`);
   return args;
 }
@@ -330,12 +333,16 @@ export function main(args = process.argv.slice(2)): void {
   if (manifestErrors.length > 0) {
     throw new Error(`Test ownership manifest is invalid:\n- ${manifestErrors.join("\n- ")}`);
   }
-  const changedFiles = collectChangedFiles(options);
+  const changedFiles = options.area ? [] : collectChangedFiles(options);
   const classification = options.area
     ? buildManualClassification(options.area, TEST_OWNERSHIP)
     : classifyChangedFiles(changedFiles, TEST_OWNERSHIP);
 
-  console.log(`Affected files (${changedFiles.length}): ${changedFiles.join(", ") || "none"}`);
+  if (options.area) {
+    console.log(`Manual area: ${options.area}`);
+  } else {
+    console.log(`Affected files (${changedFiles.length}): ${changedFiles.join(", ") || "none"}`);
+  }
   if (classification.kind === "none") {
     console.log(`⏭ ${classification.reason}`);
     return;

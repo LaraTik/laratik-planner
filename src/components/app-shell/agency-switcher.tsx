@@ -48,6 +48,7 @@ export function AgencySwitcher({
   testId,
   isPlatformAdmin = false,
   compact = false,
+  collapsed = false,
   /**
    * Round-4b single-agency micro-affordance: when the user is a
    * member of exactly one agency, the switcher collapses to a
@@ -64,6 +65,7 @@ export function AgencySwitcher({
   testId?: string;
   isPlatformAdmin?: boolean;
   compact?: boolean;
+  collapsed?: boolean;
   asSettingsLink?: boolean;
   variant?: "sidebar" | "header";
   copy?: AgencySwitcherCopy;
@@ -173,7 +175,9 @@ export function AgencySwitcher({
         <span className="bg-surface-subtle text-fg-muted flex h-6 w-6 items-center justify-center rounded font-bold">
           —
         </span>
-        <span className={compact ? "hidden xl:inline" : "inline"}>{copy.noAgency}</span>
+        <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
+          {copy.noAgency}
+        </span>
       </button>
     );
   }
@@ -195,13 +199,19 @@ export function AgencySwitcher({
           variant === "header"
             ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
             : "w-full",
-          compact ? "justify-center xl:justify-start" : "justify-start",
+          collapsed
+            ? "justify-center"
+            : compact
+              ? "justify-center xl:justify-start"
+              : "justify-start",
         )}
       >
         <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
           {active.name.charAt(0).toUpperCase()}
         </span>
-        <span className={compact ? "hidden xl:inline" : "inline"}>{active.name}</span>
+        <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
+          {active.name}
+        </span>
         {active.isAdmin ? (
           <Shield
             className="text-primary h-3.5 w-3.5"
@@ -228,13 +238,17 @@ export function AgencySwitcher({
             variant === "header"
               ? "border-border bg-surface-subtle w-auto max-w-[18rem] border shadow-sm"
               : "w-full",
-            compact ? "justify-center xl:justify-start" : "justify-start",
+            collapsed
+              ? "justify-center"
+              : compact
+                ? "justify-center xl:justify-start"
+                : "justify-start",
           )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
             {active ? active.name.charAt(0).toUpperCase() : <Building2 className="h-3.5 w-3.5" />}
           </span>
-          <span className={compact ? "hidden xl:inline" : "inline"}>
+          <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
             {active?.name ?? copy.selectAgency}
           </span>
           {active?.isAdmin ? (
@@ -245,7 +259,11 @@ export function AgencySwitcher({
             />
           ) : null}
           <ChevronsUpDown
-            className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
+            className={cn(
+              "text-fg-muted h-3.5 w-3.5",
+              (compact || collapsed) && "hidden xl:block",
+              collapsed && "hidden",
+            )}
             aria-hidden="true"
           />
         </button>

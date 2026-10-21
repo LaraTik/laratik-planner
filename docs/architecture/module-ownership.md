@@ -17,6 +17,8 @@ in `src/components/`.
 src/
   app/                 Next.js routes, layouts, loading/error surfaces, adapters
   features/<feature>/  feature UI, schemas, queries, commands, domain behavior, tests
+    index.ts           client-safe feature entry point
+    server.ts          optional server-only entry point for queries/commands
   components/          shared design primitives and cross-feature presentation
   lib/                 auth, database, i18n, security, storage, observability, integrations
 ```
@@ -53,6 +55,32 @@ canonical implementation; compatibility exports may forward to it temporarily.
   clients, secrets, privileged actors, and server-only modules never cross into
   a Client Component. Keep the interactive client surface as small as the
   behavior allows.
+
+## Import boundaries
+
+- `src/app/` may import a feature's public `index.ts`, its explicit
+  server-only `server.ts` entry point, shared presentation, and platform
+  infrastructure. It must not reach into feature-private files or own domain
+  rules in a route adapter. Keep `index.ts` client-safe; server-only data
+  access belongs behind `server.ts` so importing a catalog into a Client
+  Component cannot pull server modules into its bundle.
+- `src/features/<feature>/` may import `src/components/` and platform
+  capabilities from `src/lib/`. It must not import `src/app/`; cross-feature
+  calls go through the other feature's documented public entry point.
+- `src/components/` may depend on design primitives and platform-safe types or
+  helpers, but not on routes or product feature modules. Feature-specific
+  composition belongs in the feature.
+- `src/lib/` owns platform and integration capabilities and must not depend on
+  routes, feature modules, or presentation components.
+- Persistence and provider clients stay behind server-only adapters. A client
+  component receives serializable view data but cannot import those adapters.
+
+These rules guide new code and incremental migrations. The unit suite includes
+a static import-ownership guard for feature entry points and dependencies into
+features from shared presentation or platform modules. Existing route/UI
+action imports and platform presentation-type imports remain visible migration
+work; move them in bounded changes with focused regression coverage instead of
+turning this pilot into a repo-wide rewrite.
 
 ## Extraction and split rules
 
@@ -117,6 +145,25 @@ route-level locale behavior.
    contract.
 5. Remove compatibility adapters only after the dependency graph shows that
    callers have moved. Record deviations and remaining work in the tracker.
+
+## Validation cadence
+
+- During implementation, run the narrowest relevant unit, integration, or
+  browser check after a behavior change. Do not rerun the full repository gate
+  after each small edit.
+- At a milestone, batch independent final checks once: formatting/lint/type/unit
+  and build through `pnpm verify`, plus the service-specific checks required by
+  the changed code. Run checks that mutate the same disposable database
+  sequentially.
+- Run the full five-browser and visual release suite once on the final code
+  candidate. If that run exposes a code defect, fix it with focused regression
+  coverage and rerun the affected browser area before repeating the release
+  suite. Do not treat runner failures as product failures without an isolated
+  reproduction.
+- Documentation-only edits after code verification require formatting and
+  diff checks; they do not invalidate unrelated code or persistence evidence.
+  Record all evidence against the exact clean commit and keep `Tested` separate
+  from independent `Verified` status.
 
 No new package or public route, API, permission, workflow, or persisted-data
 change is implied by this organization. Such changes require their existing

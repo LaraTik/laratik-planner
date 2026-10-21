@@ -50,6 +50,25 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
   ],
   areas: [
     {
+      id: "app-shell",
+      sourceGlobs: ["src/components/app-shell/**", "src/app/(app)/layout.tsx"],
+      unitFiles: ["tests/unit/app-shell/**"],
+      integrationFiles: [],
+      browser: [
+        { spec: "tests/e2e/agency-switcher.spec.ts", projects: chromium },
+        { spec: "tests/e2e/workspace.spec.ts", projects: chromium },
+        { spec: "tests/e2e/social-analytics.spec.ts", projects: chromium },
+        { spec: "tests/e2e/mobile.spec.ts", projects: chromium },
+      ],
+    },
+    {
+      id: "architecture",
+      sourceGlobs: [],
+      unitFiles: ["tests/unit/architecture/module-ownership.test.ts"],
+      integrationFiles: [],
+      browser: [],
+    },
+    {
       id: "auth",
       sourceGlobs: ["src/lib/auth/**", "src/app/(auth)/**", "src/app/api/auth/**", "src/proxy.ts"],
       unitFiles: ["tests/unit/auth/**", "tests/unit/auth-*.test.ts"],
@@ -137,6 +156,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         { spec: "tests/e2e/workspace.spec.ts", projects: chromium },
         { spec: "tests/e2e/workspace-tenant-isolation.spec.ts", projects: chromium },
         { spec: "tests/e2e/agency-switcher.spec.ts", projects: chromium },
+        { spec: "tests/e2e/mobile.spec.ts", projects: chromium },
         {
           spec: "tests/e2e/visual-regression.spec.ts",
           projects: visualChromium,
@@ -186,12 +206,65 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       browser: [
         { spec: "tests/e2e/social-connections.spec.ts", projects: chromium },
         { spec: "tests/e2e/social-analytics.spec.ts", projects: chromium },
+        { spec: "tests/e2e/command-center-a11y.spec.ts", projects: chromium },
         {
           spec: "tests/e2e/a11y-routes.spec.ts",
           projects: chromium,
           grep: "channels|analytics/social",
         },
         { spec: "tests/e2e/visual-regression.spec.ts", projects: visualChromium, grep: "channels" },
+      ],
+    },
+    {
+      id: "advertising",
+      sourceGlobs: [
+        "src/lib/advertising/**",
+        "src/app/(app)/app/agency-settings/advertising/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/advertising/**",
+        "src/app/api/advertising/**",
+        "src/app/api/cron/advertising-sync/**",
+      ],
+      unitFiles: ["tests/unit/advertising-*.test.ts", "tests/unit/advertising-*.test.tsx"],
+      integrationFiles: ["tests/integration/advertising-*.test.ts"],
+      browser: [
+        { spec: "tests/e2e/advertising-reporting.spec.ts", projects: chromium },
+        { spec: "tests/e2e/advertising-admin.spec.ts", projects: chromium },
+        { spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "advertising" },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "advertising",
+        },
+      ],
+    },
+    {
+      id: "trends",
+      sourceGlobs: [
+        "src/features/trends/**",
+        "src/lib/trends/**",
+        "src/lib/db/schema/trends.ts",
+        "src/app/(app)/app/agency-settings/trend-sources/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/trends/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/trends/**",
+        "src/app/api/trends/**",
+        "src/app/api/dev/trend-source/**",
+      ],
+      unitFiles: ["tests/unit/trends/**", "tests/unit/observability-trend-radar-tags.test.ts"],
+      integrationFiles: [],
+      browser: [
+        { spec: "tests/e2e/trends-degraded.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-onboarding.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-paid-no-key.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-review-required.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-saved-filters.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-sources-page.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-use-in-brief.spec.ts", projects: chromium },
+        { spec: "tests/e2e/trends-workspace-optout.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "trend",
+        },
       ],
     },
     {

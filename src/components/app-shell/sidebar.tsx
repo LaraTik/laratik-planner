@@ -9,6 +9,10 @@ import { clampBadge } from "@/lib/nav/badge-format";
 import { useScrollSpyActiveId } from "@/lib/nav/use-scroll-spy-active-id";
 import { parseWorkspacePath, workspaceBasePath } from "@/lib/urls";
 import { SidebarCollapseToggle } from "./sidebar-collapse-toggle";
+import { AgencySwitcher, type AgencyRow } from "./agency-switcher";
+import { agencySwitcherCopy } from "./agency-switcher-copy";
+import { WorkspaceSwitcher } from "./workspace-switcher";
+import { workspaceSwitcherCopy } from "./workspace-switcher-copy";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   buildAgencyNavigation,
@@ -24,7 +28,7 @@ import {
 import type { PlatformNavigationAccess } from "@/lib/auth/platform-navigation-access";
 import type { SwitcherWorkspace } from "@/lib/workspaces/context";
 
-type SidebarWorkspace = Omit<SwitcherWorkspace, "agencySlug"> & { agencySlug?: string };
+type SidebarWorkspace = SwitcherWorkspace;
 
 /**
  * Primary navigation sidebar.
@@ -32,19 +36,19 @@ type SidebarWorkspace = Omit<SwitcherWorkspace, "agencySlug"> & { agencySlug?: s
  * Workspace-aware per the Stitch design (project 5403097764334458790).
  * The shape changes based on the current pathname:
  *
- *  - Inside /app/w/[slug]/* (workspace context):
- *      - Brand: logo only (tenant and workspace context live in the topbar)
+ *  - Inside /app/a/[agencySlug]/w/[slug]/* (workspace context):
+ *      - Brand and agency/workspace switchers at the top
  *      - Workspace tabs (vertical): Overview, Content group, Performance,
  *        Brand group, Manage group (when admin)
  *      - Persistent bottom area: Create content + user menu
  *
  *  - On a global page (/app, /app/workspaces, /app/users, ...):
- *      - Brand: logo only
+ *      - Brand and agency/workspace switchers at the top
  *      - My Work
  *      - Workspaces
  *      - (admin only) User Management, Agency Settings
  *      - (platform admin only) Platform console
- *      - Workspace context stays available in the topbar and mobile More sheet.
+ *      - Workspace context stays available in the sidebar and mobile navigation.
  *
  *  - Inside a client-reviewer workspace:
  *      - Minimal: Client review + Calendar
@@ -63,6 +67,8 @@ type SidebarWorkspace = Omit<SwitcherWorkspace, "agencySlug"> & { agencySlug?: s
 export function Sidebar({
   user,
   workspaces,
+  agencySwitcher = { active: null, options: [] },
+  canCreateWorkspace = false,
   workspaceAccess = {},
   workspaceCanCreateContent = {},
   platformAccess,
@@ -76,6 +82,8 @@ export function Sidebar({
 }: {
   user: { name: string; isAdmin: boolean };
   workspaces: SidebarWorkspace[];
+  agencySwitcher?: { active: AgencyRow | null; options: AgencyRow[] };
+  canCreateWorkspace?: boolean;
   workspaceAccess?: Record<string, "internal" | "client" | "none">;
   workspaceCanCreateContent?: Record<string, boolean>;
   platformAccess: PlatformNavigationAccess;
@@ -174,8 +182,37 @@ export function Sidebar({
       className="flex h-full min-w-0 flex-col overflow-x-hidden"
       aria-label={labelFor("sidebarAriaLabel", "Primary")}
     >
-      {/* Brand only; tenant and workspace context live in the topbar. */}
+      {/* Brand and active tenant/workspace context stay together in primary navigation. */}
       <SidebarHeader collapsed={collapsed} onCollapsedChange={onCollapsedChange} labels={labels} />
+      <div
+        className="border-border mx-2 mb-2 flex flex-col gap-1 border-b px-1 pb-2 xl:mx-3"
+        data-testid="sidebar-workspace-context"
+      >
+        {!collapsed ? (
+          <span className="text-label text-fg-muted px-2 font-semibold tracking-wide uppercase">
+            {labelFor("tenantLabel", "Tenant")}
+          </span>
+        ) : null}
+        <AgencySwitcher
+          active={agencySwitcher.active}
+          options={agencySwitcher.options}
+          isPlatformAdmin={platformAccess.canEnter}
+          compact={!collapsed}
+          collapsed={collapsed}
+          copy={agencySwitcherCopy(labels)}
+          testId="sidebar-agency-switcher-trigger"
+        />
+        <span aria-hidden="true" className="bg-border mx-2 h-px" />
+        <WorkspaceSwitcher
+          active={currentWorkspace}
+          options={workspaces}
+          canCreate={canCreateWorkspace}
+          compact={!collapsed}
+          collapsed={collapsed}
+          copy={workspaceSwitcherCopy(labels)}
+          testId="sidebar-workspace-switcher-trigger"
+        />
+      </div>
 
       {/* Top section: workspace tabs OR global items */}
       <div className="flex-1 space-y-1 overflow-y-auto px-2 xl:px-3">

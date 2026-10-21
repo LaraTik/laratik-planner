@@ -159,6 +159,8 @@ export function AppShell({
         <Sidebar
           user={user}
           workspaces={workspaces}
+          agencySwitcher={agencySwitcher}
+          canCreateWorkspace={canCreateWorkspace}
           workspaceAccess={workspaceAccess}
           workspaceCanCreateContent={workspaceCanCreateContent}
           platformAccess={platformAccess}
@@ -184,11 +186,6 @@ export function AppShell({
           notifications={notifications}
           unreadCount={unreadCount}
           themePreference={themePreference}
-          agencySwitcher={agencySwitcher}
-          workspaces={workspaces}
-          canCreateWorkspace={canCreateWorkspace}
-          platformAccess={platformAccess}
-          labels={chrome.sidebar}
           activeAgency={agencySwitcher.active}
           chrome={chrome}
         />

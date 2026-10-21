@@ -15,7 +15,7 @@ import {
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { loadEnabledCapabilities } from "@/lib/ai/governance";
-import { listEnabledSourceKeysForWorkspace } from "@/lib/trends/enabled-sources";
+import { listEnabledSourceKeysForWorkspace } from "@/features/trends/server";
 import { TrendsPageClient } from "./_components/trends-page-client";
 
 /**

@@ -58,6 +58,7 @@ export function WorkspaceSwitcher({
   options,
   canCreate,
   compact = false,
+  collapsed = false,
   variant = "sidebar",
   testId,
   copy = DEFAULT_COPY,
@@ -66,6 +67,7 @@ export function WorkspaceSwitcher({
   options: Workspace[];
   canCreate: boolean;
   compact?: boolean;
+  collapsed?: boolean;
   variant?: "sidebar" | "header";
   testId?: string;
   copy?: WorkspaceSwitcherCopy;
@@ -140,10 +142,22 @@ export function WorkspaceSwitcher({
     return (
       <Link
         href="/app/workspaces/new"
-        className="text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2"
+        aria-label={copy.createFirst}
+        data-testid={testId}
+        className={cn(
+          "text-body text-fg-primary hover:bg-surface-subtle focus-visible:ring-focus-ring inline-flex min-h-11 min-w-11 items-center gap-2 rounded-[var(--radius-control)] px-3 py-1.5 font-semibold focus:outline-none focus-visible:ring-2",
+          collapsed
+            ? "justify-center"
+            : compact
+              ? "justify-center xl:justify-start"
+              : "justify-start",
+          variant === "header" && "w-auto",
+        )}
       >
         <Plus className="h-4 w-4" aria-hidden="true" />
-        {copy.createFirst}
+        <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
+          {copy.createFirst}
+        </span>
       </Link>
     );
   }
@@ -168,17 +182,25 @@ export function WorkspaceSwitcher({
               ? "border-border bg-surface-subtle w-auto max-w-[18rem] rounded-[var(--radius-control)] border shadow-sm"
               : "w-full rounded-s-none rounded-e-[var(--radius-control)] border-b-2",
             variant === "sidebar" && (active ? "border-b-primary" : "border-b-transparent"),
-            compact ? "justify-center xl:justify-start" : "justify-start",
+            collapsed
+              ? "justify-center"
+              : compact
+                ? "justify-center xl:justify-start"
+                : "justify-start",
           )}
         >
           <span className="bg-primary-subtle text-primary flex h-6 w-6 items-center justify-center rounded font-bold">
             {active ? active.name.charAt(0).toUpperCase() : <Briefcase className="h-3.5 w-3.5" />}
           </span>
-          <span className={compact ? "hidden xl:inline" : "inline"}>
+          <span className={collapsed ? "sr-only" : compact ? "hidden xl:inline" : "inline"}>
             {active?.name ?? copy.selectWorkspace}
           </span>
           <ChevronsUpDown
-            className={cn("text-fg-muted h-3.5 w-3.5", compact && "hidden xl:block")}
+            className={cn(
+              "text-fg-muted h-3.5 w-3.5",
+              (compact || collapsed) && "hidden xl:block",
+              collapsed && "hidden",
+            )}
             aria-hidden="true"
           />
         </button>

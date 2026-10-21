@@ -285,9 +285,10 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
   // for the second select (notificationPreferences) returns [] so
   // the preference default of inAppEnabled=true kicks in.
   function stageOutboxEvent(eventType: string, payload: Record<string, unknown>) {
-    state.selectResults.push([{ id: "evt-1", eventType, payload }]);
-    // The notification_preferences select inside fanOutSingleRecipient / maybeNotify
-    // returns [] so the default inAppEnabled=true wins.
+    const event = { id: "evt-1", eventType, payload };
+    // The candidate scan and transactional FOR UPDATE claim both read the row.
+    state.selectResults.push([event], [event]);
+    // The preference select returns [] so the default inAppEnabled=true wins.
     state.selectResults.push([]);
   }
 
@@ -354,6 +355,19 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
         },
       },
     ]);
+    state.selectResults.push([
+      {
+        id: "evt-mentions",
+        eventType: "comment_created",
+        payload: {
+          commentId: "comment-1",
+          contentItemId: "ci-1",
+          authorId: "author-1",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["user-1", "user-2", "user-1"],
+        },
+      },
+    ]);
     state.selectResults.push([]);
     state.selectResults.push([]);
     await dispatchOutboxOnce({ maxEvents: 10 });
@@ -363,6 +377,13 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
   });
 
   it("notifies the content owner and designer for publication outcomes", async () => {
+    state.selectResults.push([
+      {
+        id: "evt-publication",
+        eventType: "publication_recorded",
+        payload: { contentItemId: "ci-1", channelStatus: "published" },
+      },
+    ]);
     state.selectResults.push([
       {
         id: "evt-publication",
@@ -385,9 +406,12 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
   });
 
   it("skips unknown event types without throwing", async () => {
-    state.selectResults.push([
-      { id: "evt-1", eventType: "future_kind_we_dont_handle_yet", payload: { userId: "u" } },
-    ]);
+    const unknownEvent = {
+      id: "evt-1",
+      eventType: "future_kind_we_dont_handle_yet",
+      payload: { userId: "u" },
+    };
+    state.selectResults.push([unknownEvent], [unknownEvent]);
     const result = await dispatchOutboxOnce({ maxEvents: 10 });
     expect(result.processed).toBe(1);
     // The update still runs (so the queue doesn't retry forever).
@@ -486,6 +510,21 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     // notification's click-through lands on the real
     // /app/w/{slug}/planning/{id}#discussion route. The
     // dispatcher must pass that actionUrl through unchanged.
+    state.selectResults.push([
+      {
+        id: "evt-1",
+        eventType: "comment_created",
+        payload: {
+          commentId: "cm-1",
+          contentItemId: "ci-1",
+          authorId: "u-author",
+          workspaceId: "ws-1",
+          mentionedUserIds: ["u-mentioned"],
+          visibility: "internal",
+          actionUrl: "/app/w/just-halal/planning/ci-1#discussion",
+        },
+      },
+    ]);
     state.selectResults.push([
       {
         id: "evt-1",

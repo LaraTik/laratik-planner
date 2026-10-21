@@ -143,21 +143,14 @@ test.describe("synthetic advertising reporting", () => {
       "CTR (all)",
     );
     await page.getByRole("button", { name: "Save view" }).click();
-    await expect(page.getByTestId("advertising-save-view-dialog")).toBeVisible();
+    const saveViewDialog = page.getByRole("dialog", { name: "Save advertising view" });
+    await expect(saveViewDialog).toBeVisible();
     await page.getByLabel("View name").fill("Weekly acquisition review");
     await page.getByLabel("Who can use this view?").selectOption("workspace");
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByTestId("advertising-save-view-dialog")).toContainText(
-      "View saved for this workspace.",
-    );
-    await expect(page.getByTestId("advertising-save-view-dialog")).toContainText(
-      "Weekly acquisition review",
-    );
-    await page
-      .getByTestId("advertising-save-view-dialog")
-      .getByRole("button", { name: "Cancel", exact: true })
-      .first()
-      .click();
+    await expect(saveViewDialog).toContainText("View saved for this workspace.");
+    await expect(saveViewDialog).toContainText("Weekly acquisition review");
+    await saveViewDialog.getByRole("button", { name: "Cancel", exact: true }).first().click();
     await expect(page.getByRole("link", { name: "Open client report" })).toHaveAttribute(
       "href",
       /presentation=client/,

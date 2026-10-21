@@ -3,18 +3,11 @@ import "server-only";
 import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { trendSources, workspaceSourceOptouts } from "@/lib/db/schema";
-import { TREND_SOURCE_CATALOG } from "@/features/trends";
+import { TREND_SOURCE_CATALOG } from "./index";
 
 /**
- * Resolve the set of source keys that are enabled for a workspace.
- *
- * Logic:
- *   1. Take the agency's enabled rows from `trend_sources`.
- *   2. Subtract the per-workspace opt-outs from
- *      `workspace_source_optouts`.
- *
- * Returns an empty array when the agency has no enabled sources
- * (the planner surfaces the onboarding wizard in that case).
+ * Resolve agency-enabled source keys for one workspace, subtract its opt-outs,
+ * and discard source keys that are no longer in the feature catalog.
  */
 export async function listEnabledSourceKeysForWorkspace(input: {
   agencyId: string;
@@ -26,7 +19,7 @@ export async function listEnabledSourceKeysForWorkspace(input: {
     .where(and(eq(trendSources.agencyId, input.agencyId), eq(trendSources.enabled, true)));
   if (agencyRows.length === 0) return [];
 
-  const enabled = new Set(agencyRows.map((r) => r.sourceKey));
+  const enabled = new Set(agencyRows.map((row) => row.sourceKey));
   const optoutRows = await db
     .select({ sourceKey: workspaceSourceOptouts.sourceKey })
     .from(workspaceSourceOptouts)
@@ -36,8 +29,9 @@ export async function listEnabledSourceKeysForWorkspace(input: {
         inArray(workspaceSourceOptouts.sourceKey, Array.from(enabled)),
       ),
     );
-  for (const o of optoutRows) {
-    enabled.delete(o.sourceKey);
-  }
-  return Array.from(enabled).filter((k) => TREND_SOURCE_CATALOG.some((d) => d.key === k));
+  for (const optout of optoutRows) enabled.delete(optout.sourceKey);
+
+  return Array.from(enabled).filter((key) =>
+    TREND_SOURCE_CATALOG.some((source) => source.key === key),
+  );
 }

@@ -1908,3 +1908,169 @@ UAT, and authenticated MCP smoke evidence remain release gates.
 | M9.1 | Implemented | Agency-scoped tasks with optional workspace relation, creator/assignee/admin policy, lifecycle checks, automatic cycle timing, pagination, filters, append-only activity, bilingual list/detail/create UI, and accessible archive confirmation.                                                  | Unit workflow/time coverage, authorization and transaction integration coverage, authenticated bilingual browser/a11y journeys, responsive visual review, and exact-clean evidence. | `src/lib/tasks/`, `/app/tasks`, `tests/unit/tasks/{workflow,time}.test.ts`, ADR 0016; release evidence pending. |
 | M9.2 | Implemented | Direct-to-R2 task attachment intents with allowlisted type/size, pending-to-ready metadata verification, and signed downloads.                                                                                                                                                                   | Unauthorized signing/completion is denied; invalid metadata never becomes downloadable; upload errors are announced in the UI.                                                      | `src/lib/tasks/attachments.ts`, task attachment API routes; integration/browser evidence pending.               |
 | M9.3 | Implemented | Agency global calendar combining all visible planned content and dated tasks with agency-timezone month boundaries, Today jump/current-day highlight, workspace/assignee/status filters, independent Plans/Tasks visibility, unscheduled-task visibility, desktop month grid, and mobile agenda. | Admin cross-workspace visibility, filter persistence, empty states, deep links, Arabic/RTL, responsive and a11y checks.                                                             | `src/lib/planning/calendar.ts`, `/app/calendar`, `tests/integration/tasks.test.ts`; release evidence pending.   |
+
+## 2026-10-21 — Architecture review implementation follow-up
+
+- The import-direction, ownership, DRY extraction, page-quality, and migration
+  rules are documented in `docs/architecture/module-ownership.md` and linked
+  from the architecture overview and contributor guidance. Trends remains the
+  first feature-module pilot; broad migration is intentionally incremental.
+- The first review batch has centralized repeated form-action error UI and cron
+  authorization, fixed confirmed Trends policy and social connection tenant
+  defects, and added a concurrency-safe outbox claim. Each fix has focused
+  regression coverage; the outbox change adds no schema migration.
+- The historical visual-harness claim TEST-03 is stale: committed baselines and
+  assert-mode checks exist. Exact-clean-commit visual comparison and independent
+  visual review remain release evidence. Historical FEAT-01/FEAT-02 are stale
+  about event dispatch and scheduling; source/configuration presence does not
+  certify a live VPS cron installation or production UAT. See A6 and A22 in
+  `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`.
+- Verification on the current uncommitted implementation tree: `pnpm verify`
+  passed (format, lint, strict typecheck, 552 unit files / 4,967 tests, and
+  production build); all 43 integration specs passed; the new concurrent
+  outbox regression passed against the disposable Postgres database; and
+  `pnpm migration-drill` passed all five scenarios. This is candidate evidence
+  only, not clean-SHA evidence.
+- The latest full `pnpm test:e2e:release` attempt progressed through Chromium
+  but logged a missing mobile More dialog, several Trends journey failures,
+  and closed response streams before reaching Firefox. An isolated fresh-DB
+  retry reproduced the missing More dialog; its screenshot shows the menu
+  closed and the Next dev server logged a late Fast Refresh / closed stream.
+  The test now uses the canonical agency-qualified workspace URL, but the
+  More sheet and calendar checks subsequently passed individually, and the
+  full Chromium mobile spec passed 9/9; close the mobile fixture concern from
+  this interrupted run. The Firefox project then timed out
+  launching its local Nightly binary after 180 seconds, reporting
+  `sandbox_extension_issue_file_to_process ... Operation not permitted`; a
+  focused retry with `MOZ_DISABLE_CONTENT_SANDBOX=1` failed the same way. The
+  visual phase did not run. Keep the Trends failures and full five-browser
+  matrix open for a stable run.
+- `AD-002` remains **In Progress**. The route/domain/database inventory is not
+  yet complete; the full five-browser matrix, visual gate, exact clean-SHA
+  evidence, and independent review are still required. No `Verified` status
+  is assigned by this implementation update.
+
+## 2026-10-21 — Validation efficiency follow-up
+
+- The documented validation cadence now uses focused checks during edits,
+  batches independent final checks once per milestone, runs shared-database
+  checks sequentially, and reserves the full browser/visual release suite for
+  the final candidate. Documentation-only edits require formatting and diff
+  checks rather than unrelated full-suite reruns.
+- The latest `pnpm verify` run passed formatting, ESLint, strict TypeScript,
+  and 4,966 of 4,967 unit tests. One social Meta callback test exceeded its
+  5-second timeout under suite load; its focused 3-test rerun passed. The
+  production build passed. Since there was a suite timeout, the aggregate
+  verify gate is recorded as incomplete, not passed.
+- A temporary Next Webpack memory-optimization setting did not prevent the
+  Linux dev server from restarting or a first-visit route from exceeding its
+  30-second navigation timeout, so the setting was reverted. The full browser
+  and visual gates remain open; no status is advanced from the incomplete run.
+- `AD-002` remains **In Progress**; the full route/domain/database inventory,
+  clean-SHA release evidence, and independent review remain open.
+
+## 2026-10-21 — Affected-test runner correction
+
+- The affected-test runner now passes Playwright projects using
+  `--project=<name>`, escalates when any changed test file lacks ownership, and
+  avoids Git diff discovery for explicit manual-area runs. The ownership map
+  now covers Advertising, Trends, Command Center accessibility, and mobile
+  browser specs.
+- Runner-core tests passed 14/14; the manual workspace unit batch passed
+  396/396. Earlier affected Discussion/notification browser checks passed
+  14/14 and Advertising checks passed 11/11 including visual assertions.
+  These targeted results improve feedback speed but do not close the full
+  browser/visual gate.
+- The latest runner and fixture edits pass strict TypeScript, targeted
+  Prettier checks, and `git diff --check`.
+- `AD-002` remains **In Progress**. Route/domain/database inventory, exact
+  clean-SHA release evidence, full browser/visual checks, and independent
+  review remain open.
+
+## 2026-10-21 — Sidebar context ownership correction
+
+- Restored agency and workspace selectors to the persistent sidebar beneath
+  the brand. The top bar now contains global utilities only. Expanded, tablet,
+  and collapsed layouts keep selector names accessible; shared workspace
+  switcher copy is centralized. The mobile context header remains the compact
+  mobile navigation surface.
+- Updated affected workspace and agency browser specs to target the sidebar
+  selectors. The focused sidebar unit suite passed 48/48; the agency,
+  workspace, mobile, and social-analytics Chromium batch passed 42/42 including
+  Arabic RTL journeys. Seven focused visual comparisons passed after reviewing
+  the updated captures. The full visual matrix and five-browser release check
+  remain pending.
+- Recorded the confirmed source/contract drift as A24 in
+  `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`. `AD-002` remains **In
+  Progress**; no readiness status is promoted.
+
+## 2026-10-21 — Combined persistence and repository verification
+
+- `pnpm verify` passed formatting, ESLint, strict TypeScript, 553 unit files /
+  4,971 tests, and the Next.js production build.
+- `NODE_ENV=test pnpm migration-drill` passed all five scenarios on the
+  disposable `planner_test` database. The full integration suite passed,
+  including the overlapping outbox-dispatch regression.
+- These results apply to the current implementation tree, not an exact clean
+  commit. Full five-browser release coverage, the complete visual matrix,
+  exact-clean-SHA evidence, and independent review remain open. `AD-002`
+  remains **In Progress**.
+
+## 2026-10-21 — Native-host browser follow-up
+
+- A native-host `pnpm test:e2e:release` attempt reached 257/1,632 Chromium
+  cases, then was stopped after four failures; the visual phase did not run.
+  The failures were platform overview navigation, Trends degraded-page
+  loading, Trends onboarding completion, and Trends Use-in-brief navigation.
+- A fresh focused rerun passed the platform overview, degraded-source, and
+  onboarding journeys (4/4 cases, including both platform roles). The
+  Use-in-brief route compiles lazily on a cold Next dev server; its first
+  navigation exceeded the default test timeout. The assertion now allows the
+  measured cold compile window and the focused journey passes 1/1. No
+  application navigation code changed.
+- The static route inventory now records 91 page routes by family and 105 API
+  handlers by ownership group, alongside 42 loading surfaces and 9 error
+  boundaries. Per-route state/quality review and route-to-test mapping remain
+  open. `AD-002` remains **In Progress**; no release gate is marked complete.
+
+## 2026-10-21 — Feature ownership boundary follow-up
+
+- The Trends workspace-enabled-source query moved from `src/lib/trends/` into
+  the feature's explicit server-only entry point. The client-safe catalog
+  remains exported from `index.ts`; the two server pages now use `server.ts`.
+- `tests/unit/architecture/module-ownership.test.ts` enforces public feature
+  entry points and prevents shared presentation/platform modules from
+  depending on features. Existing UI-to-route-action and platform-to-UI type
+  imports remain separately tracked migration work. This is a focused guard
+  for a rule the existing lint configuration does not enforce.
+- The static guard passed 3/3 through `pnpm test:affected -- --area
+architecture --layer unit`; the Trends area mapping selected five unit files
+  and passed 12/12. Formatting and `git diff --check` also passed. Full
+  milestone verification is still pending. The route-by-route quality map,
+  full browser/visual evidence, exact clean-SHA verification, and independent
+  review remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Validation batching and shell evidence
+
+- The sidebar context move passed the focused Chromium batch (42/42). Four
+  representative visual comparisons passed after the final candidate captures.
+- The full 252-case visual capture with four workers completed with 207 passing,
+  15 server/bootstrap failures, and 30 cases not run. A focused two-worker
+  capture of affected surfaces passed 43/45; the remaining Trends tablet case
+  and its related route cases passed in a four-case single-worker rerun. The
+  full visual compare remains open.
+- A two-worker full browser attempt caused a shared-seed race in
+  `/api/dev/seed` (duplicate `workspace_membership` insert). The full 1,632-case
+  release command was therefore stopped after its initial serialized cases.
+  No release status is promoted from partial evidence. The full five-browser
+  matrix and complete visual compare remain required before merge; `AD-002`
+  remains **In Progress**.
+- Screenshot inspection caught blank or skeleton candidates from the overloaded
+  capture. Thirty affected reference/responsive cases were recaptured with one
+  worker; the workspace settings, content detail, workspace list, agency pages,
+  research, library, channels, and approvals captures were inspected. The
+  focused compare of five corrected candidates passed 5/5. This does not close
+  the full visual compare gate.
+- The latest `pnpm verify` passed formatting, ESLint, strict TypeScript, all
+  553 unit files / 4,971 tests, and the production build. After this run, the
+  final evidence-only tracker edit passed Prettier and `git diff --check`.

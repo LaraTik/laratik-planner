@@ -33,6 +33,10 @@ test.describe("GET /api/health", () => {
     await expect(
       page.getByRole("heading", { name: /Plan, review, and publish with clarity/i }),
     ).toBeVisible();
-    await expect(page.getByRole("link", { name: /Sign in to StudioFlow/i })).toBeVisible();
+    const entryLink = page.getByRole("link", {
+      name: /(?:Sign in to|Set up) StudioFlow/i,
+    });
+    await expect(entryLink).toBeVisible();
+    await expect(entryLink).toHaveAttribute("href", /^\/signin/);
   });
 });

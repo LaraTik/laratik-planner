@@ -110,6 +110,17 @@ describe("test affected core", () => {
     expect(result.areaIds).toEqual(["auth"]);
   });
 
+  it("escalates an unmapped changed test even when another changed file has an owner", () => {
+    const result = classifyChangedFiles(
+      ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],
+      manifest,
+    );
+
+    expect(result.kind).toBe("escalated");
+    expect(result.escalationReason).toContain("tests/e2e/unmapped.spec.ts");
+    expect(result.runAllBrowser).toBe(true);
+  });
+
   it("reports stale manifest paths before a command can run", () => {
     expect(
       validateOwnershipManifest(manifest, [
@@ -199,10 +210,8 @@ describe("test affected core", () => {
       ]),
     ).toEqual([
       "--",
-      "--project",
-      "chromium",
-      "--project",
-      "firefox",
+      "--project=chromium",
+      "--project=firefox",
       "tests/e2e/auth-gate.spec.ts",
       "tests/e2e/content-flow.spec.ts",
       "--grep",

@@ -28,6 +28,60 @@ baseline and were not treated as authored by this review.
   migration safety. Refinement must extend these contracts rather than replace
   them.
 
+### Static route inventory refreshed 2026-10-21
+
+The current tree still contains 91 pages, 105 route handlers, 42 loading
+surfaces, and 9 error boundaries. Page counts below group the agency-qualified
+workspace route tree by its first feature segment; they are a filesystem
+inventory, not a claim that each route has passed a manual quality review.
+
+| Page family        | Count | Page family     | Count |
+| ------------------ | ----: | --------------- | ----: |
+| accept-invitation  |     1 | account         |     1 |
+| activity           |     1 | agency-settings |    10 |
+| agency-unavailable |     1 | ai-settings     |     1 |
+| analytics          |     3 | app-home        |     1 |
+| board              |     1 | brand-kit       |    11 |
+| calendar           |     2 | channels        |     1 |
+| client             |     2 | data-deletion   |     1 |
+| design-queue       |     1 | dev             |     1 |
+| engagement         |     1 | library         |     1 |
+| media              |     2 | planning        |     8 |
+| platform           |     9 | privacy         |     1 |
+| research           |     1 | reviews         |     1 |
+| root               |     1 | set-password    |     1 |
+| settings           |     7 | setup           |     1 |
+| share              |     2 | signin          |     4 |
+| tasks              |     4 | team            |     1 |
+| terms              |     1 | trends          |     1 |
+| users              |     1 | workspace-home  |     2 |
+| workspaces         |     2 |                 |       |
+
+The 105 route handlers are API handlers. Their current first-level ownership
+groups are:
+
+| API group            | Count | API group             | Count |
+| -------------------- | ----: | --------------------- | ----: |
+| advertising          |     6 | agencies              |     5 |
+| agency               |     2 | ai                    |     2 |
+| auth                 |     1 | bootstrap             |     2 |
+| community            |     1 | cron/advertising-sync |     1 |
+| cron/email-dispatch  |     1 | cron/error-retention  |     1 |
+| cron/outbox          |     1 | cron/social-metrics   |     1 |
+| cron/storage-cleanup |     1 | deliveries            |     1 |
+| dev                  |     6 | export                |     2 |
+| health               |     3 | mcp                   |     1 |
+| media                |    24 | mentions              |     1 |
+| reports              |     1 | research              |     9 |
+| sentry-probe         |     1 | share                 |     3 |
+| social               |     7 | storage               |     1 |
+| tasks                |     6 | trends                |     9 |
+| uploads              |     5 |                       |       |
+
+The detailed route-to-owner, route-to-test, and per-page loading/empty/error/
+permission-state review remains open and is tracked below; these counts only
+establish the inventory denominator.
+
 ## Ownership and dependency map
 
 | Surface                     | Current ownership                                                       | Review notes                                                                                                                                                                                                                                                                      |
@@ -52,15 +106,22 @@ feature's internals.
 ### A1 — Feature ownership is not yet visible in the source layout
 
 **Priority: P1 — maintainability and change risk.** The master prompt's
-feature-module rule has not been adopted in the source tree. Product UI is
+feature-module rule has not been adopted across the source tree. Product UI is
 spread across route-local files and shared component folders, while domain
 logic lives under `src/lib/<domain>/`. This makes it harder to identify a
 feature's full change and test surface. **First pilot completed:** the Trends
-source catalog now lives in `src/features/trends/`, exposes a public
-`index.ts`, and has nine production/test callers migrated. The old `src/lib`
-copy was removed, so the feature has one canonical catalog. The migration
-preserved route/API contracts and passed the full `pnpm verify` run. Continue
-with one bounded feature at a time; this does not imply a repo-wide move.
+catalog and workspace enabled-source query now live under
+`src/features/trends/`. The feature exposes a client-safe `index.ts` and an
+explicit server-only `server.ts`; two server pages were moved off the
+`src/lib/trends/` adapter. Nine catalog callers use the public catalog entry.
+A static import-ownership regression now guards app/feature public entry points
+and prevents shared presentation or platform modules from depending on
+features. Existing UI-to-route-action imports and platform presentation-type
+imports were observed during guard development and remain a separate migration
+queue; the pilot does not silently allow new feature coupling or imply a
+repo-wide move. The guard passes 3/3 cases through the manual architecture
+area. The affected Trends unit area selects its five owned files and passes
+12/12; full milestone verification remains pending.
 
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 
@@ -144,6 +205,21 @@ not certify the rest of the historical findings: review TEST-03, FEAT-01,
 FEAT-02, and the remaining security and feature findings against current code
 before closing them. Keep only gaps that reproduce and record their current
 evidence and owner/acceptance test.
+
+**Historical TEST-03 / FEAT-01 / FEAT-02 reconciliation (2026-10-21).**
+The old TEST-03 description is stale about the visual harness: assert mode is
+the default, the screenshot manifest is wired to `pnpm test:visual`, and
+committed `reference/` and `responsive/` PNG baselines are present. The tracker
+and `TEST_EVIDENCE.md` still correctly leave the final exact-HEAD visual run and
+human comparison against Stitch open; the prior 112/112 run is only candidate
+baseline evidence. This is therefore a release-evidence gap, not a missing or
+ignored visual suite. Historical FEAT-01 and FEAT-02 are also stale as
+described: the current notification service enqueues and dispatches workflow
+event kinds, `/api/cron/outbox` is implemented, and
+`scripts/vps/install-cron.sh` schedules `outbox-dispatch.sh` every minute.
+These checks establish source/configuration presence only; they do not prove
+live VPS cron installation or independent production UAT. They do not close
+the concurrent-dispatch defect recorded in A22.
 
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 
@@ -299,6 +375,13 @@ CI browser environment or repair the local harness before relying on local
 full-matrix output; visual regression did not run because the E2E command
 stopped first.
 
+**Follow-up verification (2026-10-21).** After the affected fixtures were
+moved to agency-qualified workspace URLs, the More sheet and calendar checks
+passed individually, and the complete Chromium `mobile.spec.ts` passed 9/9.
+This closes the mobile fixture concern from the earlier interrupted release
+attempt. The full five-browser/visual gate remains open because release-server
+instability, Trends journey failures, and Firefox launch remain unresolved.
+
 ### A21 — Social connection finalization did not enforce connection tenant scope
 
 **Priority: P1 — tenant isolation and data integrity.** The finalization action
@@ -316,11 +399,68 @@ action also matches existing channels by provider account ID and platform.
 Disposable-Postgres coverage proves same-workspace linking still succeeds and a
 foreign connection is rejected without changing the channel.
 
+### A22 — Concurrent outbox workers could deliver one event more than once
+
+**Priority: P1 — notification correctness and delivery idempotency.**
+`dispatchOutboxOnce` originally selected pending event rows outside a
+transaction and only set `processed_at` after fan-out. Overlapping cron
+requests could both read the same row and insert duplicate notifications;
+`notification` has no unique constraint keyed to an outbox event. The
+dispatcher now re-reads each candidate under `FOR UPDATE SKIP LOCKED` inside
+the fan-out transaction and re-checks `processed_at` / `available_at` before
+writing. A disposable-Postgres regression holds notification insertion open
+and runs two worker ticks concurrently, asserting one processed event and one
+notification. The focused integration case passed, as did the complete
+integration suite and the five-scenario migration drill. The complete
+`pnpm verify` also passed on the current implementation tree. No schema or
+public contract changed. These results are not yet attached to an exact clean
+commit.
+
+### A23 — Affected-test selection could skip coverage or reject valid browser projects
+
+**Priority: P1 — verification reliability.** The affected runner passed
+Playwright's variadic `--project` option as separate tokens before spec paths,
+so Playwright treated spec paths as project names and rejected the run. Its
+change classifier also escalated an unmapped test file only when no other
+changed file mapped to an area; a mixed diff could therefore omit that test.
+Manual `--area` runs unnecessarily queried Git and printed a missing-upstream
+error even though they did not need a diff. The runner now uses the unambiguous
+`--project=<name>` form, escalates whenever any changed test file is unmapped,
+and skips Git collection for manual area runs. The ownership manifest now
+maps Advertising, Trends, Command Center accessibility, and mobile browser
+coverage.
+Regression coverage passes 14/14; the manual workspace unit batch passes
+396/396. Earlier affected browser batches passed 14/14 for discussions and
+notifications and 11/11 for advertising, including visual assertions. These
+targeted batches validate selection and affected areas; they do not replace the
+full browser and visual release matrix.
+
+### A24 — Desktop tenant context drifted out of the primary sidebar
+
+**Priority: P2 — navigation consistency and responsive usability.** The
+repository shell contract assigns agency/workspace context to the persistent
+left sidebar and global utilities to the top bar, but the current implementation
+had moved both selectors into the top bar. This left the sidebar without its
+active tenant/workspace context and contradicted both `AGENTS.md` and the
+production-readiness M1.5 record. The selectors now render together below the
+sidebar brand on global and workspace routes; the top bar is limited to theme,
+notifications, and account controls. Collapsed rails keep the selectors
+keyboard-accessible with icon presentation and accessible names. Workspace
+switcher copy now comes from one shared catalog mapper, and affected E2E
+selectors were moved to the sidebar contract. The focused sidebar unit suite
+passes 48/48; the agency/workspace/mobile and social-analytics Chromium batch
+passes 42/42, including Arabic RTL journeys; and focused reference/responsive
+visual comparisons pass 7/7. The final `pnpm verify`, complete integration
+suite, and five-scenario migration drill also pass on this tree. Full
+five-browser release coverage, the complete visual matrix, exact-clean-commit
+evidence, and independent review remain pending, so this finding is implemented
+but not fully verified.
+
 ## Next work, ordered
 
-1. Inspect the remaining high-risk historical findings and their regression
-   evidence against current code. Do not treat the 2026-08-25 P0 count as
-   current; record newly found issues with current source and test evidence.
+1. Continue reconciling remaining historical security and feature findings
+   against current code. Do not treat the 2026-08-25 P0 count as current;
+   retain only gaps with current source and test evidence.
 2. Continue with the next bounded feature slice after the Trends catalog pilot;
    the feature ownership, import direction, and page-review rules now live in
    [`../architecture/module-ownership.md`](../architecture/module-ownership.md)
@@ -329,8 +469,9 @@ foreign connection is rejected without changing the channel.
    coverage map; this review still does not manually certify every route.
 4. Tackle confirmed security, tenant, workflow, transaction, privacy, provider,
    or shared-rendering bugs as isolated regression-tested changes.
-5. Review pages and shared UI in route groups, recording bilingual, responsive,
-   keyboard, accessibility, loading/empty/error, and visual evidence.
+5. Complete the route/domain/database/test map and review pages and shared UI in
+   route groups, recording bilingual, responsive, keyboard, accessibility,
+   loading/empty/error, and visual evidence.
 
 ## Evidence and limits
 
@@ -451,3 +592,71 @@ platform. The focused social repository integration suite passes 15/15,
 including valid same-workspace linking and rejection of a foreign connection
 without mutation. The connection action unit suite passes 11/11. No schema or
 migration changed; run `pnpm verify` on the final clean code commit.
+
+### Outbox concurrency follow-up — 2026-10-21
+
+`dispatchOutboxOnce` now claims each candidate event under a row lock before
+fan-out. This closes the duplicate-delivery race when scheduled requests
+overlap. Its focused Postgres concurrency case and the full integration suite
+passed; all five migration-drill scenarios passed. A subsequent full browser
+release run was stopped after local Next response-stream failures, and the
+visual phase did not run. Exact clean-SHA verification, the full browser
+matrix, visual review, and independent review remain open.
+
+### Latest validation — 2026-10-21
+
+The current implementation tree passes `pnpm verify`: formatting, ESLint,
+strict TypeScript, 552 unit files / 4,967 tests, and the production build.
+The previously recorded 43 integration specs and five migration-drill
+scenarios remain valid; the final code change since those runs only updates a
+browser fixture to the canonical agency-qualified route.
+
+The latest release attempt progressed through Chromium but logged a missing
+mobile More dialog, several Trends journey failures, and Next response-stream
+errors before Firefox. The More-sheet failure reproduced against a fresh
+disposable database after updating its fixture to the canonical URL. Its
+screenshot shows the sheet closed; the dev server also logged a late Fast
+Refresh and a closed stream. The existing MobileNav unit interaction passes,
+so the browser result remains unresolved pending a stable server run. A
+focused Firefox retry timed out after 180 seconds with
+`sandbox_extension_issue_file_to_process ... Operation not permitted`; setting
+`MOZ_DISABLE_CONTENT_SANDBOX=1` did not resolve the local browser launch. The
+visual phase did not run. These findings are runner evidence, not a release
+pass and not sufficient to label the More interaction a confirmed product
+defect. The full five-browser matrix, visual gate, exact clean-SHA evidence,
+and independent review remain open. `AD-002` remains **In Progress**.
+
+### Development-server memory follow-up — 2026-10-21
+
+A clean Linux Playwright container reproduced Next.js development-server heap
+pressure while compiling the authenticated route suite: the server restarted
+near its memory threshold and several first-visit navigations exceeded the
+30-second browser timeout. The local Next.js 16 memory guide recommends
+`experimental.webpackMemoryOptimizations` for reducing peak Webpack heap use.
+The setting was tried temporarily, but a release rerun still restarted the dev
+server and timed out on `/signin/forgot-password`; it did not solve the
+validation problem and was reverted because it can slightly increase compile
+time. The full five-browser and visual phases remain incomplete. Treat this as
+an unresolved validation-harness limitation, not release evidence.
+
+### Native-host release attempt and route-compilation follow-up — 2026-10-21
+
+The full `pnpm test:e2e:release` candidate was retried on the native macOS host
+with the disposable `planner_test` database and installed Chromium, Firefox,
+and WebKit binaries. It reached 257 of 1,632 Chromium cases before the run was
+stopped after failures and the repeated server-worker noise; the visual phase
+did not run. Four browser failures appeared: platform overview navigation,
+Trends degraded-page loading, Trends onboarding completion, and Trends
+Use-in-brief navigation. A fresh focused run passed the platform overview,
+degraded-source, and onboarding cases (4/4 including both platform roles).
+The remaining Use-in-brief case showed the destination route compiling in
+Next's development server; the route was not compiled before the test's
+30-second test timeout. The focused case passes 1/1 after its navigation
+assertion allows the observed cold-route compile window. No application
+navigation code was changed. This is focused evidence only; the full five-
+browser matrix and visual gate remain open.
+
+The route inventory is now grouped by page family and API ownership group in
+the static inventory section above. The route-to-owner/test mapping and
+per-route review of loading, empty, error, permission, bilingual, responsive,
+and accessibility states remain open.

@@ -215,11 +215,31 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
   const processed: string[] = [];
   for (const evt of events) {
     try {
-      await db.transaction(async (tx) => {
-        const payload = evt.payload as Record<string, unknown> | null;
+      const recipients = await db.transaction(async (tx) => {
+        // The candidate read above is intentionally lock-free. Multiple cron
+        // invocations can see the same pending rows, so acquire ownership
+        // inside the transaction and re-check eligibility before fan-out.
+        // SKIP LOCKED lets another worker take the next row instead of
+        // waiting, while the processed_at predicate prevents a second worker
+        // from replaying a row after the first commits.
+        const [claimed] = await tx
+          .select()
+          .from(outboxEvents)
+          .where(
+            and(
+              eq(outboxEvents.id, evt.id),
+              isNull(outboxEvents.processedAt),
+              sql`${outboxEvents.availableAt} <= ${availabilityCutoff}`,
+            ),
+          )
+          .for("update", { skipLocked: true })
+          .limit(1);
+        if (!claimed) return null;
+
+        const payload = claimed.payload as Record<string, unknown> | null;
+        let recipients: string[] = [];
         if (payload) {
-          let recipients: string[] = [];
-          switch (evt.eventType as OutboxEventType) {
+          switch (claimed.eventType as OutboxEventType) {
             case "comment_created":
               recipients = await fanOutCommentCreated(payload, tx);
               break;
@@ -265,7 +285,6 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
               // preserved for forensics.
               break;
           }
-          for (const userId of recipients) recipientIds.add(userId);
         }
         // Mark the event processed (or no-op for unknown types — see
         // above). A failure inside the fan-out throws and rolls this
@@ -273,8 +292,11 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
         await tx
           .update(outboxEvents)
           .set({ processedAt: new Date(), attemptCount: sql`${outboxEvents.attemptCount} + 1` })
-          .where(eq(outboxEvents.id, evt.id));
+          .where(eq(outboxEvents.id, claimed.id));
+        return recipients;
       });
+      if (recipients === null) continue;
+      for (const userId of recipients) recipientIds.add(userId);
       processed.push(evt.id);
     } catch (err) {
       // Failure path runs OUTSIDE the rolled-back tx so the error

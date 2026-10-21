@@ -37,7 +37,7 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
   test("tablet uses a compact icon rail instead of the desktop-width sidebar", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 768, height: 1024 });
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
 
     const aside = page.getByTestId("app-sidebar");
     await expect(aside).toBeVisible();
@@ -67,7 +67,7 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
   }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
 
     await expect(page.getByTestId("mobile-primary-create")).toHaveCount(0);
     await page.getByTestId("mobile-navigation-more").click();
@@ -115,7 +115,7 @@ test.describe("Mobile layout (master prompt §3 — <768px)", () => {
   test("mobile calendar uses an agenda without horizontal page overflow", async ({ page }) => {
     await bootstrapTestSession(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto("/app/w/acme/calendar");
+    await page.goto("/app/a/test-agency/w/acme/calendar");
 
     await expect(page.getByRole("region", { name: "Calendar agenda" })).toBeVisible();
     const a11y = await new AxeBuilder({ page })
