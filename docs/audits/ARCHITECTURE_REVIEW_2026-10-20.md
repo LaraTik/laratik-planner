@@ -1163,3 +1163,41 @@ against the approved design reference before the visual gate can be marked
 green. Full manual review of the 91 routes, the complete five-browser matrix,
 and an independent reviewer remain open. `AD-002` remains **In Progress** and
 must not be marked **Verified** from this run.
+
+The 56 failing captures cover 25 distinct route surfaces; counts below are
+capture failures, not confirmed unique product defects.
+
+| Surface                                        | Failed captures |
+| ---------------------------------------------- | --------------: |
+| `/app/agency-settings`                         |               4 |
+| `/app/w/acme/brand-kit`                        |               4 |
+| `/app/w/acme/client`                           |               4 |
+| `/app/agency-settings/trend-sources`           |               3 |
+| `/app/platform/errors`                         |               3 |
+| `/app/w/acme/brand-kit/templates`              |               3 |
+| `/app/w/acme/settings/approvals`               |               3 |
+| `/app/w/acme/settings/defaults`                |               3 |
+| `/app/w/acme/settings/lead-times`              |               3 |
+| `/app/w/acme/settings/lifecycle`               |               3 |
+| `/app/w/acme/settings/templates`               |               3 |
+| `/app/w/acme/settings/trends`                  |               3 |
+| `/app/platform/overview`                       |               2 |
+| `/app/w/acme/brand-kit/voice`                  |               2 |
+| `/app/w/acme/client/calendar`                  |               2 |
+| `/app/w/acme/media`                            |               2 |
+| `/app/agency-settings/ai`                      |               1 |
+| `/app/platform/agencies/{agencyId}`            |               1 |
+| `/app/w/acme/analytics/social`                 |               1 |
+| `/app/w/acme/board`                            |               1 |
+| `/app/w/acme/planning/{contentItemId}`         |               1 |
+| `/app/w/acme/planning/{contentItemId}/publish` |               1 |
+| `/app/w/acme/settings`                         |               1 |
+| Workspace Media Arabic RTL                     |               1 |
+| Workspace Settings exact reference             |               1 |
+
+Prioritize the large geometry differences for manual review: the platform
+agency detail capture expected 900px height and rendered 3,380px; the trend
+sources capture expected 3,591px and rendered 1,931px; the platform errors
+mobile capture expected 1,835px and rendered 1,557px. Review current UI state
+against the current approved design source before changing either the page or
+its baseline.
