@@ -386,7 +386,8 @@ this focused result.
 
 ### Verification follow-up — 2026-10-21
 
-`pnpm verify` passes on the implementation tree: formatting, ESLint, strict
+`pnpm verify` passes on clean commit
+`4e2a2f57545d85ee6e391f7c521570cf11101a66`: formatting, ESLint, strict
 TypeScript, 551 unit files / 4,955 tests, and the production build. The strict
 `pnpm test:e2e:release` attempt used the disposable `planner_test` database and
 stopped before the visual suite: Next restarted after its dev-server memory
@@ -399,4 +400,6 @@ reset, and that remaining sign-out case passed 1/1 on its own. No database or
 provider code changed, so integration tests and the migration drill were not
 rerun for this presentation-only change. The complete five-browser and visual
 gates remain open; this evidence does not advance any route or release to
-`Tested` or `Verified`.
+`Tested` or `Verified`. The focused Chromium runs and standalone sign-out retry
+also ran against this clean commit. The exact commit is clean locally; full
+five-browser and visual release evidence remains outstanding.
