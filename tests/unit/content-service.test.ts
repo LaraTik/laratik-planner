@@ -165,7 +165,7 @@ vi.mock("@/lib/auth/policy", async () => {
 });
 
 const { UpdateContentSchema, updateContentItem, batchCreateContentItems, UPDATEABLE_STATUSES } =
-  await import("@/lib/content/service");
+  await import("@/features/content/server");
 const { QuickCreateSchema, quickCreateContentItem } = await import("@/features/content/server");
 const {
   getContentItem,
@@ -419,8 +419,17 @@ describe("updateContentItem", () => {
   });
 
   it("updates the item and replaces the channel set when channelIds is provided", async () => {
-    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId, status: "draft" }]);
-    dbMock.state.selectResults.push([{ id: contentItemId, workspaceId }]);
+    dbMock.state.selectResults.push([
+      {
+        id: contentItemId,
+        workspaceId,
+        status: "draft",
+        agencyId: "agency-1",
+        prevFormat: "static_post",
+        prevPlannedPublishAt: new Date("2026-08-31T00:00:00Z"),
+      },
+    ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     await updateContentItem(actor, {
       contentItemId,
       title: "Updated",

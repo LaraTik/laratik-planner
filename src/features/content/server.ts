@@ -36,6 +36,14 @@ export {
   type QuickCreateInput,
 } from "./quick-create.server";
 export {
+  UpdateContentSchema,
+  updateContentItem,
+  UPDATEABLE_STATUSES,
+  DESIGNER_EDITABLE_STATUSES,
+  type UpdateContentInput,
+} from "./update-content.server";
+export { batchCreateContentItems } from "./batch-create.server";
+export {
   applyWorkflowScenario,
   type ApplyWorkflowScenarioResult,
 } from "./workflow-scenario.server";

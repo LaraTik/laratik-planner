@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   contentAssignments,
@@ -8,7 +8,6 @@ import {
   contentResearchLinks,
   contentResearchTeardownLinks,
   researchTeardowns,
-  socialChannels,
   trendBriefs,
   trendSignals,
   workspaceSettings,
@@ -16,6 +15,10 @@ import {
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
+import {
+  assertWorkspaceChannelSelection,
+  getActiveWorkspaceChannelIds,
+} from "./channel-selection.server";
 import { z } from "zod";
 
 export const QuickCreateSchema = z.object({
@@ -107,22 +110,16 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
       ? undefined
       : parseFormatPayload(input.format as ContentFormat, input.formatPayload);
 
-  const activeChannels = await db
-    .select({ id: socialChannels.id })
-    .from(socialChannels)
-    .where(
-      and(
-        eq(socialChannels.workspaceId, input.workspaceId),
-        eq(socialChannels.isActive, true),
-        isNull(socialChannels.archivedAt),
-      ),
-    );
-  const activeChannelIds = new Set(activeChannels.map((row) => row.id));
+  const activeChannelIds = await getActiveWorkspaceChannelIds(input.workspaceId);
   let channelIds = input.channelIds;
   if (!channelIds || channelIds.length === 0) {
-    channelIds = activeChannels.map((row) => row.id);
-  } else if (channelIds.some((channelId) => !activeChannelIds.has(channelId))) {
-    throw new Error("Invalid or inactive channel selection for this workspace");
+    channelIds = activeChannelIds;
+  } else {
+    assertWorkspaceChannelSelection(
+      channelIds,
+      activeChannelIds,
+      "Invalid or inactive channel selection for this workspace",
+    );
   }
 
   return db.transaction(async (tx) => {

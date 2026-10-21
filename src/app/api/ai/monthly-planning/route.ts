@@ -26,7 +26,7 @@ import {
   getMonthlyPlanningSession,
   saveMonthlyProposal,
 } from "@/lib/ai/monthly-planning";
-import { batchCreateContentItems } from "@/lib/content/service";
+import { batchCreateContentItems } from "@/features/content/server";
 import { BatchCreateSchema } from "@/lib/content/batch";
 import { parseBatchDateTime } from "@/lib/content/batch";
 import { randomUUID } from "node:crypto";

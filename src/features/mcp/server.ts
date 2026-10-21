@@ -48,8 +48,8 @@ import {
   archiveContentItem,
   rescheduleContentItem,
   quickCreateContentItem,
+  updateContentItem,
 } from "@/features/content/server";
-import { updateContentItem } from "@/lib/content/service";
 import { duplicateContentItem } from "@/lib/planning/content-clone";
 import { DomainError, WORKFLOW_SCENARIOS } from "@/lib/content/workflow";
 import {

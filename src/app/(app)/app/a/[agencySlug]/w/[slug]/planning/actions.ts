@@ -11,13 +11,7 @@ import { getAccessibleWorkspace, getAccessibleWorkspaceAtPath } from "@/lib/work
 import { workspaceBasePath } from "@/lib/urls";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
-import {
-  UpdateContentSchema,
-  updateContentItem,
-  type UpdateContentInput,
-  batchCreateContentItems,
-  mergeAiDraftIntoBrief,
-} from "@/lib/content/service";
+import { mergeAiDraftIntoBrief } from "@/lib/content/service";
 import {
   updateFormatPayload,
   applyResearchTeardownToFormatPayload,
@@ -36,6 +30,10 @@ import {
   restoreContentItem,
   QuickCreateSchema,
   quickCreateContentItem,
+  UpdateContentSchema,
+  updateContentItem,
+  type UpdateContentInput,
+  batchCreateContentItems,
 } from "@/features/content/server";
 import {
   BatchClientRowSchema,
