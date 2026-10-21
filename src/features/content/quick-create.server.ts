@@ -107,19 +107,22 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
       ? undefined
       : parseFormatPayload(input.format as ContentFormat, input.formatPayload);
 
+  const activeChannels = await db
+    .select({ id: socialChannels.id })
+    .from(socialChannels)
+    .where(
+      and(
+        eq(socialChannels.workspaceId, input.workspaceId),
+        eq(socialChannels.isActive, true),
+        isNull(socialChannels.archivedAt),
+      ),
+    );
+  const activeChannelIds = new Set(activeChannels.map((row) => row.id));
   let channelIds = input.channelIds;
   if (!channelIds || channelIds.length === 0) {
-    const rows = await db
-      .select({ id: socialChannels.id })
-      .from(socialChannels)
-      .where(
-        and(
-          eq(socialChannels.workspaceId, input.workspaceId),
-          eq(socialChannels.isActive, true),
-          isNull(socialChannels.archivedAt),
-        ),
-      );
-    channelIds = rows.map((row) => row.id);
+    channelIds = activeChannels.map((row) => row.id);
+  } else if (channelIds.some((channelId) => !activeChannelIds.has(channelId))) {
+    throw new Error("Invalid or inactive channel selection for this workspace");
   }
 
   return db.transaction(async (tx) => {

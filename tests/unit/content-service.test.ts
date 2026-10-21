@@ -310,6 +310,7 @@ describe("quickCreateContentItem", () => {
         defaultClientReviewerId: "cr-1",
       },
     ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, { ...input, channelIds: ["ch-1"] });
@@ -323,6 +324,16 @@ describe("quickCreateContentItem", () => {
     expect(values["contentReviewerId"]).toBe("rev-1");
   });
 
+  it("rejects provided channels outside the active workspace channel set", async () => {
+    dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
+    dbMock.state.selectResults.push([]);
+
+    await expect(
+      quickCreateContentItem(actor, { ...input, channelIds: ["foreign-channel"] }),
+    ).rejects.toThrow(/channel selection for this workspace/i);
+    expect(dbMock.state.insertCalls).toHaveLength(0);
+  });
+
   it("preserves a workspace-scoped research post when creating a draft", async () => {
     dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
     dbMock.state.selectResults.push([
@@ -332,6 +343,7 @@ describe("quickCreateContentItem", () => {
         researchAccount: null,
       },
     ]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, {
@@ -355,6 +367,7 @@ describe("quickCreateContentItem", () => {
   it("preserves a workspace-scoped teardown when creating a draft", async () => {
     dbMock.state.selectResults.push([{ defaultDesignerId: null }]);
     dbMock.state.selectResults.push([{ id: "teardown-1" }]);
+    dbMock.state.selectResults.push([{ id: "ch-1" }]);
     dbMock.state.insertReturningIds.push({ id: contentItemId });
 
     const id = await quickCreateContentItem(actor, {
