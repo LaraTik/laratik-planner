@@ -239,6 +239,35 @@ values, and a route regression asserts the empty-URL contract. The affected
 77-test Chromium batch reached 76/77 before exposing this issue; after the fix,
 all four research teardown/watchlist tests passed in Chromium.
 
+### A17 — Quick Create omitted the canonical overview fragment
+
+**Priority: P2 — workflow continuity.** The creation action redirected to the
+new detail route with `?created=1` but omitted `#overview`. The detail shell
+uses the fragment to select its initial workspace panel, so a newly created
+draft could arrive at a different tab than the completion flow promises. The
+action now redirects to `?created=1#overview`; the completion unit contract
+and research-to-draft browser journey assert the canonical destination.
+
+### A18 — Research watchlist submission and refresh had competing state sources
+
+**Priority: P1 — user input integrity and stale UI.** Browser evidence showed
+the handle and profile URL visible in the inputs while the POST body contained
+empty strings. `ResearchWatchlist` used React state as the submission source.
+The submit handler now reads named values from the form itself. A WebKit run
+also showed the API could create the account while a separate client-side list
+stayed empty. The list now has one owner: refreshed Server Component props;
+successful add and remove operations call `router.refresh()` rather than
+maintaining a second copy. The E2E asserts the actual POST body, the created
+record, and the rendered account. It uses a unique profile identity per run.
+
+### A19 — Member role overflow broke list semantics
+
+**Priority: P2 — accessibility.** When a member had more than three workspace
+roles, the `+N` overflow badge rendered as a direct `<ul>` child instead of a
+list item. The badge now lives inside `<li>`, and the component regression
+asserts every direct child is a list item. The `/app/users` axe route check
+passes with the corrected component.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
@@ -288,3 +317,14 @@ The route, domain, database, integration, and historical-finding inventory
 remains an active audit queue. This first pass does not claim that every route
 has received manual review or that independent `Verified` status has been
 assigned.
+
+### Follow-up evidence — 2026-10-21
+
+The Quick Create and member-list unit suites pass 8/8; the Research watchlist
+unit suite passes 3/3. The Research teardown/watchlist browser suite passes
+4/4 in Chromium and 4/4 in WebKit, including the actual request body and
+post-refresh account rendering. The `/app/users` accessibility route check
+passed in Chromium. Current `pnpm verify` passes formatting, lint, typecheck,
+all 550 unit files (4,953 tests), and the production build. A targeted Firefox
+run did not complete and was stopped without a result. The full browser matrix,
+visual suite, and exact-clean-commit evidence remain open.
