@@ -22,7 +22,6 @@ import {
   isAgencyMember,
   type Actor,
 } from "@/lib/auth/policy";
-import { type MediaKind, type MediaSourceType } from "./contract";
 import { MediaPermissionError } from "./errors";
 import { accessibleMediaWorkspaceIds, MEDIA_READ_ROLES } from "./access";
 import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "./folder-tree";
@@ -373,105 +372,6 @@ export async function countMediaAssets(
     .from(mediaAssets)
     .where(and(...conditions));
   return row?.count ?? 0;
-}
-
-export type MediaDuplicateAdvisory = {
-  assetId: string;
-  title: string;
-  ownerWorkspaceId: string;
-  workspaceName: string;
-  kind: MediaKind;
-  mimeType: string;
-  byteSize: number;
-  sourceType: MediaSourceType;
-  sameWorkspace: boolean;
-};
-
-/**
- * Return visible, ready assets with the same content checksum as a new
- * upload. This is advisory only: callers must still upload or explicitly
- * choose a future reuse/copy action. No source URLs or storage credentials
- * are exposed by this lookup.
- */
-export async function findDuplicateMediaAssets(
-  actor: Actor,
-  input: { workspaceId: string; checksumSha256: string; kind: MediaKind; limit?: number },
-): Promise<MediaDuplicateAdvisory[]> {
-  if (!(await canWriteToWorkspace(actor, input.workspaceId))) {
-    throw new MediaPermissionError("Read-only users cannot inspect upload duplicates.");
-  }
-
-  const [workspace] = await db
-    .select({ agencyId: workspaces.agencyId })
-    .from(workspaces)
-    .where(and(eq(workspaces.id, input.workspaceId), eq(workspaces.status, "active")))
-    .limit(1);
-  if (!workspace) return [];
-
-  const rows = await db
-    .select({
-      assetId: mediaAssets.id,
-      title: mediaAssets.title,
-      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
-      workspaceName: workspaces.name,
-      kind: storageObjects.kind,
-      mimeType: storageObjects.mimeType,
-      byteSize: storageObjects.byteSize,
-      sourceType: mediaAssets.sourceType,
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
-    .where(
-      and(
-        eq(mediaAssets.agencyId, workspace.agencyId),
-        eq(mediaAssets.status, "ready"),
-        eq(mediaAssets.visibility, "agency"),
-        eq(storageObjects.status, "active"),
-        eq(storageObjects.kind, input.kind),
-        eq(storageObjects.checksumSha256, input.checksumSha256),
-        eq(workspaces.status, "active"),
-      ),
-    )
-    .orderBy(desc(mediaAssets.createdAt))
-    .limit(Math.min(Math.max(input.limit ?? 5, 1), 20));
-
-  const sameWorkspaceRows = await db
-    .select({
-      assetId: mediaAssets.id,
-      title: mediaAssets.title,
-      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
-      workspaceName: workspaces.name,
-      kind: storageObjects.kind,
-      mimeType: storageObjects.mimeType,
-      byteSize: storageObjects.byteSize,
-      sourceType: mediaAssets.sourceType,
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
-    .where(
-      and(
-        eq(mediaAssets.agencyId, workspace.agencyId),
-        eq(mediaAssets.ownerWorkspaceId, input.workspaceId),
-        eq(mediaAssets.status, "ready"),
-        eq(storageObjects.status, "active"),
-        eq(storageObjects.kind, input.kind),
-        eq(storageObjects.checksumSha256, input.checksumSha256),
-        eq(workspaces.status, "active"),
-      ),
-    )
-    .orderBy(desc(mediaAssets.createdAt))
-    .limit(Math.min(Math.max(input.limit ?? 5, 1), 20));
-
-  const unique = new Map<string, (typeof rows)[number]>();
-  for (const row of [...sameWorkspaceRows, ...rows]) unique.set(row.assetId, row);
-  return [...unique.values()].slice(0, Math.min(Math.max(input.limit ?? 5, 1), 20)).map((row) => ({
-    ...row,
-    kind: row.kind as MediaKind,
-    sourceType: row.sourceType as MediaSourceType,
-    sameWorkspace: row.ownerWorkspaceId === input.workspaceId,
-  }));
 }
 
 async function ensureMediaFolder(input: {

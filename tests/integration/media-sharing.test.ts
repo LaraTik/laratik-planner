@@ -28,6 +28,7 @@ import {
   createMediaFolder,
   duplicateMediaAssets,
   expungeExpiredTrashedMedia,
+  findDuplicateMediaAssets,
   getMediaFolderAudit,
   getMediaLibraryFilters,
   listMediaFolders,
@@ -244,6 +245,81 @@ describe("media sharing and folder database contract", () => {
     );
     expect(filters.uploaders).toHaveLength(1);
     expect(filters.uploaders[0]).toMatchObject({ id: userId, count: 1 });
+  });
+
+  it("returns workspace and agency-shared duplicate advisories with workspace priority", async () => {
+    const checksumSha256 = "a".repeat(64);
+    await db
+      .update(storageObjects)
+      .set({ checksumSha256 })
+      .where(eq(storageObjects.id, storageObjectId));
+
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({ agencyId, name: "Other", slug: "other", createdBy: userId })
+      .returning();
+    const [sharedObject] = await db
+      .insert(storageObjects)
+      .values({
+        agencyId,
+        workspaceId: otherWorkspace!.id,
+        bucket: "fixture",
+        objectKey: "fixture/shared-duplicate.png",
+        kind: "image",
+        mimeType: "image/png",
+        originalName: "shared-duplicate.png",
+        byteSize: 9,
+        checksumSha256,
+        status: "active",
+        createdBy: userId,
+      })
+      .returning();
+    const [sharedAsset] = await db
+      .insert(mediaAssets)
+      .values({
+        agencyId,
+        ownerWorkspaceId: otherWorkspace!.id,
+        storageObjectId: sharedObject!.id,
+        title: "Agency duplicate",
+        status: "ready",
+        visibility: "agency",
+        sourceType: "browser_file",
+        createdBy: userId,
+        updatedBy: userId,
+      })
+      .returning();
+
+    const duplicates = await findDuplicateMediaAssets(
+      { id: userId },
+      { workspaceId, checksumSha256, kind: "image" },
+    );
+    expect(duplicates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ assetId, sameWorkspace: true }),
+        expect.objectContaining({
+          assetId: sharedAsset!.id,
+          ownerWorkspaceId: otherWorkspace!.id,
+          sameWorkspace: false,
+        }),
+      ]),
+    );
+    await expect(
+      findDuplicateMediaAssets(
+        { id: userId },
+        { workspaceId, checksumSha256, kind: "image", limit: 1 },
+      ),
+    ).resolves.toMatchObject([{ assetId, sameWorkspace: true }]);
+
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-duplicate-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+    await expect(
+      findDuplicateMediaAssets(
+        { id: outsider!.id },
+        { workspaceId, checksumSha256, kind: "image" },
+      ),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
   });
 
   it("registers an uploaded object once and returns its persisted status", async () => {

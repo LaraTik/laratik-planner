@@ -10,7 +10,12 @@ export { moveMediaAsset } from "./asset-management.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
 export { importPublicMediaAsset } from "./import.server";
 export { registerUploadedMediaAsset, type RegisteredMediaAsset } from "./asset-registration.server";
-export { getMediaFolderAudit, getMediaLibraryFilters } from "./library-queries.server";
+export {
+  findDuplicateMediaAssets,
+  getMediaFolderAudit,
+  getMediaLibraryFilters,
+  type MediaDuplicateAdvisory,
+} from "./library-queries.server";
 export { expungeExpiredTrashedMedia } from "./trash-lifecycle.server";
 export {
   bulkRestoreMediaAssets,
@@ -45,7 +50,6 @@ export {
 export {
   ensureBrandMediaFolderPath,
   ensurePlanningMediaFolderPathPublic,
-  findDuplicateMediaAssets,
   linkedTargetsForMediaAsset,
   listMediaAssets,
   listMediaAssetsForContentItem,

@@ -1,11 +1,30 @@
 import "server-only";
 
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
-import { isAgencyMember, type Actor } from "@/lib/auth/policy";
+import { canWriteToWorkspace, isAgencyMember, type Actor } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
-import { mediaAssets, mediaFolderReconcileLogs, users } from "@/lib/db/schema";
+import {
+  mediaAssets,
+  mediaFolderReconcileLogs,
+  storageObjects,
+  users,
+  workspaces,
+} from "@/lib/db/schema";
+import type { MediaKind, MediaSourceType } from "@/lib/media/contract";
 import { accessibleWorkspaceIdsForActor } from "@/lib/media/accessible-workspaces";
 import { MediaPermissionError } from "@/lib/media/errors";
+
+export type MediaDuplicateAdvisory = {
+  assetId: string;
+  title: string;
+  ownerWorkspaceId: string;
+  workspaceName: string;
+  kind: MediaKind;
+  mimeType: string;
+  byteSize: number;
+  sourceType: MediaSourceType;
+  sameWorkspace: boolean;
+};
 
 type MediaLibraryFiltersInput = {
   agencyId: string;
@@ -17,6 +36,75 @@ type MediaFolderAuditInput = {
   workspaceId: string;
   limit?: number | undefined;
 };
+
+/**
+ * Return visible, ready assets with the same content checksum as a new
+ * upload. This is advisory only: callers must still upload or explicitly
+ * choose a future reuse/copy action. No source URLs or storage credentials
+ * are exposed by this lookup.
+ */
+export async function findDuplicateMediaAssets(
+  actor: Actor,
+  input: { workspaceId: string; checksumSha256: string; kind: MediaKind; limit?: number },
+): Promise<MediaDuplicateAdvisory[]> {
+  if (!(await canWriteToWorkspace(actor, input.workspaceId))) {
+    throw new MediaPermissionError("Read-only users cannot inspect upload duplicates.");
+  }
+
+  const [workspace] = await db
+    .select({ agencyId: workspaces.agencyId })
+    .from(workspaces)
+    .where(and(eq(workspaces.id, input.workspaceId), eq(workspaces.status, "active")))
+    .limit(1);
+  if (!workspace) return [];
+
+  const limit = Math.min(Math.max(input.limit ?? 5, 1), 20);
+  const selectDuplicate = {
+    assetId: mediaAssets.id,
+    title: mediaAssets.title,
+    ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
+    workspaceName: workspaces.name,
+    kind: storageObjects.kind,
+    mimeType: storageObjects.mimeType,
+    byteSize: storageObjects.byteSize,
+    sourceType: mediaAssets.sourceType,
+  };
+  const baseConditions = [
+    eq(mediaAssets.agencyId, workspace.agencyId),
+    eq(mediaAssets.status, "ready"),
+    eq(storageObjects.status, "active"),
+    eq(storageObjects.kind, input.kind),
+    eq(storageObjects.checksumSha256, input.checksumSha256),
+    eq(workspaces.status, "active"),
+  ];
+
+  const sharedRows = await db
+    .select(selectDuplicate)
+    .from(mediaAssets)
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
+    .where(and(...baseConditions, eq(mediaAssets.visibility, "agency")))
+    .orderBy(desc(mediaAssets.createdAt))
+    .limit(limit);
+
+  const sameWorkspaceRows = await db
+    .select(selectDuplicate)
+    .from(mediaAssets)
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
+    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
+    .where(and(...baseConditions, eq(mediaAssets.ownerWorkspaceId, input.workspaceId)))
+    .orderBy(desc(mediaAssets.createdAt))
+    .limit(limit);
+
+  const unique = new Map<string, (typeof sharedRows)[number]>();
+  for (const row of [...sameWorkspaceRows, ...sharedRows]) unique.set(row.assetId, row);
+  return [...unique.values()].slice(0, limit).map((row) => ({
+    ...row,
+    kind: row.kind as MediaKind,
+    sourceType: row.sourceType as MediaSourceType,
+    sameWorkspace: row.ownerWorkspaceId === input.workspaceId,
+  }));
+}
 
 export async function getMediaLibraryFilters(actor: Actor, input: MediaLibraryFiltersInput) {
   if (!(await isAgencyMember(actor, input.agencyId))) throw new MediaPermissionError();
