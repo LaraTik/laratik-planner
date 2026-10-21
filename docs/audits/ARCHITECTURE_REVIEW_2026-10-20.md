@@ -929,3 +929,13 @@ service and remain explicit follow-up seams; no pass-through compatibility
 export was added. The same Postgres checkpoint verifies idempotent
 registration and persisted status through the feature entry point; the
 repository-wide integration suite remains open.
+
+### Media manager command ownership — 2026-10-21
+
+Single-asset tag, rename, and visibility commands now share one manager-only
+asset lookup in the media feature module. The rename and visibility commands
+no longer remain in the legacy service. Focused unit/ownership tests pass
+18/18 and the media Postgres integration passes 14/14 on exact clean SHA
+`b8323114d288665b6f1f5ef40c0eca0cbfa83655`. Main listing, duplicate
+advisory queries, asset-link reads, and reconciliation remain in the legacy
+service and stay in the review queue.

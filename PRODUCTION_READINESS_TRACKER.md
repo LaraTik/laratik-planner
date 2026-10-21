@@ -2342,3 +2342,16 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   registration. Full integration, `pnpm verify`, migration drill, route
   review, browser release matrix, and independent review remain open;
   `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Centralize manager-only media asset commands
+
+- Moved single-asset rename and visibility operations into the feature command
+  module and shared the manager lookup/authorization with tag updates.
+  Existing role behavior is unchanged.
+- Focused unit and ownership tests pass 18/18; disposable-Postgres media
+  integration passes 14/14; strict TypeScript, targeted lint, formatting, and
+  diff checks pass on exact clean SHA
+  `b8323114d288665b6f1f5ef40c0eca0cbfa83655`.
+- Full `pnpm verify`, repository-wide integration, migration drill, route
+  review, browser matrix, and independent review remain open. AD-002 remains
+  **In Progress**.

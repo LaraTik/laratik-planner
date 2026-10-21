@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Media manager command ownership — 2026-10-21, exact clean implementation SHA `b8323114d288665b6f1f5ef40c0eca0cbfa83655`
+
+Moved single-asset rename and visibility changes into
+`src/features/media/library-commands.server.ts` and centralized the manager
+lookup/authorization used by single-asset tag, rename, and visibility commands.
+The route contracts and manager-only permission rule are unchanged.
+
+| Check                                             | Result                                                                      |
+| ------------------------------------------------- | --------------------------------------------------------------------------- |
+| Focused media and module-ownership unit tests     | **Pass** — 18/18.                                                           |
+| Disposable Postgres media integration             | **Pass** — 14/14, including authorized changes and denial for non-managers. |
+| `pnpm typecheck`                                  | **Pass** — no TypeScript errors.                                            |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**, zero lint warnings.                                               |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route
+review, release browser matrix, and independent review remain open. AD-002
+remains **In Progress**.
+
 ## Media Postgres read and registration follow-up — 2026-10-21, exact clean implementation SHA `d25e25af9b6c45d7b49b22941d0bd73a837d5dd5`
 
 The disposable database was verified to be planner_test. The media integration
