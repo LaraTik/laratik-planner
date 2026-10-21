@@ -328,3 +328,25 @@ passed in Chromium. Current `pnpm verify` passes formatting, lint, typecheck,
 all 550 unit files (4,953 tests), and the production build. A targeted Firefox
 run did not complete and was stopped without a result. The full browser matrix,
 visual suite, and exact-clean-commit evidence remain open.
+
+### Release-run follow-up — 2026-10-21
+
+The release run was retried on clean commit
+`86eb9ef756db17500d2f884dd0a51f6abd016df9`. Chromium progressed through the
+mobile, role authorization, Trend Radar, and other route groups, but the local
+Next server approached its memory threshold and restarted; subsequent requests
+also reported `ECONNRESET` and `The destination stream closed early`. Firefox
+then consumed one CPU core without emitting test results, so the run was
+stopped. Its artifacts include failures caused by those server resets. A
+focused Chromium rerun of the mobile, role, and affected Trend Radar specs
+passed the previously failing calendar agenda, authorization, degraded-source,
+onboarding, paid-source error, and Use-in-brief journeys. It completed 30/32;
+two mobile checks still failed while their screenshots showed only an
+incomplete loading shell (tablet rail measurement and More-sheet opening).
+Those two are unresolved, but the evidence does not establish a repeatable
+product defect. Do not change the navigation implementation based on those
+captures alone. A fresh `mobile-chrome` run then passed the More-sheet journey
+1/1, while a fresh `chromium` run still showed the failure alongside another
+`The destination stream closed early` server error. The full five-browser
+matrix and visual suite remain open; no `Tested` or `Verified` release status
+is claimed from this run.
