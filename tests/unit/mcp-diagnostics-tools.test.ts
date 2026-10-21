@@ -136,6 +136,15 @@ describe("diagnostics tool registration", () => {
         "laratik_planner_create_task_attachment_intent",
         "laratik_planner_complete_task_attachment",
         "laratik_planner_link_task_attachment",
+        "laratik_planner_list_content",
+        "laratik_planner_get_content",
+        "laratik_planner_create_content",
+        "laratik_planner_update_content",
+        "laratik_planner_reschedule_content",
+        "laratik_planner_change_owner",
+        "laratik_planner_transition_content",
+        "laratik_planner_archive_content",
+        "laratik_planner_duplicate_content",
       ]),
     );
   });
