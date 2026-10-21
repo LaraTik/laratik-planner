@@ -1089,3 +1089,16 @@ remain pending because `TEST_DATABASE_URL` is unavailable and the local Docker
 daemon did not respond. No migration was introduced. Full `pnpm verify`,
 repository integration, migration drill, route review, release browser matrix,
 and independent review remain open; AD-002 remains **In Progress**.
+
+### Content rescheduling ownership
+
+`rescheduleContentItem` now lives in `src/features/content/reschedule.server.ts`
+and is exported by the content feature entry point. Its MCP caller uses that
+boundary. Date validation, manager/planner authorization, activity recording,
+and best-effort media-folder reconciliation retain their existing behavior.
+Focused schema, authorization, and unchanged-date tests were added.
+
+Focused content-service and module-ownership tests pass 66/66; typecheck,
+targeted ESLint, formatting, diff checks, and the commit hook pass on exact
+code SHA `6f928e093874bc8690e65738279a34db27fc5041`. Database-backed
+integration and full `pnpm verify` remain open; no migration was introduced.

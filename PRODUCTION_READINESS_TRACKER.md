@@ -2471,3 +2471,10 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   made. `AD-002` remains **In Progress**; full `pnpm verify`, integration,
   migration drill, route review, browser matrix, and independent review remain
   open.
+
+- Content rescheduling ownership: moved the MCP-used reschedule command into
+  `src/features/content/reschedule.server.ts` and added schema, role-gate, and
+  unchanged-date coverage. Focused content-service and ownership tests pass
+  66/66; typecheck, targeted lint, formatting, diff checks, and commit hook
+  pass on code SHA `6f928e093874bc8690e65738279a34db27fc5041`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.

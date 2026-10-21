@@ -1584,3 +1584,18 @@ Implementation SHA: `5e780a58651f9518e5fe5e718cebbcd21b5db840`
 Added schema and authorization coverage for archive/restore; bulk archive
 coverage remains in the content-service suite. Database-backed integration and
 full `pnpm verify` remain pending. No schema migration was introduced.
+
+## Content rescheduling extraction
+
+Implementation SHA: `6f928e093874bc8690e65738279a34db27fc5041`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 66/66. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+Added input validation, authorization, and unchanged-date coverage. The media
+folder reconciliation remains best-effort. Database integration and full
+`pnpm verify` remain pending. No schema migration was introduced.
