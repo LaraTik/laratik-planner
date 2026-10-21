@@ -40,10 +40,13 @@ import {
 import { matchErrorHint } from "@/lib/observability/error-hints";
 import { RESEARCH_METRICS_VERSION } from "@/lib/research/metrics";
 import {
-  archiveContentItem,
-  assignContentOwner,
+  applyWorkflowScenario,
   getContentItem,
   listWorkspaceContent,
+} from "@/features/content/server";
+import {
+  archiveContentItem,
+  assignContentOwner,
   quickCreateContentItem,
   rescheduleContentItem,
   transitionContent,
@@ -87,7 +90,7 @@ import {
   TASK_STATUSES,
   updateTask,
 } from "@/lib/tasks/service";
-import type { McpTokenScope } from "./tokens";
+import type { McpTokenScope } from "@/lib/mcp/tokens";
 import { z } from "zod";
 
 const CONTENT_FORMATS = [
@@ -1339,14 +1342,7 @@ export function createLaraTikPlannerMcpServer(context: McpContext) {
         if (!(await hasWorkspaceRole(context.actor, ws.id, ["workspace_manager"]))) {
           throw new McpToolError("forbidden", "Workspace manager role required.");
         }
-        // Reuse the same permission gate as the Settings UI to
-        // avoid duplicating role checks across the MCP surface.
-        const { applyWorkflowScenarioAction } =
-          await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/settings/templates-actions");
-        const { findAgencySlugById } = await import("@/lib/workspaces/context");
-        const agencySlug = await findAgencySlugById(ws.agencyId);
-        if (!agencySlug) return errorResult(new Error("Workspace agency not found"));
-        const outcome = await applyWorkflowScenarioAction(agencySlug, ws.slug, scenario_id);
+        const outcome = await applyWorkflowScenario(context.actor, ws.id, scenario_id);
         if (!outcome.ok) return errorResult(new Error(outcome.error ?? "could not apply scenario"));
         return result(
           {

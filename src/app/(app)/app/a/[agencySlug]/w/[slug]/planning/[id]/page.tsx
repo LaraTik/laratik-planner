@@ -17,7 +17,7 @@ function humanPlatform(
   return value === key ? platformLabel(platform) : value;
 }
 import { auth } from "@/lib/auth/config";
-import { getContentItem, listWorkspaceDesigners } from "@/lib/content/service";
+import { getContentItem, listWorkspaceDesigners } from "@/features/content/server";
 import { listApprovalsForItem, listDeliveryVersionsForItem } from "@/lib/deliveries/service";
 
 import {

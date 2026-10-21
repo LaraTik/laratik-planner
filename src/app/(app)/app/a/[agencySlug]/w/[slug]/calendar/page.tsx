@@ -6,7 +6,7 @@ import type { LocaleCode } from "@/lib/i18n/locales";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
-import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContent } from "@/features/content/server";
 import { PageHeader } from "@/components/workspace/page-header";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { CalendarEventCard } from "@/components/workspace/calendar-event-card";

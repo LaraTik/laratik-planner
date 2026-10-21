@@ -14,7 +14,7 @@ import {
   type UserWorkload,
   type WorkloadPlan,
   type WorkloadTask,
-} from "@/lib/planning/calendar";
+} from "@/features/calendar/server";
 import { workspaceMonthRange } from "@/lib/i18n/workspace-month";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";

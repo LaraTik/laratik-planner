@@ -19,7 +19,7 @@ import {
   requirePolicy,
   type Actor,
 } from "@/lib/auth/policy";
-import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContent } from "@/features/content/server";
 import {
   expandRecurrence,
   HolidayCalendarSchema,

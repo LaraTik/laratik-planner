@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
-import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContent } from "@/features/content/server";
 import { listWorkspaceContentEnriched, resolveActorRoles } from "@/lib/content/enriched-list";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/feedback/empty-state";

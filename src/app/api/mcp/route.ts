@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { authenticateMcpToken } from "@/lib/mcp/tokens";
-import { createLaraTikPlannerMcpServer } from "@/lib/mcp/server";
+import { createLaraTikPlannerMcpServer } from "@/features/mcp/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { serverEnv } from "@/lib/validation/env";
 

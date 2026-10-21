@@ -33,7 +33,7 @@ vi.mock("@/lib/auth/platform-access", () => platformAccessMock);
 vi.mock("@/lib/db", () => dbMock);
 vi.mock("server-only", () => ({}));
 
-import { createLaraTikPlannerMcpServer } from "@/lib/mcp/server";
+import { createLaraTikPlannerMcpServer } from "@/features/mcp/server";
 import type { McpTokenScope } from "@/lib/mcp/tokens";
 
 const ACTOR = { id: "00000000-0000-0000-0000-0000000000aa" };

@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { inArray } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
-import { listUnassignedDesignWork } from "@/lib/content/service";
+import { listUnassignedDesignWork } from "@/features/content/server";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";

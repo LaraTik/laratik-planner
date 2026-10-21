@@ -14,7 +14,7 @@ import {
 } from "@/lib/db/schema";
 import { createTask, listTasks, updateTask } from "@/lib/tasks/service";
 import { createTaskAttachmentLink, listTaskAttachmentUrls } from "@/lib/tasks/attachments";
-import { getAgencyCalendarView } from "@/lib/planning/calendar";
+import { getAgencyCalendarView } from "@/features/calendar/server";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");

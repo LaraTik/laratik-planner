@@ -32,7 +32,7 @@ vi.mock("@/lib/auth/policy", async (importOriginal) => ({
 vi.mock("@/lib/tasks/service", () => taskMock);
 vi.mock("@/lib/tasks/attachments", () => attachmentMock);
 
-import { createLaraTikPlannerMcpServer } from "@/lib/mcp/server";
+import { createLaraTikPlannerMcpServer } from "@/features/mcp/server";
 import type { McpTokenScope } from "@/lib/mcp/tokens";
 
 const ACTOR = { id: "00000000-0000-0000-0000-0000000000aa" };

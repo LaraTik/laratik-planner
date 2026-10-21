@@ -22,7 +22,7 @@ import {
   workspaceMemberships,
   workspaces,
 } from "@/lib/db/schema";
-import { createLaraTikPlannerMcpServer } from "@/lib/mcp/server";
+import { createLaraTikPlannerMcpServer } from "@/features/mcp/server";
 
 /**
  * Integration coverage for the two brand-kit MCP tools

@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { contentItemChannels, socialChannels, users } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { rowsToCsv, type CsvColumn } from "@/lib/utils/csv";
-import { listWorkspaceContent } from "@/lib/content/service";
+import { listWorkspaceContent } from "@/features/content/server";
 
 /**
  * FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — content items CSV export.

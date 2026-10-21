@@ -104,6 +104,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "content",
       sourceGlobs: [
+        "src/features/content/**",
         "src/lib/content/**",
         "src/lib/format-payload/**",
         "src/components/content/**",
@@ -118,6 +119,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       integrationFiles: [
         "tests/integration/journey.test.ts",
         "tests/integration/enriched-list-filters.test.ts",
+        "tests/integration/repro-page-render.test.ts",
         "tests/integration/publishing-m4.test.ts",
       ],
       browser: [
@@ -431,6 +433,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "calendar",
       sourceGlobs: [
+        "src/features/calendar/**",
         "src/lib/planning/calendar.ts",
         "src/app/(app)/app/calendar/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/calendar/**",
@@ -452,6 +455,13 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
           grep: "calendar",
         },
       ],
+    },
+    {
+      id: "mcp",
+      sourceGlobs: ["src/features/mcp/**", "src/lib/mcp/**", "src/app/api/mcp/**"],
+      unitFiles: ["tests/unit/mcp-*.test.ts", "tests/unit/account-mcp-token-action.test.ts"],
+      integrationFiles: ["tests/integration/mcp-*.test.ts"],
+      browser: [],
     },
     {
       id: "tasks",

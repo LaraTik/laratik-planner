@@ -6,7 +6,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
-import { getContentItem } from "@/lib/content/service";
+import { getContentItem } from "@/features/content/server";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/workspace/page-header";
