@@ -20,6 +20,9 @@
  */
 
 import type { BadgeProps } from "@/components/ui/badge";
+import { ALL_FORMATS } from "./formats";
+
+export type { ContentFormat } from "./formats";
 
 export type ContentStatus =
   | "draft"
@@ -34,16 +37,6 @@ export type ContentStatus =
   | "blocked"
   | "cancelled";
 
-export type ContentFormat =
-  | "static_post"
-  | "carousel"
-  | "story"
-  | "short_form_video"
-  | "long_form_video"
-  | "live_content"
-  | "article"
-  | "other";
-
 const ALL_STATUSES: readonly ContentStatus[] = [
   "draft",
   "content_review",
@@ -56,17 +49,6 @@ const ALL_STATUSES: readonly ContentStatus[] = [
   "changes_requested",
   "blocked",
   "cancelled",
-] as const;
-
-const ALL_FORMATS: readonly ContentFormat[] = [
-  "static_post",
-  "carousel",
-  "story",
-  "short_form_video",
-  "long_form_video",
-  "live_content",
-  "article",
-  "other",
 ] as const;
 
 /**

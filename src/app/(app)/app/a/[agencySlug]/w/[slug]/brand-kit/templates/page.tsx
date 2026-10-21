@@ -255,7 +255,7 @@ function TemplateSection({
           <Icon className="h-4 w-4" />
         </span>
         <div>
-          <h2 id={`${testId}-heading`} className="text-section-title text-fg-primary font-semibold">
+          <h2 id={`${testId}-heading`} className="text-title-section text-fg-primary font-semibold">
             {title}
           </h2>
           <p className="text-body text-fg-secondary">{blurb}</p>

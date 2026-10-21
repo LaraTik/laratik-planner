@@ -44,9 +44,17 @@ import {
 } from "@/lib/storage/intent-service";
 import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
 import { normalizeMediaFolderName } from "./folders";
+import {
+  buildMediaFolderTree,
+  BRAND_KIT_FOLDER_NAME,
+  mediaFormatFolderName,
+  type MediaFolderTreeRow,
+} from "./folder-tree";
 import { assertWithinBulkCap, MAX_TAGS_PER_ASSET, MAX_TAG_LENGTH } from "./bulk-cap";
 import { releaseCapacityAmount } from "@/lib/entitlements";
 
+export { BRAND_KIT_FOLDER_NAME, POSTS_FOLDER_NAME } from "./folder-tree";
+export type { MediaFolderKind, MediaFolderTreeRow } from "./folder-tree";
 const MEDIA_READ_ROLES = [
   "workspace_manager",
   "content_planner",
@@ -577,14 +585,6 @@ export async function findDuplicateMediaAssets(
   }));
 }
 
-function mediaFormatFolderName(format: string): string {
-  return format
-    .split("_")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(" ");
-}
-
 async function ensureMediaFolder(input: {
   agencyId: string;
   workspaceId: string;
@@ -1090,58 +1090,6 @@ export async function registerUploadedMediaAsset(input: {
     await quarantineMediaObject({ agencyId: input.agencyId, objectId: input.storageObjectId });
     throw error;
   }
-}
-
-/** Cron-safe promotion for objects whose provider was temporarily unavailable. */
-export async function processPendingMediaAssets(limit = 50) {
-  const rows = await db
-    .select({
-      assetId: mediaAssets.id,
-      agencyId: mediaAssets.agencyId,
-      workspaceId: mediaAssets.ownerWorkspaceId,
-      objectId: storageObjects.id,
-      contentType: storageObjects.mimeType,
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .where(eq(mediaAssets.status, "processing"))
-    .orderBy(asc(mediaAssets.createdAt))
-    .limit(Math.min(Math.max(limit, 1), 100));
-  let ready = 0;
-  let failed = 0;
-  let pending = 0;
-  for (const row of rows) {
-    try {
-      const dimensions = await validateStoredMediaObject(row);
-      if (dimensions) {
-        try {
-          await db
-            .update(storageObjects)
-            .set({ width: dimensions.width, height: dimensions.height, updatedAt: new Date() })
-            .where(eq(storageObjects.id, row.objectId));
-        } catch {
-          // Optional metadata must not keep a verified upload pending.
-        }
-      }
-      await db
-        .update(mediaAssets)
-        .set({ status: "ready", failureCode: null, updatedAt: new Date() })
-        .where(and(eq(mediaAssets.id, row.assetId), eq(mediaAssets.status, "processing")));
-      ready += 1;
-    } catch (error) {
-      if (error instanceof MediaValidationError && error.code === "invalid_signature") {
-        await quarantineMediaObject({ agencyId: row.agencyId, objectId: row.objectId });
-        await db
-          .update(mediaAssets)
-          .set({ status: "failed", failureCode: error.code, updatedAt: new Date() })
-          .where(and(eq(mediaAssets.id, row.assetId), eq(mediaAssets.status, "processing")));
-        failed += 1;
-      } else {
-        pending += 1;
-      }
-    }
-  }
-  return { checked: rows.length, ready, failed, pending } as const;
 }
 
 async function mediaAssetForManagement(assetId: string) {
@@ -1763,30 +1711,6 @@ export async function expungeExpiredTrashedMedia(
   return { media: mediaCount, storageObjects: storageObjectCount, bytesReleased };
 }
 
-/** Folder "kind" discriminator that powers the tree's badge + audit panel. */
-export type MediaFolderKind = "system" | "user";
-
-/** Tree row shape returned by `listMediaFoldersTree`. */
-export type MediaFolderTreeRow = {
-  id: string;
-  name: string;
-  parentId: string | null;
-  sortOrder: number;
-  assetCount: number;
-  descendantAssetCount: number;
-  kind: MediaFolderKind;
-  isBrandRoot: boolean;
-  isPostsRoot: boolean;
-  isYearFolder: boolean;
-  isMonthFolder: boolean;
-};
-
-/** Brand-Kit folder name — kept as a constant so tests and UI agree. */
-export const BRAND_KIT_FOLDER_NAME = "Brand Kit";
-
-/** Posts root folder name — kept as a constant so tests and UI agree. */
-export const POSTS_FOLDER_NAME = "Posts";
-
 /**
  * Resolve the `Posts / {Format} / {YYYY} / {MM}` chain for an idea
  * whose `plannedPublishAt` and `format` are known.
@@ -1862,13 +1786,6 @@ export async function listMediaFoldersTree(
     (await fetchAccessibleMediaFolders(actor, input.agencyId, input.workspaceId));
   if (!folders || folders.length === 0) return [];
 
-  // Build a child map for descendant traversal.
-  const byParent = new Map<string | null, typeof folders>();
-  for (const folder of folders) {
-    const key = folder.parentId ?? null;
-    byParent.set(key, [...(byParent.get(key) ?? []), folder]);
-  }
-
   // Asset counts per folder id (one query).
   const folderIds = folders.map((folder) => folder.id);
   const counts = await db
@@ -1888,79 +1805,7 @@ export async function listMediaFoldersTree(
     if (row.folderId) assetCountById.set(row.folderId, Number(row.count));
   }
 
-  // Identify "system" folders by position in the tree.
-  // - Roots: `Posts`, `Brand Kit`.
-  // - Children of a system root with parent.name === one of our format
-  //   names → format folder.
-  // - Children of a format folder whose name matches /^\d{4}$/ → year.
-  // - Children of a year whose name matches /^\d{2}$/ → month.
-  // Anything else is a user folder.
-  const systemYearPattern = /^\d{4}$/;
-  const systemMonthPattern = /^\d{2}$/;
-  const folderById = new Map(folders.map((folder) => [folder.id, folder]));
-
-  const isFormatFolder = (folder: { parentId: string | null; name: string }) => {
-    if (!folder.parentId) return false;
-    const parent = folderById.get(folder.parentId);
-    if (!parent) return false;
-    if (parent.name !== POSTS_FOLDER_NAME) return false;
-    // Formats are surfaced by mediaFormatFolderName; a system folder
-    // is anything whose parent is the Posts root and that is not a
-    // user-created folder. We mark it as system, and the UI treats it
-    // as auto-derived. (Users can't create top-level children of Posts
-    // from the UI today; if they later can, the badge will switch to
-    // user when they rename it.)
-    return true;
-  };
-
-  const isYearFolder = (folder: { parentId: string | null; name: string }) => {
-    if (!folder.parentId || !systemYearPattern.test(folder.name)) return false;
-    const parent = folderById.get(folder.parentId);
-    return !!parent && isFormatFolder(parent);
-  };
-  const isMonthFolder = (folder: { parentId: string | null; name: string }) => {
-    if (!folder.parentId || !systemMonthPattern.test(folder.name)) return false;
-    const parent = folderById.get(folder.parentId);
-    return !!parent && isYearFolder(parent);
-  };
-
-  // Compute descendant asset counts (sum of assetCount over self + descendants).
-  const descendantCount = new Map<string, number>();
-  const computeDescendant = (folderId: string): number => {
-    const cached = descendantCount.get(folderId);
-    if (cached !== undefined) return cached;
-    const children = byParent.get(folderId) ?? [];
-    const self = assetCountById.get(folderId) ?? 0;
-    const total = children.reduce((sum, child) => sum + computeDescendant(child.id), self);
-    descendantCount.set(folderId, total);
-    return total;
-  };
-
-  return folders.map<MediaFolderTreeRow>((folder) => {
-    const isPostsRoot = folder.parentId === null && folder.name === POSTS_FOLDER_NAME;
-    const isBrandRoot = folder.parentId === null && folder.name === BRAND_KIT_FOLDER_NAME;
-    const kind: MediaFolderKind =
-      isPostsRoot ||
-      isBrandRoot ||
-      isFormatFolder(folder) ||
-      isYearFolder(folder) ||
-      isMonthFolder(folder)
-        ? "system"
-        : "user";
-    return {
-      id: folder.id,
-      name: folder.name,
-      parentId: folder.parentId,
-      sortOrder: folder.sortOrder,
-      assetCount: assetCountById.get(folder.id) ?? 0,
-      descendantAssetCount: computeDescendant(folder.id),
-      kind,
-      isBrandRoot,
-      isPostsRoot,
-      isYearFolder: isYearFolder(folder),
-      isMonthFolder: isMonthFolder(folder),
-    };
-  });
+  return buildMediaFolderTree(folders, assetCountById);
 }
 
 /**

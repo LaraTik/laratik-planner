@@ -101,17 +101,13 @@ describe("workspace-ai-settings page structure", () => {
     "utf8",
   );
 
-  it("computes effectiveEnabled from the database switch and active key", () => {
-    // Same regression target as the agency page: the workspace status
-    // card must reflect what the runtime will actually do. Since
-    // `/api/ai/generate` allows managed-secret requests through
-    // regardless of deployment environment flags, the "Enabled/Disabled"
-    // badge here must not gate on the env kill-switch.
-    expect(source).toMatch(
-      /const\s+effectiveEnabled\s*=\s*!!activeAiKey\s*&&\s*feature\?\.enabled\s*===\s*true\s*;/,
-    );
-    // The environment key is a provider fallback, not a feature flag.
-    const match = source.match(/const\s+effectiveEnabled\s*=\s*([^;]+);/);
-    expect(match?.[1] ?? "").not.toMatch(/AI_FEATURE_ENABLED/);
+  it("uses the workspace-scoped feature read model for effective status", () => {
+    // The server-only feature read model resolves configuration from the
+    // URL-resolved workspace's agency and combines the active key with the
+    // agency switch. The page must not independently choose an agency.
+    expect(source).toMatch(/getWorkspaceAiSettings\(actor,\s*workspace\)/);
+    expect(source).toMatch(/effectiveEnabled\s*\}\s*=\s*aiSettings/);
+    expect(source).toMatch(/effectiveEnabled\s*\?\s*"success"\s*:\s*"outline"/);
+    expect(source).not.toMatch(/resolveActiveAgencyContext|activeAgencyId/);
   });
 });

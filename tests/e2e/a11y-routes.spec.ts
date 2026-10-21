@@ -118,6 +118,16 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean(route, page);
   });
 
+  test("@a11y /app/a/[agencySlug]/w/[slug]/ai-settings has no critical violations", async ({
+    page,
+  }) => {
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "ai-settings");
+    await page.goto(route);
+    await expect(page.getByTestId("workspace-ai-settings")).toBeVisible();
+    await expectClean(route, page);
+  });
+
   test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
     const invalidNestingWarnings: string[] = [];
     page.on("console", (message) => {

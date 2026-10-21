@@ -1,4 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 import {
   classifyChangedFiles,
   globToRegExp,
@@ -11,6 +13,7 @@ import {
   parsePushRanges,
   selectedBrowserArgs,
 } from "../../../scripts/test-affected";
+import { TEST_OWNERSHIP } from "../../../scripts/test-ownership";
 
 const manifest: TestOwnershipManifest = {
   unitSelection: {
@@ -43,6 +46,91 @@ const manifest: TestOwnershipManifest = {
 };
 
 describe("test affected core", () => {
+  it("uses the canonical section-title utility backed by the design token", () => {
+    const sourceRoot = join(process.cwd(), "src");
+    const collectSourceFiles = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(directory, entry.name);
+        if (entry.isDirectory()) return collectSourceFiles(path);
+        return /\.(tsx?|css)$/.test(entry.name) ? [path] : [];
+      });
+    const staleUtilityFiles = collectSourceFiles(sourceRoot).filter((path) =>
+      readFileSync(path, "utf8").includes("text-section-title"),
+    );
+    const theme = readFileSync(join(sourceRoot, "app/globals.css"), "utf8");
+
+    expect(staleUtilityFiles).toEqual([]);
+    expect(theme).toContain("--text-title-section:");
+  });
+
+  it("maps every App Router page to browser tests and inherited loading/error boundaries", () => {
+    const appRoot = join(process.cwd(), "src/app");
+    const collectPages = (directory: string): string[] =>
+      readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+        const path = join(directory, entry.name);
+        return entry.isDirectory()
+          ? collectPages(path)
+          : entry.name === "page.tsx"
+            ? [relative(process.cwd(), path)]
+            : [];
+      });
+
+    const unmapped = collectPages(appRoot).flatMap((sourcePath) => {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+      const hasBoundary = (name: "loading.tsx" | "error.tsx") => {
+        let directory = join(process.cwd(), dirname(sourcePath));
+        while (directory.startsWith(appRoot)) {
+          if (existsSync(join(directory, name))) return true;
+          directory = dirname(directory);
+        }
+        return false;
+      };
+      return result.kind === "targeted" &&
+        result.browser.length > 0 &&
+        hasBoundary("loading.tsx") &&
+        hasBoundary("error.tsx")
+        ? []
+        : [{ sourcePath, result }];
+    });
+
+    expect(unmapped).toEqual([]);
+  });
+
+  it("validates ownership-manifest edits with the focused architecture unit area", () => {
+    const result = classifyChangedFiles(["scripts/test-ownership.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["architecture"]);
+    expect(result.unitFiles).toContain("tests/unit/testing/test-affected-core.test.ts");
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("maps canonical agency-qualified workspace routes to their feature areas", () => {
+    const cases = [
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/new/page.tsx", "content"],
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/publish-package-form.tsx",
+        "publishing",
+      ],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/page.tsx", "workspace"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx", "brand-kit"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/page.tsx", "channels-social"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx", "channels-social"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx", "ai"],
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell.tsx",
+        "notifications-discussions",
+      ],
+    ] as const;
+
+    for (const [sourcePath, expectedArea] of cases) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toContain(expectedArea);
+    }
+  });
+
   it("matches recursive and single-segment globs without matching partial paths", () => {
     expect(globToRegExp("src/lib/auth/**").test("src/lib/auth/policy.ts")).toBe(true);
     expect(globToRegExp("src/lib/auth/**").test("src/lib/author.ts")).toBe(false);

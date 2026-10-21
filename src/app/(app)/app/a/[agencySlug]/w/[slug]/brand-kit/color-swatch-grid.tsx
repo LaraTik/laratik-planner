@@ -178,7 +178,7 @@ function ColorGroup({
       data-testid={role ? `brand-kit-color-group-${role}` : "brand-kit-color-group-uncategorised"}
     >
       <header className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
-        <h3 className="text-section-title text-fg-primary font-semibold">{label}</h3>
+        <h3 className="text-title-section text-fg-primary font-semibold">{label}</h3>
         <span className="text-label text-fg-muted font-semibold">({items.length})</span>
         <p className="text-label text-fg-muted basis-full">{description}</p>
       </header>

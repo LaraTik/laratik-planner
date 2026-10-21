@@ -62,7 +62,7 @@ export function SettingsSetupChecklist({ items, t }: SettingsSetupChecklistProps
     >
       <header className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-section-title text-fg-primary font-semibold">
+          <h2 className="text-title-section text-fg-primary font-semibold">
             {tr("settings.checklist.heading", "Setup checklist")}
           </h2>
           <p className="text-body text-fg-secondary">

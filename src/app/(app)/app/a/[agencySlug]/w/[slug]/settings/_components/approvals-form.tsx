@@ -122,7 +122,7 @@ export function ApprovalsForm(props: ApprovalsFormProps) {
                       className="border-border text-primary focus-visible:ring-focus-ring mt-0.5 h-4 w-4 border focus-visible:ring-2 focus-visible:outline-none"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-section-title text-fg-primary font-semibold">{m.label}</p>
+                      <p className="text-title-section text-fg-primary font-semibold">{m.label}</p>
                       <p className="text-body text-fg-secondary">{m.blurb}</p>
                       {m.value === currentMode ? (
                         <span
@@ -163,7 +163,7 @@ export function ApprovalsForm(props: ApprovalsFormProps) {
           >
             <div className="flex items-center gap-2">
               <Info className="text-primary h-4 w-4" aria-hidden="true" />
-              <h3 className="text-section-title text-fg-primary font-semibold">
+              <h3 className="text-title-section text-fg-primary font-semibold">
                 {t("settings.approvals.impactTitle")}
               </h3>
             </div>

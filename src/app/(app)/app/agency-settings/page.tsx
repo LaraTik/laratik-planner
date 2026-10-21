@@ -479,7 +479,7 @@ function SectionHeading({
         <div className="min-w-0">
           <h2
             id={titleId}
-            className="text-section-title text-fg-primary font-semibold text-balance"
+            className="text-title-section text-fg-primary font-semibold text-balance"
           >
             {title}
           </h2>

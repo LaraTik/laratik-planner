@@ -11,7 +11,7 @@ import {
   STITCH_CASES,
   responsiveScreenshotName,
   resolveStitchRoute,
-  RESEARCH_VIEWPORTS,
+  FULL_RESPONSIVE_VIEWPORTS,
   isAdvertisingReportingSurface,
   screenshotNameFor,
   type StitchCase,
@@ -35,12 +35,12 @@ import { setupTrendsLiveState } from "./stitch-state-helpers";
  *   2. **Responsive matrix** — one screenshot per canonical and app-only
  *      surface at the viewports
  *      selected by `viewportsForSurface()`: non-planning surfaces use
- *      360 / 768 / 1440, Research and Advertising Reporting use
- *      375 / 768 / 1024 / 1280 / 1440, while planning surfaces use
- *      375 / 768 / 1024 / 1440.
- *      The current matrix covers 20 canonical and 52 app-only surfaces
- *      (227 English responsive baselines, plus five Research Arabic/RTL
- *      baselines). The
+ *      360 / 768 / 1440, Research, Workspace AI, workspace Settings,
+ *      workspace Media, and Advertising Reporting use 375 / 768 / 1024 / 1280 / 1440, while
+ *      planning surfaces use 375 / 768 / 1024 / 1440.
+ *      The current matrix covers 20 canonical and 53 app-only surfaces
+ *      (236 English responsive baselines, plus five each for Research,
+ *      Workspace AI, Workspace Settings, and Workspace Media Arabic/RTL). The
  *      `operational-states` evidence group is not a route and is
  *      reviewed directly against the captured PNG/HTML. App-only surfaces
  *      are regression references for the shipped UI, not Stitch targets.
@@ -229,6 +229,7 @@ const STABLE_TESTID: Record<string, string> = {
   "/app/w/acme/settings": "workspace-settings",
   "/app/w/acme/library": "library-campaigns",
   "/app/w/acme/ai-settings": "workspace-ai-settings",
+  "/app/w/acme/media": "media-library",
   "/app/w/acme/client": "workspace-client-review",
   "/app/w/acme/client/calendar": "workspace-client-calendar",
   "/app/w/acme/planning/{contentItemId}": "workspace-content-detail",
@@ -326,6 +327,9 @@ async function logA11yIfBroken(page: Page, context: string): Promise<void> {
 
 async function applyMask(page: Page): Promise<void> {
   await page.addStyleTag({ content: DYNAMIC_DATA_MASK_CSS });
+  await page.getByTestId("media-storage-key-prefix").evaluateAll((nodes) => {
+    for (const node of nodes) node.textContent = "agencies/00000000-0000-0000-0000-000000000000";
+  });
 }
 
 /**
@@ -632,7 +636,7 @@ test.describe("visual regression (Research Arabic RTL)", () => {
     test.setTimeout(120_000);
     const seedLike = await bootstrapTestSession(page, { locale: "ar", visualFixture: true });
 
-    for (const viewport of RESEARCH_VIEWPORTS) {
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       const resolved = resolveStitchRoute("/app/w/acme/research", seedLike);
       await page.goto(resolved);
@@ -650,6 +654,106 @@ test.describe("visual regression (Research Arabic RTL)", () => {
       await assertNoCriticalA11y(page, `Research Arabic RTL @ ${viewport.width}px`);
       await applyMask(page);
       await expect(page).toHaveScreenshot(["arabic", `research-${viewport.name}.png`], {
+        fullPage: true,
+        maxDiffPixelRatio: 0.01,
+      });
+    }
+  });
+});
+
+test.describe("visual regression (Workspace AI Arabic RTL)", () => {
+  test("workspace ai-settings renders Arabic RTL across the full responsive matrix", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const seedLike = await bootstrapTestSession(page, { locale: "ar", visualFixture: true });
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const resolved = resolveStitchRoute("/app/w/acme/ai-settings", seedLike);
+      await page.goto(resolved);
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/w/acme/ai-settings", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(
+        page.getByRole("heading", { name: "المساعدة بالذكاء الاصطناعي", level: 1 }),
+      ).toBeVisible();
+      await expect(page.getByText("رادار الترندات")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Workspace AI Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Workspace AI Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(
+        ["arabic", `workspace-ai-settings-${viewport.name}.png`],
+        { fullPage: true, maxDiffPixelRatio: 0.01 },
+      );
+    }
+  });
+});
+
+test.describe("visual regression (Workspace Settings Arabic RTL)", () => {
+  test("workspace settings render Arabic RTL across the full responsive matrix", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    const seedLike = await bootstrapTestSession(page, { locale: "ar", visualFixture: true });
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const resolved = resolveStitchRoute("/app/w/acme/settings", seedLike);
+      await page.goto(resolved);
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/w/acme/settings", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(
+        page.getByRole("heading", { name: "إعدادات مساحة العمل", level: 1 }),
+      ).toBeVisible();
+      await expect(page.getByRole("heading", { name: "أوقات التسليم", level: 2 })).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Workspace Settings Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Workspace Settings Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(["arabic", `workspace-settings-${viewport.name}.png`], {
+        fullPage: true,
+        maxDiffPixelRatio: 0.01,
+      });
+    }
+  });
+});
+
+test.describe("visual regression (Workspace Media Arabic RTL)", () => {
+  test("workspace media renders Arabic RTL across the full responsive matrix", async ({ page }) => {
+    test.setTimeout(120_000);
+    const seedLike = await bootstrapTestSession(page, { locale: "ar", visualFixture: true });
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const resolved = resolveStitchRoute("/app/w/acme/media", seedLike);
+      await page.goto(resolved);
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/w/acme/media", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(page.getByTestId("media-library")).toBeVisible();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Workspace Media Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Workspace Media Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(["arabic", `workspace-media-${viewport.name}.png`], {
         fullPage: true,
         maxDiffPixelRatio: 0.01,
       });

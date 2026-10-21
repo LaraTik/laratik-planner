@@ -9,6 +9,12 @@ import {
   PLANNER_FACING_CAPABILITIES,
   getAiCapabilityMetadata,
 } from "@/lib/ai/capabilities";
+import enAiSettings from "@/messages/en/aiSettings.json";
+import arAiSettings from "@/messages/ar/aiSettings.json";
+
+type CapabilityCatalog = {
+  capabilities: Record<string, { label: string; description: string }>;
+};
 
 /**
  * GAP-AI-UX-2026-08-26 — the capabilities metadata is now the
@@ -47,6 +53,16 @@ describe("AI capabilities metadata (single source of truth)", () => {
       expect(cap.label.length).toBeGreaterThan(0);
       expect(cap.adminLabel.length).toBeGreaterThan(0);
       expect(cap.description.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("has localized labels and descriptions for every workspace capability", () => {
+    const catalogs = [enAiSettings, arAiSettings] as unknown as CapabilityCatalog[];
+    for (const catalog of catalogs) {
+      for (const cap of PLANNER_FACING_CAPABILITIES) {
+        expect(catalog.capabilities[cap.id]?.label).toBeTruthy();
+        expect(catalog.capabilities[cap.id]?.description).toBeTruthy();
+      }
     }
   });
 

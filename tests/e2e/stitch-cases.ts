@@ -155,11 +155,10 @@ export const PLANNING_DETAIL_VIEWPORTS = [
 ] as const;
 
 /**
- * Research is reviewed at the full product-content matrix because its
- * source cards, watchlist controls, and teardown panel are the most likely
- * places for long handles, URLs, and Arabic labels to create overflow.
+ * Surfaces with dense content or Arabic copy use the full product-content
+ * matrix to catch long labels, URLs, and crowded controls at each breakpoint.
  */
-export const RESEARCH_VIEWPORTS = [
+export const FULL_RESPONSIVE_VIEWPORTS = [
   { name: "mobile-s", width: 375, height: 812 },
   { name: "tablet", width: 768, height: 1024 },
   { name: "laptop", width: 1024, height: 768 },
@@ -167,13 +166,22 @@ export const RESEARCH_VIEWPORTS = [
   { name: "wide", width: 1440, height: 900 },
 ] as const;
 
+export const RESEARCH_VIEWPORTS = FULL_RESPONSIVE_VIEWPORTS;
+
 export function viewportsForSurface(surface: string): readonly {
   name: string;
   width: number;
   height: number;
 }[] {
   if (isAdvertisingReportingSurface(surface)) return ADVERTISING_REPORTING_VIEWPORTS;
-  if (surface === "/app/w/acme/research") return RESEARCH_VIEWPORTS;
+  if (
+    surface === "/app/w/acme/research" ||
+    surface === "/app/w/acme/ai-settings" ||
+    surface === "/app/w/acme/settings" ||
+    surface === "/app/w/acme/media"
+  ) {
+    return FULL_RESPONSIVE_VIEWPORTS;
+  }
   if (surface.startsWith("/app/w/acme/planning")) return PLANNING_DETAIL_VIEWPORTS;
   return REGRESSION_VIEWPORTS;
 }
@@ -293,6 +301,7 @@ export const APP_ONLY_SURFACES = [
   "/app/w/acme/settings/lifecycle",
   "/app/w/acme/settings/templates",
   "/app/w/acme/settings/trends",
+  "/app/w/acme/ai-settings",
   "/app/w/acme/brand-kit/activity",
   "/app/w/acme/brand-kit/colors",
   "/app/w/acme/brand-kit/linked",

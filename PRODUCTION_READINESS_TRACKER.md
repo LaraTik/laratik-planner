@@ -1491,6 +1491,21 @@ board, channel-form, channel-button, settings-form).
 | AD-001 | Complete    | Master prompt §17 expects ~60 named components. Repo has 43 in `src/components/` (was 19 pre-2026-08-21); ~8 inlined forms/sections remain in route-local files (page.tsx + co-located `*-form.tsx` / `*-section.tsx` / `*-list.tsx`).                                                                                                                                                                                                                                                                                                                                                                                          | Continue extracting shared primitives and per-feature compositions. Extracted in 2026-08-21 batch: `FormSubmitButton`, `PlanningFilters`, `DataTable`, `KpiTile`, `CommentItem`, `CommentForm`, `WorkflowBoard`, `RecentItemsCard`, `ReviewRow`, `NotificationItem`. Task 12 pass added: `CalendarEventCard`, `ApprovalTimeline`, `DeliveryVersionList`, plus the new `listDeliveryVersionsForItem` server function. | Each extracted component: typed props, 100% prop-coverage unit tests, no visual diff in the consuming page, at least 2 consumer pages using the same primitive.                  | `docs/production-readiness/DESIGN_AUDIT.md` (2026-08-19 audit + 2026-08-21 Brand Kit + 2026-08-21 Task 12 cleanup sections) + the 2026-08-21 refinement log above. Not a release blocker: every screen renders, every behavior is tested at integration + E2E level.                                                                                                                                                                                                                                                                                                                                              |
 | AD-002 | In Progress | Review 2026-10-20: full tree lacks feature ownership; Trends catalog pilot completed. Confirmed and fixed Trends policy drift/review gate, rich PageHeader markup, Brand Kit stale server-rendered lists, agency-switch navigation race, stale workflow views after assignment, delivery, and publication outcomes, account-theme route mismatch, discussion visibility/refresh defects, deep-link hydration mismatch, and invalid watchlist URL handling. Canonical agency routes and role chips corrected across affected E2E fixtures. Historical findings, forms, cron scaffolding, and route review remain in the backlog. | Complete inventory and reconcile historical findings; adopt `module-ownership.md`; migrate one feature slice at a time; fix only confirmed high-risk defects.                                                                                                                                                                                                                                                        | Evidence-backed backlog; each extraction has one owner and regression coverage; contracts remain stable except separately reviewed bug fixes; required gates pass at clean HEAD. | `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md`; Trends parity/review-gate tests; PageHeader, Brand Kit, agency-switcher, and workflow refresh regressions; full §23 and account-theme Chromium journeys pass; 76/77 affected Chromium cases passed before A16 fix, then 4/4 research teardown/watchlist tests passed; full integration + migration drill passed before current test-only edits; full release suite blocked by a Firefox process hang before the first result; full browser matrix, visual gate, exact-clean SHA evidence, and final `pnpm verify` still required; independent reviewer verifies. |
 
+**AD-002 architecture-refinement batch (2026-10-21):** The ownership manifest
+now accounts for the canonical 91-page route tree and its focused browser
+areas. Confirmed fixes include the lead-time setup state, media-folder
+classification, the invalid typography token, workspace AI tenant scope, and
+the missing-key status label. Bounded ownership changes move the media
+pending-upload worker and AI workspace read model behind server-only feature
+entry points, extract the pure media-folder tree and content-format catalog,
+and group lead-time defaults. AI settings, workspace Settings, and workspace
+Media have bilingual five-width visual and accessibility evidence; the media
+snapshot harness normalizes only the disposable agency UUID while component
+coverage preserves the real value. Full repository verification and the
+database integration suite pass on this worktree. Broader route review, the
+full five-browser release matrix, exact-clean-commit evidence, and independent
+review remain required before `Tested`.
+
 ## M1 — Multi-agency tenancy and authorization
 
 > **2026-08-22** — Milestone 1 of the M1 program lands on `feat/m1-multi-agency`. The schema, runtime, and policy layer are no longer single-agency: a second agency can coexist with the production agency, two agencies with the same workspace slug don't collide, cross-tenant reads are denied with `404` (anti-IDOR), and platform authority is disjoint from agency authority. The cookie is HMAC-signed, the resolver is fail-closed, and the singleton invariant is gone. Sub-task evidence below; architecture is documented in `docs/architecture/authorization.md`, `docs/architecture/data-model.md`, and `docs/architecture/overview.md`.
@@ -2074,3 +2089,115 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - The latest `pnpm verify` passed formatting, ESLint, strict TypeScript, all
   553 unit files / 4,971 tests, and the production build. After this run, the
   final evidence-only tracker edit passed Prettier and `git diff --check`.
+
+## 2026-10-21 — Canonical workspace test ownership
+
+- Corrected affected-test ownership globs that still referenced the retired
+  `/app/w/[slug]` source paths. Content, publishing, workspace, Brand Kit,
+  channels/social analytics, AI settings, and discussion UI ownership now
+  follows the agency-qualified App Router tree.
+- Added focused ownership areas for workspace pages, calendar, tasks, media,
+  research, agency settings, account, users, and public pages. Regression
+  coverage confirms all 91 current App Router pages select a focused browser
+  suite, have an ancestor loading/error fallback, and checks representative
+  canonical route paths. The affected-runner suite passes 17/17. The actual
+  `pnpm test:affected -- --layer unit` command selects only the architecture
+  area for manifest and mapping-test edits; Prettier and `git diff --check`
+  pass. No route or runtime behavior changed.
+- The full five-browser release matrix, complete visual comparison, exact
+  clean-SHA evidence, and independent review remain open. `AD-002` remains
+  **In Progress**.
+
+## 2026-10-21 — Media retry worker ownership
+
+- Reviewed the 2,674-line media service and confirmed it spans several
+  responsibilities. Extracted cron-owned pending-upload promotion to
+  `src/features/media/server.ts`. Added coverage for ready promotion, invalid
+  signatures, transient storage failures, and batch clamping.
+- The affected runner selected 46 related unit files / 378 tests, then the
+  directly changed media and ownership tests passed 18/18. Prettier and
+  `git diff --check` and strict TypeScript passed. No route, database schema,
+  or API contract changed.
+- Further media service boundaries and the full route review remain open;
+  `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Correct unsupported section-title utility
+
+- Replaced 16 uses of the unsupported `text-section-title` utility with the
+  `text-title-section` utility backed by the existing theme token. Added a
+  focused architecture regression that checks source usage and token presence.
+- The affected runner escalated to the full unit suite for this multi-area app
+  diff; that run was intentionally interrupted before completion. The focused
+  architecture, media, settings, sidebar, and Brand Kit suites then passed
+  79/79. Strict TypeScript, Prettier, and `git diff --check` passed.
+- Full `pnpm verify`, bilingual route/visual evidence, and exact clean-SHA
+  recording remain pending. `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Correct lead-time setup detection
+
+- The settings checklist now compares each lead-time stage with the default
+  schedule instead of treating any total other than 18 days as customized.
+  Shared defaults drive both initial values and checklist detection. Focused
+  regression cases cover default, same-total customized, and different-total
+  schedules.
+- The full settings/browser visual evidence and final `pnpm verify` remain
+  pending. Focused settings suites passed 12/12 and strict TypeScript passed;
+  formatting was applied after the initial check identified the two new files.
+  `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Place media retry worker behind its feature boundary
+
+- Moved the worker into `src/features/media/server.ts` and migrated the cron
+  route and focused test to that server-only entry point. Removed the temporary
+  re-export from the broad media service and added the feature path to media
+  test ownership. The public cron URL and response shape are unchanged.
+- The focused media, cron-auth, affected-ownership, and module-boundary suites
+  passed 36/36; strict TypeScript, Prettier, and `git diff --check` passed.
+  `AD-002` remains **In Progress** pending full milestone and release evidence.
+
+## 2026-10-21 — Extract media folder tree projection
+
+- Moved pure folder classification and descendant counting into
+  `src/lib/media/folder-tree.ts`, leaving authorization and batched database
+  reads in the existing service. The content-format union/list now has a
+  presentation-free module shared by the content status projection and media
+  tree classifier.
+- Fixed a confirmed misclassification: user-created folders under `Posts` and
+  their date-shaped descendants were marked as system folders even though the
+  UI/API allows creating those subfolders. The classifier now recognizes only
+  canonical generated format names. Focused projection tests cover generated
+  and user folders, counts, and cyclic data. Media, format-payload,
+  architecture-boundary, and ownership tests passed 34/34; strict TypeScript,
+  Prettier, and `git diff --check` passed. Media route visual evidence remains
+  pending.
+
+## 2026-10-21 — Scope workspace AI settings to its URL-resolved agency
+
+- Fixed a tenant isolation defect: the workspace AI settings page previously
+  combined a URL-resolved workspace with AI status and admin data from the
+  active-agency cookie. The new server-side read model scopes agency values to
+  `workspace.agencyId` and request counts to `workspace.id`; the page no longer
+  consults active-agency context for workspace-specific output.
+- A focused regression checks that agency admin status, provider-key
+  availability, feature configuration, and workspace usage use the resolved
+  tenant. Full EN/AR responsive visual evidence and the database integration
+  suite are recorded in the architecture evidence consolidation below.
+
+## 2026-10-21 — Architecture refinement evidence consolidation
+
+- `pnpm verify` passed on the updated worktree: formatting, ESLint, strict
+  TypeScript, 557 unit files / 4,985 tests, and the production build.
+- `pnpm test:integration` passed against the disposable `planner_test`
+  database. The five-scenario migration drill passed: from-zero, skipped
+  migration repair, in-place upgrade, backup/restore, and failed-migration
+  abort. No schema migration was added in this batch.
+- Workspace AI settings and workspace Settings passed strict English and
+  Arabic/RTL visual comparison at 375/768/1024/1280/1440px. Workspace Media
+  passed six strict visual cases; English coverage and the Arabic/RTL matrix
+  span the same five widths, with critical accessibility and overflow checks.
+  The Arabic screenshots normalize only the disposable agency UUID; component
+  coverage still verifies the actual storage prefix.
+- `AD-002` remains **In Progress**. The full five-browser release matrix,
+  manual review of every route, exact clean-commit evidence, and independent
+  review remain open. Do not advance `Tested` or `Verified` from this worktree
+  evidence alone.

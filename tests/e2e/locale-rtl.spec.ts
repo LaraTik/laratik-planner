@@ -130,3 +130,20 @@ test("agency storage billing reference renders Arabic RTL without overflow @a11y
   );
   expect(overflowsHorizontally).toBe(false);
 });
+
+test("workspace AI settings render Arabic RTL without overflow @a11y", async ({ page }) => {
+  const seeded = await bootstrapTestSession(page, { locale: "ar" });
+  const route = workspaceRoute(seeded, "ai-settings");
+  await gotoStable(page, route);
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(
+    page.getByRole("heading", { name: "المساعدة بالذكاء الاصطناعي", level: 1 }),
+  ).toBeVisible();
+  await expect(page.getByTestId("workspace-ai-settings")).toBeVisible();
+  const overflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflowsHorizontally).toBe(false);
+});

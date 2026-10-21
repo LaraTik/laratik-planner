@@ -287,7 +287,7 @@ function SidebarHeader({
           </div>
           {!collapsed ? (
             <div className="hidden min-w-0 xl:block">
-              <p className="text-section-title text-fg-primary truncate font-semibold">
+              <p className="text-title-section text-fg-primary truncate font-semibold">
                 StudioFlow
               </p>
             </div>

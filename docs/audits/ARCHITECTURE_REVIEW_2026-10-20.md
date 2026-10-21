@@ -78,9 +78,29 @@ groups are:
 | tasks                |     6 | trends                |     9 |
 | uploads              |     5 |                       |       |
 
-The detailed route-to-owner, route-to-test, and per-page loading/empty/error/
-permission-state review remains open and is tracked below; these counts only
-establish the inventory denominator.
+The route-to-test ownership map now covers all 91 page files: every page change
+selects a focused browser-validation area in `scripts/test-ownership.ts`. A
+regression checks the complete page-file inventory, so a newly added unmapped
+route cannot silently escalate to the full suite. The manual review of each
+route's owner, loading/empty/error/permission states, bilingual behavior,
+responsive layout, and accessibility remains open; the inventory does not
+claim those behaviors are all covered by the selected tests.
+All 91 pages currently inherit some `loading.tsx` and `error.tsx` boundary;
+39 have a route-local loading surface and 7 have a route-local error boundary.
+This confirms fallback reachability only, not the visual or behavioral quality
+of every state.
+
+### Static route-to-test ownership refreshed 2026-10-21
+
+The affected-test manifest now maps the canonical agency-qualified route tree
+and the global/public route families to their focused unit, integration, and
+browser suites. New areas cover workspace pages, calendar, tasks, media,
+research, agency settings, account, users, and public pages; existing feature
+areas retain planning, publishing, Brand Kit, social, Trends, AI, and platform
+ownership. This prevents page edits from falling through to the expensive
+repository-wide browser matrix while keeping that full matrix as a release
+gate. `tests/unit/testing/test-affected-core.test.ts` passes 17/17, including
+the all-page ownership assertion and representative canonical-route checks.
 
 ## Ownership and dependency map
 
@@ -178,6 +198,26 @@ publish pages, and advertising/engagement surfaces. Large modules are only
 review targets: split them only when responsibilities, change reasons, or
 test seams are demonstrably mixed.
 
+**Media responsibility review (2026-10-21).** `src/lib/media/service.ts` was
+2,674 lines and owned list/filter/duplicate queries, upload registration,
+pending-upload promotion, folder management and tree projection, public
+sharing, import, trash/restore/expunging, and bulk/reconciliation operations.
+The cron-owned pending-upload worker had a clean dependency boundary, so it now
+lives in `src/features/media/server.ts` behind a server-only feature entry
+point. The cron route and focused test now import that entry point directly,
+and the temporary `service.ts` re-export was removed.
+`tests/unit/media/process-pending-assets.test.ts` covers ready,
+invalid-signature, transient-storage, and batch-limit outcomes. The tree
+projection is now a pure `src/lib/media/folder-tree.ts` module; the broad
+service retains the authorized folder read and batched asset-count query.
+Registration already has six focused return/recovery cases, and the folder
+tree has disposable-Postgres read-path coverage. The remaining media service
+still has multiple responsibilities; further splitting should start with
+folder management and sharing seams and retain tenant checks and transaction
+behavior. Workspace Media now has English and Arabic/RTL responsive screenshots
+at all five documented widths; strict visual comparison passed all six browser
+cases, including critical accessibility checks across the Arabic matrix.
+
 ### A6 — Historical audit findings need status reconciliation
 
 **Priority: P1 — correctness of the backlog.** The repository retains older
@@ -220,6 +260,108 @@ event kinds, `/api/cron/outbox` is implemented, and
 These checks establish source/configuration presence only; they do not prove
 live VPS cron installation or independent production UAT. They do not close
 the concurrent-dispatch defect recorded in A22.
+
+**Historical UX-02 reconciliation (2026-10-21).** The prior report's three
+unsupported Tailwind text classes (`text-secondary`, `text-danger-fg`, and
+`text-h3`) no longer appear under `src/`. The current source uses the semantic
+typography and color utilities, and `src/app/globals.css` defines the
+`text-title-section` token. UX-02 is stale as a current source defect; this
+check does not substitute for visual contrast review of every route.
+
+### A25 — Section headings used a non-existent typography utility
+
+**Priority: P2 — visual consistency.** The theme defines the
+`text-title-section` utility, but 16 source usages used `text-section-title`,
+which has no matching Tailwind theme token and therefore did not apply the
+intended section-title size and line height. All current source usages now use
+the canonical utility. A focused architecture regression checks that the
+unsupported spelling stays out of `src/` and that its backing theme token is
+present. Bilingual route and visual checks remain part of the final UI evidence
+gate.
+
+### A26 — Lead-time setup status used the total instead of stage values
+
+**Priority: P2 — misleading setup state.** The workspace settings checklist
+treated the lead-time schedule as customized when its total differed from the
+default 18 days. A valid schedule can change individual stages while keeping
+the same total, leaving the checklist incorrectly marked incomplete. The
+default schedule now has one source, and setup status compares each stage to
+that default. Focused regression coverage includes a customized schedule that
+still totals 18 days. The settings route passed bilingual responsive checks
+and strict visual comparison at 375/768/1024/1280/1440px.
+
+### A27 — User-created Posts subfolders were labeled as system folders
+
+**Priority: P2 — misleading media-library navigation.** The folder tree offers
+“new subfolder” on every row, and the folders API accepts a parent id, but the
+tree classified every child of `Posts` as an auto-generated format folder.
+User folders and their date-shaped descendants therefore received system
+markers. The tree projection now recognizes only names derived from the
+canonical content-format list; the pure builder also protects descendant
+counting from malformed cyclic rows. Focused tests cover generated folders,
+custom subfolders, descendant counts, and cycle termination. Browser visual
+review now covers the English responsive and Arabic/RTL matrix at 375/768/1024/
+1280/1440px. Strict comparison passed six cases; the Arabic matrix also checks
+critical accessibility and horizontal overflow.
+
+### A28 — Workspace AI settings could read the wrong agency context
+
+**Priority: P1 — tenant isolation.** The route resolved the workspace from the
+agency-qualified URL, but then loaded agency AI configuration, provider-key
+availability, and admin status from the independently selected active-agency
+cookie. A manager opening an accessible workspace in another agency while a
+different agency was active could see that other agency's AI status and masked
+secret suffix alongside the workspace's usage count. The page now passes the
+URL-resolved workspace to a server-side read model, which scopes configuration,
+admin status, and key availability to `workspace.agencyId`, and usage to
+`workspace.id`. A regression asserts both scopes use the workspace's agency.
+The read model now lives at `src/features/ai/server.ts`, keeping the
+feature-owned query behind the documented server-only entry point. Its
+focused regression is part of an 84/84 grouped unit pass across AI, media,
+workspace settings, affected-test ownership, and module boundaries; strict
+TypeScript, formatting, and diff checks also pass. The targeted browser batch
+passed the route axe check and Arabic settings journey; responsive visual
+checks passed at 375/768/1024/1280/1440px in both locales. The full browser
+release matrix remains open.
+
+### A29 — Workspace AI status could claim a missing provider key was configured
+
+**Priority: P2 — operator clarity.** The workspace status card displayed
+"Configured by environment" whenever the feature row did not identify a
+managed secret, even when `getActiveApiKey` returned no key. The read model now
+returns only a boolean availability flag, and the card shows the localized
+not-configured state when no active key exists. The regression checks the
+missing-key result without exposing provider material and is covered by the
+same 84/84 grouped pass. The route's English and Arabic responsive visual
+checks pass at all five documented widths; the full browser release matrix
+remains open.
+
+### A30 — Workspace AI settings showed raw keys for Trend Radar copy
+
+**Priority: P2 — localization quality.** The workspace AI status card renders
+the canonical planner-facing capability list, but the English and Arabic
+`aiSettings` catalogs omitted `trend_radar`. The page therefore displayed
+`[aiSettings.capabilities.trend_radar.label]` and its description as raw keys.
+Both catalogs now include the capability copy, and the metadata test requires
+localized labels and descriptions for every planner-facing capability. The
+workspace AI route was added to the responsive visual matrix. Strict visual
+comparison passed at 375/768/1024/1280/1440px in both English and Arabic/RTL,
+with critical axe violations and horizontal overflow checked at each
+viewport. The combined strict compare passed 12 tests across Workspace AI and
+Workspace Settings. The 84/84 grouped unit suite also passes.
+
+### A31 — Media snapshots varied with disposable agency identifiers
+
+**Priority: P2 — visual evidence reliability.** Workspace Media's compact
+storage summary includes the agency-specific object prefix. Separate visual
+test seeds therefore rendered different UUIDs; at tablet width the changed
+line wrapping made strict screenshot comparison fail despite the same page
+layout. The summary now exposes its prefix as a separately testable element;
+the screenshot harness replaces only that disposable value with a fixed
+placeholder. The component unit test still asserts the real prefix, and the
+product UI continues to display it. Workspace Media's English responsive and
+Arabic/RTL matrices now pass strict comparison at all five widths; the Arabic
+matrix also checks critical accessibility and overflow.
 
 ### A7 — Shared page header emitted invalid markup for rich descriptions
 
@@ -435,6 +577,19 @@ notifications and 11/11 for advertising, including visual assertions. These
 targeted batches validate selection and affected areas; they do not replace the
 full browser and visual release matrix.
 
+**Follow-up (2026-10-21).** The ownership manifest still pointed content,
+publishing, workspace, Brand Kit, channels/social analytics, AI settings, and
+discussion UI changes at the retired `/app/w/[slug]` source layout. Those paths
+no longer exist after the agency-qualified workspace route migration, so route
+changes could miss their intended focused batch. The manifest now targets the
+current `src/app/(app)/app/a/[agencySlug]/w/[slug]` tree. A regression exercises
+eight representative route files against the actual manifest; the affected
+runner now checks every page file and passes 17/17. The manifest itself selects
+the focused architecture unit area instead of escalating to all test layers;
+the actual `pnpm test:affected -- --layer unit` run selected that area and ran
+the single 17-test suite. This changes test selection only, not runtime
+behavior or route contracts.
+
 ### A24 — Desktop tenant context drifted out of the primary sidebar
 
 **Priority: P2 — navigation consistency and responsive usability.** The
@@ -467,9 +622,10 @@ but not fully verified.
    and are linked from contributor guidance and `AGENTS.md`.
 3. Complete the current-state route, domain, database, integration, and test
    coverage map; this review still does not manually certify every route.
-4. Tackle confirmed security, tenant, workflow, transaction, privacy, provider,
-   or shared-rendering bugs as isolated regression-tested changes.
-5. Complete the route/domain/database/test map and review pages and shared UI in
+4. Continue addressing confirmed security, tenant, workflow, transaction,
+   privacy, provider, shared-rendering, and design-token bugs as isolated
+   regression-tested changes.
+5. Review pages and shared UI in
    route groups, recording bilingual, responsive, keyboard, accessibility,
    loading/empty/error, and visual evidence.
 

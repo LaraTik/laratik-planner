@@ -253,7 +253,7 @@ export default async function BrandKitPage({
         data-testid="brand-kit-recent-section"
       >
         <header className="mb-3 flex items-center justify-between gap-2">
-          <h2 className="text-section-title text-fg-primary font-semibold">
+          <h2 className="text-title-section text-fg-primary font-semibold">
             {t("brandKit.overview.recentUpdates")}
           </h2>
           <a
@@ -300,7 +300,7 @@ function KpiCard({
           <span className="text-label text-fg-muted block font-semibold tracking-wide uppercase">
             {label}
           </span>
-          <span className="text-section-title text-fg-primary block font-semibold">{count}</span>
+          <span className="text-title-section text-fg-primary block font-semibold">{count}</span>
         </span>
       </a>
     </li>

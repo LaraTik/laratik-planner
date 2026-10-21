@@ -30,8 +30,6 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     "scripts/run-integration-tests.ts",
     "scripts/test-affected-core.ts",
     "scripts/test-affected.ts",
-    "scripts/test-ownership.ts",
-    "tests/unit/testing/test-affected-core.test.ts",
     "tests/e2e/stitch-cases.ts",
     "src/app/globals.css",
     "src/app/**/layout.tsx",
@@ -51,7 +49,11 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
   areas: [
     {
       id: "app-shell",
-      sourceGlobs: ["src/components/app-shell/**", "src/app/(app)/layout.tsx"],
+      sourceGlobs: [
+        "src/components/app-shell/**",
+        "src/app/(app)/layout.tsx",
+        "src/app/(app)/app/page.tsx",
+      ],
       unitFiles: ["tests/unit/app-shell/**"],
       integrationFiles: [],
       browser: [
@@ -63,14 +65,28 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     },
     {
       id: "architecture",
-      sourceGlobs: [],
-      unitFiles: ["tests/unit/architecture/module-ownership.test.ts"],
+      sourceGlobs: ["scripts/test-ownership.ts"],
+      unitFiles: [
+        "tests/unit/architecture/module-ownership.test.ts",
+        "tests/unit/testing/test-affected-core.test.ts",
+      ],
       integrationFiles: [],
       browser: [],
     },
     {
       id: "auth",
-      sourceGlobs: ["src/lib/auth/**", "src/app/(auth)/**", "src/app/api/auth/**", "src/proxy.ts"],
+      sourceGlobs: [
+        "src/lib/auth/**",
+        "src/app/(auth)/**",
+        "src/app/api/auth/**",
+        "src/app/signin/**",
+        "src/app/accept-invitation/**",
+        "src/app/set-password/**",
+        "src/app/setup/**",
+        "src/app/agency-unavailable/**",
+        "src/app/dev/signin/**",
+        "src/proxy.ts",
+      ],
       unitFiles: ["tests/unit/auth/**", "tests/unit/auth-*.test.ts"],
       integrationFiles: [
         "tests/integration/auth/**",
@@ -92,7 +108,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/format-payload/**",
         "src/components/content/**",
         "src/components/planning/**",
-        "src/app/(app)/app/w/[slug]/planning/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/**",
       ],
       unitFiles: [
         "tests/unit/content/**",
@@ -115,7 +131,9 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       sourceGlobs: [
         "src/lib/publishing/**",
         "src/lib/deliveries/**",
-        "src/app/(app)/app/w/[slug]/planning/[id]/publish/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/design-queue/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/reviews/**",
       ],
       unitFiles: ["tests/unit/publishing/**", "tests/unit/publishing-*.test.ts"],
       integrationFiles: [
@@ -139,7 +157,8 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/dashboard/**",
         "src/components/workspace/**",
         "src/app/(app)/app/workspaces/**",
-        "src/app/(app)/app/w/[slug]/page.tsx",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/page.tsx",
+        "src/app/(app)/app/w/[...legacy]/**",
       ],
       unitFiles: [
         "tests/unit/workspace/**",
@@ -169,7 +188,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       sourceGlobs: [
         "src/lib/brand/**",
         "src/components/brand-kit/**",
-        "src/app/(app)/app/w/[slug]/brand-kit/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/**",
       ],
       unitFiles: ["tests/unit/brand/**", "tests/unit/brand-kit/**"],
       integrationFiles: ["tests/integration/brand-kit.test.ts"],
@@ -189,8 +208,8 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/channels/**",
         "src/lib/social/**",
         "src/components/channels/**",
-        "src/app/(app)/app/w/[slug]/channels/**",
-        "src/app/(app)/app/w/[slug]/analytics/social/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/**",
       ],
       unitFiles: [
         "tests/unit/channels/**",
@@ -270,18 +289,24 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "ai",
       sourceGlobs: [
+        "src/features/ai/**",
         "src/lib/ai/**",
         "src/components/ai/**",
         "src/app/(app)/app/agency-settings/ai/**",
-        "src/app/(app)/app/w/[slug]/ai-settings/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/**",
       ],
-      unitFiles: ["tests/unit/ai-*.test.ts", "tests/unit/ai-*.test.tsx"],
+      unitFiles: ["tests/unit/ai/**", "tests/unit/ai-*.test.ts", "tests/unit/ai-*.test.tsx"],
       integrationFiles: ["tests/integration/ai-governance.test.ts"],
       browser: [
         {
           spec: "tests/e2e/a11y-routes.spec.ts",
           projects: chromium,
           grep: "agency-settings/ai|ai-settings",
+        },
+        {
+          spec: "tests/e2e/locale-rtl.spec.ts",
+          projects: chromium,
+          grep: "ai-settings",
         },
         {
           spec: "tests/e2e/visual-regression.spec.ts",
@@ -316,7 +341,8 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/discussions/**",
         "src/components/notifications/**",
         "src/components/comments/**",
-        "src/app/(app)/app/w/[slug]/discussions/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/engagement/**",
       ],
       unitFiles: [
         "tests/unit/notifications/**",
@@ -364,6 +390,193 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       browser: [
         { spec: "tests/e2e/health.spec.ts", projects: chromium },
         { spec: "tests/e2e/error-states.spec.ts", projects: chromium },
+      ],
+    },
+    {
+      id: "workspace-pages",
+      sourceGlobs: [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/activity/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/board/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/client/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/library/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/team/**",
+      ],
+      unitFiles: [
+        "tests/unit/workspace/**",
+        "tests/unit/workspaces/**",
+        "tests/unit/workspace-*.test.ts",
+        "tests/unit/planning/**",
+      ],
+      integrationFiles: [
+        "tests/integration/workspace-rename.test.ts",
+        "tests/integration/client-isolation.test.ts",
+      ],
+      browser: [
+        { spec: "tests/e2e/workspace.spec.ts", projects: chromium },
+        { spec: "tests/e2e/workspace-tenant-isolation.spec.ts", projects: chromium },
+        { spec: "tests/e2e/mobile.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/a11y-routes.spec.ts",
+          projects: chromium,
+          grep: "workspace overview|client|team|library",
+        },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "workspace|workspace-board|workspace-settings|workspace-client|workspace-team|library",
+        },
+      ],
+    },
+    {
+      id: "calendar",
+      sourceGlobs: [
+        "src/lib/planning/calendar.ts",
+        "src/app/(app)/app/calendar/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/calendar/**",
+      ],
+      unitFiles: ["tests/unit/planning/**", "tests/unit/i18n/workspace-month.test.ts"],
+      integrationFiles: ["tests/integration/tasks.test.ts"],
+      browser: [
+        { spec: "tests/e2e/global-calendar-filter-feedback.spec.ts", projects: chromium },
+        { spec: "tests/e2e/global-calendar-workload-view.spec.ts", projects: chromium },
+        { spec: "tests/e2e/global-calendar-workspace-identity.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/a11y-routes.spec.ts",
+          projects: chromium,
+          grep: "calendar",
+        },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "calendar",
+        },
+      ],
+    },
+    {
+      id: "tasks",
+      sourceGlobs: [
+        "src/lib/tasks/**",
+        "src/components/tasks/**",
+        "src/app/(app)/app/tasks/**",
+        "src/app/api/tasks/**",
+      ],
+      unitFiles: ["tests/unit/tasks/**", "tests/unit/mcp-tasks.test.ts"],
+      integrationFiles: ["tests/integration/tasks.test.ts"],
+      browser: [
+        { spec: "tests/e2e/global-calendar-filter-feedback.spec.ts", projects: chromium },
+        { spec: "tests/e2e/global-calendar-workload-view.spec.ts", projects: chromium },
+        { spec: "tests/e2e/global-calendar-workspace-identity.spec.ts", projects: chromium },
+        { spec: "tests/e2e/role-authorization.spec.ts", projects: chromium },
+      ],
+    },
+    {
+      id: "media",
+      sourceGlobs: [
+        "src/features/media/**",
+        "src/lib/media/**",
+        "src/components/media/**",
+        "src/app/(app)/app/media/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/media/**",
+        "src/app/api/cron/storage-cleanup/**",
+        "src/app/share/media/**",
+        "src/app/share/media-collection/**",
+        "src/app/api/media/**",
+        "src/app/api/uploads/**",
+      ],
+      unitFiles: ["tests/unit/media/**", "tests/unit/cron-routes-auth.test.ts"],
+      integrationFiles: ["tests/integration/media-sharing.test.ts"],
+      browser: [{ spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "media" }],
+    },
+    {
+      id: "research",
+      sourceGlobs: [
+        "src/lib/research/**",
+        "src/components/research/**",
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/research/**",
+        "src/app/api/research/**",
+      ],
+      unitFiles: ["tests/unit/research-*.test.ts", "tests/unit/research-*.test.tsx"],
+      integrationFiles: ["tests/integration/research-collections.test.ts"],
+      browser: [
+        { spec: "tests/e2e/research-teardown.spec.ts", projects: chromium },
+        { spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "research" },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "research",
+        },
+      ],
+    },
+    {
+      id: "agency-settings",
+      sourceGlobs: ["src/app/(app)/app/agency-settings/**"],
+      unitFiles: [
+        "tests/unit/agency-settings/**",
+        "tests/unit/agency-actions.test.ts",
+        "tests/unit/change-agency-plan.test.ts",
+      ],
+      integrationFiles: ["tests/integration/platform-agencies.test.ts"],
+      browser: [
+        { spec: "tests/e2e/agency-edit.spec.ts", projects: chromium },
+        { spec: "tests/e2e/agency-switcher.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/a11y-routes.spec.ts",
+          projects: chromium,
+          grep: "agency-settings",
+        },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "agency-settings",
+        },
+      ],
+    },
+    {
+      id: "account",
+      sourceGlobs: ["src/app/(app)/app/account/**"],
+      unitFiles: ["tests/unit/theme-preferences.test.ts"],
+      integrationFiles: [],
+      browser: [
+        { spec: "tests/e2e/account-theme.spec.ts", projects: chromium },
+        { spec: "tests/e2e/locale-rtl.spec.ts", projects: chromium },
+        { spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "account" },
+      ],
+    },
+    {
+      id: "users",
+      sourceGlobs: ["src/app/(app)/app/users/**"],
+      unitFiles: [
+        "tests/unit/users/**",
+        "tests/unit/auth-invitations.test.ts",
+        "tests/unit/workspace-role-matrix.test.tsx",
+      ],
+      integrationFiles: ["tests/integration/invitation-concurrency.test.ts"],
+      browser: [
+        { spec: "tests/e2e/users/add-directly.spec.ts", projects: chromium },
+        { spec: "tests/e2e/users-role-assignment.spec.ts", projects: chromium },
+        { spec: "tests/e2e/role-authorization.spec.ts", projects: chromium },
+        { spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "users" },
+      ],
+    },
+    {
+      id: "public-pages",
+      sourceGlobs: [
+        "src/app/page.tsx",
+        "src/app/privacy/**",
+        "src/app/terms/**",
+        "src/app/data-deletion/**",
+      ],
+      unitFiles: [],
+      integrationFiles: [],
+      browser: [
+        { spec: "tests/e2e/public.spec.ts", projects: chromium },
+        { spec: "tests/e2e/a11y.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/visual-regression.spec.ts",
+          projects: visualChromium,
+          grep: "privacy|terms|landing",
+        },
       ],
     },
   ],

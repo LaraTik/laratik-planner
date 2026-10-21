@@ -175,7 +175,7 @@ export function LeadTimesForm({
           >
             <div className="flex flex-wrap items-center gap-2">
               <Sparkles className="text-primary h-4 w-4" aria-hidden="true" />
-              <h3 className="text-section-title text-fg-primary font-semibold">
+              <h3 className="text-title-section text-fg-primary font-semibold">
                 {t("settings.leadTimes.previewHeading")}
               </h3>
               <span
