@@ -1141,3 +1141,25 @@ authorization regression. Database integration and the migration drill remain
 pending because `TEST_DATABASE_URL` is absent and the Docker daemon does not
 respond. Manual release route/visual review and independent verification remain
 open. `AD-002` stays **In Progress**.
+
+## Release validation update — 2026-10-21
+
+The test database was located and verified as the disposable `planner_test`
+database. The full Postgres integration suite and migration drill subsequently
+passed (5/5 scenarios). Browser evidence was collected on clean HEAD
+`2bf9854f9f94c0c5ed30ae332280dfe00c638e75` (same implementation SHA
+`2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`): Chromium completed 278 cases with
+six timeouts; a focused rerun of four content/research cases passed 4/4. The
+full five-browser run stopped when Firefox could not launch its
+`plugin-container` under local macOS permissions. A test-only sandbox
+environment override also failed to produce a usable Firefox launch.
+
+The Chromium visual comparison ran all 264 checks: 208 passed and 56 failed
+image comparisons. The differences include route-state drift and page-height
+changes; the test artifacts remain in ignored `test-results/`. The approved
+Stitch baselines were not changed because no upstream design update was
+reported. The current visual backlog needs route-by-route reconciliation
+against the approved design reference before the visual gate can be marked
+green. Full manual review of the 91 routes, the complete five-browser matrix,
+and an independent reviewer remain open. `AD-002` remains **In Progress** and
+must not be marked **Verified** from this run.

@@ -1,5 +1,7 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-21 Architecture review verification checkpoint — SHA `2bf9854f9f94c0c5ed30ae332280dfe00c638e75`** — `pnpm verify` passed on implementation SHA `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`; the full Postgres integration suite and migration drill passed (5/5). The Chromium E2E project completed 278 cases with 6 timeouts; four focused content/research reruns then passed. The five-browser release run could not continue because Firefox’s `plugin-container` was denied by macOS; a test-only sandbox setting did not recover it. The visual suite completed 208/264 checks, with 56 screenshot comparisons failing across route-state and layout baselines. The baseline files were preserved pending design/reference reconciliation. Manual review of all routes and independent verification remain open; do not mark this work **Verified** or treat the release matrix as green.
+
 > **2026-10-20 Community & Inbox safety-control checkpoint** — The workspace
 > emergency stop now has an audited, manager-only action on Automations and
 > Settings. Its confirmation flow changes only the existing pause flag; reply

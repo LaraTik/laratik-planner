@@ -1646,3 +1646,40 @@ Database integration and migration drill could not run: `TEST_DATABASE_URL`
 was not configured, and the local Docker daemon did not respond. No schema
 migration was introduced. Full manual route/visual review and independent
 verification remain open.
+
+## Architecture review release-check follow-up — 2026-10-21
+
+The code under test is unchanged at implementation SHA
+`2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`; the recorded run started from clean
+HEAD `2bf9854f9f94c0c5ed30ae332280dfe00c638e75`.
+
+| Check                              | Result                                                                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Full Postgres integration suite    | Pass.                                                                                                                                |
+| Migration drill                    | Pass — 5/5 scenarios.                                                                                                                |
+| Chromium E2E project               | 272/278 passed; six timed out.                                                                                                       |
+| Focused content/research E2E rerun | Pass — 4/4.                                                                                                                          |
+| Firefox browser launch             | Blocked by macOS denying Firefox `plugin-container`; a test-only `MOZ_DISABLE_CONTENT_SANDBOX=1` attempt did not recover the launch. |
+| Visual regression suite            | 208/264 passed; 56 screenshot comparisons failed.                                                                                    |
+
+The six initial Chromium failures were the advertising-view save, unauthenticated
+`/app` redirect, community-route responsive sweep, two Quick Create journeys,
+and research watchlist assignment. The four focused content/research journeys
+passed on rerun after the application had compiled those routes. Treat those
+initial failures as cold-start or interaction timeouts unless a later focused
+reproduction confirms a product defect.
+
+The visual diff artifacts are under ignored `test-results/`. They include
+content-state differences (for example, social analytics now renders the valid
+“No connected channels yet” state while its expected image shows “Workspace
+unavailable”) and page-height differences on Settings, Brand Kit, Client,
+Media, and platform surfaces. No snapshot baselines were rewritten: the
+visual-parity instructions require an upstream Stitch change before a refresh.
+Reconcile these route states and screenshots with the approved design source
+before treating visual verification as green.
+
+This evidence does not complete the five-browser release gate. The full run
+stopped at Firefox startup after Chromium completed. Manual review of all 91
+routes, route-state reconciliation, independent review, and exact clean-SHA
+release evidence remain open. `AD-002` remains **In Progress**; do not assign
+**Verified** based on these local checks.
