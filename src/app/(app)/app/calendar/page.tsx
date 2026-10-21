@@ -892,6 +892,9 @@ export default async function GlobalCalendarPage({
     params.set("view", "workload");
     if (assigneeId) params.set("assigneeId", assigneeId);
     if (workspaceId) params.set("workspaceId", workspaceId);
+    if (taskStatus) params.set("taskStatus", taskStatus);
+    if (!showPlans) params.set("showPlans", "false");
+    if (!showTasks) params.set("showTasks", "false");
     return `?${params.toString()}`;
   })();
   const calendarHref = (() => {
