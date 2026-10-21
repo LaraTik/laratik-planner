@@ -1,5 +1,25 @@
 # Test and coverage evidence
 
+## Media import workflow ownership split — 2026-10-21, exact clean implementation SHA `277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`
+
+Single-file public import and bounded folder-import orchestration now live in
+server-only media feature modules. The API routes use the feature entry point;
+the browser imports only the serializable batch report types. Existing URL
+safety, workspace write checks, storage-intent cleanup, per-item error mapping,
+and API responses are preserved. Asset registration remains in the legacy
+media service as a shared persistence primitive. No schema migration was added.
+
+| Check                                                                        | Result                                                                                                                                               |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused import batching, module ownership, and affected-test selection tests | **Pass** — 26/26; strict TypeScript and formatting passed.                                                                                           |
+| `pnpm verify`                                                                | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on this exact clean SHA.   |
+| `TEST_DATABASE_URL=… pnpm test:integration`                                  | **Pass** — all repository integration files passed against disposable `planner_test`; no database schema changes in this milestone.                  |
+| `NODE_ENV=test pnpm migration-drill`                                         | **Pass** — 5/5 scenarios, including from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; ledger 90/90. |
+
+This service ownership move does not change page behavior, so no new visual
+comparison was required. The full five-browser release matrix, manual review of
+every route, and independent review remain open. AD-002 remains **In Progress**.
+
 ## Media folder management ownership split — 2026-10-21, exact clean implementation SHA `19983639fe39e869b8be6e640a34181e7da987ac`
 
 Folder listing, tree projection, creation, rename, and cascade archive now

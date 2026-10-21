@@ -2254,8 +2254,12 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   response contracts are preserved. Asset registration remains a shared
   persistence primitive in the legacy service.
 - Focused folder-import, module-ownership, and affected-test selection suites
-  passed 26/26; strict TypeScript and formatting passed. Full exact-SHA
-  verification and database checks remain pending for this milestone.
+  passed 26/26; strict TypeScript and formatting passed. `pnpm verify` passed
+  on exact clean SHA `277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`: formatting,
+  zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and
+  production build. All integration files passed against disposable
+  `planner_test`; the migration drill passed all five scenarios. Evidence is
+  recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; trash/restore/expunging,
   bulk/reconciliation, full route review, release browser matrix, and
   independent review remain open.
