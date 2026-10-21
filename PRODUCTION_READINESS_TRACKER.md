@@ -2625,4 +2625,7 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   remain open. OTHER-03 log-call coverage and OTHER-10 migration index-lock
   risk remain to be reviewed against current source.
 - A5 now records the 34-tool, 2,834-line MCP server-factory inventory and a
-  bounded split queue by tool domain. No MCP contract changes were made.
+  bounded split queue by tool domain. The five diagnostics tools now register
+  from `src/features/mcp/diagnostic-tools.ts`; the factory supplies its shared
+  authorization and response helpers. Tool names, schemas, scopes, and response
+  contracts remain unchanged. No MCP contract changes were made.

@@ -1836,3 +1836,23 @@ stopped at Firefox startup after Chromium completed. Manual review of all 91
 routes, route-state reconciliation, independent review, and exact clean-SHA
 release evidence remain open. `AD-002` remains **In Progress**; do not assign
 **Verified** based on these local checks.
+
+## MCP diagnostics registration boundary — 2026-10-22
+
+Implementation SHA: `8130b71cbdfbfbb32856e514acf6094198b30e6a`
+
+The five application-error diagnostics tools now register from
+`src/features/mcp/diagnostic-tools.ts`. The MCP server factory supplies shared
+authorization and response helpers. Tool names, input/output schemas, scopes,
+and response behavior are unchanged.
+
+| Check                        | Result        |
+| ---------------------------- | ------------- |
+| MCP diagnostics unit suite   | Pass — 30/30. |
+| TypeScript                   | Pass.         |
+| Targeted ESLint and Prettier | Pass.         |
+| `git diff --check`           | Pass.         |
+
+This is focused implementation evidence, not full release evidence. MCP
+integration, route/browser checks, and independent verification remain
+separate gates; status remains **Tested**, not **Verified**.
