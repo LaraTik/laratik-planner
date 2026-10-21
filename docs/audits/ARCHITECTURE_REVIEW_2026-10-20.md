@@ -230,16 +230,14 @@ publish pages, and advertising/engagement surfaces. Large modules are only
 review targets: split them only when responsibilities, change reasons, or
 test seams are demonstrably mixed.
 
-**MCP tool ownership inventory (2026-10-22).** `src/features/mcp/server.ts` is
-2,834 lines and registers 34 tools inside one server factory. The tools span
+**MCP tool ownership inventory (2026-10-22).** The initial measurement found
+2,834 lines and 34 tools inside `src/features/mcp/server.ts`. The tools span
 workspace/member/agency access, tasks and attachments, Command Center and
 research, planning/content workflows, Brand Kit import/export, and platform
-error diagnostics. This mixes transport setup, shared scope/error handling,
-and several domain command surfaces in one change unit. The next split should
-move one tool group at a time behind registration modules while retaining the
-same tool names, input schemas, scope gates, response envelopes, and MCP docs.
-This is an evidence-backed P2 responsibility review, not a line-count defect;
-no split is adopted until tests establish a stable boundary.
+error diagnostics. This was an evidence-backed P2 responsibility review, not
+a line-count defect. Bounded registration modules have since been introduced
+for diagnostics, Brand Kit, and task/attachment tools; see the dated MCP
+milestones below. Tool contracts remain stable.
 
 **Media responsibility review (2026-10-21).** `src/lib/media/service.ts` was
 2,674 lines and owned list/filter/duplicate queries, upload registration,
@@ -1346,3 +1344,20 @@ global test path; this escalation protects schema callers and should remain.
 Further media service boundaries, complete route review, release browser and
 visual evidence, and independent review remain open. AD-002 remains **In
 Progress**.
+
+## MCP task and attachment tool ownership — 2026-10-22
+
+The ten task and task-attachment registrations now live in
+`src/features/mcp/task-tools.ts`. `src/features/mcp/server.ts` remains the
+transport/factory and composes the task, Brand Kit, and diagnostics registrars
+through shared MCP response/error/context contracts. This is a responsibility
+split; public tool names, schemas, scopes, responses, and behavior did not
+change. The catalog regression asserts all ten task tools remain present and
+the total remains 34.
+
+Exact implementation commit `d1e6d93` passes formatting, targeted ESLint,
+TypeScript typecheck, and 37 focused MCP unit tests across task behavior and
+the registered tool catalog. No persistence or API contract changed. The
+broader repository verification, full bilingual route review, browser and
+visual release evidence, and independent review remain open; AD-002 remains
+**In Progress**.

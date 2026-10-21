@@ -1510,6 +1510,16 @@ media integration, and migration-drill evidence are recorded in
 route review, the full five-browser release matrix, and independent review
 remain open before `Tested`.
 
+**AD-002 MCP task-tool split (2026-10-22):** The ten task and task-attachment
+registrations moved behind `src/features/mcp/task-tools.ts`; the server
+factory composes this with the Brand Kit and diagnostics registrars through
+shared MCP contracts. Tool names, schemas, scopes, and response behavior are
+unchanged. Exact implementation commit `d1e6d93` passes targeted format, ESLint,
+typecheck, and 37 focused MCP tests; the tool catalog asserts all ten task
+tools and remains at 34. No database or external MCP contract changed. The
+full `pnpm verify`, database gates where required, route/browser review, and
+independent verification remain open; AD-002 is still **In Progress**.
+
 ## M1 — Multi-agency tenancy and authorization
 
 > **2026-08-22** — Milestone 1 of the M1 program lands on `feat/m1-multi-agency`. The schema, runtime, and policy layer are no longer single-agency: a second agency can coexist with the production agency, two agencies with the same workspace slug don't collide, cross-tenant reads are denied with `404` (anti-IDOR), and platform authority is disjoint from agency authority. The cookie is HMAC-signed, the resolver is fail-closed, and the singleton invariant is gone. Sub-task evidence below; architecture is documented in `docs/architecture/authorization.md`, `docs/architecture/data-model.md`, and `docs/architecture/overview.md`.
