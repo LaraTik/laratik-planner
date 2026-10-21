@@ -19,7 +19,7 @@ import {
  *
  * The DB mock keys rows on `getTableName(table)` rather than the table
  * object: each case resets the module registry to re-mock `@/lib/db`, which
- * gives the service a fresh copy of the schema and breaks identity keying.
+ * gives the feature a fresh copy of the schema and breaks identity keying.
  * Deriving the names here also keeps the keys honest if a table is renamed.
  */
 
@@ -175,7 +175,7 @@ function makeDb(
 }
 
 /** Fresh module graph per test so each case gets its own db mock. */
-async function importService(
+async function importRegistration(
   rows: Rows,
   returningRows: unknown[][] = [[]],
   linkInsertError?: Error,
@@ -183,7 +183,7 @@ async function importService(
   const inserts: { table: string; values: unknown }[] = [];
   vi.doMock("@/lib/db", () => ({ db: makeDb(rows, returningRows, inserts, linkInsertError) }));
   vi.resetModules();
-  const service = await import("@/lib/media/service");
+  const service = await import("@/features/media/asset-registration.server");
   return { service, inserts };
 }
 
@@ -207,7 +207,7 @@ describe("registerUploadedMediaAsset return contract", () => {
   });
 
   it("returns a ready status on a fresh, validated registration", async () => {
-    const { service } = await importService(baseRows(null), [[assetRow("ready")]]);
+    const { service } = await importRegistration(baseRows(null), [[assetRow("ready")]]);
 
     const result = await service.registerUploadedMediaAsset(baseInput());
 
@@ -220,7 +220,7 @@ describe("registerUploadedMediaAsset return contract", () => {
   });
 
   it("reports the true status when the object is already registered", async () => {
-    const { service } = await importService(baseRows("ready"));
+    const { service } = await importRegistration(baseRows("ready"));
 
     const result = await service.registerUploadedMediaAsset({
       ...baseInput(),
@@ -234,7 +234,7 @@ describe("registerUploadedMediaAsset return contract", () => {
   });
 
   it("re-asserts the content-item link when returning an already-registered asset", async () => {
-    const { service, inserts } = await importService(baseRows("ready"));
+    const { service, inserts } = await importRegistration(baseRows("ready"));
 
     await service.registerUploadedMediaAsset({ ...baseInput(), contentItemId: CONTENT_ITEM_ID });
 
@@ -253,7 +253,7 @@ describe("registerUploadedMediaAsset return contract", () => {
 
   it("does not claim success when linking fails after the asset is committed", async () => {
     const linkError = new Error("content-item link failed");
-    const { service } = await importService(baseRows(null), [[assetRow("ready")]], linkError);
+    const { service } = await importRegistration(baseRows(null), [[assetRow("ready")]], linkError);
 
     await expect(
       service.registerUploadedMediaAsset({ ...baseInput(), contentItemId: CONTENT_ITEM_ID }),
@@ -262,7 +262,7 @@ describe("registerUploadedMediaAsset return contract", () => {
   });
 
   it("keeps an asset processing and does not quarantine when validation fails transiently", async () => {
-    const { service } = await importService(baseRows(null), [[assetRow("processing")]]);
+    const { service } = await importRegistration(baseRows(null), [[assetRow("processing")]]);
     const { MediaValidationError } = await import("@/lib/media/validation");
     validate.mockRejectedValue(
       new MediaValidationError("storage_unavailable", "The media object could not be read."),
@@ -277,7 +277,7 @@ describe("registerUploadedMediaAsset return contract", () => {
   });
 
   it("quarantines and fails an asset whose signature is definitively invalid", async () => {
-    const { service } = await importService(baseRows(null), [[assetRow("failed")]]);
+    const { service } = await importRegistration(baseRows(null), [[assetRow("failed")]]);
     const { MediaValidationError } = await import("@/lib/media/validation");
     validate.mockRejectedValue(
       new MediaValidationError("invalid_signature", "The media content does not match."),

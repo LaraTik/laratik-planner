@@ -10,7 +10,7 @@ import {
   completeStorageUpload,
   createStorageUploadIntent,
 } from "@/lib/storage/intent-service";
-import { registerUploadedMediaAsset } from "@/lib/media/service";
+import { registerUploadedMediaAsset } from "./asset-registration.server";
 
 export async function importPublicMediaAsset(input: {
   actor: Actor;

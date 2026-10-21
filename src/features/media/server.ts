@@ -9,6 +9,7 @@ import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/val
 export { moveMediaAsset } from "./asset-management.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
 export { importPublicMediaAsset } from "./import.server";
+export { registerUploadedMediaAsset, type RegisteredMediaAsset } from "./asset-registration.server";
 export { getMediaFolderAudit, getMediaLibraryFilters } from "./library-queries.server";
 export { expungeExpiredTrashedMedia } from "./trash-lifecycle.server";
 export {
@@ -50,7 +51,6 @@ export {
   mediaAssetForActor,
   MEDIA_PAGE_SIZE_OPTIONS,
   parseMediaPageSize,
-  registerUploadedMediaAsset,
   renameMediaAsset,
   setMediaAssetVisibility,
 } from "@/lib/media/service";
