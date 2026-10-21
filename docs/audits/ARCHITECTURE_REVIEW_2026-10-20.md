@@ -148,7 +148,9 @@ bounded facade at `src/features/media/server.ts`; app pages and API handlers
 use it instead of importing the broad `src/lib/media/service.ts` directly.
 The import-ownership regression enforces this media boundary. The focused
 media, architecture, and affected-test suites pass 209/209, and strict
-TypeScript passes. Exact full verification remains pending for this migration.
+TypeScript passes. `pnpm verify` also passed on exact clean SHA
+`9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`; evidence is recorded in
+`docs/production-readiness/TEST_EVIDENCE.md`.
 
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 

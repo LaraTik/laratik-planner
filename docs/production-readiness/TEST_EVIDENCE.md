@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Media route feature-entry migration — 2026-10-21, exact clean implementation SHA `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`
+
+All media App Router pages and API handlers now consume
+`src/features/media/server.ts`; no route imports the broad
+`src/lib/media/service.ts` directly. The server-only feature entry point
+provides explicit compatibility exports while implementations continue to
+move by responsibility. An architecture regression prevents media app routes
+from bypassing this boundary. No route behavior, API shape, permission, or
+database contract changed.
+
+| Check                                                 | Result                                                                                                                                             |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused media, architecture, and affected-test suites | **Pass** — 209/209; covers all 38 media unit files plus module ownership and test selection.                                                       |
+| `pnpm verify`                                         | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on this exact clean SHA. |
+
+This import-only migration changes no rendered behavior, so it required no
+visual or database gate. The manual review of every route, full five-browser
+release matrix, and independent review remain open. AD-002 remains **In Progress**.
+
 ## Media trash lifecycle ownership split — 2026-10-21, exact clean implementation SHA `05f3a301e756c0de3e2bb07c080ad976797d53eb`
 
 Single and bulk trash/restore operations and expired-trash cleanup now belong

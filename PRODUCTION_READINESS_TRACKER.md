@@ -2292,6 +2292,9 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   prevents media app routes from returning to that internal module. Service
   implementations and route contracts remain unchanged.
 - The focused media, module-ownership, and affected-test suites passed
-  209/209; strict TypeScript passed. Full exact-SHA verification is pending.
+  209/209; strict TypeScript passed. `pnpm verify` passed on exact clean SHA
+  `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build.
+  Evidence is recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; the manual page review, full browser
   matrix, and independent review remain open.
