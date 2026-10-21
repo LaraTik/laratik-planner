@@ -7,12 +7,11 @@ import { getActorWorkspaceRoleIndex, WRITE_CAPABLE_ROLES } from "@/lib/auth/poli
 import { listSwitcherWorkspaces } from "@/lib/workspaces/context";
 import {
   listMediaAssetsPage,
-  listMediaFolders,
-  listMediaFoldersTree,
   MEDIA_PAGE_SIZE_OPTIONS,
   parseMediaPageSize,
   type MediaSort,
 } from "@/lib/media/service";
+import { listMediaFolders, listMediaFoldersTree } from "@/features/media/server";
 import { attachSignedPreviewUrls } from "@/lib/media/signed-preview";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { tForActive } from "@/lib/i18n/t-for-active";

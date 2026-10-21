@@ -88,8 +88,8 @@ import { EditIdeaForm } from "../edit/[id]/edit-form";
 import {
   ensurePlanningMediaFolderPathPublic,
   listMediaAssetsForContentItem,
-  listMediaFolders,
 } from "@/lib/media/service";
+import { listMediaFolders } from "@/features/media/server";
 import { buildPlanningPresentation, type PlanningPresentation } from "@/lib/planning/presentation";
 import type { WorkspaceRole, ApprovalGate } from "@/lib/content/workflow";
 import { getActiveScenario } from "@/lib/content/workflow";

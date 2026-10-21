@@ -2226,3 +2226,18 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   SHA. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; folder management, broader route review,
   the five-browser release matrix, and independent review remain open.
+
+## 2026-10-21 — Move media folder management behind the feature boundary
+
+- Extracted media folder reads, tree projection, create, rename, and cascade
+  archive into `src/features/media/folders.server.ts`; shared access scoping
+  now lives in `src/lib/media/access.ts`. Migrated app pages and API route
+  adapters to the media feature entry point. No schema, route, permission, or
+  response contract changed.
+- Focused media-sharing integration passed 5/5, read-path batching passed
+  11/11, and architecture/ownership/folder unit checks passed 23/23. Strict
+  TypeScript and `git diff --check` passed. Exact-SHA `pnpm verify` and the
+  migration drill remain pending after the implementation commit.
+- `AD-002` remains **In Progress**; import, trash/restore, bulk/reconciliation,
+  full route review, release browser matrix, and independent review remain
+  open.

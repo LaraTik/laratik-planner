@@ -485,7 +485,10 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/app/api/uploads/**",
       ],
       unitFiles: ["tests/unit/media/**", "tests/unit/cron-routes-auth.test.ts"],
-      integrationFiles: ["tests/integration/media-sharing.test.ts"],
+      integrationFiles: [
+        "tests/integration/media-sharing.test.ts",
+        "tests/integration/read-path-batching.test.ts",
+      ],
       browser: [{ spec: "tests/e2e/a11y-routes.spec.ts", projects: chromium, grep: "media" }],
     },
     {

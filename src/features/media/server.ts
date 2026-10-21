@@ -8,6 +8,13 @@ import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/val
 
 export { moveMediaAsset } from "./asset-management.server";
 export {
+  archiveMediaFolder,
+  createMediaFolder,
+  listMediaFolders,
+  listMediaFoldersTree,
+  renameMediaFolder,
+} from "./folders.server";
+export {
   activeMediaShareForActor,
   createPublicMediaShare,
   publicMediaAssetForToken,

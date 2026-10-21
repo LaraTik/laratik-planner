@@ -1,5 +1,4 @@
 import "server-only";
-import { cache } from "react";
 import { workspaceBasePath } from "@/lib/urls";
 import { and, asc, desc, eq, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
@@ -20,7 +19,6 @@ import {
 import {
   canWriteToWorkspace,
   hasWorkspaceRole,
-  isAgencyAdmin,
   isAgencyMember,
   type Actor,
 } from "@/lib/auth/policy";
@@ -41,26 +39,14 @@ import {
   createStorageUploadIntent,
 } from "@/lib/storage/intent-service";
 import { MediaPermissionError } from "./errors";
-import { normalizeMediaFolderName } from "./folders";
-import {
-  buildMediaFolderTree,
-  BRAND_KIT_FOLDER_NAME,
-  mediaFormatFolderName,
-  type MediaFolderTreeRow,
-} from "./folder-tree";
+import { accessibleMediaWorkspaceIds, MEDIA_READ_ROLES } from "./access";
+import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "./folder-tree";
 import { assertWithinBulkCap, MAX_TAGS_PER_ASSET, MAX_TAG_LENGTH } from "./bulk-cap";
 import { releaseCapacityAmount } from "@/lib/entitlements";
 
 export { BRAND_KIT_FOLDER_NAME, POSTS_FOLDER_NAME } from "./folder-tree";
 export type { MediaFolderKind, MediaFolderTreeRow } from "./folder-tree";
 export { MediaPermissionError } from "./errors";
-const MEDIA_READ_ROLES = [
-  "workspace_manager",
-  "content_planner",
-  "designer",
-  "internal_reviewer",
-  "publisher",
-] as const;
 
 export type MediaSort = "name" | "uploadedAt" | "updatedAt";
 
@@ -78,78 +64,6 @@ type ListInput = {
   pageSize?: number;
   limit?: number;
 };
-
-/**
- * The one accessible-folder read, shared by `listMediaFolders` and
- * `listMediaFoldersTree`.
- *
- * WHY THIS EXISTS
- *
- * Both public helpers take the same `{ agencyId, workspaceId }` and issued a
- * byte-identical `select … from media_folders` with the same filter and
- * ordering — but each ran it independently, and each re-ran the uncached
- * `accessibleWorkspaceIds` check (itself ~3 queries) first. Two media pages
- * call both helpers for the same workspace, so a single page render paid
- * roughly double.
- *
- * `cache()` makes the second caller free within a request. It is request-
- * scoped, not cross-request, so this cannot serve stale folders — the same
- * guarantee `getWorkspaceRoles` in `lib/auth/policy.ts` already relies on.
- *
- * The projection is `select()` (all columns) on purpose: the folders API
- * route returns these rows straight to the client as JSON, so narrowing the
- * shared projection would silently change that response shape. The tree
- * builder simply reads the four columns it needs out of the wider row.
- *
- * Returns `null` when the actor cannot access the workspace — distinct from
- * an accessible workspace that happens to have no folders (empty array), so
- * callers keep their existing "return []" behaviour.
- */
-const fetchAccessibleMediaFolders = cache(
-  async (actor: Actor, agencyId: string, workspaceId: string) => {
-    const accessible = await accessibleWorkspaceIds(actor, agencyId);
-    if (!accessible.includes(workspaceId)) return null;
-    return db
-      .select()
-      .from(mediaFolders)
-      .where(
-        and(
-          eq(mediaFolders.agencyId, agencyId),
-          eq(mediaFolders.workspaceId, workspaceId),
-          isNull(mediaFolders.archivedAt),
-        ),
-      )
-      .orderBy(asc(mediaFolders.sortOrder), asc(mediaFolders.name));
-  },
-);
-
-async function accessibleWorkspaceIds(actor: Actor, agencyId: string): Promise<string[]> {
-  if (await isAgencyAdmin(actor, agencyId)) {
-    const rows = await db
-      .select({ id: workspaces.id })
-      .from(workspaces)
-      .where(eq(workspaces.agencyId, agencyId));
-    return rows.map((row) => row.id);
-  }
-  const rows = await db
-    .select({ id: workspaceMemberships.workspaceId })
-    .from(workspaceMemberships)
-    .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-    .innerJoin(
-      workspaceMembershipRoles,
-      eq(workspaceMembershipRoles.workspaceMembershipId, workspaceMemberships.id),
-    )
-    .where(
-      and(
-        eq(workspaceMemberships.userId, actor.id),
-        eq(workspaceMemberships.status, "active"),
-        eq(workspaces.agencyId, agencyId),
-        eq(workspaces.status, "active"),
-        inArray(workspaceMembershipRoles.role, [...MEDIA_READ_ROLES]),
-      ),
-    );
-  return [...new Set(rows.map((row) => row.id))];
-}
 
 async function mediaFolderDescendantIds(input: {
   agencyId: string;
@@ -183,7 +97,7 @@ async function mediaFolderDescendantIds(input: {
 
 export async function listMediaAssets(actor: Actor, input: ListInput) {
   if (!(await isAgencyMember(actor, input.agencyId))) return [];
-  const accessibleIds = await accessibleWorkspaceIds(actor, input.agencyId);
+  const accessibleIds = await accessibleMediaWorkspaceIds(actor, input.agencyId);
   if (accessibleIds.length === 0) return [];
   if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return [];
 
@@ -433,7 +347,7 @@ export async function countMediaAssets(
   input: Omit<ListInput, "limit" | "offset" | "page" | "pageSize">,
 ): Promise<number> {
   if (!(await isAgencyMember(actor, input.agencyId))) return 0;
-  const accessibleIds = await accessibleWorkspaceIds(actor, input.agencyId);
+  const accessibleIds = await accessibleMediaWorkspaceIds(actor, input.agencyId);
   if (accessibleIds.length === 0) return 0;
   if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return 0;
 
@@ -1084,123 +998,6 @@ export async function registerUploadedMediaAsset(input: {
   }
 }
 
-export async function listMediaFolders(
-  actor: Actor,
-  input: { agencyId: string; workspaceId: string },
-) {
-  return (await fetchAccessibleMediaFolders(actor, input.agencyId, input.workspaceId)) ?? [];
-}
-
-export async function createMediaFolder(
-  actor: Actor,
-  input: { agencyId: string; workspaceId: string; name: string; parentId?: string | null },
-) {
-  if (!(await hasWorkspaceRole(actor, input.workspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError("Only workspace managers can manage media folders.");
-  }
-  const name = normalizeMediaFolderName(input.name);
-  if (!name) throw new MediaPermissionError("The folder name is invalid.");
-  const parentId = input.parentId ?? null;
-  if (parentId) {
-    const [parent] = await db
-      .select({ id: mediaFolders.id })
-      .from(mediaFolders)
-      .where(
-        and(
-          eq(mediaFolders.id, parentId),
-          eq(mediaFolders.agencyId, input.agencyId),
-          eq(mediaFolders.workspaceId, input.workspaceId),
-          isNull(mediaFolders.archivedAt),
-        ),
-      )
-      .limit(1);
-    if (!parent) throw new MediaPermissionError("The parent media folder is not available.");
-  }
-  const [folder] = await db
-    .insert(mediaFolders)
-    .values({
-      agencyId: input.agencyId,
-      workspaceId: input.workspaceId,
-      ...(parentId ? { parentId } : {}),
-      name,
-      createdBy: actor.id,
-    })
-    .returning();
-  return folder ?? null;
-}
-
-export async function renameMediaFolder(actor: Actor, folderId: string, name: string) {
-  const [folder] = await db
-    .select()
-    .from(mediaFolders)
-    .where(eq(mediaFolders.id, folderId))
-    .limit(1);
-  if (!folder || !(await hasWorkspaceRole(actor, folder.workspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError("Only workspace managers can manage media folders.");
-  }
-  const trimmed = normalizeMediaFolderName(name);
-  if (!trimmed) throw new MediaPermissionError("The folder name is invalid.");
-  const [updated] = await db
-    .update(mediaFolders)
-    .set({ name: trimmed, updatedAt: new Date() })
-    .where(and(eq(mediaFolders.id, folderId), isNull(mediaFolders.archivedAt)))
-    .returning();
-  return updated ?? null;
-}
-
-export async function archiveMediaFolder(actor: Actor, folderId: string) {
-  const [folder] = await db
-    .select()
-    .from(mediaFolders)
-    .where(eq(mediaFolders.id, folderId))
-    .limit(1);
-  if (!folder || !(await hasWorkspaceRole(actor, folder.workspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError("Only workspace managers can manage media folders.");
-  }
-  const now = new Date();
-  const updated = await db.transaction(async (tx) => {
-    const folders = await tx
-      .select({ id: mediaFolders.id, parentId: mediaFolders.parentId })
-      .from(mediaFolders)
-      .where(
-        and(
-          eq(mediaFolders.workspaceId, folder.workspaceId),
-          eq(mediaFolders.agencyId, folder.agencyId),
-          isNull(mediaFolders.archivedAt),
-        ),
-      );
-    const descendantIds = new Set([folderId]);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (const candidate of folders) {
-        if (
-          candidate.parentId &&
-          descendantIds.has(candidate.parentId) &&
-          !descendantIds.has(candidate.id)
-        ) {
-          descendantIds.add(candidate.id);
-          changed = true;
-        }
-      }
-    }
-    const ids = [...descendantIds];
-    const archived = await tx
-      .update(mediaFolders)
-      .set({ archivedAt: now, archivedBy: actor.id, updatedAt: now })
-      .where(inArray(mediaFolders.id, ids))
-      .returning();
-    if (archived.length > 0) {
-      await tx
-        .update(mediaAssets)
-        .set({ folderId: null, updatedBy: actor.id, updatedAt: now })
-        .where(inArray(mediaAssets.folderId, ids));
-    }
-    return archived.find((candidate) => candidate.id === folderId);
-  });
-  return updated ?? null;
-}
-
 export async function renameMediaAsset(actor: Actor, assetId: string, title: string) {
   const [row] = await db
     .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
@@ -1416,7 +1213,7 @@ export async function importPublicMediaAsset(input: {
 
 // ─── FEAT-MEDIA-LIBRARY-2026-09-16 — navigation primitives + bulk actions ─────
 //
-// Plan §3.5: listMediaFoldersTree, linkedTargetsForMediaAsset,
+// Plan §3.5: linkedTargetsForMediaAsset,
 // setMediaAssetTags, reconcileContentItemMediaFolders,
 // ensureBrandMediaFolderPath, bulkMoveMediaAssets, bulkTrashMediaAssets,
 // bulkRestoreMediaAssets, bulkSetMediaAssetTags,
@@ -1591,66 +1388,6 @@ export async function ensureBrandMediaFolderPath(input: {
     name: BRAND_KIT_FOLDER_NAME,
     createdBy: input.createdBy,
   });
-}
-
-/**
- * Returns every non-archived folder in the workspace with the
- * asset-count for that folder (`assetCount`) and the total count for
- * it and all descendants (`descendantAssetCount`).
- *
- * The "kind" discriminator marks system folders (`Posts`, `Brand Kit`,
- * `{Format}`, `{YYYY}`, `{MM}`) so the tree can render them with a
- * subtle shield badge and the info-audit panel.
- */
-/**
- * `preloadedFolders` lets a caller that ALREADY has the workspace's folder
- * rows (e.g. it called `listMediaFolders` moments earlier to build a filter
- * list) hand them over instead of paying for the read twice.
- *
- * This exists because `cache()` alone is not sufficient to guarantee it:
- * React's request-scoped cache only memoises inside an active Next.js
- * request scope, so the dedupe silently evaporates in a plain Node caller
- * and is unobservable from a test. Passing the rows makes the saving
- * explicit and verifiable instead of framework-dependent.
- *
- * Both "no folders" and "no access" collapse to `[]`, which is what this
- * function returns for each of those cases anyway.
- */
-export async function listMediaFoldersTree(
-  actor: Actor,
-  input: { agencyId: string; workspaceId: string },
-  preloadedFolders?: Awaited<ReturnType<typeof fetchAccessibleMediaFolders>>,
-): Promise<MediaFolderTreeRow[]> {
-  // Pull every non-archived folder in one round-trip; classify kind
-  // on the application side because Drizzle's pg-core doesn't model
-  // recursive trees. Shares `fetchAccessibleMediaFolders` with
-  // `listMediaFolders`, so the access check and this read run once per
-  // workspace per request rather than once per caller.
-  const folders =
-    preloadedFolders ??
-    (await fetchAccessibleMediaFolders(actor, input.agencyId, input.workspaceId));
-  if (!folders || folders.length === 0) return [];
-
-  // Asset counts per folder id (one query).
-  const folderIds = folders.map((folder) => folder.id);
-  const counts = await db
-    .select({ folderId: mediaAssets.folderId, count: sql<number>`count(*)::int` })
-    .from(mediaAssets)
-    .where(
-      and(
-        eq(mediaAssets.agencyId, input.agencyId),
-        eq(mediaAssets.ownerWorkspaceId, input.workspaceId),
-        inArray(mediaAssets.folderId, folderIds),
-        inArray(mediaAssets.status, ["processing", "ready", "failed"]),
-      ),
-    )
-    .groupBy(mediaAssets.folderId);
-  const assetCountById = new Map<string, number>();
-  for (const row of counts) {
-    if (row.folderId) assetCountById.set(row.folderId, Number(row.count));
-  }
-
-  return buildMediaFolderTree(folders, assetCountById);
 }
 
 /**

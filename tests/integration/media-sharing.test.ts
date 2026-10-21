@@ -16,10 +16,15 @@ import {
 } from "@/lib/db/schema";
 import { hashMediaShareToken } from "@/lib/media/share-token";
 import {
+  archiveMediaFolder,
   activeMediaShareForActor,
   createPublicMediaShare,
+  createMediaFolder,
+  listMediaFolders,
+  listMediaFoldersTree,
   MediaPermissionError,
   publicMediaAssetForToken,
+  renameMediaFolder,
   revokePublicMediaShare,
 } from "@/features/media/server";
 import { expectPgConstraint } from "./_db-error";
@@ -222,5 +227,47 @@ describe("media sharing and folder database contract", () => {
     await expect(createPublicMediaShare({ id: outsider!.id }, assetId)).rejects.toBeInstanceOf(
       MediaPermissionError,
     );
+    await expect(
+      createMediaFolder({ id: outsider!.id }, { agencyId, workspaceId, name: "Private" }),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
+  });
+
+  it("lists and renames folders, then archives descendants and unlinks their assets", async () => {
+    const actor = { id: userId };
+    const root = await createMediaFolder(actor, {
+      agencyId,
+      workspaceId,
+      name: " Campaign ",
+    });
+    expect(root?.name).toBe("Campaign");
+    const child = await createMediaFolder(actor, {
+      agencyId,
+      workspaceId,
+      name: " Assets ",
+      parentId: root!.id,
+    });
+    const renamed = await renameMediaFolder(actor, child!.id, "Final Assets");
+    expect(renamed?.name).toBe("Final Assets");
+
+    await db.update(mediaAssets).set({ folderId: child!.id }).where(eq(mediaAssets.id, assetId));
+    const visible = await listMediaFolders(actor, { agencyId, workspaceId });
+    expect(visible.map((folder) => folder.id)).toEqual([root!.id, child!.id]);
+    const tree = await listMediaFoldersTree(actor, { agencyId, workspaceId }, visible);
+    expect(tree.find((folder) => folder.id === child!.id)?.name).toBe("Final Assets");
+    expect(tree.find((folder) => folder.id === root!.id)?.descendantAssetCount).toBe(1);
+
+    await expect(archiveMediaFolder(actor, root!.id)).resolves.toMatchObject({ id: root!.id });
+    const afterArchive = await db
+      .select()
+      .from(mediaFolders)
+      .where(eq(mediaFolders.workspaceId, workspaceId));
+    expect(afterArchive).toHaveLength(2);
+    expect(afterArchive.every((folder) => folder.archivedAt !== null)).toBe(true);
+    const [asset] = await db
+      .select({ folderId: mediaAssets.folderId })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, assetId));
+    expect(asset?.folderId).toBeNull();
+    await expect(listMediaFolders(actor, { agencyId, workspaceId })).resolves.toEqual([]);
   });
 });

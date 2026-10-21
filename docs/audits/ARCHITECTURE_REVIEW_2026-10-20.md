@@ -230,6 +230,18 @@ non-member denial; route tests preserve authentication, permission mapping,
 cache headers, origin selection, and response shapes. No schema or public API
 contract changed.
 
+**Media folder ownership split (2026-10-21).** Folder listing, tree projection,
+creation, rename, and cascade archive now live in the server-only
+`src/features/media/folders.server.ts` module and are exported through the
+media feature entry point. Shared read authorization moved to
+`src/lib/media/access.ts` and remains reused by the legacy asset query path.
+The routes and pages now depend on the feature entry point. Disposable-Postgres
+coverage exercises folder normalization, tree counts, authorization, cascade
+archive, and asset unassignment; the read-path suite retains its query-budget
+checks. Import, trash/restore/expunging, and bulk/reconciliation remain review
+candidates in the broad media service. Full milestone verification remains
+pending for this checkpoint.
+
 ### A6 — Historical audit findings need status reconciliation
 
 **Priority: P1 — correctness of the backlog.** The repository retains older

@@ -3,7 +3,8 @@ import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
 import { workspaces } from "@/lib/db/schema";
-import { createMediaFolder, listMediaFolders, MediaPermissionError } from "@/lib/media/service";
+import { createMediaFolder, listMediaFolders } from "@/features/media/server";
+import { MediaPermissionError } from "@/lib/media/service";
 import { eq } from "drizzle-orm";
 
 export const dynamic = "force-dynamic";
