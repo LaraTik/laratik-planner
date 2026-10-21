@@ -190,7 +190,9 @@ export async function quickCreateAction(
   } catch (error) {
     return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
   }
-  redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1`);
+  redirect(
+    `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1#overview`,
+  );
 }
 
 // ─── Update content item ──────────────────────────────────────────────
