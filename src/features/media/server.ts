@@ -7,6 +7,8 @@ import { quarantineMediaObject } from "@/lib/media/quarantine";
 import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/validation";
 
 export { moveMediaAsset } from "./asset-management.server";
+export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
+export { importPublicMediaAsset } from "./import.server";
 export {
   archiveMediaFolder,
   createMediaFolder,

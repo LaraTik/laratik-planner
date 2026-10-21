@@ -2241,6 +2241,21 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   ESLint, strict TypeScript, 558 unit files / 4,988 tests, and production
   build. The migration drill passed 5/5 scenarios on the same SHA. Evidence is
   recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
-- `AD-002` remains **In Progress**; import, trash/restore, bulk/reconciliation,
+- `AD-002` remains **In Progress**; trash/restore, bulk/reconciliation,
   full route review, release browser matrix, and independent review remain
   open.
+
+## 2026-10-21 — Move media import workflows behind the feature boundary
+
+- Moved single-file public import and folder-import batching into
+  `src/features/media/`, migrated both import routes to the feature entry
+  point, and moved the batch unit suite to the feature module. Existing URL
+  safety, authorization, storage-intent cleanup, per-item error mapping, and
+  response contracts are preserved. Asset registration remains a shared
+  persistence primitive in the legacy service.
+- Focused folder-import, module-ownership, and affected-test selection suites
+  passed 26/26; strict TypeScript and formatting passed. Full exact-SHA
+  verification and database checks remain pending for this milestone.
+- `AD-002` remains **In Progress**; trash/restore/expunging,
+  bulk/reconciliation, full route review, release browser matrix, and
+  independent review remain open.

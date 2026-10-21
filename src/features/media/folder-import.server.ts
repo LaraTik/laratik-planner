@@ -1,13 +1,14 @@
 import "server-only";
 
-import { importPublicMediaAsset, MediaPermissionError } from "./service";
-import { MediaSourceError } from "./source";
+import { importPublicMediaAsset } from "./import.server";
+import { MediaPermissionError } from "@/lib/media/errors";
+import { MediaSourceError } from "@/lib/media/source";
 import { canWriteToWorkspace, type Actor } from "@/lib/auth/policy";
 import {
   FOLDER_IMPORT_CONCURRENCY,
   MAX_FOLDER_BATCH_IMPORT,
   type MediaFolderItem,
-} from "./folder-sources/types";
+} from "@/lib/media/folder-sources/types";
 
 export type FolderImportItemStatus = "imported" | "skipped" | "failed" | "canceled";
 

@@ -1,26 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { FOLDER_IMPORT_CONCURRENCY } from "@/lib/media/folder-sources/types";
-import { MediaPermissionError } from "@/lib/media/service";
+import { MediaPermissionError } from "@/lib/media/errors";
 import { MediaSourceError } from "@/lib/media/source";
-import { runMediaFolderBatch } from "@/lib/media/folder-import";
+import { runMediaFolderBatch } from "@/features/media/folder-import.server";
 
 // We do not want this test to hit the real `importPublicMediaAsset`. Mock
-// the service module so we can drive success / failure / per-row code.
+// the single-file import module so we can drive success / failure / per-row code.
 const mockedImport = vi.fn();
-vi.mock("@/lib/media/service", async (importOriginal) => {
-  const mod = await importOriginal<typeof import("@/lib/media/service")>();
-  return {
-    ...mod,
-    importPublicMediaAsset: (...args: unknown[]) => mockedImport(...args),
-    MediaPermissionError: class extends Error {
-      constructor(message: string) {
-        super(message);
-        this.name = "MediaPermissionError";
-      }
-    },
-  };
-});
+vi.mock("@/features/media/import.server", () => ({
+  importPublicMediaAsset: (...args: unknown[]) => mockedImport(...args),
+}));
 
 // canWriteToWorkspace should pass for the happy paths.
 vi.mock("@/lib/auth/policy", () => ({

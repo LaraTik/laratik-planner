@@ -242,6 +242,19 @@ checks. Import, trash/restore/expunging, and bulk/reconciliation remain review
 candidates in the broad media service. Full milestone verification remains
 pending for this checkpoint.
 
+**Media import workflow split (2026-10-21).** Single-file public import and
+the bounded folder-import batch now live in
+`src/features/media/import.server.ts` and
+`src/features/media/folder-import.server.ts`. Both import API routes now use
+the media feature entry point, and the browser component imports only the
+serializable report types. Storage intent creation/completion/abort, URL
+redaction, permission checks, per-item failure mapping, and response behavior
+were preserved. Asset registration remains in the legacy service as the
+existing persistence primitive. Folder import, public sharing, folder
+management, assignment, and the pending-upload worker are feature-owned; the
+remaining service review candidates are trash/restore/expunging and bulk or
+reconciliation operations. Exact milestone verification is pending.
+
 ### A6 — Historical audit findings need status reconciliation
 
 **Priority: P1 — correctness of the backlog.** The repository retains older

@@ -12,7 +12,7 @@ import {
   MAX_FOLDER_BATCH_IMPORT,
   type MediaFolderErrorCode,
 } from "@/lib/media/folder-sources/types";
-import { runMediaFolderBatch, type FolderImportReport } from "@/lib/media/folder-import";
+import { runMediaFolderBatch, type FolderImportReport } from "@/features/media/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
 export const dynamic = "force-dynamic";

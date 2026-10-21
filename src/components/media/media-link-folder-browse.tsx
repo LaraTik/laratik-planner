@@ -27,7 +27,10 @@ import {
   type MediaFolderItem,
   type MediaFolderListing,
 } from "@/lib/media/folder-sources/types";
-import type { FolderImportItemReport, FolderImportReport } from "@/lib/media/folder-import";
+import type {
+  FolderImportItemReport,
+  FolderImportReport,
+} from "@/features/media/folder-import.server";
 import type { MediaUploadResult } from "./media-upload-form";
 
 export type { FolderImportReport };

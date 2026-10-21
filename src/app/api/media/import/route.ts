@@ -4,7 +4,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { db } from "@/lib/db";
 import { storageObjects, workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { importPublicMediaAsset, MediaPermissionError } from "@/lib/media/service";
+import { importPublicMediaAsset, MediaPermissionError } from "@/features/media/server";
 import { MediaSourceError } from "@/lib/media/source";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 
