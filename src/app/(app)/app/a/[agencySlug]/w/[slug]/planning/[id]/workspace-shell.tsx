@@ -150,30 +150,11 @@ export function WorkspaceShell({
 }: WorkspaceShellProps) {
   const t = useLocaleT();
   const router = useRouter();
-  /*
-    The URL hash is the single source of truth for the active tab.
-
-    The previous arrangement kept React state as the source of truth and
-    reconciled the hash in an effect, with a one-shot ref deciding when
-    the deep link was adopted. That produced a lost race: on a deep link
-    such as `#publish`, the adoption effect queued `setActiveId("publish")`
-    and returned early, then the sync effect ran in the same commit with
-    the *old* state and pushed `#overview` over it. On the next commit the
-    adoption effect ran again — the ref was still unset because the early
-    return had skipped setting it — read the hash it had just clobbered,
-    and reverted the tab. Net effect: deep-linking to any tab other than
-    the default silently landed on Overview.
-
-    Reading the hash during the first client render fixes it without a
-    hydration mismatch, because the server has no `window` and returns
-    the same default the client falls back to; the tab panel is a client
-    component, so the first *committed* client render is already correct.
-  */
-  const [activeId, setActiveId] = React.useState<WorkspaceTabId>(() => {
-    if (typeof window === "undefined") return "overview";
-    const hash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
-    return hash && tabs.some((tab) => tab.id === hash) ? hash : "overview";
-  });
+  // The first render must match the server. Adopt a deep-link hash after
+  // hydration; reading `window.location.hash` in the state initializer makes
+  // server and client render different panels on direct links.
+  const [activeId, setActiveId] = React.useState<WorkspaceTabId>("overview");
+  const skipInitialHashSync = React.useRef(true);
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const [resetOpen, setResetOpen] = React.useState(false);
   const [replacementOpen, setReplacementOpen] = React.useState(false);
@@ -200,6 +181,10 @@ export function WorkspaceShell({
         setActiveId((current) => (current === next ? current : next));
       }
     }
+    const initialHash = normalizeWorkspaceTabId(window.location.hash.replace(/^#/, ""));
+    if (initialHash && tabs.some((tab) => tab.id === initialHash)) {
+      queueMicrotask(() => setActiveId(initialHash));
+    }
     window.addEventListener("hashchange", onUrlChange);
     window.addEventListener("popstate", onUrlChange);
     return () => {
@@ -212,6 +197,10 @@ export function WorkspaceShell({
   // the active tab instead of racing the adoption of a deep link.
   React.useEffect(() => {
     if (typeof window === "undefined") return;
+    if (skipInitialHashSync.current) {
+      skipInitialHashSync.current = false;
+      return;
+    }
     const target = `#${activeId}`;
     if (window.location.hash !== target) {
       window.history.pushState(null, "", target);
