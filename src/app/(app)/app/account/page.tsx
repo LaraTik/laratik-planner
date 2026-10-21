@@ -3,7 +3,13 @@ import { and, eq, sql } from "drizzle-orm";
 import { Building2, Mail, ShieldCheck, User as UserIcon, Bell } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { db } from "@/lib/db";
-import { agencyMemberships, agencies, users, workspaceMemberships } from "@/lib/db/schema";
+import {
+  agencyMemberships,
+  agencies,
+  users,
+  workspaceMemberships,
+  workspaces,
+} from "@/lib/db/schema";
 import { getPasswordState } from "@/lib/auth/profile";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
@@ -69,8 +75,10 @@ export default async function AccountPage() {
         workspaceCount: sql<number>`(
           SELECT COUNT(*)::int
           FROM ${workspaceMemberships} wm
+          INNER JOIN ${workspaces} w ON w.id = wm.workspace_id
           WHERE wm.user_id = ${agencyMemberships.userId}
             AND wm.status = 'active'
+            AND w.agency_id = ${agencyMemberships.agencyId}
         )`,
       })
       .from(agencyMemberships)
