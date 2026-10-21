@@ -124,6 +124,8 @@ describe("diagnostics tool registration", () => {
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_list_research");
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_get_command_center");
     expect(tools.map((tool) => tool.name)).toContain("laratik_planner_backfill_thumbnails");
+    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_export_brand_kit");
+    expect(tools.map((tool) => tool.name)).toContain("laratik_planner_import_brand_kit");
   });
 
   it("marks the thumbnail backfill as a WRITE, not a read", async () => {

@@ -14,27 +14,14 @@ import {
   type AppErrorDetail,
 } from "@/lib/observability/app-errors";
 import { matchErrorHint } from "@/lib/observability/error-hints";
-import type { Actor } from "@/lib/auth/policy";
-import type { McpTokenScope } from "@/lib/mcp/tokens";
 import { z } from "zod";
+import type { McpContext, McpToolResultHelpers } from "@/features/mcp/tool-contracts";
 
-type DiagnosticFormat = "json" | "markdown";
-type DiagnosticContext = { actor: Actor; scopes: McpTokenScope[] };
-type ToolReply = {
-  content: { type: "text"; text: string }[];
-  structuredContent?: { result: unknown };
-  isError?: boolean;
-};
-
-type DiagnosticToolsDependencies = {
-  responseFormat: z.ZodType<DiagnosticFormat, z.ZodTypeDef, DiagnosticFormat | undefined>;
+type DiagnosticToolsDependencies = McpToolResultHelpers & {
   requireDiagnosticsAccess: (
-    context: DiagnosticContext,
+    context: McpContext,
     scope: "platform:diagnostics:read" | "platform:diagnostics:write",
   ) => Promise<void>;
-  result: (value: unknown, format: DiagnosticFormat) => ToolReply;
-  errorResult: (error: unknown) => ToolReply;
-  McpToolError: new (code: "not_found" | "invalid_request", message: string) => Error;
 };
 
 /** Resolve a group fingerprint to its row id, or `null` when unknown. */
@@ -49,7 +36,7 @@ async function groupIdFor(fingerprint: string): Promise<string | null> {
 
 export function registerDiagnosticTools(
   server: McpServer,
-  context: DiagnosticContext,
+  context: McpContext,
   dependencies: DiagnosticToolsDependencies,
 ) {
   const { responseFormat, requireDiagnosticsAccess, result, errorResult, McpToolError } =
