@@ -1526,3 +1526,33 @@ introduced. Database integration is pending because `TEST_DATABASE_URL` is
 unavailable and the local Docker daemon did not respond. Full `pnpm verify`,
 repository integration, migration drill, browser release matrix, and
 independent review remain open for this architecture program.
+
+## Content workflow-transition extraction
+
+Implementation SHA: `88b23a41d52628d965d6da7de023b8f620314013`
+
+| Check                                                                  | Result        |
+| ---------------------------------------------------------------------- | ------------- |
+| Focused content-service, workflow-scenario, and module-ownership tests | Pass — 63/63. |
+| `pnpm typecheck`                                                       | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`                      | Pass.         |
+| Commit hook                                                            | Pass.         |
+
+Database-backed integration and full `pnpm verify` remain pending. No schema
+migration was introduced. Evidence is recorded against the exact code SHA;
+independent verification remains open.
+
+## Content assignment extraction
+
+Implementation SHA: `488c3273165c0efbb57635edefdc5fed8699e06f`
+
+| Check                                              | Result        |
+| -------------------------------------------------- | ------------- |
+| Focused content-service and module-ownership tests | Pass — 60/60. |
+| `pnpm typecheck`                                   | Pass.         |
+| Targeted ESLint, Prettier, and `git diff --check`  | Pass.         |
+| Commit hook                                        | Pass.         |
+
+The feature extraction preserves role gates, assignment history, activity,
+notifications, and workflow side effects. Database-backed integration and
+full `pnpm verify` remain pending. No schema migration was introduced.

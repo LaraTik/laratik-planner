@@ -983,6 +983,36 @@ targeted ESLint, Prettier, and diff checks on exact clean code SHA
 all integration files, migration drill, route review, release browser matrix,
 and independent review remain open; AD-002 remains **In Progress**.
 
+### Content workflow-transition ownership
+
+`transitionContent` now lives in `src/features/content/workflow-transition.server.ts`
+and is exposed through the content feature server entry point. The planning
+action, MCP server, and tests use that command. Role checks, agency-admin
+client-approval allowance, workflow scenario validation, transactional status,
+approval and activity writes, and notification outbox behavior remain together.
+No route, permission, workflow, or persisted-data contract changed.
+
+Focused content-service, workflow-scenario, and module-ownership checks pass
+63/63; strict typecheck, targeted ESLint, formatting, diff checks, and the
+commit hook pass on code SHA `88b23a41d52628d965d6da7de023b8f620314013`.
+Database-backed integration and full `pnpm verify` remain open because the
+disposable database is unavailable. No migration was introduced.
+
+### Content assignment ownership
+
+Designer claim, assign, reassign, release, and content-owner assignment
+commands now live in `src/features/content/assignments.server.ts` and are
+exported through the content feature entry point. Planning and MCP callers use
+that boundary. Role gates, assignment history, activity events, notification
+outbox writes, and workflow status effects remain together. Bulk archive stays
+in the existing service because it has distinct semantics. No route,
+permission, workflow, or persisted-data contract changed.
+
+Focused content-service and module-ownership checks pass 60/60; typecheck,
+targeted ESLint, formatting, diff checks, and the commit hook pass on exact
+code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database-backed
+integration and full `pnpm verify` remain open; no migration was introduced.
+
 ### Media asset listing and access ownership — 2026-10-21
 
 The media listing, pagination count, linked-content projection, page-size

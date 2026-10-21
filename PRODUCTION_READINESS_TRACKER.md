@@ -2281,6 +2281,21 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   full route review, release browser matrix, and independent review remain
   open.
 
+- Content workflow-transition ownership: moved the workflow transition command
+  into the content feature boundary and migrated planning, MCP, and test
+  callers. Authorization, scenario rules, transactional side effects, and
+  notification behavior remain stable. Focused checks pass 63/63; typecheck,
+  targeted lint, formatting, diff checks, and commit hook pass on code SHA
+  `88b23a41d52628d965d6da7de023b8f620314013`. Database integration and full
+  `pnpm verify` remain pending; no schema migration was introduced.
+
+- Content assignment ownership: extracted designer claim/assign/release and
+  content-owner assignment into the content feature server module; planning,
+  MCP, and tests use the feature boundary. Focused behavior and ownership tests
+  pass 60/60; typecheck, targeted lint, formatting, diff checks, and the commit
+  hook pass on code SHA `488c3273165c0efbb57635edefdc5fed8699e06f`. Database
+  integration and full `pnpm verify` remain pending. No schema migration.
+
 ## 2026-10-21 — Move media import workflows behind the feature boundary
 
 - Moved single-file public import and folder-import batching into
