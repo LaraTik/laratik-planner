@@ -4,6 +4,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { and, eq, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import {
+  agencyMemberships,
   agencies,
   mediaAssets,
   mediaFolders,
@@ -28,6 +29,7 @@ import {
   duplicateMediaAssets,
   expungeExpiredTrashedMedia,
   getMediaFolderAudit,
+  getMediaLibraryFilters,
   listMediaFolders,
   listMediaFoldersTree,
   MediaPermissionError,
@@ -108,6 +110,11 @@ describe("media sharing and folder database contract", () => {
       .insert(agencies)
       .values({ name: "Sharing Agency", slug: "sharing" })
       .returning();
+    await db.insert(agencyMemberships).values({
+      agencyId: agency!.id,
+      userId: user!.id,
+      status: "active",
+    });
     const [workspace] = await db
       .insert(workspaces)
       .values({ agencyId: agency!.id, name: "Main", slug: "main", createdBy: user!.id })
@@ -211,6 +218,25 @@ describe("media sharing and folder database contract", () => {
     await expect(
       getMediaFolderAudit({ id: userId }, { agencyId, workspaceId: otherWorkspace!.id }),
     ).rejects.toBeInstanceOf(MediaPermissionError);
+  });
+
+  it("returns tag and uploader facets for the authorized workspace", async () => {
+    await db
+      .update(mediaAssets)
+      .set({ tags: ["launch", "video"] })
+      .where(eq(mediaAssets.id, assetId));
+
+    const filters = await getMediaLibraryFilters({ id: userId }, { agencyId, workspaceId });
+
+    expect(filters.tags).toHaveLength(2);
+    expect(filters.tags).toEqual(
+      expect.arrayContaining([
+        { name: "launch", count: 1 },
+        { name: "video", count: 1 },
+      ]),
+    );
+    expect(filters.uploaders).toHaveLength(1);
+    expect(filters.uploaders[0]).toMatchObject({ id: userId, count: 1 });
   });
 
   it("stores only token hashes and permits one active link per image", async () => {
