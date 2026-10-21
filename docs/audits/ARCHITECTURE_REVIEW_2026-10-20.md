@@ -266,9 +266,21 @@ the A14 hydration mismatch. The 77-test affected Chromium batch passed 76 cases
 and exposed A16; all four focused research/watchlist tests passed after that
 fix. Discussion, publish deep-link, boundary, and user-role regressions passed
 in the affected run. The isolated Firefox rerun hung before the first test
-result with its browser process at full CPU.
-Full five-browser and visual gates and exact-clean-commit evidence remain
-outstanding.
+result with its browser process at full CPU. The subsequent fixture review
+found legacy workspace visual routes could discard the fixed month query; those
+screens now resolve through the canonical agency-qualified route. Its focused
+unit suite passed 26/26, and `pnpm verify` passed on
+`d7cc5d99f6cf98be20c89b5a1956fc791cdf7067` (550 unit files / 4,953 tests,
+lint, typecheck, and production build). A 19-test Chromium retry batch passed
+on the repository's normal local server topology; focused Linux Firefox theme
+tests passed 2/2 with app and browser in the same container. The full 1,632-case
+release command could not complete in the constrained browser container: its
+Next dev server was OOM-killed and subsequent requests were refused. A separate
+cross-container attempt was discarded because the remote dev-server topology
+produced navigation and streaming failures. Neither attempt is full browser
+evidence. The visual assertion still shows current UI / Stitch baseline
+differences; snapshots were not updated. Full five-browser and visual gates and
+exact-clean-commit evidence remain outstanding.
 
 The original working tree contained user changes, captured as the review
 baseline; implementation work is isolated on `codex/architecture-review`.
