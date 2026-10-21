@@ -387,6 +387,18 @@ typography and color utilities, and `src/app/globals.css` defines the
 `text-title-section` token. UX-02 is stale as a current source defect; this
 check does not substitute for visual contrast review of every route.
 
+**Historical OTHER-02 / OTHER-04 reconciliation (2026-10-22).** The old
+planning-detail N+1 claim is stale: `hasWorkspaceRole` delegates to the
+request-cached `getWorkspaceRoles`, so repeated checks for an actor and
+workspace reuse the role set. The request-correlation claim is also stale:
+`src/proxy.ts` validates or mints `x-request-id`, forwards it to route handlers,
+and returns it with responses. `tests/unit/read-path-fanout-guard.test.ts`,
+`tests/integration/app-shell-batched-access.test.ts`, and
+`tests/unit/proxy-request-id.test.ts` cover the relevant query fan-out and
+propagation contracts. The remaining OTHER-03 logging inventory and OTHER-10
+migration lock risk require separate current-state review; the old report's
+counts are not treated as current evidence.
+
 **Historical OTHER-05 reconciliation (2026-10-22).** The old claim that the
 sign-in page sends authentication failures from a client component is stale.
 `signInErrorRedirect` now captures errors in the `server-only`
