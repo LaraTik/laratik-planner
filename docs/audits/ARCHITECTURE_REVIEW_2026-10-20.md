@@ -1201,3 +1201,26 @@ sources capture expected 3,591px and rendered 1,931px; the platform errors
 mobile capture expected 1,835px and rendered 1,557px. Review current UI state
 against the current approved design source before changing either the page or
 its baseline.
+
+## Media lifecycle responsibility split — 2026-10-21
+
+The former `src/lib/media/service.ts` mixed feature behavior with broad
+re-exports. Planning-folder path creation and content-item folder
+reconciliation now live in `src/lib/media/planning-folder-lifecycle.ts`, and
+the media feature server entry point exposes the feature-facing operations.
+The existing shared content service imports the focused library module
+directly, preserving import direction. Client code now imports the serializable
+folder-tree row type from its dedicated type module. Regression coverage
+confirms valid single-linked moves record actor/reason/from/to and that
+shared or cross-tenant assets are not moved. No data schema, route, API,
+permission, or workflow contract changed.
+
+Exact-clean SHA `a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e` passes `pnpm verify`
+(562 unit files / 5,010 tests and production build), focused media and
+ownership unit suites (22/22), and media-sharing Postgres integration (20/20)
+on disposable `planner_test`. The pre-commit runner selected the full unit
+suite because the change included `src/lib/db/schema/media.ts`, an intentional
+global test path; this escalation protects schema callers and should remain.
+Further media service boundaries, complete route review, release browser and
+visual evidence, and independent review remain open. AD-002 remains **In
+Progress**.

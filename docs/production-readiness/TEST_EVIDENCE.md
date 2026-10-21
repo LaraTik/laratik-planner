@@ -1,5 +1,30 @@
 # Test and coverage evidence
 
+## Media planning-folder lifecycle ownership — 2026-10-21, exact clean implementation SHA `a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`
+
+Moved planning-folder path creation and content-item folder reconciliation
+from the broad media service into
+`src/lib/media/planning-folder-lifecycle.ts`. The media feature server entry
+point exposes the feature-owned operations; the shared content service imports
+the focused platform module directly to preserve the rule that `src/lib` does
+not depend on `src/features`. Added Postgres regressions for a valid
+single-linked move and for shared/cross-tenant assets that must remain
+unchanged. No route, API, permission, workflow, or schema contract changed.
+
+| Check                                             | Result                                                                                                           |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | **Pass** — formatting, repository ESLint, strict TypeScript, 562 unit files / 5,010 tests, and production build. |
+| Disposable Postgres media-sharing integration     | **Pass** — 20/20, including move audit details and shared/cross-tenant denial.                                   |
+| Focused media and module-ownership unit suites    | **Pass** — 22/22.                                                                                                |
+| Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                                        |
+
+The repository pre-commit hook expanded its affected selection to the full
+unit suite because this change included `src/lib/db/schema/media.ts`, which is
+intentionally classified as a global test path. The expansion is retained as
+a safety check. Full five-browser release coverage, complete visual
+reconciliation, manual review of every route, and independent review remain
+open. AD-002 remains **In Progress**.
+
 ## Media asset listing/access ownership — 2026-10-21, exact clean implementation SHA `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`
 
 Media listing, pagination counts, related-content projection, page-size
