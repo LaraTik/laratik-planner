@@ -2622,8 +2622,14 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   assert-based, while final browser/visual comparison and exact-HEAD release
   evidence remain incomplete. Historical FEAT-01/02 describe a dispatcher and
   caller that now exist, but live cron installation and operations evidence
-  remain open. OTHER-03 log-call coverage and OTHER-10 migration index-lock
-  risk remain to be reviewed against current source.
+  remain open. OTHER-03 is reconciled against the current source: caught
+  server-side failures in content delivery, account preferences, mentions,
+  email, brand profile, secret fallback, storage, media cleanup/preview, and
+  planning edit now use the sanitizing structured logger. The old "10+ raw
+  console.error" count is stale. Remaining direct output is limited to shared
+  environment bootstrap validation, the development-only seed route, and
+  browser-side diagnostics; these still need their own boundary review.
+  OTHER-10 migration index-lock risk remains open.
 - A5 now records the 34-tool, 2,834-line MCP server-factory inventory and a
   bounded split queue by tool domain. The five diagnostics tools now register
   from `src/features/mcp/diagnostic-tools.ts`; the factory supplies its shared

@@ -1856,3 +1856,25 @@ and response behavior are unchanged.
 This is focused implementation evidence, not full release evidence. MCP
 integration, route/browser checks, and independent verification remain
 separate gates; status remains **Tested**, not **Verified**.
+
+## Structured logging cleanup — 2026-10-22
+
+Implementation SHA: `6aa65de380335b2d66dbef358d3c34e19b64d919`
+
+Caught server-side failures and operational warnings in content delivery,
+account preferences, mentions, email, brand profiles, secret fallback,
+storage, media cleanup/preview, and planning edit now use the shared
+sanitizing logger. Tests assert that unconfigured SMTP logs omit recipient
+addresses and that malformed storage paths are not copied into logs. Existing
+stable action error codes and user-visible behavior are unchanged.
+
+| Check                                                                  | Result        |
+| ---------------------------------------------------------------------- | ------------- |
+| Focused observability, email, secret, storage, brand, and media suites | Pass — 78/78. |
+| TypeScript                                                             | Pass.         |
+| Targeted ESLint, Prettier, and diff check                              | Pass.         |
+
+This is focused evidence; the full repository verification and route/browser
+release gates remain pending. The remaining direct console output is recorded
+in `PRODUCTION_READINESS_TRACKER.md` and is limited to bootstrap, development,
+and browser-side paths.
