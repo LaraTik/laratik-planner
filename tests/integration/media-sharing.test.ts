@@ -35,6 +35,7 @@ import {
   MediaPermissionError,
   publicMediaAssetForToken,
   renameMediaFolder,
+  registerUploadedMediaAsset,
   restoreMediaAsset,
   revokePublicMediaShare,
   setMediaAssetTags,
@@ -79,6 +80,10 @@ vi.mock("@/lib/storage/intent-service", async (importOriginal) => {
     discardUnattachedStorageObjectCopy: vi.fn(async () => undefined),
   };
 });
+
+vi.mock("@/lib/media/thumbnails", () => ({
+  storePreviewForAsset: vi.fn(async () => undefined),
+}));
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
 if (!TEST_DB_URL) throw new Error("TEST_DATABASE_URL is required for integration tests");
@@ -237,6 +242,42 @@ describe("media sharing and folder database contract", () => {
     );
     expect(filters.uploaders).toHaveLength(1);
     expect(filters.uploaders[0]).toMatchObject({ id: userId, count: 1 });
+  });
+
+  it("registers an uploaded object once and returns its persisted status", async () => {
+    const [object] = await db
+      .insert(storageObjects)
+      .values({
+        agencyId,
+        workspaceId,
+        bucket: "fixture",
+        objectKey: "fixture/registration.png",
+        kind: "image",
+        mimeType: "image/png",
+        originalName: "registration.png",
+        byteSize: 12,
+        createdBy: userId,
+      })
+      .returning();
+
+    const input = {
+      actor: { id: userId },
+      agencyId,
+      workspaceId,
+      storageObjectId: object!.id,
+      title: "Registration image",
+      sourceType: "legacy" as const,
+    };
+    const first = await registerUploadedMediaAsset(input);
+    const retry = await registerUploadedMediaAsset(input);
+
+    expect(first).toMatchObject({ status: "ready", failureCode: null });
+    expect(retry).toEqual(first);
+    const persisted = await db
+      .select()
+      .from(mediaAssets)
+      .where(eq(mediaAssets.storageObjectId, object!.id));
+    expect(persisted).toHaveLength(1);
   });
 
   it("stores only token hashes and permits one active link per image", async () => {
