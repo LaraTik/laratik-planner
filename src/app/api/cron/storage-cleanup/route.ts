@@ -1,7 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeCronRequest } from "@/lib/cron/route-auth";
-import { processPendingMediaAssets } from "@/features/media/server";
-import { expungeExpiredTrashedMedia } from "@/lib/media/service";
+import { expungeExpiredTrashedMedia, processPendingMediaAssets } from "@/features/media/server";
 import {
   expireStorageUploadIntents,
   purgeSoftDeletedStorageObjects,

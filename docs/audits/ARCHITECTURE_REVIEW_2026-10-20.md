@@ -212,9 +212,10 @@ projection is now a pure `src/lib/media/folder-tree.ts` module; the broad
 service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
 tree has disposable-Postgres read-path coverage. The remaining media service
-still has multiple responsibilities; folder management, import, trash/restore,
-and bulk/reconciliation operations remain review candidates. Workspace Media
-now has English and Arabic/RTL responsive screenshots at all five documented
+still has multiple responsibilities; listing/filtering, duplicate queries,
+upload registration, asset links, bulk move/tag/visibility, duplication, and
+reconciliation remain responsibility review candidates. Workspace Media now
+has English and Arabic/RTL responsive screenshots at all five documented
 widths; strict visual comparison passed all six browser cases, including
 critical accessibility checks across the Arabic matrix.
 
@@ -238,9 +239,12 @@ media feature entry point. Shared read authorization moved to
 The routes and pages now depend on the feature entry point. Disposable-Postgres
 coverage exercises folder normalization, tree counts, authorization, cascade
 archive, and asset unassignment; the read-path suite retains its query-budget
-checks. Import, trash/restore/expunging, and bulk/reconciliation remain review
-candidates in the broad media service. Full milestone verification remains
-pending for this checkpoint.
+checks. Import, trash/restore/expunging, and bulk/reconciliation were review
+candidates in the broad media service at that checkpoint. The folder ownership
+split passed `pnpm verify` (558 unit files / 4,988 tests) and the five-scenario
+migration drill on exact clean SHA
+`19983639fe39e869b8be6e640a34181e7da987ac`; evidence is in
+`docs/production-readiness/TEST_EVIDENCE.md`.
 
 **Media import workflow split (2026-10-21).** Single-file public import and
 the bounded folder-import batch now live in
@@ -251,9 +255,20 @@ serializable report types. Storage intent creation/completion/abort, URL
 redaction, permission checks, per-item failure mapping, and response behavior
 were preserved. Asset registration remains in the legacy service as the
 existing persistence primitive. Folder import, public sharing, folder
-management, assignment, and the pending-upload worker are feature-owned; the
-remaining service review candidates are trash/restore/expunging and bulk or
-reconciliation operations. Exact milestone verification is pending.
+management, assignment, and the pending-upload worker are feature-owned. The
+import workflow passed `pnpm verify` (558 unit files / 4,988 tests), all
+integration files, and the five-scenario migration drill on exact clean SHA
+`277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`.
+
+**Media trash lifecycle split (2026-10-21).** Single and bulk trash/restore
+operations and expired-trash cleanup now live in
+`src/features/media/trash-lifecycle.server.ts`. The asset routes and storage
+cleanup cron consume the feature entry point. Role checks, retention windows,
+per-item authorization, storage soft deletion, and quota release were moved
+without changing their behavior. Unit checks pass 21/21; the disposable-
+Postgres integration verifies the original and preview objects are both
+soft-deleted and the asset is deleted with the expected released-byte count.
+The full milestone gate is pending.
 
 ### A6 — Historical audit findings need status reconciliation
 

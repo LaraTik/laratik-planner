@@ -2263,3 +2263,19 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - `AD-002` remains **In Progress**; trash/restore/expunging,
   bulk/reconciliation, full route review, release browser matrix, and
   independent review remain open.
+
+## 2026-10-21 — Move media trash lifecycle behind the feature boundary
+
+- Moved single and bulk trash/restore operations and expired-trash cleanup to
+  `src/features/media/trash-lifecycle.server.ts`; media asset routes and the
+  storage-cleanup cron now call the feature entry point. Existing role gates,
+  30-day retention behavior, per-item results, storage soft-delete sequence,
+  and quota release semantics are preserved.
+- Focused media route, cron authorization, module ownership, and expiry unit
+  checks passed 21/21; strict TypeScript passed. The disposable-Postgres
+  media-sharing test verifies original/preview cleanup and released byte
+  counts. Full exact-SHA verification, the full integration suite, and the
+  migration drill remain pending for this milestone.
+- `AD-002` remains **In Progress**; bulk move/tag/visibility, duplication,
+  reconciliation, full route review, release browser matrix, and independent
+  review remain open.

@@ -31,7 +31,7 @@ vi.mock("@/lib/observability/app-errors", () => ({
   pruneAppErrorRetention: mocks.pruneAppErrorRetention,
 }));
 vi.mock("@/lib/observability/logger", () => ({ logError: mocks.logError }));
-vi.mock("@/lib/media/service", () => ({
+vi.mock("@/features/media/server", () => ({
   expungeExpiredTrashedMedia: mocks.expungeExpiredTrashedMedia,
   processPendingMediaAssets: mocks.processPendingMediaAssets,
 }));

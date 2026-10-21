@@ -18,14 +18,19 @@ import { hashMediaShareToken } from "@/lib/media/share-token";
 import {
   archiveMediaFolder,
   activeMediaShareForActor,
+  bulkRestoreMediaAssets,
+  bulkTrashMediaAssets,
   createPublicMediaShare,
   createMediaFolder,
+  expungeExpiredTrashedMedia,
   listMediaFolders,
   listMediaFoldersTree,
   MediaPermissionError,
   publicMediaAssetForToken,
   renameMediaFolder,
+  restoreMediaAsset,
   revokePublicMediaShare,
+  trashMediaAsset,
 } from "@/features/media/server";
 import { expectPgConstraint } from "./_db-error";
 
@@ -40,6 +45,7 @@ describe("media sharing and folder database contract", () => {
   let agencyId: string;
   let workspaceId: string;
   let assetId: string;
+  let storageObjectId: string;
 
   beforeAll(async () => {
     await migrate(db, { migrationsFolder: "./src/lib/db/migrations" });
@@ -102,6 +108,7 @@ describe("media sharing and folder database contract", () => {
     agencyId = agency!.id;
     workspaceId = workspace!.id;
     assetId = asset!.id;
+    storageObjectId = object!.id;
   });
 
   afterAll(async () => {
@@ -269,5 +276,92 @@ describe("media sharing and folder database contract", () => {
       .where(eq(mediaAssets.id, assetId));
     expect(asset?.folderId).toBeNull();
     await expect(listMediaFolders(actor, { agencyId, workspaceId })).resolves.toEqual([]);
+  });
+
+  it("expunges expired trashed assets and soft-deletes original and preview storage", async () => {
+    const [preview] = await db
+      .insert(storageObjects)
+      .values({
+        agencyId,
+        workspaceId,
+        bucket: "fixture",
+        objectKey: "fixture/image-preview.webp",
+        kind: "image",
+        mimeType: "image/webp",
+        originalName: "image-preview.webp",
+        byteSize: 7,
+        createdBy: userId,
+      })
+      .returning();
+    const expiredAt = new Date(Date.now() - 60_000);
+    await db
+      .update(mediaAssets)
+      .set({
+        status: "trashed",
+        trashedAt: expiredAt,
+        deleteAfter: expiredAt,
+        previewStorageObjectId: preview!.id,
+      })
+      .where(eq(mediaAssets.id, assetId));
+
+    await expect(expungeExpiredTrashedMedia(10)).resolves.toEqual({
+      media: 1,
+      storageObjects: 2,
+      bytesReleased: 11,
+    });
+    await expect(
+      db.select().from(mediaAssets).where(eq(mediaAssets.id, assetId)),
+    ).resolves.toHaveLength(0);
+    const storedRows = await db
+      .select({ status: storageObjects.status, deleteAfter: storageObjects.deleteAfter })
+      .from(storageObjects)
+      .where(sql`${storageObjects.id} in (${storageObjectId}, ${preview!.id})`);
+    expect(storedRows).toHaveLength(2);
+    expect(storedRows.every((row) => row.status === "soft_deleted" && row.deleteAfter)).toBe(true);
+  });
+
+  it("preserves manager-only single-asset trash and restore with the 30-day retention", async () => {
+    const actor = { id: userId };
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-trash-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+    const trashed = await trashMediaAsset(actor, assetId);
+    expect(trashed?.status).toBe("trashed");
+    expect(trashed?.trashedAt).toBeInstanceOf(Date);
+    expect(trashed?.deleteAfter?.getTime()).toBeGreaterThan(Date.now() + 29 * 24 * 60 * 60 * 1000);
+
+    await expect(restoreMediaAsset(actor, assetId)).resolves.toMatchObject({
+      status: "ready",
+      trashedAt: null,
+      deleteAfter: null,
+    });
+
+    await expect(trashMediaAsset({ id: outsider!.id }, assetId)).rejects.toBeInstanceOf(
+      MediaPermissionError,
+    );
+  });
+
+  it("keeps bulk trash and restore idempotent and reports per-asset denial", async () => {
+    const actor = { id: userId };
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-bulk-trash-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+    await expect(bulkTrashMediaAssets(actor, { assetIds: [assetId] })).resolves.toEqual({
+      trashed: 1,
+      failures: [],
+    });
+    await expect(bulkTrashMediaAssets(actor, { assetIds: [assetId] })).resolves.toEqual({
+      trashed: 0,
+      failures: [],
+    });
+    await expect(bulkRestoreMediaAssets(actor, { assetIds: [assetId] })).resolves.toEqual({
+      restored: 1,
+      failures: [],
+    });
+    await expect(
+      bulkTrashMediaAssets({ id: outsider!.id }, { assetIds: [assetId] }),
+    ).resolves.toEqual({ trashed: 0, failures: [{ assetId, reason: "forbidden" }] });
   });
 });

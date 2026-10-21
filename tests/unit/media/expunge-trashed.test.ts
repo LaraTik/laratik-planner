@@ -16,9 +16,9 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  *     poison the rest of the batch.
  *   - The return shape is `{ media, storageObjects, bytesReleased }`.
  *
- * The actual SQL transaction (quota release + hard-delete + soft-delete
- * + transaction) is integration-tested in the storage-cleanup cron
- * suite; this unit test pins the SELECT / error-isolation contract.
+ * The actual SQL transaction (quota release + hard-delete + soft-delete)
+ * is integration-tested in `tests/integration/media-sharing.test.ts`; this
+ * unit test pins the SELECT / error-isolation contract.
  */
 
 const selectMock = vi.fn();
@@ -47,7 +47,7 @@ vi.mock("@/lib/storage/config", () => ({
   getAgencyStorageContext: vi.fn(),
 }));
 
-const { expungeExpiredTrashedMedia } = await import("@/lib/media/service");
+const { expungeExpiredTrashedMedia } = await import("@/features/media/trash-lifecycle.server");
 
 // The function's internals build a Drizzle query chain. The shape
 // we exercise here is: `db.select(...).from(mediaAssets).where(...).
