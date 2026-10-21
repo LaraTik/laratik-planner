@@ -23,6 +23,8 @@ import { PageHeader } from "@/components/workspace/page-header";
 import { revalidatePath } from "next/cache";
 import { reserveCapacity } from "@/lib/entitlements";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { ianaTimezoneSchema } from "@/lib/workspaces/timezone";
+import { WorkspaceTimezoneField } from "./timezone-field";
 
 /**
  * Create a new workspace.
@@ -42,7 +44,7 @@ const FormSchema = z.object({
     .min(2)
     .max(60)
     .regex(/^[a-z0-9](?:[a-z0-9-]{0,58}[a-z0-9])?$/, "Use lowercase letters, digits, and hyphens"),
-  timezone: z.string().min(2).default("UTC"),
+  timezone: ianaTimezoneSchema.default("UTC"),
 });
 
 async function createWorkspaceAction(formData: FormData) {
@@ -189,7 +191,7 @@ export default async function NewWorkspacePage() {
             label={t("workspaceNew.timezonesLabel")}
             hint={t("workspaceNew.timezonesHint")}
           >
-            <Input type="text" name="timezone" defaultValue="UTC" placeholder="UTC" />
+            <WorkspaceTimezoneField />
           </FormField>
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <Button type="submit" size="lg">
