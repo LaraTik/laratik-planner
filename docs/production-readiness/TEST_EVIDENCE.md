@@ -1,5 +1,20 @@
 # Test and coverage evidence
 
+## Media service responsibility split — 2026-10-21, exact clean implementation SHA `a016d98b683235f803891155e405ea7f46a1a4e8`
+
+Public media sharing and single-asset folder assignment now have a feature-owned
+server boundary. The route URLs, authorization contract, share token behavior,
+transaction/audit handling, and JSON responses are unchanged.
+
+| Check                                                                                                            | Result                                                                                                                                                      |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                    | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build; exit 0 on the exact clean SHA.   |
+| `TEST_DATABASE_URL=… rtk pnpm exec tsx scripts/run-integration-tests.ts tests/integration/media-sharing.test.ts` | **Pass** — 4/4 disposable-Postgres tests on the exact clean SHA, including share rotation, hashed tokens, public lookup, revocation, and non-member denial. |
+| `NODE_ENV=test rtk pnpm migration-drill`                                                                         | **Pass** — all five migration-pipeline scenarios; from-zero and restored ledger each contained 90/90 entries. No schema migration was added by this change. |
+
+The full five-browser release matrix and manual review of every route remain
+open. This checkpoint does not promote AD-002 to `Tested` or `Verified`.
+
 ## Architecture refinement checkpoint — 2026-10-21, exact clean implementation SHA `7e4e4b13c590d31f080ff71480903addd33d10ea`
 
 This checkpoint records the architecture-refinement milestone on its clean

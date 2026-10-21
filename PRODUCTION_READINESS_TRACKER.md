@@ -2219,9 +2219,10 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   revoke and non-member denial, plus route coverage for auth/permission
   failures, cache headers, public origin, and JSON shapes. No schema migration
   or API contract change.
-- `TEST_DATABASE_URL=…` focused integration passed 4/4. The affected unit
-  runner escalated to the full suite and passed 558 files / 4,988 tests.
-  Strict TypeScript and formatting passed. Exact-SHA `pnpm verify` evidence
-  will be added after the implementation commit.
+- `pnpm verify` passed on exact clean SHA
+  `a016d98b683235f803891155e405ea7f46a1a4e8`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build.
+  Focused integration passed 4/4 and the migration drill passed 5/5 on that
+  SHA. Full details are in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; folder management, broader route review,
   the five-browser release matrix, and independent review remain open.
