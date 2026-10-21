@@ -2,7 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ConnectionActions } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/connection-actions";
-import { testChannelConnectionAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
+import {
+  disconnectChannelAction,
+  testChannelConnectionAction,
+} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
 
 /**
  * UX-03 (GAP-FULL-REVIEW-2026-08-25) — the connection revoke
@@ -203,5 +206,19 @@ describe("ConnectionActions Re-test", () => {
     expect(button).toHaveAttribute("aria-busy", "true");
     resolveAction({ success: true, lastSyncedAt: new Date().toISOString() } as Result);
     await screen.findByTestId("retest-success");
+  });
+});
+
+describe("ConnectionActions disconnect", () => {
+  it("calls the workspace-scoped server action for the selected channel", async () => {
+    const user = userEvent.setup();
+    const action = vi.mocked(disconnectChannelAction);
+    render(<ConnectionActions slug="acme" channel={channel} affectedChannels={[]} />);
+
+    await user.click(screen.getByTestId("disconnect-button"));
+
+    await waitFor(() => {
+      expect(action).toHaveBeenCalledWith("acme", channel.id);
+    });
   });
 });

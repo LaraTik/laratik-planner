@@ -43,11 +43,9 @@ test.describe("M4 — social connections (workspace_manager)", () => {
     await expect(page.getByTestId("channels-table")).toBeVisible();
   });
 
-  test("disconnect preserves the channel row and sets status=disconnected", async ({ page }) => {
+  test("renders the Add channel form when the workspace has no connections", async ({ page }) => {
     await bootstrapRoleSession(page, "workspace_manager");
     await page.goto("/app/a/test-agency/w/acme/channels");
-    // The page is empty in the dev seed; the test only verifies the
-    // page renders without errors and the form is reachable.
     await expect(page.getByTestId("channel-add-card")).toBeVisible();
   });
 
