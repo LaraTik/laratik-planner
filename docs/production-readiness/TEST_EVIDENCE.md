@@ -1,5 +1,31 @@
 # Test and coverage evidence
 
+## Architecture refinement checkpoint — 2026-10-21, exact clean implementation SHA `7e4e4b13c590d31f080ff71480903addd33d10ea`
+
+This checkpoint records the architecture-refinement milestone on its clean
+implementation commit. Database checks ran on the disposable `planner_test`
+database against the same source tree immediately before commit; no schema
+migration was added.
+
+| Check                                               | Result                                                                                                                                                                                                                                              |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                       | **Pass** — formatting, ESLint, strict TypeScript, 557 unit files / 4,985 tests, and Next.js production build; exit 0 on the exact implementation SHA.                                                                                               |
+| `TEST_DATABASE_URL=… pnpm test:integration`         | **Pass** — complete integration suite on disposable Postgres against the identical source tree; exit 0.                                                                                                                                             |
+| `NODE_ENV=test pnpm migration-drill`                | **Pass** — 5/5 scenarios: from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; exit 0.                                                                                                                |
+| Focused visual suite via `scripts/run-e2e-tests.ts` | **Pass** — 18/18 strict Chromium comparisons: AI settings, workspace settings, and media at 375/768/1024/1280/1440px in English/LTR, plus each page's Arabic/RTL full-width matrix. Accessibility and overflow checks ran within the suite; exit 0. |
+
+The focused visual run was executed after commit `7e4e4b13` and compared against
+the committed baselines. The complete five-browser release matrix, manual
+review of every route, and independent review remain open. This evidence does
+not promote AD-002 to `Tested` or `Verified`.
+
+Reproduction command (replace the placeholder with a disposable test database
+URL; do not use production credentials):
+
+```sh
+TEST_DATABASE_URL='<disposable planner_test URL>' rtk pnpm exec tsx scripts/run-e2e-tests.ts -- tests/e2e/visual-regression.spec.ts --project=visual-chromium --grep='responsive /app/w/acme/(ai-settings|media) @|responsive /app/w/acme/settings @|workspace ai-settings renders Arabic RTL|workspace settings render Arabic RTL|workspace media renders Arabic RTL'
+```
+
 ## Safe Graph API version migration — 2026-10-14, exact clean implementation SHA `3a518784a4e977ddf54f08d9f03c314f01bc0c9e`
 
 The advertising admin surface now supports migrating an existing explicit Meta
