@@ -14,9 +14,15 @@ unchanged. No route, API, permission, workflow, or schema contract changed.
 | Check                                             | Result                                                                                                           |
 | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | `pnpm verify`                                     | **Pass** — formatting, repository ESLint, strict TypeScript, 562 unit files / 5,010 tests, and production build. |
+| Full `pnpm test:integration`                      | **Pass** — all integration specs against disposable `planner_test`; every suite completed successfully.          |
 | Disposable Postgres media-sharing integration     | **Pass** — 20/20, including move audit details and shared/cross-tenant denial.                                   |
+| `NODE_ENV=test pnpm migration-drill`              | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90.                                      |
 | Focused media and module-ownership unit suites    | **Pass** — 22/22.                                                                                                |
 | Targeted ESLint, Prettier, and `git diff --check` | **Pass**.                                                                                                        |
+
+The full database suite and migration drill ran against the source at SHA
+`a8ddbd2b6b84744ae7b7cc8e341edde80c1cc13e`; only documentation commits have
+been added since, and the current source tree remains identical to that SHA.
 
 The repository pre-commit hook expanded its affected selection to the full
 unit suite because this change included `src/lib/db/schema/media.ts`, which is
