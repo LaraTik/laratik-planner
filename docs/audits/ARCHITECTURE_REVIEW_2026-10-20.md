@@ -1393,3 +1393,18 @@ TypeScript typecheck, and the 37 focused MCP tests. The catalog regression
 includes all five workspace tool names and remains at 34 tools. Broad
 repository verification, route/browser/visual evidence, and independent
 review remain open; AD-002 remains **In Progress**.
+
+## MCP research and social analytics tool ownership — 2026-10-22
+
+The research shelf reader now lives in `src/features/mcp/research-tools.ts`;
+the Command Center reader and thumbnail maintenance tool live in
+`src/features/mcp/social-tools.ts`. Their existing workspace authorization,
+scope requirements, serialization, and tool-list positions are preserved.
+The server factory retains only shared transport setup and composes the
+feature registrations. No tool contract or persisted behavior changed.
+
+Exact implementation commit `9f5fdc5` passes formatting, targeted ESLint,
+TypeScript typecheck, and 37 focused MCP tests. Existing catalog checks retain
+the research, Command Center, and thumbnail tool names and the 34-tool total.
+Full repository verification, remaining page review, browser and visual
+evidence, and independent review remain open; AD-002 remains **In Progress**.
