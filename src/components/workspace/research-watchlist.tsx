@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { ArrowUpRight, Plus, Trash2, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -55,11 +56,7 @@ export function ResearchWatchlist({
   canManage: boolean;
   labels: Labels;
 }) {
-  const [accounts, setAccounts] = React.useState(initialAccounts);
-  const [platform, setPlatform] = React.useState<(typeof platformOptions)[number]>("instagram");
-  const [handle, setHandle] = React.useState("");
-  const [displayName, setDisplayName] = React.useState("");
-  const [sourceUrl, setSourceUrl] = React.useState("");
+  const router = useRouter();
   const [pending, setPending] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [memberships, setMemberships] = React.useState<Record<string, string[]>>(() =>
@@ -106,6 +103,8 @@ export function ResearchWatchlist({
 
   async function addAccount(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     setPending(true);
     setError(null);
     let response: Response;
@@ -115,10 +114,10 @@ export function ResearchWatchlist({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           workspaceSlug,
-          platform,
-          handle,
-          displayName: displayName || undefined,
-          sourceUrl,
+          platform: String(formData.get("platform") ?? "instagram"),
+          handle: String(formData.get("handle") ?? ""),
+          displayName: String(formData.get("displayName") ?? "") || undefined,
+          sourceUrl: String(formData.get("sourceUrl") ?? ""),
         }),
       });
     } catch {
@@ -135,11 +134,9 @@ export function ResearchWatchlist({
       setPending(false);
       return;
     }
-    setAccounts((current) => [body.account!, ...current]);
-    setHandle("");
-    setDisplayName("");
-    setSourceUrl("");
+    form.reset();
     setPending(false);
+    router.refresh();
   }
 
   async function removeAccount(id: string) {
@@ -159,7 +156,7 @@ export function ResearchWatchlist({
       setError(labels.error);
       return;
     }
-    setAccounts((current) => current.filter((account) => account.id !== id));
+    router.refresh();
   }
 
   return (
@@ -185,10 +182,8 @@ export function ResearchWatchlist({
             </div>
             <FormField id="research-watchlist-platform" label={labels.platform} required>
               <select
-                value={platform}
-                onChange={(event) =>
-                  setPlatform(event.target.value as (typeof platformOptions)[number])
-                }
+                name="platform"
+                defaultValue="instagram"
                 className="border-border bg-surface text-body text-fg-primary focus-visible:ring-focus-ring h-10 w-full rounded-[var(--radius-control)] border px-3 py-2 focus-visible:ring-2 focus-visible:outline-none"
               >
                 {platformOptions.map((option) => (
@@ -199,21 +194,13 @@ export function ResearchWatchlist({
               </select>
             </FormField>
             <FormField id="research-watchlist-handle" label={labels.handle} required>
-              <Input
-                value={handle}
-                onChange={(event) => setHandle(event.target.value)}
-                placeholder="@account"
-              />
+              <Input name="handle" placeholder="@account" />
             </FormField>
             <FormField id="research-watchlist-display-name" label={labels.displayName}>
-              <Input value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
+              <Input name="displayName" />
             </FormField>
             <FormField id="research-watchlist-source-url" label={labels.sourceUrl} required>
-              <Input
-                type="url"
-                value={sourceUrl}
-                onChange={(event) => setSourceUrl(event.target.value)}
-              />
+              <Input name="sourceUrl" type="url" />
             </FormField>
             <div className="flex items-end">
               <Button type="submit" disabled={pending} className="w-full">
@@ -230,9 +217,9 @@ export function ResearchWatchlist({
         </Card>
       ) : null}
 
-      {accounts.length > 0 ? (
+      {initialAccounts.length > 0 ? (
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {accounts.map((account) => (
+          {initialAccounts.map((account) => (
             <Card key={account.id} padding="md" className="space-y-4">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">

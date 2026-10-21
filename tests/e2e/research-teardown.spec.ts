@@ -31,17 +31,38 @@ test.describe("research teardown preview", () => {
       timeout: 30_000,
     });
 
-    await page.getByLabel("Handle").fill("@competitor");
+    const competitorHandle = `competitor-${Date.now()}`;
+    const handleField = page.getByLabel("Handle");
+    await handleField.fill(`@${competitorHandle}`);
+    await expect(handleField).toHaveValue(`@${competitorHandle}`);
     const sourceUrl = page.getByLabel("Profile URL");
-    await sourceUrl.fill("https://instagram.com/competitor");
-    await expect(sourceUrl).toHaveValue("https://instagram.com/competitor");
+    const competitorUrl = `https://instagram.com/${competitorHandle}`;
+    await sourceUrl.fill(competitorUrl);
+    await expect(sourceUrl).toHaveValue(competitorUrl);
+    const submittedFields = await sourceUrl
+      .locator("xpath=ancestor::form")
+      .evaluate((element) =>
+        Object.fromEntries(new FormData(element as HTMLFormElement).entries()),
+      );
+    expect(submittedFields).toMatchObject({
+      handle: `@${competitorHandle}`,
+      sourceUrl: competitorUrl,
+    });
     const accountResponse = page.waitForResponse(
       (response) =>
         response.url().endsWith("/api/research/watchlist") &&
         response.request().method() === "POST",
     );
     await page.getByRole("button", { name: "Add to watchlist" }).click();
-    await expect((await accountResponse).status()).toBe(201);
+    const createdAccountResponse = await accountResponse;
+    expect(createdAccountResponse.request().postDataJSON()).toMatchObject({
+      handle: `@${competitorHandle}`,
+      sourceUrl: competitorUrl,
+    });
+    await expect(createdAccountResponse.status()).toBe(201);
+    await expect(createdAccountResponse.json()).resolves.toMatchObject({
+      account: { handle: competitorHandle, sourceUrl: competitorUrl },
+    });
     await expect(page.getByText("Source reference only", { exact: true })).toBeVisible();
 
     const membership = page.getByRole("checkbox", { name: watchlistName });
@@ -156,7 +177,7 @@ test.describe("research teardown preview", () => {
     await expect(page.locator('input[name="researchTeardownId"]')).toHaveValue(body.teardown.id);
     await page.getByLabel("Title").fill("Research-led draft");
     await page.getByRole("button", { name: "Create draft", exact: true }).click();
-    await expect(page).toHaveURL(/\/planning\/[^/]+\?created=1/, { timeout: 30_000 });
+    await expect(page).toHaveURL(/\/planning\/[^/]+\?created=1#overview$/, { timeout: 30_000 });
     if ((page.viewportSize()?.width ?? 1024) < 1024) {
       await page
         .getByRole("combobox", { name: "Planning workspace sections" })
