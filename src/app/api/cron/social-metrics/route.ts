@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isCronAuthorized } from "@/lib/cron/auth";
+import { authorizeCronRequest } from "@/lib/cron/route-auth";
 import { runSyncTick, type SyncTickResult } from "@/lib/social/sync";
 import { recordCronTick } from "@/lib/cron/history";
 import { mutatingApiHeaders } from "@/lib/security/headers";
@@ -44,10 +44,6 @@ export const runtime = "nodejs";
 
 const MAX_RUNTIME_MS = 50_000; // leave a 10s cushion under the 60s VPS timeout
 const CRON_NAME = "social-metrics";
-
-function unauthorized(): NextResponse {
-  return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
-}
 
 type TickOutcome =
   | { kind: "flag-off" }
@@ -117,7 +113,8 @@ async function persistTick(outcome: TickOutcome): Promise<void> {
 }
 
 export async function GET(req: NextRequest) {
-  if (!isCronAuthorized(req.headers)) return unauthorized();
+  const authResponse = authorizeCronRequest(req.headers);
+  if (authResponse) return authResponse;
 
   if (!serverEnv.SOCIAL_SYNC_ENABLED) {
     // Best-effort history. If the insert fails, the route still

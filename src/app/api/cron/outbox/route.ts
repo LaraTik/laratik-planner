@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { isCronAuthorized } from "@/lib/cron/auth";
+import { authorizeCronRequest } from "@/lib/cron/route-auth";
 import { dispatchOutboxOnce } from "@/lib/notifications/service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
@@ -31,12 +31,9 @@ export const runtime = "nodejs";
 
 const MAX_RUNTIME_MS = 50_000; // leave a 10s cushion under the 60s VPS timeout
 
-function unauthorized(): NextResponse {
-  return new NextResponse("Unauthorized", { status: 401, headers: mutatingApiHeaders() });
-}
-
 async function handle(req: NextRequest): Promise<NextResponse> {
-  if (!isCronAuthorized(req.headers)) return unauthorized();
+  const authResponse = authorizeCronRequest(req.headers);
+  if (authResponse) return authResponse;
 
   const start = Date.now();
   let result: Awaited<ReturnType<typeof dispatchOutboxOnce>>;

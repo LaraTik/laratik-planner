@@ -101,8 +101,12 @@ contracts are not sufficiently stable to justify another shared module.
 authorization and response-header behavior; several also repeat timing,
 unauthorized-response, and GET/POST delegation code. Their business work,
 failure response shapes, and side effects differ, so a broad generic runner
-could hide meaningful behavior. Add route-level coverage first, then extract
-only a narrow common contract if it removes real caller complexity.
+must not hide meaningful behavior. The shared `authorizeCronRequest` helper
+now owns only the bearer authorization check and the uniform 401/no-store
+response. Job-specific timing, flags, history, execution, and failure handling
+remain in each route. `tests/unit/cron-routes-auth.test.ts` covers all six
+routes and every supported GET/POST method (11 cases), asserting that
+unauthorized requests do not invoke job or history side effects.
 
 ### A5 — Several modules warrant responsibility review
 
@@ -297,9 +301,8 @@ stopped first.
    the feature ownership, import direction, and page-review rules now live in
    [`../architecture/module-ownership.md`](../architecture/module-ownership.md)
    and are linked from contributor guidance and `AGENTS.md`.
-3. Add route-level unauthorized-response tests for the six cron adapters, then
-   decide whether the repeated 401 response merits the narrow shared helper in
-   A4.
+3. Complete the current-state route, domain, database, integration, and test
+   coverage map; this review still does not manually certify every route.
 4. Tackle confirmed security, tenant, workflow, transaction, privacy, provider,
    or shared-rendering bugs as isolated regression-tested changes.
 5. Review pages and shared UI in route groups, recording bilingual, responsive,
@@ -403,3 +406,13 @@ gates remain open; this evidence does not advance any route or release to
 `Tested` or `Verified`. The focused Chromium runs and standalone sign-out retry
 also ran against this clean commit. The exact commit is clean locally; full
 five-browser and visual release evidence remains outstanding.
+
+### Cron boundary follow-up — 2026-10-21
+
+The six cron adapters now share `authorizeCronRequest` for bearer authorization
+and their standard unauthorized response. Route-specific work and failure
+contracts remain local. `tests/unit/cron-routes-auth.test.ts` passes 11/11
+cases across every supported GET/POST method and proves no job/history side
+effect runs when authorization fails. This change does not touch persistence,
+provider behavior, or user-facing routes; the full repository verification is
+still required at the resulting clean commit.
