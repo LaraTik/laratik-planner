@@ -145,6 +145,11 @@ describe("diagnostics tool registration", () => {
         "laratik_planner_transition_content",
         "laratik_planner_archive_content",
         "laratik_planner_duplicate_content",
+        "laratik_planner_list_workspaces",
+        "laratik_planner_list_workspace_members",
+        "laratik_planner_list_agencies",
+        "laratik_planner_get_workspace_settings",
+        "laratik_planner_apply_workflow_scenario",
       ]),
     );
   });
