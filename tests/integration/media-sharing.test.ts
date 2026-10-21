@@ -37,6 +37,7 @@ import {
   linkedTargetsForMediaAsset,
   listMediaFolders,
   listMediaFoldersTree,
+  listMediaAssetsPage,
   MediaPermissionError,
   publicMediaAssetForToken,
   renameMediaAsset,
@@ -378,6 +379,47 @@ describe("media sharing and folder database contract", () => {
     expect(storedLinks).toHaveLength(1);
   });
 
+  it("keeps library pagination totals aligned with agency-shared visible rows", async () => {
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({ agencyId, name: "Other", slug: "other", createdBy: userId })
+      .returning();
+    const [sharedObject] = await db
+      .insert(storageObjects)
+      .values({
+        agencyId,
+        workspaceId: otherWorkspace!.id,
+        bucket: "fixture",
+        objectKey: "fixture/count-shared.png",
+        kind: "image",
+        mimeType: "image/png",
+        originalName: "count-shared.png",
+        byteSize: 10,
+        status: "active",
+        createdBy: userId,
+      })
+      .returning();
+    await db.insert(mediaAssets).values({
+      agencyId,
+      ownerWorkspaceId: otherWorkspace!.id,
+      storageObjectId: sharedObject!.id,
+      title: "Shared with main workspace",
+      status: "ready",
+      visibility: "agency",
+      sourceType: "browser_file",
+      createdBy: userId,
+      updatedBy: userId,
+    });
+
+    const page = await listMediaAssetsPage(
+      { id: userId },
+      { agencyId, workspaceId, kind: "image", page: 1, pageSize: 10 },
+    );
+
+    expect(page.rows).toHaveLength(2);
+    expect(page.total).toBe(2);
+  });
+
   it("registers an uploaded object once and returns its persisted status", async () => {
     const [object] = await db
       .insert(storageObjects)
@@ -515,6 +557,15 @@ describe("media sharing and folder database contract", () => {
     await db.update(mediaAssets).set({ folderId: child!.id }).where(eq(mediaAssets.id, assetId));
     const visible = await listMediaFolders(actor, { agencyId, workspaceId });
     expect(visible.map((folder) => folder.id)).toEqual([root!.id, child!.id]);
+    await expect(
+      listMediaAssetsPage(actor, {
+        agencyId,
+        workspaceId,
+        folderId: root!.id,
+        kind: "image",
+        page: 1,
+      }),
+    ).resolves.toMatchObject({ total: 1 });
     const tree = await listMediaFoldersTree(actor, { agencyId, workspaceId }, visible);
     expect(tree.find((folder) => folder.id === child!.id)?.name).toBe("Final Assets");
     expect(tree.find((folder) => folder.id === root!.id)?.descendantAssetCount).toBe(1);

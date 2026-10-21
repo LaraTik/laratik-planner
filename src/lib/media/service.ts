@@ -1,5 +1,5 @@
 import "server-only";
-import { and, asc, desc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or, sql, type SQL } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -69,30 +69,32 @@ async function mediaFolderDescendantIds(input: {
   return [...descendantIds];
 }
 
-export async function listMediaAssets(actor: Actor, input: ListInput) {
-  if (!(await isAgencyMember(actor, input.agencyId))) return [];
-  const accessibleIds = await accessibleMediaWorkspaceIds(actor, input.agencyId);
-  if (accessibleIds.length === 0) return [];
-  if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return [];
+type MediaAssetFilterInput = Omit<ListInput, "page" | "pageSize" | "limit">;
 
-  // A workspace view includes its own assets plus agency-shared assets from
-  // the agency. The object is reused; this is a catalog visibility rule, not
-  // a copy operation. The detail/download path applies the same agency-level
-  // internal-role rule.
+/** Keep list rows and pagination counts on the same authorization and filter rules. */
+async function mediaAssetFilterConditions(
+  actor: Actor,
+  input: MediaAssetFilterInput,
+): Promise<{ accessibleIds: string[]; conditions: SQL[] } | null> {
+  if (!(await isAgencyMember(actor, input.agencyId))) return null;
+  const accessibleIds = await accessibleMediaWorkspaceIds(actor, input.agencyId);
+  if (accessibleIds.length === 0) return null;
+  if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return null;
+
   const ownerScope = input.workspaceId
     ? or(eq(mediaAssets.ownerWorkspaceId, input.workspaceId), eq(mediaAssets.visibility, "agency"))
     : or(
         inArray(mediaAssets.ownerWorkspaceId, accessibleIds),
         eq(mediaAssets.visibility, "agency"),
       );
-
-  const conditions = [
+  const conditions: SQL[] = [
     eq(mediaAssets.agencyId, input.agencyId),
-    ownerScope,
+    ownerScope!,
     input.includeTrashed
       ? inArray(mediaAssets.status, ["processing", "ready", "failed", "trashed"])
       : inArray(mediaAssets.status, ["processing", "ready", "failed"]),
   ];
+
   if (input.kind) conditions.push(eq(storageObjects.kind, input.kind));
   if (input.folderId === null) conditions.push(isNull(mediaAssets.folderId));
   if (input.folderId) {
@@ -117,11 +119,11 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
             folderId: input.folderId,
           })
         : [];
-    if (folderIds.length === 0) return [];
+    if (folderIds.length === 0) return null;
     conditions.push(inArray(mediaAssets.folderId, folderIds));
   }
   if (input.assetIds) {
-    if (input.assetIds.length === 0) return [];
+    if (input.assetIds.length === 0) return null;
     conditions.push(inArray(mediaAssets.id, input.assetIds));
   }
   if (input.sharedOnly) conditions.push(eq(mediaAssets.visibility, "agency"));
@@ -131,6 +133,14 @@ export async function listMediaAssets(actor: Actor, input: ListInput) {
       or(ilike(mediaAssets.title, `%${query}%`), ilike(storageObjects.originalName, `%${query}%`))!,
     );
   }
+
+  return { accessibleIds, conditions };
+}
+
+export async function listMediaAssets(actor: Actor, input: ListInput) {
+  const filters = await mediaAssetFilterConditions(actor, input);
+  if (!filters) return [];
+  const { accessibleIds, conditions } = filters;
 
   const orderBy =
     input.sort === "uploadedAt"
@@ -318,50 +328,16 @@ export async function listMediaAssetsPage(actor: Actor, input: ListInput) {
  */
 export async function countMediaAssets(
   actor: Actor,
-  input: Omit<ListInput, "limit" | "offset" | "page" | "pageSize">,
+  input: MediaAssetFilterInput,
 ): Promise<number> {
-  if (!(await isAgencyMember(actor, input.agencyId))) return 0;
-  const accessibleIds = await accessibleMediaWorkspaceIds(actor, input.agencyId);
-  if (accessibleIds.length === 0) return 0;
-  if (input.workspaceId && !accessibleIds.includes(input.workspaceId)) return 0;
-
-  const ownerScope = input.workspaceId
-    ? or(eq(mediaAssets.ownerWorkspaceId, input.workspaceId), eq(mediaAssets.visibility, "agency"))
-    : or(
-        inArray(mediaAssets.ownerWorkspaceId, accessibleIds),
-        eq(mediaAssets.visibility, "agency"),
-      );
-
-  const conditions = [
-    eq(mediaAssets.agencyId, input.agencyId),
-    ownerScope,
-    input.includeTrashed
-      ? inArray(mediaAssets.status, ["processing", "ready", "failed", "trashed"])
-      : inArray(mediaAssets.status, ["processing", "ready", "failed"]),
-    inArray(mediaAssets.ownerWorkspaceId, input.workspaceId ? [input.workspaceId] : accessibleIds),
-  ];
-
-  if (input.query) {
-    const pattern = `%${input.query.trim()}%`;
-    conditions.push(
-      or(ilike(mediaAssets.title, pattern), ilike(storageObjects.originalName, pattern))!,
-    );
-  }
-  if (input.kind) {
-    conditions.push(eq(storageObjects.kind, input.kind));
-  }
-  if (input.sharedOnly) {
-    conditions.push(eq(mediaAssets.visibility, "agency"));
-  }
-  if (input.folderId === null) {
-    conditions.push(isNull(mediaAssets.folderId));
-  } else if (input.folderId) {
-    conditions.push(eq(mediaAssets.folderId, input.folderId));
-  }
+  const filters = await mediaAssetFilterConditions(actor, input);
+  if (!filters) return 0;
+  const { conditions } = filters;
 
   const [row] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(mediaAssets)
+    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
     .where(and(...conditions));
   return row?.count ?? 0;
 }
