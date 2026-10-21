@@ -2404,3 +2404,18 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
   integration, migration drill, route review, release browser matrix, and
   independent review remain open.
+
+## 2026-10-21 — Move audience-copy writes behind the content feature
+
+- Moved canonical audience-copy material edits and the legacy partial-patch
+  adapter into `src/features/content/audience-copy.server.ts`; the explicit
+  server entry point is marked `server-only`. The planning action now imports
+  both creative and audience-copy writes from the content feature. The schema
+  test moved into `tests/unit/content/` so the affected-test runner can map it
+  to the content area instead of escalating to the full unit suite.
+- 103 focused content, materiality, and ownership tests pass; strict TypeScript,
+  targeted ESLint, Prettier, and diff checks pass on exact clean SHA
+  `4ad0f0473d5d001096390757cf60bf47cd69e68a`.
+- `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
+  integration, migration drill, route review, release browser matrix, and
+  independent review remain open.

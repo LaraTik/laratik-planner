@@ -963,18 +963,23 @@ and independent review remain open.
 ### Content structured-creative ownership — 2026-10-21
 
 Format-payload validation, role checks, designer-field restrictions, activity
-recording, and research-teardown prefill now live in
-`src/features/content/format-payload.server.ts`, exported through the explicit
-server entry point. The planning action and existing content-service tests use
-that feature boundary. The broad content workflow service no longer owns these
-responsibilities; other content workflows remain in the legacy domain module
-for later bounded migrations. No route, permission, workflow, or data contract
-changed.
+recording, and research-teardown prefill live in
+`src/features/content/format-payload.server.ts`. Canonical material audience
+copy updates and the legacy partial-patch adapter live in
+`src/features/content/audience-copy.server.ts`. The planning action uses the
+explicit content server entry point; schema coverage now sits under the mapped
+content test area so affected checks can remain targeted. The broad content
+workflow service no longer owns these responsibilities; other content
+workflows remain in the legacy domain module for later bounded migrations. No
+route, permission, workflow, or data contract changed.
 
 The existing content-service suite passes 57/57, including payload
 normalization/audit and designer field restrictions. TypeScript, targeted
 ESLint, Prettier, and diff checks pass on exact clean code SHA
-`e5b238f38830d6729b986261a0277dc9017df9e5`. Full repository verification,
+`e5b238f38830d6729b986261a0277dc9017df9e5`. The audience-copy move passes
+103/103 focused content, materiality, and ownership tests plus typecheck,
+targeted ESLint, Prettier, and diff checks on exact clean code SHA
+`4ad0f0473d5d001096390757cf60bf47cd69e68a`. Full repository verification,
 all integration files, migration drill, route review, release browser matrix,
 and independent review remain open; AD-002 remains **In Progress**.
 

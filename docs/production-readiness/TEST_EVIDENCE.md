@@ -1491,3 +1491,20 @@ This was an ownership-only extraction with no schema, route, permission, or
 workflow changes. Full `pnpm verify`, repository-wide integration, migration
 drill, browser release matrix, and independent review remain open for the
 architecture program.
+
+## 2026-10-21 — Audience-copy content feature extraction
+
+Implementation SHA: `4ad0f0473d5d001096390757cf60bf47cd69e68a`
+
+| Check                                              | Result                                                               |
+| -------------------------------------------------- | -------------------------------------------------------------------- |
+| Focused content/materiality/ownership Vitest batch | Pass — 103/103 tests, including feature server-boundary enforcement. |
+| `pnpm typecheck`                                   | Pass.                                                                |
+| Targeted ESLint                                    | Pass — zero warnings.                                                |
+| Targeted Prettier check and `git diff --check`     | Pass.                                                                |
+
+The initial commit attempt exposed the missing `server-only` marker and an
+unmapped root-level content test; both were corrected before commit. The
+successful pre-commit run passed. Full `pnpm verify`, repository-wide
+integration, migration drill, browser release matrix, and independent review
+remain open for the architecture program.
