@@ -1,6 +1,6 @@
 "use server";
 
-import {} from "next/cache";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -846,7 +846,7 @@ export async function createCommentAction(
     }
   }
   await createComment(actor, parsed.data, structuredMentionIds);
-  void workspace;
+  revalidatePath(workspaceBasePath(workspace.agencySlug, workspace.slug), "layout");
   return { ok: true, mentionedUserIds: structuredMentionIds };
 }
 
@@ -855,7 +855,7 @@ export async function resolveCommentAction(input: {
   commentId: string;
   resolved: boolean;
 }): Promise<ActionState<ResolveCommentFields>> {
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   const parsed = ResolveCommentSchema.safeParse({
     commentId: input.commentId,
     resolved: input.resolved,
@@ -864,6 +864,7 @@ export async function resolveCommentAction(input: {
     return fieldErrorsFromZod<ResolveCommentFields>(parsed.error);
   }
   await resolveComment(actor, parsed.data);
+  revalidatePath(workspaceBasePath(workspace.agencySlug, workspace.slug), "layout");
   return { ok: true };
 }
 

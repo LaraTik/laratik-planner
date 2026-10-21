@@ -115,7 +115,7 @@ export function CommentComposer({
   const locale = useLocaleCode();
   const boundAction = createCommentAction.bind(null, workspaceSlug);
   const [state, formAction] = useActionState<
-    { error?: string; mentionedUserIds?: string[] } | null,
+    { error?: string; ok?: true; mentionedUserIds?: string[] } | null,
     FormData
   >(boundAction, null);
   const { pending } = useFormStatus();
@@ -410,6 +410,7 @@ export function CommentComposer({
         name="mentionedUserIds"
         value={JSON.stringify(Array.from(new Set(pendingMentions.map((m) => m.id))))}
       />
+      <input type="hidden" name="visibility" value={visibility} />
 
       <div className="relative">
         <DirAwareTextarea
