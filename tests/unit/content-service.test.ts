@@ -164,11 +164,6 @@ const {
   batchCreateContentItems,
   bulkArchiveContentItems,
   BulkArchiveSchema,
-  claimAsDesigner,
-  assignDesigner,
-  assignContentOwner,
-  releaseDesignTask,
-  AssignDesignerSchema,
   UPDATEABLE_STATUSES,
 } = await import("@/lib/content/service");
 const {
@@ -178,6 +173,11 @@ const {
   listWorkspaceDesigners,
   transitionContent,
   updateFormatPayload,
+  claimAsDesigner,
+  assignDesigner,
+  assignContentOwner,
+  releaseDesignTask,
+  AssignDesignerSchema,
 } = await import("@/features/content/server");
 
 const actor = { id: "user-1" };

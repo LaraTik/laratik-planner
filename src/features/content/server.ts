@@ -30,3 +30,16 @@ export {
   type ApplyWorkflowScenarioResult,
 } from "./workflow-scenario.server";
 export { transitionContent, type WorkflowAction } from "./workflow-transition.server";
+
+export {
+  AssignContentOwnerSchema,
+  AssignDesignerSchema,
+  ReleaseDesignTaskSchema,
+  assignContentOwner,
+  assignDesigner,
+  claimAsDesigner,
+  releaseDesignTask,
+  type AssignContentOwnerInput,
+  type AssignDesignerInput,
+  type ReleaseDesignTaskInput,
+} from "./assignments.server";
