@@ -2283,3 +2283,15 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - `AD-002` remains **In Progress**; bulk move/tag/visibility, duplication,
   reconciliation, full route review, release browser matrix, and independent
   review remain open.
+
+## 2026-10-21 — Route media pages and handlers through the feature API
+
+- Added explicit media service compatibility exports to the server-only
+  feature entry point and migrated all app pages and API handlers off direct
+  imports of `src/lib/media/service.ts`. Added an ownership regression that
+  prevents media app routes from returning to that internal module. Service
+  implementations and route contracts remain unchanged.
+- The focused media, module-ownership, and affected-test suites passed
+  209/209; strict TypeScript passed. Full exact-SHA verification is pending.
+- `AD-002` remains **In Progress**; the manual page review, full browser
+  matrix, and independent review remain open.

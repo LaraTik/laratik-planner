@@ -30,6 +30,26 @@ export {
   revokePublicMediaShare,
 } from "./sharing.server";
 export { MediaPermissionError } from "@/lib/media/errors";
+export {
+  bulkMoveMediaAssets,
+  bulkSetMediaAssetTags,
+  bulkSetMediaAssetVisibility,
+  duplicateMediaAssets,
+  ensureBrandMediaFolderPath,
+  ensurePlanningMediaFolderPathPublic,
+  findDuplicateMediaAssets,
+  linkedTargetsForMediaAsset,
+  listMediaAssets,
+  listMediaAssetsForContentItem,
+  listMediaAssetsPage,
+  mediaAssetForActor,
+  MEDIA_PAGE_SIZE_OPTIONS,
+  parseMediaPageSize,
+  registerUploadedMediaAsset,
+  renameMediaAsset,
+  setMediaAssetVisibility,
+} from "@/lib/media/service";
+export type { MediaSort } from "@/lib/media/service";
 
 /** Promote uploads that were left pending after a transient storage read. */
 export async function processPendingMediaAssets(limit = 50) {

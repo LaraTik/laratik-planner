@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { createMediaShareCollection } from "@/lib/media/collection-service";
-import { MediaPermissionError } from "@/lib/media/service";
+import { MediaPermissionError } from "@/features/media/server";
 import { resolvePublicAppOrigin } from "@/lib/http/public-app-origin";
 import { clientEnv, serverEnv } from "@/lib/validation/env";
 

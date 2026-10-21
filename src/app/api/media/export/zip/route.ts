@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { exportDeliveryVersionZip, exportMediaAssetIdsZip } from "@/lib/media/collection-service";
-import { MediaPermissionError } from "@/lib/media/service";
+import { MediaPermissionError } from "@/features/media/server";
 import { MediaZipTooLargeError } from "@/lib/exports/media-assets-zip";
 
 export const dynamic = "force-dynamic";

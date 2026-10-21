@@ -34,16 +34,14 @@ const fetchStorageObjectMock = vi.fn();
 
 vi.mock("@/lib/auth/config", () => ({ auth: authMock }));
 vi.mock("@/lib/auth/current-actor", () => ({ currentActor: vi.fn() }));
-vi.mock("@/lib/media/service", () => ({
+vi.mock("@/features/media/server", () => ({
   mediaAssetForActor: mediaAssetForActorMock,
   MediaPermissionError: class MediaPermissionError extends Error {},
-  renameMediaAsset: vi.fn(),
-  setMediaAssetVisibility: vi.fn(),
-}));
-vi.mock("@/features/media/server", () => ({
   moveMediaAsset: vi.fn(),
-  trashMediaAsset: vi.fn(),
+  renameMediaAsset: vi.fn(),
   restoreMediaAsset: vi.fn(),
+  setMediaAssetVisibility: vi.fn(),
+  trashMediaAsset: vi.fn(),
 }));
 vi.mock("@/lib/storage/read-service", () => ({
   fetchStorageObject: fetchStorageObjectMock,

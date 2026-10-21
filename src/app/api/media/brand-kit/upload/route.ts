@@ -6,7 +6,7 @@ import {
   ensureBrandMediaFolderPath,
   MediaPermissionError,
   registerUploadedMediaAsset,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { linkedTargetsForMediaAsset, MediaPermissionError } from "@/lib/media/service";
+import { linkedTargetsForMediaAsset, MediaPermissionError } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

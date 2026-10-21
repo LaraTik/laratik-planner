@@ -8,7 +8,7 @@ import {
   listMediaAssets,
   registerUploadedMediaAsset,
   MediaPermissionError,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 
 const Body = z.object({
   workspaceId: z.string().uuid(),

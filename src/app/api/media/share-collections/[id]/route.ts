@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { revokeMediaShareCollection } from "@/lib/media/collection-service";
-import { MediaPermissionError } from "@/lib/media/service";
+import { MediaPermissionError } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 

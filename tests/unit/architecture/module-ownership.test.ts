@@ -106,7 +106,9 @@ function ownershipViolations(edges: ModuleEdge[]): string[] {
     const targetFeature = featureFor(target);
     let reason: string | null = null;
 
-    if (fromLayer === "app" && targetFeature && !isPublicFeatureEntry(target)) {
+    if (fromLayer === "app" && toLayer === "lib" && to[1] === "media" && to[2] === "service.ts") {
+      reason = "media app routes must use the media feature server entry point";
+    } else if (fromLayer === "app" && targetFeature && !isPublicFeatureEntry(target)) {
       reason = "app routes may import only a feature's index.ts or server.ts entry";
     } else if (sourceFeature && toLayer === "app") {
       reason = "features must not import route modules";

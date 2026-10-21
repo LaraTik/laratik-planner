@@ -143,6 +143,13 @@ repo-wide move. The guard passes 3/3 cases through the manual architecture
 area. The affected Trends unit area selects its five owned files and passes
 12/12; full milestone verification remains pending.
 
+**Media route feature boundary (2026-10-21).** The media route tree now has a
+bounded facade at `src/features/media/server.ts`; app pages and API handlers
+use it instead of importing the broad `src/lib/media/service.ts` directly.
+The import-ownership regression enforces this media boundary. The focused
+media, architecture, and affected-test suites pass 209/209, and strict
+TypeScript passes. Exact full verification remains pending for this migration.
+
 ### A2 — Trends source policy had drifted and review-required sources could be enabled
 
 **Priority: P1 — operator safety and provider-policy correctness.** The
