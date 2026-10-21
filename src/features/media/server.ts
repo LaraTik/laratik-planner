@@ -7,6 +7,7 @@ import { quarantineMediaObject } from "@/lib/media/quarantine";
 import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/validation";
 
 export { moveMediaAsset } from "./asset-management.server";
+export { linkMediaAssetToContentItem, linkedTargetsForMediaAsset } from "./asset-links.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
 export { importPublicMediaAsset } from "./import.server";
 export { registerUploadedMediaAsset, type RegisteredMediaAsset } from "./asset-registration.server";
@@ -50,7 +51,6 @@ export {
 export {
   ensureBrandMediaFolderPath,
   ensurePlanningMediaFolderPathPublic,
-  linkedTargetsForMediaAsset,
   listMediaAssets,
   listMediaAssetsForContentItem,
   listMediaAssetsPage,

@@ -6,6 +6,8 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import {
   agencyMemberships,
   agencies,
+  contentItems,
+  mediaAssetLinks,
   mediaAssets,
   mediaFolders,
   mediaShareLinks,
@@ -31,6 +33,8 @@ import {
   findDuplicateMediaAssets,
   getMediaFolderAudit,
   getMediaLibraryFilters,
+  linkMediaAssetToContentItem,
+  linkedTargetsForMediaAsset,
   listMediaFolders,
   listMediaFoldersTree,
   MediaPermissionError,
@@ -320,6 +324,58 @@ describe("media sharing and folder database contract", () => {
         { workspaceId, checksumSha256, kind: "image" },
       ),
     ).rejects.toBeInstanceOf(MediaPermissionError);
+  });
+
+  it("links assets to content idempotently and projects the canonical planner destination", async () => {
+    const [item] = await db
+      .insert(contentItems)
+      .values({
+        workspaceId,
+        title: "November launch",
+        format: "static_post",
+        plannedPublishAt: new Date("2026-11-01T12:00:00Z"),
+        contentOwnerId: userId,
+        createdBy: userId,
+      })
+      .returning();
+    const actor = { id: userId };
+
+    const firstLink = await linkMediaAssetToContentItem(actor, {
+      assetId,
+      contentItemId: item!.id,
+    });
+    const duplicateLink = await linkMediaAssetToContentItem(actor, {
+      assetId,
+      contentItemId: item!.id,
+    });
+    expect(firstLink).toMatchObject({
+      mediaAssetId: assetId,
+      targetType: "content_item",
+      targetId: item!.id,
+    });
+    expect(duplicateLink).toBeNull();
+    await expect(linkedTargetsForMediaAsset(actor, { agencyId, assetId })).resolves.toEqual([
+      expect.objectContaining({
+        id: firstLink!.id,
+        label: "November launch",
+        href: `/app/a/sharing/w/main/planning/${item!.id}`,
+        clientVisible: false,
+      }),
+    ]);
+
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-link-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+    await expect(
+      linkMediaAssetToContentItem({ id: outsider!.id }, { assetId, contentItemId: item!.id }),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
+
+    const storedLinks = await db
+      .select()
+      .from(mediaAssetLinks)
+      .where(eq(mediaAssetLinks.mediaAssetId, assetId));
+    expect(storedLinks).toHaveLength(1);
   });
 
   it("registers an uploaded object once and returns its persisted status", async () => {

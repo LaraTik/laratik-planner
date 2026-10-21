@@ -18,10 +18,8 @@ import {
   type MediaDimensions,
   type MediaSourceType,
 } from "@/lib/media/contract";
-import {
-  ensurePlanningMediaFolderPathPublic,
-  linkMediaAssetToContentItem,
-} from "@/lib/media/service";
+import { linkMediaAssetToContentItem } from "./asset-links.server";
+import { ensurePlanningMediaFolderPathPublic } from "@/lib/media/service";
 
 const MEDIA_ASSET_STATUSES = ["processing", "ready", "failed", "trashed", "deleted"] as const;
 type MediaAssetRowStatus = (typeof MEDIA_ASSET_STATUSES)[number];
