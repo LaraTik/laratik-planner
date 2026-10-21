@@ -2274,8 +2274,12 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - Focused media route, cron authorization, module ownership, and expiry unit
   checks passed 21/21; strict TypeScript passed. The disposable-Postgres
   media-sharing test verifies original/preview cleanup and released byte
-  counts. Full exact-SHA verification, the full integration suite, and the
-  migration drill remain pending for this milestone.
+  counts. `pnpm verify` passed on exact clean SHA
+  `05f3a301e756c0de3e2bb07c080ad976797d53eb`: formatting, zero-warning ESLint,
+  strict TypeScript, 558 unit files / 4,988 tests, and production build. All
+  integration files passed against disposable `planner_test`; the migration
+  drill passed all five scenarios. Evidence is in
+  `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; bulk move/tag/visibility, duplication,
   reconciliation, full route review, release browser matrix, and independent
   review remain open.

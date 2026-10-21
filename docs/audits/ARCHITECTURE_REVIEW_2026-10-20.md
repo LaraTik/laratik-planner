@@ -268,7 +268,10 @@ per-item authorization, storage soft deletion, and quota release were moved
 without changing their behavior. Unit checks pass 21/21; the disposable-
 Postgres integration verifies the original and preview objects are both
 soft-deleted and the asset is deleted with the expected released-byte count.
-The full milestone gate is pending.
+`pnpm verify`, the full disposable-Postgres integration suite, and the five-
+scenario migration drill passed on exact clean SHA
+`05f3a301e756c0de3e2bb07c080ad976797d53eb`; see
+`docs/production-readiness/TEST_EVIDENCE.md`.
 
 ### A6 — Historical audit findings need status reconciliation
 

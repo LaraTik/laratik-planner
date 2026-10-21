@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Media trash lifecycle ownership split — 2026-10-21, exact clean implementation SHA `05f3a301e756c0de3e2bb07c080ad976797d53eb`
+
+Single and bulk trash/restore operations and expired-trash cleanup now belong
+to `src/features/media/trash-lifecycle.server.ts`. The asset routes and
+storage-cleanup cron use the media feature entry point. Existing role checks,
+30-day retention, per-item results, storage soft-delete order, and quota
+release behavior are preserved. No schema migration was added.
+
+| Check                                       | Result                                                                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused unit checks                         | **Pass** — 21/21 across media expiry, media routes, cron authorization, and module ownership.                                                                                               |
+| Focused media database integration          | **Pass** — 8/8; includes manager-only single trash/restore, retention window, bulk idempotency and denial reporting, transactional original/preview soft deletion, and released-byte count. |
+| `pnpm verify`                               | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build on the exact clean SHA.                                           |
+| `TEST_DATABASE_URL=… pnpm test:integration` | **Pass** — all repository integration files passed against disposable `planner_test`.                                                                                                       |
+| `NODE_ENV=test pnpm migration-drill`        | **Pass** — all five scenarios; ledger 90/90.                                                                                                                                                |
+
+The full five-browser release matrix, manual review of every route, and
+independent review remain open. AD-002 remains **In Progress**.
+
 ## Media import workflow ownership split — 2026-10-21, exact clean implementation SHA `277c5af88d4cd3b8f0ba0e1fd6637152cc2cfb20`
 
 Single-file public import and bounded folder-import orchestration now live in
