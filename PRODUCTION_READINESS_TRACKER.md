@@ -1522,6 +1522,15 @@ or external MCP contract changed. Full `pnpm verify`, database gates where
 required, route/browser review, and independent verification remain open;
 AD-002 is still **In Progress**.
 
+**AD-002 MCP workspace-tool split (2026-10-22):** Workspace discovery,
+membership and agency listing, workflow settings, and workflow-scenario tools
+now live in `src/features/mcp/workspace-tools.ts` (`0bb1fc5`). The two
+registrars stay at the same positions in the factory so the tool-list order is
+preserved. Targeted format, ESLint, typecheck, and 37 MCP tests pass; catalog
+coverage asserts the five workspace tools and stable 34-tool count. No role,
+scope, API, or data contract changed. Full repository and release verification
+remain open.
+
 ## M1 — Multi-agency tenancy and authorization
 
 > **2026-08-22** — Milestone 1 of the M1 program lands on `feat/m1-multi-agency`. The schema, runtime, and policy layer are no longer single-agency: a second agency can coexist with the production agency, two agencies with the same workspace slug don't collide, cross-tenant reads are denied with `404` (anti-IDOR), and platform authority is disjoint from agency authority. The cookie is HMAC-signed, the resolver is fail-closed, and the singleton invariant is gone. Sub-task evidence below; architecture is documented in `docs/architecture/authorization.md`, `docs/architecture/data-model.md`, and `docs/architecture/overview.md`.

@@ -1378,3 +1378,18 @@ behavior tests and the catalog checks. The extraction adds an ownership seam;
 it does not claim complete coverage of content tool behavior. Full repository
 verification and the remaining route/browser/visual and independent review
 gates remain open; AD-002 remains **In Progress**.
+
+## MCP workspace tool ownership — 2026-10-22
+
+Workspace discovery and member listing, agency listing, workflow settings,
+and workflow-scenario registration now live in
+`src/features/mcp/workspace-tools.ts`. Directory tools and workflow settings
+are registered at their original points in the factory, preserving the
+existing `tools/list` order. The factory still owns shared workspace access
+and response helpers; no authorization, scope, tool, or data contract changed.
+
+Exact implementation commit `0bb1fc5` passes formatting, targeted ESLint,
+TypeScript typecheck, and the 37 focused MCP tests. The catalog regression
+includes all five workspace tool names and remains at 34 tools. Broad
+repository verification, route/browser/visual evidence, and independent
+review remain open; AD-002 remains **In Progress**.
