@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { workspaceBasePath } from "@/lib/urls";
-import { and, asc, desc, eq, gt, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   agencies,
@@ -12,8 +12,6 @@ import {
   type MediaAssetLink,
   mediaFolderReconcileLogs,
   mediaFolders,
-  mediaShareLinks,
-  securityAuditEvents,
   storageObjects,
   workspaceMembershipRoles,
   workspaceMemberships,
@@ -42,7 +40,7 @@ import {
   completeStorageUpload,
   createStorageUploadIntent,
 } from "@/lib/storage/intent-service";
-import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
+import { MediaPermissionError } from "./errors";
 import { normalizeMediaFolderName } from "./folders";
 import {
   buildMediaFolderTree,
@@ -55,6 +53,7 @@ import { releaseCapacityAmount } from "@/lib/entitlements";
 
 export { BRAND_KIT_FOLDER_NAME, POSTS_FOLDER_NAME } from "./folder-tree";
 export type { MediaFolderKind, MediaFolderTreeRow } from "./folder-tree";
+export { MediaPermissionError } from "./errors";
 const MEDIA_READ_ROLES = [
   "workspace_manager",
   "content_planner",
@@ -62,13 +61,6 @@ const MEDIA_READ_ROLES = [
   "internal_reviewer",
   "publisher",
 ] as const;
-
-export class MediaPermissionError extends Error {
-  constructor(message = "You do not have permission to manage this media.") {
-    super(message);
-    this.name = "MediaPermissionError";
-  }
-}
 
 export type MediaSort = "name" | "uploadedAt" | "updatedAt";
 
@@ -1092,29 +1084,6 @@ export async function registerUploadedMediaAsset(input: {
   }
 }
 
-async function mediaAssetForManagement(assetId: string) {
-  const [row] = await db
-    .select({
-      asset: mediaAssets,
-      object: storageObjects,
-      workspace: { id: workspaces.id, agencyId: workspaces.agencyId },
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .innerJoin(workspaces, eq(workspaces.id, mediaAssets.ownerWorkspaceId))
-    .where(eq(mediaAssets.id, assetId))
-    .limit(1);
-  return row ?? null;
-}
-
-async function assertMediaManager(actor: Actor, assetId: string) {
-  const row = await mediaAssetForManagement(assetId);
-  if (!row || !(await hasWorkspaceRole(actor, row.asset.ownerWorkspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError();
-  }
-  return row;
-}
-
 export async function listMediaFolders(
   actor: Actor,
   input: { agencyId: string; workspaceId: string },
@@ -1230,130 +1199,6 @@ export async function archiveMediaFolder(actor: Actor, folderId: string) {
     return archived.find((candidate) => candidate.id === folderId);
   });
   return updated ?? null;
-}
-
-export async function moveMediaAsset(actor: Actor, assetId: string, folderId: string | null) {
-  const row = await assertMediaManager(actor, assetId);
-  if (folderId) {
-    const [folder] = await db
-      .select({ id: mediaFolders.id })
-      .from(mediaFolders)
-      .where(
-        and(
-          eq(mediaFolders.id, folderId),
-          eq(mediaFolders.agencyId, row.asset.agencyId),
-          eq(mediaFolders.workspaceId, row.asset.ownerWorkspaceId),
-          isNull(mediaFolders.archivedAt),
-        ),
-      )
-      .limit(1);
-    if (!folder) throw new MediaPermissionError("The selected media folder is not available.");
-  }
-  const [updated] = await db
-    .update(mediaAssets)
-    .set({ folderId, updatedBy: actor.id, updatedAt: new Date() })
-    .where(eq(mediaAssets.id, assetId))
-    .returning();
-  return updated ?? null;
-}
-
-export async function activeMediaShareForActor(actor: Actor, assetId: string) {
-  const row = await assertMediaManager(actor, assetId);
-  const [share] = await db
-    .select({ id: mediaShareLinks.id, expiresAt: mediaShareLinks.expiresAt })
-    .from(mediaShareLinks)
-    .where(
-      and(
-        eq(mediaShareLinks.mediaAssetId, assetId),
-        isNull(mediaShareLinks.revokedAt),
-        gt(mediaShareLinks.expiresAt, new Date()),
-      ),
-    )
-    .limit(1);
-  return { asset: row.asset, share: share ?? null };
-}
-
-export async function createPublicMediaShare(actor: Actor, assetId: string) {
-  const row = await assertMediaManager(actor, assetId);
-  if (
-    row.asset.status !== "ready" ||
-    row.object.status !== "active" ||
-    row.object.kind !== "image"
-  ) {
-    throw new MediaPermissionError("Only ready images can be shared publicly.");
-  }
-
-  const token = createMediaShareToken();
-  const expiresAt = new Date(Date.now() + MEDIA_SHARE_TTL_MS);
-  const now = new Date();
-  const share = await db.transaction(async (tx) => {
-    await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtext(${`media-share:${assetId}`}))`);
-    await tx
-      .update(mediaShareLinks)
-      .set({ revokedAt: now, updatedAt: now })
-      .where(and(eq(mediaShareLinks.mediaAssetId, assetId), isNull(mediaShareLinks.revokedAt)));
-    const [created] = await tx
-      .insert(mediaShareLinks)
-      .values({
-        mediaAssetId: assetId,
-        tokenHash: hashMediaShareToken(token),
-        expiresAt,
-        createdBy: actor.id,
-      })
-      .returning({ id: mediaShareLinks.id, expiresAt: mediaShareLinks.expiresAt });
-    await tx.insert(securityAuditEvents).values({
-      actorId: actor.id,
-      action: "media.public_share.create",
-      targetType: "media_asset",
-      targetId: assetId,
-      outcome: "success",
-      metadata: { expiresAt: expiresAt.toISOString(), rotated: true },
-    });
-    return created;
-  });
-  if (!share) throw new Error("Public media link could not be created");
-  return { token, expiresAt: share.expiresAt };
-}
-
-export async function revokePublicMediaShare(actor: Actor, assetId: string) {
-  await assertMediaManager(actor, assetId);
-  const now = new Date();
-  const updated = await db
-    .update(mediaShareLinks)
-    .set({ revokedAt: now, updatedAt: now })
-    .where(and(eq(mediaShareLinks.mediaAssetId, assetId), isNull(mediaShareLinks.revokedAt)))
-    .returning({ id: mediaShareLinks.id });
-  if (updated.length > 0) {
-    await db.insert(securityAuditEvents).values({
-      actorId: actor.id,
-      action: "media.public_share.revoke",
-      targetType: "media_asset",
-      targetId: assetId,
-      outcome: "success",
-    });
-  }
-  return { revoked: updated.length > 0 };
-}
-
-export async function publicMediaAssetForToken(token: string) {
-  const tokenHash = hashMediaShareToken(token);
-  const [row] = await db
-    .select({ asset: mediaAssets, object: storageObjects })
-    .from(mediaShareLinks)
-    .innerJoin(mediaAssets, eq(mediaAssets.id, mediaShareLinks.mediaAssetId))
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .where(
-      and(
-        eq(mediaShareLinks.tokenHash, tokenHash),
-        isNull(mediaShareLinks.revokedAt),
-        gt(mediaShareLinks.expiresAt, new Date()),
-        eq(mediaAssets.status, "ready"),
-        eq(storageObjects.status, "active"),
-        eq(storageObjects.kind, "image"),
-      ),
-    )
-    .limit(1);
-  return row ?? null;
 }
 
 export async function renameMediaAsset(actor: Actor, assetId: string, title: string) {

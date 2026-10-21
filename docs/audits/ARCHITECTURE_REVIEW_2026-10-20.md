@@ -212,11 +212,23 @@ projection is now a pure `src/lib/media/folder-tree.ts` module; the broad
 service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
 tree has disposable-Postgres read-path coverage. The remaining media service
-still has multiple responsibilities; further splitting should start with
-folder management and sharing seams and retain tenant checks and transaction
-behavior. Workspace Media now has English and Arabic/RTL responsive screenshots
-at all five documented widths; strict visual comparison passed all six browser
-cases, including critical accessibility checks across the Arabic matrix.
+still has multiple responsibilities; folder management, import, trash/restore,
+and bulk/reconciliation operations remain review candidates. Workspace Media
+now has English and Arabic/RTL responsive screenshots at all five documented
+widths; strict visual comparison passed all six browser cases, including
+critical accessibility checks across the Arabic matrix.
+
+**Media sharing and assignment split (2026-10-21).** Public share creation,
+rotation, lookup, revocation, and single-asset folder assignment now live
+behind `src/features/media/server.ts`. A shared media-manager authorization
+query sits behind the feature seam, while the existing
+`MediaPermissionError` contract remains stable for route adapters. The public
+share and asset routes now call the feature entry point; the corresponding
+implementations were removed from `src/lib/media/service.ts`. Integration
+coverage verifies token hashing, link rotation, lookup, revocation, and
+non-member denial; route tests preserve authentication, permission mapping,
+cache headers, origin selection, and response shapes. No schema or public API
+contract changed.
 
 ### A6 — Historical audit findings need status reconciliation
 

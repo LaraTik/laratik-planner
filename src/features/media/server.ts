@@ -6,6 +6,15 @@ import { mediaAssets, storageObjects } from "@/lib/db/schema";
 import { quarantineMediaObject } from "@/lib/media/quarantine";
 import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/validation";
 
+export { moveMediaAsset } from "./asset-management.server";
+export {
+  activeMediaShareForActor,
+  createPublicMediaShare,
+  publicMediaAssetForToken,
+  revokePublicMediaShare,
+} from "./sharing.server";
+export { MediaPermissionError } from "@/lib/media/errors";
+
 /** Promote uploads that were left pending after a transient storage read. */
 export async function processPendingMediaAssets(limit = 50) {
   const rows = await db

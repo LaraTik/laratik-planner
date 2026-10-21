@@ -10,9 +10,18 @@ import {
   mediaShareLinks,
   storageObjects,
   users,
+  workspaceMembershipRoles,
+  workspaceMemberships,
   workspaces,
 } from "@/lib/db/schema";
 import { hashMediaShareToken } from "@/lib/media/share-token";
+import {
+  activeMediaShareForActor,
+  createPublicMediaShare,
+  MediaPermissionError,
+  publicMediaAssetForToken,
+  revokePublicMediaShare,
+} from "@/features/media/server";
 import { expectPgConstraint } from "./_db-error";
 
 const TEST_DB_URL = process.env.TEST_DATABASE_URL;
@@ -75,6 +84,14 @@ describe("media sharing and folder database contract", () => {
         updatedBy: user!.id,
       })
       .returning();
+    const [membership] = await db
+      .insert(workspaceMemberships)
+      .values({ workspaceId: workspace!.id, userId: user!.id, status: "active" })
+      .returning();
+    await db.insert(workspaceMembershipRoles).values({
+      workspaceMembershipId: membership!.id,
+      role: "workspace_manager",
+    });
 
     userId = user!.id;
     agencyId = agency!.id;
@@ -163,5 +180,47 @@ describe("media sharing and folder database contract", () => {
       .where(eq(mediaShareLinks.mediaAssetId, assetId));
     expect(activeLinks).toHaveLength(1);
     expect(activeLinks[0]?.revokedAt).not.toBeNull();
+  });
+
+  it("creates, rotates, reads, and revokes public shares through the feature service", async () => {
+    const actor = { id: userId };
+    const first = await createPublicMediaShare(actor, assetId);
+    expect(first.token).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
+    const [storedFirst] = await db
+      .select()
+      .from(mediaShareLinks)
+      .where(eq(mediaShareLinks.mediaAssetId, assetId));
+    expect(storedFirst?.tokenHash).toBe(hashMediaShareToken(first.token));
+    expect(storedFirst?.tokenHash).not.toBe(first.token);
+    expect((await activeMediaShareForActor(actor, assetId)).share?.id).toBe(storedFirst?.id);
+    expect((await publicMediaAssetForToken(first.token))?.asset.id).toBe(assetId);
+
+    const second = await createPublicMediaShare(actor, assetId);
+    const links = await db
+      .select()
+      .from(mediaShareLinks)
+      .where(eq(mediaShareLinks.mediaAssetId, assetId));
+    expect(links).toHaveLength(2);
+    expect(links.filter((link) => link.revokedAt === null)).toHaveLength(1);
+    expect(await publicMediaAssetForToken(first.token)).toBeNull();
+    expect((await activeMediaShareForActor(actor, assetId)).share?.expiresAt).toEqual(
+      second.expiresAt,
+    );
+
+    await expect(revokePublicMediaShare(actor, assetId)).resolves.toEqual({ revoked: true });
+    expect(await publicMediaAssetForToken(second.token)).toBeNull();
+    await expect(revokePublicMediaShare(actor, assetId)).resolves.toEqual({ revoked: false });
+  });
+
+  it("denies a non-member access to share management", async () => {
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+
+    await expect(createPublicMediaShare({ id: outsider!.id }, assetId)).rejects.toBeInstanceOf(
+      MediaPermissionError,
+    );
   });
 });

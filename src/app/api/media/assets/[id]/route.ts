@@ -7,12 +7,12 @@ import { downloadFilename } from "@/lib/media/contract";
 import {
   mediaAssetForActor,
   MediaPermissionError,
-  moveMediaAsset,
   renameMediaAsset,
   restoreMediaAsset,
   setMediaAssetVisibility,
   trashMediaAsset,
 } from "@/lib/media/service";
+import { moveMediaAsset } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

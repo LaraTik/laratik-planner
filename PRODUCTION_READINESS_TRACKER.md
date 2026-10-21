@@ -2206,3 +2206,22 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   manual review of every route, and independent review remain open. Exact
   implementation-SHA evidence is recorded above and in the test evidence log.
   Do not advance `Tested` or `Verified` from this local evidence alone.
+
+## 2026-10-21 — Move media sharing behind the feature boundary
+
+- Moved public media share lifecycle and single-asset folder assignment into
+  server-only media feature modules, with shared manager authorization. Updated
+  route adapters to use the feature server entry point and removed the moved
+  implementations from the broad media service. Public URLs, route responses,
+  permission checks, token hashing, and transaction/audit behavior are
+  preserved.
+- Added disposable-Postgres integration coverage for share create/rotate/read/
+  revoke and non-member denial, plus route coverage for auth/permission
+  failures, cache headers, public origin, and JSON shapes. No schema migration
+  or API contract change.
+- `TEST_DATABASE_URL=…` focused integration passed 4/4. The affected unit
+  runner escalated to the full suite and passed 558 files / 4,988 tests.
+  Strict TypeScript and formatting passed. Exact-SHA `pnpm verify` evidence
+  will be added after the implementation commit.
+- `AD-002` remains **In Progress**; folder management, broader route review,
+  the five-browser release matrix, and independent review remain open.

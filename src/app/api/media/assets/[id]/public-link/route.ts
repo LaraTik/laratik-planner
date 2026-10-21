@@ -6,7 +6,7 @@ import {
   createPublicMediaShare,
   MediaPermissionError,
   revokePublicMediaShare,
-} from "@/lib/media/service";
+} from "@/features/media/server";
 import { resolvePublicAppOrigin } from "@/lib/http/public-app-origin";
 
 export const dynamic = "force-dynamic";

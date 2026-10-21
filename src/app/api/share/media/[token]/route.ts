@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { fetchStorageObject } from "@/lib/storage/read-service";
 import { downloadFilename } from "@/lib/media/contract";
-import { publicMediaAssetForToken } from "@/lib/media/service";
+import { publicMediaAssetForToken } from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";

@@ -39,10 +39,10 @@ vi.mock("@/lib/media/service", () => ({
   MediaPermissionError: class MediaPermissionError extends Error {},
   renameMediaAsset: vi.fn(),
   setMediaAssetVisibility: vi.fn(),
-  moveMediaAsset: vi.fn(),
   trashMediaAsset: vi.fn(),
   restoreMediaAsset: vi.fn(),
 }));
+vi.mock("@/features/media/server", () => ({ moveMediaAsset: vi.fn() }));
 vi.mock("@/lib/storage/read-service", () => ({
   fetchStorageObject: fetchStorageObjectMock,
 }));
