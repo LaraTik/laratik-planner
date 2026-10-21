@@ -1943,3 +1943,26 @@ workflow, schema, or persisted data.
 This records `Tested` evidence for the code batch. MCP production smoke,
 full route/browser/visual review, and independent verification remain separate
 release gates; the architecture goal remains **In Progress**.
+
+## Operator logging privacy refinement — 2026-10-22
+
+Exact clean implementation HEAD: `b23fc604529056b1b8be497b101d1e41d9082efb`
+
+The local-upload migration no longer prints a workspace ID or user-supplied
+filename when it preserves a file changed during cleanup; its JSON summary
+continues to report the aggregate `localCleanupSkipped` count. Concurrent-index
+migration errors retain a validated error class and code but omit raw database
+message/detail, which may contain data values after a failed unique index
+build. No migration or stored data changed.
+
+| Command / check                                      | Result                                  |
+| ---------------------------------------------------- | --------------------------------------- |
+| Focused migration report and concurrent runner tests | Pass — 26/26.                           |
+| TypeScript                                           | Pass.                                   |
+| Targeted ESLint and Prettier                         | Pass.                                   |
+| `git diff --check`                                   | Pass.                                   |
+| Disposable database integration / migration drill    | Not applicable; no persistence changed. |
+
+This narrow batch is **Tested**, not **Verified**. Full repository
+verification, route/browser/visual review, and independent review remain
+separate open gates; AD-002 remains **In Progress**.

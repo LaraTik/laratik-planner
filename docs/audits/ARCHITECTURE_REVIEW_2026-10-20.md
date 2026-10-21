@@ -1421,3 +1421,26 @@ The combined MCP batch then passed `pnpm verify` on exact clean HEAD
 `d383413bdb256e17a505c34b0d3db2389110ad58` (562 unit files / 5,018 tests and
 production build). Remaining page review, browser and visual evidence, and
 independent review remain open; AD-002 remains **In Progress**.
+
+## OTHER-03 — Remaining direct logging review — 2026-10-22
+
+The remaining direct-output paths were reviewed by ownership and runtime
+context. Environment validation emits only field names and fixed provider
+configuration messages; the development seed route is unavailable in
+production; and the remaining browser diagnostics do not print request or
+credential payloads. No high-risk application-server console leak was found.
+
+Two operator-script paths could retain user or database details in captured
+logs. The local-upload migration now relies on its existing aggregate
+`localCleanupSkipped` report instead of logging workspace IDs and filenames.
+The concurrent-index runner now emits a validated error class and code without
+the Postgres message/detail, which can contain values from a failed unique
+index build. The SQLSTATE and existing index cleanup instruction remain
+available to operators. This is a narrow privacy hardening change; migration
+semantics and stored data are unchanged.
+
+Exact implementation commit `b23fc604529056b1b8be497b101d1e41d9082efb`
+passes 26 focused migration-report and concurrent-migration tests, TypeScript,
+targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
+visual, route-by-route, and independent review gates remain open; AD-002
+remains **In Progress**.

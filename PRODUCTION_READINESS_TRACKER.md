@@ -2688,3 +2688,20 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   callers) already centralize their respective presentation patterns. Do not
   add another generic state component based on superficial similarity; the
   remaining route-by-route state and localization review is still open.
+
+## 2026-10-22 — Close remaining direct logging review
+
+- Environment validation logs only field names and fixed configuration
+  messages. The seed route is disabled in production, and remaining browser
+  diagnostics do not print request or credential payloads. No high-risk
+  application-server `console` leak was confirmed.
+- Removed user-supplied file names and workspace identifiers from the local
+  upload migration warning; the existing report retains the aggregate count
+  of changed files that were kept. Concurrent-index migration output now
+  reports a validated error class/code without raw Postgres message detail.
+- Exact implementation SHA `b23fc604529056b1b8be497b101d1e41d9082efb` passed
+  26 focused tests, TypeScript, targeted ESLint, Prettier, and diff checks.
+  No route, permission, workflow, migration, schema, or stored-data behavior
+  changed. Full verification and release browser/visual/manual review remain
+  open; AD-002 remains **In Progress** and this work is **Tested**, not
+  **Verified**.
