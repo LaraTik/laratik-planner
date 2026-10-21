@@ -30,8 +30,7 @@ export function sanitizeMediaTags(tags: readonly string[]): string[] {
   return result;
 }
 
-/** Single-asset tag setter. Used by `setMediaAssetTags` UI flow. */
-export async function setMediaAssetTags(actor: Actor, assetId: string, tags: readonly string[]) {
+async function requireManagedMediaAsset(actor: Actor, assetId: string) {
   const [row] = await db
     .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
     .from(mediaAssets)
@@ -40,10 +39,40 @@ export async function setMediaAssetTags(actor: Actor, assetId: string, tags: rea
   if (!row || !(await hasWorkspaceRole(actor, row.workspaceId, ["workspace_manager"]))) {
     throw new MediaPermissionError();
   }
+  return row;
+}
+
+/** Single-asset tag setter. Used by `setMediaAssetTags` UI flow. */
+export async function setMediaAssetTags(actor: Actor, assetId: string, tags: readonly string[]) {
+  await requireManagedMediaAsset(actor, assetId);
   const sanitized = sanitizeMediaTags(tags);
   const [updated] = await db
     .update(mediaAssets)
     .set({ tags: sanitized, updatedBy: actor.id, updatedAt: new Date() })
+    .where(eq(mediaAssets.id, assetId))
+    .returning();
+  return updated ?? null;
+}
+
+export async function renameMediaAsset(actor: Actor, assetId: string, title: string) {
+  await requireManagedMediaAsset(actor, assetId);
+  const [updated] = await db
+    .update(mediaAssets)
+    .set({ title: sanitizeAssetTitle(title), updatedBy: actor.id, updatedAt: new Date() })
+    .where(eq(mediaAssets.id, assetId))
+    .returning();
+  return updated ?? null;
+}
+
+export async function setMediaAssetVisibility(
+  actor: Actor,
+  assetId: string,
+  visibility: "workspace" | "agency",
+) {
+  await requireManagedMediaAsset(actor, assetId);
+  const [updated] = await db
+    .update(mediaAssets)
+    .set({ visibility, updatedBy: actor.id, updatedAt: new Date() })
     .where(eq(mediaAssets.id, assetId))
     .returning();
   return updated ?? null;

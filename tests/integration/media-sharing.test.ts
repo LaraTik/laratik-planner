@@ -34,11 +34,13 @@ import {
   listMediaFoldersTree,
   MediaPermissionError,
   publicMediaAssetForToken,
+  renameMediaAsset,
   renameMediaFolder,
   registerUploadedMediaAsset,
   restoreMediaAsset,
   revokePublicMediaShare,
   setMediaAssetTags,
+  setMediaAssetVisibility,
   trashMediaAsset,
 } from "@/features/media/server";
 import { expectPgConstraint } from "./_db-error";
@@ -489,6 +491,10 @@ describe("media sharing and folder database contract", () => {
 
   it("moves, tags, and changes visibility through the library commands", async () => {
     const actor = { id: userId };
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-library-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
     const folder = await createMediaFolder(actor, { agencyId, workspaceId, name: "Campaign" });
     await expect(
       bulkMoveMediaAssets(actor, { assetIds: [assetId], folderId: folder!.id }),
@@ -497,6 +503,18 @@ describe("media sharing and folder database contract", () => {
     await expect(
       setMediaAssetTags(actor, assetId, [" hero ", "hero", " campaign "]),
     ).resolves.toMatchObject({ tags: ["hero", "campaign"] });
+    await expect(renameMediaAsset(actor, assetId, "  Catalog image  ")).resolves.toMatchObject({
+      title: "Catalog image",
+    });
+    await expect(setMediaAssetVisibility(actor, assetId, "workspace")).resolves.toMatchObject({
+      visibility: "workspace",
+    });
+    await expect(
+      renameMediaAsset({ id: outsider!.id }, assetId, "Unauthorized"),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
+    await expect(
+      setMediaAssetVisibility({ id: outsider!.id }, assetId, "agency"),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
     await expect(
       bulkSetMediaAssetTags(actor, {
         assetIds: [assetId],

@@ -22,7 +22,7 @@ import {
   isAgencyMember,
   type Actor,
 } from "@/lib/auth/policy";
-import { sanitizeAssetTitle, type MediaKind, type MediaSourceType } from "./contract";
+import { type MediaKind, type MediaSourceType } from "./contract";
 import { MediaPermissionError } from "./errors";
 import { accessibleMediaWorkspaceIds, MEDIA_READ_ROLES } from "./access";
 import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "./folder-tree";
@@ -654,44 +654,6 @@ export async function listMediaAssetsForContentItem(
     sort: "name",
     limit: input.limit ?? 100,
   });
-}
-
-export async function renameMediaAsset(actor: Actor, assetId: string, title: string) {
-  const [row] = await db
-    .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
-    .from(mediaAssets)
-    .where(eq(mediaAssets.id, assetId))
-    .limit(1);
-  if (!row || !(await hasWorkspaceRole(actor, row.workspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError();
-  }
-  const [updated] = await db
-    .update(mediaAssets)
-    .set({ title: sanitizeAssetTitle(title), updatedBy: actor.id, updatedAt: new Date() })
-    .where(eq(mediaAssets.id, assetId))
-    .returning();
-  return updated ?? null;
-}
-
-export async function setMediaAssetVisibility(
-  actor: Actor,
-  assetId: string,
-  visibility: "workspace" | "agency",
-) {
-  const [row] = await db
-    .select({ id: mediaAssets.id, workspaceId: mediaAssets.ownerWorkspaceId })
-    .from(mediaAssets)
-    .where(eq(mediaAssets.id, assetId))
-    .limit(1);
-  if (!row || !(await hasWorkspaceRole(actor, row.workspaceId, ["workspace_manager"]))) {
-    throw new MediaPermissionError();
-  }
-  const [updated] = await db
-    .update(mediaAssets)
-    .set({ visibility, updatedBy: actor.id, updatedAt: new Date() })
-    .where(eq(mediaAssets.id, assetId))
-    .returning();
-  return updated ?? null;
 }
 
 export async function mediaAssetForActor(actor: Actor, assetId: string) {

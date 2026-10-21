@@ -37,7 +37,9 @@ export {
   bulkSetMediaAssetTags,
   bulkSetMediaAssetVisibility,
   duplicateMediaAssets,
+  renameMediaAsset,
   sanitizeMediaTags,
+  setMediaAssetVisibility,
   setMediaAssetTags,
 } from "./library-commands.server";
 export {
@@ -51,8 +53,6 @@ export {
   mediaAssetForActor,
   MEDIA_PAGE_SIZE_OPTIONS,
   parseMediaPageSize,
-  renameMediaAsset,
-  setMediaAssetVisibility,
 } from "@/lib/media/service";
 export type { MediaSort } from "@/lib/media/service";
 
