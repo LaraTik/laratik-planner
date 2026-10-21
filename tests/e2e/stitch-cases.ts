@@ -200,9 +200,13 @@ export function resolveStitchRoute(route: string, seed: SeedResultLike): string 
   }
 
   if (resolved === "/app/w/acme" || resolved === "/app/w/acme/planning") {
-    return `${resolved}?month=${VISUAL_FIXTURE_MONTH}`;
+    resolved = `${resolved}?month=${VISUAL_FIXTURE_MONTH}`;
   }
-  return resolved;
+
+  // Keep the captured surface names stable, but navigate through the
+  // tenant-qualified App Router path. The legacy redirect can drop query
+  // parameters, which makes month-based visual fixtures depend on wall time.
+  return resolved.replace(/^\/app\/w\/([^/?#]+)(?=[/?#]|$)/, "/app/a/test-agency/w/$1");
 }
 
 const PORTABLE_VIEWPORT_NAME: Record<string, string> = {

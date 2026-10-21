@@ -178,6 +178,18 @@ describe("visual regression harness contract (Task 7)", () => {
     }
   });
 
+  it("resolves workspace visual routes through the canonical agency path", () => {
+    expect(resolveStitchRoute("/app/w/acme", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme?month=2026-09",
+    );
+    expect(resolveStitchRoute("/app/w/acme/planning", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme/planning?month=2026-09",
+    );
+    expect(resolveStitchRoute("/app/w/acme/media", { contentItemId: "item-1" })).toBe(
+      "/app/a/test-agency/w/acme/media",
+    );
+  });
+
   it("uses the platform-owner session for platform Stitch screens", () => {
     const platformCases = STITCH_CASES.filter((entry) => entry.route?.startsWith("/app/platform/"));
     expect(platformCases).toHaveLength(2);
