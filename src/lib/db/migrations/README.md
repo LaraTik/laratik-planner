@@ -30,6 +30,12 @@ For new production-critical indexes, use the dedicated helper:
 
 The helper:
 
+- Refuses `.sql` files inside `src/lib/db/migrations/` so the Drizzle
+  migrator cannot replay a file that was not recorded in its journal.
+- Validates each breakpoint-delimited chunk contains exactly one
+  `CREATE [UNIQUE] INDEX CONCURRENTLY` command. It rejects regular indexes,
+  unrelated DDL, and multiple commands in one chunk before opening a database
+  connection.
 - Splits the file on Drizzle's `--> statement-breakpoint`
   delimiter (mirrors `migration-drill.ts`).
 - Runs each statement in its own auto-commit query (no
@@ -58,6 +64,6 @@ Failure modes the operator should know about:
 Existing migrations are unchanged. Editing a historical migration
 breaks reproducibility (a fresh DB built from a stale commit will
 get a different schema than a DB that has been live-migrated).
-This README documents the convention for migrations going
-forward; the 74 historical `CREATE INDEX` statements in this
-directory continue to apply under the regular Drizzle migrator.
+This README documents the convention for migrations going forward.
+Historical `CREATE INDEX` statements in this directory continue to apply
+under the regular Drizzle migrator and must not be rewritten in place.

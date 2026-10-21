@@ -1,5 +1,5 @@
 /**
- * Apply a migration file containing only CREATE INDEX [CONCURRENTLY]
+ * Apply a migration file containing only CREATE INDEX CONCURRENTLY
  * statements. Runs each statement outside a transaction (the
  * non-negotiable constraint of CREATE INDEX CONCURRENTLY) and retries
  * on transient failures.
@@ -19,11 +19,9 @@
  *
  * Authoring contract
  * ------------------
- *  - The .sql file must contain ONLY CREATE INDEX statements. Other
- *    DDL inside the same file breaks the contract; the runner does
- *    not enforce this (so an operator can mix in a comment), but
- *    the practical effect is that non-index DDL will be applied
- *    auto-commit, which is normally what you want anyway.
+ *  - The .sql file must contain only CREATE [UNIQUE] INDEX CONCURRENTLY
+ *    statements, each as its own command. The runner enforces this and
+ *    rejects files inside the Drizzle migrations directory.
  *  - Each statement is its own query; we deliberately do NOT wrap
  *    multiple statements in a single multi-statement query because
  *    a single failure should not abort the whole batch.
@@ -33,7 +31,7 @@
  *
  * CLI
  * ---
- *   pnpm tsx scripts/migrate-concurrent.ts <path> [--max-retries N] [--wait-ms N]
+ *   pnpm tsx scripts/migrate-concurrent.ts scripts/migrations/<file>.sql [--max-retries N] [--wait-ms N]
  *
  * Exit codes
  * ----------
@@ -42,10 +40,16 @@
  *   2  usage / configuration error
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, realpathSync } from "node:fs";
 import { resolve } from "node:path";
 import { config as loadEnv } from "dotenv";
 import { Client } from "pg";
+import {
+  extractIndexName,
+  isInsideDirectory,
+  splitStatements,
+  validateConcurrentIndexStatements,
+} from "./migrate-concurrent-sql";
 
 // Load .env so DATABASE_URL is populated the same way `pnpm db:migrate`
 // gets it. Only effective when the variable isn't already in the
@@ -79,7 +83,9 @@ function parseArgs(argv: ReadonlyArray<string>): Args {
       }
       waitMs = Number(v);
     } else if (arg === "--help" || arg === "-h") {
-      console.log("usage: migrate-concurrent.ts <file> [--max-retries N] [--wait-ms N]");
+      console.log(
+        "usage: migrate-concurrent.ts scripts/migrations/<file>.sql [--max-retries N] [--wait-ms N]",
+      );
       process.exit(0);
     } else if (arg.startsWith("--")) {
       console.error(`unknown flag: ${arg}`);
@@ -92,14 +98,28 @@ function parseArgs(argv: ReadonlyArray<string>): Args {
     }
   }
   if (!file) {
-    console.error("usage: migrate-concurrent.ts <file> [--max-retries N] [--wait-ms N]");
+    console.error(
+      "usage: migrate-concurrent.ts scripts/migrations/<file>.sql [--max-retries N] [--wait-ms N]",
+    );
     process.exit(2);
   }
   return { file, maxRetries, waitMs };
 }
 
 const args = parseArgs(process.argv);
-const filePath = resolve(process.cwd(), args.file);
+const filePath = realpathSync(resolve(process.cwd(), args.file));
+const drizzleMigrationsPath = realpathSync(resolve(process.cwd(), "src/lib/db/migrations"));
+
+if (isInsideDirectory(filePath, drizzleMigrationsPath)) {
+  console.error(
+    "concurrent index files must live outside src/lib/db/migrations so Drizzle cannot replay them",
+  );
+  process.exit(2);
+}
+if (!filePath.endsWith(".sql")) {
+  console.error("concurrent index migration must be a .sql file");
+  process.exit(2);
+}
 const sqlText = readFileSync(filePath, "utf8");
 
 if (!process.env["DATABASE_URL"]) {
@@ -107,36 +127,15 @@ if (!process.env["DATABASE_URL"]) {
   process.exit(2);
 }
 
-/**
- * Parse the SQL into individual statements, mirroring Drizzle's
- * `--> statement-breakpoint` split. Empty / whitespace-only
- * statements are dropped; comments inside a statement block stay
- * with their statement.
- */
-function splitStatements(sql: string): string[] {
-  return sql
-    .split("--> statement-breakpoint")
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
-}
-
-/**
- * Surface the index name from a `CREATE INDEX [CONCURRENTLY]`
- * statement so the failure path can print a DROP INDEX CONCURRENTLY
- * cleanup command. Best-effort: handles the common shapes and falls
- * back to a heuristic for weird ones.
- */
-function extractIndexName(statement: string): string | null {
-  // CREATE [UNIQUE] INDEX [CONCURRENTLY] [IF NOT EXISTS] <name> ON ...
-  const m = statement.match(
-    /CREATE\s+(UNIQUE\s+)?INDEX\s+(CONCURRENTLY\s+)?(IF\s+NOT\s+EXISTS\s+)?"?([A-Za-z_][A-Za-z0-9_]*)"?/i,
-  );
-  return m?.[4] ?? null;
-}
-
 const statements = splitStatements(sqlText);
 if (statements.length === 0) {
   console.error(`no statements found in ${filePath} (after statement-breakpoint split)`);
+  process.exit(2);
+}
+try {
+  validateConcurrentIndexStatements(statements);
+} catch (err) {
+  console.error(`[migrate-concurrent] invalid migration file: ${(err as Error).message}`);
   process.exit(2);
 }
 

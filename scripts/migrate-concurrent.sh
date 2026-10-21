@@ -32,10 +32,10 @@
 # Usage
 # -----
 #   pnpm tsx scripts/migrate-concurrent.ts <path-to-migration.sql>
-#   pnpm tsx scripts/migrate-concurrent.ts src/lib/db/migrations/0020_add_foo_idx.sql
+#   pnpm tsx scripts/migrate-concurrent.ts scripts/migrations/0020_add_foo_idx.sql
 #
 #   # Or via the shell wrapper:
-#   ./scripts/migrate-concurrent.sh src/lib/db/migrations/0020_add_foo_idx.sql
+#   ./scripts/migrate-concurrent.sh scripts/migrations/0020_add_foo_idx.sql
 #
 #   # Override the retry / wait budget:
 #   CONCURRENT_MAX_RETRIES=5 CONCURRENT_WAIT_MS=10000 \
@@ -49,7 +49,7 @@
 #                               (the script uses the pg npm package
 #                               which delegates to libpq for parsing).
 #
-# Authoring constraint (documented for migration authors)
+# Authoring constraint (enforced by migrate-concurrent.ts)
 # --------------------------------------------------------
 #   - Each .sql file passed to this script must contain ONLY CREATE
 #     INDEX [CONCURRENTLY] statements. Mixing in any other DDL breaks
@@ -61,13 +61,9 @@
 #     persistent failure:
 #         DROP INDEX CONCURRENTLY IF EXISTS "<name>";
 #     so the operator can re-run.
-#   - The helper does NOT touch the Drizzle ledger. If the migration
-#     file lives in src/lib/db/migrations/, the operator must mark
-#     it applied in the Drizzle journal (or the next regular
-#     migration will try to re-apply it). The convention we use:
-#     the migration file lives outside src/lib/db/migrations/, in
-#     scripts/migrations/ or similar, so the Drizzle migrator never
-#     sees it.
+#   - The helper does NOT touch the Drizzle ledger and refuses files
+#     inside src/lib/db/migrations/. Keep the SQL in scripts/migrations/
+#     so the regular migrator never attempts to re-apply it.
 #
 # References
 # ----------
