@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Media library query ownership — 2026-10-21, exact clean implementation SHA `9cb1187f212a7b5cba285e077e70fc7c1f256aed`
+
+Moved media filter-facet and folder-reconciliation audit reads from their API
+route handlers into `src/features/media/library-queries.server.ts`. The feature
+module now owns workspace authorization, tenant-scoped queries, and response
+projection. Routes retain authentication, query parsing, HTTP status mapping,
+and cache headers. Response shapes and SQL predicates are preserved.
+
+| Check                                                | Result                                                                                                                                                                                                                                                       |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused media route/query and module-ownership tests | **Pass** — 12/12.                                                                                                                                                                                                                                            |
+| `pnpm typecheck`                                     | **Pass** — no TypeScript errors.                                                                                                                                                                                                                             |
+| Targeted ESLint, Prettier, and `git diff --check`    | **Pass**.                                                                                                                                                                                                                                                    |
+| Disposable Postgres media integration                | **Pending** — test database URL was not configured; the local Docker status request did not return. A same-agency, cross-workspace regression was added to `tests/integration/media-sharing.test.ts` and must run once the disposable database is available. |
+
+Full `pnpm verify`, the route review, release browser matrix, and independent
+review remain open. AD-002 remains **In Progress**.
+
 ## Media folder audit workspace authorization — 2026-10-21, exact clean implementation SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`
 
 The folder-audit route now uses the shared workspace-access policy before

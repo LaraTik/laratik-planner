@@ -2312,3 +2312,17 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   at exact code SHA `ad7a9956e65c42d094901c3ade55f42dec2bf3d2`.
 - `AD-002` remains **In Progress**; full repository verification, the complete
   route review, browser release matrix, and independent review remain open.
+
+## 2026-10-21 — Move media library reads behind the feature boundary
+
+- Moved the library tag/uploader facets and reconciliation audit queries,
+  tenant authorization, and response projection into
+  `src/features/media/library-queries.server.ts`. The API handlers now adapt
+  auth, query validation, status mapping, and cache headers.
+- Focused route/query and module-boundary tests pass 12/12; strict TypeScript,
+  targeted lint, formatting, and diff checks pass on exact clean code SHA
+  `9cb1187f212a7b5cba285e077e70fc7c1f256aed`.
+- A cross-workspace Postgres regression is added but pending execution because
+  `TEST_DATABASE_URL` is unavailable and local Docker did not respond. Full
+  repository verification, route review, browser matrix, and independent
+  review remain open; `AD-002` remains **In Progress**.

@@ -906,3 +906,13 @@ request before querying the audit log. A focused regression test covers the
 denial and proves the database is not queried. This fix preserves the route
 response and requires no schema change. Broader media-route ownership review
 remains open.
+
+### Media library read ownership — 2026-10-21
+
+The filter-facet and folder-audit handlers contained tenant-scoped SQL and
+workspace authorization inside transport files. Both reads now live in a
+server-only media feature query module, while route adapters retain HTTP
+validation and response behavior. Focused unit and ownership tests pass; a
+Postgres regression is written but pending because the disposable test
+database is not available in this environment. Continue the review across the
+remaining media routes and feature services.
