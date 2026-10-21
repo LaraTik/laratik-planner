@@ -50,7 +50,7 @@ type RoleCase = {
 const ROLE_MATRIX: RoleCase[] = [
   {
     role: "workspace_manager",
-    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    can: [{ route: "/app/a/test-agency/w/acme", testid: "workspace-overview" }],
     // workspace_manager can manage content (canManageContent includes
     // workspace_manager + content_planner), so /planning/new is allowed.
     // workspace_manager is not an internal_reviewer, but the reviews page
@@ -61,50 +61,53 @@ const ROLE_MATRIX: RoleCase[] = [
   {
     role: "content_planner",
     can: [
-      { route: "/app/w/acme/planning", testid: "workspace-planning" },
-      { route: "/app/w/acme/planning/new", testid: "workspace-planning-new" },
+      { route: "/app/a/test-agency/w/acme/planning", testid: "workspace-planning" },
+      { route: "/app/a/test-agency/w/acme/planning/new", testid: "workspace-planning-new" },
     ],
     cannot: [],
   },
   {
     role: "designer",
-    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    can: [{ route: "/app/a/test-agency/w/acme", testid: "workspace-overview" }],
     cannot: [
       // A designer has no creator role → /planning/new shows the
       // "Creation access required" page.
-      { route: "/app/w/acme/planning/new", heading: /Creation access required/i },
+      { route: "/app/a/test-agency/w/acme/planning/new", heading: /Creation access required/i },
     ],
   },
   {
     role: "internal_reviewer",
-    can: [{ route: "/app/w/acme/reviews", testid: "reviews-kpi-row" }],
+    can: [{ route: "/app/a/test-agency/w/acme/reviews", testid: "reviews-kpi-row" }],
     cannot: [
       // Reviewer has no creator role; /planning/new shows the denied page.
-      { route: "/app/w/acme/planning/new", heading: /Creation access required/i },
+      { route: "/app/a/test-agency/w/acme/planning/new", heading: /Creation access required/i },
     ],
   },
   {
     role: "client_reviewer",
-    can: [{ route: "/app/w/acme/client", testid: "workspace-client-review" }],
+    can: [{ route: "/app/a/test-agency/w/acme/client", testid: "workspace-client-review" }],
     cannot: [
       // Client reviewer has no internal workspace role; planning is gated.
-      { route: "/app/w/acme/planning", heading: /Workspace unavailable|Page not found/i },
+      {
+        route: "/app/a/test-agency/w/acme/planning",
+        heading: /Workspace unavailable|Page not found/i,
+      },
     ],
   },
   {
     role: "publisher",
-    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    can: [{ route: "/app/a/test-agency/w/acme", testid: "workspace-overview" }],
     cannot: [
       // Publisher has no creator role → /planning/new shows the denied page.
-      { route: "/app/w/acme/planning/new", heading: /Creation access required/i },
+      { route: "/app/a/test-agency/w/acme/planning/new", heading: /Creation access required/i },
     ],
   },
   {
     role: "viewer",
-    can: [{ route: "/app/w/acme", testid: "workspace-overview" }],
+    can: [{ route: "/app/a/test-agency/w/acme", testid: "workspace-overview" }],
     cannot: [
       // Viewer has no creator role → /planning/new shows the denied page.
-      { route: "/app/w/acme/planning/new", heading: /Creation access required/i },
+      { route: "/app/a/test-agency/w/acme/planning/new", heading: /Creation access required/i },
     ],
   },
 ];
@@ -112,7 +115,7 @@ const ROLE_MATRIX: RoleCase[] = [
 test.describe("role-separated workspace access (existing)", () => {
   test("content planner can create while viewer cannot", async ({ page, browser }) => {
     await bootstrapRoleSession(page, "content_planner");
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
     await expect(page.getByRole("link", { name: /Quick Create/i })).toBeVisible();
 
     // Keep role identities in separate browser contexts. A single page can
@@ -122,9 +125,9 @@ test.describe("role-separated workspace access (existing)", () => {
     const viewerPage = await viewerContext.newPage();
     try {
       await bootstrapRoleSession(viewerPage, "viewer");
-      await viewerPage.goto("/app/w/acme/planning", { waitUntil: "commit" });
+      await viewerPage.goto("/app/a/test-agency/w/acme/planning", { waitUntil: "commit" });
       await expect(viewerPage.getByRole("link", { name: /Quick Create/i })).toHaveCount(0);
-      await viewerPage.goto("/app/w/acme/planning/new", { waitUntil: "commit" });
+      await viewerPage.goto("/app/a/test-agency/w/acme/planning/new", { waitUntil: "commit" });
       await expect(
         viewerPage.getByRole("heading", { name: "Creation access required" }),
       ).toBeVisible();
@@ -135,14 +138,14 @@ test.describe("role-separated workspace access (existing)", () => {
 
   test("review roles see only their review surface", async ({ page }) => {
     await bootstrapRoleSession(page, "internal_reviewer");
-    await page.goto("/app/w/acme/reviews");
+    await page.goto("/app/a/test-agency/w/acme/reviews");
     await expect(page.getByRole("heading", { name: "Approvals" })).toBeVisible();
 
     await bootstrapRoleSession(page, "client_reviewer");
-    await page.goto("/app/w/acme/client");
+    await page.goto("/app/a/test-agency/w/acme/client");
     await expect(page.getByRole("heading", { name: "Client review" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Planning" })).toHaveCount(0);
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
     await expect(
       page.getByRole("heading", { name: /Workspace unavailable|Page not found/i }),
     ).toBeVisible();
@@ -152,7 +155,7 @@ test.describe("role-separated workspace access (existing)", () => {
   for (const role of ["workspace_manager", "designer", "publisher", "viewer"] as const) {
     test(`${role} has workspace access without agency-admin privileges`, async ({ page }) => {
       await bootstrapRoleSession(page, role);
-      await page.goto("/app/w/acme");
+      await page.goto("/app/a/test-agency/w/acme");
       // Workspace overview page testid is the stable contract.
       await expect(page.getByTestId("workspace-overview")).toBeVisible();
       await expect(page.getByText("No access")).toHaveCount(0);

@@ -197,6 +197,48 @@ agency-qualified route. The corrected test passes in Chromium; Firefox could
 not start the first test in this environment and remained at full CPU without
 emitting a result, so the remaining browser matrix is still unverified.
 
+### A13 — Discussion controls did not serialize state or refresh the thread
+
+**Priority: P1 — privacy and workflow correctness.** The visibility chips were
+plain `type="button"` controls, so their `name`/`value` were not included in the
+form submission. The server defaulted comments to internal even when the UI
+showed Client visible. Successful create and resolve actions also left the
+client-rendered thread stale. A hidden field now submits the selected visibility;
+the composer and resolve action refresh Server Component data after success.
+The discussion E2E now asserts rendered comment bodies and persisted visibility,
+mentions, open counts, and resolution state.
+
+### A14 — Direct tab deep links rendered different server and client panels
+
+**Priority: P1 — hydration reliability.** `WorkspaceShell` read
+`window.location.hash` in its state initializer. The server rendered Overview
+while the first client render could select Publish, producing a hydration
+mismatch and an unstable panel. The shell now starts from deterministic
+Overview state, adopts the URL hash in an effect after hydration, and only then
+synchronizes state back to the URL. The publish-package E2E covers the `#publish`
+path and reload.
+
+### A15 — E2E fixtures still targeted legacy agency-less workspace routes
+
+**Priority: P2 — evidence reliability.** The latest full Chromium sweep showed
+that old `/app/w/...` route assertions often followed an agency-context redirect
+that dropped query parameters or landed at a different seeded workspace. Tests
+for discussions, workspace access, social analytics, Trends, and research now
+use the canonical `/app/a/{agency}/w/{workspace}` route. Fixed names in the
+research watchlist test are unique per run, avoiding collisions in the shared
+disposable database. The affected Chromium batches passed after route and
+interaction corrections.
+
+### A16 — Invalid watchlist URLs could turn validation into a server error
+
+**Priority: P2 — API reliability.** The URL schema refinement constructed
+`new URL(value)` without handling malformed values. An empty source URL
+therefore threw from validation and returned a 500 instead of the route's 400
+`invalid_body` response. The refinement now returns `false` for unparseable
+values, and a route regression asserts the empty-URL contract. The affected
+77-test Chromium batch reached 76/77 before exposing this issue; after the fix,
+all four research teardown/watchlist tests passed in Chromium.
+
 ## Next work, ordered
 
 1. Complete the route, domain, database, integration, and test coverage map;
@@ -218,11 +260,15 @@ was changed without changing source keys, persisted data, or provider response
 contracts. The initial baseline passed `pnpm verify`, all 44 integration
 files, and the five-scenario migration drill. Targeted Trends, PageHeader,
 Brand Kit, agency-switcher, content-flow, and account-theme checks passed in
-Chromium, including the full §23 journey. The release browser run passed its
-first 52 Chromium cases except for the A12 stale route in the theme shell test;
-that fixture path is corrected. The isolated Firefox rerun then hung before
-the first test result with its browser process at full CPU. Full five-browser
-and visual gates and exact-clean-commit evidence remain outstanding.
+Chromium, including the full §23 journey. The release browser run exposed route
+drift, the A12 stale theme route, the A13 comment visibility/refresh defect, and
+the A14 hydration mismatch. The 77-test affected Chromium batch passed 76 cases
+and exposed A16; all four focused research/watchlist tests passed after that
+fix. Discussion, publish deep-link, boundary, and user-role regressions passed
+in the affected run. The isolated Firefox rerun hung before the first test
+result with its browser process at full CPU.
+Full five-browser and visual gates and exact-clean-commit evidence remain
+outstanding.
 
 The original working tree contained user changes, captured as the review
 baseline; implementation work is isolated on `codex/architecture-review`.

@@ -15,12 +15,12 @@ test.describe("Workspace navigation (admin)", () => {
 
     await page.goto("/app/workspaces");
     await expect(page.getByRole("heading", { name: "Workspaces" })).toBeVisible();
-    const acmeWorkspace = page.locator('a[href="/app/w/acme"]').first();
+    const acmeWorkspace = page.locator('a[href="/app/a/test-agency/w/acme"]').first();
     await expect(acmeWorkspace).toBeVisible();
 
     // Click into the workspace
     await acmeWorkspace.click();
-    await expect(page).toHaveURL(/\/app\/w\/acme$/);
+    await expect(page).toHaveURL(/\/app\/a\/test-agency\/w\/acme$/);
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
     await expect(page.getByRole("button", { name: /Active workspace: Acme/ })).toBeVisible();
     // The planning + calendar shortcuts must be present
@@ -30,7 +30,7 @@ test.describe("Workspace navigation (admin)", () => {
   test("Planning tab lists channels + an empty-state for fresh workspaces", async ({ page }) => {
     await bootstrapTestSession(page);
 
-    await page.goto("/app/w/acme/planning");
+    await page.goto("/app/a/test-agency/w/acme/planning");
     // The page renders either an item list or an empty state
     await expect(page.getByRole("heading", { name: /Planning|Calendar/i }).first()).toBeVisible();
   });
@@ -50,7 +50,7 @@ test.describe("Workspace navigation (admin)", () => {
     await page.getByRole("button", { name: /Create workspace/i }).click();
 
     // After redirect, we should be on the new workspace's overview
-    await page.waitForURL(new RegExp(`/app/w/${uniqueSlug}$`), { timeout: 10_000 });
+    await page.waitForURL(new RegExp(`/app/a/test-agency/w/${uniqueSlug}$`), { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
     await expect(
       page.getByRole("button", { name: /Active workspace: My New Brand/ }),

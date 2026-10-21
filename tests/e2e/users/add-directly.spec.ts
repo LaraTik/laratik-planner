@@ -78,9 +78,17 @@ test.describe("User Management — Add directly flow", () => {
     await page.getByTestId("add-directly-grants-admin").click();
     // The shared chip deliberately makes the Radix checkbox visually hidden;
     // click its associated label so Playwright follows the real user target.
-    const firstWorkspaceRoles = page.locator('[data-testid^="add-directly-workspace-"]').first();
-    await firstWorkspaceRoles.getByText("Designer", { exact: true }).click();
-    await firstWorkspaceRoles.getByText("Publisher", { exact: true }).click();
+    const roleMatrix = page.getByTestId("add-directly-role-matrix");
+    await roleMatrix
+      .getByTestId(/^add-directly-chip-.*-designer$/)
+      .first()
+      .getByText("Designer", { exact: true })
+      .click();
+    await roleMatrix
+      .getByTestId(/^add-directly-chip-.*-publisher$/)
+      .first()
+      .getByText("Publisher", { exact: true })
+      .click();
 
     await page.getByRole("button", { name: /Add user/i }).click();
     await expect(page.getByTestId("add-directly-reveal")).toBeVisible({ timeout: 10_000 });
@@ -88,7 +96,7 @@ test.describe("User Management — Add directly flow", () => {
     // The Team page reads the persisted membership-role rows. Both selected
     // roles must be visible on the same member row; the old last-role-wins
     // defect would show only Publisher here.
-    await page.goto("/app/w/acme/team");
+    await page.goto("/app/a/test-agency/w/acme/team");
     const memberRow = page.locator("tr").filter({ hasText: newName });
     await expect(memberRow).toContainText("Designer");
     await expect(memberRow).toContainText("Publisher");

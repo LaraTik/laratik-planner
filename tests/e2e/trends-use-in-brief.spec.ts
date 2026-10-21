@@ -35,7 +35,7 @@ test.describe("Trend Radar — Use in brief", () => {
   }: {
     page: Page;
   }) => {
-    await page.goto(`/app/w/${workspaceSlug}/trends`);
+    await page.goto(`/app/a/trend-brief-agency/w/${workspaceSlug}/trends`);
 
     // Wait for at least one card.
     const card = page.getByTestId("trend-card").first();

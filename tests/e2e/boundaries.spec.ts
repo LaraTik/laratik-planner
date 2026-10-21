@@ -27,23 +27,17 @@ test.describe("Loading + error boundaries", () => {
     });
 
     // Start the navigation, but don't wait for it to fully resolve
-    const navPromise = page.goto("/app", { waitUntil: "domcontentloaded" });
-    // The page should still render some shell — the layout's loading
-    // skeleton or the header — never a truly empty body.
-    const html = await Promise.race([
-      navPromise.then(() => page.content()),
-      new Promise<string>((resolve) => setTimeout(() => resolve(page.content()), 1_000)),
-    ]);
-    expect(html).toMatch(/laratik-planner|aria-busy|My Work|skeleton/i);
-
-    // Cleanup: cancel the navigation and unblock the route
+    await page.goto("/app", { waitUntil: "commit" });
+    // Use an auto-waiting body assertion rather than reading page.content()
+    // while the intercepted request still has the navigation in flight.
+    await expect(page.locator("body")).toContainText(/LaraTik|My work|skeleton/i);
     await page.unroute("**/api/**");
   });
 
   test("a non-existent content item renders the not-found page (no 500 page)", async ({ page }) => {
     await bootstrapTestSession(page);
     const fakeId = "00000000-0000-0000-0000-000000000000";
-    const res = await page.goto(`/app/w/acme/planning/${fakeId}`, {
+    const res = await page.goto(`/app/a/test-agency/w/acme/planning/${fakeId}`, {
       waitUntil: "domcontentloaded",
     });
     // 200 (rendered not-found boundary) or 404 (transport-level
@@ -51,15 +45,15 @@ test.describe("Loading + error boundaries", () => {
     // sees a usable page, not a 500.
     expect([200, 404]).toContain(res?.status() ?? 0);
     // The not-found page renders the "Back to My Work" CTA
-    await expect(page.getByRole("link", { name: /My Work/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /My work/i }).first()).toBeVisible();
   });
 
   test("a non-existent workspace renders the not-found page", async ({ page }) => {
     await bootstrapTestSession(page);
-    const res = await page.goto("/app/w/this-workspace-does-not-exist", {
+    const res = await page.goto("/app/a/test-agency/w/this-workspace-does-not-exist", {
       waitUntil: "domcontentloaded",
     });
     expect([200, 404]).toContain(res?.status() ?? 0);
-    await expect(page.getByRole("link", { name: /My Work/i }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: /My work/i }).first()).toBeVisible();
   });
 });
