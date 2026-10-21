@@ -12,9 +12,7 @@ import { workspaceBasePath } from "@/lib/urls";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import {
-  QuickCreateSchema,
   UpdateContentSchema,
-  quickCreateContentItem,
   updateContentItem,
   type UpdateContentInput,
   batchCreateContentItems,
@@ -36,6 +34,8 @@ import {
   claimAsDesigner,
   archiveContentItem,
   restoreContentItem,
+  QuickCreateSchema,
+  quickCreateContentItem,
 } from "@/features/content/server";
 import {
   BatchClientRowSchema,

@@ -164,14 +164,9 @@ vi.mock("@/lib/auth/policy", async () => {
   return { ...actual, ...policyMock };
 });
 
-const {
-  QuickCreateSchema,
-  UpdateContentSchema,
-  quickCreateContentItem,
-  updateContentItem,
-  batchCreateContentItems,
-  UPDATEABLE_STATUSES,
-} = await import("@/lib/content/service");
+const { UpdateContentSchema, updateContentItem, batchCreateContentItems, UPDATEABLE_STATUSES } =
+  await import("@/lib/content/service");
+const { QuickCreateSchema, quickCreateContentItem } = await import("@/features/content/server");
 const {
   getContentItem,
   listUnassignedDesignWork,

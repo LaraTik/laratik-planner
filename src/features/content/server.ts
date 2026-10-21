@@ -31,6 +31,11 @@ export {
   type DispatchDeadlineRemindersResult,
 } from "./deadline-reminders.server";
 export {
+  QuickCreateSchema,
+  quickCreateContentItem,
+  type QuickCreateInput,
+} from "./quick-create.server";
+export {
   applyWorkflowScenario,
   type ApplyWorkflowScenarioResult,
 } from "./workflow-scenario.server";

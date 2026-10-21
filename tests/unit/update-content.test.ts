@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { QuickCreateSchema, UpdateContentSchema, UPDATEABLE_STATUSES } from "@/lib/content/service";
+import { QuickCreateSchema } from "@/features/content/server";
+import { UpdateContentSchema, UPDATEABLE_STATUSES } from "@/lib/content/service";
 
 /**
  * The edit page re-uses the same field rules as Quick Create (minus
