@@ -1475,3 +1475,19 @@ password yet. No schema, migration, or production-data change is involved.
 Status remains `READY FOR INDEPENDENT REVIEW`. This evidence does not validate
 real Google OAuth or SMTP delivery and does not promote the login row to
 `Verified`; those remain external/independent review responsibilities.
+
+## 2026-10-21 — Content structured-creative feature extraction
+
+Implementation SHA: `e5b238f38830d6729b986261a0277dc9017df9e5`
+
+| Check                                                     | Result                                                                                                                          |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm exec vitest run tests/unit/content-service.test.ts` | Pass — 57/57 tests, including format-payload normalization, activity key-set audit, and designer production-field restrictions. |
+| `pnpm typecheck`                                          | Pass.                                                                                                                           |
+| Targeted ESLint                                           | Pass — zero warnings.                                                                                                           |
+| Targeted Prettier check and `git diff --check`            | Pass.                                                                                                                           |
+
+This was an ownership-only extraction with no schema, route, permission, or
+workflow changes. Full `pnpm verify`, repository-wide integration, migration
+drill, browser release matrix, and independent review remain open for the
+architecture program.

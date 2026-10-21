@@ -2389,3 +2389,18 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - Full `pnpm verify`, repository-wide integration, migration drill, route
   review, browser matrix, and independent review remain open. AD-002 remains
   **In Progress**.
+
+## 2026-10-21 — Extract structured creative writes into the content feature
+
+- Moved format-payload validation, role checks, designer-field restrictions,
+  activity recording, and linked research-teardown prefill into
+  `src/features/content/format-payload.server.ts`, exposed through
+  `src/features/content/server.ts`. The planning action and existing service
+  tests now use the feature entry point. User-visible behavior and contracts
+  are unchanged.
+- `tests/unit/content-service.test.ts` passes 57/57; strict TypeScript,
+  targeted ESLint, Prettier, and diff checks pass on exact clean implementation
+  SHA `e5b238f38830d6729b986261a0277dc9017df9e5`.
+- `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
+  integration, migration drill, route review, release browser matrix, and
+  independent review remain open.

@@ -109,7 +109,7 @@ the all-page ownership assertion and representative canonical-route checks.
 | Public/authenticated routes | `src/app`                                                               | 91 pages and 105 route handlers. App Router files mix public/auth screens, agency settings, platform administration, workspace routes, APIs, and cron adapters. Workspace routes use the agency-qualified route shape; the legacy workspace path remains a compatibility adapter. |
 | Shared UI                   | `src/components`                                                        | `ui/` owns primitives; `forms/` owns shared controls; `feedback/` and `app-shell/` own cross-feature presentation. Feature decisions remain close to their current route/domain until a bounded migration moves them.                                                             |
 | Domain behavior             | `src/lib/<domain>`                                                      | Domains include auth, AI, advertising, brand, community, content, deliveries, notifications, planning, publishing, research, social, storage, tasks, Trends, and workspace access. This is the existing migration source for gradual feature modules.                             |
-| Feature modules             | `src/features/<feature>`                                                | The Trends catalog is the first pilot. It owns source metadata and exports through `index.ts`; routes and services import its public entry point.                                                                                                                                 |
+| Feature modules             | `src/features/<feature>`                                                | Trends and media have feature-owned pilots; structured creative-payload writes now use `src/features/content/server.ts`. Migrations are incremental, with remaining domain callers still in `src/lib/<domain>`.                                                                   |
 | Persistence                 | `src/lib/db`                                                            | Drizzle schema and ordered SQL migrations own persistence. The current migration journal has 90 entries; schema or identifier changes require the migration evidence protocol.                                                                                                    |
 | Trends sidecar              | `services/trends`                                                       | Python FastAPI/extractor service owns scheduler and source policy. The Next.js catalog is a UI projection; parity tests cover shared policy fields.                                                                                                                               |
 | External integrations       | `src/lib/{social,advertising,ai,email,mcp}` and route adapters          | Provider-specific boundaries remain isolated from UI; cron and callbacks are transport adapters. Secrets stay server-side.                                                                                                                                                        |
@@ -959,6 +959,24 @@ and diff checks pass on exact clean implementation SHA
 `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`. Full repository verification,
 all integration files, migration drill, route review, release browser matrix,
 and independent review remain open.
+
+### Content structured-creative ownership — 2026-10-21
+
+Format-payload validation, role checks, designer-field restrictions, activity
+recording, and research-teardown prefill now live in
+`src/features/content/format-payload.server.ts`, exported through the explicit
+server entry point. The planning action and existing content-service tests use
+that feature boundary. The broad content workflow service no longer owns these
+responsibilities; other content workflows remain in the legacy domain module
+for later bounded migrations. No route, permission, workflow, or data contract
+changed.
+
+The existing content-service suite passes 57/57, including payload
+normalization/audit and designer field restrictions. TypeScript, targeted
+ESLint, Prettier, and diff checks pass on exact clean code SHA
+`e5b238f38830d6729b986261a0277dc9017df9e5`. Full repository verification,
+all integration files, migration drill, route review, release browser matrix,
+and independent review remain open; AD-002 remains **In Progress**.
 
 ### Media asset listing and access ownership — 2026-10-21
 
