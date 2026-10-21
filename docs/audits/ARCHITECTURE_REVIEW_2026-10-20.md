@@ -220,10 +220,11 @@ invalid-signature, transient-storage, and batch-limit outcomes. The tree
 projection is now a pure `src/lib/media/folder-tree.ts` module; the broad
 service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
-tree has disposable-Postgres read-path coverage. The remaining media service
-still has multiple responsibilities; listing/filtering and reconciliation
-remain responsibility review candidates. Duplicate lookup and content-item
-asset links have since moved behind feature-owned query/command modules.
+tree has disposable-Postgres read-path coverage. Listing, pagination counts,
+duplicate lookup, asset access, and content-item links now live behind focused
+query/command owners. The 286-line legacy service now holds derived folder-path
+creation and content-item reconciliation; reconciliation remains a review
+candidate because it spans content changes and media-folder persistence.
 Workspace Media now
 has English and Arabic/RTL responsive screenshots at all five documented
 widths; strict visual comparison passed all six browser cases, including
@@ -938,7 +939,7 @@ asset lookup in the media feature module. The rename and visibility commands
 no longer remain in the legacy service. Focused unit/ownership tests pass
 18/18 and the media Postgres integration passes 14/14 on exact clean SHA
 `b8323114d288665b6f1f5ef40c0eca0cbfa83655`. Main listing and reconciliation
-remain in the legacy service and stay in the review queue.
+were still in the legacy service at this checkpoint; listing has since moved.
 
 ### Media duplicate and asset-link ownership; pagination correction — 2026-10-21
 
@@ -956,5 +957,27 @@ priority, link idempotency and canonical destination, agency-shared pagination
 totals, and descendant-folder totals. TypeScript, targeted ESLint, Prettier,
 and diff checks pass on exact clean implementation SHA
 `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`. Full repository verification,
+all integration files, migration drill, route review, release browser matrix,
+and independent review remain open.
+
+### Media asset listing and access ownership — 2026-10-21
+
+The media listing, pagination count, linked-content projection, page-size
+contract, and folder-descendant filter now live in
+`src/features/media/asset-library-queries.server.ts`. The client row contract
+is serializable and lives in `src/lib/media/types.ts`. The asset-access query
+is a focused `src/lib/media/asset-access.server.ts` module because both the
+feature facade and the existing media collection service use it; the feature
+facade re-exports the query while the collection service retains a direct
+same-domain dependency. The unreferenced `MediaAssetFilters` helper was
+removed. The remaining legacy service is limited to planning/brand folder-path
+creation and content-item folder reconciliation.
+
+The media Postgres integration passes 18/18, including manager/outsider asset
+access, listing/count parity for agency-shared assets, and descendant-folder
+counts. The related page-size, registration-recovery, collection-revocation,
+and module-ownership tests pass 21/21. TypeScript, targeted ESLint, Prettier,
+and diff checks pass on exact clean implementation SHA
+`7ea8c7991de28d7f95fc30b607cfac2fa532ea46`. Full repository verification,
 all integration files, migration drill, route review, release browser matrix,
 and independent review remain open.

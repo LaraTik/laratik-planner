@@ -2226,6 +2226,23 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   review, release browser matrix, and independent review remain open. AD-002
   remains **In Progress**; no independent `Verified` status is assigned.
 
+## 2026-10-21 — Media asset query ownership follow-up
+
+- Media listing, pagination totals, related-content projection, and page-size
+  parsing now live in `src/features/media/asset-library-queries.server.ts`.
+  The client row type is serializable; shared storage access is isolated in
+  `src/lib/media/asset-access.server.ts`. The obsolete media filter helper was
+  removed after confirming there were no callers.
+- The broad media service is now 286 lines and owns derived folder paths and
+  content-item folder reconciliation. The latter remains in the review queue
+  because it coordinates content changes with media-folder state.
+- Focused media Postgres tests pass 18/18; related unit/ownership checks pass
+  21/21; type, lint, format, and diff checks pass on exact clean SHA
+  `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`. See the test evidence log.
+- Full `pnpm verify`, all integration files, migration drill, route review,
+  release browser matrix, and independent review remain open. AD-002 remains
+  **In Progress**; no independent `Verified` status is assigned.
+
 ## 2026-10-21 — Move media sharing behind the feature boundary
 
 - Moved public media share lifecycle and single-asset folder assignment into

@@ -1,5 +1,26 @@
 # Test and coverage evidence
 
+## Media asset listing/access ownership — 2026-10-21, exact clean implementation SHA `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`
+
+Media listing, pagination counts, related-content projection, page-size
+selection, and descendant-folder filtering now live behind the media feature
+server entry point. Client presentation uses a serializable row type. Asset
+access is isolated in a focused shared media query module for the feature and
+existing same-domain collection service. The unreferenced media filter helper
+was removed. The remaining legacy media service handles derived folder paths
+and content-item folder reconciliation.
+
+| Check                                                                  | Result                                                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Disposable Postgres media integration                                  | **Pass** — 18/18, including owner/outsider access and list/count parity. |
+| Page-size, registration-recovery, collection, and ownership unit tests | **Pass** — 21/21.                                                        |
+| `pnpm typecheck`                                                       | **Pass** — no TypeScript errors.                                         |
+| Targeted ESLint, Prettier, and `git diff --check`                      | **Pass**, zero lint warnings.                                            |
+
+Full `pnpm verify`, repository-wide integration, migration drill, route review,
+release browser matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
 ## Media query/link ownership and pagination correction — 2026-10-21, exact clean implementation SHA `9a4c8adb4c51c799bb56d97c0284bd2aac78c51d`
 
 Duplicate advisory reads now belong to the media feature query module. Content-item
