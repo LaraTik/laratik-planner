@@ -109,7 +109,7 @@ the all-page ownership assertion and representative canonical-route checks.
 | Public/authenticated routes | `src/app`                                                               | 91 pages and 105 route handlers. App Router files mix public/auth screens, agency settings, platform administration, workspace routes, APIs, and cron adapters. Workspace routes use the agency-qualified route shape; the legacy workspace path remains a compatibility adapter. |
 | Shared UI                   | `src/components`                                                        | `ui/` owns primitives; `forms/` owns shared controls; `feedback/` and `app-shell/` own cross-feature presentation. Feature decisions remain close to their current route/domain until a bounded migration moves them.                                                             |
 | Domain behavior             | `src/lib/<domain>`                                                      | Domains include auth, AI, advertising, brand, community, content, deliveries, notifications, planning, publishing, research, social, storage, tasks, Trends, and workspace access. This is the existing migration source for gradual feature modules.                             |
-| Feature modules             | `src/features/<feature>`                                                | Trends and media have feature-owned pilots; structured creative-payload writes now use `src/features/content/server.ts`. Migrations are incremental, with remaining domain callers still in `src/lib/<domain>`.                                                                   |
+| Feature modules             | `src/features/<feature>`                                                | Trends, media, content, calendar, and MCP now have feature-owned modules. Content read and write paths use the content server entry point; remaining commands in the legacy content service are staged for later migration.                                                       |
 | Persistence                 | `src/lib/db`                                                            | Drizzle schema and ordered SQL migrations own persistence. The current migration journal has 90 entries; schema or identifier changes require the migration evidence protocol.                                                                                                    |
 | Trends sidecar              | `services/trends`                                                       | Python FastAPI/extractor service owns scheduler and source policy. The Next.js catalog is a UI projection; parity tests cover shared policy fields.                                                                                                                               |
 | External integrations       | `src/lib/{social,advertising,ai,email,mcp}` and route adapters          | Provider-specific boundaries remain isolated from UI; cron and callbacks are transport adapters. Secrets stay server-side.                                                                                                                                                        |
@@ -1004,3 +1004,30 @@ and diff checks pass on exact clean implementation SHA
 `7ea8c7991de28d7f95fc30b607cfac2fa532ea46`. Full repository verification,
 all integration files, migration drill, route review, release browser matrix,
 and independent review remain open.
+
+### Content read ownership and MCP integration boundary — 2026-10-21
+
+Content detail/list queries, designer roster, and CSV export now live behind
+`src/features/content/server.ts`. Planning, calendar, board, design queue,
+export, and MCP callers use feature entry points. The calendar and MCP
+adapters now live under `src/features/calendar/` and `src/features/mcp/`;
+platform token handling remains under `src/lib/mcp/`. The feature test map now
+recognizes content, calendar, and MCP ownership so affected unit checks can
+stay scoped.
+
+The MCP workflow-scenario tool previously called a Next server action after
+checking the MCP actor. That action independently resolved a NextAuth session,
+so the two authentication contexts could disagree. Both the Settings action
+and MCP tool now call the same manager-gated content command with their
+authenticated actor. The command retains scenario validation, transaction,
+approval-mode side effect, and result contract. No route, permission, workflow,
+or persisted-data contract changed.
+
+The full unit suite passes 5,003 tests across 562 files; focused query, MCP,
+workflow-scenario, ownership, and affected-runner checks pass. TypeScript,
+targeted ESLint, Prettier, and diff checks pass on exact clean code SHA
+`975c9f468bd419b65ce3e04c998ed3383f07182c`. Database-backed integration checks
+remain pending because `TEST_DATABASE_URL` is unavailable and the local Docker
+daemon did not respond. No migration was introduced. Full `pnpm verify`,
+repository integration, migration drill, route review, release browser matrix,
+and independent review remain open; AD-002 remains **In Progress**.

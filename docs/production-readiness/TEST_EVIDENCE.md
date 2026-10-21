@@ -1508,3 +1508,21 @@ unmapped root-level content test; both were corrected before commit. The
 successful pre-commit run passed. Full `pnpm verify`, repository-wide
 integration, migration drill, browser release matrix, and independent review
 remain open for the architecture program.
+
+## 2026-10-21 — Content read paths and MCP feature boundaries
+
+Implementation SHA: `975c9f468bd419b65ce3e04c998ed3383f07182c`
+
+| Check                                                        | Result                                                                                                                                                                                                                      |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm test:affected -- --staged --layer unit`                | Pass — escalated to the full unit suite because `repro-page-render.test.ts` was unmapped: 562 files / 5,003 tests passed. The missing content ownership mapping was then added and its selection/architecture tests passed. |
+| Focused content, MCP, workflow-scenario, and ownership batch | Pass — 114/114 tests; the final ownership-map check passes 21/21.                                                                                                                                                           |
+| `pnpm typecheck`                                             | Pass.                                                                                                                                                                                                                       |
+| Targeted ESLint, Prettier, and `git diff --check`            | Pass.                                                                                                                                                                                                                       |
+
+The workflow-scenario command test covers manager denial, unknown scenarios,
+and the `two_gate_client` approval-mode side effect. No schema migration was
+introduced. Database integration is pending because `TEST_DATABASE_URL` is
+unavailable and the local Docker daemon did not respond. Full `pnpm verify`,
+repository integration, migration drill, browser release matrix, and
+independent review remain open for this architecture program.

@@ -2419,3 +2419,25 @@ architecture --layer unit`; the Trends area mapping selected five unit files
 - `AD-002` remains **In Progress**. Full `pnpm verify`, repository-wide
   integration, migration drill, route review, release browser matrix, and
   independent review remain open.
+
+## 2026-10-21 — Route content reads through feature boundaries
+
+- Moved content detail/list queries, designer roster, and CSV export behind
+  `src/features/content/server.ts`; moved calendar and MCP servers into their
+  feature modules. Planning, calendar, design queue, export, API, and test
+  callers now use those feature entry points. Added content/calendar/MCP test
+  ownership so affected checks remain targeted.
+- Extracted workflow-scenario persistence into the content feature and removed
+  the MCP server's import of a Next server action. The Settings and MCP paths
+  now call one manager-gated command with the actor authenticated at their
+  respective boundary. Workflow, approval-mode side effect, and response
+  contracts remain stable.
+- Full unit suite: 5,003 tests across 562 files passed. Focused feature and
+  architecture checks, strict TypeScript, targeted ESLint, Prettier, and diff
+  checks pass on exact clean SHA
+  `975c9f468bd419b65ce3e04c998ed3383f07182c`.
+- Database-backed integration is pending because the disposable test URL is
+  not configured and local Docker did not respond. No schema changes were
+  made. `AD-002` remains **In Progress**; full `pnpm verify`, integration,
+  migration drill, route review, browser matrix, and independent review remain
+  open.
