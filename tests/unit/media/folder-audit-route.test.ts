@@ -3,15 +3,14 @@ import { NextRequest } from "next/server";
 
 const authMock = vi.fn();
 const currentActorMock = vi.fn();
-const accessibleWorkspaceIdsForActorMock = vi.fn();
-const selectMock = vi.fn();
+const feature = vi.hoisted(() => ({
+  getMediaFolderAudit: vi.fn(),
+  MediaPermissionError: class MediaPermissionError extends Error {},
+}));
 
 vi.mock("@/lib/auth/config", () => ({ auth: authMock }));
 vi.mock("@/lib/auth/current-actor", () => ({ currentActor: currentActorMock }));
-vi.mock("@/lib/media/accessible-workspaces", () => ({
-  accessibleWorkspaceIdsForActor: accessibleWorkspaceIdsForActorMock,
-}));
-vi.mock("@/lib/db", () => ({ db: { select: selectMock } }));
+vi.mock("@/features/media/server", () => feature);
 
 async function loadRoute() {
   vi.resetModules();
@@ -24,23 +23,50 @@ function request(workspaceId: string) {
   );
 }
 
-describe("GET /api/media/library/folder-audit — workspace access", () => {
+describe("GET /api/media/library/folder-audit", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     authMock.mockResolvedValue({ user: { id: "user-1" } });
     currentActorMock.mockResolvedValue({ id: "user-1" });
-    accessibleWorkspaceIdsForActorMock.mockResolvedValue(["22222222-2222-4222-8222-222222222222"]);
   });
 
-  it("denies agency members who cannot access the requested workspace before querying its audit log", async () => {
+  it("forwards the actor and validated query to the feature and preserves the response contract", async () => {
+    const events = [
+      {
+        id: "event-1",
+        reason: "content_moved",
+        fromFolderId: null,
+        toFolderId: "folder-1",
+        contentItemId: "content-1",
+        mediaAssetId: "asset-1",
+        reconciledAt: "2026-10-21T10:00:00.000Z",
+        actorName: "Planner",
+      },
+    ];
+    feature.getMediaFolderAudit.mockResolvedValue(events);
     const { GET } = await loadRoute();
+
+    const response = await GET(request("22222222-2222-4222-8222-222222222222"));
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ events });
+    expect(response.headers.get("Cache-Control")).toBe("private, max-age=30");
+    expect(feature.getMediaFolderAudit).toHaveBeenCalledWith(
+      { id: "user-1" },
+      {
+        agencyId: "11111111-1111-4111-8111-111111111111",
+        workspaceId: "22222222-2222-4222-8222-222222222222",
+      },
+    );
+  });
+
+  it("maps the feature permission error to the established forbidden response", async () => {
+    feature.getMediaFolderAudit.mockRejectedValue(new feature.MediaPermissionError());
+    const { GET } = await loadRoute();
+
     const response = await GET(request("33333333-3333-4333-8333-333333333333"));
 
     expect(response.status).toBe(403);
-    expect(accessibleWorkspaceIdsForActorMock).toHaveBeenCalledWith(
-      { id: "user-1" },
-      "11111111-1111-4111-8111-111111111111",
-    );
-    expect(selectMock).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual({ error: "Forbidden" });
   });
 });

@@ -9,6 +9,7 @@ import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/val
 export { moveMediaAsset } from "./asset-management.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
 export { importPublicMediaAsset } from "./import.server";
+export { getMediaFolderAudit, getMediaLibraryFilters } from "./library-queries.server";
 export { expungeExpiredTrashedMedia } from "./trash-lifecycle.server";
 export {
   bulkRestoreMediaAssets,

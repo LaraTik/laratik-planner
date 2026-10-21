@@ -27,6 +27,7 @@ import {
   createMediaFolder,
   duplicateMediaAssets,
   expungeExpiredTrashedMedia,
+  getMediaFolderAudit,
   listMediaFolders,
   listMediaFoldersTree,
   MediaPermissionError,
@@ -199,6 +200,17 @@ describe("media sharing and folder database contract", () => {
       .returning();
     expect(campaignAssets?.parentId).toBe(folder?.id);
     expect(archiveAssets?.parentId).toBe(archive?.id);
+  });
+
+  it("denies folder audit reads for another workspace in the same agency", async () => {
+    const [otherWorkspace] = await db
+      .insert(workspaces)
+      .values({ agencyId, name: "Other", slug: "other", createdBy: userId })
+      .returning({ id: workspaces.id });
+
+    await expect(
+      getMediaFolderAudit({ id: userId }, { agencyId, workspaceId: otherWorkspace!.id }),
+    ).rejects.toBeInstanceOf(MediaPermissionError);
   });
 
   it("stores only token hashes and permits one active link per image", async () => {
