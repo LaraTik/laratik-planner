@@ -1921,3 +1921,25 @@ contracts are unchanged.
 The Brand Kit integration suite requires `TEST_DATABASE_URL`, which is
 currently missing. No schema migration or API contract change was introduced.
 Full repository and browser release gates remain open.
+
+## MCP registration architecture batch — 2026-10-22
+
+Exact clean implementation HEAD: `d383413bdb256e17a505c34b0d3db2389110ad58`
+
+The MCP server now composes feature registrars for workspace access, tasks,
+planning content, research, social analytics, Brand Kit, and diagnostics.
+Shared context, scope, error, and response contracts live in
+`src/features/mcp/tool-contracts.ts`. The 34-tool catalog retains its names
+and registration order. This refactor changes no route, API, permission,
+workflow, schema, or persisted data.
+
+| Command / check                                   | Result                                                                          |
+| ------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `pnpm verify`                                     | Pass — format, lint, typecheck, 562 unit files / 5,018 tests, production build. |
+| Focused MCP task/catalog suites                   | Pass — 37/37.                                                                   |
+| `git status --short --branch` before verification | Clean at `d383413bdb256e17a505c34b0d3db2389110ad58`.                            |
+| Database integration and migration drill          | Not applicable; no persistence or migration behavior changed.                   |
+
+This records `Tested` evidence for the code batch. MCP production smoke,
+full route/browser/visual review, and independent verification remain separate
+release gates; the architecture goal remains **In Progress**.

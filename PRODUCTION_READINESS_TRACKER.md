@@ -1537,8 +1537,10 @@ maintenance moved to `src/features/mcp/social-tools.ts` (`9f5fdc5`). Their
 factory registration order, workspace authorization, scopes, and response
 contracts are preserved. Targeted format, ESLint, typecheck, and 37 MCP tests
 pass; the catalog assertions retain these tools and the stable count of 34.
-Full repository verification, page/browser/visual review, and independent
-verification remain open.
+The combined MCP batch passes `pnpm verify` on exact clean HEAD
+`d383413bdb256e17a505c34b0d3db2389110ad58` (562 unit files / 5,018 tests and
+production build). Page/browser/visual review and independent verification
+remain open.
 
 ## M1 — Multi-agency tenancy and authorization
 

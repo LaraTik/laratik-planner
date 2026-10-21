@@ -1406,5 +1406,7 @@ feature registrations. No tool contract or persisted behavior changed.
 Exact implementation commit `9f5fdc5` passes formatting, targeted ESLint,
 TypeScript typecheck, and 37 focused MCP tests. Existing catalog checks retain
 the research, Command Center, and thumbnail tool names and the 34-tool total.
-Full repository verification, remaining page review, browser and visual
-evidence, and independent review remain open; AD-002 remains **In Progress**.
+The combined MCP batch then passed `pnpm verify` on exact clean HEAD
+`d383413bdb256e17a505c34b0d3db2389110ad58` (562 unit files / 5,018 tests and
+production build). Remaining page review, browser and visual evidence, and
+independent review remain open; AD-002 remains **In Progress**.
