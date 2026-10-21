@@ -916,3 +916,14 @@ validation and response behavior. Focused unit and ownership tests pass; a
 Postgres regression is written but pending because the disposable test
 database is not available in this environment. Continue the review across the
 remaining media routes and feature services.
+
+### Media upload registration ownership — 2026-10-21
+
+Upload registration, the return contract, and bounded storage-validation
+retries have moved into a server-only feature module. The public import
+workflow now calls that feature-owned command. Six pre-existing focused
+recovery tests continue to pass against the moved implementation. Planning
+folder creation and content-item linking still come from the legacy media
+service and remain explicit follow-up seams; no pass-through compatibility
+export was added. Disposable-Postgres integration remains pending because the
+test database is unavailable in the current environment.

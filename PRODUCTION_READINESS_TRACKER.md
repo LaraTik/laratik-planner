@@ -2326,3 +2326,17 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   `TEST_DATABASE_URL` is unavailable and local Docker did not respond. Full
   repository verification, route review, browser matrix, and independent
   review remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-21 — Move media upload registration behind the feature boundary
+
+- Moved asset registration, return projection, and transient validation retry
+  into `src/features/media/asset-registration.server.ts`; the import workflow
+  now uses the feature-owned command. The stable feature facade exports the
+  command and result type.
+- The registration, folder-import, and module-ownership suites pass 14/14;
+  strict TypeScript, targeted ESLint, formatting, and diff checks pass on
+  exact clean code SHA `ab66308ed0c9383376e7cb5d11f8e5f4be4b6901`.
+- Disposable Postgres integration and full `pnpm verify` remain pending.
+  `TEST_DATABASE_URL` is unavailable and local Docker did not respond. The
+  route review, browser release matrix, and independent review also remain
+  open; `AD-002` remains **In Progress**.

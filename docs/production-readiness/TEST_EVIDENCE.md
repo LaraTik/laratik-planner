@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Media upload registration ownership — 2026-10-21, exact clean implementation SHA ab66308ed0c9383376e7cb5d11f8e5f4be4b6901
+
+Moved registerUploadedMediaAsset, its return projection, and transient
+validation retry policy into src/features/media/asset-registration.server.ts.
+Public media imports now reuse the feature-owned command. The feature facade
+exports the stable command and result type; existing folder-path and
+content-item linking helpers remain temporary imports from the legacy media
+service.
+
+| Check                                                         | Result                                                                           |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| Registration, folder-import, and module-ownership unit suites | **Pass** — 14/14, including six registration recovery cases.                     |
+| pnpm typecheck                                                | **Pass** — no TypeScript errors.                                                 |
+| Targeted ESLint, Prettier, and git diff --check               | **Pass**.                                                                        |
+| Disposable Postgres integration                               | **Pending** — TEST_DATABASE_URL is unavailable and local Docker did not respond. |
+
+Full pnpm verify, disposable-Postgres integration, route review, release
+browser matrix, and independent review remain open. AD-002 remains **In Progress**.
+
 ## Media library query ownership — 2026-10-21, exact clean implementation SHA `9cb1187f212a7b5cba285e077e70fc7c1f256aed`
 
 Moved media filter-facet and folder-reconciliation audit reads from their API
