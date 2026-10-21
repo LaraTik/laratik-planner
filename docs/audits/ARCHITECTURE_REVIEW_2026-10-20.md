@@ -387,6 +387,15 @@ typography and color utilities, and `src/app/globals.css` defines the
 `text-title-section` token. UX-02 is stale as a current source defect; this
 check does not substitute for visual contrast review of every route.
 
+**Historical OTHER-05 reconciliation (2026-10-22).** The old claim that the
+sign-in page sends authentication failures from a client component is stale.
+`signInErrorRedirect` now captures errors in the `server-only`
+`src/app/signin/auth-error-server.ts` module, called by server actions; the
+page does not import Sentry. `tests/unit/signin-auth-error-server.test.ts`
+checks server-side capture, the support reference, and the no-client-Sentry
+boundary. The old client-exposure finding is closed as a current source issue;
+this does not certify every authentication error payload for privacy.
+
 ### A25 — Section headings used a non-existent typography utility
 
 **Priority: P2 — visual consistency.** The theme defines the
