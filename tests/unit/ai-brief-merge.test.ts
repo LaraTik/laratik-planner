@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mergeAiDraftIntoBrief } from "@/lib/content/service";
+import { mergeAiDraftIntoBrief } from "@/features/content/server";
 
 /**
  * FEAT-04 (GAP-FULL-REVIEW-2026-08-25) — the AI Insert / Replace buttons

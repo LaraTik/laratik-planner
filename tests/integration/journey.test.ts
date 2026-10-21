@@ -29,7 +29,7 @@ process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
  */
 
 describe("primary acceptance journey (§23, service-level)", () => {
-  let content: typeof import("@/lib/content/service") & typeof import("@/features/content/server");
+  let content: typeof import("@/features/content/server");
   let workflow: typeof import("@/lib/content/workflow");
   let publishing: typeof import("@/lib/publishing/service");
   let deliveries: typeof import("@/lib/deliveries/service");
@@ -50,10 +50,7 @@ describe("primary acceptance journey (§23, service-level)", () => {
   let deliveryMediaAssetId: string;
 
   beforeAll(async () => {
-    content = Object.assign(
-      await import("@/lib/content/service"),
-      await import("@/features/content/server"),
-    );
+    content = await import("@/features/content/server");
     workflow = await import("@/lib/content/workflow");
     publishing = await import("@/lib/publishing/service");
     deliveries = await import("@/lib/deliveries/service");

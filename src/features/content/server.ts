@@ -1,5 +1,8 @@
 import "server-only";
 
+export { mergeAiDraftIntoBrief } from "./brief-draft";
+export { decodeContentCursor, encodeContentCursor } from "./content-cursor.server";
+
 export {
   ApplyResearchTeardownSchema,
   UpdateFormatPayloadSchema,

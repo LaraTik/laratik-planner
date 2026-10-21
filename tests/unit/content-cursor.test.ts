@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { decodeContentCursor, encodeContentCursor } from "@/lib/content/service";
+import { decodeContentCursor, encodeContentCursor } from "@/features/content/server";
 
 /**
  * FEAT-09 (GAP-FULL-REVIEW-2026-08-25) — the planning list "load more"
