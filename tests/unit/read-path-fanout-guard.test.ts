@@ -42,12 +42,12 @@ describe("read-path fan-out guard", () => {
     // So the check looks for the helper inside a `.map(async …)` body.
     const perWorkspaceHelpers = /canWriteToWorkspace\(|hasWorkspaceRole\(|isAgencyAdmin\(/;
 
-    // Known-bounded loop, deliberately allowed. `lib/content/service.ts` maps
-    // `WORKFLOW_RULES[action].roles` — a fixed set of at most six roles —
-    // against ONE workspace id. It is not a fan-out over a growing set, and
-    // `getWorkspaceRoles` is `React.cache`-wrapped so the repeats collapse.
+    // Known-bounded loop, deliberately allowed. The content transition
+    // command maps `WORKFLOW_RULES[action].roles` — a fixed set of at most six
+    // roles — against ONE workspace id. It is not a fan-out over a growing
+    // set, and `getWorkspaceRoles` is `React.cache`-wrapped so repeats collapse.
     // Recorded here with its reason so the exception is visible, not silent.
-    const allowlist = new Set(["lib/content/service.ts"]);
+    const allowlist = new Set(["features/content/workflow-transition.server.ts"]);
 
     const offenders: string[] = [];
 
