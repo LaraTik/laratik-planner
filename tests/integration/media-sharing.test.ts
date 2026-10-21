@@ -38,6 +38,7 @@ import {
   listMediaFolders,
   listMediaFoldersTree,
   listMediaAssetsPage,
+  mediaAssetForActor,
   MediaPermissionError,
   publicMediaAssetForToken,
   renameMediaAsset,
@@ -377,6 +378,20 @@ describe("media sharing and folder database contract", () => {
       .from(mediaAssetLinks)
       .where(eq(mediaAssetLinks.mediaAssetId, assetId));
     expect(storedLinks).toHaveLength(1);
+  });
+
+  it("loads asset storage details only for an authorized workspace actor", async () => {
+    await expect(mediaAssetForActor({ id: userId }, assetId)).resolves.toMatchObject({
+      asset: { id: assetId, ownerWorkspaceId: workspaceId },
+      object: { id: storageObjectId },
+      previewStorageObjectId: null,
+    });
+
+    const [outsider] = await db
+      .insert(users)
+      .values({ email: "media-access-outsider@sharing.test", displayName: "Outsider" })
+      .returning();
+    await expect(mediaAssetForActor({ id: outsider!.id }, assetId)).resolves.toBeNull();
   });
 
   it("keeps library pagination totals aligned with agency-shared visible rows", async () => {

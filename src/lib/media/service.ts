@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   contentItems,
@@ -7,15 +7,12 @@ import {
   mediaAssetLinks,
   mediaFolderReconcileLogs,
   mediaFolders,
-  storageObjects,
-  workspaceMembershipRoles,
-  workspaceMemberships,
   workspaces,
 } from "@/lib/db/schema";
-import { hasWorkspaceRole, isAgencyMember, type Actor } from "@/lib/auth/policy";
-import { MEDIA_READ_ROLES } from "./access";
+import type { Actor } from "@/lib/auth/policy";
 import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "./folder-tree";
 
+export { mediaAssetForActor } from "./asset-access.server";
 export { BRAND_KIT_FOLDER_NAME, POSTS_FOLDER_NAME } from "./folder-tree";
 export type { MediaFolderKind, MediaFolderTreeRow } from "./folder-tree";
 export { MediaPermissionError } from "./errors";
@@ -111,61 +108,6 @@ async function ensurePlanningMediaFolderPath(input: {
   }
   return parentId;
 }
-
-export async function mediaAssetForActor(actor: Actor, assetId: string) {
-  const [row] = await db
-    .select({
-      asset: mediaAssets,
-      object: storageObjects,
-      // PR 2: surface the preview variant's storage_object id so the
-      // `/api/media/assets/[id]` route can kick off a backfill
-      // when the variant is missing for legacy assets.
-      previewStorageObjectId: mediaAssets.previewStorageObjectId,
-    })
-    .from(mediaAssets)
-    .innerJoin(storageObjects, eq(storageObjects.id, mediaAssets.storageObjectId))
-    .where(eq(mediaAssets.id, assetId))
-    .limit(1);
-  if (!row) return null;
-  const ownerAccess = await hasWorkspaceRole(actor, row.asset.ownerWorkspaceId, [
-    "workspace_manager",
-    "content_planner",
-    "designer",
-    "internal_reviewer",
-    "publisher",
-  ]);
-  if (ownerAccess) return row;
-  if (row.asset.visibility === "agency" && (await isAgencyMember(actor, row.asset.agencyId))) {
-    const [internal] = await db
-      .select({ role: workspaceMembershipRoles.role })
-      .from(workspaceMembershipRoles)
-      .innerJoin(
-        workspaceMemberships,
-        eq(workspaceMemberships.id, workspaceMembershipRoles.workspaceMembershipId),
-      )
-      .innerJoin(workspaces, eq(workspaces.id, workspaceMemberships.workspaceId))
-      .where(
-        and(
-          eq(workspaceMemberships.userId, actor.id),
-          eq(workspaceMemberships.status, "active"),
-          eq(workspaces.agencyId, row.asset.agencyId),
-          inArray(workspaceMembershipRoles.role, [...MEDIA_READ_ROLES]),
-        ),
-      )
-      .limit(1);
-    if (internal?.role) return row;
-  }
-  return null;
-}
-
-// ─── FEAT-MEDIA-LIBRARY-2026-09-16 — navigation primitives + bulk actions ─────
-//
-// Plan §3.5: linkedTargetsForMediaAsset,
-// setMediaAssetTags, reconcileContentItemMediaFolders,
-// ensureBrandMediaFolderPath, bulkMoveMediaAssets, bulkSetMediaAssetTags,
-// bulkSetMediaAssetVisibility, duplicateMediaAssets.
-// Trash, restore, and retention cleanup live in
-// `src/features/media/trash-lifecycle.server.ts`.
 
 /**
  * Resolve the `Posts / {Format} / {YYYY} / {MM}` chain for an idea
@@ -341,53 +283,4 @@ export async function reconcileContentItemMediaFolders(input: {
     }
   });
   return { moved };
-}
-
-// ─── Filter extensions for `listMediaAssets` ────────────────────────────────
-
-/**
- * Filter extensions used by the library URL state:
- *   - `tagIntersect`: array of tag names — assets must carry ALL of them.
- *   - `status`: array of status names; default = `['processing','ready','failed']`.
- *   - `inUse`: when true, only assets that have at least one
- *     `media_asset_link` row.
- *   - `unlinked`: when true, only assets without any link row.
- *
- * Both `inUse` and `unlinked` use the same EXISTS / NOT EXISTS predicate;
- * they're mutually exclusive at the URL layer.
- */
-export type MediaAssetFilters = {
-  tagIntersect?: string[];
-  status?: ReadonlyArray<"processing" | "ready" | "failed" | "trashed">;
-  inUse?: boolean;
-  unlinked?: boolean;
-};
-
-/**
- * Inject `MediaAssetFilters` into a Drizzle `where` builder. Pulled out
- * of `listMediaAssets` so the bulk route and the API handlers can reuse
- * the same predicate shape.
- */
-export function applyMediaAssetFilters(
-  conditions: Parameters<typeof and>,
-  filters: MediaAssetFilters,
-): void {
-  if (filters.status && filters.status.length > 0) {
-    conditions.push(inArray(mediaAssets.status, [...filters.status]));
-  }
-  if (filters.tagIntersect && filters.tagIntersect.length > 0) {
-    for (const tag of filters.tagIntersect) {
-      conditions.push(sql`${tag} = ANY(${mediaAssets.tags})`);
-    }
-  }
-  if (filters.inUse) {
-    conditions.push(
-      sql`EXISTS (SELECT 1 FROM ${mediaAssetLinks} WHERE ${mediaAssetLinks.mediaAssetId} = ${mediaAssets.id})`,
-    );
-  }
-  if (filters.unlinked) {
-    conditions.push(
-      sql`NOT EXISTS (SELECT 1 FROM ${mediaAssetLinks} WHERE ${mediaAssetLinks.mediaAssetId} = ${mediaAssets.id})`,
-    );
-  }
 }

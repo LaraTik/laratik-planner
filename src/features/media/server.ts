@@ -7,6 +7,7 @@ import { quarantineMediaObject } from "@/lib/media/quarantine";
 import { MediaValidationError, validateStoredMediaObject } from "@/lib/media/validation";
 
 export { moveMediaAsset } from "./asset-management.server";
+export { mediaAssetForActor } from "@/lib/media/asset-access.server";
 export { linkMediaAssetToContentItem, linkedTargetsForMediaAsset } from "./asset-links.server";
 export {
   countMediaAssets,
@@ -60,7 +61,6 @@ export {
 export {
   ensureBrandMediaFolderPath,
   ensurePlanningMediaFolderPathPublic,
-  mediaAssetForActor,
 } from "@/lib/media/service";
 export type { MediaSort } from "./asset-library-queries.server";
 
