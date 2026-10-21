@@ -1,5 +1,30 @@
 # Test and coverage evidence
 
+## Media library command ownership and confirmed defect fixes — 2026-10-21, exact clean implementation SHA `6ba5c4c7ea1d5678705e170e58f2757dc330ee29`
+
+Media bulk move, tag, visibility, and duplication commands now belong to
+`src/features/media/library-commands.server.ts`, behind the existing
+server-only feature entry point. The broad `src/lib/media/service.ts` no
+longer owns those commands or the media-tag sanitizer. Duplication creates
+separate R2 objects through the storage upload-intent lifecycle, preserving
+the unique media-to-object invariant, quota reservation, object verification,
+and cleanup on partial failure. Folder moves now reject a target folder from
+another workspace. No schema migration, route, permission, or response-shape
+change was made.
+
+| Check                                                  | Result                                                                                                                                                                                               |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Focused media, storage, and module-boundary unit tests | **Pass** — 34/34. Includes R2 copy request encoding, quota reservation, upload verification, cleanup, tag normalization, and ownership imports.                                                      |
+| Focused disposable-Postgres media integration          | **Pass** — 11/11. Covers bulk library operations, cross-workspace move denial, and duplication to a distinct storage-object record. The storage provider is stubbed for this database contract test. |
+| `pnpm verify`                                          | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,991 tests, and production build on this exact clean SHA.                                                           |
+| Full integration suite                                 | **Pass** — all repository integration files passed against disposable `planner_test` on the pre-commit implementation snapshot; the focused media integration was repeated on this exact SHA.        |
+| `NODE_ENV=test pnpm migration-drill`                   | **Pass** — 5/5 scenarios; from-zero and restored Drizzle ledgers are 90/90 on this exact SHA.                                                                                                        |
+
+R2 provider copy behavior is covered by adapter-command tests but has not yet
+received production R2 UAT. Manual review of every page/route, the full
+five-browser release matrix, and independent review remain open. AD-002 remains
+**In Progress**.
+
 ## Media route feature-entry migration — 2026-10-21, exact clean implementation SHA `9c2b728771aeae8e8d2f63a9511364dfb4c3d42d`
 
 All media App Router pages and API handlers now consume

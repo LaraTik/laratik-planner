@@ -222,8 +222,8 @@ service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
 tree has disposable-Postgres read-path coverage. The remaining media service
 still has multiple responsibilities; listing/filtering, duplicate queries,
-upload registration, asset links, bulk move/tag/visibility, duplication, and
-reconciliation remain responsibility review candidates. Workspace Media now
+upload registration, asset links, and reconciliation remain responsibility
+review candidates. Workspace Media now
 has English and Arabic/RTL responsive screenshots at all five documented
 widths; strict visual comparison passed all six browser cases, including
 critical accessibility checks across the Arabic matrix.
@@ -281,6 +281,21 @@ soft-deleted and the asset is deleted with the expected released-byte count.
 scenario migration drill passed on exact clean SHA
 `05f3a301e756c0de3e2bb07c080ad976797d53eb`; see
 `docs/production-readiness/TEST_EVIDENCE.md`.
+
+**Media library commands and defect fixes (2026-10-21).** Bulk move, tag,
+visibility, and duplicate operations now live in
+`src/features/media/library-commands.server.ts`. Review confirmed two defects:
+bulk move accepted a folder from a different workspace, and duplication
+reused a storage-object ID despite the schema's unique media-object index.
+Moves now check each asset's agency/workspace against the target folder;
+duplication makes a separately owned R2 copy using the existing quota and
+upload-verification lifecycle, and cleans up unattached copies after failure.
+The API contract and role gates are unchanged. Focused unit checks pass 34/34,
+media integration passes 11/11, `pnpm verify` passes on exact clean SHA
+`6ba5c4c7ea1d5678705e170e58f2757dc330ee29`, and the migration drill passes
+5/5. The full integration suite also passed on the pre-commit implementation
+snapshot. R2 production UAT, manual review of every route, the full
+five-browser matrix, and independent review remain open.
 
 ### A6 — Historical audit findings need status reconciliation
 

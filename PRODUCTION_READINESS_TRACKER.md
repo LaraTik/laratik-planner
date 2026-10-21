@@ -1495,16 +1495,18 @@ board, channel-form, channel-button, settings-form).
 now accounts for the canonical 91-page route tree and its focused browser
 areas. Confirmed fixes include the lead-time setup state, media-folder
 classification, the invalid typography token, workspace AI tenant scope, and
-the missing-key status label. Bounded ownership changes move the media
-pending-upload worker and AI workspace read model behind server-only feature
-entry points, extract the pure media-folder tree and content-format catalog,
-and group lead-time defaults. AI settings, workspace Settings, and workspace
-Media have bilingual five-width visual and accessibility evidence; the media
-snapshot harness normalizes only the disposable agency UUID while component
-coverage preserves the real value. Full repository verification and the
-database integration suite pass on this worktree. Broader route review, the
-full five-browser release matrix, exact-clean-commit evidence, and independent
-review remain required before `Tested`.
+the missing-key status label. Bounded ownership changes move media sharing,
+folder management, imports, trash lifecycle, and library commands behind
+server-only feature entry points; route adapters now use the media feature
+entry point. The library review fixed cross-workspace folder moves and storage
+object reuse during duplication. AI settings, workspace Settings, and
+workspace Media have bilingual five-width visual and accessibility evidence;
+the media snapshot harness normalizes only the disposable agency UUID while
+component coverage preserves the real value. Exact clean-SHA verification,
+media integration, and migration-drill evidence are recorded in
+`docs/production-readiness/TEST_EVIDENCE.md`. R2 production UAT, broader manual
+route review, the full five-browser release matrix, and independent review
+remain open before `Tested`.
 
 ## M1 — Multi-agency tenancy and authorization
 
