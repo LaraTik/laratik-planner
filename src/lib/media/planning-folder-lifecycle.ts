@@ -1,4 +1,5 @@
 import "server-only";
+
 import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
@@ -10,12 +11,7 @@ import {
   workspaces,
 } from "@/lib/db/schema";
 import type { Actor } from "@/lib/auth/policy";
-import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "./folder-tree";
-
-export { mediaAssetForActor } from "./asset-access.server";
-export { BRAND_KIT_FOLDER_NAME, POSTS_FOLDER_NAME } from "./folder-tree";
-export type { MediaFolderKind, MediaFolderTreeRow } from "./folder-tree";
-export { MediaPermissionError } from "./errors";
+import { BRAND_KIT_FOLDER_NAME, mediaFormatFolderName } from "@/lib/media/folder-tree";
 
 async function ensureMediaFolder(input: {
   agencyId: string;
@@ -109,13 +105,7 @@ async function ensurePlanningMediaFolderPath(input: {
   return parentId;
 }
 
-/**
- * Resolve the `Posts / {Format} / {YYYY} / {MM}` chain for an idea
- * whose `plannedPublishAt` and `format` are known.
- *
- * Public so other services can compare an asset's current folder to
- * the expected path before triggering a reconcile (plan §5.1).
- */
+/** Resolve the Posts / Format / year / month folder path for a planned item. */
 export async function ensurePlanningMediaFolderPathPublic(input: {
   agencyId: string;
   workspaceId: string;
@@ -127,11 +117,7 @@ export async function ensurePlanningMediaFolderPathPublic(input: {
   return ensurePlanningMediaFolderPath(input);
 }
 
-/**
- * Resolve the `Brand Kit` folder for a workspace. No further nesting
- * for v1 (plan §5.2). Brand-kind subfolders are a follow-up after we
- * see real usage.
- */
+/** Resolve the workspace-level Brand Kit folder. */
 export async function ensureBrandMediaFolderPath(input: {
   agencyId: string;
   workspaceId: string;
@@ -146,19 +132,10 @@ export async function ensureBrandMediaFolderPath(input: {
   });
 }
 
-// ─── Reconcile ──────────────────────────────────────────────────────────────
-
 /**
- * Triggered when an idea's `plannedPublishAt` or `format` changes.
- * For every asset linked to that idea:
- *   - Compute the new derived folder.
- *   - If the asset's current folder matches the old derived path AND
- *     the asset's only link is this idea, move it to the new folder.
- *   - Write a `media_folder_reconcile_log` audit row in the same
- *     transaction.
- *
- * Returns the count of moved assets; callers revalidate the planning
- * page so a toast can fire.
+ * Keep managed media in its derived Posts/Format/year/month folder when a
+ * content item's schedule or format changes. Manual moves and shared assets
+ * remain untouched; each automated move and its audit row commit together.
  */
 export async function reconcileContentItemMediaFolders(input: {
   actor: Actor;
@@ -197,8 +174,6 @@ export async function reconcileContentItemMediaFolders(input: {
     timezone: contentItem.timezone,
     createdBy: input.actor.id,
   });
-
-  // Old derived folder (only matters if format/date actually moved).
   const oldFolderId =
     input.prevPlannedPublishAt && input.prevFormat
       ? await ensurePlanningMediaFolderPath({
@@ -210,16 +185,12 @@ export async function reconcileContentItemMediaFolders(input: {
           createdBy: input.actor.id,
         })
       : null;
-
-  // If the old and new derived folder resolve to the same id, no-op.
   if (oldFolderId && oldFolderId === newFolderId) return { moved: 0 };
 
-  // Fetch every asset linked to this idea.
   const links = await db
     .select({
       mediaAssetId: mediaAssetLinks.mediaAssetId,
       folderId: mediaAssets.folderId,
-      ownerWorkspaceId: mediaAssets.ownerWorkspaceId,
       assetStatus: mediaAssets.status,
     })
     .from(mediaAssetLinks)
@@ -230,23 +201,18 @@ export async function reconcileContentItemMediaFolders(input: {
         eq(mediaAssetLinks.targetId, input.contentItemId),
       ),
     );
-
-  // Per-asset: only move when the asset's *only* link is this idea AND
-  // the current folder matches the old derived path (no manual override).
   const reason: "planned_publish_at_changed" | "format_changed" =
     input.prevFormat !== input.nextFormat && oldFolderId === newFolderId
       ? "format_changed"
       : "planned_publish_at_changed";
-
   const now = new Date();
   let moved = 0;
+
   await db.transaction(async (tx) => {
     for (const link of links) {
       if (link.assetStatus !== "ready" && link.assetStatus !== "processing") continue;
-      // Skip assets whose current folder doesn't match the old derived
-      // path — they've been moved manually or shared across ideas.
       if (oldFolderId && link.folderId !== oldFolderId) continue;
-      // Skip assets linked to anything else (the move would be surprising).
+
       const otherRows = await tx
         .select({ otherCount: sql<number>`count(*)::int` })
         .from(mediaAssetLinks)
@@ -256,16 +222,11 @@ export async function reconcileContentItemMediaFolders(input: {
             sql`(${mediaAssetLinks.targetType} <> 'content_item' OR ${mediaAssetLinks.targetId} <> ${input.contentItemId})`,
           ),
         );
-      const otherCount = otherRows[0]?.otherCount ?? 0;
-      if (otherCount > 0) continue;
+      if ((otherRows[0]?.otherCount ?? 0) > 0) continue;
 
       const [updated] = await tx
         .update(mediaAssets)
-        .set({
-          folderId: newFolderId,
-          updatedBy: input.actor.id,
-          updatedAt: now,
-        })
+        .set({ folderId: newFolderId, updatedBy: input.actor.id, updatedAt: now })
         .where(eq(mediaAssets.id, link.mediaAssetId))
         .returning({ id: mediaAssets.id });
       if (!updated) continue;
@@ -282,5 +243,6 @@ export async function reconcileContentItemMediaFolders(input: {
       moved += 1;
     }
   });
+
   return { moved };
 }

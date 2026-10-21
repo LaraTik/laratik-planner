@@ -9,6 +9,7 @@ import {
   contentItems,
   mediaAssetLinks,
   mediaAssets,
+  mediaFolderReconcileLogs,
   mediaFolders,
   mediaShareLinks,
   storageObjects,
@@ -28,6 +29,7 @@ import {
   bulkTrashMediaAssets,
   createPublicMediaShare,
   createMediaFolder,
+  ensurePlanningMediaFolderPathPublic,
   duplicateMediaAssets,
   expungeExpiredTrashedMedia,
   findDuplicateMediaAssets,
@@ -43,6 +45,7 @@ import {
   publicMediaAssetForToken,
   renameMediaAsset,
   renameMediaFolder,
+  reconcileContentItemMediaFolders,
   registerUploadedMediaAsset,
   restoreMediaAsset,
   revokePublicMediaShare,
@@ -378,6 +381,144 @@ describe("media sharing and folder database contract", () => {
       .from(mediaAssetLinks)
       .where(eq(mediaAssetLinks.mediaAssetId, assetId));
     expect(storedLinks).toHaveLength(1);
+  });
+
+  it("moves a single-linked asset with its planned folder and records the move", async () => {
+    const previousDate = new Date("2026-11-01T12:00:00Z");
+    const nextDate = new Date("2026-12-01T12:00:00Z");
+    const [item] = await db
+      .insert(contentItems)
+      .values({
+        workspaceId,
+        title: "Scheduled launch",
+        format: "static_post",
+        plannedPublishAt: previousDate,
+        contentOwnerId: userId,
+        createdBy: userId,
+      })
+      .returning();
+    const oldFolderId = await ensurePlanningMediaFolderPathPublic({
+      agencyId,
+      workspaceId,
+      format: "static_post",
+      plannedPublishAt: previousDate,
+      timezone: "UTC",
+      createdBy: userId,
+    });
+    const newFolderId = await ensurePlanningMediaFolderPathPublic({
+      agencyId,
+      workspaceId,
+      format: "static_post",
+      plannedPublishAt: nextDate,
+      timezone: "UTC",
+      createdBy: userId,
+    });
+    await db.update(mediaAssets).set({ folderId: oldFolderId }).where(eq(mediaAssets.id, assetId));
+    await linkMediaAssetToContentItem({ id: userId }, { assetId, contentItemId: item!.id });
+
+    await expect(
+      reconcileContentItemMediaFolders({
+        actor: { id: userId },
+        agencyId,
+        workspaceId,
+        contentItemId: item!.id,
+        prevPlannedPublishAt: previousDate,
+        nextPlannedPublishAt: nextDate,
+        prevFormat: "static_post",
+        nextFormat: "static_post",
+      }),
+    ).resolves.toEqual({ moved: 1 });
+
+    const [asset] = await db
+      .select({ folderId: mediaAssets.folderId })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, assetId));
+    const [audit] = await db
+      .select()
+      .from(mediaFolderReconcileLogs)
+      .where(eq(mediaFolderReconcileLogs.contentItemId, item!.id));
+    expect(asset?.folderId).toBe(newFolderId);
+    expect(audit).toMatchObject({
+      mediaAssetId: assetId,
+      fromFolderId: oldFolderId,
+      toFolderId: newFolderId,
+      reason: "planned_publish_at_changed",
+      actorId: userId,
+    });
+  });
+
+  it("leaves shared assets and cross-tenant content untouched during folder reconciliation", async () => {
+    const previousDate = new Date("2026-11-01T12:00:00Z");
+    const nextDate = new Date("2026-12-01T12:00:00Z");
+    const [item] = await db
+      .insert(contentItems)
+      .values({
+        workspaceId,
+        title: "Shared launch asset",
+        format: "static_post",
+        plannedPublishAt: previousDate,
+        contentOwnerId: userId,
+        createdBy: userId,
+      })
+      .returning();
+    const [otherItem] = await db
+      .insert(contentItems)
+      .values({
+        workspaceId,
+        title: "Another asset use",
+        format: "static_post",
+        plannedPublishAt: previousDate,
+        contentOwnerId: userId,
+        createdBy: userId,
+      })
+      .returning();
+    const oldFolderId = await ensurePlanningMediaFolderPathPublic({
+      agencyId,
+      workspaceId,
+      format: "static_post",
+      plannedPublishAt: previousDate,
+      timezone: "UTC",
+      createdBy: userId,
+    });
+    await db.update(mediaAssets).set({ folderId: oldFolderId }).where(eq(mediaAssets.id, assetId));
+    await linkMediaAssetToContentItem({ id: userId }, { assetId, contentItemId: item!.id });
+    await linkMediaAssetToContentItem({ id: userId }, { assetId, contentItemId: otherItem!.id });
+
+    await expect(
+      reconcileContentItemMediaFolders({
+        actor: { id: userId },
+        agencyId,
+        workspaceId,
+        contentItemId: item!.id,
+        prevPlannedPublishAt: previousDate,
+        nextPlannedPublishAt: nextDate,
+        prevFormat: "static_post",
+        nextFormat: "static_post",
+      }),
+    ).resolves.toEqual({ moved: 0 });
+    await expect(
+      reconcileContentItemMediaFolders({
+        actor: { id: userId },
+        agencyId: "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        workspaceId,
+        contentItemId: item!.id,
+        prevPlannedPublishAt: previousDate,
+        nextPlannedPublishAt: nextDate,
+        prevFormat: "static_post",
+        nextFormat: "static_post",
+      }),
+    ).resolves.toEqual({ moved: 0 });
+
+    const [asset] = await db
+      .select({ folderId: mediaAssets.folderId })
+      .from(mediaAssets)
+      .where(eq(mediaAssets.id, assetId));
+    const auditRows = await db
+      .select()
+      .from(mediaFolderReconcileLogs)
+      .where(eq(mediaFolderReconcileLogs.contentItemId, item!.id));
+    expect(asset?.folderId).toBe(oldFolderId);
+    expect(auditRows).toHaveLength(0);
   });
 
   it("loads asset storage details only for an authorized workspace actor", async () => {

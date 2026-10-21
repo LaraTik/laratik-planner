@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentItems, workspaces } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
-import { reconcileContentItemMediaFolders } from "@/lib/media/service";
+import { reconcileContentItemMediaFolders } from "@/features/media/server";
 import { z } from "zod";
 
 export const RescheduleContentItemSchema = z.object({

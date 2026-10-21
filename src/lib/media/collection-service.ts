@@ -21,7 +21,8 @@ import {
 import { fetchStorageObject } from "@/lib/storage/read-service";
 import { exportMediaAssetsZip, type MediaZipSource } from "@/lib/exports/media-assets-zip";
 import { createMediaShareToken, hashMediaShareToken, MEDIA_SHARE_TTL_MS } from "./share-token";
-import { MediaPermissionError, mediaAssetForActor } from "./service";
+import { mediaAssetForActor } from "./asset-access.server";
+import { MediaPermissionError } from "./errors";
 
 export type CollectionSourceType = "delivery_version" | "library_selection";
 

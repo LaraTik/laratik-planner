@@ -19,7 +19,7 @@ import {
   type MediaSourceType,
 } from "@/lib/media/contract";
 import { linkMediaAssetToContentItem } from "./asset-links.server";
-import { ensurePlanningMediaFolderPathPublic } from "@/lib/media/service";
+import { ensurePlanningMediaFolderPathPublic } from "@/lib/media/planning-folder-lifecycle";
 
 const MEDIA_ASSET_STATUSES = ["processing", "ready", "failed", "trashed", "deleted"] as const;
 type MediaAssetRowStatus = (typeof MEDIA_ASSET_STATUSES)[number];

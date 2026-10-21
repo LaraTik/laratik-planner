@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { MediaFolderTree } from "@/components/media/media-folder-tree";
-import type { MediaFolderTreeRow } from "@/lib/media/service";
+import type { MediaFolderTreeRow } from "@/lib/media/folder-tree";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({

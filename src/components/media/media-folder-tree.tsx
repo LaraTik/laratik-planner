@@ -23,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { cn } from "@/lib/utils";
-import type { MediaFolderTreeRow } from "@/lib/media/service";
+import type { MediaFolderTreeRow } from "@/lib/media/folder-tree";
 
 /**
  * Collapsible folder tree that powers the library sidebar.

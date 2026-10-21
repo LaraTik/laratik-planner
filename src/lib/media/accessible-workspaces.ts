@@ -4,16 +4,7 @@ import { db } from "@/lib/db";
 import { workspaceMembershipRoles, workspaceMemberships, workspaces } from "@/lib/db/schema";
 import { isAgencyAdmin, isAgencyMember, type Actor } from "@/lib/auth/policy";
 
-/**
- * Read-side helper: which workspace ids in this agency can the actor
- * see media for?
- *
- * Mirrors the workspace-access predicate inside
- * `src/lib/media/service.ts::accessibleWorkspaceIds` so non-service
- * callers (e.g. the library filters route, which doesn't import the
- * full media service to keep its bundle small) can apply the same
- * rule without round-tripping the service.
- */
+/** Return the agency workspaces whose media the actor may access. */
 export async function accessibleWorkspaceIdsForActor(
   actor: Actor,
   agencyId: string,

@@ -42,6 +42,11 @@ export {
   renameMediaFolder,
 } from "./folders.server";
 export {
+  ensureBrandMediaFolderPath,
+  ensurePlanningMediaFolderPathPublic,
+  reconcileContentItemMediaFolders,
+} from "@/lib/media/planning-folder-lifecycle";
+export {
   activeMediaShareForActor,
   createPublicMediaShare,
   publicMediaAssetForToken,
@@ -58,10 +63,6 @@ export {
   setMediaAssetVisibility,
   setMediaAssetTags,
 } from "./library-commands.server";
-export {
-  ensureBrandMediaFolderPath,
-  ensurePlanningMediaFolderPathPublic,
-} from "@/lib/media/service";
 export type { MediaSort } from "./asset-library-queries.server";
 
 /** Promote uploads that were left pending after a transient storage read. */

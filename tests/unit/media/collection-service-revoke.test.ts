@@ -56,15 +56,15 @@ vi.mock("@/lib/auth/policy", async () => {
   return { ...actual, ...policyMock };
 });
 
-vi.mock("@/lib/media/service", () => ({
+vi.mock("@/lib/media/errors", () => ({
   MediaPermissionError: class MediaPermissionError extends Error {
     constructor(message = "media_permission_denied") {
       super(message);
       this.name = "MediaPermissionError";
     }
   },
-  mediaAssetForActor: vi.fn(),
 }));
+vi.mock("@/lib/media/asset-access.server", () => ({ mediaAssetForActor: vi.fn() }));
 
 const { revokeMediaShareCollection } = await import("@/lib/media/collection-service");
 

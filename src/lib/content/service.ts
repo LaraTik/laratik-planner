@@ -32,7 +32,7 @@ import {
 } from "@/lib/format-payload/schemas";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import { enqueueDeadlineNotification } from "@/lib/notifications/service";
-import { reconcileContentItemMediaFolders } from "@/lib/media/service";
+import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
 
 /**
  * Content service — the heart of the app.

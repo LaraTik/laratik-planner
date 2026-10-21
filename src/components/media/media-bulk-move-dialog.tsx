@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useLocaleT } from "@/components/i18n/locale-provider";
-import type { MediaFolderTreeRow } from "@/lib/media/service";
+import type { MediaFolderTreeRow } from "@/lib/media/folder-tree";
 
 /**
  * Bulk-move dialog. Plan §3.8 rule 4.
