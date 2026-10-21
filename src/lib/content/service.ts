@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gte, inArray, isNull, lt } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import {
   activityEvents,
@@ -8,13 +8,10 @@ import {
   contentItemChannels,
   contentItems,
   contentPillars,
-  outboxEvents,
   socialChannels,
   contentResearchLinks,
   contentResearchTeardownLinks,
   researchTeardowns,
-  workspaceMembershipRoles,
-  workspaceMemberships,
   workspaceSettings,
   workspaces,
   trendBriefs,
@@ -31,7 +28,6 @@ import {
   type ContentFormat,
 } from "@/lib/format-payload/schemas";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
-import { enqueueDeadlineNotification } from "@/lib/notifications/service";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
 
 /**
@@ -642,110 +638,3 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
  * `publisher` even though they could in principle mutate, so the
  * bulk action stays in the planning / manager surface.
  */
-/**
- * Move a content item's planned publish date. Distinct from the
- * broader `updateContentItem` (which also changes the brief / title
- * etc.) so the calendar UI can re-schedule without round-tripping
- * the full edit form. Accepts both the standard `workspaces.tz`
- * `Date` and a string for ergonomic `useActionState` form binding.
- */
-export async function dispatchDeadlineReminders(
-  opts: {
-    now?: Date;
-    windowHours?: number;
-  } = {},
-): Promise<{ scanned: number; enqueued: number }> {
-  const now = opts.now ?? new Date();
-  const windowHours = opts.windowHours ?? 24;
-  const windowEnd = new Date(now.getTime() + windowHours * 60 * 60 * 1000);
-  // The 24h dedupe horizon: don't fire the same item twice in 24h.
-  const dedupeCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-
-  // Closed statuses (ready / partial / published) are excluded —
-  // those items don't need a deadline reminder.
-  const openStatuses = [
-    "draft",
-    "content_review",
-    "approved_for_design",
-    "in_design",
-    "creative_review",
-    "changes_requested",
-    "blocked",
-  ] as const;
-
-  const candidates = await db
-    .select({
-      id: contentItems.id,
-      workspaceId: contentItems.workspaceId,
-      title: contentItems.title,
-      plannedPublishAt: contentItems.plannedPublishAt,
-      contentOwnerId: contentItems.contentOwnerId,
-      designerId: contentItems.designerId,
-    })
-    .from(contentItems)
-    .where(
-      and(
-        isNull(contentItems.archivedAt),
-        gte(contentItems.plannedPublishAt, now),
-        lt(contentItems.plannedPublishAt, windowEnd),
-        inArray(contentItems.status, [...openStatuses]),
-      ),
-    );
-
-  let enqueued = 0;
-  for (const item of candidates) {
-    // Skip if a `deadline` outbox event for this content item was
-    // written in the last 24h. The aggregateId is the content item
-    // id (enqueueOutboxEvent defaults `aggregateId` to the
-    // `contentItemId` for content events).
-    const [recent] = await db
-      .select({ id: outboxEvents.id })
-      .from(outboxEvents)
-      .where(
-        and(
-          eq(outboxEvents.eventType, "deadline"),
-          eq(outboxEvents.aggregateType, "content_item"),
-          eq(outboxEvents.aggregateId, item.id),
-          gte(outboxEvents.createdAt, dedupeCutoff),
-        ),
-      )
-      .limit(1);
-    if (recent) continue;
-
-    // Re-read the item inside the loop to short-circuit if a
-    // concurrent transition moved it to a closed status between
-    // the candidate select and now.
-    const [fresh] = await db
-      .select({ status: contentItems.status })
-      .from(contentItems)
-      .where(eq(contentItems.id, item.id))
-      .limit(1);
-    if (!fresh) continue;
-    if (
-      ["ready_to_publish", "partially_published", "published", "cancelled"].includes(fresh.status)
-    ) {
-      continue;
-    }
-
-    const recipients = [item.contentOwnerId, item.designerId].filter((u): u is string =>
-      Boolean(u),
-    );
-    for (const userId of recipients) {
-      await enqueueDeadlineNotification({
-        userId,
-        workspaceId: item.workspaceId,
-        contentItemId: item.id,
-        title: `Deadline approaching: "${item.title}"`,
-        body: `The planned publish date is approaching. Confirm the package is on track.`,
-        messageKey: "notifications.events.deadline_warning",
-        messageParams: { title: item.title },
-      });
-      enqueued += 1;
-    }
-  }
-  return { scanned: candidates.length, enqueued };
-}
-
-// silence unused
-void workspaceMembershipRoles;
-void workspaceMemberships;

@@ -109,18 +109,21 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/format-payload/**",
         "src/components/content/**",
         "src/components/planning/**",
+        "src/app/api/cron/deadline-reminders/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/**",
       ],
       unitFiles: [
         "tests/unit/content/**",
         "tests/unit/content-*.test.ts",
         "tests/unit/planning/**",
+        "tests/unit/cron-routes-auth.test.ts",
       ],
       integrationFiles: [
         "tests/integration/journey.test.ts",
         "tests/integration/enriched-list-filters.test.ts",
         "tests/integration/repro-page-render.test.ts",
         "tests/integration/publishing-m4.test.ts",
+        "tests/integration/deadline-reminders.test.ts",
       ],
       browser: [
         { spec: "tests/e2e/content-flow.spec.ts", projects: chromium },

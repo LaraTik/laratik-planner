@@ -26,6 +26,11 @@ export {
 } from "./queries.server";
 export { exportContentItemsCsv, type ContentCsvExportOptions } from "./csv-export.server";
 export {
+  dispatchDeadlineReminders,
+  type DispatchDeadlineRemindersOptions,
+  type DispatchDeadlineRemindersResult,
+} from "./deadline-reminders.server";
+export {
   applyWorkflowScenario,
   type ApplyWorkflowScenarioResult,
 } from "./workflow-scenario.server";

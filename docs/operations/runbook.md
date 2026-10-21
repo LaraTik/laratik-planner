@@ -944,6 +944,31 @@ sudo /opt/laratik-planner/scripts/vps/outbox-dispatch.sh   # one-off manual run
 
 The expected response shape is `{ "ok": true, "processed": <int>, "durationMs": <int> }`. A non-JSON response or an HTTP non-2xx indicates the secret rotated, the route is down, or the dispatcher threw. The in-app dispatcher writes failures to `outbox_events.last_error` / `attempt_count`; the email dispatcher writes `email_last_error` / `email_attempt_count` and per-recipient records in `notification_email_delivery` so a stuck address is observable without resending successful recipients.
 
+## Content deadline reminders
+
+`GET|POST /api/cron/deadline-reminders` scans open content scheduled within
+the next 24 hours and queues the localized deadline event through the shared
+notification outbox. It uses the same `CRON_SECRET` bearer check as the other
+cron routes. A transaction-scoped PostgreSQL advisory lock prevents overlapping
+ticks from creating duplicate events; an existing deadline event for the item
+within 24 hours is also treated as already queued. The owner and designer each
+receive one event, with duplicate assignee IDs collapsed.
+
+`scripts/vps/install-cron.sh` installs the job hourly at minute 15 UTC. The
+caller reads `CRON_SECRET` from `/opt/laratik-planner/.env`, posts to the local
+route with a 60-second timeout, and never prints the secret. To validate the
+installed chain on the VPS:
+
+```bash
+grep deadline-reminders /etc/cron.d/laratik-planner
+sudo /opt/laratik-planner/scripts/vps/deadline-reminders.sh
+tail -n 40 /var/log/laratik-planner-deadline-reminders.log
+```
+
+The response reports `{ ok, scanned, enqueued, skipped, durationMs }`. A
+`skipped` result means another instance holds the scheduler lock; it is a
+successful no-op because that instance is processing the same candidate set.
+
 ### Why a 1-minute cadence (not 5 or 15)
 
 The bell counter is the user's primary signal that something needs their attention. Five minutes of latency on a `comment_created` mention would feel broken on a chatty day. The route is cheap — at most 50 single-row transactions per tick, no external calls in v1 — so the cost of a 1-minute cadence is negligible against the cost of "the bell doesn't update for 5 minutes". The integration test `tests/integration/discussions.test.ts` exercises the same `dispatchOutboxOnce` entry point directly, so the worker code is covered without depending on the cron.

@@ -31,6 +31,9 @@
 #      (see scripts/vps/audit-retention.sh). Bounded retention
 #      keeps security_audit_event (365d default) and rate_limit_event
 #      (30d default) from growing unbounded. Silent on success.
+#   7. Hourly at :15 UTC — Content deadline reminders
+#      (see scripts/vps/deadline-reminders.sh). Queues upcoming reminders
+#      through the authenticated outbox path with a 24-hour item dedupe.
 #
 # Why a single cron file: cron on Debian/Ubuntu reads /etc/cron.d/* owned by
 # root. Putting both entries in one file makes the deploy chain surface-able
@@ -53,6 +56,7 @@ SOCIAL_SCHEDULE="*/15 * * * *"
 ADVERTISING_SCHEDULE="*/15 * * * *"
 OUTBOX_SCHEDULE="* * * * *"
 RETENTION_SCHEDULE="0 4 * * *"
+DEADLINE_REMINDER_SCHEDULE="15 * * * *"
 BACKUP_CMD="${PROJECT_DIR}/scripts/vps/backup.sh"
 CERT_CMD="${PROJECT_DIR}/scripts/vps/check-smtp-cert.sh"
 SOCIAL_CMD="${PROJECT_DIR}/scripts/vps/social-metrics-sync.sh"
@@ -60,6 +64,7 @@ ADVERTISING_CMD="${PROJECT_DIR}/scripts/vps/advertising-sync.sh"
 OUTBOX_CMD="${PROJECT_DIR}/scripts/vps/outbox-dispatch.sh"
 EMAIL_CMD="${PROJECT_DIR}/scripts/vps/email-dispatch.sh"
 RETENTION_CMD="${PROJECT_DIR}/scripts/vps/audit-retention.sh"
+DEADLINE_REMINDERS_CMD="${PROJECT_DIR}/scripts/vps/deadline-reminders.sh"
 
 DRY_RUN=0
 UNINSTALL=0
@@ -106,6 +111,7 @@ CRON_BODY="# laratik-planner crons — installed by scripts/vps/install-cron.sh
 # Backup: 03:30 UTC daily. Cert probe: 07:30 UTC daily. Social and advertising sync: every 15m.
 # Outbox dispatcher: every minute. Email dispatcher: every minute.
 # Audit / rate-limit retention prune: 04:00 UTC daily.
+# Content deadline reminders: hourly at minute 15 UTC.
 ${BACKUP_SCHEDULE} root ${BACKUP_CMD} >> /var/log/laratik-planner-backup.log 2>&1
 ${CERT_SCHEDULE} root ${CERT_CMD} >/dev/null
 ${SOCIAL_SCHEDULE} root ${SOCIAL_CMD} >/var/log/laratik-planner-social-sync.log 2>&1
@@ -113,12 +119,13 @@ ${ADVERTISING_SCHEDULE} root ${ADVERTISING_CMD} >/var/log/laratik-planner-advert
 ${OUTBOX_SCHEDULE} root ${OUTBOX_CMD} >/var/log/laratik-planner-outbox.log 2>&1
 ${OUTBOX_SCHEDULE} root ${EMAIL_CMD} >/var/log/laratik-planner-email.log 2>&1
 ${RETENTION_SCHEDULE} root ${RETENTION_CMD} >/var/log/laratik-planner-retention.log 2>&1
+${DEADLINE_REMINDER_SCHEDULE} root ${DEADLINE_REMINDERS_CMD} >/var/log/laratik-planner-deadline-reminders.log 2>&1
 "
 
 # Verify the target scripts exist (and are executable) before installing the
 # cron. A cron that points at a missing script fails silently — the runbook
 # already calls this out as the failure mode install-cron.sh prevents.
-for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD" "$ADVERTISING_CMD" "$OUTBOX_CMD" "$EMAIL_CMD" "$RETENTION_CMD"; do
+for cmd in "$BACKUP_CMD" "$CERT_CMD" "$SOCIAL_CMD" "$ADVERTISING_CMD" "$OUTBOX_CMD" "$EMAIL_CMD" "$RETENTION_CMD" "$DEADLINE_REMINDERS_CMD"; do
   if [[ ! -x "$cmd" ]]; then
     echo "✗ install-cron: $cmd is missing or not executable." >&2
     echo "  Run: chmod +x $cmd" >&2
@@ -153,6 +160,7 @@ trap - EXIT
 echo "[install-cron] ✅ Installed $CRON_FILE"
 echo "  - 03:30 UTC: $BACKUP_CMD (writes /var/log/laratik-planner-backup.log)"
 echo "  - 07:30 UTC: $CERT_CMD (emails root on exit 1/2/3)"
+echo "  - hourly at :15 UTC: $DEADLINE_REMINDERS_CMD"
 echo
 echo "  Verify with:  cat $CRON_FILE"
 echo "  Test backup:  sudo -u root ${BACKUP_CMD}"
