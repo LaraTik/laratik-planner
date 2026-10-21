@@ -2236,8 +2236,11 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   response contract changed.
 - Focused media-sharing integration passed 5/5, read-path batching passed
   11/11, and architecture/ownership/folder unit checks passed 23/23. Strict
-  TypeScript and `git diff --check` passed. Exact-SHA `pnpm verify` and the
-  migration drill remain pending after the implementation commit.
+  TypeScript and `git diff --check` passed. `pnpm verify` passed on exact clean
+  SHA `19983639fe39e869b8be6e640a34181e7da987ac`: formatting, zero-warning
+  ESLint, strict TypeScript, 558 unit files / 4,988 tests, and production
+  build. The migration drill passed 5/5 scenarios on the same SHA. Evidence is
+  recorded in `docs/production-readiness/TEST_EVIDENCE.md`.
 - `AD-002` remains **In Progress**; import, trash/restore, bulk/reconciliation,
   full route review, release browser matrix, and independent review remain
   open.

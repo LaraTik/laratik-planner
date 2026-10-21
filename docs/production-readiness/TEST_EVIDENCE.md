@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Media folder management ownership split — 2026-10-21, exact clean implementation SHA `19983639fe39e869b8be6e640a34181e7da987ac`
+
+Folder listing, tree projection, creation, rename, and cascade archive now
+belong to the server-only media feature module. App pages and API adapters
+consume the feature entry point; route, permission, and response contracts
+remain unchanged. No migration was added.
+
+| Check                                                  | Result                                                                                                                                                    |
+| ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                          | **Pass** — formatting, zero-warning ESLint, strict TypeScript, 558 unit files / 4,988 tests, and Next.js production build; exit 0 on the exact clean SHA. |
+| Focused media-sharing integration                      | **Pass** — 5/5 disposable-Postgres tests, including folder create/rename/tree count/cascade archive, asset unassignment, and non-member denial.           |
+| Focused read-path batching integration                 | **Pass** — 11/11 disposable-Postgres tests; folder list/tree query budget remains covered.                                                                |
+| Focused architecture, ownership, and folder unit tests | **Pass** — 23/23.                                                                                                                                         |
+| `NODE_ENV=test pnpm migration-drill`                   | **Pass** — 5/5 scenarios: from-zero, skipped-migration repair, in-place upgrade, backup/restore, and failed-migration abort; ledger 90/90.                |
+
+No route visual behavior changed in this service ownership move. The full
+five-browser release matrix, manual review of every route, and independent
+review remain open. AD-002 remains **In Progress**.
+
 ## Media service responsibility split — 2026-10-21, exact clean implementation SHA `a016d98b683235f803891155e405ea7f46a1a4e8`
 
 Public media sharing and single-asset folder assignment now have a feature-owned
