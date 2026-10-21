@@ -1445,6 +1445,38 @@ targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
 visual, route-by-route, and independent review gates remain open; AD-002
 remains **In Progress**.
 
+## Route review pass — tenant and page behavior — 2026-10-22
+
+The next route review confirmed and corrected six issues:
+
+- Trends now resolves feature access, capabilities, admin status, enabled
+  sources, and health from the agency attached to the URL workspace. An active
+  agency cookie can no longer select another tenant's Trends configuration.
+- Team activity now displays only role-change audit events whose metadata
+  explicitly lists the current workspace. New role-change events record those
+  workspace IDs; legacy unscoped events and agency-wide admin/deactivation
+  events are excluded from the workspace activity panel.
+- The Account workspace count now joins memberships through workspaces and
+  counts only memberships in the agency shown on the card.
+- Activity page requests now apply a zero-based offset across both merged
+  sources. Scope predicates are applied before pagination, and count requests
+  use the documented 5,000-row ceiling. Page two no longer re-slices page one.
+- Calendar view switching now carries task status and plan/task visibility
+  filters into Workload view.
+- Workspace creation now uses the shared searchable timezone picker and the
+  shared IANA timezone validator already used by workspace settings.
+
+These are narrow corrections; no route, API, permission, workflow, schema, or
+stored-data contract changed. A database-backed assertion was added for the
+new audit scope metadata. `pnpm verify` passed on the combined implementation
+tree (formatting, lint, TypeScript, 563 unit files / 5,022 tests, and the
+production build); focused timezone tests passed 8/8. The full Postgres
+integration suite could not run because `TEST_DATABASE_URL` is unset and the
+Docker endpoint returned HTTP 500. Exact clean-commit evidence, page-specific
+integration/browser checks, the remaining route inventory, full bilingual
+visual review, and independent verification remain open. AD-002 remains **In
+Progress**; this pass is **Tested**, not **Verified**.
+
 ## Full verification milestone — 2026-10-22
 
 `pnpm verify` passes at exact clean HEAD

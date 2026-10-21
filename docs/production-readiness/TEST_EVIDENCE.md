@@ -1982,3 +1982,27 @@ This verifies the current code and build at the recorded clean HEAD. The full
 disposable-Postgres integration/migration drill, release browser and visual
 matrix, route-by-route review, and independent review remain open. This is
 **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Route review tenant and behavior corrections — 2026-10-22
+
+Implementation commits:
+
+- `97cbe92` — agency-resolved Trends configuration and workspace-scoped Team
+  audit activity metadata.
+- `48acf8a` — Account workspace count scoped to the displayed agency.
+- `30f928a` — preserve calendar filters when switching to Workload view.
+- `5ba4a00` — offset pagination for the merged workspace activity feed.
+- `fa9e86a` — shared IANA timezone validation and workspace timezone picker.
+
+| Command / check                                           | Result                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm verify` on combined implementation tree             | **Pass** — formatting, lint, TypeScript, 563 unit files / 5,022 tests, production build. |
+| Focused timezone validation and combobox tests            | **Pass** — 8/8.                                                                          |
+| Targeted ESLint, TypeScript, Prettier, `git diff --check` | **Pass**.                                                                                |
+| Member-role audit metadata integration assertion          | Added; **not run** because `TEST_DATABASE_URL` is unset and Docker returned HTTP 500.    |
+| Browser and visual checks for touched routes              | **Open**.                                                                                |
+
+This is candidate evidence for the route review pass. Re-run the required
+checks on the exact clean commit before assigning `Tested`; database, browser,
+visual, route-inventory, and independent review gates remain open. AD-002
+remains **In Progress**; do not mark this pass **Verified**.

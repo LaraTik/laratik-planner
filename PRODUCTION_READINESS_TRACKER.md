@@ -2103,6 +2103,26 @@ UAT, and authenticated MCP smoke evidence remain release gates.
   depending on features. Existing UI-to-route-action and platform-to-UI type
   imports remain separately tracked migration work. This is a focused guard
   for a rule the existing lint configuration does not enforce.
+
+## 2026-10-22 — Route review tenant and behavior corrections
+
+- Corrected six confirmed issues in Trends agency selection, Team audit-event
+  scoping, Account agency workspace counts, Activity pagination across merged
+  sources, Calendar filter preservation, and workspace timezone selection.
+  Role-change audit events now carry workspace IDs; the workspace Team panel
+  omits legacy events with no auditable workspace scope.
+- Shared timezone validation is now used by both workspace creation and
+  workspace settings. The page uses the existing accessible IANA timezone
+  combobox.
+- `pnpm verify` passed on the combined implementation tree: formatting, lint,
+  strict TypeScript, 563 unit files / 5,022 tests, and production build. Focused
+  timezone tests passed 8/8. The new audit metadata assertion is in the
+  integration suite but has not run; `TEST_DATABASE_URL` is unset and Docker
+  returned HTTP 500.
+- This pass is **Tested**, not **Verified**. Exact clean-SHA evidence, database
+  integration, page-specific browser/visual checks, the remaining route
+  inventory, and independent review remain open. `AD-002` remains **In
+  Progress**.
 - The static guard passed 3/3 through `pnpm test:affected -- --area
 architecture --layer unit`; the Trends area mapping selected five unit files
   and passed 12/12. Formatting and `git diff --check` also passed. Full
