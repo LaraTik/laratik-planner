@@ -222,10 +222,12 @@ service retains the authorized folder read and batched asset-count query.
 Registration already has six focused return/recovery cases, and the folder
 tree has disposable-Postgres read-path coverage. Listing, pagination counts,
 duplicate lookup, asset access, and content-item links now live behind focused
-query/command owners. The 286-line legacy service now holds derived folder-path
-creation and content-item reconciliation; reconciliation remains a review
-candidate because it spans content changes and media-folder persistence.
-Workspace Media now
+query/command owners. The remaining planning-folder path creation and
+content-item folder reconciliation were moved to
+`src/lib/media/planning-folder-lifecycle.ts` in the latest bounded split; the
+former `src/lib/media/service.ts` compatibility module was removed. The shared
+content service calls the focused library module directly, keeping the
+platform-to-feature import direction valid. Workspace Media now
 has English and Arabic/RTL responsive screenshots at all five documented
 widths; strict visual comparison passed all six browser cases, including
 critical accessibility checks across the Arabic matrix.
