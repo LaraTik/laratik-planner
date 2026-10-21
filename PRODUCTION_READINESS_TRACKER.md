@@ -2629,7 +2629,15 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   console.error" count is stale. Remaining direct output is limited to shared
   environment bootstrap validation, the development-only seed route, and
   browser-side diagnostics; these still need their own boundary review.
-  OTHER-10 migration index-lock risk remains open.
+  OTHER-10 is reconciled against current migration practice: a dedicated
+  non-transactional runner already existed, and now rejects journaled Drizzle
+  paths, non-concurrent indexes, unrelated DDL, and multiple commands before
+  connecting to Postgres. The migration directory has 205 historical index
+  statements across 59 files (52 are in the initial schema); these files stay
+  immutable. No actual `CREATE INDEX CONCURRENTLY` SQL command currently lives
+  in that directory. Future production-critical indexes use the guarded
+  outside-journal path. `TEST_DATABASE_URL` is missing, so database gates for
+  this operational change remain unverified.
 - A5 now records the 34-tool, 2,834-line MCP server-factory inventory and a
   bounded split queue by tool domain. The five diagnostics tools now register
   from `src/features/mcp/diagnostic-tools.ts`; the factory supplies its shared

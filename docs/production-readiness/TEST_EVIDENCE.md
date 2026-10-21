@@ -1878,3 +1878,25 @@ This is focused evidence; the full repository verification and route/browser
 release gates remain pending. The remaining direct console output is recorded
 in `PRODUCTION_READINESS_TRACKER.md` and is limited to bootstrap, development,
 and browser-side paths.
+
+## Concurrent index migration guard — 2026-10-22
+
+Implementation SHA: `488ada20bbebf81b624f91cb30a6f0fcf1c62a7a`
+
+The dedicated runner now accepts only external `.sql` files containing one
+`CREATE [UNIQUE] INDEX CONCURRENTLY` command per Drizzle statement breakpoint.
+It resolves paths before checking them, rejects files inside the Drizzle
+migration journal, and validates SQL before connecting to Postgres. The
+historic journal was not edited.
+
+| Check                                       | Result        |
+| ------------------------------------------- | ------------- |
+| Concurrent migration helper unit suite      | Pass — 22/22. |
+| TypeScript                                  | Pass.         |
+| Targeted ESLint, Prettier, and shell syntax | Pass.         |
+| `git diff --check`                          | Pass.         |
+| Database integration and migration drill    | Not run.      |
+
+Database gates could not be run because `TEST_DATABASE_URL` is missing; the
+Docker availability probe stalled. No schema migration was introduced. The
+full repository and browser release gates remain open.
