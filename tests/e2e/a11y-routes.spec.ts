@@ -53,6 +53,23 @@ async function createDraft(
 
 async function expectClean(route: string, page: import("@playwright/test").Page) {
   await page.waitForLoadState("domcontentloaded");
+  // App Router metadata can stream after the body, especially on dynamic
+  // workspace routes. Wait for the document contract before scanning it.
+  await expect(page).toHaveTitle(/.+/);
+  // Theme changes animate semantic foreground/background tokens. Axe can
+  // observe an intermediate low-contrast frame if it starts before the finite
+  // transitions settle; ignore infinite spinners and wait for the rest.
+  await page.evaluate(async () => {
+    const finiteRunningAnimations = document.getAnimations().filter((animation) => {
+      const endTime = animation.effect?.getComputedTiming().endTime;
+      return (
+        animation.playState === "running" && typeof endTime === "number" && Number.isFinite(endTime)
+      );
+    });
+    await Promise.all(
+      finiteRunningAnimations.map((animation) => animation.finished.catch(() => {})),
+    );
+  });
 
   let results: Awaited<ReturnType<AxeBuilder["analyze"]>> | undefined;
   for (let attempt = 0; attempt < 2; attempt += 1) {
@@ -321,6 +338,33 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     const route = workspaceRoute(seeded, "settings");
     await page.goto(route);
     await expectClean(route, page);
+  });
+
+  test("@a11y workspace settings uses one date during server render and hydration", async ({
+    page,
+  }) => {
+    const seeded = await bootstrapTestSession(page);
+    const hydrationErrors: string[] = [];
+    page.on("console", (message) => {
+      if (
+        message.type() === "error" &&
+        /hydration failed|didn't match the client/i.test(message.text())
+      ) {
+        hydrationErrors.push(message.text());
+      }
+    });
+    // The server keeps its real clock. A deliberately different browser clock
+    // reproduces a midnight/client-time mismatch if the client calculates its
+    // own date instead of using the serialized render-time value.
+    await page.clock.setFixedTime(new Date("2020-01-01T12:00:00.000Z"));
+    const route = workspaceRoute(seeded, "settings");
+    await page.goto(route);
+    await expectClean(route, page);
+
+    const dates = await page.getByTestId("lead-times-deadline-date").allTextContents();
+    expect(dates).toHaveLength(2);
+    expect(dates[0]).toBe(dates[1]);
+    expect(hydrationErrors).toEqual([]);
   });
 
   test("@a11y /app/w/[slug]/calendar has no critical violations", async ({ page }) => {
