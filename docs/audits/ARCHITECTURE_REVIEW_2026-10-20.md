@@ -2796,6 +2796,33 @@ success result, route, permission, or persisted-data contract changed. Full
 browser/visual release coverage, manual route review, Firefox, and independent
 verification remain open; AD-002 remains **In Progress**.
 
+## A55 — Brand Kit actions exposed unexpected persistence and provider errors
+
+**Priority: P2 — privacy and consistent feature-owned failure behavior.** The
+Brand Kit profile, pillar, publishing-template, and AI voice-suggestion actions
+could return unexpected database or provider error text as user-facing action
+state. The feature server entry point now owns a shared sanitized diagnostic
+logger; actions return stable safe copy while retaining known duplicate-pillar
+and duplicate-template behavior. Credential-shaped DB and provider-error
+regressions cover action responses. The Brand Kit action suite passes 51/51,
+the profile action regression passes 1/1, and the commit hook passed the
+affected suites. The code is committed in `fa4859e42d4cd4bd17a1ce2273e75ec5b0967aeb`
+and `edcbd9e06d2dcacfa0c009578d40e08ee164ef39`. Full `pnpm verify` remains
+pending on the final clean code SHA. No permissions, successful writes, or
+duplicate behavior changed.
+
+## A56 — Social profile linking returned raw persistence failures
+
+**Priority: P2 — operational privacy and actionable user feedback.** The
+account-picker finalization action serialized unexpected transaction errors
+directly into its response. It now records the failure through the sanitized
+logger and returns stable safe copy; quota-limit errors retain their existing
+message. A route-action regression uses a credential-shaped database URL and
+confirms it is absent from the returned action state. The affected channel
+unit set passed 34/34 and the direct regression passed 1/1. Full `pnpm verify`
+remains pending on the final clean code SHA. No role, transaction, linking, or
+persisted-data behavior changed.
+
 ## A54 — Brand Kit template failures exposed persistence details
 
 **Priority: P2 — operational privacy and reliable user feedback.** The

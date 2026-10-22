@@ -2083,6 +2083,24 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Brand Kit and social-action failure privacy — implementation commits `fa4859e`–`1ffec617`
+
+Brand Kit profile, pillar, publishing-template, and AI suggestion actions now
+return stable safe copy for unexpected errors and log sanitized diagnostics
+through a feature-owned helper. Existing duplicate handling remains intact.
+The Brand Kit action suite passed 51/51, the profile-action regression passed
+1/1, and commit hooks passed TypeScript and affected tests. Social account
+picker finalization also sanitizes unexpected transaction errors while
+preserving the existing quota-limit message; the related affected set passed
+34/34 and its direct route-action regression passed 1/1. Each regression uses
+a credential-shaped fake database URL or a provider error and confirms that
+unexpected details are absent from the response.
+
+These implementation commits follow the previously green full `pnpm verify`
+on `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`; exact-HEAD grouped verification
+is still pending. No schema, route, permission, successful write, or persisted
+data behavior changed.
+
 ## Brand Kit template failure privacy — `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`
 
 The focused Brand Kit action suite passed 48/48, including a fake Postgres URL

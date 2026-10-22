@@ -3757,3 +3757,20 @@ default framebuffer`, then consumes a CPU core without returning control;
   browser/visual coverage, manual route review, Firefox, database evidence for
   unrelated open items, and independent verification remain open. AD-002
   remains **In Progress**.
+
+## 2026-10-23 — Sanitize Brand Kit and social action failures
+
+- Brand Kit profile, pillar, publishing-template, and AI suggestion actions
+  now share feature-owned sanitized diagnostics and return stable safe copy
+  for unexpected failures. Known duplicate pillar/template outcomes remain
+  unchanged. Credential-shaped persistence and provider failures are covered
+  by action-level regressions.
+- Social profile linking now sanitizes unexpected transaction failures while
+  preserving the existing quota-limit response. The affected channel unit set
+  passed 34/34; the direct failure regression passed 1/1. Brand Kit action
+  tests passed 51/51 and the profile-action regression passed 1/1. Commit hooks
+  passed TypeScript and affected unit selection.
+- Full `pnpm verify` passed on parent SHA `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`;
+  exact-HEAD grouped verification will be recorded at the next stable code
+  checkpoint. No route, permission, success, or persisted-data contract
+  changed. AD-002 remains **In Progress**.
