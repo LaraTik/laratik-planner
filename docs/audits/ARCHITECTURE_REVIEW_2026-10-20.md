@@ -1531,3 +1531,18 @@ Postgres integration and migration checks were not run. Browser and visual
 checks for touched pages, the remaining complete route inventory, and
 independent verification remain open. This pass is **Tested**, not **Verified**;
 AD-002 remains **In Progress**.
+
+## Research mutation ownership refinement — 2026-10-22
+
+The route security pass initially added the same watchlist owner/share query to
+two route modules. That duplicated authorization invariant is now owned by
+`src/lib/research/watchlist-access.ts`. The workspace plus manager/planner role
+check is centralized in `getResearchManagerContext` and shared by watchlist
+creation, archive/restore, membership, reorder, and transfer handlers. The
+visible-list read path retains its broader reviewer role contract. Focused
+watchlist and collection route tests pass 10/10, including denied roles and
+private-list mutations. Full `pnpm verify` passes at exact clean implementation
+SHA `40a6682b5d322c5e842547b0582c6480b9cb55bd` (566 unit files / 5,030 tests,
+formatting, lint, TypeScript, and production build). Postgres, browser/visual,
+remaining route, and independent verification gates remain open; this work is
+**Tested**, not **Verified**.

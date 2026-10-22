@@ -1,5 +1,19 @@
 # Test and coverage evidence
 
+## Research access ownership refinement — 2026-10-22
+
+Implementation SHA: `40a6682b5d322c5e842547b0582c6480b9cb55bd` (clean).
+
+| Command / check                                           | Result                                                                                   |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused research watchlist and collection routes          | **Pass** — 10/10.                                                                        |
+| `pnpm verify`                                             | **Pass** — formatting, lint, TypeScript, 566 unit files / 5,030 tests, production build. |
+| Disposable Postgres integration                           | **Not run** — `TEST_DATABASE_URL` unset; Docker engine did not respond.                  |
+| Full browser, visual, route inventory, independent review | **Open**.                                                                                |
+
+Status: **Tested**, not **Verified**. No schema, route, role, or data contract
+changed in this ownership refactor.
+
 ## Migration index-build authoring guidance — 2026-10-22
 
 Documentation now directs index builds on populated, active production tables
