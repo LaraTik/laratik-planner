@@ -2532,6 +2532,22 @@ browser checks cover the English empty-state accessibility contract and Arabic
 RTL rendering. Responsive visual, full browser matrix, exact-clean-SHA, and
 independent verification remain open.
 
+## Email retry failure privacy — `0bbb846ae744fc7d6bf8481c31744b78c48ea2ff`
+
+Email delivery and dispatch failures now persist stable
+`email_delivery_failed` / `email_dispatch_failed` codes instead of raw
+provider or database exception messages. Diagnostics use the credential-
+scrubbing structured logger. The focused notifications/discussions unit area
+passed 150/150; the transaction-path regression passed in the final dispatch
+suite (47/47). The Postgres DLQ regression now uses credential-shaped SMTP
+failure text and asserts a stable dead-letter value, but could not run because
+`TEST_DATABASE_URL` is unset and Docker is unavailable. On this clean SHA,
+`pnpm verify` passed formatting, ESLint, TypeScript, all 595 unit files / 5,156
+tests, and the production build. No schema, retry, delivery-state, route, or
+user-facing response contract changed. Browser/visual checks, route review,
+Firefox, and independent verification remain open. This work is **Tested**, not
+**Verified**.
+
 ## Batched isolated Chromium run — 2026-10-22
 
 Working-tree evidence (not exact clean-SHA release evidence):
