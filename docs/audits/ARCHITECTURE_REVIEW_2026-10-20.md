@@ -2713,3 +2713,17 @@ On clean commit `04c8bea93023bb7b75eafe914464dae2b91272d6`, `pnpm verify`
 passed formatting, lint, TypeScript, 590 unit files / 5,137 tests, and the
 production build. No auth provider, permission, or successful same-origin
 callback contract changed.
+
+## A49 — Brand-kit MCP imports returned raw failure messages
+
+**Priority: P2 — privacy and provider diagnostics.** Logo source-fetch errors
+and per-item brand-kit import catches serialized arbitrary `Error.message`
+values into the MCP result. Network errors can include a source URL, and
+storage/database messages can expose internal details. Known `McpToolError`
+messages remain useful, permission failures receive generic copy, and unknown
+failures are now logged through the sanitized logger while returning a
+per-item message. The focused database-backed regression expands case 16 to
+include an exception containing a fake source URL token and proves it is not
+returned; its result is pending execution against `planner_test`. Grouped
+repository verification is pending. No MCP tool names, arguments, scopes, or
+success-result shape changed.

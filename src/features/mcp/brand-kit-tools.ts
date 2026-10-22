@@ -27,6 +27,8 @@ import { writeFile as storageWriteFile, getSignedDownloadUrl } from "@/lib/stora
 import type { McpTokenScope } from "@/lib/mcp/tokens";
 import { z } from "zod";
 import type { McpContext, McpToolResultHelpers } from "@/features/mcp/tool-contracts";
+import { PermissionDeniedError } from "@/lib/auth/policy";
+import { logError } from "@/lib/observability/logger";
 
 type BrandKitDependencies = McpToolResultHelpers & {
   workspaceId: z.ZodType<string, z.ZodTypeDef, string>;
@@ -74,6 +76,15 @@ export function registerBrandKitTools(
     "other",
   ] as const;
   const LOGO_MAX_BYTES = 10 * 1024 * 1024;
+
+  function importFailureMessage(error: unknown, fallback: string): string {
+    if (error instanceof McpToolError) return error.message;
+    if (error instanceof PermissionDeniedError) {
+      return "You do not have permission to import this item.";
+    }
+    logError("mcp.brand_kit.import_item_failed", { err: error });
+    return fallback;
+  }
 
   const brandKitConflictStrategies = ["fail", "merge", "overwrite"] as const;
   type BrandKitConflictStrategy = (typeof brandKitConflictStrategies)[number];
@@ -125,10 +136,8 @@ export function registerBrandKitTools(
       return { buffer: Buffer.from(arrayBuffer), mimeType: contentType };
     } catch (error) {
       if (error instanceof McpToolError) throw error;
-      throw new McpToolError(
-        "invalid_request",
-        `Logo source fetch failed: ${error instanceof Error ? error.message : "unknown error"}`,
-      );
+      logError("mcp.brand_kit.logo_source_fetch_failed", { err: error });
+      throw new McpToolError("invalid_request", "Logo source fetch failed.");
     } finally {
       clearTimeout(timer);
     }
@@ -566,7 +575,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "logo",
               name: logo.name,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Logo import failed."),
             });
           }
         }
@@ -594,7 +603,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "color",
               name: color.name,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Color import failed."),
             });
           }
         }
@@ -618,7 +627,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "font",
               name: font.name,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Font import failed."),
             });
           }
         }
@@ -670,7 +679,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "other_asset",
               name: key,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Asset import failed."),
             });
           }
         }
@@ -698,7 +707,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "voice_rule",
               name: key,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Voice rule import failed."),
             });
           }
         }
@@ -727,7 +736,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "publishing_rule",
               name: key,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Publishing rule import failed."),
             });
           }
         }
@@ -756,7 +765,7 @@ export function registerBrandKitTools(
             summary.failed.push({
               kind: "linked_resource",
               name: resource.url,
-              message: error instanceof Error ? error.message : "unknown error",
+              message: importFailureMessage(error, "Linked resource import failed."),
             });
           }
         }

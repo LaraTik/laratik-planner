@@ -474,7 +474,11 @@ describe("MCP brand-kit tools", () => {
     // body arrives. Vitest's vi.stubGlobal is the documented hook.
     const { vi } = await import("vitest");
     const originalFetch = globalThis.fetch;
-    const stub = vi.fn(async () => {
+    const secret = "do-not-expose-this-test-token";
+    const stub = vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input).includes(secret)) {
+        throw new Error(`network request failed for ${String(input)}`);
+      }
       return new Response("body", {
         status: 200,
         headers: { "content-type": "image/png", "content-length": "99999999" },
@@ -495,15 +499,23 @@ describe("MCP brand-kit tools", () => {
             mime_type: "image/png",
             ext: "png",
           },
+          {
+            name: "private-source",
+            source_url: `https://example.com/logo.png?access_token=${secret}`,
+            mime_type: "image/png",
+            ext: "png",
+          },
         ],
         colors: [{ name: "Brand Red", hex: "#C8102E", color_role: "primary" }],
         response_format: "json",
       });
       expect(summary.created.colors).toBe(1);
       expect(summary.created.logos).toBe(0);
-      expect(summary.failed).toHaveLength(1);
+      expect(summary.failed).toHaveLength(2);
       expect(summary.failed[0]?.kind).toBe("logo");
       expect(summary.failed[0]?.message).toMatch(/10 MB cap/);
+      expect(summary.failed[1]?.message).toBe("Logo source fetch failed.");
+      expect(JSON.stringify(summary)).not.toContain(secret);
     } finally {
       globalThis.fetch = originalFetch;
     }
