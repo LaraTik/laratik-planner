@@ -10,7 +10,11 @@ import {
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
-import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
+import {
+  ThemeToggle,
+  type ThemeToggleCopy,
+  type UpdateThemePreferenceAction,
+} from "./theme-toggle";
 import { MobileContextHeader } from "./mobile-context-header";
 import type { AgencyRow } from "./agency-switcher";
 import type { BuildInfo } from "@/lib/build-info";
@@ -87,6 +91,7 @@ export function AppShell({
   chrome,
   markAllReadAction,
   markReadAction,
+  updateThemePreferenceAction,
   children,
 }: {
   user: {
@@ -133,6 +138,7 @@ export function AppShell({
   chrome: AppShellChrome;
   markAllReadAction: MarkAllReadAction;
   markReadAction: MarkReadAction;
+  updateThemePreferenceAction: UpdateThemePreferenceAction;
   children: React.ReactNode;
 }) {
   // The active workspace is the one whose slug is currently in the
@@ -192,6 +198,7 @@ export function AppShell({
         <Topbar
           markAllReadAction={markAllReadAction}
           markReadAction={markReadAction}
+          updateThemePreferenceAction={updateThemePreferenceAction}
           user={user}
           buildInfo={buildInfo}
           notifications={notifications}
@@ -206,7 +213,11 @@ export function AppShell({
       <header className="bg-surface border-border sticky top-0 z-20 flex h-14 items-center justify-between gap-2 border-b px-3 md:hidden">
         <MobileContextHeader workspaces={workspaces} />
         <div className="flex items-center gap-1">
-          <ThemeToggle preference={themePreference} copy={chrome.theme} />
+          <ThemeToggle
+            preference={themePreference}
+            copy={chrome.theme}
+            updateThemePreferenceAction={updateThemePreferenceAction}
+          />
           <NotificationsBell
             markAllReadAction={markAllReadAction}
             markReadAction={markReadAction}

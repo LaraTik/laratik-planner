@@ -10,6 +10,7 @@ import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency
 import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
+import { updateThemePreferenceAction } from "@/app/(app)/app/account/actions";
 import { renderNotificationCopy } from "@/lib/notifications/service";
 import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
 import {
@@ -455,6 +456,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     <AppShell
       markAllReadAction={markAllReadAction}
       markReadAction={markReadAction}
+      updateThemePreferenceAction={updateThemePreferenceAction}
       buildInfo={buildInfo}
       user={{
         id: session.user.id,

@@ -7,7 +7,11 @@ import {
   type NotificationsCopy,
 } from "./notifications-bell";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
-import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
+import {
+  ThemeToggle,
+  type ThemeToggleCopy,
+  type UpdateThemePreferenceAction,
+} from "./theme-toggle";
 import type { BuildInfo } from "@/lib/build-info";
 import type { ThemePreference } from "@/lib/theme/preferences";
 
@@ -32,6 +36,7 @@ export function Topbar({
   chrome,
   markAllReadAction,
   markReadAction,
+  updateThemePreferenceAction,
 }: {
   user: {
     id: string;
@@ -57,11 +62,16 @@ export function Topbar({
   chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
   markAllReadAction: MarkAllReadAction;
   markReadAction: MarkReadAction;
+  updateThemePreferenceAction: UpdateThemePreferenceAction;
 }) {
   return (
     <div className="flex h-full items-center justify-end gap-4 px-3 sm:px-6">
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <ThemeToggle preference={themePreference} copy={chrome.theme} />
+        <ThemeToggle
+          preference={themePreference}
+          copy={chrome.theme}
+          updateThemePreferenceAction={updateThemePreferenceAction}
+        />
         <NotificationsBell
           markAllReadAction={markAllReadAction}
           markReadAction={markReadAction}

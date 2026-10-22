@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { updateThemePreferenceAction } from "@/app/(app)/app/account/actions";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -21,6 +20,10 @@ export type ThemeToggleCopy = {
   dark: string;
 };
 
+export type UpdateThemePreferenceAction = (
+  preference: ThemePreference,
+) => Promise<{ saved?: boolean; errorCode?: string }>;
+
 const THEME_ICONS = { system: Monitor, light: Sun, dark: Moon } as const;
 
 function applyTheme(preference: ThemePreference) {
@@ -34,9 +37,11 @@ function applyTheme(preference: ThemePreference) {
 export function ThemeToggle({
   preference,
   copy,
+  updateThemePreferenceAction,
 }: {
   preference: ThemePreference;
   copy: ThemeToggleCopy;
+  updateThemePreferenceAction: UpdateThemePreferenceAction;
 }) {
   const [value, setValue] = React.useState(preference);
   const [saving, setSaving] = React.useState(false);
