@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Architecture refinement — planning list action ownership — 2026-10-22
+
+Implementation SHA: `aefe97aa6bedda02d013d52ce79337dce491ea7b` (clean at run).
+
+| Command / check                                      | Result                                                                                                          |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Focused planning and ownership tests                 | Pass — 8/8.                                                                                                     |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`              | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Docker availability check                            | Timed out after five seconds.                                                                                   |
+| Postgres integration, migration drill, visual review | Open; no persistence or schema changes in this refactor.                                                        |
+| Independent verification                             | Open.                                                                                                           |
+
+Planning list actions and the owner dialog now live beside their only route.
+The static shared-component-to-route import migration list is down to 17.
+Page behavior and public contracts are unchanged. This checkpoint is
+**Tested**, not **Verified**.
+
 ## Architecture refinement — planning publishing UI ownership — 2026-10-22
 
 Implementation SHA: `95bba579bca646db6dd9459e0767033fade8c409` (clean at run).

@@ -151,15 +151,18 @@ imported a route-local workspace shell. It now lives beside its owning page.
 The publishing card and its Meta publication-link dialog also had one
 production caller each in that page, so they moved beside it as a single
 route-owned group. Their existing unit tests now import the route-owned modules
-directly. The static ownership guard rejects new `src/components` → `src/app`
-imports and pins the 20 remaining legacy imports as an explicit migration
-queue. These bounded changes remove three route couplings without changing
-page behavior. Focused planning and ownership tests passed 23/23, and
-`pnpm verify` passed at exact clean implementation SHA
-`95bba579bca646db6dd9459e0767033fade8c409` (567 unit files / 5,035 tests,
-formatting, lint, TypeScript, and production build). Route browser/visual
-review and independent verification remain open; this is **Tested**, not
-**Verified**.
+directly. The planning list actions and owner dialog also had a single route
+owner and now live beside that page. The static ownership guard rejects new
+`src/components` → `src/app` imports and pins the 17 remaining legacy imports
+as an explicit migration queue. These bounded changes remove six route
+couplings without changing page behavior. Focused planning and ownership tests
+passed 8/8 for the latest change, and `pnpm verify` passed at exact clean
+implementation SHA `aefe97aa6bedda02d013d52ce79337dce491ea7b` (567 unit files /
+5,035 tests, formatting, lint, TypeScript, and production build). The affected
+browser command escalated to the full matrix and stopped before browser tests:
+`TEST_DATABASE_URL` was unset and the Docker availability check timed out.
+Postgres, route browser/visual review, full route review, and independent
+verification remain open; this is **Tested**, not **Verified**.
 
 **Media route feature boundary (2026-10-21).** The media route tree now has a
 bounded facade at `src/features/media/server.ts`; app pages and API handlers
