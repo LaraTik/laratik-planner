@@ -1,5 +1,27 @@
 # Test and coverage evidence
 
+## Architecture refinement — content detail ownership — 2026-10-22
+
+Implementation SHA: `03d4a3cd6e255f88d4418d95bd418cab5fad2ddc` (clean at run).
+
+| Command / check                                      | Result                                                                                       |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Focused content detail, inline editor, and ownership | Pass — 39/39; related task, workflow, and AI panel regressions also passed in focused runs.  |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 569 unit files / 5,040 tests, and production build.     |
+| Browser, accessibility, and visual review            | Not run — `TEST_DATABASE_URL` is unset; the browser runner requires the disposable database. |
+| Integration and migration drill                      | Not applicable — no schema or persistence behavior changed.                                  |
+| Independent review                                   | Open.                                                                                        |
+
+Shared planning editors now receive route-owned actions as props; the AI
+launcher receives its route-owned content as a slot. The unused edit drawer
+was removed after the dependency graph and source search showed no callers.
+The content detail header, overview, navigation wrapper, and inline editors
+now live under `src/features/content/` and are exposed through its client-safe
+`index.ts`. The shared-component-to-route import allowlist is empty. Routes,
+permissions, workflow behavior, and persisted data are unchanged. This
+checkpoint is **Tested**, not **Verified**; route-by-route browser/visual
+review and independent review remain open.
+
 ## Architecture refinement — shared action ownership — 2026-10-22
 
 Implementation SHA: `345eb4f5afcaba4deded63581d6a7e68ad6882ed` (clean at run).

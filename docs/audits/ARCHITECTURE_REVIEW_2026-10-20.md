@@ -1623,6 +1623,27 @@ checks for touched pages, the remaining complete route inventory, and
 independent verification remain open. This pass is **Tested**, not **Verified**;
 AD-002 remains **In Progress**.
 
+## Shared component ownership closure checkpoint — 2026-10-22
+
+At implementation SHA `03d4a3cd6e255f88d4418d95bd418cab5fad2ddc`, the static
+shared-component-to-route import allowlist is empty. Planning format/copy
+editors and the task form receive route-owned actions; workflow actions are
+passed into the shared workflow rail; the AI launcher receives route-owned
+content as a slot. The unused edit drawer was removed after caller analysis
+found no usages. The content-detail header, overview, navigation wrapper, and
+inline editors moved into `src/features/content/` behind its client-safe
+`index.ts`. Existing tests preserve action handoff, form submissions,
+workflow refresh, localization, and editor behavior. No route, API, permission,
+workflow, or persisted-data contract changed.
+
+The exact clean SHA passed `pnpm verify` (569 unit files / 5,040 tests,
+formatting, lint, TypeScript, and production build). The affected browser,
+a11y, and visual review could not run because `TEST_DATABASE_URL` is unset.
+Manual quality review of all routes, the five-browser release matrix, visual
+release gate, database gates when persistence changes, and independent review
+remain open. AD-002 remains **In Progress**; this checkpoint is **Tested**, not
+**Verified**.
+
 ## Agency form action ownership — 2026-10-22
 
 The shared agency identity form imported the agency-settings route action even
