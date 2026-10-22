@@ -2782,3 +2782,11 @@ the route's verified current state is the empty state.
 This is focused working-tree evidence, not a full visual release pass or
 exact-clean-SHA evidence. Brand Kit root parity and the remaining visual
 differences are still open.
+
+## Exact clean-SHA checks — `aa61956414666b2777c814d11862ffcdb2e9421a`
+
+On the clean commit, `pnpm verify` passed formatting, ESLint, TypeScript, all
+587 unit files / 5,118 tests, and the production build. The strict visual
+comparison for platform-errors passed 3/3 at mobile, tablet, and wide widths.
+This does not clear the complete visual matrix, Firefox, manual route review,
+or independent verification.

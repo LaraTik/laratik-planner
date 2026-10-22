@@ -3553,3 +3553,10 @@ default framebuffer`, then consumes a CPU core without returning control;
   Stitch design; it remains a product-parity item and its snapshot was not
   refreshed. Status remains **Tested**, not **Verified**; Firefox, full visual
   reconciliation, route review, independent review, and push remain open.
+
+### Exact clean-SHA checks — `aa61956414666b2777c814d11862ffcdb2e9421a`
+
+- `pnpm verify` passed: formatting, ESLint, TypeScript, 587 unit files / 5,118
+  tests, and production build.
+- The focused platform-errors visual comparison passed 3/3 on the same clean
+  SHA. No schema or runtime behavior changed in this test/evidence batch.
