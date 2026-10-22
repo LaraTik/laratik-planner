@@ -591,9 +591,10 @@ export async function suggestVoiceRulesAction(
     });
     return { ok: true, suggestions };
   } catch (err) {
+    logBrandKitActionFailure("brand_kit.voice_rule_suggestion_failed", err);
     return {
       ok: false,
-      error: err instanceof Error ? err.message : "AI suggestion failed.",
+      error: "AI suggestion failed.",
     };
   }
 }

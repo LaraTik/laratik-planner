@@ -19,6 +19,7 @@ type DrizzleState = {
   insertCalls: { values: unknown }[];
   updateCalls: { set: unknown; where: unknown }[];
   deleteCalls: { where: unknown }[];
+  selectRows: unknown[][];
 };
 
 function makeDrizzleMock(state: DrizzleState) {
@@ -49,11 +50,21 @@ function makeDrizzleMock(state: DrizzleState) {
   });
   const del = vi.fn(() => deleteChain);
 
-  return { insert, update, delete: del, state };
+  const select = vi.fn(() => {
+    const rows = state.selectRows.shift() ?? [];
+    const chain: Record<string, unknown> = {};
+    chain.from = vi.fn(() => chain);
+    chain.where = vi.fn(() => chain);
+    chain.limit = vi.fn(() => Promise.resolve(rows));
+    chain.then = (resolve: (value: unknown[]) => unknown) => Promise.resolve(rows).then(resolve);
+    return chain;
+  });
+
+  return { insert, update, delete: del, select, state };
 }
 
 const dbMock = vi.hoisted(() => {
-  const state: DrizzleState = { insertCalls: [], updateCalls: [], deleteCalls: [] };
+  const state: DrizzleState = { insertCalls: [], updateCalls: [], deleteCalls: [], selectRows: [] };
   return makeDrizzleMock(state);
 });
 
@@ -87,10 +98,23 @@ const pillarMock = vi.hoisted(() => ({
   createPillar: vi.fn(),
 }));
 
+const aiMock = vi.hoisted(() => ({
+  getActiveApiKey: vi.fn(),
+  suggestVoiceRules: vi.fn(),
+}));
+const agencyContextMock = vi.hoisted(() => ({
+  resolveActiveAgencyContext: vi.fn(),
+}));
+
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/auth/config", () => ({ auth: authMock.auth }));
 vi.mock("@/lib/workspaces/context", () => workspaceMock);
 vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: policyMock.hasWorkspaceRole }));
+vi.mock("@/lib/auth/agency-context", () => agencyContextMock);
+vi.mock("@/lib/ai", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/ai")>("@/lib/ai");
+  return { ...actual, ...aiMock };
+});
 vi.mock("@/lib/planning/pillars", async () => {
   const actual =
     await vi.importActual<typeof import("@/lib/planning/pillars")>("@/lib/planning/pillars");
@@ -125,6 +149,7 @@ const {
   addPublishingTemplateAction,
   createPillarAction,
   addPillarTemplateAction,
+  suggestVoiceRulesAction,
   createLinkedResourceAction,
   archiveLinkedResourceAction,
 } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions");
@@ -143,6 +168,7 @@ beforeEach(() => {
   dbMock.state.insertCalls = [];
   dbMock.state.updateCalls = [];
   dbMock.state.deleteCalls = [];
+  dbMock.state.selectRows = [];
   authMock.auth.mockReset();
   workspaceMock.getAccessibleWorkspace.mockReset();
   policyMock.hasWorkspaceRole.mockReset();
@@ -158,6 +184,11 @@ beforeEach(() => {
   serviceMock.archiveBrandLinkedResource.mockResolvedValue(undefined);
   pillarMock.createPillar.mockReset();
   pillarMock.createPillar.mockResolvedValue(undefined);
+  aiMock.getActiveApiKey.mockReset().mockResolvedValue("test-provider-key");
+  aiMock.suggestVoiceRules.mockReset();
+  agencyContextMock.resolveActiveAgencyContext
+    .mockReset()
+    .mockResolvedValue({ agencyId: "agency-1" });
 });
 
 describe("createColorAssetAction", () => {
@@ -633,6 +664,23 @@ describe("Brand Kit pillar action failures", () => {
       ok: true,
       added: 0,
     });
+  });
+});
+
+describe("suggestVoiceRulesAction failures", () => {
+  it("does not return raw provider error details", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    dbMock.state.selectRows = [[{ enabled: true, enabledCapabilities: ["caption_drafts"] }], []];
+    aiMock.suggestVoiceRules.mockRejectedValue(
+      new Error("MiniMax API error: 502 upstream response contained private details"),
+    );
+
+    const result = await suggestVoiceRulesAction(slug, "tone");
+
+    expect(result).toEqual({ ok: false, error: "AI suggestion failed." });
+    expect(JSON.stringify(result)).not.toContain("private details");
   });
 });
 
