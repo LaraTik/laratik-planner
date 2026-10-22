@@ -371,117 +371,183 @@ export async function dispatchEmailOnce(
     .orderBy(outboxEvents.availableAt)
     .limit(maxEvents);
 
+  let processed = 0;
   let sent = 0;
   let skipped = 0;
   let failed = 0;
   for (const evt of events) {
-    const payload = (evt.payload as Record<string, unknown> | null) ?? {};
-    const kind = eventTypeToNotificationKind(evt.eventType as string);
-    const recipients = await emailRecipientIds(evt.eventType as string, payload);
-    if (!kind || recipients.length === 0) {
-      skipped += recipients.length === 0 ? 1 : recipients.length;
-      await markEmailEventProcessed(evt.id);
-      continue;
-    }
-
-    await db
-      .insert(notificationEmailDeliveries)
-      .values(recipients.map((userId) => ({ outboxEventId: evt.id, userId })))
-      .onConflictDoNothing();
-    const deliveries = await db
-      .select()
-      .from(notificationEmailDeliveries)
-      .where(
-        and(
-          eq(notificationEmailDeliveries.outboxEventId, evt.id),
-          isNull(notificationEmailDeliveries.processedAt),
-        ),
-      );
-
-    // A delivery row should always exist after the upsert. Treat an empty
-    // result as a completed skip defensively (for example, if a recipient
-    // was deleted between the two statements) so the event cannot spin.
-    if (deliveries.length === 0) {
-      skipped += recipients.length;
-      await markEmailEventProcessed(evt.id);
-      continue;
-    }
-
-    for (const delivery of deliveries) {
-      const wantsEmail = await shouldEmailUserFor(delivery.userId, kind);
-      if (!wantsEmail) {
-        skipped += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId);
-        continue;
-      }
-      const [user] = await db
-        .select({ email: users.email, locale: users.locale })
-        .from(users)
-        .where(eq(users.id, delivery.userId))
-        .limit(1);
-      if (!user) {
-        skipped += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId);
-        continue;
-      }
-      const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
-      const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
-      const messageKey = payload["messageKey"] as string | undefined;
-      const messageParams =
-        (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
-      const { subject, text: emailBody } = renderNotificationEmailCopy(
-        {
-          title,
-          body,
-          ...(messageKey ? { messageKey } : {}),
-          ...(messageParams ? { messageParams } : {}),
-        },
-        user.locale ?? "en",
-      );
-      try {
-        await sendEmail({ to: user.email, subject, text: emailBody });
-        sent += 1;
-        await markEmailDeliveryProcessed(evt.id, delivery.userId, true);
-      } catch (err) {
-        failed += 1;
-        const message = err instanceof Error ? err.message : String(err);
-        const nextAttempt = (delivery.attemptCount ?? 0) + 1;
-        const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
-        await db
-          .update(notificationEmailDeliveries)
-          .set({
-            ...(isPoisoned ? { processedAt: new Date() } : {}),
-            attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
-            lastError: isPoisoned ? `[poisoned] ${message}` : message,
-          })
+    try {
+      const result = await db.transaction(async (tx) => {
+        // Candidate discovery above is lock-free. Claim the event inside the
+        // transaction so overlapping cron ticks cannot both send the same
+        // recipient email. Keep the event lock until delivery state commits.
+        const [claimed] = await tx
+          .select()
+          .from(outboxEvents)
           .where(
             and(
-              eq(notificationEmailDeliveries.outboxEventId, evt.id),
-              eq(notificationEmailDeliveries.userId, delivery.userId),
+              eq(outboxEvents.id, evt.id),
+              isNull(outboxEvents.emailProcessedAt),
+              sql`${outboxEvents.availableAt} <= ${now}`,
+            ),
+          )
+          .for("update", { skipLocked: true })
+          .limit(1);
+        if (!claimed) return null;
+
+        const payload = (claimed.payload as Record<string, unknown> | null) ?? {};
+        const kind = eventTypeToNotificationKind(claimed.eventType as string);
+        const recipients = await emailRecipientIds(claimed.eventType as string, payload);
+        if (!kind || recipients.length === 0) {
+          await tx
+            .update(outboxEvents)
+            .set({ emailProcessedAt: new Date() })
+            .where(eq(outboxEvents.id, claimed.id));
+          return { sent: 0, skipped: recipients.length === 0 ? 1 : recipients.length, failed: 0 };
+        }
+
+        await tx
+          .insert(notificationEmailDeliveries)
+          .values(recipients.map((userId) => ({ outboxEventId: claimed.id, userId })))
+          .onConflictDoNothing();
+        const deliveries = await tx
+          .select()
+          .from(notificationEmailDeliveries)
+          .where(
+            and(
+              eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+              isNull(notificationEmailDeliveries.processedAt),
             ),
           );
-        await db
-          .update(outboxEvents)
-          .set({
-            emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
-            emailLastError: isPoisoned ? `[poisoned] ${message}` : message,
-          })
-          .where(eq(outboxEvents.id, evt.id));
-      }
-    }
 
-    const pending = await db
-      .select({ userId: notificationEmailDeliveries.userId })
-      .from(notificationEmailDeliveries)
-      .where(
-        and(
-          eq(notificationEmailDeliveries.outboxEventId, evt.id),
-          isNull(notificationEmailDeliveries.processedAt),
-        ),
-      );
-    if (pending.length === 0) await markEmailEventProcessed(evt.id);
+        let eventSent = 0;
+        let eventSkipped = 0;
+        let eventFailed = 0;
+        for (const delivery of deliveries) {
+          const wantsEmail = await shouldEmailUserFor(delivery.userId, kind);
+          if (!wantsEmail) {
+            eventSkipped += 1;
+            await tx
+              .update(notificationEmailDeliveries)
+              .set({ processedAt: new Date() })
+              .where(
+                and(
+                  eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+                  eq(notificationEmailDeliveries.userId, delivery.userId),
+                ),
+              );
+            continue;
+          }
+          const [user] = await tx
+            .select({ email: users.email, locale: users.locale })
+            .from(users)
+            .where(eq(users.id, delivery.userId))
+            .limit(1);
+          if (!user) {
+            eventSkipped += 1;
+            await tx
+              .update(notificationEmailDeliveries)
+              .set({ processedAt: new Date() })
+              .where(
+                and(
+                  eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+                  eq(notificationEmailDeliveries.userId, delivery.userId),
+                ),
+              );
+            continue;
+          }
+          const title = (payload["title"] as string | undefined) ?? defaultTitleFor(kind);
+          const body = (payload["body"] as string | undefined) ?? defaultBodyFor(kind);
+          const messageKey = payload["messageKey"] as string | undefined;
+          const messageParams =
+            (payload["messageParams"] as Record<string, string | number> | undefined) ?? undefined;
+          const { subject, text: emailBody } = renderNotificationEmailCopy(
+            {
+              title,
+              body,
+              ...(messageKey ? { messageKey } : {}),
+              ...(messageParams ? { messageParams } : {}),
+            },
+            user.locale ?? "en",
+          );
+          try {
+            const deliveryResult = await sendEmail({ to: user.email, subject, text: emailBody });
+            if (!deliveryResult) throw new Error("SMTP is not configured");
+            eventSent += 1;
+            await tx
+              .update(notificationEmailDeliveries)
+              .set({
+                processedAt: new Date(),
+                attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
+              })
+              .where(
+                and(
+                  eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+                  eq(notificationEmailDeliveries.userId, delivery.userId),
+                ),
+              );
+          } catch (err) {
+            eventFailed += 1;
+            const message = err instanceof Error ? err.message : String(err);
+            const nextAttempt = (delivery.attemptCount ?? 0) + 1;
+            const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
+            await tx
+              .update(notificationEmailDeliveries)
+              .set({
+                ...(isPoisoned ? { processedAt: new Date() } : {}),
+                attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
+                lastError: isPoisoned ? `[poisoned] ${message}` : message,
+              })
+              .where(
+                and(
+                  eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+                  eq(notificationEmailDeliveries.userId, delivery.userId),
+                ),
+              );
+            await tx
+              .update(outboxEvents)
+              .set({
+                emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
+                emailLastError: isPoisoned ? `[poisoned] ${message}` : message,
+              })
+              .where(eq(outboxEvents.id, claimed.id));
+          }
+        }
+
+        const pending = await tx
+          .select({ userId: notificationEmailDeliveries.userId })
+          .from(notificationEmailDeliveries)
+          .where(
+            and(
+              eq(notificationEmailDeliveries.outboxEventId, claimed.id),
+              isNull(notificationEmailDeliveries.processedAt),
+            ),
+          );
+        if (pending.length === 0) {
+          await tx
+            .update(outboxEvents)
+            .set({ emailProcessedAt: new Date() })
+            .where(eq(outboxEvents.id, claimed.id));
+        }
+        return { sent: eventSent, skipped: eventSkipped, failed: eventFailed };
+      });
+      if (result === null) continue;
+      processed += 1;
+      sent += result.sent;
+      skipped += result.skipped;
+      failed += result.failed;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await db
+        .update(outboxEvents)
+        .set({
+          emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
+          emailLastError: message,
+        })
+        .where(eq(outboxEvents.id, evt.id));
+    }
   }
-  return { processed: events.length, sent, skipped, failed };
+  return { processed, sent, skipped, failed };
 }
 
 async function emailRecipientIds(eventType: string, payload: Record<string, unknown>) {
@@ -503,28 +569,6 @@ async function emailRecipientIds(eventType: string, payload: Record<string, unkn
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
   return [...new Set([item?.contentOwnerId, item?.designerId].filter((id): id is string => !!id))];
-}
-
-async function markEmailDeliveryProcessed(eventId: string, userId: string, sent = false) {
-  await db
-    .update(notificationEmailDeliveries)
-    .set({
-      processedAt: new Date(),
-      ...(sent ? { attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1` } : {}),
-    })
-    .where(
-      and(
-        eq(notificationEmailDeliveries.outboxEventId, eventId),
-        eq(notificationEmailDeliveries.userId, userId),
-      ),
-    );
-}
-
-async function markEmailEventProcessed(eventId: string) {
-  await db
-    .update(outboxEvents)
-    .set({ emailProcessedAt: new Date() })
-    .where(eq(outboxEvents.id, eventId));
 }
 
 /**

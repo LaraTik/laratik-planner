@@ -1,5 +1,8 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+const emailMock = vi.hoisted(() => ({ sendEmail: vi.fn() }));
+vi.mock("@/lib/email", () => emailMock);
+
 /**
  * FEAT-01 (GAP-FULL-REVIEW-2026-08-25) — outbox dispatcher coverage
  * for the 10 newly-wired notification kinds.
@@ -177,6 +180,8 @@ const {
 
 beforeEach(() => {
   cacheMock.updateTag.mockClear();
+  emailMock.sendEmail.mockReset();
+  emailMock.sendEmail.mockResolvedValue({ id: "message-1" });
   state = {
     selectResults: [],
     insertCalls: [],
@@ -480,23 +485,24 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
   //      default email_enabled=false skips the row).
   //   3. (When opted in) a read of the user's email address.
   function stageUnprocessedEvent(eventType: string, payload: Record<string, unknown>) {
-    state.selectResults.push([{ id: "evt-1", eventType, payload }]);
+    const event = { id: "evt-1", eventType, payload };
+    state.selectResults.push([event], [event]);
   }
 
   it("skips rows when the user has not opted into email for the kind", async () => {
     stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
-    // The first select inside shouldEmailUserFor returns [] → emailEnabled defaults to false.
-    state.selectResults.push([]);
+    // The transaction reads the delivery, the preference query returns []
+    // (emailEnabled defaults to false), and no delivery remains pending.
+    state.selectResults.push([{ userId: "user-1", attemptCount: 0 }], [], []);
     const result = await dispatchEmailOnce({ maxEvents: 10 });
     expect(result.processed).toBe(1);
     expect(result.skipped).toBe(1);
     expect(result.sent).toBe(0);
   });
 
-  it("marks email state processed on skip + non-existent user", async () => {
+  it("marks email state processed when the user opted out", async () => {
     stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
-    // shouldEmailUserFor: []
-    state.selectResults.push([]);
+    state.selectResults.push([{ userId: "user-1", attemptCount: 0 }], [], []);
     await dispatchEmailOnce({ maxEvents: 10 });
     const update = state.updateCalls.find(
       (c) => (c.set as Record<string, unknown>)["emailProcessedAt"] instanceof Date,
@@ -504,10 +510,27 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     expect(update).toBeDefined();
   });
 
+  it("retries instead of marking a message sent when SMTP is unconfigured", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    state.selectResults.push(
+      [{ userId: "user-1", attemptCount: 0 }],
+      [{ emailEnabled: true }],
+      [{ email: "user@example.com", locale: "en" }],
+      [{ userId: "user-1" }],
+    );
+    emailMock.sendEmail.mockResolvedValueOnce(null);
+    const result = await dispatchEmailOnce({ maxEvents: 10 });
+    expect(result.failed).toBe(1);
+    expect(result.sent).toBe(0);
+    expect(
+      state.updateCalls.some(
+        (call) => (call.set as Record<string, unknown>).lastError === "SMTP is not configured",
+      ),
+    ).toBe(true);
+  });
+
   it("handles rows with no userId by marking them processed and skipping", async () => {
-    state.selectResults.push([
-      { id: "evt-1", eventType: "assignment", payload: { title: "T", body: "B" } },
-    ]);
+    stageUnprocessedEvent("assignment", { title: "T", body: "B" });
     const result = await dispatchEmailOnce({ maxEvents: 10 });
     expect(result.skipped).toBe(1);
     expect(result.sent).toBe(0);

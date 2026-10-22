@@ -519,6 +519,46 @@ standalone path. Deployed migration files were not rewritten. Their historical
 lock duration cannot be established from source alone; no current runtime
 impact is inferred from the old count of index statements.
 
+**Historical FEAT-03 / FEAT-04 / FEAT-05 reconciliation (2026-10-22).** The
+three AI capabilities reported as returning 501 are implemented in
+`src/lib/ai/index.ts` and dispatched by `/api/ai/generate`; the focused
+`tests/unit/ai-generate-501.test.ts` verifies those capabilities do not fall
+through to the former 501 response. The outdated "not yet implemented" route
+comment was removed during this review. The planner AI surface now provides
+Insert, Replace, Try again, and multiple brief variants in
+`planning/[id]/ai-assistance-section.tsx`, with component coverage in
+`tests/unit/planning/ai-assistance-section.test.tsx`. Context selection is
+validated by the route, passed to `loadAiContext`, and the usage record is
+built from selected categories and whether data was present; this replaces
+the historical fixed manifest. The manifest builder now lives beside the
+context loader and `tests/unit/ai-context.test.ts` covers selected, empty, and
+unselected branches. The old AI findings are no longer current implementation
+defects; this source review does not establish provider UAT or route-level
+request integration coverage.
+
+**Historical FEAT-06 reconciliation (2026-10-22).** The planning library
+absence claim is stale: workspace-scoped campaign, pillar, and template
+services, server actions, UI, and focused unit coverage now exist. Review of
+those services found a current consistency issue: each business-row mutation
+and its activity event were separate writes, and concurrent archive requests
+could both observe an active row. The current refinement puts each mutation
+and its activity record in one database transaction, locks the archive target
+row, and uses one shared manager/planner write-policy helper across the three
+services. Pillar restore uses the same locked transaction boundary. The
+focused planning-library unit suite passed (25 tests), including transaction
+and lock-path assertions. These unit tests use a mocked database; rollback
+behavior against disposable Postgres remains part of the grouped integration
+checkpoint.
+
+**Historical FEAT-10 reconciliation (2026-10-22).** The old claim that no
+outbox-driven email worker exists is stale: `dispatchEmailOnce`,
+`/api/cron/email-dispatch`, and `scripts/vps/email-dispatch.sh` are present, and
+the service reads each recipient's email preference. Source review found that
+two scheduled ticks could still select the same unprocessed delivery and send
+it concurrently. A44 records the current defect and its no-schema-change fix.
+The source/configuration review does not prove live cron installation or
+production SMTP delivery.
+
 The earlier OTHER-03 logging inventory is recorded as reviewed in the
 2026-10-22 direct-logging pass above. TEST-03 and FEAT-01/FEAT-02 were also
 reconciled above; their runtime/deployment evidence remains distinct from
@@ -2556,3 +2596,39 @@ particular, the current Brand Kit root differs materially from its active
 Stitch screen (`b8b3b5767...`); that remains a P2 product-parity follow-up
 instead of a snapshot refresh. The complete visual matrix, Firefox, manual
 route review, and independent verification remain open.
+
+## A43 — Planning library writes and activity records could diverge
+
+**Priority: P1 — audit consistency and retry behavior.** Campaign, pillar, and
+template create/archive services wrote their business row separately from the
+corresponding activity event. An activity insert failure could make the action
+report failure after the business change had committed. Archive read and write
+were also not serialized, allowing overlapping requests to record duplicate
+archive events. The refinement uses a single database transaction for each
+create/archive/restore and activity event, and `FOR UPDATE` on archive/restore
+targets. Workspace-manager/planner authorization is now owned by one
+planning-library policy helper. The updated focused unit suite and exact
+clean-commit `pnpm verify` remain pending. The mocked transaction assertions do
+not prove database rollback; disposable-Postgres integration evidence remains
+pending. No schema, route, permission, or persisted-data contract changed.
+
+## A44 — Concurrent email dispatcher ticks could send duplicate mail
+
+**Priority: P1 — delivery idempotency.** The email worker originally scanned
+pending outbox rows, inserted per-recipient delivery rows, then selected every
+unprocessed delivery without acquiring ownership. Since the cron runs every
+minute, a slow SMTP send could overlap the next tick and both workers could
+send the same recipient email. The worker now claims each outbox event with
+`FOR UPDATE SKIP LOCKED` inside a transaction and commits recipient delivery
+state before another tick can claim it. This adds no schema change. Unit
+coverage passes, and `tests/integration/notifications/email-dlq.test.ts` now
+holds one SMTP send open while a second worker attempts the same event and
+asserts that only one send occurs. The unit suite also verifies an unconfigured
+SMTP transport is retried instead of being recorded as a successful send. That
+database-backed regression remains
+unrun because `TEST_DATABASE_URL` is unset and the local Docker API returned
+HTTP 500. Exact clean-commit `pnpm verify` and disposable-Postgres integration
+evidence remain pending. SMTP delivery remains at-least-once across a process
+failure after provider acceptance and before database commit; the row lock
+prevents concurrent duplicate attempts without claiming provider-level
+exactly-once semantics.

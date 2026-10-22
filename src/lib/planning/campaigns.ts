@@ -2,9 +2,9 @@ import "server-only";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, campaigns } from "@/lib/db/schema";
-import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import type { Actor } from "@/lib/auth/policy";
+import { requirePlanningLibraryWrite } from "./library-policy";
 import { z } from "zod";
-import {} from "next/cache";
 
 /**
  * Planning library — campaign service (FEAT-06).
@@ -46,36 +46,35 @@ export async function createCampaign(
   if (!parsed.success) {
     throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
   }
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "create_campaign",
-  );
-  const [created] = await db
-    .insert(campaigns)
-    .values({
+  await requirePlanningLibraryWrite(actor, workspaceId, "create_campaign");
+  return db.transaction(async (tx) => {
+    const [created] = await tx
+      .insert(campaigns)
+      .values({
+        workspaceId,
+        name: parsed.data.name,
+        ...(parsed.data.objective ? { objective: parsed.data.objective } : {}),
+        ...(parsed.data.description ? { description: parsed.data.description } : {}),
+        ...(parsed.data.startDate
+          ? { startDate: parsed.data.startDate.toISOString().slice(0, 10) }
+          : {}),
+        ...(parsed.data.endDate ? { endDate: parsed.data.endDate.toISOString().slice(0, 10) } : {}),
+        ...(parsed.data.ownerId ? { ownerId: parsed.data.ownerId } : {}),
+        ...(parsed.data.coverColor ? { coverColor: parsed.data.coverColor } : {}),
+        status: parsed.data.status,
+        createdBy: actor.id,
+      })
+      .returning({ id: campaigns.id });
+    if (!created) throw new Error("Failed to create campaign");
+    await tx.insert(activityEvents).values({
       workspaceId,
-      name: parsed.data.name,
-      ...(parsed.data.objective ? { objective: parsed.data.objective } : {}),
-      ...(parsed.data.description ? { description: parsed.data.description } : {}),
-      ...(parsed.data.startDate
-        ? { startDate: parsed.data.startDate.toISOString().slice(0, 10) }
-        : {}),
-      ...(parsed.data.endDate ? { endDate: parsed.data.endDate.toISOString().slice(0, 10) } : {}),
-      ...(parsed.data.ownerId ? { ownerId: parsed.data.ownerId } : {}),
-      ...(parsed.data.coverColor ? { coverColor: parsed.data.coverColor } : {}),
-      status: parsed.data.status,
-      createdBy: actor.id,
-    })
-    .returning({ id: campaigns.id });
-  if (!created) throw new Error("Failed to create campaign");
-  await db.insert(activityEvents).values({
-    workspaceId,
-    actorId: actor.id,
-    kind: "create",
-    summary: `Created campaign "${parsed.data.name}"`,
-    afterData: { campaignId: created.id, status: parsed.data.status },
+      actorId: actor.id,
+      kind: "create",
+      summary: `Created campaign "${parsed.data.name}"`,
+      afterData: { campaignId: created.id, status: parsed.data.status },
+    });
+    return { id: created.id };
   });
-  return { id: created.id };
 }
 
 export async function archiveCampaign(
@@ -83,31 +82,31 @@ export async function archiveCampaign(
   workspaceId: string,
   campaignId: string,
 ): Promise<void> {
-  await requirePolicy(
-    hasWorkspaceRole(actor, workspaceId, ["workspace_manager", "content_planner"]),
-    "archive_campaign",
-  );
-  const [existing] = await db
-    .select({ id: campaigns.id, name: campaigns.name, archivedAt: campaigns.archivedAt })
-    .from(campaigns)
-    .where(and(eq(campaigns.id, campaignId), eq(campaigns.workspaceId, workspaceId)))
-    .limit(1);
-  if (!existing) throw new Error("Campaign not found");
-  if (existing.archivedAt) return; // idempotent
-  await db
-    .update(campaigns)
-    .set({
-      status: "archived",
-      archivedAt: new Date(),
-      updatedAt: new Date(),
-    })
-    .where(eq(campaigns.id, campaignId));
-  await db.insert(activityEvents).values({
-    workspaceId,
-    actorId: actor.id,
-    kind: "update",
-    summary: `Archived campaign "${existing.name}"`,
-    afterData: { campaignId, status: "archived" },
+  await requirePlanningLibraryWrite(actor, workspaceId, "archive_campaign");
+  await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: campaigns.id, name: campaigns.name, archivedAt: campaigns.archivedAt })
+      .from(campaigns)
+      .where(and(eq(campaigns.id, campaignId), eq(campaigns.workspaceId, workspaceId)))
+      .for("update")
+      .limit(1);
+    if (!existing) throw new Error("Campaign not found");
+    if (existing.archivedAt) return; // idempotent
+    await tx
+      .update(campaigns)
+      .set({
+        status: "archived",
+        archivedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(campaigns.id, campaignId));
+    await tx.insert(activityEvents).values({
+      workspaceId,
+      actorId: actor.id,
+      kind: "update",
+      summary: `Archived campaign "${existing.name}"`,
+      afterData: { campaignId, status: "archived" },
+    });
   });
 }
 

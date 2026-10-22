@@ -34,7 +34,7 @@ import {
   type FormatPayloadField,
   type ResearchBriefContext,
 } from "@/lib/ai";
-import { loadAiContext, isContextMeaningful } from "@/lib/ai/context";
+import { buildAiContextManifestCategories, loadAiContext } from "@/lib/ai/context";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { publicProviderError } from "@/lib/security/public-error";
@@ -51,9 +51,9 @@ import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements"
  *       "caption_drafts"        (default — backwards compatible)
  *       "brief_improvement"
  *       "completeness_check"
- *       "platform_adaptation"   (not yet implemented)
- *       "campaign_ideas"        (not yet implemented)
- *       "related_format_ideas"  (not yet implemented)
+ *       "platform_adaptation"
+ *       "campaign_ideas"
+ *       "related_format_ideas"
  *
  * Auth: signed in + workspace member with manager or planner role.
  * The agency feature-settings `enabledCapabilities` allowlist is the
@@ -522,46 +522,7 @@ export async function POST(req: NextRequest) {
     // false }` so the audit doesn't claim context was included
     // when it wasn't. Categories the planner didn't tick are
     // simply omitted from the manifest.
-    const usedCategories: string[] = ["title", "brief", "format", "workspace_name"];
-    const sel = parsed.data.contextSelection;
-    if (sel.brandKit) {
-      usedCategories.push(
-        isContextMeaningful(context) &&
-          context.brandVoice.tone.length +
-            context.brandVoice.do.length +
-            context.brandVoice.dont.length >
-            0
-          ? "brand_kit:used"
-          : "brand_kit:empty",
-      );
-    }
-    if (sel.brandVisuals) {
-      // Phase 8 — log whether the workspace actually has any visual
-      // brand data. A workspace that ticked the box but has no
-      // colors / fonts / rules will report `empty` so the audit
-      // doesn't claim visual context was included when it wasn't.
-      const has =
-        (context.brandVisuals?.colors.length ?? 0) > 0 ||
-        (context.brandVisuals?.fonts.length ?? 0) > 0 ||
-        (context.brandVisuals?.publishingRules.length ?? 0) > 0;
-      usedCategories.push(has ? "brand_visuals:used" : "brand_visuals:empty");
-    }
-    if (sel.campaign) {
-      usedCategories.push(context.campaign ? "campaign:used" : "campaign:empty");
-    }
-    if (sel.pillars) {
-      usedCategories.push(context.pillars.length > 0 ? "pillars:used" : "pillars:empty");
-    }
-    if (sel.channels) {
-      usedCategories.push(context.channels.length > 0 ? "channels:used" : "channels:empty");
-    }
-    if (sel.approvedContent) {
-      usedCategories.push(
-        context.approvedContentSamples.length > 0
-          ? "approved_content:used"
-          : "approved_content:empty",
-      );
-    }
+    const usedCategories = buildAiContextManifestCategories(parsed.data.contextSelection, context);
 
     await recordAiUsageEvent({
       agencyId,
