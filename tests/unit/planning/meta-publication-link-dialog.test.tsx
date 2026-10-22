@@ -22,7 +22,8 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
-const { ChannelPublishingCard } = await import("@/components/planning/channel-publishing-card");
+const { ChannelPublishingCard } =
+  await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/channel-publishing-card");
 
 const candidate = {
   id: "meta-post-1",

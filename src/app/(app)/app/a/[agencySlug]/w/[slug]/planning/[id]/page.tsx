@@ -43,7 +43,7 @@ import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
 import { PlanningHeader } from "@/components/planning/planning-header";
 import { PlanningSection } from "@/components/planning/planning-section";
-import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
+import { ChannelPublishingCard } from "./channel-publishing-card";
 import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
 import { OverviewNavigator } from "@/components/planning/overview-navigator";

@@ -26,7 +26,7 @@ vi.mock("next/navigation", () => ({
 
 import { WorkflowRail } from "@/components/planning/workflow-rail";
 import { DeliverySection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/delivery-section";
-import { ChannelPublishingCard } from "@/components/planning/channel-publishing-card";
+import { ChannelPublishingCard } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/channel-publishing-card";
 import { CommentForm } from "@/components/comments/comment-form";
 
 /**
