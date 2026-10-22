@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Architecture refinement — Meta insights module — 2026-10-22
+
+Implementation SHA: `926b833cc1a1a0f49e7836749a8202d1ae2e599f` (clean at run).
+
+| Command / check                                        | Result                                                                                                                     |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider, insights, and publication tests | Pass — 70/70.                                                                                                              |
+| `pnpm verify`                                          | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill               | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification   | Open.                                                                                                                      |
+
+Meta account/media insight reads and bounded Facebook/Instagram post
+observations now live in `meta-insights.ts`. Snapshot composition remains in
+`meta.ts`; its existing public exports and provider contracts are preserved.
+This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
 ## Architecture refinement — Meta publication reads — 2026-10-22
 
 Implementation SHA: `79f8761d0278bb74939b883bb27df74a83a133a5` (clean at run).
