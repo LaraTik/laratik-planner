@@ -1,5 +1,26 @@
 # Test and coverage evidence
 
+## E2E runner isolation and fixture targeting — 2026-10-22
+
+Implementation SHA: `49161a5105af78c1791caf23a76a37af9948041e` (clean at run).
+
+| Command / check                                | Result                                                                                                                                                                                                                                                                     |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                  | Pass — formatting, lint, strict TypeScript, 573 unit files / 5,064 tests, and production build.                                                                                                                                                                            |
+| Affected architecture unit area                | Pass — 20/20; runner-only changes do not select unrelated integration or browser checks for the pre-push core layer.                                                                                                                                                       |
+| Targeted Chromium reruns                       | Pass — five previously failing journeys: advertising report, social comparison, degraded Trends, Trends onboarding, and multi-role user creation.                                                                                                                          |
+| Full Chromium / Firefox / visual release gates | Open — parent SHA `89cc6f2b` full Chromium run had 273/279 passes, five failures, and one expected skip; the server restarted late. Targeted reruns pass. Firefox is unavailable under the local macOS sandbox; full browser matrix and visual reconciliation remain open. |
+| Integration and migration drill                | Not applicable — this milestone changes test ownership and an E2E fixture, not persistence or migrations.                                                                                                                                                                  |
+| Independent review                             | Open.                                                                                                                                                                                                                                                                      |
+
+The multi-role E2E fixture now selects the workspace returned by its own seed
+instead of the first matching role block in a database shared across tests. A
+read-only query confirmed the earlier failure had saved both requested roles
+to a different seeded workspace; after the test fix, the journey passes 1/1.
+The other four formerly failing journeys also pass in targeted fresh-server
+runs. This does not convert the full browser run into release evidence or close
+the full route/visual review. This checkpoint is **Tested**, not **Verified**.
+
 ## Architecture refinement — content detail ownership — 2026-10-22
 
 Implementation SHA: `03d4a3cd6e255f88d4418d95bd418cab5fad2ddc` (clean at run).

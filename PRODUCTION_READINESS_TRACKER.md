@@ -3057,3 +3057,22 @@ full route review and release evidence remain open.
 - Architecture review remains **In Progress** / **Tested**, pending the open
   route, browser, visual, and independent-review evidence. No production
   deployment or main-branch merge is authorized by this milestone.
+
+## 2026-10-22 — E2E runner ownership and multi-role fixture stability
+
+- Commit `49161a5105af78c1791caf23a76a37af9948041e` passes clean-SHA
+  `pnpm verify`: formatting, lint, strict TypeScript, 573 unit files / 5,064
+  tests, and production build. The focused architecture area passes 20/20.
+- Runner-only changes now select the focused architecture area in the pre-push
+  core layer instead of escalating to unrelated integration tests. The full
+  browser release suite remains separate.
+- The Add Directly E2E now targets the workspace returned by its own seed.
+  Five previously failing Chromium journeys pass targeted reruns; one failure
+  was a test selecting another seeded workspace, while the other four passed
+  when rerun against a fresh server. The earlier full Chromium run on parent
+  `89cc6f2b` remains 273/279 with five failures and one expected skip; the dev
+  server restarted late in the run.
+- Firefox, full five-browser coverage, visual reconciliation (57 known
+  differences), remaining route-by-route review, and independent verification
+  remain open. No schema or product behavior changed. This is **Tested**, not
+  **Verified**; `AD-002` remains **In Progress**.
