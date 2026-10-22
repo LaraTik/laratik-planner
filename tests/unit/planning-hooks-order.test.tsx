@@ -25,6 +25,13 @@ vi.mock("next/navigation", () => ({
 }));
 
 import { WorkflowRail } from "@/components/planning/workflow-rail";
+
+const workflowActions = {
+  transition: async () => ({}),
+  claim: async () => ({}),
+  assignDesigner: async () => ({}),
+  decideApproval: async () => ({}),
+};
 import { DeliverySection } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/delivery-section";
 import { ChannelPublishingCard } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/channel-publishing-card";
 import { CommentForm } from "@/components/comments/comment-form";
@@ -90,6 +97,7 @@ describe("planning detail components — hooks order guard", () => {
     try {
       const { rerender } = render(
         <WorkflowRail
+          actions={workflowActions}
           workspaceSlug="acme"
           contentItemId="ci-1"
           status="draft"
@@ -115,6 +123,7 @@ describe("planning detail components — hooks order guard", () => {
       const err = runWithoutThrowing(() =>
         rerender(
           <WorkflowRail
+            actions={workflowActions}
             workspaceSlug="acme"
             contentItemId="ci-1"
             status="content_review"

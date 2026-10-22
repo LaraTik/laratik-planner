@@ -50,7 +50,11 @@ import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
 import {
+  assignDesignerAction,
   applyResearchTeardownAction,
+  claimAction,
+  decideApprovalAction,
+  transitionAction,
   updateAudienceCopyAction,
   updateFormatPayloadAction,
 } from "../actions";
@@ -800,6 +804,12 @@ export default async function ContentDetailPage({
   // Build the serializable client model once so both responsive surfaces
   // stay in sync as the workflow contract evolves.
   const workflowProps = {
+    actions: {
+      transition: transitionAction,
+      claim: claimAction,
+      assignDesigner: assignDesignerAction,
+      decideApproval: decideApprovalAction,
+    },
     workspaceSlug: slug,
     contentItemId: item.id,
     status: item.status,

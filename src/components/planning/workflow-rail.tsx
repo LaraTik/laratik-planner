@@ -21,12 +21,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  transitionAction,
-  decideApprovalAction,
-  claimAction,
-  assignDesignerAction,
-} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { humanStatus } from "@/lib/content/status";
 import { ApprovalTimeline } from "@/components/workspace/approval-timeline";
 import { ReasonDialog } from "@/components/forms/reason-dialog";
@@ -37,9 +31,10 @@ import {
   localizeStepExplanation,
 } from "@/lib/content/workflow-explanations";
 import { planningStageForStatus } from "@/lib/planning/presentation";
-import type { ScenarioSpec } from "@/lib/content/workflow";
+import type { ScenarioSpec, WorkflowAction } from "@/lib/content/workflow";
 import { responsibleRolesForStatus, type WorkspaceRole } from "@/lib/content/workflow";
 import type { PlanningPresentation } from "@/lib/planning/presentation";
+import type { ActionState } from "@/lib/validation/action-state";
 import { cn } from "@/lib/utils";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { isMissingTranslation } from "@/messages";
@@ -334,6 +329,26 @@ export function WorkflowRail(props: WorkflowRailBodyProps) {
  * on `<lg`.
  */
 export interface WorkflowRailBodyProps {
+  actions: {
+    transition: (input: {
+      workspaceSlug: string;
+      contentItemId: string;
+      action: WorkflowAction;
+      reason?: string;
+    }) => Promise<ActionState>;
+    claim: (input: { workspaceSlug: string; contentItemId: string }) => Promise<ActionState>;
+    assignDesigner: (input: {
+      workspaceSlug: string;
+      contentItemId: string;
+      designerId: string;
+    }) => Promise<ActionState>;
+    decideApproval: (input: {
+      workspaceSlug: string;
+      approvalRequestId: string;
+      decision: "approved" | "changes_requested";
+      feedback?: string;
+    }) => Promise<ActionState>;
+  };
   workspaceSlug: string;
   contentItemId: string;
   status: string;
@@ -366,6 +381,7 @@ export interface WorkflowRailBodyProps {
 }
 
 function WorkflowRailBody({
+  actions,
   workspaceSlug,
   contentItemId,
   status,
@@ -378,6 +394,7 @@ function WorkflowRailBody({
   planningPresentation,
   scenario,
 }: {
+  actions: WorkflowRailBodyProps["actions"];
   workspaceSlug: string;
   contentItemId: string;
   status: string;
@@ -405,12 +422,9 @@ function WorkflowRailBody({
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const executeTransition = async (
-    action: Parameters<typeof transitionAction>[0]["action"],
-    reason?: string,
-  ) => {
+  const executeTransition = async (action: WorkflowAction, reason?: string) => {
     setActionError(null);
-    const result = await transitionAction({
+    const result = await actions.transition({
       workspaceSlug,
       contentItemId,
       action,
@@ -423,7 +437,7 @@ function WorkflowRailBody({
     }
   };
 
-  const run = (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => {
+  const run = (action: WorkflowAction, reason?: string) => {
     start(async () => {
       await executeTransition(action, reason).catch(() => undefined);
     });
@@ -686,7 +700,7 @@ function WorkflowRailBody({
                           onExecuteTransition={executeTransition}
                           onClaim={async () => {
                             setActionError(null);
-                            const result = await claimAction({ workspaceSlug, contentItemId });
+                            const result = await actions.claim({ workspaceSlug, contentItemId });
                             if (result?.error) {
                               setActionError(result.error);
                             } else {
@@ -695,7 +709,7 @@ function WorkflowRailBody({
                           }}
                           onAssignDesigner={async (designerId) => {
                             setActionError(null);
-                            const result = await assignDesignerAction({
+                            const result = await actions.assignDesigner({
                               workspaceSlug,
                               contentItemId,
                               designerId,
@@ -768,7 +782,7 @@ function WorkflowRailBody({
               start(async () => {
                 setActionError(null);
                 try {
-                  const result = await decideApprovalAction({
+                  const result = await actions.decideApproval({
                     workspaceSlug,
                     approvalRequestId,
                     decision: "approved",
@@ -788,7 +802,7 @@ function WorkflowRailBody({
             onRequestChanges={async (approvalRequestId, feedback) => {
               setActionError(null);
               try {
-                const result = await decideApprovalAction({
+                const result = await actions.decideApproval({
                   workspaceSlug,
                   approvalRequestId,
                   decision: "changes_requested",
@@ -979,11 +993,8 @@ function ActionButtons({
   designers: { id: string; label: string }[];
   designer?: AssignedDesigner | null;
   pending: boolean;
-  onTransition: (action: Parameters<typeof transitionAction>[0]["action"], reason?: string) => void;
-  onExecuteTransition: (
-    action: Parameters<typeof transitionAction>[0]["action"],
-    reason?: string,
-  ) => Promise<void>;
+  onTransition: (action: WorkflowAction, reason?: string) => void;
+  onExecuteTransition: (action: WorkflowAction, reason?: string) => Promise<void>;
   onClaim: () => Promise<void>;
   onAssignDesigner: (designerId: string) => Promise<void>;
   canonicalActionType?: PlanningPresentation["nextAction"]["type"];

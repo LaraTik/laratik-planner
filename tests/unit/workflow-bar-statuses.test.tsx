@@ -2,16 +2,14 @@ import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import { ALL_STATUSES } from "@/lib/content/status";
 import { WorkflowRail } from "@/components/planning/workflow-rail";
-import { assignDesignerAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 
 const { routerRefresh } = vi.hoisted(() => ({ routerRefresh: vi.fn() }));
-
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
-  transitionAction: vi.fn(),
-  decideApprovalAction: vi.fn(),
-  claimAction: vi.fn(),
-  assignDesignerAction: vi.fn(),
-}));
+const workflowActions = {
+  transition: vi.fn(async () => ({})),
+  claim: vi.fn(async () => ({})),
+  assignDesigner: vi.fn(async () => ({})),
+  decideApproval: vi.fn(async () => ({})),
+};
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: routerRefresh }),
@@ -39,6 +37,7 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
     for (const status of ALL_STATUSES) {
       const { container, unmount } = render(
         <WorkflowRail
+          actions={workflowActions}
           workspaceSlug="acme"
           contentItemId="ci-1"
           status={status}
@@ -70,6 +69,7 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
   it("keeps designer assignment visible while an item is already in design", () => {
     const { getByTestId } = render(
       <WorkflowRail
+        actions={workflowActions}
         workspaceSlug="acme"
         contentItemId="ci-1"
         status="in_design"
@@ -87,11 +87,12 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
   });
 
   it("refreshes the server-rendered workflow after assigning a designer", async () => {
-    vi.mocked(assignDesignerAction).mockResolvedValue({ ok: true });
+    workflowActions.assignDesigner.mockResolvedValue({ ok: true });
     routerRefresh.mockClear();
 
     const { getByTestId } = render(
       <WorkflowRail
+        actions={workflowActions}
         workspaceSlug="acme"
         contentItemId="ci-1"
         status="approved_for_design"
@@ -107,11 +108,17 @@ describe("WorkflowRail pipeline ladder (React #441 regression guard)", () => {
     fireEvent.click(getByTestId("assign-designer-confirm"));
 
     await waitFor(() => expect(routerRefresh).toHaveBeenCalledOnce());
+    expect(workflowActions.assignDesigner).toHaveBeenCalledWith({
+      workspaceSlug: "acme",
+      contentItemId: "ci-1",
+      designerId: "designer-1",
+    });
   });
 
   it("keeps manager-only destructive actions collapsed by default", () => {
     const { container } = render(
       <WorkflowRail
+        actions={workflowActions}
         workspaceSlug="acme"
         contentItemId="ci-1"
         status="draft"

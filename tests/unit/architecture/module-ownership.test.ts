@@ -12,7 +12,6 @@ const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
   "src/components/planning/edit-details-drawer.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/edit-form.tsx: shared presentation modules must not depend on route modules",
   "src/components/planning/overview-command-center.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
   "src/components/planning/planning-header-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
-  "src/components/planning/workflow-rail.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
 ]);
 
 type ModuleEdge = { importer: string; target: string };
