@@ -2664,3 +2664,17 @@ build. The commit hook also passed type-checking and 259 affected tests. No
 schema, route, or persisted-data contract changed. Unexpected error details
 are intentionally sanitized in client responses and server logs, and late
 permission failures now consistently return forbidden.
+
+## A46 — Public media download routes duplicated the security response contract
+
+**Priority: P2 — regression prevention and shared ownership.** The
+single-asset and collection-asset endpoints independently proxied storage
+objects and built the same range-aware response, download filename, cache
+policy, and browser security headers. This made changes to a shared public
+access contract easy to apply inconsistently. The media feature now owns one
+server-only response adapter used by both route handlers; each route retains
+its token lookup, rate limit, and unavailable response. A focused contract test
+checks range forwarding, safe response headers, attachment naming, and missing
+storage behavior (2/2). Grouped repository verification is pending on the
+committed code tree. No token format, route, permission, or persisted-data
+contract changed.

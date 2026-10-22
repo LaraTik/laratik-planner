@@ -19,6 +19,7 @@ export {
   parseMediaPageSize,
 } from "./asset-library-queries.server";
 export { runMediaFolderBatch, type FolderImportReport } from "./folder-import.server";
+export { publicShareAssetResponse } from "./public-share-response.server";
 export { importPublicMediaAsset } from "./import.server";
 export { registerUploadedMediaAsset, type RegisteredMediaAsset } from "./asset-registration.server";
 export {
