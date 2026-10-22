@@ -153,16 +153,14 @@ production caller each in that page, so they moved beside it as a single
 route-owned group. Their existing unit tests now import the route-owned modules
 directly. The planning list actions and owner dialog also had a single route
 owner and now live beside that page. The static ownership guard rejects new
-`src/components` → `src/app` imports and pins the 17 remaining legacy imports
-as an explicit migration queue. These bounded changes remove six route
-couplings without changing page behavior. Focused planning and ownership tests
-passed 8/8 for the latest change, and `pnpm verify` passed at exact clean
-implementation SHA `aefe97aa6bedda02d013d52ce79337dce491ea7b` (567 unit files /
-5,035 tests, formatting, lint, TypeScript, and production build). The affected
-browser command escalated to the full matrix and stopped before browser tests:
-`TEST_DATABASE_URL` was unset and the Docker availability check timed out.
-Postgres, route browser/visual review, full route review, and independent
-verification remain open; this is **Tested**, not **Verified**.
+`src/components` → `src/app` imports. The initial queue of 17 legacy imports
+has since been closed through bounded route-owned moves and route-supplied
+action/presentation slots; the current allowlist in
+`tests/unit/architecture/module-ownership.test.ts` is empty. The guard rejects
+new route coupling. This closes shared-presentation ownership, while migration
+of legacy domain code into feature modules and the route-by-route quality audit
+remain open. The historical 17-edge count and its earlier test evidence are
+retained below as dated progress, not current inventory.
 
 **Shared comments action boundary (2026-10-22).** `CommentComposer` and
 `CommentItem` previously imported create/resolve server actions from the
@@ -835,6 +833,20 @@ This closes the mobile fixture concern from the earlier interrupted release
 attempt. The full five-browser/visual gate remains open because release-server
 instability, Trends journey failures, and Firefox launch remain unresolved.
 
+**Follow-up verification (2026-10-22).** The isolated runner now starts a fresh
+Next dev server per Playwright project. The full Chromium project completed
+279 cases with 273 passed, five failed, and one expected skip; the server still
+restarted late in that project. Targeted reruns passed the advertising report,
+social comparison, degraded-Trends, and onboarding journeys. The multi-role
+user journey exposed a test-fixture ordering issue: the test selected the first
+workspace role block even though earlier tests had seeded other workspaces in
+the shared disposable database. A read-only query confirmed the new user had
+both requested roles, but on a different workspace than the test asserted. The
+test now targets the workspace ID and slug returned by its own seed, and passes
+1/1. This is a corrected test assumption, not an application defect. Local
+Firefox still cannot launch under the macOS sandbox; the full five-browser
+release gate and visual reconciliation remain open.
+
 ### A21 — Social connection finalization did not enforce connection tenant scope
 
 **Priority: P1 — tenant isolation and data integrity.** The finalization action
@@ -900,6 +912,16 @@ the focused architecture unit area instead of escalating to all test layers;
 the actual `pnpm test:affected -- --layer unit` run selected that area and ran
 the single 17-test suite. This changes test selection only, not runtime
 behavior or route contracts.
+
+**Runner isolation follow-up (2026-10-22).** The E2E runner now defaults to a
+fresh server for each browser project while explicit project selections remain
+one invocation. Its owner mapping no longer treats this E2E-only orchestrator
+as an application-wide change: runner-only changes select the architecture
+unit area and do not rerun unrelated integration or browser suites during the
+pre-push core layer. Regression coverage verifies that classification; the
+focused affected run passed 20/20 with no integration escalation. Full browser
+release coverage remains a separate gate, and the local full Chromium run still
+showed late server memory pressure.
 
 ### A24 — Desktop tenant context drifted out of the primary sidebar
 

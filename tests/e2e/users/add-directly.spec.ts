@@ -71,7 +71,7 @@ test.describe("User Management — Add directly flow", () => {
   });
 
   test("admin can assign multiple workspace roles and Agency Admin access", async ({ page }) => {
-    await bootstrapTestSession(page);
+    const seeded = await bootstrapTestSession(page);
 
     await openAddDirectlyTab(page);
 
@@ -89,13 +89,11 @@ test.describe("User Management — Add directly flow", () => {
     // click its associated label so Playwright follows the real user target.
     const roleMatrix = page.getByTestId("add-directly-role-matrix");
     await roleMatrix
-      .getByTestId(/^add-directly-chip-.*-designer$/)
-      .first()
+      .getByTestId(`add-directly-chip-${seeded.workspaceId}-designer`)
       .getByText("Designer", { exact: true })
       .click();
     await roleMatrix
-      .getByTestId(/^add-directly-chip-.*-publisher$/)
-      .first()
+      .getByTestId(`add-directly-chip-${seeded.workspaceId}-publisher`)
       .getByText("Publisher", { exact: true })
       .click();
 
@@ -105,7 +103,7 @@ test.describe("User Management — Add directly flow", () => {
     // The Team page reads the persisted membership-role rows. Both selected
     // roles must be visible on the same member row; the old last-role-wins
     // defect would show only Publisher here.
-    await page.goto("/app/a/test-agency/w/acme/team");
+    await page.goto(`/app/a/test-agency/w/${seeded.workspaceSlug}/team`);
     const memberRow = page.locator("tr").filter({ hasText: newName });
     await expect(memberRow).toContainText("Designer");
     await expect(memberRow).toContainText("Publisher");

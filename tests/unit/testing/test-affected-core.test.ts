@@ -106,6 +106,17 @@ describe("test affected core", () => {
     expect(result.runAllBrowser).toBe(false);
   });
 
+  it("keeps isolated E2E runner changes in the focused architecture area", () => {
+    const result = classifyChangedFiles(["scripts/run-e2e-tests.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["architecture"]);
+    expect(result.unitFiles).toContain("tests/unit/testing/run-e2e-tests-core.test.ts");
+    expect(result.integrationFiles).toEqual([]);
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
   it("maps canonical agency-qualified workspace routes to their feature areas", () => {
     const cases = [
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/new/page.tsx", "content"],
