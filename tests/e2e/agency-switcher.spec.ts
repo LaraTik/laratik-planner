@@ -3,8 +3,64 @@ import { bootstrapTestSession, devSeed, devSignIn } from "./_helpers";
 
 async function openApp(page: Page, path = "/app") {
   await page.goto(path, { waitUntil: "domcontentloaded" });
-  await expect(page.getByTestId("sidebar-agency-switcher-trigger")).toBeVisible();
   await page.waitForLoadState("networkidle");
+  await openAgencySwitcher(page);
+}
+
+async function openMobileMoreIfNeeded(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) >= 768) return;
+  const agencyTrigger = page.getByTestId("mobile-agency-switcher-trigger");
+  if (!(await agencyTrigger.isVisible())) {
+    // Wait for React to hydrate the bottom navigation before its DialogTrigger
+    // is clicked; a click during the document-load window can be a no-op.
+    await page.waitForLoadState("networkidle");
+    await page.getByTestId("mobile-navigation-more").click();
+    await expect(page.getByTestId("mobile-tenant-label")).toBeVisible();
+  }
+}
+
+async function openAgencySwitcher(page: Page) {
+  await openMobileMoreIfNeeded(page);
+  const trigger = page.getByTestId(
+    (page.viewportSize()?.width ?? 1280) < 768
+      ? "mobile-agency-switcher-trigger"
+      : "sidebar-agency-switcher-trigger",
+  );
+  await expect(trigger).toBeVisible();
+  return trigger;
+}
+
+async function openWorkspaceSwitcher(page: Page) {
+  await openMobileMoreIfNeeded(page);
+  const trigger = page.getByTestId(
+    (page.viewportSize()?.width ?? 1280) < 768
+      ? "mobile-workspace-switcher-trigger"
+      : "sidebar-workspace-switcher-trigger",
+  );
+  await expect(trigger).toBeVisible();
+  return trigger;
+}
+
+async function signInWithTwoAgencies(page: Page, suffix: string) {
+  const email = `agency-switcher-popover-${suffix}@laratik.local`;
+  const firstName = `Switcher ${suffix} One`;
+  const secondName = `Switcher ${suffix} Two`;
+  await devSeed(page.request, {
+    email,
+    agencyName: firstName,
+    agencySlug: `switcher-popover-one-${suffix}`,
+    workspaceName: `Workspace ${suffix} One`,
+    workspaceSlug: `switcher-popover-workspace-one-${suffix}`,
+  });
+  await devSeed(page.request, {
+    email,
+    agencyName: secondName,
+    agencySlug: `switcher-popover-two-${suffix}`,
+    workspaceName: `Workspace ${suffix} Two`,
+    workspaceSlug: `switcher-popover-workspace-two-${suffix}`,
+  });
+  await devSignIn(page.request, { email });
+  return { firstName, secondName };
 }
 
 /**
@@ -16,11 +72,12 @@ async function openApp(page: Page, path = "/app") {
  * cookie for the seeded member. This spec covers both the original
  * single-agency interaction and the multi-agency behavior:
  *
- *  1. The agency switcher trigger is visible in the persistent sidebar.
+ *  1. The agency switcher trigger is visible in desktop navigation and
+ *     in the mobile More sheet.
  *  2. The trigger shows the seeded agency's name.
  *  3. Clicking the trigger opens a popover with a listbox that
  *     includes the seeded agency.
- *  4. The trigger exposes a stable test id (sidebar-agency-switcher-trigger).
+ *  4. The trigger exposes a stable test id in each responsive navigation.
  *  5. The listbox contains one row per agency the actor belongs to.
  *  6. Selecting a different row sets the `laratik_active_agency`
  *     cookie via the server action.
@@ -32,7 +89,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await bootstrapTestSession(page);
     await openApp(page);
 
-    const trigger = page.locator('[data-testid="sidebar-agency-switcher-trigger"]');
+    const trigger = await openAgencySwitcher(page);
     await expect(trigger).toBeVisible();
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Test Agency/);
   });
@@ -41,7 +98,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await bootstrapTestSession(page);
     await openApp(page);
 
-    const trigger = page.locator('[data-testid="sidebar-agency-switcher-trigger"]');
+    const trigger = await openAgencySwitcher(page);
     await expect(trigger).toBeVisible();
   });
 
@@ -91,29 +148,28 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await openApp(page);
     await expect(page).toHaveURL(/\/app(?:$|\?)/);
     await expect(page).not.toHaveURL(/\/setup/);
-    await expect(page.getByTestId("sidebar-agency-switcher-trigger")).toBeVisible();
+    await expect(await openAgencySwitcher(page)).toBeVisible();
   });
 
   test("clicking the trigger opens a listbox containing the seeded agency", async ({ page }) => {
-    await bootstrapTestSession(page);
+    const { secondName } = await signInWithTwoAgencies(page, `${Date.now()}`);
     await openApp(page);
 
-    const trigger = page.locator('[data-testid="sidebar-agency-switcher-trigger"]');
+    const trigger = await openAgencySwitcher(page);
     await trigger.click();
     const listbox = page.getByRole("listbox", { name: "Agencies" });
     await expect(listbox).toBeVisible({ timeout: 5_000 });
-    // The seeded agency is the only option. The listbox must contain
-    // a row for it. Marked active (`aria-selected="true"`).
-    const option = listbox.getByRole("option", { name: /Test Agency/ });
+    // The current agency is marked active among the available options.
+    const option = listbox.getByRole("option", { name: secondName });
     await expect(option).toBeVisible();
     await expect(option).toHaveAttribute("aria-selected", "true");
   });
 
   test("Escape closes the popover and returns focus to the trigger", async ({ page }) => {
-    await bootstrapTestSession(page);
+    await signInWithTwoAgencies(page, `${Date.now()}`);
     await openApp(page);
 
-    const trigger = page.locator('[data-testid="sidebar-agency-switcher-trigger"]');
+    const trigger = await openAgencySwitcher(page);
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Agencies" })).toBeVisible();
 
@@ -123,14 +179,17 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
   });
 
   test("outside click closes the popover", async ({ page }) => {
-    await bootstrapTestSession(page);
+    await signInWithTwoAgencies(page, `${Date.now()}`);
     await openApp(page);
 
-    const trigger = page.locator('[data-testid="sidebar-agency-switcher-trigger"]');
+    const trigger = await openAgencySwitcher(page);
     await trigger.click();
     await expect(page.getByRole("listbox", { name: "Agencies" })).toBeVisible();
 
-    await page.mouse.click(600, 240);
+    await page.mouse.click(
+      Math.floor((page.viewportSize()?.width ?? 1280) / 2),
+      Math.floor((page.viewportSize()?.height ?? 800) / 2),
+    );
     await expect(page.getByRole("listbox", { name: "Agencies" })).not.toBeVisible();
   });
 
@@ -153,11 +212,80 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await devSignIn(page.request, { email });
 
     await openApp(page);
-    await page.getByTestId("sidebar-agency-switcher-trigger").click();
+    await (await openAgencySwitcher(page)).click();
 
     const listbox = page.getByRole("listbox", { name: "Agencies" });
     await expect(listbox.getByRole("option", { name: /Switcher Agency One/ })).toBeVisible();
     await expect(listbox.getByRole("option", { name: /Switcher Agency Two/ })).toBeVisible();
+  });
+
+  for (const locale of ["en", "ar"] as const) {
+    test(`user with no active agency can choose one (${locale})`, async ({ page }, testInfo) => {
+      const suffix = `${locale}-${testInfo.project.name}-${Date.now()}`;
+      const email = `agency-switcher-recovery-${suffix}@laratik.local`;
+      const agencySlug = `switcher-recovery-two-${suffix}`;
+      const workspaceSlug = `switcher-recovery-workspace-two-${suffix}`;
+      await devSeed(page.request, {
+        email,
+        locale,
+        agencyName: `Switcher Recovery Agency One ${suffix}`,
+        agencySlug: `switcher-recovery-one-${suffix}`,
+        workspaceName: `Switcher Recovery Workspace One ${suffix}`,
+        workspaceSlug: `switcher-recovery-workspace-one-${suffix}`,
+      });
+      await devSeed(page.request, {
+        email,
+        locale,
+        agencyName: `Switcher Recovery Agency Two ${suffix}`,
+        agencySlug,
+        workspaceName: `Switcher Recovery Workspace Two ${suffix}`,
+        workspaceSlug,
+      });
+      await devSignIn(page.request, { email });
+      await page.context().clearCookies({ name: "laratik_active_agency" });
+      expect(
+        (await page.context().cookies()).some((cookie) => cookie.name === "laratik_active_agency"),
+      ).toBe(false);
+
+      await page.goto("/app", { waitUntil: "domcontentloaded" });
+      await page.waitForLoadState("networkidle");
+      await expect(page).toHaveURL(/\/setup$/);
+      await expect(page.getByTestId("agency-selection-page")).toBeVisible();
+      await expect(
+        page.getByRole("heading", { name: /choose your agency|اختر وكالتك/i }),
+      ).toBeVisible();
+      await page.waitForLoadState("networkidle");
+      await page.getByTestId("agency-setup-switcher").click();
+      await page
+        .getByRole("option", { name: new RegExp(`Switcher Recovery Agency Two ${suffix}`) })
+        .click();
+      await expect(page).toHaveURL(new RegExp(`/app/a/${agencySlug}/w/${workspaceSlug}$`), {
+        timeout: 15_000,
+      });
+      await expect(await openAgencySwitcher(page)).toBeVisible();
+    });
+  }
+
+  test("user without any agency membership sees a clear access state", async ({
+    page,
+  }, testInfo) => {
+    const suffix = `no-membership-${testInfo.project.name}-${Date.now()}`;
+    await devSeed(page.request, {
+      email: `${suffix}-provisioner@laratik.local`,
+      agencyName: `Provisioned Agency ${suffix}`,
+      agencySlug: `provisioned-agency-${suffix}`,
+      workspaceName: `Provisioned Workspace ${suffix}`,
+      workspaceSlug: `provisioned-workspace-${suffix}`,
+    });
+    await devSignIn(page.request, { email: `${suffix}@laratik.local` });
+    await page.context().clearCookies({ name: "laratik_active_agency" });
+
+    await page.goto("/app", { waitUntil: "domcontentloaded" });
+    await expect(page).toHaveURL(/\/setup$/);
+    await expect(page.getByTestId("agency-membership-required-page")).toBeVisible();
+    await expect(page.getByRole("heading", { name: /no agency access/i })).toBeVisible();
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+    await expect(page.locator("html")).toHaveAttribute("dir", "ltr");
   });
 
   test("selecting another agency updates the signed cookie and active shell", async ({ page }) => {
@@ -179,7 +307,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await devSignIn(page.request, { email });
     await openApp(page);
 
-    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    const trigger = await openAgencySwitcher(page);
     await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency Two/);
     const before = await page.context().cookies();
     const priorValue = before.find((cookie) => cookie.name === "laratik_active_agency")?.value;
@@ -200,7 +328,11 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
       timeout: 15_000,
     });
     await expect(page).not.toHaveURL(/selectable-workspace-two/);
-    await expect(trigger).toHaveAttribute("aria-label", /Active agency: Selectable Agency One/);
+    const activeAgencyTrigger = await openAgencySwitcher(page);
+    await expect(activeAgencyTrigger).toHaveAttribute(
+      "aria-label",
+      /Active agency: Selectable Agency One/,
+    );
     const after = await page.context().cookies();
     const activeCookie = after.find((cookie) => cookie.name === "laratik_active_agency");
     expect(activeCookie?.value).toBeTruthy();
@@ -227,7 +359,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
     await devSignIn(page.request, { email });
     await openApp(page, "/app/w/workspace-one");
 
-    const trigger = page.getByTestId("sidebar-workspace-switcher-trigger");
+    const trigger = await openWorkspaceSwitcher(page);
     await expect(trigger).toHaveAttribute("aria-label", /Active workspace: Workspace One/);
     await trigger.click();
     await page
@@ -236,7 +368,7 @@ test.describe("Agency switcher (sidebar) — M1.5", () => {
       .click();
 
     await expect(page).toHaveURL(/\/app\/a\/workspace-switcher-agency\/w\/workspace-two/);
-    await expect(page.getByTestId("sidebar-workspace-switcher-trigger")).toHaveAttribute(
+    await expect(await openWorkspaceSwitcher(page)).toHaveAttribute(
       "aria-label",
       /Active workspace: Workspace Two/,
     );
@@ -307,7 +439,7 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
     // atomically to the new agency's first workspace —
     // `/app/a/atomic-agency-b/w/atomic-workspace-b1` — never leave the old
     // slug in the address bar.
-    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    const trigger = await openAgencySwitcher(page);
     await trigger.click();
     await expect(trigger).toHaveAttribute("aria-expanded", "true");
     const switchResponse = page.waitForResponse(
@@ -362,10 +494,10 @@ test.describe("Agency switcher — atomic navigation (P0.2)", () => {
     await devSignIn(page.request, { email });
 
     await page.goto("/app");
-    await expect(page.getByTestId("sidebar-agency-switcher-trigger")).toBeVisible();
+    await expect(await openAgencySwitcher(page)).toBeVisible();
     await page.waitForLoadState("networkidle");
 
-    const trigger = page.getByTestId("sidebar-agency-switcher-trigger");
+    const trigger = await openAgencySwitcher(page);
     await trigger.click();
     await page
       .getByRole("listbox", { name: "Agencies" })

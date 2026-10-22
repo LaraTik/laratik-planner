@@ -14,8 +14,8 @@ import {
 
 export type PlatformActionState = {
   success?: boolean;
-  error?: string;
-  warning?: string;
+  errorCode?: "sessionExpired" | "invalidInput" | "createFailed";
+  warningCode?: "adminEmailFailed";
   agencyId?: string;
 };
 
@@ -82,7 +82,7 @@ export async function createAgencyAction(
   formData: FormData,
 ): Promise<PlatformActionState> {
   const actor = await currentActor();
-  if (!actor) return { error: "Sign in is required." };
+  if (!actor) return { errorCode: "sessionExpired" };
   try {
     const input = CreateAgencySchema.parse({
       name: formData.get("name"),
@@ -100,20 +100,11 @@ export async function createAgencyAction(
     return {
       success: true,
       agencyId: result.id,
-      ...(result.emailSent
-        ? {}
-        : { warning: "Agency created, but the administrator email could not be sent." }),
+      ...(result.emailSent ? {} : { warningCode: "adminEmailFailed" }),
     };
   } catch (error) {
     captureError("platform.createAgency", error);
-    return {
-      error:
-        error instanceof z.ZodError
-          ? (error.issues[0]?.message ?? "Check the agency details.")
-          : error instanceof Error
-            ? error.message
-            : "The agency could not be created.",
-    };
+    return { errorCode: error instanceof z.ZodError ? "invalidInput" : "createFailed" };
   }
 }
 

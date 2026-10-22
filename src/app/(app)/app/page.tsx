@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { and, eq, isNull, or } from "drizzle-orm";
 import {
   AlertTriangle,
@@ -72,7 +73,7 @@ export default async function MyWorkPage() {
   // error page. Scoping at the data layer is the correct fix.
   const ctx = await resolveActiveAgencyContext({ actor: { id: userId } });
   const activeAgencyId = ctx?.agencyId ?? null;
-  if (!activeAgencyId) return null;
+  if (!activeAgencyId) redirect("/app/platform");
   const canCreateWorkspace = await isAgencyAdmin({ id: userId }, activeAgencyId);
 
   // Pull every item I have any stake in (owner / designer / reviewer)

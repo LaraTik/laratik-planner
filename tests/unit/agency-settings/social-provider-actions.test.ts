@@ -58,9 +58,7 @@ describe("agency social provider actions", () => {
   it("returns a stable sign-in error code without touching provider configuration", async () => {
     mocks.auth.mockResolvedValue(null);
 
-    await expect(
-      setProviderConfigAction("agency-1", "attacker", "tiktok", validInput),
-    ).resolves.toEqual({
+    await expect(setProviderConfigAction("agency-1", "tiktok", validInput)).resolves.toEqual({
       errorCode: "sign_in_required",
     });
     expect(mocks.setAgencyProviderConfig).not.toHaveBeenCalled();
@@ -68,7 +66,7 @@ describe("agency social provider actions", () => {
 
   it("returns a stable validation code instead of English Zod text", async () => {
     await expect(
-      setProviderConfigAction("agency-1", "session-user", "tiktok", {
+      setProviderConfigAction("agency-1", "tiktok", {
         ...validInput,
         appId: "",
       }),
@@ -79,9 +77,9 @@ describe("agency social provider actions", () => {
   it("rejects a tampered provider id before reading or changing configuration", async () => {
     const invalidProvider = "instagram" as "meta" | "tiktok";
 
-    await expect(
-      setProviderConfigAction("agency-1", "session-user", invalidProvider, validInput),
-    ).resolves.toEqual({ errorCode: "invalid_input" });
+    await expect(setProviderConfigAction("agency-1", invalidProvider, validInput)).resolves.toEqual(
+      { errorCode: "invalid_input" },
+    );
     await expect(removeProviderConfigAction("agency-1", invalidProvider)).resolves.toEqual({
       errorCode: "invalid_input",
     });
@@ -95,10 +93,10 @@ describe("agency social provider actions", () => {
     expect(mocks.recordProviderTestResult).not.toHaveBeenCalled();
   });
 
-  it("uses the authenticated actor when saving provider settings", async () => {
-    await expect(
-      setProviderConfigAction("agency-1", "attacker", "tiktok", validInput),
-    ).resolves.toEqual({ saved: true });
+  it("uses only the authenticated actor when saving provider settings", async () => {
+    await expect(setProviderConfigAction("agency-1", "tiktok", validInput)).resolves.toEqual({
+      saved: true,
+    });
 
     expect(mocks.setAgencyProviderConfig).toHaveBeenCalledWith(
       {},
@@ -109,9 +107,9 @@ describe("agency social provider actions", () => {
   it("returns a stable save failure code without exposing internal error details", async () => {
     mocks.setAgencyProviderConfig.mockRejectedValue(new Error("database detail"));
 
-    await expect(
-      setProviderConfigAction("agency-1", "session-user", "tiktok", validInput),
-    ).resolves.toEqual({ errorCode: "save_failed" });
+    await expect(setProviderConfigAction("agency-1", "tiktok", validInput)).resolves.toEqual({
+      errorCode: "save_failed",
+    });
   });
 
   it("allows TikTok credential checks without a Login Kit config id", async () => {

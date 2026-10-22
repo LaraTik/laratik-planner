@@ -221,6 +221,7 @@ export const analyticsTemplate: ReportTemplateSpec<AgencyReachAggregate> = {
   blurb: "Reach, views, engagement and follower growth across the chosen workspaces × channels.",
   load: async (ctx) => {
     return aggregateAgencyReach({
+      agencyId: ctx.agencyId,
       workspaceIds: ctx.workspaceIds,
       channelIds: ctx.channelIds,
       from: ctx.period.from,

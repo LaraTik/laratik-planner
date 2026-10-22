@@ -6,9 +6,11 @@ import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolvePeriodPreset, resolveCustomPeriod } from "@/lib/reports/aggregate";
+import type { Period } from "@/lib/reports/templates/types";
 import { renderReport } from "@/lib/reports/render";
 import { listTemplates } from "@/lib/reports/templates";
 import { saveReport } from "@/lib/reports/storage";
+import { resolveAgencyReportSelection } from "@/features/reports/server";
 
 const SubmitSchema = z.object({
   templateId: z.string().min(1),
@@ -21,7 +23,7 @@ const SubmitSchema = z.object({
 });
 
 export interface GenerateReportState {
-  error?: string;
+  errorCode?: string;
   ok?: boolean;
   reportId?: string;
 }
@@ -40,54 +42,74 @@ export async function generateReportAction(
     preparedFor: formData.get("preparedFor") ?? undefined,
   });
   if (!parsed.success) {
-    return {
-      error: parsed.error.issues[0]?.message ?? "Invalid input",
-    };
+    return { errorCode: "invalidInput" };
   }
   // Reject unknown templates early. Even though SubmitSchema accepts
   // any string, the renderer would throw if `templateId` is unknown;
   // we want a friendlier error before the throw.
   if (!listTemplates().some((t) => t.id === parsed.data.templateId)) {
-    return { error: "Template not available yet." };
+    return { errorCode: "templateUnavailable" };
   }
 
   const session = await auth();
-  if (!session?.user?.id) return { error: "Not signed in." };
+  if (!session?.user?.id) return { errorCode: "signInRequired" };
   const ctx = await resolveActiveAgencyContext({ actor: { id: session.user.id } });
-  if (!ctx) return { error: "No active agency." };
+  if (!ctx) return { errorCode: "agencyUnavailable" };
   if (!(await isAgencyAdmin({ id: session.user.id }, ctx.agencyId))) {
-    return { error: "Only agency admins can generate reports." };
+    return { errorCode: "agencyAdminRequired" };
   }
 
-  const period =
-    parsed.data.preset === "custom"
-      ? resolveCustomPeriod(new Date(parsed.data.from!), new Date(parsed.data.to!))
-      : { ...resolvePeriodPreset(parsed.data.preset), preset: parsed.data.preset };
-
-  const result = await renderReport({
-    templateId: parsed.data.templateId,
-    ctx: {
+  let selection: Awaited<ReturnType<typeof resolveAgencyReportSelection>>;
+  try {
+    selection = await resolveAgencyReportSelection({
       agencyId: ctx.agencyId,
       workspaceIds: parsed.data.workspaceIds,
       channelIds: parsed.data.channelIds,
-      period,
-      preparedFor: parsed.data.preparedFor ?? "",
-    },
-  });
+    });
+  } catch {
+    return { errorCode: "generationFailed" };
+  }
+  if (!selection) return { errorCode: "selectionChanged" };
 
-  const row = await saveReport(
-    {
-      templateId: result.templateId,
-      agencyId: ctx.agencyId,
-      workspaceIds: parsed.data.workspaceIds,
-      channelIds: parsed.data.channelIds,
-      from: period.from.toISOString(),
-      to: period.to.toISOString(),
-      preset: period.preset,
-      preparedFor: parsed.data.preparedFor ?? "",
-    },
-    result.buffer,
-  );
+  let period: Period;
+  try {
+    period =
+      parsed.data.preset === "custom"
+        ? resolveCustomPeriod(new Date(parsed.data.from ?? ""), new Date(parsed.data.to ?? ""))
+        : { ...resolvePeriodPreset(parsed.data.preset), preset: parsed.data.preset };
+  } catch {
+    return { errorCode: "invalidDateRange" };
+  }
+
+  let row: Awaited<ReturnType<typeof saveReport>>;
+  try {
+    const result = await renderReport({
+      templateId: parsed.data.templateId,
+      ctx: {
+        agencyId: ctx.agencyId,
+        workspaceIds: selection.workspaceIds,
+        channelIds: selection.channelIds,
+        period,
+        preparedFor: parsed.data.preparedFor ?? "",
+      },
+    });
+
+    row = await saveReport(
+      {
+        templateId: result.templateId,
+        agencyId: ctx.agencyId,
+        workspaceIds: selection.workspaceIds,
+        channelIds: selection.channelIds,
+        from: period.from.toISOString(),
+        to: period.to.toISOString(),
+        preset: period.preset,
+        preparedFor: parsed.data.preparedFor ?? "",
+      },
+      result.buffer,
+    );
+  } catch {
+    return { errorCode: "generationFailed" };
+  }
 
   revalidatePath("/app/agency-settings/reports");
   return { ok: true, reportId: row.id };

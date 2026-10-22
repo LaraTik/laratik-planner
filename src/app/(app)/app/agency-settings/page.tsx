@@ -36,7 +36,7 @@ import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { getSocialStatus } from "@/lib/social/service";
 import { getActiveApiKey } from "@/lib/ai";
 import { listInstructionPacks } from "@/lib/ai/instruction-packs";
-import { getEffectiveEntitlement } from "@/lib/entitlements";
+import { isCommunityInboxPlanIncluded } from "@/lib/community/plan-access";
 import { COMMUNITY_INBOX_MODULE } from "@/lib/community/access";
 import { CommunityModuleToggle } from "@/components/community/community-module-toggle";
 
@@ -106,7 +106,7 @@ export default async function AgencySettingsPage() {
   ]);
   if (!agency) redirect("/setup");
 
-  const [[communityModule], communityEntitlement] = await Promise.all([
+  const [[communityModule], communityPlanIncluded] = await Promise.all([
     db
       .select({ enabled: agencyModuleSettings.enabled })
       .from(agencyModuleSettings)
@@ -117,10 +117,8 @@ export default async function AgencySettingsPage() {
         ),
       )
       .limit(1),
-    getEffectiveEntitlement({ agencyId }).catch(() => null),
+    isCommunityInboxPlanIncluded(agencyId),
   ]);
-  const communityPlanIncluded =
-    communityEntitlement?.enabledModules?.has(COMMUNITY_INBOX_MODULE) === true;
   const communityEnabled = communityModule?.enabled === true;
 
   // Pre-compute the managed-services status (read-only display). These

@@ -299,6 +299,66 @@ export default async function AdvertisingAnalyticsPage({
       tagValue: tag.tagValue,
     });
   }
+  const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
+  const objectiveFilter = firstQueryValue(query.objective) ?? "";
+  const statusFilter = firstQueryValue(query.status) ?? "";
+  const visibleCampaigns = view.campaigns.filter((campaign) => {
+    const searchMatch =
+      campaignSearch.length === 0 ||
+      (String(campaign.name ?? "") + " " + campaign.campaignId)
+        .toLowerCase()
+        .includes(campaignSearch) ||
+      (localTagsByEntity[`campaign:${campaign.campaignId}`] ?? []).some((tag) =>
+        tag.tagValue.toLowerCase().includes(campaignSearch),
+      );
+    const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
+    const statusMatch = !statusFilter || campaign.status === statusFilter;
+    return searchMatch && objectiveMatch && statusMatch;
+  });
+  const campaignInsights = buildCampaignPerformanceInsights(visibleCampaigns);
+  const budgetPacing = buildBudgetPacingInsights(visibleCampaigns, since, until);
+  const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
+  const organicByPostId = await loadOrganicPromotedPosts({
+    postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
+    workspaceId: workspace.id,
+    timezone: workspace.timezone,
+    since,
+    until,
+  });
+  const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
+  if (firstQueryValue(query.presentation) === "client") {
+    return (
+      <div className="space-y-6" data-testid="advertising-client-report-shell">
+        <AdvertisingClientReport
+          accountName={selectedAccount.name}
+          accountId={selectedAccount.id}
+          workspaceId={workspace.id}
+          currency={selectedAccount.currency}
+          since={since}
+          until={until}
+          freshness={freshnessLabel}
+          partial={result.partial}
+          totals={result.report.totals}
+          campaigns={view.campaigns}
+          performance={campaignInsights}
+          pacing={budgetPacing}
+          fatigue={creativeFatigue}
+          promotedPosts={view.promotedPosts ?? []}
+          organicByPostId={
+            new Map(
+              [...organicByPostId.entries()].map(
+                ([postId, value]) => [postId, value.views] as const,
+              ),
+            )
+          }
+          backHref={`${basePath}?accountId=${encodeURIComponent(selectedAccount.id)}&since=${since}&until=${until}`}
+          labels={advertisingClientReportLabels(t)}
+          locale={code}
+        />
+      </div>
+    );
+  }
+
   const primaryMetrics = aggregateAdvertisingMetrics(result.report.rows);
   const reportMetricStatuses = metricStatuses(primaryMetrics, {
     healthState: result.dataHealth.state,
@@ -344,33 +404,6 @@ export default async function AdvertisingAnalyticsPage({
     comparisonDailyMetrics,
     trendGranularity,
   );
-  const campaignSearch = firstQueryValue(query.search)?.trim().toLowerCase() ?? "";
-  const objectiveFilter = firstQueryValue(query.objective) ?? "";
-  const statusFilter = firstQueryValue(query.status) ?? "";
-  const visibleCampaigns = view.campaigns.filter((campaign) => {
-    const searchMatch =
-      campaignSearch.length === 0 ||
-      (String(campaign.name ?? "") + " " + campaign.campaignId)
-        .toLowerCase()
-        .includes(campaignSearch) ||
-      (localTagsByEntity[`campaign:${campaign.campaignId}`] ?? []).some((tag) =>
-        tag.tagValue.toLowerCase().includes(campaignSearch),
-      );
-    const objectiveMatch = !objectiveFilter || campaign.objective === objectiveFilter;
-    const statusMatch = !statusFilter || campaign.status === statusFilter;
-    return searchMatch && objectiveMatch && statusMatch;
-  });
-  const campaignInsights = buildCampaignPerformanceInsights(visibleCampaigns);
-  const budgetPacing = buildBudgetPacingInsights(visibleCampaigns, since, until);
-  const creativeFatigue = buildCreativeFatigueInsights(result.report.rows, view.ads, since, until);
-  const organicByPostId = await loadOrganicPromotedPosts({
-    postIds: new Set(view.promotedPosts?.map((post) => post.postId) ?? []),
-    workspaceId: workspace.id,
-    timezone: workspace.timezone,
-    since,
-    until,
-  });
-  const freshnessLabel = t(`advertising.reporting.freshness.${result.freshness}`);
   const syncLabel = result.syncStatus
     ? t(`advertising.syncStatus.${result.syncStatus}`)
     : t("advertising.reporting.notAvailable");
@@ -539,39 +572,6 @@ export default async function AdvertisingAnalyticsPage({
       />
     </>
   );
-
-  if (firstQueryValue(query.presentation) === "client") {
-    return (
-      <div className="space-y-6" data-testid="advertising-client-report-shell">
-        <AdvertisingClientReport
-          accountName={selectedAccount.name}
-          accountId={selectedAccount.id}
-          workspaceId={workspace.id}
-          currency={selectedAccount.currency}
-          since={since}
-          until={until}
-          freshness={freshnessLabel}
-          partial={result.partial}
-          totals={result.report.totals}
-          campaigns={view.campaigns}
-          performance={campaignInsights}
-          pacing={budgetPacing}
-          fatigue={creativeFatigue}
-          promotedPosts={view.promotedPosts ?? []}
-          organicByPostId={
-            new Map(
-              [...organicByPostId.entries()].map(
-                ([postId, value]) => [postId, value.views] as const,
-              ),
-            )
-          }
-          backHref={`${basePath}?accountId=${encodeURIComponent(selectedAccount.id)}&since=${since}&until=${until}`}
-          labels={advertisingClientReportLabels(t)}
-          locale={code}
-        />
-      </div>
-    );
-  }
 
   const renderFilterFields = (idPrefix: string) => (
     <>

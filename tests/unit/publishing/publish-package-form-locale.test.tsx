@@ -5,6 +5,7 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/actions",
   markPublishingSetupReadyAction: vi.fn(),
   recordInternalNoteAction: vi.fn(),
   savePublishPackageAction: vi.fn(),
+  savePublishPackageBatchAction: vi.fn(),
   setFinalCopyApprovalAction: vi.fn(),
 }));
 

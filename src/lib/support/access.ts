@@ -312,6 +312,7 @@ export async function decideSupportAccessRequest(
   requestId: string,
   decision: SupportAccessDecision,
   input: SupportAccessDecisionInput,
+  expectedAgencyId?: string,
 ): Promise<{ request: SupportAccessRequestRow; grant: SupportAccessGrantRow | null }> {
   const parsed = SupportAccessDecisionSchema.parse(input);
 
@@ -325,6 +326,13 @@ export async function decideSupportAccessRequest(
       .for("update")
       .limit(1);
     if (!reqRow) {
+      throw new SupportAccessError(
+        SupportAccessErrorCode.NotFound,
+        "Support access request not found",
+        { requestId },
+      );
+    }
+    if (expectedAgencyId && reqRow.targetAgencyId !== expectedAgencyId) {
       throw new SupportAccessError(
         SupportAccessErrorCode.NotFound,
         "Support access request not found",

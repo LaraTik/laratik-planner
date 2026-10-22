@@ -88,7 +88,6 @@ async function requireAgencyAdmin(actorId: string): Promise<string | null> {
 
 export async function setProviderConfigAction(
   agencyIdFromUrl: string,
-  actorId: string,
   provider: SocialProvider,
   input: ProviderConfigInput,
 ): Promise<ProviderConfigFormState> {

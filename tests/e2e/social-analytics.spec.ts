@@ -1,5 +1,23 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { bootstrapRoleSession, devSeed } from "./_helpers";
+
+async function openWorkspaceSwitcher(page: Page) {
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    const mobileTrigger = page.getByTestId("mobile-workspace-switcher-trigger");
+    if (!(await mobileTrigger.isVisible())) {
+      await page.waitForLoadState("networkidle");
+      await page.getByTestId("mobile-navigation-more").click();
+      await expect(mobileTrigger).toBeVisible();
+    }
+  }
+  const trigger = page.getByTestId(
+    (page.viewportSize()?.width ?? 1280) < 768
+      ? "mobile-workspace-switcher-trigger"
+      : "sidebar-workspace-switcher-trigger",
+  );
+  await expect(trigger).toBeVisible();
+  return trigger;
+}
 
 /**
  * M4 — social analytics dashboard E2E.
@@ -159,7 +177,7 @@ test.describe("M4 — social analytics dashboard", () => {
     });
 
     await page.goto(`/app/a/test-agency/w/${source.workspaceSlug}/analytics/social`);
-    await page.getByTestId("sidebar-workspace-switcher-trigger").click();
+    await (await openWorkspaceSwitcher(page)).click();
     await page
       .getByRole("listbox", { name: "Workspaces" })
       .getByRole("option", { name: "Analytics Switch Target" })

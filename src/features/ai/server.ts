@@ -7,6 +7,8 @@ import { db } from "@/lib/db";
 import { aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
 import { getActiveApiKey } from "@/lib/ai";
 
+export { applyMonthlyProposalAtomically } from "./apply-proposal.server";
+
 /** Read the agency-level AI status in the agency that owns this workspace. */
 export async function getWorkspaceAiSettings(
   actor: Actor,

@@ -53,9 +53,14 @@ test.describe("Brand Kit administration journey", () => {
         hasText: managerRuleTitle,
       }),
     ).toBeVisible();
+    await expect(page.getByTestId("publishing-rule-form").getByLabel("Title")).toHaveValue("");
+  });
+
+  test("workspace manager links a Brand Kit resource", async ({ page }) => {
+    await bootstrapRoleSession(page, "workspace_manager", "brand-admin");
+    await page.goto("/app/a/test-agency/w/brand-admin/brand-kit/linked");
 
     // ── Linked resource ────────────────────────────────────────────────
-    await page.goto("/app/a/test-agency/w/brand-admin/brand-kit/linked");
     const resourceName = `Master design library ${Date.now()}`;
     const linkedResourceForm = page.getByTestId("linked-resource-form");
     await linkedResourceForm.getByLabel("Provider").selectOption("figma");

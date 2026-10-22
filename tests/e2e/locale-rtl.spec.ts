@@ -131,6 +131,22 @@ test("agency storage billing reference renders Arabic RTL without overflow @a11y
   expect(overflowsHorizontally).toBe(false);
 });
 
+test("agency support request review renders Arabic RTL without overflow @a11y", async ({
+  page,
+}) => {
+  await bootstrapTestSession(page, { locale: "ar" });
+  await gotoStable(page, "/app/agency-settings/plan/support");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { name: "مراجعة وصول الدعم", level: 1 })).toBeVisible();
+  await expect(page.getByTestId("agency-support-no-pending")).toBeVisible();
+  const overflowsHorizontally = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(overflowsHorizontally).toBe(false);
+});
+
 test("workspace AI settings render Arabic RTL without overflow @a11y", async ({ page }) => {
   const seeded = await bootstrapTestSession(page, { locale: "ar" });
   const route = workspaceRoute(seeded, "ai-settings");

@@ -58,7 +58,6 @@ function renderCard(
       provider="tiktok"
       agencyId="agency-1"
       agencySlug="laratik"
-      actorId="user-1"
       existing={existing}
       now={now}
     />,

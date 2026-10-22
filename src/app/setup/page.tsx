@@ -2,10 +2,14 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth/config";
 import { firstAgencyForBootstrap } from "@/lib/auth/policy";
+import { currentActor } from "@/lib/auth/current-actor";
+import { listActorAgencies, resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { AgencySwitcher } from "@/components/app-shell/agency-switcher";
+import { agencySwitcherCopy } from "@/components/app-shell/agency-switcher-copy";
 
 /**
  * First-time agency administrator setup.
@@ -31,11 +35,83 @@ export default async function SetupPage() {
     redirect("/signin?callbackUrl=/setup");
   }
 
-  // If an agency already exists, this user is not the first admin
-  // (we don't reveal whether THEY are the admin — they should check /app)
+  const actor = await currentActor();
+  if (!actor) redirect("/signin?callbackUrl=/setup");
+  const [agencyContext, agencyOptions] = await Promise.all([
+    resolveActiveAgencyContext({ actor }),
+    listActorAgencies(actor),
+  ]);
+  if (agencyContext) redirect("/app");
+
+  // A member of multiple agencies has no safe implicit fallback. The app
+  // shell redirects unresolved requests here, where the user can explicitly
+  // choose an agency and the existing switch endpoint signs that selection.
+  if (agencyOptions.length > 0) {
+    return (
+      <main
+        className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 pt-20 pb-16 sm:py-16"
+        data-testid="agency-selection-page"
+      >
+        <header className="flex flex-col items-center gap-2 text-center">
+          <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">
+            {t("auth.setup.selectAgencyTitle")}
+          </h1>
+          <p className="text-body text-fg-secondary max-w-sm">
+            {t("auth.setup.selectAgencyDescription")}
+          </p>
+        </header>
+        <AgencySwitcher
+          active={null}
+          options={agencyOptions}
+          testId="agency-setup-switcher"
+          variant="header"
+          copy={agencySwitcherCopy({
+            agencySwitcherActiveAria: t("sidebar.agencySwitcherActiveAria"),
+            agencySwitcherSelectAria: t("sidebar.agencySwitcherSelectAria"),
+            agencySwitcherSelect: t("sidebar.agencySwitcherSelect"),
+            agencySwitcherNoAgenciesAria: t("sidebar.agencySwitcherNoAgenciesAria"),
+            agencySwitcherNoAgency: t("sidebar.agencySwitcherNoAgency"),
+            agencySwitcherSwitchTitle: t("sidebar.agencySwitcherSwitchTitle"),
+            agencySwitcherListAria: t("sidebar.agencySwitcherListAria"),
+            agencySwitcherNoAgenciesYet: t("sidebar.agencySwitcherNoAgenciesYet"),
+            agencySwitcherCreateNew: t("sidebar.agencySwitcherCreateNew"),
+            agencySwitcherAdminLabel: t("sidebar.agencySwitcherAdminLabel"),
+            agencySwitcherSwitchNotMember: t("sidebar.agencySwitcherSwitchNotMember"),
+            agencySwitcherSessionExpired: t("sidebar.agencySwitcherSessionExpired"),
+            agencySwitcherSwitchFailed: t("sidebar.agencySwitcherSwitchFailed"),
+            agencySwitcherSwitchFailedShort: t("sidebar.agencySwitcherSwitchFailedShort"),
+          })}
+        />
+      </main>
+    );
+  }
+
+  // A signed-in user with no active agency membership cannot bootstrap an
+  // agency once this deployment is provisioned. Explain the access state
+  // here instead of redirecting to /app, whose app shell sends them back.
   const agencyId = await firstAgencyForBootstrap();
   if (agencyId) {
-    redirect("/app");
+    return (
+      <main
+        className="bg-canvas mx-auto flex min-h-screen max-w-md flex-col items-center justify-center gap-6 px-6 pt-20 pb-16 text-center sm:py-16"
+        data-testid="agency-membership-required-page"
+      >
+        <header className="flex flex-col items-center gap-2">
+          <h1 className="text-title-page text-fg-primary font-semibold tracking-tight">
+            {t("auth.setup.noMembershipTitle")}
+          </h1>
+          <p className="text-body text-fg-secondary max-w-sm">
+            {t("auth.setup.noMembershipDescription")}
+          </p>
+        </header>
+        <Link
+          href="/api/auth/signout"
+          className="text-primary focus-visible:ring-focus-ring rounded-[var(--radius-control)] px-3 py-2 underline-offset-4 hover:underline focus:outline-none focus-visible:ring-2"
+        >
+          {t("auth.setup.signOut")}
+        </Link>
+      </main>
+    );
   }
 
   return (

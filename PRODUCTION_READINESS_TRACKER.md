@@ -1648,15 +1648,15 @@ This note supersedes the browser-evidence wording in M1.4, M1.5, and M1.9. Commi
 
 > **2026-08-24** — Implementation branch `feat/m3-ai-governance-and-support-access` lands M3 in 7 sub-tasks. The AI capability intersection is server-enforced (`resolveEnabledCapabilities`); the per-user daily AI budget is enforced inside the same transaction as the monthly reservation (`enforceAiBudget`); the support-access workflow replaces any implicit-impersonation model with a ticketed request → agency-admin approval → grant → tenant-view flow. Every state transition and every view through an active grant is audited in `support_access_audit` (append-only, trigger-enforced). A persistent banner surfaces the active session on every (app)/* page the platform admin lands on. Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`.
 
-| ID   | Status | Required implementation                                                              | Acceptance                                                                                                                                                                                                        | Evidence                                                                                                                                                     |
-| ---- | ------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| M3.1 | Tested | Support access + AI daily budget schema; append-only audit; additive backfill.       | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                           | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                       |
-| M3.2 | Tested | Ticketed support-access workflow service (create / decide / revoke / expire / gate). | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                            | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                           |
-| M3.3 | Tested | AI capability intersection and per-user daily budget enforcement.                    | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                      | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                               |
-| M3.4 | Tested | Platform console security tab + agency admin request list.                           | Platform-only access to security console; cross-agency workspace scope rejected (IDOR); agency admin sees pending requests; no tenant self-edit.                                                                  | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support-requests-card.tsx`. |
-| M3.5 | Tested | Persistent support-session banner for active grants.                                 | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout). | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                               |
-| M3.6 | Tested | Unit + integration tests for the full M3 surface.                                    | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                    | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                      |
-| M3.7 | Tested | Architecture doc, M3 plan, and tracker update.                                       | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                   | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                              |
+| ID   | Status | Required implementation                                                              | Acceptance                                                                                                                                                                                                        | Evidence                                                                                                                                                                                   |
+| ---- | ------ | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| M3.1 | Tested | Support access + AI daily budget schema; append-only audit; additive backfill.       | Migration 0012 lands on an empty DB; new tables and triggers install cleanly; agency / workspace / user data unchanged.                                                                                           | `src/lib/db/migrations/0012_support_access_grants.sql`; Drizzle schema `src/lib/db/schema/support.ts`.                                                                                     |
+| M3.2 | Tested | Ticketed support-access workflow service (create / decide / revoke / expire / gate). | Authority split enforced (platform admin vs agency admin); UNIQUE on request_id blocks double approval; revocation immediately deactivates; expiry sweep flips status.                                            | `src/lib/support/access.ts`; `tests/unit/support-access.test.ts` (15 cases); `tests/integration/support-access.test.ts` (7 cases).                                                         |
+| M3.3 | Tested | AI capability intersection and per-user daily budget enforcement.                    | Agency can never widen beyond plan ceiling; daily counter cap throws `LimitExceededError` (route 429); reconciliation refunds unused tokens.                                                                      | `src/lib/ai/governance.ts`; `tests/unit/ai-governance.test.ts` (9 cases); `tests/integration/ai-governance.test.ts` (4 cases).                                                             |
+| M3.4 | Tested | Platform console security tab + agency-admin request review and decision route.      | Platform-only security console; agency admins see and decide requests for their active agency; cross-agency decisions fail closed; no tenant self-edit.                                                           | `/app/platform/security/{page,actions}.tsx`; `/app/platform/agencies/[agencyId]/support-section.tsx`; `/app/agency-settings/plan/support/{page,actions}.tsx`; `src/lib/support/access.ts`. |
+| M3.5 | Tested | Persistent support-session banner for active grants.                                 | Banner appears on every (app)/* page when the platform admin holds an active grant; revocation / expiry remove the banner on the next request; React 19 purity rule respected (`Date.now()` moved to the layout). | `src/components/app-shell/support-session-banner.tsx`; `src/app/(app)/layout.tsx` integration.                                                                                             |
+| M3.6 | Tested | Unit + integration tests for the full M3 surface.                                    | 1,374 unit tests + 98 integration tests green; `pnpm verify` clean; no skipped required tests.                                                                                                                    | `pnpm test:unit` 1,374/1,374; `TEST_DATABASE_URL=… pnpm test:integration` 98/98; `pnpm verify` exits 0.                                                                                    |
+| M3.7 | Tested | Architecture doc, M3 plan, and tracker update.                                       | New `docs/architecture/ai-governance-and-support-access.md` describes the gate, audit, and intersection; M3 row visible in this tracker; no M1 / M2 regression.                                                   | `docs/m3-ai-governance-support/PLAN.md`; this section; full integration suite re-runs at 98/98.                                                                                            |
 
 **Sub-task sequence on `feat/m3-ai-governance-and-support-access`:** `05982c4` (M3.1) → `c9d0288` (M3.2) → `7424cb1` (M3.3) → `(M3.4 platform+security)` → `4701985` (M3.5) → `b4fc136` (M3.6). Architecture: `docs/architecture/ai-governance-and-support-access.md`. Plan: `docs/m3-ai-governance-support/PLAN.md`. **No M3 row is `Verified`** — the `Verified` transition is the independent reviewer's, per the status protocol at the top of this file.
 
@@ -3076,3 +3076,433 @@ full route review and release evidence remain open.
   differences), remaining route-by-route review, and independent verification
   remain open. No schema or product behavior changed. This is **Tested**, not
   **Verified**; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Publishing, notification, and AI route refinement
+
+- Moved the publish-package form into `src/features/publishing/` behind a
+  client-safe feature entry point and typed route-action adapter.
+- Split notification inbox and preference responsibilities into focused
+  modules. Preference updates now use one transaction and enforce the locked
+  system notification row.
+- Moved the AI generation route's role and write-capability checks ahead of
+  research, trend, and brand-context reads. Added an authorization-order
+  regression check without changing response or provider contracts.
+- Moved monthly proposal apply into a server-owned AI feature command. The
+  proposal claim, content creation, and both final status writes now share one
+  transaction; integration coverage proves rollback and single-winner claims.
+- Grouped worktree checks pass: `pnpm verify` (574 unit files / 5,066 tests
+  and production build), full integration suite on a fresh disposable Postgres
+  database, and all five migration-drill scenarios.
+- Exact clean-SHA evidence, full browser and visual release gates, remaining
+  route-by-route review, and independent verification remain open. AD-002 is
+  **In Progress**; this implementation is **Tested**, not **Verified**.
+
+## 2026-10-22 — Account route MCP scope validation
+
+- Route review confirmed that an empty or all-unknown MCP scope submission
+  silently became `content:read`; mixed valid/unknown input also issued a
+  partial grant. The account server action now rejects empty or invalid scope
+  selections rather than granting a scope the user did not select.
+- `tests/unit/account-mcp-token-action.test.ts` passes 10/10, including all
+  offered scopes, diagnostics-only selection, mixed invalid, unknown-only,
+  empty, and unauthenticated cases.
+- This records review of the account MCP scope-issuance path only. The rest of
+  the account route contracts and remaining page-by-page review, release
+  browser/visual evidence, exact clean-SHA evidence, and independent review
+  remain open. AD-002 stays **In Progress**; this focused work is **Tested**,
+  not **Verified**.
+
+## 2026-10-22 — Platform route result boundary
+
+- Reviewed the platform console gate and its overview, agencies, access,
+  security, errors, storage, and cron route/service boundaries. Page reads
+  check exact permissions before protected reads; mutations repeat their
+  action-specific permission in the owning service.
+- Fixed agency creation's raw exception and validation-message response.
+  The action returns stable codes, and the form translates them with the EN
+  and AR catalogs. The email-delivery warning is also localized.
+- Focused platform action, drawer, and agency-service tests pass 13/13. This
+  source review and unit evidence do not replace platform route browser,
+  responsive, keyboard/axe, native Arabic editorial, or visual release
+  evidence. The full route review and release gates remain open; AD-002 stays
+  **In Progress** and independent **Verified** status remains unassigned.
+
+## 2026-10-22 — Agency provider settings boundary
+
+- The provider settings page passes only a typed, secret-free configuration
+  summary to its client component. The unused client actor-id prop was removed;
+  provider actions continue to derive the actor from the session and enforce
+  active-agency/admin checks.
+- Replaced the route's generic table loading state with a responsive skeleton
+  matching its provider forms, readiness panel, and analytics-probe cards.
+- Provider config/action/loading and shared loading tests pass 23/23. Full
+  bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA, and
+  independent verification evidence remain open; AD-002 remains **In
+  Progress**.
+
+## 2026-10-22 — Agency AI settings result and encryption-status boundary
+
+- Reviewed the admin-only agency AI settings route, action authorization,
+  managed-secret service boundary, client state, and key-status loading path.
+  No plaintext provider key is passed to the page or client components.
+- Replaced raw server-action validation and exception text with stable codes
+  translated by the EN/AR catalogs. Encryption-key status now uses explicit
+  warning codes and does not send raw filesystem error details to the browser.
+  The development fallback is represented as a no-file state.
+- Focused action, page, provider-secret, and encryption-status tests pass
+  62/62; Prettier and `git diff --check` pass. No schema, permission, route,
+  provider, workflow, or persisted-data contract changed.
+- Route browser, bilingual runtime, keyboard/axe, responsive visual, exact
+  clean-SHA, remaining route review, and independent verification evidence
+  remain open. AD-002 stays **In Progress**; this work is **Tested**, not
+  **Verified**.
+
+## 2026-10-22 — Agency settings entitlement failure handling
+
+- Narrowed the Community Inbox entitlement fallback to the explicit
+  `AgencyNotFoundError`. Unexpected entitlement or database failures now reach
+  the route's localized retry boundary instead of appearing as a missing plan
+  feature; the toggle remains fail-closed. The read policy now lives behind a
+  server-only community module helper with direct error-path coverage.
+- The settings-page, entitlement-merge, and entitlement-hardening suites pass
+  56/56; formatting and `git diff --check` pass. Browser, bilingual runtime,
+  keyboard/axe, responsive visual, exact clean-SHA, broader route review, and
+  independent verification remain open. AD-002 stays **In Progress**; this
+  work is **Tested**, not **Verified**.
+
+## 2026-10-22 — Agency Plan and Usage route source review
+
+- Reviewed the plan page against ADR 0002 and M2.9: active agency resolution,
+  agency-admin gate, tenant-scoped usage and support-request reads, read-only
+  entitlement presentation, missing-plan state, locale formatting, and parent
+  loading/error boundaries. No new defect was confirmed in this source pass.
+- Existing a11y and visual route cases were located but not run here. Full
+  bilingual runtime, responsive/keyboard/axe/visual release checks, exact
+  clean-SHA evidence, and independent verification remain open. AD-002 stays
+  **In Progress**.
+
+## 2026-10-22 — Controlled support-access review and decision route
+
+- Added the missing agency-admin request-review route and tenant-scoped action;
+  removed the platform-side decision action because the service correctly
+  requires target-agency admin authority. The service's locked decision path
+  now returns not-found when the active agency does not match the request.
+- Focused action coverage passes 6/6; the cross-agency regression and support
+  integration suite pass 9/9 against disposable `planner_test`. The route's
+  English empty-state axe scan and Arabic RTL check pass 2/2 in Chromium. Full
+  browser matrix, responsive visual, exact clean-SHA, and independent
+  verification evidence remain open. AD-002 stays **In Progress**; this slice
+  is **Tested**, not **Verified**.
+
+## 2026-10-22 — Batched browser validation result
+
+- The affected-browser selector escalated to the full isolated Chromium suite
+  because shared app-shell and test-infrastructure files were in scope. The
+  281-case run completed with 277 passing, 3 failing during repeated local
+  Next server memory-threshold restarts, and 1 expected skip. Focused reruns of
+  all three failed cases passed 3/3.
+- Record this as an unstable full-suite run, not a green release gate. Keep the
+  failed-run details and focused rerun evidence in
+  `docs/production-readiness/TEST_EVIDENCE.md`; use focused affected checks
+  during implementation and reserve another full browser run for the final
+  release candidate after stabilizing the local runner.
+- AD-002 remains **In Progress**. Full browser/visual release evidence, exact
+  clean-SHA evidence, remaining route review, and independent verification
+  remain open; this run does not assign **Verified** status.
+
+## 2026-10-22 — Route inventory reconciled after support review
+
+- Recounted the current App Router tree after adding the agency-admin support
+  request review route: 92 pages, 106 API handlers, 43 loading surfaces, and 9
+  error boundaries. The route family table now records 11 agency-settings
+  pages; prior dated counts remain historical snapshots.
+- The ownership manifest continues to cover the full page inventory. Manual
+  review of the remaining route contracts and the release browser/visual gates
+  remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Password-reset anti-enumeration and auth ownership
+
+- Moved the forgot-password Server Action out of the page into the explicit
+  `src/features/auth/server.ts` entry point. SMTP, token lookup, or recipient-
+  locale lookup failures now produce the same generic confirmation as an
+  unknown account and log only a non-PII warning event.
+- Reset emails now use the recipient's validated saved locale, falling back to
+  the active interface locale when the profile value is unset. Added unit and
+  isolated browser regressions for SMTP failure, existing/unknown accounts,
+  and focused auth test ownership. The route, token, role, and stored-data
+  contracts remain unchanged.
+- Focused test results are recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`; full clean-SHA and release
+  evidence remain open. AD-002 stays **In Progress**.
+
+## 2026-10-22 — Trend source settings read boundary
+
+- The agency-admin gate now precedes feature and plan reads. Trend source and
+  health data loads through `src/features/trends/server.ts` into a typed,
+  secret-free view model; unused provider error details and key references are
+  not serialized to the client.
+- The focused route-order, view-model, UI, and module-boundary suites pass
+  8/8; the existing Trends Sources Chromium journey passes 1/1. Formatting and
+  whitespace checks pass. Full clean-SHA, route-by-route, release visual, and
+  independent verification evidence remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Agency Reports tenant-scope enforcement
+
+- Confirmed that client-provided workspace and channel IDs could cross the
+  active agency boundary during PDF generation. Added a server-side selection
+  validator before rendering/persistence and an independent agency filter in
+  the aggregate query; metric reads now use only channels returned by that
+  tenant-scoped query. Action errors return stable codes with English and
+  Arabic catalog entries.
+- Added disposable-Postgres regressions for foreign workspace/channel IDs,
+  valid same-agency selections, and mixed-tenant/direct aggregate calls. The
+  focused integration result and grouped quality checks will be recorded in
+  `docs/production-readiness/TEST_EVIDENCE.md`. Full verification, remaining
+  route/browser review, exact clean-SHA evidence, and independent verification
+  remain open; AD-002 stays **In Progress**.
+
+## 2026-10-22 — Custom report date validation
+
+- Invalid or missing custom date values previously passed through the action
+  and could fail later while rendering the PDF. Custom-period resolution now
+  rejects malformed as well as reversed ranges, and the action responds with
+  a stable date-range validation error. Focused unit coverage was added; this
+  is a separate input-reliability correction from the tenant-isolation fix.
+
+## 2026-10-22 — Report channel picker behavior
+
+- The channel list previously rendered only checked rows, so a user could
+  remove a channel but could not select it again. The list now keeps all
+  channels in selected workspaces visible and submits only checked channel
+  IDs. Focused component coverage exercises deselect/reselect and workspace
+  deselection; the component and report domain suites pass 12/12. Added an
+  English/LTR and Arabic/RTL Chromium journey for the same selection contract.
+
+## 2026-10-22 — Reports Server/Client translation boundary
+
+- The Reports Server Component passed its translator function into the client
+  history list, causing Next.js to reject the route during serialization. The
+  history list now reads translations from the existing locale provider and
+  receives only serializable report data. The first browser run reproduced the
+  route failure; the English/LTR and Arabic/RTL rerun passes 2/2. Each locale
+  also verifies 375, 768, 1024, 1280, and 1440 pixel widths for horizontal
+  overflow.
+
+## 2026-10-22 — Report download anti-IDOR response
+
+- The PDF endpoint returned `403` for foreign-agency reports and `404` for
+  unknown IDs, revealing whether a guessed report ID existed. Cross-agency
+  requests now receive the same `404` response as missing reports, while
+  same-agency member downloads remain available. Focused route regressions
+  pass 2/2 and cover both behaviors.
+
+## 2026-10-22 — Account multi-agency membership context
+
+The Account page previously chose one arbitrary active membership, which could
+make its role badge and workspace count disagree with the active agency shown
+by the app shell. It now lists active memberships in stable order, displays
+each role and its agency-scoped workspace count together, and marks the agency
+resolved by the signed active-agency context. The profile role badge follows
+that resolved agency. English and Arabic labels are present. No authorization,
+route, schema, or stored-data contract changed. The multi-agency Chromium
+regression passes 1/1; account accessibility and theme journeys pass 4/4;
+typecheck, ownership checks, formatting, and whitespace checks pass. The
+remaining bilingual runtime and responsive visual evidence are open; see
+`docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md` and working-tree evidence in
+`docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Unresolved agency-context recovery
+
+When a signed-in user had multiple agency memberships but no valid active
+agency cookie, the app shell sent them to `/setup`, which redirected back to
+`/app` after initial bootstrap had completed. The setup page now presents the
+existing shared agency switcher for authorized memberships and gives users
+with no active membership a clear access state. Choosing an agency uses the
+existing membership-gated switch endpoint and reaches that agency's canonical
+workspace. The English/Arabic recovery browser journeys pass 2/2; the
+no-membership English state passes 1/1; TypeScript, focused ownership/cookie
+checks, formatting, and whitespace checks pass. Arabic no-membership runtime,
+full route browser/visual evidence, exact clean-SHA, and independent review
+remain open. See `docs/audits/ARCHITECTURE_REVIEW_2026-10-20.md` and the working-
+tree evidence in `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Platform-only tenant landing states
+
+The `/app` home and `/app/workspaces` returned empty output when a platform
+operator had no active agency context. Both now route to the platform console;
+platform roles still do not authorize tenant data. The focused Chromium
+regression passes 1/1 across both routes, and typecheck, ownership,
+formatting, and whitespace checks pass. Full route browser/visual, exact
+clean-SHA, and independent review remain open; see the architecture audit and
+working-tree evidence.
+
+## 2026-10-22 — AI budget accounting and usage-event consistency
+
+- Added one AI governance entry point for token-reservation refunds and request
+  usage events. Standard generation, monthly planning, and Community Test Lab
+  now share the same event fields and refund behavior.
+- Fixed monthly planning to validate messages before reserving tokens, refund
+  estimated tokens after pre-provider failures, return 429 for budget limits,
+  sanitize provider errors, and record model, capability, context categories,
+  token counts, outcome, and request ID.
+- Fixed standard generation so post-provider audit failures cannot refund
+  already reconciled tokens, and its empty-result branch settles reservations.
+- The AI affected-test map now includes the Community Test Lab route.
+- Focused AI units pass 242/242; ownership and affected-selection suites pass
+  28/28. TypeScript, formatting, and whitespace checks pass.
+- Focused AI governance Postgres integration passes 5/5 against the verified
+  disposable `planner_test` database; the full integration suite remains open.
+- This is **Tested**, not **Verified**. Full Postgres integration,
+  `pnpm verify`, browser/visual release coverage, exact clean-SHA evidence, and
+  independent verification remain open. No schema or migration changed. See
+  the architecture audit and `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Agency report download contract
+
+- Confirmed that PDF downloads intentionally permit authenticated members of
+  the report's active agency, while generation and report history remain
+  agency-admin-only. Removed the discarded admin-role lookup from the download
+  route and corrected the feature documentation's ambiguous “own reports”
+  statement. Runtime and storage contracts are unchanged.
+- Focused report download tests pass 2/2; targeted formatting passes. This is
+  **Tested**, not **Verified**. Full route browser/visual, exact clean-SHA, and
+  independent review remain open; see the architecture audit.
+
+## 2026-10-22 — Report history file cleanup
+
+- Fixed retention cleanup to delete displaced PDF files instead of truncating
+  them and leaving orphaned zero-byte files. A temporary-directory regression
+  writes 101 reports and confirms both the 100-entry history and 100-file cap.
+- Focused report storage and download tests pass 3/3. **Tested**, not
+  **Verified**; exact clean-SHA, full route browser/visual, and independent
+  review remain open.
+
+## 2026-10-22 — Grouped architecture pass validation
+
+- Final grouped `pnpm verify` passes: formatting, lint, type checks, all 587
+  unit files / 5,117 tests, and the production build.
+- The disposable-Postgres integration suite reported all files passing; the
+  migration drill passed all five scenarios. No schema changed in the latest
+  report download/storage work.
+- The one-worker release browser run passed 276/289 tests and hit memory
+  threshold restarts. Ten of its 11 failing cases passed in a focused rerun;
+  the advertising client-report timeout passed after moving dashboard-only
+  work below the client-report branch. The adjusted case then passed alone.
+- The current visual comparison attempt was stopped at 23/264 after repeated
+  reference mismatches. The prior full visual capture remains 207/264 with 57
+  known differences; no snapshots were updated.
+- This remains **Tested**, not **Verified**. Full browser/visual reconciliation,
+  exact clean-SHA evidence, manual route review, independent review, and clean
+  commit/push remain open. See `docs/production-readiness/TEST_EVIDENCE.md`.
+
+## 2026-10-22 — Browser shard follow-up
+
+- Chromium shard work was grouped to avoid rerunning the whole suite per issue:
+  shard 1 had 96 passes and its advertising timeout passed after a focused
+  rerun; shard 2 had 95 passes and one environment-gated MCP skip; shard 3 had
+  94 passes and the research teardown suite passed 4/4 in a focused rerun.
+- Updated the stale YouTube paid-source E2E assertion to match the route's
+  existing `api_key_required` response, disabled source state, and configure
+  action. Its focused Chromium check passes 1/1; product behavior did not
+  change.
+- Firefox shard 1/3 is incomplete. The `/app` accessibility case failed, and
+  Firefox then ran at full CPU without progress during retry; the run was
+  stopped after more than five minutes. WebKit and mobile-browser checks and
+  visual reconciliation remain open. This is **Tested**, not **Verified**.
+
+## 2026-10-22 — Advertising timestamp hydration and browser follow-up
+
+- The advertising Data Health timestamp used raw `Intl.DateTimeFormat` in a
+  Client Component. WebKit showed different server/client connectors in both
+  English and Arabic. It now uses the shared deterministic `formatDate` and
+  `DateFormat.dateTime` contract with the workspace timezone.
+- Added hydration-console assertions to both advertising reporting journeys;
+  focused WebKit coverage passed 2/2 for English and Arabic RTL.
+- WebKit shard 1/3 completed 96/97. Its remaining Brand Kit test failed when a
+  route navigation was interrupted by a fallback navigation to the publishing
+  route after an RSC fetch failure. The isolated rerun reproduced it. This is
+  not yet classified as a product defect; remaining WebKit shards, mobile
+  browser coverage, and visual reconciliation are open.
+- A direct Firefox launch against a plain `data:` page also hangs at full CPU,
+  independent of the application. Firefox coverage remains blocked by the
+  local browser runtime; the release matrix is incomplete.
+- Grouped `pnpm verify` passes after the locale type correction: formatting,
+  lint, typecheck, all 587 unit files / 5,117 tests, and the production build.
+  No migration or persistent data contract changed. Status remains **Tested**,
+  not **Verified**; exact clean-SHA evidence and independent review are open.
+
+## 2026-10-22 — Mobile browser reconciliation
+
+- Mobile Chrome shard 3/3 completed with 90 passed and six responsive-selector
+  failures. The analytics workspace-switch test now opens the mobile More
+  sheet; workspace overview assertions target the mobile context header; and
+  desktop-sidebar keyboard cases are explicitly scoped to the desktop layout.
+  The focused mobile Chrome group passed 19 tests with three desktop-only
+  skips.
+- Mobile Safari shard 1/3 completed 96/97; its Brand Kit journey was navigating
+  between sections while the form's server action was refreshing the current
+  route. The journey is now split into focused publishing-rule and linked-
+  resource route tests. Both pass on mobile Safari and WebKit (2/2 per browser).
+- Mobile Safari shard 2/3 passed 95 with one environment-gated skip; shard 3/3
+  passed 93 with three desktop-only skips. No product route or data contract
+  changed in these browser-test refinements.
+- Browser evidence is reconciled through sharded runs and targeted reruns;
+  Firefox runtime, visual-reference differences, exact clean-SHA evidence, and
+  independent review remain open. Status remains **Tested**, not **Verified**.
+
+## 2026-10-22 — Final grouped working-tree validation
+
+- `pnpm verify` passes formatting, lint, typecheck, all 587 unit files / 5,117
+  tests, and the production build.
+- The full disposable-Postgres integration suite passes. The migration drill
+  passes all five scenarios: from-zero, skipped-migration repair, in-place
+  upgrade, backup and restore, and failed-migration abort. No schema or
+  migration changed in this architecture batch.
+- Mobile Chrome shard 3/3 and mobile Safari shard results, including focused
+  responsive and Brand Kit reruns, are recorded above. Chromium shard evidence
+  is reconciled in the earlier entry; WebKit targeted Brand Kit reruns pass.
+- Remaining release gates: local Firefox runtime failure, 57 visual reference
+  differences, route-by-route manual review, independent review, clean exact
+  commit evidence, and commit/push. No `Verified` status is assigned; AD-002
+  remains **In Progress**.
+
+## 2026-10-22 — Firefox runtime diagnostics
+
+- Reinstalled/checked the repository-pinned Playwright 1.62.1 Firefox
+  installation and reproduced the hang against a plain `data:` page. The
+  bundled Firefox 1538 process reaches `RenderCompositorSWGL failed mapping
+default framebuffer`, then consumes a CPU core without returning control;
+  disabling WebRender did not change the result. The app and test database
+  are not involved.
+- The installed branded Firefox 158 exits before Playwright can attach its
+  Juggler protocol. This is expected to be an unsupported executable for
+  Playwright's patched Firefox. The Docker service also returned an API 500,
+  so a containerized browser could not be used as a local fallback.
+- Firefox browser coverage remains incomplete. Chromium, WebKit, and mobile
+  results already recorded above remain separate evidence; none substitutes
+  for the missing Firefox release gate.
+
+## 2026-10-22 — Agency AI localization regression and RTL visual coverage
+
+- Fixed the missing English and Arabic labels/descriptions for the
+  `advertising_recommendations` capability; added a unit assertion covering
+  localized copy for every agency-facing capability.
+- Made the agency AI visual fixture deterministic and added Arabic/RTL
+  responsive coverage at 375, 768, 1024, 1280, and 1440px, including overflow
+  and critical/serious accessibility checks.
+- Refreshed only the agency AI exact/responsive references after reviewing the
+  application capture. The focused English exact, responsive, and Arabic/RTL
+  strict visual checks pass 5/5; this does not count as approval against the
+  active Stitch design.
+- The focused catalog unit suite passes 19/19. The new visual suite check
+  also passes for the English exact reference and Arabic/RTL matrix. Status
+  remains **Tested**, not **Verified**; AD-002 remains **In Progress**.
+- The full visual matrix was restarted once after updating this route, then
+  stopped at 96/265 before the responsive-fixture correction. The affected
+  English exact, three responsive captures, and five-width Arabic/RTL check
+  pass 5/5; the partial matrix is not counted as a release pass.
+- Grouped `pnpm verify` passes with 587 unit files / 5,118 tests; the full
+  disposable-Postgres integration suite and all five migration-drill scenarios
+  also pass on the current worktree. Firefox, 57 known visual differences,
+  route review, exact clean-SHA evidence, independent review, and commit/push
+  remain open.

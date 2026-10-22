@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { Folder, Lightbulb, Plus, Send, AlertTriangle, Building } from "lucide-react";
 import { auth } from "@/lib/auth/config";
@@ -50,7 +51,7 @@ export default async function WorkspacesPage() {
   if (!actor) return null;
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) return null;
+  if (!agencyId) redirect("/app/platform");
   const isAdmin = await isAgencyAdmin(actor, agencyId);
   const { t, code } = await tForActive();
   const now = new Date();

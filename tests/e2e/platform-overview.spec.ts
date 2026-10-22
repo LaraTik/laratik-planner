@@ -109,13 +109,19 @@ test.describe("/app/platform overview — gate behavior", () => {
     await cta.click();
     await expect(page).toHaveURL(/\/app\/platform\/agencies$/);
     await expect(page.getByRole("heading", { name: "Agencies", level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
 
     // Smoke: the agency we just seeded is reachable by id. Use the
     // seed's agencyId directly so the test is order-independent.
-    await page.goto(`/app/platform/agencies/${seed.agencyId}`);
-    await expect(
-      page.getByTestId("platform-agency-kpi-row"),
-      "per-agency KPI row renders for the seeded agency",
-    ).toBeVisible();
+    const agencyDetailPage = await page.context().newPage();
+    try {
+      await agencyDetailPage.goto(`/app/platform/agencies/${seed.agencyId}`);
+      await expect(
+        agencyDetailPage.getByTestId("platform-agency-kpi-row"),
+        "per-agency KPI row renders for the seeded agency",
+      ).toBeVisible();
+    } finally {
+      await agencyDetailPage.close();
+    }
   });
 });

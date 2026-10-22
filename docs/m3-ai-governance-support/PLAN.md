@@ -103,15 +103,20 @@ integration branch.
   - "My recent views" table (audit-log only — no tenant
     content).
   - "Open requests" — every agency with a pending request.
-- `/app/platform/security/actions.ts` — server actions for
-  create / decide / revoke / expire-sweep, each with
-  rate-limit + `revalidatePath`.
+- `/app/platform/security/actions.ts` — platform actions for
+  create / revoke / expire-sweep. The platform actor cannot
+  decide a request; approval authority belongs to the target
+  agency admin.
 - `/app/platform/agencies/[agencyId]/support-section.tsx` —
   agency detail page gets a "Support access requests"
   block (read-only for platform admins).
 - `/app/agency-settings/plan/support-requests-card.tsx` —
   agency admin's view of pending platform-admin requests,
-  with a "Review" link to a future dedicated decision page.
+  with a "Review" link to `/app/agency-settings/plan/support`.
+- `/app/agency-settings/plan/support/page.tsx` and its action
+  provide the agency-admin decision surface. The action checks
+  the active agency and admin role, rate limits decisions, and
+  passes the active agency id to the locked service transaction.
 - Sidebar gets a "Security & support" entry in the
   Platform section (platform admin only).
 
@@ -191,8 +196,8 @@ integration branch.
 
 - Stripe / billing automation (still manually managed, per
   master prompt).
-- Dedicated agency admin decision page (the data is exposed on
-  `/app/agency-settings/plan`; a full decision flow is a
-  follow-up commit because the current surface already
-  surfaces the pending state to the agency admin).
+- The dedicated agency-admin decision page was completed on
+  2026-10-22. Its cross-agency denial, localized empty state,
+  and Arabic RTL contract are covered by integration and
+  focused browser checks recorded in the architecture audit.
 - Publish packages (Milestone 4).

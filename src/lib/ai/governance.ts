@@ -2,7 +2,7 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { aiDailyBudgetUsage, aiFeatureSettings } from "@/lib/db/schema";
+import { aiDailyBudgetUsage, aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
 import { getEffectiveEntitlement, type AiCapability } from "@/lib/entitlements";
 import { LimitExceededError, reserveCapacity } from "@/lib/entitlements";
 import { recordUsage } from "@/lib/usage";
@@ -108,6 +108,34 @@ const AI_BUDGET_DAILY_KEY_PREFIX = "daily_ai_requests:";
 const AI_BUDGET_MONTHLY_REQUESTS = "ai_requests_month";
 const AI_BUDGET_MONTHLY_INPUT = "ai_input_tokens_month";
 const AI_BUDGET_MONTHLY_OUTPUT = "ai_output_tokens_month";
+
+export async function recordAiUsageEvent(input: {
+  agencyId: string;
+  workspaceId: string;
+  contentItemId?: string;
+  userId: string;
+  capability: AiCapability;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  requestId: string;
+  succeeded: boolean;
+  contextCategories: readonly string[];
+}): Promise<void> {
+  await db.insert(aiUsageEvents).values({
+    agencyId: input.agencyId,
+    workspaceId: input.workspaceId,
+    ...(input.contentItemId ? { contentItemId: input.contentItemId } : {}),
+    userId: input.userId,
+    capability: input.capability,
+    model: input.model,
+    inputTokens: input.inputTokens,
+    outputTokens: input.outputTokens,
+    requestId: input.requestId,
+    succeeded: input.succeeded,
+    contextManifest: { categories: [...new Set(input.contextCategories)] },
+  });
+}
 
 /**
  * The shape of the reservation that `enforceAiBudget` returns.
@@ -395,6 +423,32 @@ export async function reconcileAiBudget(input: {
   // enhancements that may want to record the actual vs estimated
   // split in the audit log.
   void userId;
+}
+
+/** Refund estimated monthly tokens when a provider request fails before it
+ * returns billable usage. Request counters intentionally remain consumed. */
+export async function releaseAiBudgetReservation(input: {
+  agencyId: string;
+  inputTokens: number;
+  outputTokens: number;
+}): Promise<boolean> {
+  const { agencyId, inputTokens, outputTokens } = input;
+  if (
+    !Number.isSafeInteger(inputTokens) ||
+    inputTokens < 0 ||
+    !Number.isSafeInteger(outputTokens) ||
+    outputTokens < 0
+  ) {
+    throw new Error("AI budget releases must be non-negative safe integers");
+  }
+
+  const releases: Promise<unknown>[] = [];
+  if (inputTokens > 0)
+    releases.push(recordUsage(db, agencyId, AI_BUDGET_MONTHLY_INPUT, -inputTokens));
+  if (outputTokens > 0)
+    releases.push(recordUsage(db, agencyId, AI_BUDGET_MONTHLY_OUTPUT, -outputTokens));
+  const results = await Promise.allSettled(releases);
+  return results.every((result) => result.status === "fulfilled");
 }
 
 // ─── Read views (used by the AI tab in the platform console) ──────────

@@ -1,5 +1,15 @@
-import { test, expect, type Locator } from "@playwright/test";
+import { test, expect, type Locator, type Page } from "@playwright/test";
 import { bootstrapRoleSession, bootstrapTestSession, type SeedResult } from "./_helpers";
+
+async function selectWorkspaceTab(page: Page, tab: string) {
+  const mobileTabSelect = page.getByTestId("workspace-tab-select");
+  if ((page.viewportSize()?.width ?? 1280) < 768) {
+    await expect(mobileTabSelect).toBeVisible({ timeout: 10_000 });
+    await mobileTabSelect.selectOption(tab);
+    return;
+  }
+  await page.getByTestId(`workspace-tab-${tab}`).click();
+}
 
 /** Open the responsive workflow surface when the test is running on a
  * mobile project. Desktop projects render the same actions in the rail,
@@ -22,6 +32,16 @@ function workflowSurface(page: Parameters<typeof bootstrapRoleSession>[0]): Loca
 
 function workflowStage(page: Parameters<typeof bootstrapRoleSession>[0], stage: string): Locator {
   return workflowSurface(page).locator(`[data-stage="${stage}"]`);
+}
+
+function collectHydrationErrors(page: Page) {
+  const errors: string[] = [];
+  page.on("console", (message) => {
+    if (message.type() === "error" && /hydration|did not match/i.test(message.text())) {
+      errors.push(message.text());
+    }
+  });
+  return errors;
 }
 
 /**
@@ -203,11 +223,12 @@ test.describe("Content: Quick Create + workflow transitions", () => {
   // the four actor roles that participate.
   test("full §23 path: draft → published across planner/reviewer/designer/publisher", async ({
     context,
-  }) => {
+    page,
+  }, testInfo) => {
     // This cross-role journey intentionally opens four isolated contexts
     // and exercises every workflow transition; allow enough time for the
     // first dev-server compilation and server actions on a cold run.
-    test.setTimeout(90_000);
+    test.setTimeout(testInfo.project.name.startsWith("mobile-") ? 180_000 : 90_000);
     // Open one browser context per role; each owns its own
     // authenticated cookie jar. We hand the planning detail URL
     // across contexts so each actor lands on the same content item.
@@ -222,6 +243,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
     const clientPage = await clientContext.newPage();
     const designerPage = await designerContext.newPage();
     const publisherPage = await publisherContext.newPage();
+    const plannerHydrationErrors = collectHydrationErrors(plannerPage);
     let designerSeeded: SeedResult;
 
     try {
@@ -243,18 +265,27 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       const createdUrl = new URL(plannerPage.url());
       const detailUrl = `${createdUrl.origin}${createdUrl.pathname}`;
       await expect(plannerPage.getByRole("heading", { name: title })).toBeVisible();
+      expect(plannerHydrationErrors).toEqual([]);
 
       // Publish-package drafts are material edits and are intentionally
       // writable by planners/managers only. Save a package for each seeded
       // channel while the planner still owns the editable draft; the later
       // publisher role records outcomes against those configured channels.
-      await plannerPage.getByTestId("workspace-tab-publish").click();
+      await selectWorkspaceTab(plannerPage, "publish");
       const plannerPackageForm = plannerPage.getByTestId("publish-package-form");
       const plannerPackageTabs = plannerPackageForm.getByRole("tab");
       const plannerPackageTabCount = await plannerPackageTabs.count();
       for (let i = 0; i < plannerPackageTabCount; i += 1) {
         await plannerPackageTabs.nth(i).click();
-        await plannerPackageForm.getByTestId("publish-save-draft").click();
+        await plannerPackageForm.locator('a[href="#publish-caption"]').click();
+        await plannerPackageForm
+          .getByTestId("publish-caption")
+          .fill(`Approved campaign caption ${i + 1}`);
+        await plannerPackageForm.locator('a[href="#publish-compliance"]').click();
+        await plannerPackageForm.getByTestId("publish-alt-text").fill("Campaign product image");
+        const musicRights = plannerPackageForm.getByTestId("publish-music-rights-checkbox");
+        if (await musicRights.count()) await musicRights.click();
+        await plannerPackageForm.getByTestId("publish-save-draft").click({ noWaitAfter: true });
         await expect(plannerPackageForm.getByTestId("publish-last-saved")).toBeVisible({
           timeout: 10_000,
         });
@@ -375,6 +406,9 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       await mediaCheckbox.check();
       await deliveryForm.getByRole("button", { name: /Submit for creative review/i }).click();
       // The status should advance to creative_review.
+      // The mobile workflow sheet closes after the action, so reopen it to
+      // inspect the updated stage; desktop keeps the workflow rail in place.
+      await openWorkflowSurface(designerPage);
       await expect(workflowStage(designerPage, "creative_approval")).toBeVisible({
         timeout: 15_000,
       });
@@ -426,13 +460,29 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         });
       }
 
+      // The publishing outcome form is intentionally unavailable until the
+      // per-channel package is ready. Final-copy approval belongs to an
+      // agency admin, so complete that explicit gate before the publisher
+      // records outcomes; planners cannot approve their own copy.
+      await bootstrapRoleSession(page, "agency_admin", "acme");
+      await page.goto(detailUrl);
+      await selectWorkspaceTab(page, "publish");
+      const adminPackageForm = page.getByTestId("publish-package-form");
+      const adminPackageTabs = adminPackageForm.getByRole("tab");
+      const adminPackageTabCount = await adminPackageTabs.count();
+      for (let i = 0; i < adminPackageTabCount; i += 1) {
+        await adminPackageTabs.nth(i).click();
+        await adminPackageForm.locator('a[href="#publish-approval"]').click();
+        await adminPackageForm.getByTestId("publish-final-copy-approved").click();
+        await expect(
+          adminPackageForm.getByRole("status").filter({ hasText: "Final copy approved" }),
+        ).toBeVisible({ timeout: 10_000 });
+      }
+
       // ─── 7. Publisher: record publications for each of the 3 channels → published ───
       await bootstrapRoleSession(publisherPage, "publisher");
       await publisherPage.goto(detailUrl);
-      await expect(publisherPage.getByTestId("workspace-tab-publish")).toBeVisible({
-        timeout: 10_000,
-      });
-      await publisherPage.getByTestId("workspace-tab-publish").click();
+      await selectWorkspaceTab(publisherPage, "publish");
       const publishingOutcomes = publisherPage.locator("details#publish-outcomes");
       await expect(publishingOutcomes).toBeVisible({ timeout: 10_000 });
       if ((await publishingOutcomes.getAttribute("open")) === null) {
@@ -457,10 +507,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
         await publisherPage.goto(`${detailUrl}?channel=${channelId}#publishing`, {
           waitUntil: "commit",
         });
-        await expect(publisherPage.getByTestId("workspace-tab-publish")).toBeVisible({
-          timeout: 10_000,
-        });
-        await publisherPage.getByTestId("workspace-tab-publish").click();
+        await selectWorkspaceTab(publisherPage, "publish");
         const channelPublishingOutcomes = publisherPage.locator("details#publish-outcomes");
         await expect(channelPublishingOutcomes).toBeVisible({ timeout: 10_000 });
         if ((await channelPublishingOutcomes.getAttribute("open")) === null) {
@@ -496,6 +543,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
       await publisherPage.goto(`${detailUrl}?published=${Date.now()}`, {
         waitUntil: "commit",
       });
+      await openWorkflowSurface(publisherPage);
       await expect(workflowStage(publisherPage, "published")).toBeVisible({
         timeout: 15_000,
       });
@@ -530,7 +578,7 @@ test.describe("Content: Quick Create + workflow transitions", () => {
 
     // The "Channels" section should list at least 3 channels
     await expect(page.getByText(/Channels:\s*3/i).first()).toBeVisible();
-    await page.getByTestId("workspace-tab-publish").click();
+    await selectWorkspaceTab(page, "publish");
     const publishingOutcomes = page.locator("details#publish-outcomes");
     await expect(publishingOutcomes).toBeVisible();
     if ((await publishingOutcomes.getAttribute("open")) === null) {

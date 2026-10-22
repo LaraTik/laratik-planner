@@ -57,6 +57,22 @@ contract. This is automated `Tested` evidence; the reference screenshot is
 the supplied product image rather than a live Stitch screen, so independent
 visual review remains required before `Verified`.
 
+### Agency AI capability localization — 2026-10-22
+
+The `advertising_recommendations` agency capability was missing from both
+locale catalogs and rendered raw keys. The EN/AR entries are now present, and
+the agency AI fixture enables the master switch and Trend Radar deterministically.
+The focused strict Chromium run passes **5/5**: the exact desktop reference,
+three English responsive captures, and the five-width Arabic/RTL matrix at 375,
+768, 1024, 1280, and 1440px. The English responsive fixture uses the same
+state as the exact capture. References were refreshed only for this page after
+reviewing the before/after capture; the Arabic matrix also checks its heading,
+translated capability label, no overflow, and critical/serious axe violations.
+
+This is automated application-reference evidence, not Stitch approval. The
+page's current layout still needs review against the active Stitch PNG/HTML,
+and the reviewer tables below remain unapproved.
+
 ### Planning responsive baseline evidence (2026-10-03; `ef0c2754`)
 
 After the planning UI changes were committed, the reviewed planning-list

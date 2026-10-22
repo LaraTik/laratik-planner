@@ -1,5 +1,5 @@
 import "server-only";
-import { and, desc, eq, inArray, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { updateTag } from "next/cache";
 import { db } from "@/lib/db";
 import {
@@ -12,19 +12,28 @@ import {
   contentItems,
   workspaces,
 } from "@/lib/db/schema";
-import { type Actor } from "@/lib/auth/policy";
 import { workspaceBasePath } from "@/lib/urls";
 import { sendEmail } from "@/lib/email";
-import { tFor } from "@/messages";
 import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
 import { notificationsUserTag } from "@/lib/notifications/cache";
-import {
-  NOTIFICATION_KIND_VALUES,
-  type NotificationKind,
-  type NotificationKindForPrefs,
-  type NotificationPreferencesSnapshot,
-} from "@/lib/notifications/types";
-import { z } from "zod";
+import type { NotificationKind } from "@/lib/notifications/types";
+import { shouldEmailUserFor } from "@/lib/notifications/preferences";
+
+export {
+  defaultNotificationPreferences,
+  getNotificationPreferencesForUser,
+  NotificationKindSchema,
+  NotificationKindSchemaValues,
+  SetNotificationPreferencesSchema,
+  setNotificationPreferencesForUser,
+  shouldDigestUserFor,
+  updateNotificationPreferences,
+} from "@/lib/notifications/preferences";
+export { shouldEmailUserFor };
+export type {
+  SetNotificationPreferencesInput,
+  UpdateNotificationPreferencesInput,
+} from "@/lib/notifications/preferences";
 
 export type {
   NotificationKind,
@@ -78,8 +87,6 @@ export type OutboxEventType = (typeof OUTBOX_EVENT_TYPES)[number];
  *    on the notification is the only delivery state we track in v1.
  */
 
-export const NotificationKindSchema = z.enum(NOTIFICATION_KIND_VALUES);
-
 // ─── In-app notification writers (used by other services / outbox worker) ─
 
 /**
@@ -103,31 +110,8 @@ type NotificationCore = {
   actionUrl?: string;
 };
 
-/**
- * The set of fields shared by both the `notifications` row and the
- * `outbox_events.payload` jsonb blob. Centralised so a new field
- * (e.g. `actorId`) added to one site is also added to the other
- * automatically — the previous implementation had three spread
- * sites that could drift.
- *
- * Falsy values are dropped so the resulting object is JSON-safe and
- * Drizzle doesn't try to insert `null` into a non-null column.
- * The return type is the union of all present fields; callers can
- * spread it into a typed insert without losing inference.
- */
-type NotificationCoreFields = {
-  userId: string;
-  workspaceId?: string;
-  contentItemId?: string;
-  title?: string;
-  body?: string;
-  messageKey?: string;
-  messageParams?: Record<string, string | number>;
-  actionUrl?: string;
-};
-
-function notificationCoreFields(input: NotificationCore): NotificationCoreFields {
-  const out: NotificationCoreFields = { userId: input.userId };
+function notificationCoreFields(input: NotificationCore): NotificationCore {
+  const out: NotificationCore = { userId: input.userId };
   if (input.workspaceId) out.workspaceId = input.workspaceId;
   if (input.contentItemId) out.contentItemId = input.contentItemId;
   if (input.title) out.title = input.title;
@@ -977,177 +961,6 @@ async function maybeNotify(
   });
 }
 
-// ─── Preference readers / writers (FEAT-08) ─────────────────────────────
-
-/**
- * FEAT-08 (GAP-FULL-REVIEW-2026-08-25) — notification_preferences
- * was a dead schema: the columns existed but no UI wrote them and no
- * service read them. These helpers are the only API for the rest of
- * the codebase, so the future email worker and the existing
- * dispatchOutboxOnce funnel through one place.
- *
- * Conventions:
- *  - `emailEnabled` is per (user, kind). Default OFF (opt-in).
- *  - `digestEnabled` is a single user-level toggle stored on the
- *    `system` kind (no other kind writes to it). Default OFF (opt-in).
- *  - Missing rows mean "no preference saved" — callers fall back to
- *    the safe default.
- */
-
-async function readPreferenceRow(userId: string, kind: NotificationKind) {
-  const [row] = await db
-    .select({
-      inAppEnabled: notificationPreferences.inAppEnabled,
-      emailEnabled: notificationPreferences.emailEnabled,
-      digestEnabled: notificationPreferences.digestEnabled,
-    })
-    .from(notificationPreferences)
-    .where(and(eq(notificationPreferences.userId, userId), eq(notificationPreferences.kind, kind)))
-    .limit(1);
-  return row;
-}
-
-/**
- * Should we email `userId` about a `kind` event? Master prompt §8
- * defaults to off; the future email worker checks this before queueing
- * a Mailcow SMTP send.
- */
-export async function shouldEmailUserFor(userId: string, kind: NotificationKind): Promise<boolean> {
-  const row = await readPreferenceRow(userId, kind);
-  return row?.emailEnabled ?? false;
-}
-
-/**
- * Should the daily digest include events for `userId`? The digest is a
- * single user-level toggle (any "active" kind goes into the digest
- * body), so we read the `system` row.
- */
-export async function shouldDigestUserFor(userId: string): Promise<boolean> {
-  const row = await readPreferenceRow(userId, "system");
-  return row?.digestEnabled ?? false;
-}
-
-/**
- * Per-kind preference shape used by the account-page form. R4
- * expanded the surface from two booleans to a full 11-kind
- * matrix. The `system` kind's `inAppEnabled` is intentionally
- * NOT exposed — the master prompt §8 promises "invitations and
- * security events cannot be disabled", and the `system` kind
- * is the closest match. We hardcode `inAppEnabled = true` for
- * it and force `emailEnabled = false` (those events are
- * bell-only; the email surface is reserved for user-driven
- * kinds).
- */
-export const NotificationKindSchemaValues = NOTIFICATION_KIND_VALUES;
-
-/**
- * Default snapshot. Matches the schema's column defaults
- * (`inAppEnabled: true`, `emailEnabled: false`,
- * `digestEnabled: false`) and the master prompt §8 contract
- * (in-app bell is on, email is opt-in per kind, daily digest
- * is opt-in via the system row).
- */
-export function defaultNotificationPreferences(): NotificationPreferencesSnapshot {
-  const out = {} as NotificationPreferencesSnapshot;
-  for (const k of NotificationKindSchemaValues) {
-    out[k] = { inAppEnabled: true, emailEnabled: false };
-  }
-  out.dailyDigest = false;
-  return out;
-}
-
-/**
- * Snapshot of the user's notification preferences for the
- * account-page UI. Returns safe defaults when no row exists yet
- * — every kind defaults to "in-app on, email off" so a brand-
- * new user immediately gets the bell experience the master
- * prompt §8 contract promises.
- */
-export async function getNotificationPreferencesForUser(
-  userId: string,
-): Promise<NotificationPreferencesSnapshot> {
-  const rows = await db
-    .select()
-    .from(notificationPreferences)
-    .where(eq(notificationPreferences.userId, userId));
-  const snap = defaultNotificationPreferences();
-  for (const row of rows) {
-    if (NotificationKindSchemaValues.includes(row.kind as NotificationKindForPrefs)) {
-      snap[row.kind as NotificationKindForPrefs] = {
-        inAppEnabled: row.inAppEnabled,
-        emailEnabled: row.emailEnabled,
-      };
-    }
-    if (row.kind === "system") {
-      snap.dailyDigest = row.digestEnabled;
-    }
-  }
-  return snap;
-}
-
-export const SetNotificationPreferencesSchema = z.object({
-  /**
-   * Per-kind matrix. The form posts each kind × channel
-   * boolean; the action flattens this back into the right
-   * shape. A missing kind is treated as the default (in-app
-   * on, email off) — the form is the source of truth, the
-   * service just persists what the form sent.
-   */
-  prefs: z.record(
-    NotificationKindSchema,
-    z.object({
-      inAppEnabled: z.boolean(),
-      emailEnabled: z.boolean(),
-    }),
-  ),
-  /** Daily-digest toggle. Lives on the `system` kind's
-   * `digestEnabled` column. */
-  dailyDigest: z.boolean(),
-});
-export type SetNotificationPreferencesInput = z.infer<typeof SetNotificationPreferencesSchema>;
-
-/**
- * Upsert the user's notification preferences. Idempotent:
- * each (user, kind) row is overwritten on save so a user who
- * flips a toggle and saves sees the new state immediately on
- * the next request. We always write the `inAppEnabled` flag
- * the form sent — except for `system`, which is forced to
- * `true` to honour the master prompt §8 "invitations and
- * security events cannot be disabled" rule.
- */
-export async function setNotificationPreferencesForUser(
-  userId: string,
-  input: SetNotificationPreferencesInput,
-): Promise<void> {
-  const parsed = SetNotificationPreferencesSchema.parse(input);
-  for (const [kindRaw, prefs] of Object.entries(parsed.prefs)) {
-    const kind = kindRaw as NotificationKindForPrefs;
-    // Master prompt §8 — `system` is the kind we use for
-    // invitations + security events. Keep it on in the bell.
-    const inAppEnabled = kind === "system" ? true : prefs.inAppEnabled;
-    await db
-      .insert(notificationPreferences)
-      .values({
-        userId,
-        kind,
-        inAppEnabled,
-        emailEnabled: prefs.emailEnabled,
-        // Only the `system` row carries digestEnabled; the other
-        // kinds share the same column shape but the value is
-        // irrelevant there.
-        digestEnabled: kind === "system" ? parsed.dailyDigest : false,
-      })
-      .onConflictDoUpdate({
-        target: [notificationPreferences.userId, notificationPreferences.kind],
-        set: {
-          inAppEnabled,
-          emailEnabled: prefs.emailEnabled,
-          ...(kind === "system" ? { digestEnabled: parsed.dailyDigest } : {}),
-        },
-      });
-  }
-}
-
 // ─── FEAT-01 — enqueue helpers (GAP-FULL-REVIEW-2026-08-25) ────────────────
 //
 // 10 of the 11 master-prompt §12 mandatory kinds never fired before
@@ -1305,146 +1118,14 @@ export async function enqueueReadyToPublishNotification(
   return enqueueOutboxEvent("ready_to_publish", input, tx);
 }
 
-// ─── Read helpers for the /app topbar ──────────────────────────────────
-
-export type NotificationRow = {
-  id: string;
-  kind: NotificationKind;
-  title: string;
-  body: string;
-  // STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. The
-  // bell + email dispatcher render the i18n at view / send time
-  // when set; otherwise the stored `title` / `body` is the fallback.
-  messageKey: string | null;
-  messageParams: Record<string, string | number> | null;
-  actionUrl: string | null;
-  readAt: Date | null;
-  createdAt: Date;
-  workspaceId: string | null;
-  contentItemId: string | null;
-};
-
-export async function listNotificationsForUser(
-  actor: Actor,
-  opts: { unreadOnly?: boolean; limit?: number } = {},
-): Promise<NotificationRow[]> {
-  const limit = opts.limit ?? 50;
-  const where = opts.unreadOnly
-    ? and(eq(notifications.userId, actor.id), isNull(notifications.readAt))
-    : eq(notifications.userId, actor.id);
-  const rows = await db
-    .select()
-    .from(notifications)
-    .where(where)
-    .orderBy(desc(notifications.createdAt))
-    .limit(limit);
-  return rows as NotificationRow[];
-}
-
-/**
- * STUDIOFLOW_MASTER_PROMPT.md §1 — Stored system copy. Render the
- * persisted `title` + `body` for the given locale using the
- * `messageKey` + `messageParams` columns when present. Falls back
- * to the stored English copy when `messageKey` is null (the
- * additive migration keeps every pre-existing row with no
- * `messageKey`, so the fallback is the common case until every
- * writer is updated).
- */
-export function renderNotificationCopy(
-  row: Pick<NotificationRow, "title" | "body" | "messageKey" | "messageParams">,
-  locale: string,
-): { title: string; body: string } {
-  if (!row.messageKey) return { title: row.title, body: row.body };
-  const t = tFor(locale as Parameters<typeof tFor>[0]);
-  const title = t(row.messageKey + ".title", row.messageParams ?? undefined);
-  const body = t(row.messageKey + ".body", row.messageParams ?? undefined);
-  // Loud-key wrapper on missing translations — surface the gap
-  // to tests rather than silently falling back to English.
-  if (title.startsWith("[") || body.startsWith("[")) {
-    return { title: row.title, body: row.body };
-  }
-  return { title, body };
-}
-
-export async function countUnreadNotifications(actor: Actor): Promise<number> {
-  const [row] = await db
-    .select({ n: sql<number>`count(*)::int` })
-    .from(notifications)
-    .where(and(eq(notifications.userId, actor.id), isNull(notifications.readAt)));
-  return row?.n ?? 0;
-}
-
-export const MarkReadSchema = z.object({
-  ids: z.array(z.string().uuid()).min(1).max(200),
-});
-export type MarkReadInput = z.infer<typeof MarkReadSchema>;
-
-export async function markNotificationsRead(actor: Actor, input: MarkReadInput) {
-  const parsed = MarkReadSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
-  }
-  // Only mark the actor's own notifications read
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(and(eq(notifications.userId, actor.id), inArray(notifications.id, parsed.data.ids)));
-}
-
-export async function markAllNotificationsRead(actor: Actor) {
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(and(eq(notifications.userId, actor.id), isNull(notifications.readAt)));
-}
-
-// ─── FEAT-07 — single-row mark + preferences write (GAP-FULL-REVIEW-2026-08-25) ──
-//
-// §14 listed `markNotificationRead` (singular) and
-// `updateNotificationPreferences` as required commands. The plural
-// `markNotificationsRead` was already exported (the bell's
-// "Mark all as read" button uses the batch path), but the
-// per-notification one was missing. Same for the preferences writer
-// — the FEAT-08 helpers above only read the rows; the UI was left to
-// re-use `setNotificationPreferencesForUser` and that was never
-// re-exported under the §14 contract name.
-
-export const MarkReadOneSchema = z.object({
-  notificationId: z.string().uuid(),
-});
-export type MarkReadOneInput = z.infer<typeof MarkReadOneSchema>;
-
-/**
- * Mark a single notification as read. Idempotent — re-marking an
- * already-read row leaves `read_at` unchanged. Refuses to mark
- * another user's notification read (the actor can only act on
- * their own).
- */
-export async function markNotificationRead(actor: Actor, input: MarkReadOneInput) {
-  const parsed = MarkReadOneSchema.safeParse(input);
-  if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => i.message).join("; "));
-  }
-  await db
-    .update(notifications)
-    .set({ readAt: new Date() })
-    .where(
-      and(eq(notifications.userId, actor.id), eq(notifications.id, parsed.data.notificationId)),
-    );
-}
-
-export type UpdateNotificationPreferencesInput = SetNotificationPreferencesInput;
-
-/**
- * §14 `updateNotificationPreferences` — alias for the FEAT-08 writer
- * so the §14 contract name resolves to the same code path. UI code
- * that imports `updateNotificationPreferences` (instead of the older
- * `setNotificationPreferencesForUser`) gets the same
- * idempotent-upsert behaviour.
- */
-export async function updateNotificationPreferences(
-  userId: string,
-  input: UpdateNotificationPreferencesInput,
-): Promise<void> {
-  return setNotificationPreferencesForUser(userId, input);
-}
+export {
+  countUnreadNotifications,
+  listNotificationsForUser,
+  markAllNotificationsRead,
+  markNotificationRead,
+  MarkReadOneSchema,
+  MarkReadSchema,
+  markNotificationsRead,
+  renderNotificationCopy,
+} from "@/lib/notifications/inbox";
+export type { MarkReadInput, MarkReadOneInput, NotificationRow } from "@/lib/notifications/inbox";

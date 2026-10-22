@@ -80,6 +80,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "auth",
       sourceGlobs: [
+        "src/features/auth/**",
         "src/lib/auth/**",
         "src/app/(auth)/**",
         "src/app/api/auth/**",
@@ -99,6 +100,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "tests/integration/client-isolation.test.ts",
       ],
       browser: [
+        { spec: "tests/e2e/password-reset-enumeration.spec.ts", projects: chromium },
         { spec: "tests/e2e/auth-gate.spec.ts", projects: chromium },
         { spec: "tests/e2e/auth-middleware.spec.ts", projects: chromium },
         { spec: "tests/e2e/pre-seed-auth.spec.ts", projects: chromium },
@@ -138,6 +140,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "publishing",
       sourceGlobs: [
+        "src/features/publishing/**",
         "src/lib/publishing/**",
         "src/lib/deliveries/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/publish/**",
@@ -299,16 +302,38 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       ],
     },
     {
+      id: "reports",
+      sourceGlobs: [
+        "src/features/reports/**",
+        "src/lib/reports/**",
+        "src/app/(app)/app/agency-settings/reports/**",
+        "src/app/api/reports/**",
+      ],
+      unitFiles: ["tests/unit/report-*.test.ts", "tests/unit/report-*.test.tsx"],
+      integrationFiles: ["tests/integration/reports-tenant-isolation.test.ts"],
+      browser: [{ spec: "tests/e2e/reports-builder.spec.ts", projects: chromium }],
+    },
+    {
       id: "ai",
       sourceGlobs: [
         "src/features/ai/**",
         "src/lib/ai/**",
+        "src/app/api/ai/**",
+        "src/app/api/community/test-lab/**",
         "src/components/ai/**",
         "src/app/(app)/app/agency-settings/ai/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/**",
       ],
-      unitFiles: ["tests/unit/ai/**", "tests/unit/ai-*.test.ts", "tests/unit/ai-*.test.tsx"],
-      integrationFiles: ["tests/integration/ai-governance.test.ts"],
+      unitFiles: [
+        "tests/unit/ai/**",
+        "tests/unit/ai-*.test.ts",
+        "tests/unit/ai-*.test.tsx",
+        "tests/unit/community-test-lab-route.test.ts",
+      ],
+      integrationFiles: [
+        "tests/integration/ai-governance.test.ts",
+        "tests/integration/monthly-planning-apply.test.ts",
+      ],
       browser: [
         {
           spec: "tests/e2e/a11y-routes.spec.ts",
@@ -544,6 +569,11 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       browser: [
         { spec: "tests/e2e/agency-edit.spec.ts", projects: chromium },
         { spec: "tests/e2e/agency-switcher.spec.ts", projects: chromium },
+        {
+          spec: "tests/e2e/locale-rtl.spec.ts",
+          projects: chromium,
+          grep: "agency support request review",
+        },
         {
           spec: "tests/e2e/a11y-routes.spec.ts",
           projects: chromium,

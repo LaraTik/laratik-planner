@@ -12,7 +12,7 @@ import { AppShell } from "@/components/app-shell/app-shell";
 import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
 import { updateThemePreferenceAction } from "@/app/(app)/app/account/actions";
 import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
-import { renderNotificationCopy } from "@/lib/notifications/service";
+import { renderNotificationCopy } from "@/lib/notifications/inbox";
 import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
 import {
   getAccessibleWorkspaceAtPath,

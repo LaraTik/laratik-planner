@@ -28,10 +28,14 @@ test.describe("platform role authorization", () => {
     await page.getByLabel("Platform role").selectOption("platform_auditor");
     await page.getByLabel("Reason").fill("Quarterly compliance review");
     await page.getByRole("button", { name: "Add platform member" }).last().click();
-    await expect(page.getByRole("status")).toContainText(/Platform access added/i);
+    await expect(page.getByText("Platform access added.", { exact: true })).toBeVisible();
 
     await page.reload();
-    const row = page.getByTestId(`platform-access-row-${member.userId}`);
+    const row = page.getByTestId(
+      (page.viewportSize()?.width ?? 1280) < 1024
+        ? `platform-access-card-${member.userId}`
+        : `platform-access-row-${member.userId}`,
+    );
     await expect(row).toContainText("Platform Auditor");
     await row.getByRole("button", { name: `Change role for ${memberEmail}` }).click();
     const changeDialog = page.getByRole("dialog", { name: "Change platform role" });

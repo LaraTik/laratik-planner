@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Clock } from "lucide-react";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
@@ -12,9 +11,10 @@ import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
  * Date through; the indicator renders nothing when the date is
  * missing (the row was never written — defaults applied).
  */
-export function LastSaved({ at }: { at: Date | null | undefined }) {
+export function LastSaved({ at, now }: { at: Date | null | undefined; now: Date }) {
   const t = useLocaleT();
   const locale = useLocaleCode();
+
   if (!at) {
     return (
       <p
@@ -36,7 +36,9 @@ export function LastSaved({ at }: { at: Date | null | undefined }) {
         {t("settings.lastSaved.label")}{" "}
         <span className="text-fg-secondary font-semibold">
           {t("settings.lastSaved.relative", {
-            date: formatRelativeDate(at, new Date(), locale),
+            // The server passes the page's render-time clock so a minute
+            // boundary cannot produce different server and client labels.
+            date: formatRelativeDate(at, now, locale),
           })}
         </span>
       </span>

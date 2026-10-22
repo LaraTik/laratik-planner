@@ -17,8 +17,14 @@ import {
   getActiveWorkspaceChannelIds,
 } from "./channel-selection.server";
 
+export type ContentTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 /** Create an entire pasted batch atomically; one invalid row rolls back all rows. */
-export async function batchCreateContentItems(actor: Actor, input: BatchCreateInput) {
+export async function batchCreateContentItems(
+  actor: Actor,
+  input: BatchCreateInput,
+  transaction?: ContentTransaction,
+) {
   const parsed = BatchCreateSchema.parse(input);
   await requirePolicy(
     hasWorkspaceRole(actor, parsed.workspaceId, ["workspace_manager", "content_planner"]),
@@ -86,7 +92,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
     }
   }
 
-  return db.transaction(async (tx) => {
+  const insertBatch = async (tx: ContentTransaction) => {
     const ids: string[] = [];
     for (const item of parsed.items) {
       let formatPayload: Record<string, unknown> = { schemaVersion: 1 };
@@ -167,5 +173,7 @@ export async function batchCreateContentItems(actor: Actor, input: BatchCreateIn
       }
     }
     return ids;
-  });
+  };
+
+  return transaction ? insertBatch(transaction) : db.transaction(insertBatch);
 }

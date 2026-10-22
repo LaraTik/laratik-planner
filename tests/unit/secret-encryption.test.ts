@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -404,27 +412,46 @@ describe("getKekStatus (UI helper)", () => {
     expect(status.source).toBe("auto-file");
     expect(status.path).toBe(path.join(dir, "kek.json"));
     expect(status.createdAt).toBe("2026-08-25T12:00:00.000Z");
-    expect(status.warning).toBeUndefined();
+    expect(status.warningCode).toBeUndefined();
   });
 
-  it("returns source=auto-file with a 'will be generated' warning when the file is missing in production", async () => {
+  it("returns source=auto-file with a generation code when the file is missing in production", async () => {
     const dir = setupTmpDataDir();
     envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
     envMock.NODE_ENV = "production";
     const status = await getKekStatus();
     expect(status.source).toBe("auto-file");
     expect(status.path).toBe(path.join(dir, "kek.json"));
-    expect(status.warning).toMatch(/will be auto-generated/i);
+    expect(status.warningCode).toBe("generate-on-save");
   });
 
-  it("returns source=auto-file with a 'will NOT be regenerated' warning when the file is corrupt", async () => {
+  it("uses the development fallback status when no encryption file is written", async () => {
+    setupTmpDataDir();
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "test";
+    const status = await getKekStatus();
+    expect(status).toEqual({ source: "dev-fallback" });
+  });
+
+  it("returns a corruption code without exposing filesystem details", async () => {
     const dir = setupTmpDataDir();
     writeFileSync(path.join(dir, "kek.json"), "{ not valid json", { mode: 0o600 });
     envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
     envMock.NODE_ENV = "production";
     const status = await getKekStatus();
     expect(status.source).toBe("auto-file");
-    expect(status.warning).toMatch(/will NOT be auto-regenerated/i);
+    expect(status.warningCode).toBe("corrupt");
+    expect(status).not.toHaveProperty("warning");
+  });
+
+  it("returns a generic unreadable code rather than the raw filesystem error", async () => {
+    const dir = setupTmpDataDir();
+    mkdirSync(path.join(dir, "kek.json"));
+    envMock.AI_SECRET_ENCRYPTION_KEY = undefined;
+    envMock.NODE_ENV = "production";
+    const status = await getKekStatus();
+    expect(status.warningCode).toBe("unreadable");
+    expect(status).not.toHaveProperty("warning");
   });
 });
 

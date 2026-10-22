@@ -62,7 +62,7 @@ import {
   inlineUpdateTitleAction,
 } from "@/lib/content/inline-update";
 import { formatDateInTimeZoneForInput, parseInputAsWorkspaceDate } from "@/lib/utils/date";
-import { formatDate } from "@/lib/i18n/format-locale";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { cn } from "@/lib/utils";
@@ -307,11 +307,7 @@ export function InlineDateEditor({
       value={value}
       render={(v) => (
         <p className="text-body text-fg-primary">
-          {formatDate(new Date(v), locale, {
-            dateStyle: "medium",
-            timeStyle: "short",
-            timeZone: timezone,
-          })}{" "}
+          {formatDate(new Date(v), locale, { ...DateFormat.dateTime, timeZone: timezone })}{" "}
           <span className="text-label text-fg-muted">· {timezone}</span>
         </p>
       )}

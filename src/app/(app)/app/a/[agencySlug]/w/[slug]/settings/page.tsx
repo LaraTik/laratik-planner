@@ -363,7 +363,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.lifecycle.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -400,7 +400,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.leadTimes.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -438,7 +438,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.defaults.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -463,7 +463,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.approvals.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         <SettingsSection
@@ -494,7 +494,7 @@ export default async function WorkspaceSettingsPage({
           ) : (
             <ReadOnlySettings message={t("settings.metaPublishing.readOnly")} />
           )}
-          <LastSaved at={settings?.updatedAt ?? null} />
+          <LastSaved at={settings?.updatedAt ?? null} now={renderedAt} />
         </SettingsSection>
 
         {canBulkReset ? (

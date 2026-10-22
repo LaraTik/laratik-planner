@@ -141,8 +141,8 @@ export type KekStatus = {
   path?: string;
   /** ISO-8601 creation timestamp from the on-disk file, if present. */
   createdAt?: string;
-  /** Operator-facing message (e.g. "will be auto-generated on next save"). */
-  warning?: string;
+  /** Stable UI state; detailed filesystem errors stay on the server. */
+  warningCode?: "generate-on-save" | "unreadable" | "corrupt";
 };
 
 type FileKeyResult =
@@ -331,19 +331,14 @@ export async function getKekStatus(): Promise<KekStatus> {
     raw = await readFileAsync(filePath, "utf8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code === "ENOENT") {
-      return {
-        source: "auto-file",
-        path: filePath,
-        warning:
-          serverEnv.NODE_ENV === "production"
-            ? "Will be auto-generated on the first save — back the file up afterwards."
-            : "Will fall back to a derived dev key in dev/test (no file will be written).",
-      };
+      return serverEnv.NODE_ENV === "production"
+        ? { source: "auto-file", path: filePath, warningCode: "generate-on-save" }
+        : { source: "dev-fallback" };
     }
     return {
       source: "auto-file",
       path: filePath,
-      warning: `Unreadable: ${(e as Error).message}`,
+      warningCode: "unreadable",
     };
   }
 
@@ -354,8 +349,7 @@ export async function getKekStatus(): Promise<KekStatus> {
     return {
       source: "auto-file",
       path: filePath,
-      warning:
-        "File exists but is corrupt (invalid JSON) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+      warningCode: "corrupt",
     };
   }
 
@@ -372,8 +366,7 @@ export async function getKekStatus(): Promise<KekStatus> {
   return {
     source: "auto-file",
     path: filePath,
-    warning:
-      "File exists but is corrupt (wrong version or shape) — it will NOT be auto-regenerated to avoid orphaning existing ciphertexts. Set AI_SECRET_ENCRYPTION_KEY to recover.",
+    warningCode: "corrupt",
   };
 }
 

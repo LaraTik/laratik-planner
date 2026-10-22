@@ -136,20 +136,35 @@ test.describe("role-separated workspace access (existing)", () => {
     }
   });
 
-  test("review roles see only their review surface", async ({ page }) => {
+  test("review roles see only their review surface", async ({ page, browser }) => {
     await bootstrapRoleSession(page, "internal_reviewer");
     await page.goto("/app/a/test-agency/w/acme/reviews");
     await expect(page.getByRole("heading", { name: "Approvals" })).toBeVisible();
 
-    await bootstrapRoleSession(page, "client_reviewer");
-    await page.goto("/app/a/test-agency/w/acme/client");
-    await expect(page.getByRole("heading", { name: "Client review" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "Planning" })).toHaveCount(0);
-    await page.goto("/app/a/test-agency/w/acme/planning");
-    await expect(
-      page.getByRole("heading", { name: /Workspace unavailable|Page not found/i }),
-    ).toBeVisible();
-    await expect(page.getByRole("heading", { name: /^Planning$/i })).toHaveCount(0);
+    // Changing the JWT role in one live app-router context lets WebKit race
+    // the old route's navigation against the new session. Isolate the client
+    // reviewer just as the other role-switch test does above.
+    const clientContext = await browser.newContext();
+    const clientPage = await clientContext.newPage();
+    try {
+      await bootstrapRoleSession(clientPage, "client_reviewer");
+      await clientPage.goto("/app/a/test-agency/w/acme/client", { waitUntil: "commit" });
+      await expect(clientPage.getByRole("heading", { name: "Client review" })).toBeVisible();
+      await expect(clientPage.getByRole("link", { name: "Planning" })).toHaveCount(0);
+      await clientPage.waitForLoadState("networkidle");
+      const planningPage = await clientContext.newPage();
+      try {
+        await planningPage.goto("/app/a/test-agency/w/acme/planning");
+        await expect(
+          planningPage.getByRole("heading", { name: /Workspace unavailable|Page not found/i }),
+        ).toBeVisible();
+        await expect(planningPage.getByRole("heading", { name: /^Planning$/i })).toHaveCount(0);
+      } finally {
+        await planningPage.close();
+      }
+    } finally {
+      await clientContext.close();
+    }
   });
 
   for (const role of ["workspace_manager", "designer", "publisher", "viewer"] as const) {

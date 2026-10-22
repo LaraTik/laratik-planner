@@ -11,9 +11,15 @@ import {
 } from "@/lib/ai/capabilities";
 import enAiSettings from "@/messages/en/aiSettings.json";
 import arAiSettings from "@/messages/ar/aiSettings.json";
+import enAgencyAi from "@/messages/en/agencyAi.json";
+import arAgencyAi from "@/messages/ar/agencyAi.json";
 
 type CapabilityCatalog = {
   capabilities: Record<string, { label: string; description: string }>;
+};
+
+type AdminCapabilityCatalog = {
+  capabilities: Record<string, { adminLabel: string; description: string }>;
 };
 
 /**
@@ -61,6 +67,16 @@ describe("AI capabilities metadata (single source of truth)", () => {
     for (const catalog of catalogs) {
       for (const cap of PLANNER_FACING_CAPABILITIES) {
         expect(catalog.capabilities[cap.id]?.label).toBeTruthy();
+        expect(catalog.capabilities[cap.id]?.description).toBeTruthy();
+      }
+    }
+  });
+
+  it("has localized admin labels and descriptions for every agency capability", () => {
+    const catalogs = [enAgencyAi, arAgencyAi] as unknown as AdminCapabilityCatalog[];
+    for (const catalog of catalogs) {
+      for (const cap of ADMIN_FACING_CAPABILITIES) {
+        expect(catalog.capabilities[cap.id]?.adminLabel).toBeTruthy();
         expect(catalog.capabilities[cap.id]?.description).toBeTruthy();
       }
     }

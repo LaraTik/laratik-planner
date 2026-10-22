@@ -51,7 +51,7 @@ vi.mock("@/lib/auth/profile", () => ({
   getPasswordState: vi.fn(),
   updateOwnProfile: vi.fn(),
 }));
-vi.mock("@/lib/notifications/service", () => ({
+vi.mock("@/lib/notifications/preferences", () => ({
   setNotificationPreferencesForUser: vi.fn(),
 }));
 vi.mock("next/cache", () => ({

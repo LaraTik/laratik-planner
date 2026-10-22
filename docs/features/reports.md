@@ -100,8 +100,9 @@ surface is two helpers.
 
 - Generate → agency admin only (`isAgencyAdmin`).
 - Download → any signed-in user whose active agency matches the
-  report's `agencyId`. Agency admins always pass; non-admins read
-  their own reports.
+  report's `agencyId`. Agency admins and other active members can read
+  reports generated for their agency; report history and generation
+  remain agency-admin-only in the Reports page.
 
 ## Bilingual
 

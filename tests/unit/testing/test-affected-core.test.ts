@@ -131,6 +131,8 @@ describe("test affected core", () => {
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx", "channels-social"],
       ["src/app/api/social/providers/analytics-test/route.ts", "channels-social"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx", "ai"],
+      ["src/app/api/ai/monthly-planning/route.ts", "ai"],
+      ["src/app/api/community/test-lab/route.ts", "ai"],
       [
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell.tsx",
         "notifications-discussions",
@@ -165,6 +167,50 @@ describe("test affected core", () => {
     expect(directTestFile.kind).toBe("targeted");
     expect(directTestFile.areaIds).toContain("workspace-pages");
     expect(directTestFile.runAllUnit).toBe(false);
+  });
+
+  it("selects bilingual browser coverage for agency support review changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/agency-settings/plan/support/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.browser).toContainEqual({
+      spec: "tests/e2e/locale-rtl.spec.ts",
+      projects: ["chromium"],
+      grep: "agency support request review",
+    });
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("selects monthly proposal transaction coverage for AI route changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/api/ai/monthly-planning/route.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("ai");
+    expect(result.integrationFiles).toContain("tests/integration/monthly-planning-apply.test.ts");
+
+    const directTest = classifyChangedFiles(
+      ["tests/integration/monthly-planning-apply.test.ts"],
+      TEST_OWNERSHIP,
+    );
+    expect(directTest.kind).toBe("targeted");
+    expect(directTest.areaIds).toContain("ai");
+  });
+
+  it("selects AI and Community Test Lab units for the shared budget route", () => {
+    const result = classifyChangedFiles(
+      ["src/app/api/community/test-lab/route.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("ai");
+    expect(result.unitFiles).toContain("tests/unit/community-test-lab-route.test.ts");
   });
 
   it("matches recursive and single-segment globs without matching partial paths", () => {
@@ -225,6 +271,17 @@ describe("test affected core", () => {
     expect(result.areaIds).toEqual(["auth"]);
     expect(result.integrationFiles).toEqual(["tests/integration/auth/**"]);
     expect(result.browser).toHaveLength(1);
+  });
+
+  it("maps the password-reset feature to its focused auth checks", () => {
+    const result = classifyChangedFiles(["src/features/auth/server.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("auth");
+    expect(result.unitFiles).toContain("tests/unit/auth/**");
+    expect(result.browser).toContainEqual(
+      expect.objectContaining({ spec: "tests/e2e/password-reset-enumeration.spec.ts" }),
+    );
   });
 
   it("maps a changed test file to its owning area", () => {

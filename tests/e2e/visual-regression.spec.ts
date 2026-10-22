@@ -106,6 +106,7 @@ function sessionOptionsFor(entry: StitchCase): {
   platformRole?: PlatformRole;
   authRole?: "agency_admin" | "user";
   enableTrendRadar?: boolean;
+  agencyAiFixture?: true;
   visualFixture: true;
   advertisingReportingFixture?: true;
 } {
@@ -123,6 +124,7 @@ function sessionOptionsFor(entry: StitchCase): {
       : {}),
     ...(entry.platformRole ? { platformRole: entry.platformRole, authRole: "user" } : {}),
     ...(entry.route === "/app/w/acme/trends" ? { enableTrendRadar: true } : {}),
+    ...(entry.route === "/app/agency-settings/ai" ? { agencyAiFixture: true } : {}),
   };
 }
 
@@ -585,9 +587,11 @@ test.describe("visual regression (responsive matrix)", () => {
                     : surface === "/app/w/acme/trends" ||
                         surface === "/app/agency-settings/trend-sources"
                       ? { enableTrendRadar: true, visualFixture: true }
-                      : isAdvertisingReportingSurface(surface)
-                        ? { advertisingReportingFixture: true, visualFixture: true }
-                        : { visualFixture: true },
+                      : surface === "/app/agency-settings/ai"
+                        ? { agencyAiFixture: true, visualFixture: true }
+                        : isAdvertisingReportingSurface(surface)
+                          ? { advertisingReportingFixture: true, visualFixture: true }
+                          : { visualFixture: true },
               );
             }
             if (surface === "/app/w/acme/trends") {
@@ -695,6 +699,45 @@ test.describe("visual regression (Workspace AI Arabic RTL)", () => {
         ["arabic", `workspace-ai-settings-${viewport.name}.png`],
         { fullPage: true, maxDiffPixelRatio: 0.01 },
       );
+    }
+  });
+});
+
+test.describe("visual regression (Agency AI Arabic RTL)", () => {
+  test("agency AI settings render translated Arabic RTL across the full responsive matrix", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await bootstrapTestSession(page, {
+      locale: "ar",
+      agencyAiFixture: true,
+      visualFixture: true,
+    });
+
+    for (const viewport of FULL_RESPONSIVE_VIEWPORTS) {
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      await page.goto("/app/agency-settings/ai");
+      await page.waitForLoadState("domcontentloaded");
+      await waitForStableDom(page, "/app/agency-settings/ai", 30_000);
+      await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+      await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+      await expect(
+        page.getByRole("heading", { name: "إعدادات الذكاء الاصطناعي", level: 1 }),
+      ).toBeVisible();
+      await expect(page.getByText("توصيات الإعلانات")).toBeVisible();
+      await expect(page.getByText(/agencyAi\.capabilities\./)).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+        `Agency AI Arabic RTL overflows at ${viewport.width}px`,
+      ).toBe(true);
+      await assertNoCriticalA11y(page, `Agency AI Arabic RTL @ ${viewport.width}px`);
+      await applyMask(page);
+      await expect(page).toHaveScreenshot(["arabic", `agency-ai-settings-${viewport.name}.png`], {
+        fullPage: true,
+        maxDiffPixelRatio: 0.01,
+      });
     }
   });
 });

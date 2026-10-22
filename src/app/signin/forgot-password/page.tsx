@@ -1,36 +1,11 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
 import { CheckCircle2 } from "lucide-react";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
-import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormField } from "@/components/forms/form-field";
-import { issuePasswordResetToken } from "@/lib/auth/password";
-import { sendEmail } from "@/lib/email";
-import { clientEnv, serverEnv } from "@/lib/validation/env";
-import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { headers } from "next/headers";
+import { requestPasswordResetAction } from "@/features/auth/server";
 import { tForActive } from "@/lib/i18n/t-for-active";
-import { tFor } from "@/messages";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-
-/**
- * Zod schema for the forgot-password email input. Rejecting obvious
- * non-emails at the server boundary prevents a malformed value from
- * being normalized to "" and slipping past the rate-limit + token
- * issuance branches (which already early-return on empty input).
- *
- * The validation message is taken from the message catalog so the
- * user sees the same locale as the rest of the surface. The
- * server action is bound at the top of the file and re-runs
- * through `tForActive()` on every request.
- */
-const ForgotEmailSchema = z.object({
-  email: z.string().trim().toLowerCase().email("auth.forgot.invalidEmail"),
-});
 
 /**
  * Forgot-password page. The user enters their email; if a user with
@@ -41,68 +16,6 @@ const ForgotEmailSchema = z.object({
 export async function generateMetadata() {
   const { t } = await tForActive();
   return { title: t("auth.forgot.title") };
-}
-
-async function requestResetAction(formData: FormData) {
-  "use server";
-  const { t } = await tForActive();
-  const rawEmail = String(formData.get("email") ?? "");
-  const parsed = ForgotEmailSchema.safeParse({ email: rawEmail });
-  // Anti-enumeration: respond identically on validation failure,
-  // missing user, and success. The user only sees `?sent=1`.
-  if (!parsed.success) {
-    // The Zod error message is a catalog key (`auth.forgot.invalidEmail`).
-    // The action swallows it on purpose: the user sees the same `?sent=1`
-    // page either way, so the catalog message is never surfaced to the
-    // browser. Keeping the key in the schema is the *only* place the
-    // validation message lives; updating the English / Arabic copy is a
-    // catalog change, not a code change.
-    void t(parsed.error.issues[0]?.message ?? "");
-    redirect("/signin/forgot-password?sent=1");
-  }
-  const email = parsed.data.email;
-
-  // Throttle per (email, source IP) — same composite as the
-  // sign-in rate limit so an attacker can't rotate IPs to spam
-  // resets for one email. `password_reset_request` is its own
-  // scope (FEAT-11) so the audit log distinguishes reset abuse
-  // from sign-in magic-link abuse.
-  const h = await headers();
-  const requestId = h.get("x-request-id");
-  const subject = h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? email;
-  const limit = await enforceRateLimit({
-    scope: "password_reset_request",
-    subject: `forgot::${email}::${subject}`,
-    ...(requestId ? { requestId } : {}),
-  });
-  if (!limit.allowed) {
-    redirect("/signin/forgot-password?sent=1");
-  }
-
-  const issued = await issuePasswordResetToken(email);
-  if (issued) {
-    const resetUrl = `${serverEnv.AUTH_URL || clientEnv.NEXT_PUBLIC_APP_URL}/signin/set-password?token=${issued.raw}`;
-    // STUDIOFLOW_MASTER_PROMPT.md §1 — stored system copy.
-    // Password reset emails render in the recipient's profile
-    // locale at send time. The public-cookie locale is the
-    // fallback for the rare case the user has never signed in
-    // (e.g. an admin triggers a reset for a freshly invited
-    // account that hasn't completed its first sign-in).
-    const [recipient] = await db
-      .select({ locale: users.locale })
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1);
-    const recipientLocale = (recipient?.locale as Parameters<typeof tFor>[0] | undefined) ?? "en";
-    const t = tFor(recipientLocale);
-    const expiresAt = new Date(issued.expiresAt).toISOString().slice(0, 10);
-    await sendEmail({
-      to: email,
-      subject: t("emails.passwordReset.subject"),
-      text: t("emails.passwordReset.body", { resetUrl, expiresAt }),
-    });
-  }
-  redirect("/signin/forgot-password?sent=1");
 }
 
 export default async function ForgotPasswordPage({
@@ -143,7 +56,7 @@ export default async function ForgotPasswordPage({
             </div>
           </div>
         ) : (
-          <form action={requestResetAction} className="flex flex-col gap-5">
+          <form action={requestPasswordResetAction} className="flex flex-col gap-5">
             <FormField id="email" label={t("auth.signin.emailLabel")} required>
               <Input
                 type="email"

@@ -152,13 +152,17 @@ route-level locale behavior.
 
 ## Validation cadence
 
-- During implementation, run the narrowest relevant unit, integration, or
-  browser check after a behavior change. Do not rerun the full repository gate
-  after each small edit.
-- At a milestone, batch independent final checks once: formatting/lint/type/unit
-  and build through `pnpm verify`, plus the service-specific checks required by
-  the changed code. Run checks that mutate the same disposable database
-  sequentially.
+- During implementation, review the diff and dependency impact as changes are
+  made. Run a focused check early only when it resolves a concrete uncertainty
+  or protects a high-risk behavior; do not rerun suites after every small edit.
+- At a stable milestone, batch the independent release checks once:
+  `pnpm verify` for formatting, lint, type, unit, and build, plus the
+  service-specific checks required by the completed changes. Run checks that
+  mutate the same disposable database sequentially.
+- If a batch finds a defect, fix it with a focused regression and rerun the
+  affected check first. Repeat the broad gate only when the fix changes code
+  covered by that gate or when the final clean commit requires exact-SHA
+  evidence.
 - Keep `scripts/test-ownership.ts` current for route, unit-test, and visual
   snapshot paths. Missing ownership intentionally escalates to the full suite;
   add a selector regression with each new mapping so ordinary feature changes

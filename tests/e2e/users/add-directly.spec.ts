@@ -1,6 +1,23 @@
 import { test, expect, type Page } from "@playwright/test";
 import { bootstrapTestSession, setAuthCookie } from "../_helpers";
 
+async function navigateThroughExpectedRedirect(page: Page, path: string, destination: RegExp) {
+  try {
+    await page.goto(path, { waitUntil: "commit" });
+  } catch (error) {
+    // WebKit can report the expected middleware redirect as an interrupted
+    // navigation. The destination URL and page landmarks below remain the
+    // contract, so ignore only this specific navigation handoff.
+    if (
+      !(error instanceof Error) ||
+      !/Navigation to .* is interrupted by another navigation to/.test(error.message)
+    ) {
+      throw error;
+    }
+  }
+  await page.waitForURL(destination, { timeout: 10_000 });
+}
+
 async function openAddDirectlyTab(page: Page) {
   await page.goto("/app/users");
   await page.waitForLoadState("networkidle");
@@ -99,15 +116,22 @@ test.describe("User Management — Add directly flow", () => {
 
     await page.getByRole("button", { name: /Add user/i }).click();
     await expect(page.getByTestId("add-directly-reveal")).toBeVisible({ timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
 
     // The Team page reads the persisted membership-role rows. Both selected
     // roles must be visible on the same member row; the old last-role-wins
     // defect would show only Publisher here.
-    await page.goto(`/app/a/test-agency/w/${seeded.workspaceSlug}/team`);
-    const memberRow = page.locator("tr").filter({ hasText: newName });
-    await expect(memberRow).toContainText("Designer");
-    await expect(memberRow).toContainText("Publisher");
-    await expect(memberRow).toContainText(/Agency admin/i);
+    const teamPage = await page.context().newPage();
+    try {
+      await teamPage.goto(`/app/a/test-agency/w/${seeded.workspaceSlug}/team`);
+      await expect(teamPage).toHaveURL(/\/team$/);
+      const memberRow = teamPage.locator("tr").filter({ hasText: newName });
+      await expect(memberRow).toContainText("Designer");
+      await expect(memberRow).toContainText("Publisher");
+      await expect(memberRow).toContainText(/Agency admin/i);
+    } finally {
+      await teamPage.close();
+    }
 
     // A fresh session with a normal global user role must still pass the
     // tenant-scoped Agency Admin gate because the membership flag is the
@@ -171,8 +195,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
 
     // Visit any protected route; the middleware should redirect to /set-password
-    await page.goto("/app");
-    await page.waitForURL(/\/set-password/, { timeout: 10_000 });
+    await navigateThroughExpectedRedirect(page, "/app", /\/set-password/);
     await expect(page.getByTestId("set-password-page")).toBeVisible();
     await expect(page.getByTestId("set-password-form")).toBeVisible();
 
@@ -207,8 +230,7 @@ test.describe("First-login redirect (mustChangePassword)", () => {
     // Sign in as the new user; middleware redirects to /set-password
     await page.context().clearCookies();
     await setAuthCookie(page, page.request, { email: newEmail, role: "user" });
-    await page.goto("/app");
-    await page.waitForURL(/\/set-password/, { timeout: 10_000 });
+    await navigateThroughExpectedRedirect(page, "/app", /\/set-password/);
 
     // The sign-out escape must be present and clickable.
     const signOutLink = page.getByTestId("set-password-signout-link");

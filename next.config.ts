@@ -34,6 +34,10 @@ const nextConfig: NextConfig = {
   // Strict React in dev, no surprises in prod.
   reactStrictMode: true,
 
+  // Keep the floating Next.js dev-tools badge out of the mobile bottom-nav
+  // touch area during browser checks. Compile and runtime errors still surface.
+  devIndicators: false,
+
   // Disable powered-by header (Traefik already adds its own).
   poweredByHeader: false,
 

@@ -125,6 +125,8 @@ type SeedBody = {
   includeDeliveryMediaFixture?: boolean;
   /** Enable the gated Trend Radar surface for visual/onboarding fixtures. */
   enableTrendRadar?: boolean;
+  /** Enable the agency AI settings visual fixture with Trend Radar switched on. */
+  agencyAiFixture?: boolean;
   /** Keep visual planning fixtures in the committed visual-reference month. Test-only. */
   visualFixture?: boolean;
   /** Seed canonical, synthetic advertising facts for the populated reporting E2E. */
@@ -196,6 +198,7 @@ export async function POST(req: NextRequest) {
     socialAnalyticsFixture: body.socialAnalyticsFixture ?? false,
     includeDeliveryMediaFixture: body.includeDeliveryMediaFixture ?? false,
     enableTrendRadar: body.enableTrendRadar ?? false,
+    agencyAiFixture: body.agencyAiFixture ?? false,
     visualFixture: body.visualFixture ?? false,
     advertisingReportingFixture: body.advertisingReportingFixture ?? false,
     communityInboxFixture: body.communityInboxFixture ?? false,
@@ -237,6 +240,7 @@ async function seedInternal(f: {
   socialAnalyticsFixture: boolean;
   includeDeliveryMediaFixture: boolean;
   enableTrendRadar: boolean;
+  agencyAiFixture: boolean;
   visualFixture: boolean;
   advertisingReportingFixture: boolean;
   communityInboxFixture: boolean;
@@ -372,15 +376,15 @@ async function seedInternal(f: {
     .insert(aiFeatureSettings)
     .values({
       agencyId,
-      enabled: f.enableTrendRadar,
-      enabledCapabilities: f.enableTrendRadar ? ["trend_radar"] : [],
+      enabled: f.enableTrendRadar || f.agencyAiFixture,
+      enabledCapabilities: f.enableTrendRadar || f.agencyAiFixture ? ["trend_radar"] : [],
       updatedBy: userId,
     })
     .onConflictDoUpdate({
       target: aiFeatureSettings.agencyId,
       set: {
-        enabled: f.enableTrendRadar,
-        enabledCapabilities: f.enableTrendRadar ? ["trend_radar"] : [],
+        enabled: f.enableTrendRadar || f.agencyAiFixture,
+        enabledCapabilities: f.enableTrendRadar || f.agencyAiFixture ? ["trend_radar"] : [],
         updatedBy: userId,
         updatedAt: new Date(),
       },

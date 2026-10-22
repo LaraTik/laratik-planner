@@ -11,6 +11,17 @@
   "featureSettingsTitle": "Feature settings",
   "testConnectionTitle": "Test connection",
   "noUsageYet": "No usage yet",
+  "actionErrors": {
+    "unauthorized": "Your session or agency permissions changed. Sign in again and retry.",
+    "invalid_input": "Review the settings and try again.",
+    "save_failed": "Could not save AI settings. Try again.",
+    "connection_failed": "The provider connection failed. Check the configured key and base URL, then retry."
+  },
+  "actionFeedback": {
+    "saved": "AI settings saved.",
+    "connection_ok": "Connection OK",
+    "connection_ok_with_latency": "Connection OK · {latency} ms"
+  },
   "form": {
     "configured": "Configured",
     "notConfigured": "Not configured",
@@ -86,9 +97,25 @@
     "community_reply_drafts": {
       "adminLabel": "Community reply drafts",
       "description": "Create reviewable community replies in a simulation-only test lab."
+    },
+    "advertising_recommendations": {
+      "adminLabel": "Advertising recommendations",
+      "description": "Generate explainable actions from verified, authorized advertising performance."
     }
   },
   "managedSecret": {
+    "actionErrors": {
+      "unauthorized": "Your session or agency permissions changed. Sign in again and retry.",
+      "invalid_input": "Check the API key or reason and try again.",
+      "missing_encryption_key": "Managed secrets are unavailable because the encryption key is not configured.",
+      "save_failed": "Could not save the managed key. Try again.",
+      "remove_failed": "Could not remove the managed key. Try again."
+    },
+    "encryptionWarnings": {
+      "generate-on-save": "The encryption key will be created when you first save a managed key. Back up the file afterward.",
+      "unreadable": "The encryption-key file could not be read. Check its permissions or the available storage, then retry.",
+      "corrupt": "The encryption-key file is corrupt and will not be regenerated because that would lock out existing keys. Configure AI_SECRET_ENCRYPTION_KEY to recover."
+    },
     "badge": "Managed secret · ends in …{suffix}",
     "providerKey": "Provider key",
     "description": "The active key for this agency. A managed secret in the database takes priority; the environment key is the fallback. Master switch status: {status}.",

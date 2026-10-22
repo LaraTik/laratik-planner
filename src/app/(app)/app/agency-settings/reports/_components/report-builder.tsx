@@ -98,14 +98,12 @@ export function ReportBuilder({ templates, workspaces, channels, generate }: Rep
   const visibleChannels = React.useMemo(() => {
     const out: ReportBuilderChannel[] = [];
     for (const wid of selection.workspaces) {
-      const picked = selection.channelsByWorkspace.get(wid);
-      if (!picked) continue;
       for (const c of channelsByWorkspaceId.get(wid) ?? []) {
-        if (picked.has(c.id)) out.push(c);
+        out.push(c);
       }
     }
     return out;
-  }, [selection.workspaces, selection.channelsByWorkspace, channelsByWorkspaceId]);
+  }, [selection.workspaces, channelsByWorkspaceId]);
 
   const toggleWorkspace = React.useCallback((id: string) => {
     setSelection((prev) => {
@@ -129,7 +127,11 @@ export function ReportBuilder({ templates, workspaces, channels, generate }: Rep
 
   const [state, formAction] = useActionState<GenerateReportState, FormData>(generate, {});
 
-  const totalSelectedChannels = visibleChannels.length;
+  const totalSelectedChannels = visibleChannels.reduce((count, channel) => {
+    return selection.channelsByWorkspace.get(channel.workspaceId)?.has(channel.id)
+      ? count + 1
+      : count;
+  }, 0);
 
   return (
     <form action={formAction} className="space-y-6" data-testid="report-builder-form">
@@ -233,7 +235,7 @@ export function ReportBuilder({ templates, workspaces, channels, generate }: Rep
                   className="border-border hover:bg-surface-subtle flex cursor-pointer items-center gap-2 rounded-[var(--radius-control)] border p-3"
                   data-testid={`report-channel-${c.id}`}
                 >
-                  <input type="hidden" name="channelIds" value={c.id} />
+                  {checked ? <input type="hidden" name="channelIds" value={c.id} /> : null}
                   <input
                     type="checkbox"
                     checked={checked}
@@ -298,12 +300,12 @@ export function ReportBuilder({ templates, workspaces, channels, generate }: Rep
         />
       </div>
 
-      {state.error ? (
+      {state.errorCode ? (
         <div
           className="border-danger/40 bg-danger-subtle text-body text-danger rounded-[var(--radius-control)] border p-3"
           data-testid="reports-form-error"
         >
-          {state.error}
+          {t(`reports.errors.${state.errorCode}`)}
         </div>
       ) : null}
 

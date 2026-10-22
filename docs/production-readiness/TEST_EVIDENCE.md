@@ -2325,3 +2325,412 @@ Creator, assignee, agency-admin, and active-member task access is now resolved
 through `src/lib/tasks/access.ts` and reused by task updates, detail flags,
 and attachment writes. The ADR 0016 behavior is unchanged. This checkpoint
 is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Architecture refinement — publishing, notification, and AI workflows
+
+Implementation SHA: pending the final clean implementation commit.
+
+| Command / check                  | Result                                                                                  |
+| -------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm verify`                    | Pass — formatting, lint, typecheck, 574 unit files / 5,066 tests, and production build. |
+| Postgres integration suite       | Pass — full suite against a fresh disposable `planner_test` database.                   |
+| Migration drill                  | Pass — all five scenarios against the disposable database.                              |
+| Monthly proposal apply           | Pass — commit, forced finalization rollback, concurrent claim, workspace-scope cases.   |
+| Browser and visual release gates | Open — full matrix and 57 known visual differences remain under review.                 |
+| Independent verification         | Open — no independent `Verified` status assigned.                                       |
+
+The monthly planning route now uses a feature-owned transaction to claim the
+proposal, create content, and persist both final states atomically. The AI
+generation route rejects unauthorized actors before loading workspace
+research or brand context. Exact clean-SHA evidence remains pending. AD-002
+remains **In Progress**; this is **Tested**, not **Verified**.
+
+## Account MCP scope issuance — focused regression evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                       | Result        |
+| ------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/account-mcp-token-action.test.ts` | Pass — 10/10. |
+
+Review found that invalid or empty scope input could silently issue
+`content:read`. The action now rejects invalid and empty submissions. The
+account MCP scope-issuance path is reviewed; other account contracts and the
+full route, browser, and visual checks remain open. Independent **Verified**
+status is not assigned.
+
+## Platform agency creation result boundary — focused regression evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                        | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/platform/create-agency-action.test.ts tests/unit/platform/add-agency-drawer.test.tsx tests/unit/platform-agencies-service.test.ts` | Pass — 13/13. |
+
+The action no longer serializes internal exception or raw validation messages.
+It returns stable codes for the client to translate, and the administrator
+email warning uses the English/Arabic catalogs. This does not certify the
+platform route family's full browser, responsive, keyboard, axe, editorial,
+or visual behavior. Independent **Verified** status is not assigned.
+
+The combined route-fix checkpoint then passed 58/58 across the account scope
+action, platform agency action/form/service, catalog parity, and affected-test
+ownership suites. Prettier and `git diff --check` also pass for the touched
+files. These remain working-tree results pending the final exact-clean-SHA
+release checks.
+
+## Agency provider settings — focused route evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                                                                       | Result        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/provider-config-card.test.tsx tests/unit/agency-settings/social-provider-actions.test.ts tests/unit/agency-settings/provider-config-loading.test.tsx tests/unit/feedback/screen-loading.test.tsx` | Pass — 23/23. |
+
+The route uses a shared secret-free client DTO, derives action identity from the
+session, and now has a loading surface matching its card/form layout. Full
+route browser, bilingual runtime, accessibility, visual, and independent
+verification evidence remain open.
+
+## Agency AI settings — focused action and secret-status evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/ai-actions.test.ts tests/unit/agency-settings/ai-page.test.tsx tests/unit/ai-provider-secret.test.ts tests/unit/secret-encryption.test.ts` | Pass — 62/62. |
+| Prettier and `git diff --check`                                                                                                                                                        | Pass.         |
+
+The AI settings actions now return stable result codes instead of internal
+exception or validation text. The managed-secret screen localizes those codes
+and receives only encryption warning classifications; raw filesystem errors
+stay server-side. The development fallback no longer claims a key file exists.
+Full bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA, and
+independent verification evidence remain open; AD-002 remains **In Progress**.
+
+## Agency Settings overview entitlement fallback — focused evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                              | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `pnpm vitest run tests/unit/agency-settings/page.test.tsx tests/unit/community/plan-access.test.ts tests/unit/entitlement-merge.test.ts tests/unit/m2-entitlement-hardening.test.ts` | Pass — 56/56. |
+| Prettier and `git diff --check`                                                                                                                                                      | Pass.         |
+
+The overview delegates to a server-only feature helper that treats only a
+missing entitlement row as unavailable; unexpected lookup failures reach the
+route error boundary. This does not replace the
+route's bilingual browser, keyboard/axe, responsive visual, exact-clean-SHA,
+or independent verification evidence. AD-002 remains **In Progress**.
+
+## Agency support-access decisions — focused action evidence
+
+Working-tree evidence (not exact clean-SHA evidence):
+
+| Command                                                                                                                                                                                                          | Result      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `pnpm exec vitest run tests/unit/agency-settings/support-decisions.test.ts`                                                                                                                                      | Pass — 6/6. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test NODE_ENV=test pnpm exec vitest run --config vitest.integration.config.ts tests/integration/support-access.test.ts`                           | Pass — 9/9. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/a11y-routes.spec.ts tests/e2e/locale-rtl.spec.ts --grep='agency support request review'` | Pass — 2/2. |
+| Prettier and `git diff --check`                                                                                                                                                                                  | Pass.       |
+
+The agency-admin action verifies active-agency role, rate limit, stable results,
+and tenant-scoped service arguments. Integration verifies an admin cannot
+decide a request outside the active agency and that no grant is created. The
+browser checks cover the English empty-state accessibility contract and Arabic
+RTL rendering. Responsive visual, full browser matrix, exact-clean-SHA, and
+independent verification remain open.
+
+## Batched isolated Chromium run — 2026-10-22
+
+Working-tree evidence (not exact clean-SHA release evidence):
+
+| Command                                                                                                    | Result                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:affected -- --layer browser` | Full suite selected: 277/281 passed, 3 failed while the local Next server repeatedly hit its memory threshold and restarted, 1 expected skip. |
+| Focused rerun of the three failed cases in `research-teardown.spec.ts` and `users/add-directly.spec.ts`    | Pass — 3/3.                                                                                                                                   |
+
+The failures coincided with `ECONNRESET`, early response-stream closure, and
+seed-request socket hang-up errors from the restarted local server. All three
+cases passed when rerun in isolation. The full browser gate remains open because
+the full run was not green; focused reruns do not replace it. This result
+supports batching focused checks during implementation and running the full
+browser matrix once against a stable final candidate. Visual comparison, exact
+clean-SHA release evidence, remaining route review, and independent review
+remain open; AD-002 stays **In Progress**.
+
+## Password-reset anti-enumeration — working-tree evidence
+
+| Check                                                                                                                                                                | Result        |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| `pnpm exec vitest run tests/unit/auth/password-reset-request.test.ts tests/unit/testing/test-affected-core.test.ts tests/unit/architecture/module-ownership.test.ts` | Pass — 32/32. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/password-reset-enumeration.spec.ts`          | Pass — 1/1.   |
+| Prettier and `git diff --check`                                                                                                                                      | Pass.         |
+
+The server action catches token lookup, profile-locale lookup, and mail delivery
+errors after rate limiting. The browser receives the same confirmation URL for
+unknown addresses and provider failures; warning logs omit the address and
+provider exception. The action uses the saved locale when present and the
+active interface locale otherwise. These are working-tree results, not exact
+clean-SHA release evidence; broader release gates and independent review remain
+open.
+
+## Trend source settings read boundary — working-tree evidence
+
+| Check                                                                                                                                                | Result      |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| Focused Trend Sources page authorization, view-model, UI, and module ownership suites                                                                | Pass — 8/8. |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/trends-sources-page.spec.ts` | Pass — 1/1. |
+| Prettier and `git diff --check`                                                                                                                      | Pass.       |
+
+The admin denial now occurs before agency AI/source reads. The feature query
+selects only safe display data and does not send provider error messages or
+secret references to the browser. The existing admin source-management journey
+still passes. These are working-tree results; exact clean-SHA and full release
+evidence remain open.
+
+## Agency Reports tenant-scope enforcement — working-tree evidence
+
+| Check                                                                                                                                            | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:integration tests/integration/reports-tenant-isolation.test.ts`    | Pass — 4/4.   |
+| `pnpm typecheck`                                                                                                                                 | Pass.         |
+| Report action, channel-picker, and period unit regressions                                                                                       | Pass — 12/12. |
+| Report PDF cross-agency and member-access route tests                                                                                            | Pass — 2/2.   |
+| `TEST_DATABASE_URL=postgresql://planner@127.0.0.1:5432/planner_test pnpm test:e2e:isolated --project=chromium tests/e2e/reports-builder.spec.ts` | Pass — 2/2.   |
+| Ownership and affected-test selector suites                                                                                                      | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                                                   | Pass.         |
+
+The action rejects foreign workspaces and channels before rendering or saving;
+the aggregate query also requires the active agency and restricts metric reads
+to its scoped channel set. Missing or invalid custom dates now return a
+translated validation code without reaching PDF generation. Server Action
+errors are translated from the English and Arabic catalogs. The history list
+resolves client translations through the locale provider, and foreign report
+IDs receive the same 404 response as missing IDs. These are working-tree
+results; full verification, exact clean-SHA and release evidence, and
+independent verification remain open.
+
+## Account multi-agency membership context — working-tree evidence
+
+| Check                                                                                                                          | Result        |
+| ------------------------------------------------------------------------------------------------------------------------------ | ------------- |
+| Multi-agency account Chromium regression (`tests/e2e/account-theme.spec.ts`, disposable `planner_test`)                        | Pass — 1/1.   |
+| Account accessibility and theme journeys (`a11y-routes.spec.ts`, `account-theme.spec.ts`, Chromium, disposable `planner_test`) | Pass — 4/4.   |
+| `pnpm typecheck`                                                                                                               | Pass.         |
+| Architecture ownership and affected-test selector suites                                                                       | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                                 | Pass.         |
+
+The regression seeds two agencies for one user and verifies both membership
+rows appear while only the signed active agency is marked current. The broader
+Arabic runtime, responsive visual release checks, exact clean-SHA evidence,
+and independent verification remain open.
+
+## Unresolved agency-context recovery — working-tree evidence
+
+| Check                                                                                                                                                | Result        |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- |
+| Multi-agency no-cookie recovery and canonical workspace landing (`tests/e2e/agency-switcher.spec.ts`, Chromium, disposable `planner_test`) — EN + AR | Pass — 2/2.   |
+| No active membership access state (`tests/e2e/agency-switcher.spec.ts`, Chromium, disposable `planner_test`)                                         | Pass — 1/1.   |
+| Agency-context cookie, architecture ownership, affected-test selector suites                                                                         | Pass — 43/43. |
+| `pnpm typecheck`                                                                                                                                     | Pass.         |
+| Targeted Prettier check and `git diff --check`                                                                                                       | Pass.         |
+
+The user explicitly selects an active membership through the shared switcher;
+the server rechecks membership, writes the signed cookie, and returns the
+canonical workspace URL. These are working-tree checks. Arabic no-membership
+runtime, keyboard/axe, responsive visual release gates, exact clean-SHA
+evidence, and independent verification remain open.
+
+## Platform-only tenant landing states — working-tree evidence
+
+| Check                                                                                                           | Result        |
+| --------------------------------------------------------------------------------------------------------------- | ------------- |
+| Platform owner with unresolved multi-agency context visits `/app` and `/app/workspaces` (`a11y-routes.spec.ts`) | Pass — 1/1.   |
+| `pnpm typecheck`                                                                                                | Pass.         |
+| Architecture ownership and affected-test selector suites                                                        | Pass — 27/27. |
+| Targeted Prettier check and `git diff --check`                                                                  | Pass.         |
+
+Both tenant pages now send a platform-only context to the platform console
+instead of rendering an empty page. No tenant data is exposed. Full route
+browser/visual release evidence, exact clean-SHA, and independent verification
+remain open.
+
+## AI budget and usage-event corrections — working-tree evidence
+
+| Check                                                                  | Result                                |
+| ---------------------------------------------------------------------- | ------------------------------------- |
+| Affected AI unit area (`pnpm test:affected -- --area ai --layer unit`) | Pass — 242/242 tests across 21 files. |
+| Architecture ownership and affected-test selection suites              | Pass — 28/28 tests.                   |
+| AI governance integration against disposable `planner_test`            | Pass — 5/5 tests.                     |
+| `pnpm typecheck`                                                       | Pass.                                 |
+| Targeted Prettier and `git diff --check`                               | Pass.                                 |
+
+The AI governance entry now owns shared token reservation refunds and usage
+event persistence. Monthly planning validates before reserving, releases
+estimated tokens after pre-provider failures, records usage metadata, maps
+budget limits to 429, and sanitizes provider errors. Standard generation no
+longer refunds reconciled provider usage after later failures, and the
+Community Test Lab uses the same refund helper. No schema or migration changed.
+These checks are against the working tree, not an exact clean SHA. Full
+Full Postgres integration, `pnpm verify`, browser/visual release gates, and
+independent verification remain open.
+
+## Agency report download contract — working-tree evidence
+
+| Check                                          | Result      |
+| ---------------------------------------------- | ----------- |
+| `tests/unit/report-download-route.test.ts`     | Pass — 2/2. |
+| Targeted Prettier check and `git diff --check` | Pass.       |
+
+The PDF route no longer performs an unused agency-admin lookup; the
+documentation now accurately describes the existing same-agency member read
+contract. Download permissions and report storage are unchanged. These checks
+are against the working tree, not an exact clean SHA. Full route browser/visual
+release evidence and independent verification remain open.
+
+## Report history retention cleanup — working-tree evidence
+
+| Check                                                              | Result      |
+| ------------------------------------------------------------------ | ----------- |
+| Report storage and download suites                                 | Pass — 3/3. |
+| 101-report retention regression in an isolated temporary directory | Pass.       |
+| Targeted Prettier and `git diff --check`                           | Pass.       |
+
+The adapter now unlinks PDF files when their history entries leave the
+100-report window. This check is against the working tree, not an exact clean
+SHA. Full repository and release evidence remain open.
+
+## Grouped architecture pass validation — 2026-10-22
+
+| Check                                                                   | Result                                                                                                                                                                                                                                                                            |
+| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                           | Pass: Prettier, ESLint, TypeScript, 587 unit files / 5,117 tests, production build.                                                                                                                                                                                               |
+| Full disposable-Postgres integration suite                              | All reported test files passed against `planner_test`; no schema changed in the latest report-route/storage edits.                                                                                                                                                                |
+| `NODE_ENV=test TEST_DATABASE_URL=… pnpm migration-drill`                | Pass — all 5 scenarios.                                                                                                                                                                                                                                                           |
+| `test:e2e:release` browser phase                                        | 276/289 passed; 11 failed under the one-worker run while Next reported memory-threshold restarts. Ten of the 11 failed cases passed in an isolated rerun; the remaining advertising report case passed after its route stopped doing dashboard-only work for client presentation. |
+| Visual compare                                                          | Current attempt stopped at 23/264 after repeated early reference mismatches; the previously completed full capture remains 207/264 with 57 known differences.                                                                                                                     |
+| Targeted advertising client report Chromium case after route adjustment | Pass — 1/1.                                                                                                                                                                                                                                                                       |
+
+The functional failures were rerun as a focused group instead of repeating the
+full suite; the advertising route was then checked separately after the
+performance change. The full browser release matrix and visual reconciliation
+are still open. These are working-tree checks, not evidence for an exact clean
+commit. No independent reviewer has assigned **Verified**.
+
+## Browser shard follow-up — 2026-10-22
+
+| Check                          | Result                                                                                                                                   |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| Chromium shard 1/3             | 96 passed; the advertising reporting timeout passed in a focused rerun after its test-local timeout adjustment.                          |
+| Chromium shard 2/3             | 95 passed, 1 skipped because authenticated MCP E2E requires `MCP_ACCESS_TOKEN`.                                                          |
+| Chromium shard 3/3             | 94 passed; the research teardown suite passed 4/4 in a focused rerun.                                                                    |
+| YouTube paid-source regression | Pass — 1/1 after updating the stale test to assert the current missing-key error, disabled status, and configuration affordance.         |
+| Firefox shard 1/3              | Incomplete — `/app` accessibility case failed, then Firefox remained at full CPU without progress; stopped after more than five minutes. |
+
+Chromium coverage was reconciled through shards plus targeted reruns. The
+Firefox, WebKit, mobile Chrome, and mobile Safari release checks remain open;
+the five-browser gate is not green. No visual snapshots were updated. These
+are working-tree checks and do not satisfy clean-SHA or independent
+verification requirements.
+
+## Advertising timestamp hydration and WebKit follow-up — working tree
+
+| Check                                               | Result                                                                                                                      |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                       | Pass — formatting, lint, typecheck, 587 unit files / 5,117 tests, and production build.                                     |
+| Advertising reporting, English + Arabic RTL, WebKit | Pass — 2/2; both journeys assert no hydration warning.                                                                      |
+| WebKit shard 1/3                                    | 96 passed, 1 failed. The Brand Kit administration case reproduced an RSC fallback navigation interruption when rerun alone. |
+| Firefox plain-page launch                           | Blocked — a minimal `data:` page hangs at full CPU before application code loads.                                           |
+
+The advertising dashboard now formats its last-sync value through the shared
+deterministic locale formatter and workspace timezone. The Brand Kit failure
+is not classified as a product defect; the Firefox problem is isolated to the
+local browser runtime. WebKit shards 2/3 and 3/3, mobile-browser coverage, and
+visual reconciliation remain open. These working-tree checks are not
+independent verification or exact clean-SHA evidence.
+
+## Mobile browser reconciliation — working tree
+
+| Check                                        | Result                                                                                                      |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Mobile Chrome shard 3/3                      | 90 passed, 6 failed on desktop-only or non-mobile navigation selectors.                                     |
+| Mobile Chrome focused responsive group       | Pass — 19 passed, 3 desktop-only skips across workspace and analytics route cases.                          |
+| Mobile Safari shard 1/3                      | 96 passed, 1 Brand Kit route-transition failure; replaced with isolated route cases and rerun below.        |
+| Mobile Safari shard 2/3                      | 95 passed, 1 environment-gated MCP skip.                                                                    |
+| Mobile Safari shard 3/3                      | 93 passed, 3 desktop-only skips.                                                                            |
+| Brand Kit rule/resource cases, mobile Safari | Pass — 2/2 after splitting publishing-rule creation and linked-resource creation into separate route tests. |
+| Brand Kit rule/resource cases, WebKit        | Pass — 2/2.                                                                                                 |
+
+The six mobile Chrome failures were mismatched test selectors: the application
+uses a mobile context header and More sheet, while the test asserted desktop
+sidebar controls. The refreshed responsive assertions passed in a focused
+rerun. The Brand Kit case had combined two routes while a server-action refresh
+was still settling; isolated route cases pass in both Safari engines. These
+are working-tree results. Firefox, the visual release gate, exact clean-SHA
+evidence, and independent verification remain open.
+
+## Final grouped working-tree validation — 2026-10-22
+
+| Check                                    | Result                                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass — Prettier, ESLint, TypeScript, 587 unit files / 5,117 tests, and production build.                                  |
+| Full disposable-Postgres integration     | Pass — full integration command exited successfully against `planner_test`.                                               |
+| `pnpm migration-drill`                   | Pass — all five scenarios: from-zero, skipped migration repair, in-place upgrade, backup/restore, failed-migration abort. |
+| Mobile browser shards and focused reruns | Reconciled as documented above; no unresolved mobile-only failure remains from these runs.                                |
+| `git diff --check`                       | Pass.                                                                                                                     |
+
+No schema or migration changed in this batch. Results are against the working
+tree and do not establish an exact clean-SHA release check. Firefox remains
+unavailable in the local runtime, the visual matrix retains 57 known reference
+differences, and manual route review plus independent **Verified** status are
+open. This batch is not release-ready or commit/push evidence.
+
+## Agency AI capability localization and RTL coverage — 2026-10-22
+
+The agency AI catalog omitted the `advertising_recommendations` capability,
+causing its label and description to render as raw keys. Added English and
+Arabic catalog entries, a metadata regression for every agency-facing
+capability, and a route-specific deterministic visual fixture. Added the
+agency AI Arabic/RTL responsive matrix at 375, 768, 1024, 1280, and 1440px;
+it asserts the localized heading/label, no horizontal overflow, and no
+critical/serious axe findings.
+
+| Check                                                             | Result                                                                                                                               |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Focused AI capability metadata unit suite                         | Pass — 19/19.                                                                                                                        |
+| Agency AI English exact, responsive, and Arabic/RTL visual checks | Pass — 5/5; Arabic check covers all five documented widths.                                                                          |
+| Full visual matrix rerun                                          | Stopped at 96/265 before the final responsive-fixture correction; known unrelated reference drift reproduced, so not a release pass. |
+| `git diff --check`                                                | Pass before this evidence update; rerun with the final grouped checks.                                                               |
+
+The agency AI references were refreshed only for the affected page after
+reviewing the before/after application capture. This does not approve the page
+against the active Stitch design; the full visual reconciliation, Firefox,
+route review, clean exact-SHA evidence, and independent **Verified** status
+remain open.
+
+## Grouped architecture pass revalidation — 2026-10-22, current worktree
+
+| Check                                      | Result                                                                                                                                                 |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm verify`                              | Pass — formatting, ESLint, TypeScript, 587 unit files / 5,118 tests, and production build.                                                             |
+| Full disposable-Postgres integration suite | Pass against `planner_test`; all integration files completed.                                                                                          |
+| `NODE_ENV=test pnpm migration-drill`       | Pass — all five scenarios. No migration changed in this batch.                                                                                         |
+| Focused agency AI visual checks            | Pass — 5/5 after the localized copy and fixture change.                                                                                                |
+| Full visual matrix                         | Stopped at 96/265 before the final responsive-fixture correction; previously observed unrelated reference differences recurred, so not a release pass. |
+| `git diff --check`                         | Pass after evidence updates.                                                                                                                           |
+
+These are working-tree results, not exact clean-SHA evidence. Firefox, full
+visual reconciliation, route-by-route manual review, and independent review
+remain open. Do not advance the production-readiness status from **Tested**.
+
+### Firefox runtime diagnostic follow-up — 2026-10-22
+
+The repository-pinned Playwright 1.62.1 Firefox 1538 binary hangs even on a
+plain `data:` page, with `RenderCompositorSWGL failed mapping default
+framebuffer` followed by sustained CPU use. Disabling WebRender did not change
+the result. The installed branded Firefox 158 exits before Playwright can
+attach its Juggler protocol, and the local Docker service returned an API 500
+before a containerized browser could be started. These are environment
+diagnostics; Firefox release coverage remains open and no application-level
+Firefox pass is claimed.

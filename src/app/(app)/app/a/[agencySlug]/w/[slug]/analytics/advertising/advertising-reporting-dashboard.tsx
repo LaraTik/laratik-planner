@@ -51,6 +51,8 @@ import type {
   TrendGranularity,
   TrendMetricKey,
 } from "@/lib/advertising/reporting-trend";
+import { DateFormat, formatDate } from "@/lib/i18n/format-locale";
+import type { LocaleCode } from "@/lib/i18n/locales";
 import {
   advertisingSignalFeedbackKey,
   type AdvertisingSignalEntityType,
@@ -182,7 +184,7 @@ export function AdvertisingReportingDashboard(props: {
   workspaceSlug: string;
   accountName: string;
   currency: string;
-  locale: string;
+  locale: LocaleCode;
   timezone: string;
   freshness: string;
   syncStatus: string;
@@ -434,7 +436,7 @@ function SupplementaryMetricCard({
   metrics: AdvertisingMetricSnapshot;
   comparison: ComparisonSummary | null;
   statuses: readonly MetricStatus[];
-  locale: string;
+  locale: LocaleCode;
   currency: string;
   labels: AdvertisingReportingDashboardLabels;
   onChange: (value: AdvertisingSupplementaryMetricKey) => void;
@@ -510,7 +512,7 @@ function DataHealth({
   partial: boolean;
   dataHealth: DataHealthSummary;
   lastSync: string | null;
-  locale: string;
+  locale: LocaleCode;
   timezone: string;
   since: string;
   until: string;
@@ -820,15 +822,11 @@ function healthIssueLabel(issue: string, labels: AdvertisingReportingDashboardLa
   }
 }
 
-function formatLastSync(lastSync: string | null, locale: string, timezone: string) {
+function formatLastSync(lastSync: string | null, locale: LocaleCode, timezone: string) {
   if (!lastSync) return "—";
   const date = new Date(lastSync);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat(locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-    timeZone: timezone,
-  }).format(date);
+  return formatDate(date, locale, { ...DateFormat.dateTime, timeZone: timezone });
 }
 function TrendPanel({
   dailyMetrics,

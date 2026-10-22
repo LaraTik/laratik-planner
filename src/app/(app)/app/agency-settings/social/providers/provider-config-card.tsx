@@ -29,27 +29,13 @@ import {
   type ProviderTestMessageCode,
 } from "./actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
+import type { ProviderConfigSummary } from "./provider-config-view";
 
 // Hydration-aware `window.location.origin` reader. Mirrors the
 // pattern in `edit-agency-form.tsx` (browser-only value, server
 // snapshot empty). The empty server snapshot is rendered on the
 // first paint to keep server and client output in lockstep.
 const subscribeToHydration = () => () => undefined;
-
-type ExistingSummary = {
-  appId: string;
-  loginConfigId: string | null;
-  graphApiVersion: string | null;
-  enabled: boolean;
-  publishingEnabled: boolean;
-  appReviewStatus: "not_requested" | "pending" | "approved" | "rejected";
-  businessVerificationStatus: "not_required" | "not_started" | "pending" | "verified" | "rejected";
-  lastTestedAt: Date | null;
-  lastTestedOk: boolean | null;
-  lastTestErrorCode: string | null;
-  configuredBy: string;
-  updatedAt: Date;
-};
 
 type Translator = (key: string, params?: Record<string, string | number>) => string;
 
@@ -181,15 +167,13 @@ export function ProviderConfigCard({
   provider,
   agencyId,
   agencySlug,
-  actorId,
   existing,
   now,
 }: {
   provider: "meta" | "tiktok";
   agencyId: string;
   agencySlug: string;
-  actorId: string;
-  existing: ExistingSummary | null;
+  existing: ProviderConfigSummary | null;
   /** Shared page-render clock keeps relative labels stable through hydration. */
   now: Date;
 }) {
@@ -242,7 +226,7 @@ export function ProviderConfigCard({
     }
     setState({});
     startTransition(async () => {
-      const result = await setProviderConfigAction(agencyId, actorId, provider, {
+      const result = await setProviderConfigAction(agencyId, provider, {
         appId: appId.trim(),
         appSecret,
         loginConfigId: loginConfigId.trim() || null,
@@ -629,7 +613,7 @@ export function ProviderConfigCard({
 }
 
 function appReviewStatusLabel(
-  status: ExistingSummary["appReviewStatus"] | undefined,
+  status: ProviderConfigSummary["appReviewStatus"] | undefined,
   tr: Translator,
 ): string {
   switch (status) {
@@ -645,7 +629,7 @@ function appReviewStatusLabel(
 }
 
 function businessVerificationStatusLabel(
-  status: ExistingSummary["businessVerificationStatus"] | undefined,
+  status: ProviderConfigSummary["businessVerificationStatus"] | undefined,
   tr: Translator,
 ): string {
   switch (status) {

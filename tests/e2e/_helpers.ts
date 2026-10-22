@@ -164,6 +164,7 @@ export async function devSeed(
     socialAnalyticsFixture?: boolean;
     includeDeliveryMediaFixture?: boolean;
     enableTrendRadar?: boolean;
+    agencyAiFixture?: boolean;
     visualFixture?: boolean;
     communityInboxFixture?: boolean;
     advertisingReportingFixture?: boolean;
@@ -191,6 +192,7 @@ export async function devSeed(
           ? { includeDeliveryMediaFixture: options.includeDeliveryMediaFixture }
           : {}),
         ...(options.enableTrendRadar ? { enableTrendRadar: true } : {}),
+        ...(options.agencyAiFixture ? { agencyAiFixture: true } : {}),
         ...(options.visualFixture ? { visualFixture: true } : {}),
         ...(options.advertisingReportingFixture ? { advertisingReportingFixture: true } : {}),
         ...(options.communityInboxFixture ? { communityInboxFixture: true } : {}),
@@ -261,6 +263,7 @@ export async function bootstrapTestSession(
     authRole?: "agency_admin" | "user";
     socialAnalyticsFixture?: boolean;
     enableTrendRadar?: boolean;
+    agencyAiFixture?: boolean;
     visualFixture?: boolean;
     communityInboxFixture?: boolean;
     advertisingReportingFixture?: boolean;

@@ -99,6 +99,7 @@
     "system": "حدث نظام"
   },
   "agency": "الوكالة",
+  "activeAgencyLabel": "الحالية",
   "agencyNameLabel": "الاسم",
   "agencyAdminLabel": "مسؤول",
   "workspaceCount": "مساحات العمل",

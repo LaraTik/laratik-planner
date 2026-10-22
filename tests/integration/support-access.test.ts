@@ -150,6 +150,42 @@ describe("M3.6 — support access workflow (integration)", () => {
     ).rejects.toMatchObject({ code: support.SupportAccessErrorCode.NotAgencyAdmin });
   });
 
+  it("rejects an agency admin deciding a request outside the active agency scope", async () => {
+    const platform = await seedPlatformAdmin();
+    const first = await seedAgencyAdminAndAgency("scope-first");
+    const second = await seedAgencyAdminAndAgency("scope-second");
+    const request = await support.createSupportAccessRequest(platform, {
+      ticketReference: "SUP-SCOPE-1",
+      reason: "Reviewing the agency-scoped approval path.",
+      targetAgencyId: first.agencyId,
+      scopeMetadataOnly: true,
+      downloadsRequested: false,
+      requestedDurationHours: 1,
+    });
+
+    await expect(
+      support.decideSupportAccessRequest(
+        { id: second.adminId },
+        request.id,
+        "approved",
+        { reason: "Wrong active agency.", grantDownloads: false },
+        second.agencyId,
+      ),
+    ).rejects.toMatchObject({ code: support.SupportAccessErrorCode.NotFound });
+
+    const [unchanged] = await db
+      .select()
+      .from(schema.supportAccessRequests)
+      .where(eq(schema.supportAccessRequests.id, request.id))
+      .limit(1);
+    expect(unchanged?.status).toBe("pending");
+    const grants = await db
+      .select()
+      .from(schema.supportAccessGrants)
+      .where(eq(schema.supportAccessGrants.requestId, request.id));
+    expect(grants).toHaveLength(0);
+  });
+
   it("lets Support request while reserving third-party revoke for Owners", async () => {
     const requester = await seedPlatformAdmin("support_operator");
     const agencyOperator = await seedPlatformAdmin("agency_operator");

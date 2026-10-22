@@ -453,11 +453,20 @@ describe("updateNotificationPreferences (FEAT-07) — §14 contract alias", () =
       delivery: { inAppEnabled: true, emailEnabled: false },
       ready_to_publish: { inAppEnabled: true, emailEnabled: false },
       mention: { inAppEnabled: true, emailEnabled: true },
-      system: { inAppEnabled: true, emailEnabled: false },
+      system: { inAppEnabled: false, emailEnabled: true },
     } as const;
     await updateNotificationPreferences("user-1", { prefs, dailyDigest: true });
     const inserts = state.insertCalls.filter((c) => c.table === "insert");
     expect(inserts.length).toBe(11);
+    expect(state.transactionCalls).toBe(1);
+    expect(
+      inserts.find((entry) => (entry.values as { kind?: string }).kind === "system")?.values,
+    ).toMatchObject({
+      kind: "system",
+      inAppEnabled: true,
+      emailEnabled: false,
+      digestEnabled: true,
+    });
   });
 });
 

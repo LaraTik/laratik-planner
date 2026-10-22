@@ -171,6 +171,8 @@ vi.mock("@/lib/usage", async () => {
 const {
   enforceAiBudget,
   reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
   loadEnabledCapabilities,
   getUserDailyBudgetSnapshot,
   AI_CAPABILITIES,
@@ -385,6 +387,68 @@ describe("loadEnabledCapabilities", () => {
     expect(out.size).toBe(1);
     expect(out.has("completeness_check")).toBe(true);
     expect(out.has("caption_drafts")).toBe(false);
+  });
+});
+
+describe("releaseAiBudgetReservation", () => {
+  it("refunds only token reservations and keeps request counters untouched", async () => {
+    recordUsageMock.mockClear();
+
+    const released = await releaseAiBudgetReservation({
+      agencyId,
+      inputTokens: 1200,
+      outputTokens: 600,
+    });
+
+    expect(released).toBe(true);
+    expect(recordUsageMock.mock.calls.map((call) => call.slice(1))).toEqual([
+      [agencyId, "ai_input_tokens_month", -1200],
+      [agencyId, "ai_output_tokens_month", -600],
+    ]);
+  });
+
+  it("attempts both refunds and reports a failed counter release", async () => {
+    recordUsageMock.mockClear();
+    recordUsageMock.mockRejectedValueOnce(new Error("counter unavailable"));
+
+    const released = await releaseAiBudgetReservation({
+      agencyId,
+      inputTokens: 10,
+      outputTokens: 20,
+    });
+
+    expect(released).toBe(false);
+    expect(recordUsageMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("recordAiUsageEvent", () => {
+  it("stores request metadata and a deduplicated context-category manifest", async () => {
+    await recordAiUsageEvent({
+      agencyId,
+      workspaceId: "44444444-4444-4444-8444-444444444444",
+      userId,
+      capability: "monthly_planning_copilot",
+      model: "MiniMax-M3",
+      inputTokens: 120,
+      outputTokens: 45,
+      requestId,
+      succeeded: true,
+      contextCategories: ["monthly_planning_session", "brand_profile", "monthly_planning_session"],
+    });
+
+    expect(dbState.insertCalls.at(-1)?.values).toMatchObject({
+      agencyId,
+      workspaceId: "44444444-4444-4444-8444-444444444444",
+      userId,
+      capability: "monthly_planning_copilot",
+      model: "MiniMax-M3",
+      inputTokens: 120,
+      outputTokens: 45,
+      requestId,
+      succeeded: true,
+      contextManifest: { categories: ["monthly_planning_session", "brand_profile"] },
+    });
   });
 });
 

@@ -6,7 +6,7 @@ import {
   markAllNotificationsRead,
   markNotificationsRead,
   MarkReadSchema,
-} from "@/lib/notifications/service";
+} from "@/lib/notifications/inbox";
 import { notificationsUserTag } from "@/lib/notifications/cache";
 
 /**

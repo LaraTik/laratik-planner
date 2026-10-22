@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-import { bootstrapTestSession, type SeedResult } from "./_helpers";
+import { bootstrapTestSession, devSeed, devSignIn, type SeedResult } from "./_helpers";
 
 /**
  * Per-route axe-core scan for the authenticated app shell.
@@ -103,6 +103,32 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app/workspaces");
     await expectClean("/app/workspaces", page);
+  });
+
+  test("platform-only context does not render tenant home or workspace list", async ({ page }) => {
+    const stamp = Date.now();
+    const email = `e2e-workspace-index-platform-${stamp}@laratik.local`;
+    await devSeed(page.request, {
+      email,
+      agencyAdmin: false,
+      platformRole: "platform_owner",
+      agencySlug: `workspace-index-one-${stamp}`,
+      workspaceSlug: `workspace-index-one-${stamp}`,
+    });
+    await devSeed(page.request, {
+      email,
+      agencyAdmin: false,
+      platformRole: "platform_owner",
+      agencySlug: `workspace-index-two-${stamp}`,
+      workspaceSlug: `workspace-index-two-${stamp}`,
+    });
+    await devSignIn(page.request, { email, role: "user" });
+    await page.context().clearCookies({ name: "laratik_active_agency" });
+
+    await page.goto("/app");
+    await expect(page).toHaveURL(/\/app\/platform(?:$|\?)/);
+    await page.goto("/app/workspaces");
+    await expect(page).toHaveURL(/\/app\/platform(?:$|\?)/);
   });
 
   test("@a11y /app/media has no critical violations", async ({ page }) => {
@@ -246,6 +272,13 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await bootstrapTestSession(page);
     await page.goto("/app/agency-settings/plan");
     await expectClean("/app/agency-settings/plan", page);
+  });
+
+  test("@a11y agency support request review has no critical violations", async ({ page }) => {
+    await bootstrapTestSession(page);
+    await page.goto("/app/agency-settings/plan/support");
+    await expect(page.getByTestId("agency-support-no-pending")).toBeVisible();
+    await expectClean("/app/agency-settings/plan/support", page);
   });
 
   test("@a11y agency social settings has no critical violations", async ({ page }) => {

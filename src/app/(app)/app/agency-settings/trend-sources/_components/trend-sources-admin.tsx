@@ -24,7 +24,6 @@ type HealthRow = {
   sourceKey: string;
   circuitState: string;
   lastSuccessAt: string | null;
-  lastError: { code: string; message: string; at: string } | null;
 };
 
 /**

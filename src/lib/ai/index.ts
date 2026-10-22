@@ -15,6 +15,8 @@ export {
   loadEnabledCapabilities,
   enforceAiBudget,
   reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
   getUserDailyBudgetSnapshot,
   AiBudgetReservationSchema,
 } from "./governance";

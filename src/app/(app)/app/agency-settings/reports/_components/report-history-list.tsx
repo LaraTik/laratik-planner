@@ -5,25 +5,11 @@ import Link from "next/link";
 import { Download, History as HistoryIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { ReportRequestRow } from "@/lib/reports/storage";
 
-// Inline translator type — kept local so this component has no
-// dependency on `tForActive()` (it only needs to format a string).
-interface Translator {
-  (key: string, params?: Record<string, string | number>): string;
-}
-
-interface Translator {
-  (key: string, params?: Record<string, string | number>): string;
-}
-
-export function ReportHistoryList({
-  entries,
-  translator: t,
-}: {
-  entries: ReadonlyArray<ReportRequestRow>;
-  translator: Translator;
-}) {
+export function ReportHistoryList({ entries }: { entries: ReadonlyArray<ReportRequestRow> }) {
+  const t = useLocaleT();
   if (entries.length === 0) {
     return (
       <div

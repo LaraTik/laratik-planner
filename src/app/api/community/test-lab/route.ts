@@ -12,19 +12,21 @@ import {
   runCommunityTestLab,
 } from "@/lib/community/ai-test-lab";
 import { db } from "@/lib/db";
-import { aiFeatureSettings, aiUsageEvents } from "@/lib/db/schema";
+import { aiFeatureSettings } from "@/lib/db/schema";
 import {
   enforceAiBudget,
   getActiveApiKey,
   loadEnabledCapabilities,
   reconcileAiBudget,
+  releaseAiBudgetReservation,
+  recordAiUsageEvent,
   type ChatResult,
 } from "@/lib/ai";
 import { getEffectiveEntitlement, LimitExceededError } from "@/lib/entitlements";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
 import { mutatingApiHeaders } from "@/lib/security/headers";
-import { recordUsage } from "@/lib/usage";
 import { serverEnv } from "@/lib/validation/env";
+import { captureError } from "@/lib/observability/sentry";
 import { randomUUID } from "node:crypto";
 
 export const dynamic = "force-dynamic";
@@ -177,7 +179,7 @@ export async function POST(request: NextRequest) {
     });
     reserved = false;
 
-    await db.insert(aiUsageEvents).values({
+    await recordAiUsageEvent({
       agencyId: workspace.agencyId,
       workspaceId: workspace.id,
       userId: actor.id,
@@ -187,9 +189,7 @@ export async function POST(request: NextRequest) {
       outputTokens: actualOutput,
       requestId,
       succeeded: true,
-      contextManifest: {
-        categories: ["community_message", "community_scenario", "simulation_only"],
-      },
+      contextCategories: ["community_message", "community_scenario", "simulation_only"],
     });
 
     return NextResponse.json(
@@ -204,28 +204,30 @@ export async function POST(request: NextRequest) {
       );
     }
     if (reserved) {
-      await Promise.allSettled([
-        recordUsage(db, workspace.agencyId, "ai_input_tokens_month", -estimatedInput),
-        recordUsage(db, workspace.agencyId, "ai_output_tokens_month", -outputReservation),
-      ]);
-    }
-    await db
-      .insert(aiUsageEvents)
-      .values({
+      const released = await releaseAiBudgetReservation({
         agencyId: workspace.agencyId,
-        workspaceId: workspace.id,
-        userId: actor.id,
-        capability: "community_reply_drafts",
-        model: serverEnv.MINIMAX_MODEL,
-        inputTokens: 0,
-        outputTokens: 0,
-        requestId,
-        succeeded: false,
-        contextManifest: {
-          categories: ["community_message", "community_scenario", "simulation_only"],
-        },
-      })
-      .catch(() => undefined);
+        inputTokens: estimatedInput,
+        outputTokens: outputReservation,
+      });
+      if (!released)
+        captureError(
+          "ai.budget_release_failed",
+          new Error("Failed to release AI token reservation"),
+          { requestId, userId: actor.id, workspaceId: workspace.id },
+        );
+    }
+    await recordAiUsageEvent({
+      agencyId: workspace.agencyId,
+      workspaceId: workspace.id,
+      userId: actor.id,
+      capability: "community_reply_drafts",
+      model: serverEnv.MINIMAX_MODEL,
+      inputTokens: 0,
+      outputTokens: 0,
+      requestId,
+      succeeded: false,
+      contextCategories: ["community_message", "community_scenario", "simulation_only"],
+    }).catch(() => undefined);
     return errorResponse("community_test_lab_failed", 502);
   }
 }

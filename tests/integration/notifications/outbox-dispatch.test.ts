@@ -129,3 +129,48 @@ describe("notification outbox dispatch concurrency", () => {
     }
   });
 });
+
+describe("notification preference transaction boundary", () => {
+  it("rolls back earlier preference rows if one kind write fails", async () => {
+    const { user } = await seedWorkspaceNotification();
+    await db.execute(sql`
+      CREATE OR REPLACE FUNCTION test_fail_notification_preference_insert() RETURNS trigger
+      LANGUAGE plpgsql AS $$
+      BEGIN
+        IF NEW.kind::text = 'mention' THEN
+          RAISE EXCEPTION 'forced preference write failure';
+        END IF;
+        RETURN NEW;
+      END;
+      $$
+    `);
+    await db.execute(sql`
+      CREATE TRIGGER test_fail_notification_preference_insert
+      BEFORE INSERT ON notification_preference
+      FOR EACH ROW EXECUTE FUNCTION test_fail_notification_preference_insert()
+    `);
+
+    try {
+      await expect(
+        notifications.setNotificationPreferencesForUser(user.id, {
+          prefs: {
+            assignment: { inAppEnabled: true, emailEnabled: false },
+            mention: { inAppEnabled: false, emailEnabled: true },
+          },
+          dailyDigest: false,
+        }),
+      ).rejects.toThrow(/mention/);
+
+      const savedRows = await db
+        .select({ kind: schema.notificationPreferences.kind })
+        .from(schema.notificationPreferences)
+        .where(sql`${schema.notificationPreferences.userId} = ${user.id}`);
+      expect(savedRows).toEqual([]);
+    } finally {
+      await db.execute(
+        sql`DROP TRIGGER IF EXISTS test_fail_notification_preference_insert ON notification_preference`,
+      );
+      await db.execute(sql`DROP FUNCTION IF EXISTS test_fail_notification_preference_insert()`);
+    }
+  });
+});

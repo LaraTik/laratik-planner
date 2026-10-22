@@ -22,7 +22,11 @@ test.describe("Workspace navigation (admin)", () => {
     await acmeWorkspace.click();
     await expect(page).toHaveURL(/\/app\/a\/test-agency\/w\/acme$/);
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
-    await expect(page.getByRole("button", { name: /Active workspace: Acme/ })).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await expect(page.locator('header a[href="/app/a/test-agency/w/acme"]')).toBeVisible();
+    } else {
+      await expect(page.getByRole("button", { name: /Active workspace: Acme/ })).toBeVisible();
+    }
     // The planning + calendar shortcuts must be present
     await expect(page.getByRole("link", { name: /Planning/i }).first()).toBeVisible();
   });
@@ -52,9 +56,15 @@ test.describe("Workspace navigation (admin)", () => {
     // After redirect, we should be on the new workspace's overview
     await page.waitForURL(new RegExp(`/app/a/test-agency/w/${uniqueSlug}$`), { timeout: 10_000 });
     await expect(page.getByRole("heading", { name: /^Overview / })).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /Active workspace: My New Brand/ }),
-    ).toBeVisible();
+    if ((page.viewportSize()?.width ?? 1280) < 768) {
+      await expect(
+        page.locator(`header a[href="/app/a/test-agency/w/${uniqueSlug}"]`),
+      ).toBeVisible();
+    } else {
+      await expect(
+        page.getByRole("button", { name: /Active workspace: My New Brand/ }),
+      ).toBeVisible();
+    }
 
     // The new workspace must also appear in the list
     await page.goto("/app/workspaces");
@@ -87,6 +97,8 @@ test.describe("Workspace non-member experience", () => {
 });
 
 test.describe("Workspace switcher keyboard (sidebar)", () => {
+  test.skip(({ isMobile }) => isMobile, "These cases exercise the desktop sidebar switcher.");
+
   test("Enter on the trigger opens the listbox; arrow keys move aria-activedescendant", async ({
     page,
   }) => {

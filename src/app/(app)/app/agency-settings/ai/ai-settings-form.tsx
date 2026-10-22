@@ -213,22 +213,22 @@ export function AiSettingsForm({
             </fieldset>
           </div>
 
-          {state.error ? (
+          {state.errorCode ? (
             <p
               role="alert"
               data-testid="ai-settings-error"
               className="text-body text-danger mt-4 font-semibold"
             >
-              {state.error}
+              {t(`agencyAi.actionErrors.${state.errorCode}`)}
             </p>
           ) : null}
-          {state.saved ? (
+          {state.savedCode ? (
             <p
               role="status"
               data-testid="ai-settings-saved"
               className="text-body text-success mt-4 font-semibold"
             >
-              {state.saved}
+              {t(`agencyAi.actionFeedback.${state.savedCode}`)}
             </p>
           ) : null}
 
@@ -276,14 +276,18 @@ export function AiSettingsForm({
             tone={lastTestOk === null ? "muted" : lastTestOk ? "success" : "danger"}
           />
         </dl>
-        {testState.error ? (
+        {testState.errorCode ? (
           <p role="alert" className="text-body text-danger mt-3 font-semibold">
-            {testState.error}
+            {t(`agencyAi.actionErrors.${testState.errorCode}`)}
           </p>
         ) : null}
-        {testState.saved ? (
+        {testState.savedCode ? (
           <p role="status" className="text-body text-success mt-3 font-semibold">
-            {testState.saved}
+            {testState.savedCode === "connection_ok" && testState.latencyMs != null
+              ? t("agencyAi.actionFeedback.connection_ok_with_latency", {
+                  latency: testState.latencyMs,
+                })
+              : t(`agencyAi.actionFeedback.${testState.savedCode}`)}
           </p>
         ) : null}
       </Card>

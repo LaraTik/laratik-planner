@@ -56,6 +56,11 @@ describe("agency-settings page structure", () => {
     expect(source).toMatch(/testId="agency-service-sentry"/);
   });
 
+  it("treats a missing entitlement as unavailable but lets operational failures reach the route boundary", () => {
+    expect(source).toContain("isCommunityInboxPlanIncluded(agencyId)");
+    expect(source).not.toContain("getEffectiveEntitlement({ agencyId }).catch");
+  });
+
   it("renders a forbidden fallback with a back link for non-admin actors", () => {
     expect(source).toMatch(/data-testid="agency-settings-forbidden"/);
   });

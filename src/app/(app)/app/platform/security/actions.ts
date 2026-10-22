@@ -8,7 +8,6 @@ import { db } from "@/lib/db";
 import { agencies } from "@/lib/db/schema";
 import {
   createSupportAccessRequest,
-  decideSupportAccessRequest,
   expireStaleSupportAccessGrants,
   listActiveGrantsForActor,
   listRecentAuditForActor,
@@ -25,9 +24,9 @@ import { PermissionDeniedError } from "@/lib/auth/policy";
 /**
  * M3.4 — Platform console support-access actions.
  *
- * These are the only mutations a platform admin (or, where
- * noted, an agency admin) can run on the support-access
- * surface. The functions follow the existing
+ * These are platform-side mutations for the support-access
+ * surface. Agency admins decide requests from their own
+ * agency settings route. The functions follow the existing
  * (app)/app/platform/STAR/actions.ts pattern: thin wrappers over
  * the service-layer helpers that the UI calls, with rate
  * limiting, error translation, and revalidatePath baked in.
@@ -111,37 +110,6 @@ export async function createSupportAccessRequestFormAction(
     requestedDurationHours: Number(stringValue("requestedDurationHours")),
     downloadsRequested: formData.get("downloadsRequested") === "on",
   });
-}
-
-const DecideFormSchema = z.object({
-  requestId: z.string().uuid(),
-  decision: z.enum(["approved", "rejected"]),
-  reason: z.string().trim().min(3).max(2000),
-  grantDownloads: z.boolean().default(false),
-});
-
-export async function decideSupportAccessRequestAction(input: z.input<typeof DecideFormSchema>) {
-  const { actor } = await requirePlatformActor();
-  const parsed = DecideFormSchema.parse(input);
-  const limit = await enforceRateLimit({
-    scope: "support_access_decision",
-    subject: actor.id,
-    actorId: actor.id,
-  });
-  if (!limit.allowed) {
-    return { ok: false as const, error: "Too many decisions. Try again shortly." };
-  }
-  try {
-    const result = await decideSupportAccessRequest(actor, parsed.requestId, parsed.decision, {
-      reason: parsed.reason,
-      grantDownloads: parsed.grantDownloads,
-    });
-    revalidatePath("/app/platform/security");
-    revalidatePath("/app/agency-settings/plan");
-    return { ok: true as const, ...result };
-  } catch (e) {
-    return translateSupportError(e);
-  }
 }
 
 const RevokeFormSchema = z.object({
