@@ -3742,3 +3742,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No success response, route, permission, or persisted-data behavior changed.
   Browser/visual release checks, full route review, Firefox, and independent
   verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize Brand Kit template failures
+
+- Unexpected publishing-template persistence failures now emit sanitized
+  diagnostics and return stable safe copy. Idempotent duplicate handling is
+  unchanged; regression coverage proves a credential-shaped database URL is
+  absent from the caller's action state.
+- Focused action tests passed 48/48; the commit hook passed 90 affected tests.
+  On clean SHA `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`, `pnpm verify`
+  passed formatting, ESLint, TypeScript, 592 unit files / 5,146 tests, and
+  production build.
+- No route, permission, success, or persisted-data behavior changed. Full
+  browser/visual coverage, manual route review, Firefox, database evidence for
+  unrelated open items, and independent verification remain open. AD-002
+  remains **In Progress**.

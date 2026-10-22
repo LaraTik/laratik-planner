@@ -2083,6 +2083,18 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Brand Kit template failure privacy — `4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`
+
+The focused Brand Kit action suite passed 48/48, including a fake Postgres URL
+with a credential that is absent from the returned action state. The commit
+hook passed TypeScript and 90 affected tests. On this clean SHA,
+`pnpm verify` passed formatting, ESLint, TypeScript, 592 unit files / 5,146
+tests, and production build. Unexpected publishing-template failures now
+return stable safe copy and are recorded through the sanitized logger. No
+success or duplicate-template behavior changed. Browser/visual checks, route
+review, Firefox, disposable-Postgres evidence for unrelated outstanding
+database items, and independent verification remain open.
+
 ## Assignment-target authorization fix
 
 Implementation SHA: `2bf99cb39238ee122f9f92e3e31be8cee9b1d02e`

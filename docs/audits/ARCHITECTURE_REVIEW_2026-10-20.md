@@ -2795,3 +2795,18 @@ including formatting, lint, TypeScript, unit tests, and production build. No
 success result, route, permission, or persisted-data contract changed. Full
 browser/visual release coverage, manual route review, Firefox, and independent
 verification remain open; AD-002 remains **In Progress**.
+
+## A54 — Brand Kit template failures exposed persistence details
+
+**Priority: P2 — operational privacy and reliable user feedback.** The
+publishing-template server action returned any thrown error message to the
+caller. Database errors can include host, schema, or credential details. The
+action now records unexpected failures through the sanitized logger and
+returns stable safe copy. A regression test uses a credential-shaped database
+URL and confirms it is absent from the returned state. Focused action coverage
+passed 48/48; the pre-commit affected set passed 90/90. On clean SHA
+`4b8ca2611550a71a34aeee4b37f7c0fba485ebcd`, `pnpm verify` passed formatting,
+lint, TypeScript, 592 unit files / 5,146 tests, and production build. No
+template success or duplicate-handling behavior changed. Browser/visual
+release coverage, manual route review, Firefox, database integration evidence,
+and independent verification remain open; AD-002 remains **In Progress**.
