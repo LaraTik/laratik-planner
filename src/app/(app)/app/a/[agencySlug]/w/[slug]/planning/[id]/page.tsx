@@ -68,6 +68,7 @@ import { WorkflowSheet } from "@/components/planning/workflow-rail";
 import { PlanningDetailShell } from "./planning-detail-shell";
 import { DeliverySection } from "./delivery-section";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
+import { AiAssistanceSection } from "./ai-assistance-section";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { db } from "@/lib/db";
@@ -1208,19 +1209,23 @@ export default async function ContentDetailPage({
                     <div className="flex items-center gap-2">
                       {canEdit ? (
                         <AiAssistancePanel
-                          agencySlug={agencySlug}
-                          workspaceSlug={slug}
-                          contentItemId={item.id}
-                          contentStatus={item.status}
-                          isManager={actorRoles.isManager}
-                          isPlanner={actorRoles.isPlanner}
-                          enabledCapabilities={enabledCapabilities}
-                          agencyEnabled={agencyEnabled}
-                          hasKey={hasKey}
-                          currentBrief={item.brief ?? ""}
-                          {...(linkedTrend
-                            ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
-                            : {})}
+                          content={
+                            <AiAssistanceSection
+                              agencySlug={agencySlug}
+                              workspaceSlug={slug}
+                              contentItemId={item.id}
+                              contentStatus={item.status}
+                              isManager={actorRoles.isManager}
+                              isPlanner={actorRoles.isPlanner}
+                              enabledCapabilities={enabledCapabilities}
+                              agencyEnabled={agencyEnabled}
+                              hasKey={hasKey}
+                              currentBrief={item.brief ?? ""}
+                              {...(linkedTrend
+                                ? { trendContext: { id: linkedTrend.id, label: linkedTrend.label } }
+                                : {})}
+                            />
+                          }
                           {...(researchLinks[0]
                             ? {
                                 researchContext: {
