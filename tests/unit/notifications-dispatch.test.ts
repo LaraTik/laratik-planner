@@ -476,7 +476,7 @@ describe("updateNotificationPreferences (FEAT-07) — §14 contract alias", () =
 });
 
 // ─── FEAT-10 — email dispatcher (GAP-FULL-REVIEW-2026-08-25) ──────────────
-const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
 
 describe("dispatchEmailOnce (FEAT-10)", () => {
   // The dispatcher needs:

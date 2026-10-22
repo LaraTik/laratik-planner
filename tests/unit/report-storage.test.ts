@@ -14,6 +14,8 @@ afterEach(async () => {
 });
 
 describe("report storage retention", () => {
+  // This contract performs 101 filesystem writes; allow extra time when the
+  // full suite is running alongside other I/O tests.
   it("deletes PDF files when entries fall outside the 100-report history", async () => {
     temporaryDirectory = await mkdtemp(join(tmpdir(), "planner-report-storage-"));
     process.chdir(temporaryDirectory);
@@ -36,7 +38,7 @@ describe("report storage retention", () => {
     await expect(
       readFile(join(temporaryDirectory, "data/reports", `${first.id}.pdf`)),
     ).rejects.toMatchObject({ code: "ENOENT" });
-  });
+  }, 15_000);
 });
 
 function reportRow() {

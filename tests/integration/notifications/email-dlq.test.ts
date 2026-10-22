@@ -132,7 +132,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     // First four ticks: the email delivery stays unprocessed,
     // emailAttemptCount climbs, and in-app state remains independent.
     for (let i = 1; i <= 4; i++) {
-      const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+      const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
       await dispatchEmailOnce();
       const [row] = await db
         .select({
@@ -149,7 +149,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
 
     // Fifth tick: the per-recipient attempt count reaches 5 and the
     // delivery is marked processed with [poisoned].
-    const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+    const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
     await dispatchEmailOnce();
     const [poisoned] = await db
       .select({
@@ -212,7 +212,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
       return { id: "concurrent-send-1" };
     });
 
-    const { dispatchEmailOnce } = await import("@/lib/notifications/service");
+    const { dispatchEmailOnce } = await import("@/lib/notifications/email-dispatch");
     const firstTick = dispatchEmailOnce();
     await sendStarted;
     const secondResult = await dispatchEmailOnce();

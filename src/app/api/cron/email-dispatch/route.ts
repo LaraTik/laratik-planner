@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { authorizeCronRequest } from "@/lib/cron/route-auth";
-import { dispatchEmailOnce } from "@/lib/notifications/service";
+import { dispatchEmailOnce } from "@/lib/notifications/email-dispatch";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { logError } from "@/lib/observability/logger";
 

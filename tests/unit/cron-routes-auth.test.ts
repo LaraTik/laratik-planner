@@ -18,8 +18,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/lib/cron/auth", () => ({ isCronAuthorized: mocks.isCronAuthorized }));
-vi.mock("@/lib/notifications/service", () => ({
+vi.mock("@/lib/notifications/email-dispatch", () => ({
   dispatchEmailOnce: mocks.dispatchEmailOnce,
+}));
+vi.mock("@/lib/notifications/service", () => ({
   dispatchOutboxOnce: mocks.dispatchOutboxOnce,
 }));
 vi.mock("@/features/content/server", () => ({
