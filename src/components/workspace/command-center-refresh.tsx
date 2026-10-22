@@ -4,7 +4,10 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { refreshWorkspaceSocialDataAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions";
+
+export type WorkspaceSocialRefreshAction = (
+  slug: string,
+) => Promise<{ error?: string; synced?: number; failed?: number }>;
 
 type CommandCenterRefreshLabels = {
   refresh: string;
@@ -21,9 +24,11 @@ function countCopy(template: string, synced: number, failed: number): string {
 export function CommandCenterRefresh({
   slug,
   labels,
+  refreshAction,
 }: {
   slug: string;
   labels: CommandCenterRefreshLabels;
+  refreshAction: WorkspaceSocialRefreshAction;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -32,7 +37,7 @@ export function CommandCenterRefresh({
   function refresh() {
     setStatus(null);
     startTransition(async () => {
-      const result = await refreshWorkspaceSocialDataAction(slug);
+      const result = await refreshAction(slug);
       if ("error" in result && result.error) {
         setStatus(labels.error);
         return;

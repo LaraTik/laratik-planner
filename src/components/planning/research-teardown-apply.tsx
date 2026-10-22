@@ -3,7 +3,16 @@
 import * as React from "react";
 import { Check, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { applyResearchTeardownAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
+
+type ApplyResearchTeardownInput = {
+  workspaceSlug: string;
+  contentItemId: string;
+  researchTeardownId: string;
+};
+
+type ApplyResearchTeardownAction = (
+  input: ApplyResearchTeardownInput,
+) => Promise<{ ok?: boolean; appliedFields?: string[] }>;
 
 export function ResearchTeardownApply({
   workspaceSlug,
@@ -11,11 +20,13 @@ export function ResearchTeardownApply({
   researchTeardownId,
   editable,
   labels,
+  applyAction,
 }: {
   workspaceSlug: string;
   contentItemId: string;
   researchTeardownId: string;
   editable: boolean;
+  applyAction: ApplyResearchTeardownAction;
   labels: {
     title: string;
     description: string;
@@ -35,7 +46,7 @@ export function ResearchTeardownApply({
     setMessage(null);
     setError(false);
     startTransition(async () => {
-      const result = await applyResearchTeardownAction({
+      const result = await applyAction({
         workspaceSlug,
         contentItemId,
         researchTeardownId,

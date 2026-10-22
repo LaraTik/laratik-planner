@@ -31,6 +31,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { getCommandCenterSnapshot } from "@/lib/social/command-center-snapshot";
+import { refreshWorkspaceSocialDataAction } from "./channels/actions";
 import { workspaceBasePath } from "@/lib/urls";
 
 /**
@@ -445,6 +446,7 @@ export default async function WorkspaceOverviewPage({
         planningHref={`${workspaceBasePath(agencySlug, slug)}/planning`}
         workspaceSlug={slug}
         canRefresh={canRefreshSocial}
+        refreshAction={refreshWorkspaceSocialDataAction}
         savedResearchObservationIds={new Set(researchBookmarkRows.map((row) => row.observationId))}
         canSaveResearch={canSaveResearch}
         watchlist={watchlistRows.map((row) => ({

@@ -22,7 +22,10 @@ import { PlatformIcon } from "@/components/workspace/platform-icon";
 import { PostCaption, PostThumbnail } from "@/components/workspace/post-thumbnail";
 import { Sparkline } from "@/components/workspace/sparkline";
 import { cn } from "@/lib/utils";
-import { CommandCenterRefresh } from "@/components/workspace/command-center-refresh";
+import {
+  CommandCenterRefresh,
+  type WorkspaceSocialRefreshAction,
+} from "@/components/workspace/command-center-refresh";
 import { CommandCenterSectionNav } from "@/components/workspace/command-center-section-nav";
 import {
   CommandCenterContentInventory,
@@ -228,6 +231,7 @@ export function CommandCenterPanel({
   planningHref,
   workspaceSlug,
   canRefresh,
+  refreshAction,
   savedResearchObservationIds,
   canSaveResearch,
   watchlist,
@@ -246,6 +250,7 @@ export function CommandCenterPanel({
   planningHref: string;
   workspaceSlug: string;
   canRefresh: boolean;
+  refreshAction: WorkspaceSocialRefreshAction;
   savedResearchObservationIds: ReadonlySet<string>;
   canSaveResearch: boolean;
   watchlist: CommandCenterWatchlistAccount[];
@@ -323,6 +328,7 @@ export function CommandCenterPanel({
           {canRefresh ? (
             <CommandCenterRefresh
               slug={workspaceSlug}
+              refreshAction={refreshAction}
               labels={{
                 refresh: labels.refreshData,
                 refreshing: labels.refreshingData,

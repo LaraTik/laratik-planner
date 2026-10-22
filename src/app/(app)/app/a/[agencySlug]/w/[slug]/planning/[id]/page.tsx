@@ -49,6 +49,7 @@ import { ActivityWithFilters } from "@/components/planning/activity-with-filters
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
+import { applyResearchTeardownAction } from "../actions";
 import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
@@ -1088,6 +1089,7 @@ export default async function ContentDetailPage({
                           contentItemId={item.id}
                           researchTeardownId={linkedTeardown.teardownId}
                           editable={canEdit}
+                          applyAction={applyResearchTeardownAction}
                           labels={{
                             title: t("contentDetail.researchTeardownApply.title"),
                             description: t("contentDetail.researchTeardownApply.description"),
@@ -1146,6 +1148,7 @@ export default async function ContentDetailPage({
                         contentItemId={item.id}
                         researchTeardownId={linkedTeardown.teardownId}
                         editable={canEdit}
+                        applyAction={applyResearchTeardownAction}
                         labels={{
                           title: t("contentDetail.researchTeardownApply.title"),
                           description: t("contentDetail.researchTeardownApply.description"),
