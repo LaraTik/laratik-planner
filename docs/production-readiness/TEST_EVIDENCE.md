@@ -2751,3 +2751,16 @@ This focused rerun is after the implementation commit and against a dirty
 working tree. It is not exact-clean-SHA release evidence. Firefox coverage,
 visual reconciliation, route-by-route manual review, and independent
 **Verified** review remain open. Keep AD-002 **In Progress**.
+
+## Exact clean-SHA verification — `3d0612a249b980bc9fc232859444889122df70ed`
+
+On this clean commit, `pnpm verify` passed formatting, ESLint, TypeScript, all
+587 unit files / 5,118 tests, and the production build. The focused visual
+rerun also passed both affected cases (2/2): the Trends exact reference and
+the five-width Arabic/RTL workspace AI check. The full 265-case visual result
+remains 215/265 because 48 references still differ. Disposable-Postgres
+integration and migration-drill results are recorded for the implementation
+commit `cd4ce270a53a7381b2debd69da059028769fd821`; the intervening commit only
+changed visual test setup and evidence documentation. Firefox and route review
+remain open, so this does not clear the full release gates or assign
+**Verified** status.

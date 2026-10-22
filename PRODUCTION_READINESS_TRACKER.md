@@ -3519,5 +3519,19 @@ default framebuffer`, then consumes a CPU core without returning control;
   rerun (2/2), including the five-width Arabic/RTL matrix.
 - The 48 screenshot differences still require review against the active design
   source; no blanket snapshot refresh was made. Firefox, manual route review,
-  exact clean-SHA evidence, independent review, and push remain open. Status is
-  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+  the full release browser matrix, independent review, and push remain open.
+  Status is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+### Exact clean-SHA verification — `3d0612a249b980bc9fc232859444889122df70ed`
+
+- `pnpm verify` passed on the clean commit: formatting, ESLint, TypeScript,
+  587 unit files / 5,118 tests, and production build.
+- The focused visual rerun passed both affected cases (2/2), including all
+  five documented widths for Arabic/RTL workspace AI. The Trends exact
+  reference also passed.
+- Integration and all five migration-drill scenarios passed on
+  `cd4ce270a53a7381b2debd69da059028769fd821`; the following commit contains
+  only the visual harness correction and its evidence.
+- This is exact-SHA evidence for the grouped code checks, not release approval:
+  48 visual reference differences, Firefox, the full browser matrix, manual
+  route review, and independent **Verified** review remain open.
