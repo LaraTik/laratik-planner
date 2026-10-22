@@ -15,7 +15,7 @@ if (!process.env.TEST_DATABASE_URL) {
 }
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
-const sendEmailMock = vi.fn(async (): Promise<void> => {
+const sendEmailMock = vi.fn(async (): Promise<{ id: string } | null> => {
   throw new Error("simulated SMTP failure");
 });
 vi.mock("@/lib/email", () => ({
@@ -209,6 +209,7 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     sendEmailMock.mockImplementationOnce(async () => {
       signalStarted();
       await allowSendToFinish;
+      return { id: "concurrent-send-1" };
     });
 
     const { dispatchEmailOnce } = await import("@/lib/notifications/service");
