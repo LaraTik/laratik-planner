@@ -1,10 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
 import { researchWatchlists } from "@/lib/db/schema";
-import { getResearchContext } from "@/lib/research/context";
+import { getResearchManagerContext } from "@/lib/research/context";
+import { getAccessibleResearchWatchlist } from "@/lib/research/watchlist-access";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
 const bodySchema = z.object({
@@ -15,44 +15,21 @@ function errorResponse(error: string, status: number) {
   return NextResponse.json({ error }, { status, headers: mutatingApiHeaders() });
 }
 
-async function manageContext(workspaceSlug: string) {
-  const ctx = await getResearchContext(workspaceSlug);
-  if (!ctx) return { response: errorResponse("workspace_not_accessible", 403) };
-  if (
-    !(await hasWorkspaceRole(ctx.actor, ctx.workspace.id, ["workspace_manager", "content_planner"]))
-  ) {
-    return { response: errorResponse("forbidden", 403) };
-  }
-  return ctx;
-}
-
-async function canManageWatchlist(workspaceId: string, actorId: string, watchlistId: string) {
-  const [watchlist] = await db
-    .select({ id: researchWatchlists.id })
-    .from(researchWatchlists)
-    .where(
-      and(
-        eq(researchWatchlists.id, watchlistId),
-        eq(researchWatchlists.workspaceId, workspaceId),
-        or(
-          eq(researchWatchlists.shareScope, "workspace"),
-          eq(researchWatchlists.createdBy, actorId),
-        ),
-      ),
-    )
-    .limit(1);
-  return watchlist;
-}
-
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return errorResponse("invalid_body", 400);
   const { id } = await params;
-  const ctx = await manageContext(parsed.data.workspaceSlug);
-  if ("response" in ctx) return ctx.response;
-  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+  const ctx = await getResearchManagerContext(parsed.data.workspaceSlug);
+  if ("error" in ctx) return errorResponse(ctx.error, 403);
+  if (
+    !(await getAccessibleResearchWatchlist({
+      workspaceId: ctx.workspace.id,
+      actorId: ctx.actor.id,
+      watchlistId: id,
+    }))
+  ) {
     return errorResponse("watchlist_not_found", 404);
   }
 
@@ -75,9 +52,15 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return errorResponse("invalid_body", 400);
   const { id } = await params;
-  const ctx = await manageContext(parsed.data.workspaceSlug);
-  if ("response" in ctx) return ctx.response;
-  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+  const ctx = await getResearchManagerContext(parsed.data.workspaceSlug);
+  if ("error" in ctx) return errorResponse(ctx.error, 403);
+  if (
+    !(await getAccessibleResearchWatchlist({
+      workspaceId: ctx.workspace.id,
+      actorId: ctx.actor.id,
+      watchlistId: id,
+    }))
+  ) {
     return errorResponse("watchlist_not_found", 404);
   }
 

@@ -108,6 +108,18 @@ describe("research watchlist routes", () => {
     await expect(response.json()).resolves.toEqual({ error: "duplicate" });
   });
 
+  it("keeps the shared mutation role gate on watchlist creation", async () => {
+    mocks.hasWorkspaceRole.mockResolvedValue(false);
+
+    const response = await createWatchlist(
+      request({ workspaceSlug: "acme", name: "Private research" }),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "forbidden" });
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
   it("adds and removes a membership only after both records pass workspace scope", async () => {
     const limit = vi.fn().mockResolvedValue([
       {
@@ -194,5 +206,30 @@ describe("research watchlist routes", () => {
     expect(response.status).toBe(404);
     await expect(response.json()).resolves.toEqual({ error: "watchlist_not_found" });
     expect(mocks.update).not.toHaveBeenCalled();
+  });
+
+  it("hides private watchlists from other managers during member removal", async () => {
+    const query = {
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    mocks.select.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    const context = {
+      params: Promise.resolve({ id: "33333333-3333-4333-8333-333333333333" }),
+    };
+
+    const response = await removeMember(
+      routeRequest(
+        {
+          workspaceSlug: "acme",
+          accountId: "44444444-4444-4444-8444-444444444444",
+        },
+        "DELETE",
+      ),
+      context,
+    );
+
+    expect(response.status).toBe(404);
+    expect(mocks.delete).not.toHaveBeenCalled();
   });
 });
