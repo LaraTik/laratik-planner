@@ -159,6 +159,10 @@ route-level locale behavior.
   and build through `pnpm verify`, plus the service-specific checks required by
   the changed code. Run checks that mutate the same disposable database
   sequentially.
+- Keep `scripts/test-ownership.ts` current for route, unit-test, and visual
+  snapshot paths. Missing ownership intentionally escalates to the full suite;
+  add a selector regression with each new mapping so ordinary feature changes
+  stay focused without skipping the relevant browser contract.
 - Run the full five-browser and visual release suite once on the final code
   candidate. If that run exposes a code defect, fix it with focused regression
   coverage and rerun the affected browser area before repeating the release

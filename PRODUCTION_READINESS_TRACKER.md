@@ -3026,3 +3026,15 @@ full route review and release evidence remain open.
   visual/browser evidence, exact-clean-SHA evidence, and independent review
   remain open; `AD-002` remains **In Progress** and work is **Tested**, not
   **Verified**.
+
+## 2026-10-22 — Keep affected-test selection focused
+
+- Added the workspace-settings unit area to the workspace page owner and added
+  a regression proving settings-route changes select its deadline test. Added
+  a visual-regression owner for screenshot assets so visual baseline changes
+  no longer escalate the pre-commit unit layer to the full suite. Ownership
+  selection tests pass 23/23; the staged hook then selects the focused
+  architecture suite for ownership-only edits.
+- This keeps validation scope evidence-driven: the focused layer remains
+  mapped to the changed contract, and the full visual release suite remains a
+  separate milestone gate. No application behavior or route contract changed.
