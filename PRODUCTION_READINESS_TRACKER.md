@@ -3038,3 +3038,22 @@ full route review and release evidence remain open.
 - This keeps validation scope evidence-driven: the focused layer remains
   mapped to the changed contract, and the full visual release suite remains a
   separate milestone gate. No application behavior or route contract changed.
+
+## 2026-10-22 — Final grouped architecture verification
+
+- Grouped `pnpm verify` passed on clean code SHA
+  `690de91683e1d917b877009fe3684f41e0e56022`: formatting, repository lint,
+  strict TypeScript, 572 unit files / 5,060 tests, and the production build.
+- Existing disposable-Postgres integration and migration-drill evidence still
+  applies: this architecture batch adds no schema or migration changes.
+  Focused settings visuals pass 18/18; the earlier route accessibility and
+  deadline-hydration browser checks remain recorded above.
+- The affected-browser selector escalated to the full browser matrix because
+  shared route/test infrastructure and visual assets changed. That redundant
+  matrix attempt was stopped before browser assertions; it is not a pass. The
+  full five-browser release gate and full visual reconciliation remain open,
+  including the previously recorded local Firefox sandbox failure and 57
+  visual differences. No independent reviewer assigned **Verified**.
+- Architecture review remains **In Progress** / **Tested**, pending the open
+  route, browser, visual, and independent-review evidence. No production
+  deployment or main-branch merge is authorized by this milestone.
