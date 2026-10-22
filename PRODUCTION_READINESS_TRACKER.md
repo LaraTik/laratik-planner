@@ -3774,3 +3774,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   exact-HEAD grouped verification will be recorded at the next stable code
   checkpoint. No route, permission, success, or persisted-data contract
   changed. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize destructive-action audit failures
+
+- Reset-idea and workspace trend-data deletion audit records now store stable
+  `permission_denied` / `persistence_failure` codes instead of arbitrary
+  exception text. Focused destructive-action tests passed 10/10. The commit
+  hook escalated to the full unit suite because the existing reset-idea test
+  lacked ownership mapping; all 595 files / 5,153 tests passed at code SHA
+  `708630e7b007a9229916a17a3f9e86218e92b7dc`.
+- Added a content-area owner mapping and selector regression so reset-idea
+  changes now select focused tests. The architecture selector test passed
+  25/25 and the commit hook stayed in that focused area.
+- No schema, permission, destructive workflow, or audit outcome changed.
+  Final exact-SHA `pnpm verify`, Postgres/browser gates, and independent review
+  remain open. AD-002 remains **In Progress**.

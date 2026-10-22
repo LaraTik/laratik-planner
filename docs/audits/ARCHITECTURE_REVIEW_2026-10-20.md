@@ -2837,3 +2837,19 @@ lint, TypeScript, 592 unit files / 5,146 tests, and production build. No
 template success or duplicate-handling behavior changed. Browser/visual
 release coverage, manual route review, Firefox, database integration evidence,
 and independent verification remain open; AD-002 remains **In Progress**.
+
+## A57 — Destructive-action audit rows stored raw failure messages
+
+**Priority: P2 — audit privacy and safe operational history.** The reset-idea
+and workspace trend-data deletion actions already returned generic failures and
+captured diagnostics, but copied arbitrary exception messages into
+`security_audit_event.metadata.error_message`. The audit now stores stable
+`permission_denied` and `persistence_failure` codes for those paths. Regression
+coverage proves credential-shaped database details do not enter the audit
+payload. The destructive-action suites pass 10/10; the commit hook escalated
+to all 595 unit files / 5,153 tests because the existing reset-idea test had no
+ownership mapping, and that suite passed on clean code SHA
+`708630e7b007a9229916a17a3f9e86218e92b7dc`. No destructive behavior,
+permission, audit outcome, or schema changed. The reset-idea test is now
+explicitly owned by the content area, with selector coverage in
+`d6b4a82424f8ac41ef8cd06ff27bc41d6f8349d0`.

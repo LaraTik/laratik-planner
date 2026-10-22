@@ -2974,3 +2974,16 @@ copy. Key-management fallback errors follow the same policy. No success
 response, route, permission, or persisted-data contract changed. Full
 browser/visual checks, route review, Firefox, and independent verification
 remain open.
+
+## Destructive-action audit failure privacy — `708630e7b007a9229916a17a3f9e86218e92b7dc`
+
+The reset-idea and workspace trend-data deletion actions now record stable
+failure codes in audit metadata instead of raw permission or persistence
+exception text. Focused destructive-action tests passed 10/10. The commit hook
+escalated to the full unit suite because `tests/unit/reset-idea-action.test.ts`
+was unmapped; all 595 unit files / 5,153 tests passed, followed by a
+successful commit. The ownership gap was then closed in
+`d6b4a82424f8ac41ef8cd06ff27bc41d6f8349d0`, and its selector regression passed
+25/25. No schema or destructive-workflow behavior changed. Full `pnpm verify`
+at the final clean SHA, Postgres/browser gates, and independent verification
+remain open.
