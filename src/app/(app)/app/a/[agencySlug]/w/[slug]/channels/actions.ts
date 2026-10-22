@@ -10,6 +10,7 @@ import { ChannelCommandSchema } from "@/lib/channels/command";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { LimitExceededError, releaseCapacity, reserveCapacity } from "@/lib/entitlements";
+import { logError } from "@/lib/observability/logger";
 import {
   linkProfile,
   setConnectionStatus,
@@ -253,7 +254,8 @@ export async function finalizeMetaSelectionAction(
     });
   } catch (err) {
     if (err instanceof LimitExceededError) return { error: err.message };
-    return { error: err instanceof Error ? err.message : "Failed to link profiles." };
+    logError("social.channel_profile_link_failed", { err });
+    return { error: "Failed to link profiles." };
   }
   // _previous is the form prevState from useFormState; reserved.
   void _previous;
