@@ -15,6 +15,28 @@ Migrations are **forward-only and additive** by default. The system has no down-
 - `COMMENT ON TABLE / COLUMN` for schema-level documentation.
 - `CREATE OR REPLACE FUNCTION` for a trigger function that is **purely additive** (e.g. the `forbid_modify_audit_log()` family).
 
+### Index build strategy
+
+Choose the index strategy from the target table's production size and write
+traffic; do not choose it only from whether the table is new in the feature.
+
+- Use ordinary `CREATE INDEX` inside a Drizzle migration for a new or small
+  table, or when a reviewed maintenance window makes the write lock acceptable.
+- For an index on an existing, populated production table that must remain
+  writable during the build, put only `CREATE [UNIQUE] INDEX CONCURRENTLY`
+  statements in a standalone SQL file outside `src/lib/db/migrations/` and run
+  it through `scripts/migrate-concurrent.sh`. PostgreSQL rejects this command
+  inside a transaction, so it cannot be put in a Drizzle migration file.
+- Record the SQL file's SHA-256, target database, index names, preflight, result,
+  invalid-index cleanup if needed, and rollback command in
+  `docs/production-readiness/MIGRATION_DEPLOYMENT.md`. The standalone runner
+  deliberately does not update the Drizzle ledger; the deployment record is
+  its execution evidence. Verify the index is valid before deploying code that
+  depends on it.
+- Never edit a migration that has reached a shared or production database.
+  The older ordinary index builds remain historical migrations; new index
+  changes must follow the strategy above.
+
 **Requires an ADR in `docs/decisions/`:**
 
 - `ALTER TABLE ... DROP COLUMN` (any column).

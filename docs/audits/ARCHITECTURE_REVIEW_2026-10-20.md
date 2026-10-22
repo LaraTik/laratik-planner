@@ -417,6 +417,25 @@ checks server-side capture, the support reference, and the no-client-Sentry
 boundary. The old client-exposure finding is closed as a current source issue;
 this does not certify every authentication error payload for privacy.
 
+**Historical OTHER-10 reconciliation (2026-10-22).** The old review correctly
+identified that ordinary `CREATE INDEX` statements in a Drizzle migration can
+hold a write-blocking table lock. The repository now has
+`scripts/migrate-concurrent.sh` and a validated standalone runner for indexes
+that must be built while a populated table remains writable. The contributor
+guide previously did not tell authors when to use it, so its index strategy
+now distinguishes small/new tables from existing busy tables and requires a
+SHA-256, validity check, apply record, and rollback/cleanup evidence for the
+standalone path. Deployed migration files were not rewritten. Their historical
+lock duration cannot be established from source alone; no current runtime
+impact is inferred from the old count of index statements.
+
+The earlier OTHER-03 logging inventory is recorded as reviewed in the
+2026-10-22 direct-logging pass above. TEST-03 and FEAT-01/FEAT-02 were also
+reconciled above; their runtime/deployment evidence remains distinct from
+source-presence checks. A6 remains open for the rest of the historical report
+and the route/domain inventory rather than carrying these stale descriptions
+forward as current defects.
+
 ### A25 — Section headings used a non-existent typography utility
 
 **Priority: P2 — visual consistency.** The theme defines the

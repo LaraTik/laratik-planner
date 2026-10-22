@@ -2729,3 +2729,14 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   changed. Full verification and release browser/visual/manual review remain
   open; AD-002 remains **In Progress** and this work is **Tested**, not
   **Verified**.
+
+## 2026-10-22 — Reconcile historical migration index-lock finding
+
+The dedicated concurrent-index runner already prevents future production index
+builds from needing to run inside Drizzle's transaction. The authoring guide now
+states when to use the standalone runner and what execution, index-validity,
+cleanup, and rollback evidence to retain. Deployed migration files were left
+unchanged. The existing runner and journal-order regression suites pass 29/29;
+no database migration was executed. The exact current code was previously
+verified at implementation SHA `2d6aa2a081063360cc9eeba2e69045519f86673c`;
+full route review and release evidence remain open.

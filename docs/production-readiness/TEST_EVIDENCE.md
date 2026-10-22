@@ -1,5 +1,20 @@
 # Test and coverage evidence
 
+## Migration index-build authoring guidance — 2026-10-22
+
+Documentation now directs index builds on populated, active production tables
+to the standalone `CREATE INDEX CONCURRENTLY` runner and requires an execution
+record, index-validity check, and rollback/cleanup details. Existing deployed
+migrations were not changed.
+
+| Command / check                              | Result                                                                                   |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/unit/migrate-concurrent.test.ts`      | **Pass** — 24/24.                                                                        |
+| `tests/unit/migration-journal-order.test.ts` | **Pass** — 5/5.                                                                          |
+| Database migration execution                 | **Not run** — documentation-only change; the disposable Postgres service is unavailable. |
+
+No application or schema behavior changed in this documentation pass.
+
 ## Architecture review — route access and readiness — 2026-10-22
 
 Implementation SHA: `2d6aa2a081063360cc9eeba2e69045519f86673c` (clean).
