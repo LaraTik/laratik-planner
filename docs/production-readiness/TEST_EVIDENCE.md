@@ -2734,3 +2734,20 @@ attach its Juggler protocol, and the local Docker service returned an API 500
 before a containerized browser could be started. These are environment
 diagnostics; Firefox release coverage remains open and no application-level
 Firefox pass is claimed.
+
+## Full visual run and harness corrections — 2026-10-22
+
+The grouped full visual run reached all 265 cases: 215 passed and 50 failed.
+Forty-eight failures were screenshot differences against the current
+references. Two failures were confirmed harness issues: the Trends setup used
+the legacy workspace route and could redirect to `/app` before readiness; the
+Arabic workspace AI assertion matched both its sidebar item and its capability
+card. The Trends setup now uses the canonical tenant route, and the AI
+assertion scopes to the capability card. Both affected cases pass in a focused
+rerun (2/2), including the five-width Arabic/RTL sweep. The 48 reference
+differences still need visual review; no broad snapshot refresh was performed.
+
+This focused rerun is after the implementation commit and against a dirty
+working tree. It is not exact-clean-SHA release evidence. Firefox coverage,
+visual reconciliation, route-by-route manual review, and independent
+**Verified** review remain open. Keep AD-002 **In Progress**.

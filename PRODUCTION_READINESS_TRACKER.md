@@ -3506,3 +3506,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   also pass on the current worktree. Firefox, 57 known visual differences,
   route review, exact clean-SHA evidence, independent review, and commit/push
   remain open.
+
+## 2026-10-22 — Full visual reconciliation attempt and harness fixes
+
+- The grouped full visual run completed all 265 cases: 215 passed and 50
+  failed. Forty-eight failures are screenshot differences against the current
+  references. The remaining two were test-harness issues: Trends setup
+  navigated through a legacy workspace URL and could redirect to `/app`, and
+  the Arabic workspace AI assertion matched both the sidebar and its card.
+- Switched Trends setup to its canonical tenant-qualified route and scoped the
+  Arabic AI assertion to its capability card. Both cases pass in a focused
+  rerun (2/2), including the five-width Arabic/RTL matrix.
+- The 48 screenshot differences still require review against the active design
+  source; no blanket snapshot refresh was made. Firefox, manual route review,
+  exact clean-SHA evidence, independent review, and push remain open. Status is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.

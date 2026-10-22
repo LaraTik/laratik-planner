@@ -686,7 +686,7 @@ test.describe("visual regression (Workspace AI Arabic RTL)", () => {
       await expect(
         page.getByRole("heading", { name: "المساعدة بالذكاء الاصطناعي", level: 1 }),
       ).toBeVisible();
-      await expect(page.getByText("رادار الترندات")).toBeVisible();
+      await expect(page.getByTestId("ai-capability-trend_radar")).toContainText("رادار الترندات");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
