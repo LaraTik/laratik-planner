@@ -2882,3 +2882,14 @@ page construction and inside each server action. Review of the installed
 Auth.js redirect callback found no confirmed external redirect exploit; this
 change is boundary hardening. No provider, permission, or valid same-origin
 callback contract changed.
+
+## MCP brand-kit failure privacy — `b10bfd6380826287c814e9a3d694783de58b3e42`
+
+The MCP brand-kit integration suite passed 10/10 on the disposable
+`planner_test` database. Its source-fetch failure case includes a fake access
+token in the thrown network error and verifies that the token is redacted in
+the structured server log and absent from the returned item summary. On this
+clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 590 unit
+files / 5,137 tests, and the production build. The commit hook passed the 51
+MCP-related unit tests. No MCP tool contract or persisted-data behavior
+changed.

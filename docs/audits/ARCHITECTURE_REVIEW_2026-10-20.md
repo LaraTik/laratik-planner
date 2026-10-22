@@ -2724,6 +2724,8 @@ messages remain useful, permission failures receive generic copy, and unknown
 failures are now logged through the sanitized logger while returning a
 per-item message. The focused database-backed regression expands case 16 to
 include an exception containing a fake source URL token and proves it is not
-returned; its result is pending execution against `planner_test`. Grouped
-repository verification is pending. No MCP tool names, arguments, scopes, or
-success-result shape changed.
+returned (the MCP brand-kit integration suite passes 10/10 on `planner_test`).
+On clean commit `b10bfd6380826287c814e9a3d694783de58b3e42`, `pnpm verify`
+passed formatting, lint, TypeScript, 590 unit files / 5,137 tests, and
+production build. No MCP tool names, arguments, scopes, or success-result
+shape changed.

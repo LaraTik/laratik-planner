@@ -3669,3 +3669,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   changed. Full browser/visual evidence, remaining manual route review,
   Firefox, and independent verification remain open. AD-002 remains
   **In Progress**.
+
+## 2026-10-23 — Sanitize brand-kit MCP import failures
+
+- Logo fetch failures and per-item failures no longer return arbitrary error
+  messages. Safe `McpToolError` details remain available, permission failures
+  use generic copy, and unexpected failures go through the sanitized logger.
+- The focused MCP brand-kit database integration suite passed 10/10 against
+  the disposable `planner_test` database, including a fake source URL token
+  that is redacted in logs and absent from the returned result. On clean SHA
+  `b10bfd6380826287c814e9a3d694783de58b3e42`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 590 unit files / 5,137 tests, and the production build.
+  The commit hook passed 51 MCP-related tests.
+- No MCP tool contract or persisted-data behavior changed. Full browser/visual
+  release coverage, remaining manual route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
