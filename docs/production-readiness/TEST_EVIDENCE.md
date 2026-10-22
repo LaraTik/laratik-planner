@@ -2860,3 +2860,14 @@ adapter for storage streaming, range forwarding, download naming, and security
 headers. Route-specific token and rate-limit behavior is unchanged. Full
 browser/visual release coverage, manual route review, Firefox, and independent
 verification remain open.
+
+## Media feature entry-point migration — `f0a5c0dab05480f613b4e6c9f39b1a3d20b9a113`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 589
+unit files / 5,129 tests, and production build. The focused share-collection
+route and module-ownership tests passed 9/9; the commit hook passed TypeScript
+and 253 affected unit tests. Media App Router callers now use the feature
+server entry point for share-collection operations, with the legacy service
+retained behind the adapter. No route or persisted-data contract changed.
+Manual route review, release browser/visual evidence, Firefox, and independent
+verification remain open.

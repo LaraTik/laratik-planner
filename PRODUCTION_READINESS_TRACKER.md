@@ -3639,3 +3639,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No route, permission, token, or persisted-data contract changed. The
   remaining route review, full browser/visual evidence, Firefox, and
   independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Route media collection calls through the feature API
+
+- Media share-collection create/revoke, public lookup, and ZIP export
+  operations are exposed through `features/media/server.ts`; their App Router
+  callers now use that boundary. The existing `lib/media/collection-service`
+  stays behind the feature adapter during this incremental move.
+- Focused share-collection and module-ownership tests passed 9/9. The commit
+  hook passed TypeScript and 253 affected unit tests. On clean SHA
+  `f0a5c0dab05480f613b4e6c9f39b1a3d20b9a113`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 589 unit files / 5,129 tests, and production build.
+- No route or data contract changed. Manual route review, release
+  browser/visual evidence, Firefox, and independent verification remain open.
+  AD-002 remains **In Progress**.
