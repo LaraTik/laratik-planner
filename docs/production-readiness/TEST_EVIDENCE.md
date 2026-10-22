@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Architecture refinement — Meta publication reads — 2026-10-22
+
+Implementation SHA: `79f8761d0278bb74939b883bb27df74a83a133a5` (clean at run).
+
+| Command / check                                       | Result                                                                                                                     |
+| ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider, publication, and service tests | Pass — 62/62.                                                                                                              |
+| `pnpm verify`                                         | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill              | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification  | Open.                                                                                                                      |
+
+Meta connection and publication-history reads now have their own focused
+modules. The existing `meta.ts` public exports and provider contracts remain
+stable. This checkpoint is **Tested**, not **Verified**; AD-002 remains **In
+Progress**.
+
 ## Architecture refinement — Meta connection module — 2026-10-22
 
 Implementation SHA: `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e` (clean at run).

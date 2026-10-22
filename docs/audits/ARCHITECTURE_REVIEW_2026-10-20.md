@@ -243,11 +243,12 @@ milestones below. Tool contracts remain stable.
 `src/lib/social/providers/meta.ts` combined OAuth scope selection and token
 exchange, Page/Instagram discovery, publication reads, snapshot and insights
 collection, and the provider adapter. OAuth, token exchange, and managed Page
-discovery now live in `meta-connection.ts`; the provider module re-exports
-that public surface while retaining publication and analytics ownership.
-Focused Meta provider tests passed 56/56, and `pnpm verify` passed at exact
-clean implementation SHA `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e` (567 unit
-files / 5,035 tests, formatting, lint, TypeScript, and production build).
+discovery now live in `meta-connection.ts`; publication-history reads and
+pagination live in `meta-publication-reads.ts`. The provider module re-exports
+both public surfaces, preserving existing callers. Focused Meta tests passed
+62/62, and `pnpm verify` passed at exact clean implementation SHA
+`79f8761d0278bb74939b883bb27df74a83a133a5` (567 unit files / 5,035 tests,
+formatting, lint, TypeScript, and production build).
 Postgres, browser/visual, remaining route inventory, and independent review
 remain open. This is **Tested**, not **Verified**; AD-002 remains **In
 Progress**.
