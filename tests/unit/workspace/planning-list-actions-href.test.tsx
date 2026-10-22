@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
-import { PlanningListActions } from "@/components/workspace/planning-list-actions";
+import { PlanningListActions } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/planning-list-actions";
 import { changeContentOwnerAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 
 vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({

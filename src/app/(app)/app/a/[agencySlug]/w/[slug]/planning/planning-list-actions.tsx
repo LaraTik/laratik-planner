@@ -22,10 +22,7 @@ import { cn } from "@/lib/utils";
 import type { ContentStatus } from "@/lib/content/status";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import { getErrorMessage } from "@/lib/utils/error";
-import {
-  ChangeOwnerDialog,
-  type PlanningOwnerOption,
-} from "@/components/workspace/change-owner-dialog";
+import { ChangeOwnerDialog, type PlanningOwnerOption } from "./change-owner-dialog";
 
 /**
  * PlanningListActions — three-dot quick actions menu for a

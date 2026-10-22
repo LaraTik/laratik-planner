@@ -24,10 +24,7 @@ const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
   "src/components/planning/research-teardown-apply.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/planning/workflow-rail.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/tasks/task-form.tsx -> src/app/(app)/app/tasks/actions.ts: shared presentation modules must not depend on route modules",
-  "src/components/workspace/change-owner-dialog.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/workspace/command-center-refresh.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions.ts: shared presentation modules must not depend on route modules",
-  "src/components/workspace/planning-list-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions.ts: shared presentation modules must not depend on route modules",
-  "src/components/workspace/planning-list-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
 ]);
 
 type ModuleEdge = { importer: string; target: string };
