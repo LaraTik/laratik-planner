@@ -1,19 +1,18 @@
 "use client";
 
 import * as React from "react";
-import { useActionState } from "react";
 import { Building2 } from "lucide-react";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
-import {
-  editAgencyAction,
-  type EditAgencyActionState,
-} from "@/app/(app)/app/agency-settings/actions";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 
-const initial: EditAgencyActionState = {};
+export type EditAgencyFormState = {
+  ok?: boolean;
+  error?: string;
+  changedFields?: string[];
+};
 
 /**
  * EditAgencyForm (M3.4 — agency CRUD).
@@ -85,12 +84,6 @@ export function EditAgencyForm({
   initialLocale,
   initialTimezone,
   testIdPrefix = "agency-settings",
-  // Optional override of the action target. When the caller
-  // supplies a different `formAction`, the form posts to that
-  // action instead of the default `editAgencyAction` (the
-  // agency-admin surface). The platform-admin surface passes
-  // its own action so the form reuses the same body without
-  // needing two copies.
   formAction,
   actionState,
   hiddenFields = {},
@@ -100,15 +93,11 @@ export function EditAgencyForm({
   initialLocale: string;
   initialTimezone: string;
   testIdPrefix?: string;
-  formAction?: (formData: FormData) => void | Promise<void>;
-  actionState?: EditAgencyActionState;
+  formAction: (formData: FormData) => void | Promise<void>;
+  actionState: EditAgencyFormState;
   hiddenFields?: Record<string, string>;
 }) {
   const tr: Translator = useLocaleT() ?? EN_FALLBACK;
-  const [localState, defaultAction, pending] = useActionState(editAgencyAction, initial);
-  const state = actionState ?? localState;
-  void pending; // pending is read by FormSubmitButton via useFormStatus
-  const action = formAction ?? defaultAction;
   // Node and the browser can ship different ICU timezone lists. The server
   // snapshot stays empty through hydration; React then reads the browser
   // snapshot without an effect-driven state cascade.
@@ -128,7 +117,7 @@ export function EditAgencyForm({
       <CardDescription className="mt-2">{tr("agencySettings.identityDescription")}</CardDescription>
 
       <form
-        action={action}
+        action={formAction}
         className="mt-5 space-y-4"
         data-testid={`${testIdPrefix}-edit-identity-form`}
       >
@@ -230,24 +219,24 @@ export function EditAgencyForm({
           </div>
         </div>
 
-        {state.error ? (
+        {actionState.error ? (
           <p
             role="alert"
             data-testid={`${testIdPrefix}-edit-error`}
             className="text-body text-danger font-semibold"
           >
-            {state.error}
+            {actionState.error}
           </p>
         ) : null}
-        {state.ok ? (
+        {actionState.ok ? (
           <p
             role="status"
             data-testid={`${testIdPrefix}-edit-saved`}
             className="text-body text-success font-semibold"
           >
-            {state.changedFields && state.changedFields.length > 0
+            {actionState.changedFields && actionState.changedFields.length > 0
               ? tr("agencySettings.identitySavedChanged", {
-                  fields: state.changedFields.join(", "),
+                  fields: actionState.changedFields.join(", "),
                 })
               : tr("agencySettings.identitySavedNoChange")}
           </p>

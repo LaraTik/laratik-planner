@@ -31,7 +31,7 @@ import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/workspace/page-header";
-import { EditAgencyForm } from "@/components/forms/edit-agency-form";
+import { AgencySettingsEditForm } from "./edit-agency-form";
 import { getAgencyStorageSummary } from "@/lib/storage/config";
 import { getSocialStatus } from "@/lib/social/service";
 import { getActiveApiKey } from "@/lib/ai";
@@ -265,7 +265,7 @@ export default async function AgencySettingsPage() {
       </div>
 
       <section id="general" aria-labelledby="agency-settings-general-title">
-        <EditAgencyForm
+        <AgencySettingsEditForm
           initialName={agency.name}
           initialSlug={agency.slug}
           initialLocale={agency.locale}
