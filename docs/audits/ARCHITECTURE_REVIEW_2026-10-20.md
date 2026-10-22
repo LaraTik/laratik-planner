@@ -1623,6 +1623,21 @@ checks for touched pages, the remaining complete route inventory, and
 independent verification remain open. This pass is **Tested**, not **Verified**;
 AD-002 remains **In Progress**.
 
+## Agency form action ownership — 2026-10-22
+
+The shared agency identity form imported the agency-settings route action even
+when the platform route supplied a different action. This coupled shared
+presentation to one route and made the action override optional across two
+authorization paths. Route-owned wrappers now bind each server action and pass
+the action and result state to the shared form. The static shared-to-route
+queue drops from 12 to 11. Focused agency-settings and ownership tests pass
+8/8; `pnpm verify` passes at clean implementation SHA
+`374304de6b4f0f2d958fafa7ac9b5b2feaad9539`. Browser execution escalated to the
+full matrix and remains blocked before test startup because `TEST_DATABASE_URL`
+is unset. No route, permission, persisted-data, or save behavior changed. This
+finding is addressed; bilingual browser review and independent verification
+remain open.
+
 ## Research mutation ownership refinement — 2026-10-22
 
 The route security pass initially added the same watchlist owner/share query to

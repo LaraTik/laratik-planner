@@ -46,7 +46,9 @@ canonical implementation; compatibility exports may forward to it temporarily.
   contains low-level controls. Shared forms, tables, navigation, status, and
   feedback patterns belong in shared presentation modules only when multiple
   features use the same behavior and accessibility contract. Feature-specific
-  composition stays with its feature.
+  composition stays with its feature. Route-specific server actions and their
+  result state stay in route wrappers; pass the action and serializable state
+  into shared presentation components instead of importing route modules.
 - **Feature internals are private.** One feature imports another feature's
   documented exports through its `index.ts`, not its internal files.
   Cross-feature needs should use a stable shared module or a deliberate

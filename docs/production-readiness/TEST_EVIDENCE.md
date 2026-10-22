@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Architecture refinement — agency form action ownership — 2026-10-22
+
+Implementation SHA: `374304de6b4f0f2d958fafa7ac9b5b2feaad9539` (clean at run).
+
+| Command / check                                        | Result                                                                                   |
+| ------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Focused agency-settings and module-ownership tests     | Pass — 8/8.                                                                              |
+| `pnpm verify`                                          | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build. |
+| `pnpm test:affected -- --layer browser`                | Escalated to full matrix; stopped before browsers because `TEST_DATABASE_URL` is unset.  |
+| Postgres integration and migration drill               | Open; no persistence or schema change in this refactor.                                  |
+| Bilingual browser/visual review and independent review | Open.                                                                                    |
+
+The reusable agency identity form now receives its action and result state as
+props. Agency-settings and platform route wrappers own their respective
+server actions, and the shared-to-route import allowlist drops from 12 to 11.
+Form fields, authorization, routes, and save behavior are unchanged. This
+checkpoint is **Tested**, not **Verified**.
+
 ## Architecture refinement — account menu sign-out slot — 2026-10-22
 
 Implementation SHA: `ceaac8f9cce23187133c8182b23a0e5d8ebba0e9` (clean at run).
