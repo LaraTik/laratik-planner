@@ -1,6 +1,10 @@
 "use client";
 
-import { CommentComposer, type CommentVisibility } from "@/components/comments/comment-composer";
+import {
+  CommentComposer,
+  type CommentVisibility,
+  type CreateCommentAction,
+} from "@/components/comments/comment-composer";
 
 /**
  * Backwards-compatible alias for the old `<CommentForm>` API.
@@ -10,6 +14,7 @@ import { CommentComposer, type CommentVisibility } from "@/components/comments/c
  * (optional), role flags, onCancel, onPosted.
  */
 export interface CommentFormProps {
+  createCommentAction: CreateCommentAction;
   workspaceSlug: string;
   contentItemId: string;
   parentCommentId?: string;
@@ -30,6 +35,7 @@ export interface CommentFormProps {
 }
 
 export function CommentForm({
+  createCommentAction,
   workspaceSlug,
   contentItemId,
   parentCommentId,
@@ -42,6 +48,7 @@ export function CommentForm({
 }: CommentFormProps) {
   return (
     <CommentComposer
+      createCommentAction={createCommentAction}
       workspaceSlug={workspaceSlug}
       contentItemId={contentItemId}
       {...(parentCommentId ? { parentCommentId } : {})}

@@ -7,9 +7,21 @@ import { AtSign, Lock, Eye, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { MentionPicker, type MentionableUser } from "@/components/comments/mention-picker";
-import { createCommentAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { useLocaleCode } from "@/components/i18n/locale-provider";
+
+type CommentActionState = {
+  error?: string;
+  fieldErrors?: Partial<Record<string, string>>;
+  ok?: true;
+  mentionedUserIds?: string[];
+};
+
+export type CreateCommentAction = (
+  workspaceSlug: string,
+  previousState: unknown,
+  formData: FormData,
+) => Promise<CommentActionState>;
 
 /**
  * CommentComposer — a textarea with an integrated @-mention
@@ -50,6 +62,7 @@ export type CommentVisibility = "internal" | "client";
 export type CommentLabel = "general" | "question" | "feedback" | "decision";
 
 export interface CommentComposerProps {
+  createCommentAction: CreateCommentAction;
   workspaceSlug: string;
   contentItemId: string;
   parentCommentId?: string;
@@ -100,6 +113,7 @@ function labelKey(value: CommentLabel): string {
 }
 
 export function CommentComposer({
+  createCommentAction,
   workspaceSlug,
   contentItemId,
   parentCommentId,
@@ -114,10 +128,10 @@ export function CommentComposer({
 }: CommentComposerProps) {
   const locale = useLocaleCode();
   const boundAction = createCommentAction.bind(null, workspaceSlug);
-  const [state, formAction] = useActionState<
-    { error?: string; ok?: true; mentionedUserIds?: string[] } | null,
-    FormData
-  >(boundAction, null);
+  const [state, formAction] = useActionState<CommentActionState | null, FormData>(
+    boundAction,
+    null,
+  );
   const { pending } = useFormStatus();
 
   // The textarea is uncontrolled so the @-tracker can

@@ -40,6 +40,8 @@ import {
 import { duplicateContentItemAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions";
 import {
   archiveContentItemAction,
+  createCommentAction,
+  resolveCommentAction,
   restoreContentItemAction,
 } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { CONTENT_FORMAT_DEFINITIONS } from "@/lib/content/format-catalog";
@@ -262,6 +264,8 @@ export function WorkspaceShell({
       </div>
 
       <DiscussionDrawer
+        createCommentAction={createCommentAction}
+        resolveCommentAction={resolveCommentAction}
         workspaceSlug={workspaceSlug}
         contentItemId={contentItemId}
         comments={comments}

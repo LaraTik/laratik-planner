@@ -232,6 +232,7 @@ describe("planning detail components — hooks order guard", () => {
       // State A: no posting rights
       const { rerender } = render(
         <CommentForm
+          createCommentAction={vi.fn(async () => ({}))}
           workspaceSlug="acme"
           contentItemId="ci-1"
           canPostClientVisible={false}
@@ -243,6 +244,7 @@ describe("planning detail components — hooks order guard", () => {
       const err = runWithoutThrowing(() =>
         rerender(
           <CommentForm
+            createCommentAction={vi.fn(async () => ({}))}
             workspaceSlug="acme"
             contentItemId="ci-1"
             canPostClientVisible

@@ -11,8 +11,6 @@ const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
   "src/components/app-shell/notifications-bell.tsx -> src/app/(app)/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/app-shell/theme-toggle.tsx -> src/app/(app)/app/account/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/app-shell/user-menu.tsx -> src/app/(app)/app/account/sign-out-form.tsx: shared presentation modules must not depend on route modules",
-  "src/components/comments/comment-composer.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
-  "src/components/comments/comment-item.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/forms/edit-agency-form.tsx -> src/app/(app)/app/agency-settings/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/forms/format-aware-content-editor.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/forms/format-payload-editor.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
