@@ -179,6 +179,20 @@ escalated to the full matrix and stopped before browser tests because
 contract changed. Bilingual browser/visual review and independent verification
 remain open; this is **Tested**, not **Verified**.
 
+**Notification action boundary (2026-10-22).** The notification bell in
+`src/components/app-shell` imported mark-read server actions from the app
+route. The authenticated layout now supplies those actions to the app shell,
+which forwards them through the topbar and mobile bell. Shared presentation no
+longer imports route code, and the static migration queue is down from 15 to
+14 imports. Focused notification and ownership tests passed 8/8. `pnpm verify`
+passed at exact clean implementation SHA
+`73e612e0806667385445b707e3fb687c72f0bcdf` (567 unit files / 5,035 tests,
+formatting, lint, TypeScript, and production build). The affected browser run
+escalated to the full matrix and stopped before browser tests because
+`TEST_DATABASE_URL` is unset. Public notification behavior is unchanged;
+bilingual browser/visual review and independent verification remain open. This
+is **Tested**, not **Verified**.
+
 **Media route feature boundary (2026-10-21).** The media route tree now has a
 bounded facade at `src/features/media/server.ts`; app pages and API handlers
 use it instead of importing the broad `src/lib/media/service.ts` directly.

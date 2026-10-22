@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Architecture refinement — notification action boundary — 2026-10-22
+
+Implementation SHA: `73e612e0806667385445b707e3fb687c72f0bcdf` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused notification and ownership tests                     | Pass — 8/8.                                                                                                     |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated app layout supplies the existing notification actions to
+shared shell presentation components. Notification permissions, optimistic
+updates, and user-visible behavior are unchanged. This checkpoint is
+**Tested**, not **Verified**.
+
 ## Architecture refinement — shared comment action boundary — 2026-10-22
 
 Implementation SHA: `bb449b8721e66bf029aa66bed474a2c49e14342b` (clean at run).
