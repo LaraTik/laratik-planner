@@ -121,6 +121,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       unitFiles: [
         "tests/unit/content/**",
         "tests/unit/content-*.test.ts",
+        "tests/unit/reset-idea-action.test.ts",
         "tests/unit/planning/**",
         "tests/unit/cron-routes-auth.test.ts",
       ],
