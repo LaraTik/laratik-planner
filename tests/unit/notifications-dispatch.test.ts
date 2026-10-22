@@ -348,6 +348,21 @@ describe("dispatchOutboxOnce (FEAT-01) — per-kind fan-out", () => {
     expect(update, "expected processedAt update").toBeDefined();
   });
 
+  it("stores a stable code when outbox transaction errors contain credentials", async () => {
+    stageOutboxEvent("approval", { userId: "user-1", title: "T", body: "B" });
+    state.transactionError = new Error(
+      "postgres://planner:credential-shaped-secret@db.test/planner",
+    );
+
+    await dispatchOutboxOnce({ maxEvents: 10 });
+
+    const persistedError = state.updateCalls
+      .map((call) => (call.set as Record<string, unknown>).lastError)
+      .find((value) => value !== undefined);
+    expect(persistedError).toBe("outbox_dispatch_failed");
+    expect(String(persistedError)).not.toContain("credential-shaped-secret");
+  });
+
   it("invalidates every mentioned user's bell cache", async () => {
     state.selectResults.push([
       {

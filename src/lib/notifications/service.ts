@@ -14,6 +14,7 @@ import { workspaceBasePath } from "@/lib/urls";
 import { notificationsUserTag } from "@/lib/notifications/cache";
 import type { NotificationKind } from "@/lib/notifications/types";
 import { defaultBodyFor, defaultTitleFor } from "@/lib/notifications/copy";
+import { logError } from "@/lib/observability/logger";
 export { dispatchEmailOnce } from "@/lib/notifications/email-dispatch";
 import { shouldEmailUserFor } from "@/lib/notifications/preferences";
 
@@ -284,11 +285,12 @@ export async function dispatchOutboxOnce(opts: { maxEvents?: number; now?: Date 
       // Failure path runs OUTSIDE the rolled-back tx so the error
       // bookkeeping (attempt_count++, last_error) is persisted even
       // when the inner fan-out throws.
+      logError("notification.outbox_dispatch_failed", { err, outboxEventId: evt.id });
       await db
         .update(outboxEvents)
         .set({
           attemptCount: sql`${outboxEvents.attemptCount} + 1`,
-          lastError: err instanceof Error ? err.message : String(err),
+          lastError: "outbox_dispatch_failed",
         })
         .where(eq(outboxEvents.id, evt.id));
     }
