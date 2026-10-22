@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Architecture refinement — account menu sign-out slot — 2026-10-22
+
+Implementation SHA: `ceaac8f9cce23187133c8182b23a0e5d8ebba0e9` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused notification, theme-toggle, ownership tests          | Pass — 10/10.                                                                                                   |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated app layout supplies the existing sign-out form to the
+shared user menu through a presentation slot. Sign-out action semantics and
+menu behavior are unchanged. This checkpoint is **Tested**, not **Verified**.
+
 ## Architecture refinement — theme preference action boundary — 2026-10-22
 
 Implementation SHA: `28c008641845964ffa7ebe38cd5a4dd0789543fe` (clean at run).

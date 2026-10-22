@@ -179,6 +179,20 @@ escalated to the full matrix and stopped before browser tests because
 contract changed. Bilingual browser/visual review and independent verification
 remain open; this is **Tested**, not **Verified**.
 
+**Account menu sign-out slot (2026-10-22).** `UserMenu` previously imported
+the account route's `SignOutForm`. The authenticated layout now supplies that
+form as a presentation slot to the shared app shell, which forwards it to the
+desktop and mobile user menus. Notification, theme, and sign-out shell
+refinements together reduce the shared-to-route migration queue from 15 to 12
+imports. Focused notification, theme-toggle, and ownership tests passed 10/10.
+`pnpm verify` passed at exact clean implementation SHA
+`ceaac8f9cce23187133c8182b23a0e5d8ebba0e9` (568 unit files / 5,037 tests,
+formatting, lint, TypeScript, and production build). The affected browser run
+escalated to the full matrix and stopped before browser tests because
+`TEST_DATABASE_URL` is unset. The menu actions and presentation are unchanged;
+bilingual browser/visual review and independent verification remain open. This
+is **Tested**, not **Verified**.
+
 **Theme preference action boundary (2026-10-22).** `ThemeToggle` previously
 imported its account server action directly. The authenticated app layout now
 passes the action through the shell into both theme controls. Shared shell UI
