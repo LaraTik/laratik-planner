@@ -3684,3 +3684,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No MCP tool contract or persisted-data behavior changed. Full browser/visual
   release coverage, remaining manual route review, Firefox, and independent
   verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize cron failure details
+
+- Email dispatch, notification outbox, and social-metrics cron routes now log
+  exception diagnostics and return stable failure copy. Social-metrics cron
+  history and the manual Run Now action store the same safe failure text.
+- On clean SHA `b7ec99a3bc721021d129a10833fa092ec0e8224`, formatting, ESLint,
+  and TypeScript passed. The unit suite passed 5,140/5,141 tests; an unrelated
+  report-retention test timed out under suite load and passed alone in 782 ms.
+  `pnpm build` passed separately on this SHA. Since `pnpm verify` exited
+  nonzero on the suite timeout, this is not recorded as a passing full gate.
+- No schema, route, cron authorization, success response, or persisted-data
+  contract changed. Browser/visual release checks, full route review, Firefox,
+  and independent verification remain open. AD-002 remains **In Progress**.

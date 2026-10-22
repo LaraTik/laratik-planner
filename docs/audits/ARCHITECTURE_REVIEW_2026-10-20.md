@@ -2738,7 +2738,11 @@ were also returned to the scheduler, persisted in `cron_tick_history`, shown
 in the platform console, and returned by the manual Run Now action. Those
 messages can contain database/provider details. The handlers now record errors
 through the sanitized logger/Sentry path and return or persist stable failure
-copy. Focused route and Run Now regression tests cover response/history
-redaction and diagnostics (pending execution). Grouped repository verification
-is pending. Success payloads, cron authorization, job behavior, and status codes
-are unchanged.
+copy. The focused cron route and Run Now regressions pass within the full unit
+run. On clean commit `b7ec99a3bc721021d129a10833fa092ec0e8224`, formatting,
+ESLint, and TypeScript passed. The full unit run passed 5,140/5,141 tests; one
+unrelated report-retention test hit its 5-second timeout under suite load and
+passed when rerun alone (782 ms). `pnpm build` passed separately on the same
+clean SHA. Because `pnpm verify` exited nonzero on that timeout, the full gate
+is recorded as not fully green. Success payloads, cron authorization, job
+behavior, and status codes are unchanged.

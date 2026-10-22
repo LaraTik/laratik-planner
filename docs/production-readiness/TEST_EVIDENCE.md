@@ -2893,3 +2893,15 @@ clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 590 unit
 files / 5,137 tests, and the production build. The commit hook passed the 51
 MCP-related unit tests. No MCP tool contract or persisted-data behavior
 changed.
+
+## Cron failure privacy — `b7ec99a3bc721021d129a10833fa092ec0e8224`
+
+On this clean SHA, formatting, ESLint, and TypeScript passed. The full unit
+run passed 5,140/5,141 tests across 590 passing files and one timed-out file;
+the unrelated report-retention test exceeded its 5-second limit under suite
+load, then passed alone in 782 ms. The cron route and manual Run Now failure
+regressions passed in the full run. `pnpm build` passed separately on the same
+SHA. `pnpm verify` is recorded as not fully green because of the suite timeout,
+not as a passing gate. No schema or persisted-data behavior changed. This
+evidence does not clear browser/visual release checks, full route review,
+Firefox, or independent verification.
