@@ -56,7 +56,7 @@ import { MessagesPanel } from "@/components/planning/messages-panel";
 // `@/components/planning/overview-command-center`). The
 // source component (`./inline-editable-fields`) is unchanged.
 import { WorkflowSheet } from "@/components/planning/workflow-rail";
-import { PlanningDetailShell } from "@/components/planning/planning-detail-shell";
+import { PlanningDetailShell } from "./planning-detail-shell";
 import { DeliverySection } from "./delivery-section";
 import { AiAssistancePanel } from "@/components/planning/ai-assistance-panel";
 import { getResetIdeaCounts, EMPTY_RESET_IDEA_COUNTS } from "@/lib/content/reset-idea";

@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { WorkflowRail, type WorkflowRailBodyProps } from "./workflow-rail";
-import { WorkspaceShell } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell";
-import type { WorkspacePanelId, WorkspaceTab } from "./workspace-tabs";
+import { WorkflowRail, type WorkflowRailBodyProps } from "@/components/planning/workflow-rail";
+import { WorkspaceShell } from "./workspace-shell";
+import type { WorkspacePanelId, WorkspaceTab } from "@/components/planning/workspace-tabs";
 import type { CommentRecord, CommentRoleFlags } from "@/components/comments/comment-item";
 import type { ResetIdeaCounts } from "@/lib/content/reset-idea-shared";
 import type { ContentFormat } from "@/lib/format-payload/schemas";

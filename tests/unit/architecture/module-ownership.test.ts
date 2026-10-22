@@ -5,6 +5,32 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
+// Exact legacy component-to-route imports retained for bounded migration.
+// New shared presentation code must not add dependencies on route modules.
+const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
+  "src/components/app-shell/notifications-bell.tsx -> src/app/(app)/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/app-shell/theme-toggle.tsx -> src/app/(app)/app/account/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/app-shell/user-menu.tsx -> src/app/(app)/app/account/sign-out-form.tsx: shared presentation modules must not depend on route modules",
+  "src/components/comments/comment-composer.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/comments/comment-item.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/forms/edit-agency-form.tsx -> src/app/(app)/app/agency-settings/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/forms/format-aware-content-editor.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/forms/format-payload-editor.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/planning/ai-assistance-panel.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/ai-assistance-section.tsx: shared presentation modules must not depend on route modules",
+  "src/components/planning/channel-publishing-card.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/planning/edit-details-drawer.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/edit/[id]/edit-form.tsx: shared presentation modules must not depend on route modules",
+  "src/components/planning/messages-panel.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/planning/meta-publication-link-dialog.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/planning/overview-command-center.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
+  "src/components/planning/planning-header-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
+  "src/components/planning/research-teardown-apply.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/planning/workflow-rail.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/tasks/task-form.tsx -> src/app/(app)/app/tasks/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/workspace/change-owner-dialog.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/workspace/command-center-refresh.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/workspace/planning-list-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions.ts: shared presentation modules must not depend on route modules",
+  "src/components/workspace/planning-list-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions.ts: shared presentation modules must not depend on route modules",
+]);
 
 type ModuleEdge = { importer: string; target: string };
 
@@ -112,6 +138,8 @@ function ownershipViolations(edges: ModuleEdge[]): string[] {
       reason = "app routes may import only a feature's index.ts or server.ts entry";
     } else if (sourceFeature && toLayer === "app") {
       reason = "features must not import route modules";
+    } else if (fromLayer === "components" && toLayer === "app") {
+      reason = "shared presentation modules must not depend on route modules";
     } else if (
       sourceFeature &&
       targetFeature &&
@@ -139,7 +167,11 @@ describe("module ownership imports", () => {
   });
 
   it("enforces feature entry points and prevents feature dependencies from reversing direction", () => {
-    expect(ownershipViolations(moduleEdges(walk(SRC)))).toEqual([]);
+    const violations = ownershipViolations(moduleEdges(walk(SRC)));
+    expect(
+      violations.filter((violation) => !KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS.has(violation)),
+    ).toEqual([]);
+    expect(violations.sort()).toEqual([...KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS].sort());
   });
 
   it("keeps feature index entries client-safe and marks server entries explicitly", () => {

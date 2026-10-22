@@ -145,6 +145,14 @@ repo-wide move. The guard passes 3/3 cases through the manual architecture
 area. The affected Trends unit area selects its five owned files and passes
 12/12; full milestone verification remains pending.
 
+**Shared presentation to route ownership (2026-10-22).** The content-detail
+`PlanningDetailShell` had only one caller, but lived in shared presentation and
+imported a route-local workspace shell. It now lives beside its owning page.
+The static ownership guard now rejects new `src/components` → `src/app`
+imports and pins the 22 existing legacy imports as an explicit migration
+queue. This bounded change removes one route coupling without moving domain
+actions or changing page behavior.
+
 **Media route feature boundary (2026-10-21).** The media route tree now has a
 bounded facade at `src/features/media/server.ts`; app pages and API handlers
 use it instead of importing the broad `src/lib/media/service.ts` directly.

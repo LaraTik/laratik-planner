@@ -79,8 +79,10 @@ These rules guide new code and incremental migrations. The unit suite includes
 a static import-ownership guard for feature entry points and dependencies into
 features from shared presentation or platform modules. Existing route/UI
 action imports and platform presentation-type imports remain visible migration
-work; move them in bounded changes with focused regression coverage instead of
-turning this pilot into a repo-wide rewrite.
+work. The import guard records the exact legacy shared-component-to-route
+imports and rejects new ones; remove an entry when its caller moves behind a
+feature entry point or into its route owner. Migrate these imports in bounded
+changes with focused regression coverage.
 
 ## Extraction and split rules
 
