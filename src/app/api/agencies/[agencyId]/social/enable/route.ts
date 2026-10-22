@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth/config";
 import { currentActor } from "@/lib/auth/current-actor";
-import { enableSocial, SocialServiceError } from "@/lib/social/service";
+import { enableSocial, toSocialFailureResponse } from "@/lib/social/service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 
 /**
@@ -59,15 +59,10 @@ export async function POST(
     const result = await enableSocial(actor, agencyId);
     return NextResponse.json(result, { headers: mutatingApiHeaders() });
   } catch (err) {
-    if (err instanceof SocialServiceError) {
-      return NextResponse.json(
-        { error: err.message, code: err.code },
-        { status: err.status, headers: mutatingApiHeaders() },
-      );
-    }
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Unexpected error" },
-      { status: 500, headers: mutatingApiHeaders() },
-    );
+    const failure = toSocialFailureResponse(err);
+    return NextResponse.json(failure.body, {
+      status: failure.status,
+      headers: mutatingApiHeaders(),
+    });
   }
 }
