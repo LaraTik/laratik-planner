@@ -2873,18 +2873,17 @@ verification remain open. AD-002 remains **In Progress**.
 
 ## A59 — Email dispatch stored raw provider and database errors
 
-**Priority: P2 — privacy and safe operational metadata.** The email worker
-copied raw SMTP/provider and dispatch exception messages into per-recipient
-and outbox retry metadata. It now records stable `email_delivery_failed` and
-`email_dispatch_failed` codes, preserving the poisoned-row marker and retry
-behavior. Detailed diagnostics go through the credential-scrubbing structured
-logger. Unit regressions cover credential-shaped transaction errors; the
-existing Postgres DLQ integration regression now uses credential-shaped SMTP
-failure text and expects the stable stored code. Focused notifications tests
-passed 150/150 before the added transaction-path assertion; the amended
-focused dispatch suite passed 47/47. On clean SHA
-`0bbb846ae744fc7d6bf8481c31744b78c48ea2ff`, `pnpm verify` passed formatting,
-lint, TypeScript, all 595 unit files / 5,156 tests, and the production build.
+**Priority: P2 — privacy and safe operational metadata.** The email and in-app
+outbox workers copied raw SMTP/provider and dispatch exception messages into
+retry/dead-letter metadata. They now record stable `email_delivery_failed`,
+`email_dispatch_failed`, and `outbox_dispatch_failed` codes, preserving retry
+and poisoned-row behavior. Detailed diagnostics go through the credential-
+scrubbing structured logger. Regressions cover credential-shaped failures in
+both transaction paths; the Postgres DLQ integration regression now uses
+credential-shaped SMTP failure text and expects the stable stored code. The
+focused notifications/discussions unit area passed 152/152. On clean SHA
+`b5166d983e8b1cf470b57d78e1741eb813532913`, `pnpm verify` passed formatting,
+lint, TypeScript, all 595 unit files / 5,157 tests, and the production build.
 The Postgres DLQ integration test could not run because `TEST_DATABASE_URL` is
 unset and Docker is unavailable. No schema, retry threshold, delivery state,
 route, or user-facing response changed. Browser/visual release checks, manual

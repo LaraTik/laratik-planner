@@ -3807,16 +3807,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 
 ## 2026-10-23 — Sanitize email worker failure metadata
 
-- Email delivery and dispatch failure metadata now stores stable failure codes;
-  structured logs retain diagnostics through the credential scrubber. SMTP
-  retry and poisoned-row behavior remain unchanged. Added regressions for
-  credential-shaped SMTP and transaction errors.
-- On clean SHA `0bbb846ae744fc7d6bf8481c31744b78c48ea2ff`, grouped
-  `pnpm verify` passed formatting, lint, TypeScript, 595 unit files / 5,156
-  tests, and the production build. The affected dispatch suite passed 47/47.
+- Email delivery, email dispatch, and in-app outbox failure metadata now store
+  stable failure codes; structured logs retain diagnostics through the
+  credential scrubber. SMTP retry and poisoned-row behavior remain unchanged.
+  Added regressions for credential-shaped provider and transaction errors.
+- On clean SHA `b5166d983e8b1cf470b57d78e1741eb813532913`, grouped
+  `pnpm verify` passed formatting, lint, TypeScript, 595 unit files / 5,157
+  tests, and the production build. The affected notification unit area passed
+  152/152.
 - The Postgres DLQ integration regression could not run because
   `TEST_DATABASE_URL` is unset and Docker is unavailable. Browser/visual release
   checks, route review, Firefox, and independent verification remain open. No
   schema, retry threshold, delivery state, route, or user-facing response
-  changed. This work is **Tested**, not **Verified**; AD-002 remains **In
-  Progress**.
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
