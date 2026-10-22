@@ -16,7 +16,7 @@ if (!process.env.TEST_DATABASE_URL) {
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
 
 const sendEmailMock = vi.fn(async (): Promise<{ id: string } | null> => {
-  throw new Error("simulated SMTP failure");
+  throw new Error("smtp://planner:credential-shaped-secret@mail.laratik.local");
 });
 vi.mock("@/lib/email", () => ({
   sendEmail: sendEmailMock,
@@ -163,7 +163,8 @@ describe("R6 — dispatchEmailOnce DLQ guard", () => {
     expect(poisoned?.processedAt).toBeNull();
     expect(poisoned?.emailProcessedAt).not.toBeNull();
     expect(poisoned?.attempt).toBe(5);
-    expect(poisoned?.lastError).toMatch(/^\[poisoned\] simulated SMTP failure$/);
+    expect(poisoned?.lastError).toBe("[poisoned] email_delivery_failed");
+    expect(poisoned?.lastError).not.toContain("credential-shaped-secret");
 
     // Sixth tick: dispatcher skips the row entirely (no attempt
     // bump, no extra sendEmail call).

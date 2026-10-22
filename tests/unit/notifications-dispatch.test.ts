@@ -30,6 +30,7 @@ type DrizzleState = {
   deleteCalls: { table: unknown; where: unknown }[];
   executeCalls: { sql: unknown }[];
   transactionCalls: number;
+  transactionError?: Error;
 };
 
 function thenableProxy(target: Record<string, unknown>): Record<string, unknown> {
@@ -97,6 +98,7 @@ const executeFn = vi.fn((sqlArg: unknown) => {
 });
 const transactionFn = vi.fn(async (cb: (tx: Record<string, unknown>) => Promise<unknown>) => {
   state.transactionCalls += 1;
+  if (state.transactionError) throw state.transactionError;
   const txSelect = vi.fn(() => makeSelectChain());
   const txInsert = vi.fn(() => insertChain);
   const txUpdate = vi.fn(() => updateChain);
@@ -524,9 +526,24 @@ describe("dispatchEmailOnce (FEAT-10)", () => {
     expect(result.sent).toBe(0);
     expect(
       state.updateCalls.some(
-        (call) => (call.set as Record<string, unknown>).lastError === "SMTP is not configured",
+        (call) => (call.set as Record<string, unknown>).lastError === "email_delivery_failed",
       ),
     ).toBe(true);
+  });
+
+  it("stores a stable code when dispatch transaction errors contain credentials", async () => {
+    stageUnprocessedEvent("assignment", { userId: "user-1", title: "T", body: "B" });
+    state.transactionError = new Error(
+      "postgres://planner:credential-shaped-secret@db.test/planner",
+    );
+
+    await dispatchEmailOnce({ maxEvents: 10 });
+
+    const persistedError = state.updateCalls
+      .map((call) => (call.set as Record<string, unknown>).emailLastError)
+      .find((value) => value !== undefined);
+    expect(persistedError).toBe("email_dispatch_failed");
+    expect(String(persistedError)).not.toContain("credential-shaped-secret");
   });
 
   it("handles rows with no userId by marking them processed and skipping", async () => {

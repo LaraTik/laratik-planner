@@ -7,6 +7,7 @@ import { renderNotificationEmailCopy } from "@/lib/notifications/email-copy";
 import { shouldEmailUserFor } from "@/lib/notifications/preferences";
 import type { NotificationKind } from "@/lib/notifications/types";
 import { defaultBodyFor, defaultTitleFor } from "@/lib/notifications/copy";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * One email-dispatch tick. Claims at most `maxEvents` due
@@ -144,15 +145,22 @@ export async function dispatchEmailOnce(
               );
           } catch (err) {
             eventFailed += 1;
-            const message = err instanceof Error ? err.message : String(err);
+            logError("notification.email_delivery_failed", {
+              err,
+              outboxEventId: claimed.id,
+              userId: delivery.userId,
+            });
             const nextAttempt = (delivery.attemptCount ?? 0) + 1;
             const isPoisoned = nextAttempt >= EMAIL_DLQ_THRESHOLD;
+            const failureCode = isPoisoned
+              ? "[poisoned] email_delivery_failed"
+              : "email_delivery_failed";
             await tx
               .update(notificationEmailDeliveries)
               .set({
                 ...(isPoisoned ? { processedAt: new Date() } : {}),
                 attemptCount: sql`${notificationEmailDeliveries.attemptCount} + 1`,
-                lastError: isPoisoned ? `[poisoned] ${message}` : message,
+                lastError: failureCode,
               })
               .where(
                 and(
@@ -164,7 +172,7 @@ export async function dispatchEmailOnce(
               .update(outboxEvents)
               .set({
                 emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
-                emailLastError: isPoisoned ? `[poisoned] ${message}` : message,
+                emailLastError: failureCode,
               })
               .where(eq(outboxEvents.id, claimed.id));
           }
@@ -193,12 +201,12 @@ export async function dispatchEmailOnce(
       skipped += result.skipped;
       failed += result.failed;
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+      logError("notification.email_dispatch_failed", { err, outboxEventId: evt.id });
       await db
         .update(outboxEvents)
         .set({
           emailAttemptCount: sql`${outboxEvents.emailAttemptCount} + 1`,
-          emailLastError: message,
+          emailLastError: "email_dispatch_failed",
         })
         .where(eq(outboxEvents.id, evt.id));
     }
