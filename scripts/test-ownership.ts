@@ -599,6 +599,13 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         },
       ],
     },
+    {
+      id: "visual-regression",
+      sourceGlobs: ["tests/e2e/visual-regression.spec.ts-snapshots/**"],
+      unitFiles: ["tests/unit/stitch-cases.test.ts", "tests/unit/visual-snapshot-orphans.test.ts"],
+      integrationFiles: [],
+      browser: [{ spec: "tests/e2e/visual-regression.spec.ts", projects: visualChromium }],
+    },
   ],
 };
 

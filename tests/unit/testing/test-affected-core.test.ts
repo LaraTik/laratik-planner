@@ -124,6 +124,10 @@ describe("test affected core", () => {
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell.tsx",
         "notifications-discussions",
       ],
+      [
+        "tests/e2e/visual-regression.spec.ts-snapshots/responsive/app-w-acme-settings-defaults-mobile-s.png",
+        "visual-regression",
+      ],
     ] as const;
 
     for (const [sourcePath, expectedArea] of cases) {
