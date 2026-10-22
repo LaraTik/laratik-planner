@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Architecture refinement — shared action ownership — 2026-10-22
+
+Implementation SHA: `345eb4f5afcaba4deded63581d6a7e68ad6882ed` (clean at run).
+
+| Command / check                                             | Result                                                                                   |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused command-center, research-apply, and ownership tests | Pass — 13/13.                                                                            |
+| `pnpm verify`                                               | Pass — formatting, lint, TypeScript, 569 unit files / 5,038 tests, and production build. |
+| `pnpm test:affected -- --layer browser`                     | Escalated to full matrix; stopped before browsers because `TEST_DATABASE_URL` is unset.  |
+| Postgres integration and migration drill                    | Open; no persistence or schema change in this refactor.                                  |
+| Bilingual browser/visual review and independent review      | Open.                                                                                    |
+
+Workspace social refresh and research teardown apply now receive their server
+actions from route owners. The route actions retain the same authorization and
+workflow behavior. The shared-to-route import allowlist drops from 11 to 9.
+This checkpoint is **Tested**, not **Verified**.
+
 ## Architecture refinement — agency form action ownership — 2026-10-22
 
 Implementation SHA: `374304de6b4f0f2d958fafa7ac9b5b2feaad9539` (clean at run).

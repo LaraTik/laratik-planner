@@ -1638,6 +1638,20 @@ is unset. No route, permission, persisted-data, or save behavior changed. This
 finding is addressed; bilingual browser review and independent verification
 remain open.
 
+## Shared command action ownership — 2026-10-22
+
+`CommandCenterRefresh` and `ResearchTeardownApply` imported their server
+actions from route modules despite living in shared presentation. Their route
+owners now pass the corresponding action into the components. The existing
+workspace-manager authorization, content editability gate, and sequential
+provider refresh behavior remain in place. The static shared-to-route queue
+drops from 11 to 9. Focused command-center, research-apply, and ownership
+tests pass 13/13; `pnpm verify` passes at clean implementation SHA
+`345eb4f5afcaba4deded63581d6a7e68ad6882ed` (569 unit files / 5,038 tests and
+build). Browser execution is blocked before startup by the missing disposable
+database URL. No route, permission, persistence, or workflow contract changed.
+This is **Tested**, not **Verified**; bilingual browser review remains open.
+
 ## Research mutation ownership refinement — 2026-10-22
 
 The route security pass initially added the same watchlist owner/share query to
