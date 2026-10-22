@@ -11,6 +11,7 @@ import { currentActor } from "@/lib/auth/current-actor";
 import { AppShell } from "@/components/app-shell/app-shell";
 import { markAllReadAction, markReadAction } from "@/app/(app)/actions";
 import { updateThemePreferenceAction } from "@/app/(app)/app/account/actions";
+import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 import { renderNotificationCopy } from "@/lib/notifications/service";
 import { getCachedNotificationsForUser, getCachedUnreadCount } from "@/lib/notifications/cache";
 import {
@@ -457,6 +458,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       markAllReadAction={markAllReadAction}
       markReadAction={markReadAction}
       updateThemePreferenceAction={updateThemePreferenceAction}
+      signOutForm={<SignOutForm variant="menuitem" />}
       buildInfo={buildInfo}
       user={{
         id: session.user.id,

@@ -92,6 +92,7 @@ export function AppShell({
   markAllReadAction,
   markReadAction,
   updateThemePreferenceAction,
+  signOutForm,
   children,
 }: {
   user: {
@@ -139,6 +140,7 @@ export function AppShell({
   markAllReadAction: MarkAllReadAction;
   markReadAction: MarkReadAction;
   updateThemePreferenceAction: UpdateThemePreferenceAction;
+  signOutForm: React.ReactNode;
   children: React.ReactNode;
 }) {
   // The active workspace is the one whose slug is currently in the
@@ -199,6 +201,7 @@ export function AppShell({
           markAllReadAction={markAllReadAction}
           markReadAction={markReadAction}
           updateThemePreferenceAction={updateThemePreferenceAction}
+          signOutForm={signOutForm}
           user={user}
           buildInfo={buildInfo}
           notifications={notifications}
@@ -227,6 +230,7 @@ export function AppShell({
             copy={chrome.notifications}
           />
           <UserMenu
+            signOutForm={signOutForm}
             user={{
               ...user,
               isPlatformAdmin: platformAccess.canEnter || user.isPlatformAdmin || false,

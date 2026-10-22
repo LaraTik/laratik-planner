@@ -4,7 +4,6 @@ import * as React from "react";
 import Link from "next/link";
 import { HelpCircle, Settings, ShieldCheck, User as UserIcon } from "lucide-react";
 import type { BuildInfo } from "@/lib/build-info";
-import { SignOutForm } from "@/app/(app)/app/account/sign-out-form";
 import {
   CopyBuildInfoMenuItem,
   CopyBuildInfoSheetAction,
@@ -112,12 +111,14 @@ export function UserMenu({
   copy,
   variant = "desktop",
   activeAgency,
+  signOutForm,
 }: {
   user: UserMenuUser;
   buildInfo: BuildInfo;
   copy: UserMenuCopy;
   variant?: "desktop" | "mobile";
   activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
+  signOutForm: React.ReactNode;
 }) {
   if (variant === "mobile") {
     return (
@@ -184,7 +185,7 @@ export function UserMenu({
             <div className="bg-border my-1 h-px" role="separator" />
             <CopyBuildInfoSheetAction buildInfo={buildInfo} />
             <div className="bg-border my-1 h-px" role="separator" />
-            <SignOutForm variant="menuitem" />
+            {signOutForm}
           </div>
         </DialogContent>
       </Dialog>
@@ -255,9 +256,7 @@ export function UserMenu({
         <DropdownMenuSeparator />
         <CopyBuildInfoMenuItem buildInfo={buildInfo} />
         <DropdownMenuSeparator />
-        <div className="p-0.5">
-          <SignOutForm variant="menuitem" />
-        </div>
+        <div className="p-0.5">{signOutForm}</div>
       </DropdownMenuContent>
     </DropdownMenu>
   );

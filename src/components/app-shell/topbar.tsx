@@ -37,6 +37,7 @@ export function Topbar({
   markAllReadAction,
   markReadAction,
   updateThemePreferenceAction,
+  signOutForm,
 }: {
   user: {
     id: string;
@@ -63,6 +64,7 @@ export function Topbar({
   markAllReadAction: MarkAllReadAction;
   markReadAction: MarkReadAction;
   updateThemePreferenceAction: UpdateThemePreferenceAction;
+  signOutForm: React.ReactNode;
 }) {
   return (
     <div className="flex h-full items-center justify-end gap-4 px-3 sm:px-6">
@@ -81,6 +83,7 @@ export function Topbar({
           copy={chrome.notifications}
         />
         <UserMenu
+          signOutForm={signOutForm}
           user={user}
           buildInfo={buildInfo}
           activeAgency={activeAgency}
