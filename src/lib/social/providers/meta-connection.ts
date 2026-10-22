@@ -384,3 +384,40 @@ export async function discoverMetaPages(
     },
   };
 }
+
+/**
+ * Resolve a Page token from the connection's token map or acquire and cache
+ * one for legacy connections that predate per-profile token persistence.
+ */
+const pageAccessTokenCache = new Map<string, { token: string; expires: number }>();
+
+export async function acquirePageAccessToken(
+  credentials: SocialCredentials,
+  pageId: string,
+  apiVersion: string,
+): Promise<string> {
+  const stored = credentials.profileAccessTokens?.[pageId];
+  if (stored) return stored;
+
+  const cached = pageAccessTokenCache.get(pageId);
+  if (cached && cached.expires > Date.now()) return cached.token;
+
+  const url = new URL(`${graphBaseUrl(apiVersion)}/${pageId}`);
+  url.searchParams.set("fields", "access_token");
+  url.searchParams.set("access_token", credentials.accessToken);
+  const { body } = await providerRequest(url.toString());
+  let parsed: { access_token?: string };
+  try {
+    parsed = JSON.parse(body) as { access_token?: string };
+  } catch {
+    throw new SocialProviderError("invalid_response", false, null);
+  }
+  if (typeof parsed.access_token !== "string" || parsed.access_token.length === 0) {
+    throw new SocialProviderError("permission_denied", false, null);
+  }
+  pageAccessTokenCache.set(pageId, {
+    token: parsed.access_token,
+    expires: Number.MAX_SAFE_INTEGER,
+  });
+  return parsed.access_token;
+}
