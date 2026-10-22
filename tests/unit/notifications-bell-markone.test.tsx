@@ -13,11 +13,12 @@ import userEvent from "@testing-library/user-event";
  * the badge by exactly 1.
  */
 
-const markReadActionMock = vi.fn(async () => ({ ok: true }));
-vi.mock("@/app/(app)/actions", () => ({
+const markReadActionMock = vi.fn(async () => ({ ok: true as const }));
+const markAllReadActionMock = vi.fn(async () => ({ ok: true as const }));
+const notificationActions = {
+  markAllReadAction: markAllReadActionMock,
   markReadAction: markReadActionMock,
-  markAllReadAction: vi.fn(async () => ({ ok: true })),
-}));
+};
 
 const useRouterMock = vi.fn(() => ({
   refresh: vi.fn(),
@@ -86,7 +87,14 @@ const copy = {
 describe("NotificationsBell markOne — optimistic badge decrement", () => {
   it("decrements the badge by exactly 1 when a single mark-read is clicked", async () => {
     const user = userEvent.setup();
-    render(<NotificationsBell initial={initialUnread(2)} initialUnread={2} copy={copy} />);
+    render(
+      <NotificationsBell
+        {...notificationActions}
+        initial={initialUnread(2)}
+        initialUnread={2}
+        copy={copy}
+      />,
+    );
 
     // The trigger button shows the unread count.
     const trigger = screen.getByRole("button", { name: /2 unread/ });
@@ -119,7 +127,14 @@ describe("NotificationsBell markOne — optimistic badge decrement", () => {
     // decrement". We start with unread = 1 and click the single
     // mark-read button; the badge must go to 0, not -1.
     const user = userEvent.setup();
-    render(<NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />);
+    render(
+      <NotificationsBell
+        {...notificationActions}
+        initial={initialUnread(1)}
+        initialUnread={1}
+        copy={copy}
+      />,
+    );
 
     const trigger = screen.getByRole("button", { name: /1 unread/ });
     await user.click(trigger);
@@ -141,7 +156,14 @@ describe("NotificationsBell markOne — optimistic badge decrement", () => {
 
 describe("NotificationsBell — F22 keyboard shortcut", () => {
   it("toggles the popover when Cmd+J is pressed outside a text input", () => {
-    render(<NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />);
+    render(
+      <NotificationsBell
+        {...notificationActions}
+        initial={initialUnread(1)}
+        initialUnread={1}
+        copy={copy}
+      />,
+    );
     // Closed initially.
     expect(screen.queryByRole("dialog")).toBeNull();
 
@@ -155,7 +177,14 @@ describe("NotificationsBell — F22 keyboard shortcut", () => {
   });
 
   it("toggles the popover when a bare 'j' is pressed", () => {
-    render(<NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />);
+    render(
+      <NotificationsBell
+        {...notificationActions}
+        initial={initialUnread(1)}
+        initialUnread={1}
+        copy={copy}
+      />,
+    );
     fireEvent.keyDown(window, { key: "j" });
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
@@ -164,7 +193,12 @@ describe("NotificationsBell — F22 keyboard shortcut", () => {
     render(
       <div>
         <input data-testid="textbox" type="text" />
-        <NotificationsBell initial={initialUnread(1)} initialUnread={1} copy={copy} />
+        <NotificationsBell
+          {...notificationActions}
+          initial={initialUnread(1)}
+          initialUnread={1}
+          copy={copy}
+        />
       </div>,
     );
     const textbox = screen.getByTestId("textbox");

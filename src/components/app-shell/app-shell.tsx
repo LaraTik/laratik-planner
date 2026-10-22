@@ -1,7 +1,12 @@
 import { Sidebar } from "./sidebar";
 import { Topbar } from "./topbar";
 import { MobileNav } from "./mobile-nav";
-import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
+import {
+  NotificationsBell,
+  type MarkAllReadAction,
+  type MarkReadAction,
+  type NotificationsCopy,
+} from "./notifications-bell";
 import { RouteScrollReset } from "./route-scroll-reset";
 import { SupportSessionBanner } from "./support-session-banner";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
@@ -80,6 +85,8 @@ export function AppShell({
   unreadAppErrors = 0,
   sidebarCollapsed = false,
   chrome,
+  markAllReadAction,
+  markReadAction,
   children,
 }: {
   user: {
@@ -124,6 +131,8 @@ export function AppShell({
   unreadAppErrors?: number;
   sidebarCollapsed?: boolean;
   chrome: AppShellChrome;
+  markAllReadAction: MarkAllReadAction;
+  markReadAction: MarkReadAction;
   children: React.ReactNode;
 }) {
   // The active workspace is the one whose slug is currently in the
@@ -181,6 +190,8 @@ export function AppShell({
         )}
       >
         <Topbar
+          markAllReadAction={markAllReadAction}
+          markReadAction={markReadAction}
           user={user}
           buildInfo={buildInfo}
           notifications={notifications}
@@ -197,6 +208,8 @@ export function AppShell({
         <div className="flex items-center gap-1">
           <ThemeToggle preference={themePreference} copy={chrome.theme} />
           <NotificationsBell
+            markAllReadAction={markAllReadAction}
+            markReadAction={markReadAction}
             initial={notifications}
             initialUnread={unreadCount}
             badgeTestId="unread-badge-mobile"

@@ -1,6 +1,11 @@
 "use client";
 
-import { NotificationsBell, type NotificationsCopy } from "./notifications-bell";
+import {
+  NotificationsBell,
+  type MarkAllReadAction,
+  type MarkReadAction,
+  type NotificationsCopy,
+} from "./notifications-bell";
 import { UserMenu, type UserMenuCopy } from "./user-menu";
 import { ThemeToggle, type ThemeToggleCopy } from "./theme-toggle";
 import type { BuildInfo } from "@/lib/build-info";
@@ -25,6 +30,8 @@ export function Topbar({
   activeAgency,
   themePreference,
   chrome,
+  markAllReadAction,
+  markReadAction,
 }: {
   user: {
     id: string;
@@ -48,12 +55,16 @@ export function Topbar({
   activeAgency?: { name: string; isAdmin: boolean } | null | undefined;
   themePreference: ThemePreference;
   chrome: { userMenu: UserMenuCopy; notifications: NotificationsCopy; theme: ThemeToggleCopy };
+  markAllReadAction: MarkAllReadAction;
+  markReadAction: MarkReadAction;
 }) {
   return (
     <div className="flex h-full items-center justify-end gap-4 px-3 sm:px-6">
       <div className="flex shrink-0 items-center gap-1 sm:gap-2">
         <ThemeToggle preference={themePreference} copy={chrome.theme} />
         <NotificationsBell
+          markAllReadAction={markAllReadAction}
+          markReadAction={markReadAction}
           initial={notifications}
           initialUnread={unreadCount}
           badgeTestId="unread-badge"

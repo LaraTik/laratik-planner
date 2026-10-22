@@ -8,7 +8,6 @@ const SRC = join(ROOT, "src");
 // Exact legacy component-to-route imports retained for bounded migration.
 // New shared presentation code must not add dependencies on route modules.
 const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
-  "src/components/app-shell/notifications-bell.tsx -> src/app/(app)/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/app-shell/theme-toggle.tsx -> src/app/(app)/app/account/actions.ts: shared presentation modules must not depend on route modules",
   "src/components/app-shell/user-menu.tsx -> src/app/(app)/app/account/sign-out-form.tsx: shared presentation modules must not depend on route modules",
   "src/components/forms/edit-agency-form.tsx -> src/app/(app)/app/agency-settings/actions.ts: shared presentation modules must not depend on route modules",
