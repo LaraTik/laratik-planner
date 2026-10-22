@@ -164,6 +164,21 @@ browser command escalated to the full matrix and stopped before browser tests:
 Postgres, route browser/visual review, full route review, and independent
 verification remain open; this is **Tested**, not **Verified**.
 
+**Shared comments action boundary (2026-10-22).** `CommentComposer` and
+`CommentItem` previously imported create/resolve server actions from the
+planning route despite living in shared presentation. The route now supplies
+those server actions through the discussion drawer and comment form props; the
+components retain their presentation and interaction contracts without a
+route dependency. The ownership allowlist is down from 17 to 15 imports.
+Focused comment, planning-shell, hook-order, and ownership tests passed 55/55.
+`pnpm verify` passed at exact clean implementation SHA
+`bb449b8721e66bf029aa66bed474a2c49e14342b` (567 unit files / 5,035 tests,
+formatting, lint, TypeScript, and production build). The affected browser run
+escalated to the full matrix and stopped before browser tests because
+`TEST_DATABASE_URL` is unset. No authorization, workflow, route, API, or data
+contract changed. Bilingual browser/visual review and independent verification
+remain open; this is **Tested**, not **Verified**.
+
 **Media route feature boundary (2026-10-21).** The media route tree now has a
 bounded facade at `src/features/media/server.ts`; app pages and API handlers
 use it instead of importing the broad `src/lib/media/service.ts` directly.

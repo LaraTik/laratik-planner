@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Architecture refinement — shared comment action boundary — 2026-10-22
+
+Implementation SHA: `bb449b8721e66bf029aa66bed474a2c49e14342b` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused comment, planning-shell, hook-order, ownership tests | Pass — 55/55.                                                                                                   |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The planning route now passes the comment create and resolve server actions
+into shared comment presentation components. No authorization, workflow,
+route, API, or data contract changed. This checkpoint is **Tested**, not
+**Verified**.
+
 ## Architecture refinement — planning list action ownership — 2026-10-22
 
 Implementation SHA: `aefe97aa6bedda02d013d52ce79337dce491ea7b` (clean at run).
