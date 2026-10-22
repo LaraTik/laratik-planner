@@ -4,6 +4,7 @@ import { importPublicMediaAsset } from "./import.server";
 import { MediaPermissionError } from "@/lib/media/errors";
 import { MediaSourceError } from "@/lib/media/source";
 import { canWriteToWorkspace, type Actor } from "@/lib/auth/policy";
+import { logError } from "@/lib/observability/logger";
 import {
   FOLDER_IMPORT_CONCURRENCY,
   MAX_FOLDER_BATCH_IMPORT,
@@ -153,6 +154,7 @@ async function importOne(
         message: error.message,
       };
     }
+    logError("media.folder_import.item_failed", { err: error });
     return {
       id: item.id,
       title,

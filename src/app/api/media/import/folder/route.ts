@@ -15,6 +15,7 @@ import {
 } from "@/lib/media/folder-sources/types";
 import { runMediaFolderBatch, type FolderImportReport } from "@/features/media/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
+import { logError } from "@/lib/observability/logger";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -142,6 +143,7 @@ async function handleImport(
         { status: 403 },
       );
     }
+    logError("media.folder_import.failed", { err: error });
     return NextResponse.json(
       { error: "Folder import could not complete. Please try again." },
       { status: 500 },

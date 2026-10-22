@@ -6,6 +6,7 @@ const currentActorMock = vi.fn();
 const rateMock = vi.fn();
 const runMediaFolderBatchMock = vi.fn();
 const canWriteMock = vi.fn();
+const logErrorMock = vi.hoisted(() => vi.fn());
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 
 vi.mock("@/lib/auth/config", () => ({ auth: authMock }));
@@ -13,6 +14,7 @@ vi.mock("@/lib/auth/current-actor", () => ({ currentActor: currentActorMock }));
 vi.mock("@/lib/auth/policy", () => ({ canWriteToWorkspace: canWriteMock }));
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/security/rate-limit", () => ({ enforceRateLimit: rateMock }));
+vi.mock("@/lib/observability/logger", () => ({ logError: logErrorMock }));
 vi.mock("@/lib/media/folder-sources", () => ({ inspectMediaFolder: vi.fn() }));
 vi.mock("@/features/media/server", () => ({ runMediaFolderBatch: runMediaFolderBatchMock }));
 
@@ -51,6 +53,7 @@ describe("POST /api/media/import/folder failure responses", () => {
   });
 
   it("returns a generic failure when an unexpected persistence error occurs", async () => {
+    logErrorMock.mockReset();
     runMediaFolderBatchMock.mockRejectedValueOnce(new Error("private database details"));
     const { POST } = await loadRoute();
 
@@ -60,6 +63,10 @@ describe("POST /api/media/import/folder failure responses", () => {
     expect(await response.json()).toEqual({
       error: "Folder import could not complete. Please try again.",
     });
+    expect(logErrorMock).toHaveBeenCalledWith(
+      "media.folder_import.failed",
+      expect.objectContaining({ err: expect.any(Error) }),
+    );
   });
 
   it("keeps a late workspace permission denial as a forbidden response", async () => {
@@ -73,5 +80,6 @@ describe("POST /api/media/import/folder failure responses", () => {
     expect(await response.json()).toEqual({
       error: "You do not have permission to import media into this workspace.",
     });
+    expect(logErrorMock).not.toHaveBeenCalled();
   });
 });
