@@ -151,4 +151,45 @@ describe("cron route authorization boundary", () => {
       expect.objectContaining({ err: expect.any(Error) }),
     );
   });
+
+  it.each([
+    [
+      "email dispatch",
+      emailDispatchGet,
+      mocks.dispatchEmailOnce,
+      "cron.email_dispatch_failed",
+      "Email dispatch failed.",
+    ],
+    [
+      "outbox",
+      outboxGet,
+      mocks.dispatchOutboxOnce,
+      "cron.outbox_failed",
+      "Notification dispatch failed.",
+    ],
+    [
+      "social metrics",
+      socialMetricsGet,
+      mocks.runSyncTick,
+      "cron.social_metrics_failed",
+      "Social metrics sync failed.",
+    ],
+  ])("logs and sanitizes %s failures", async (_, handler, job, event, publicMessage) => {
+    mocks.isCronAuthorized.mockReturnValue(true);
+    const failure = new Error("postgres://private-user:private-password@db.internal/planner");
+    job.mockRejectedValue(failure);
+
+    const response = await handler(request("GET"));
+
+    expect(response.status).toBe(500);
+    const body = await response.json();
+    expect(body).toMatchObject({ error: publicMessage });
+    expect(JSON.stringify(body)).not.toContain("private-password");
+    expect(mocks.logError).toHaveBeenCalledWith(event, { err: failure });
+    if (job === mocks.runSyncTick) {
+      expect(mocks.recordCronTick).toHaveBeenCalledWith(
+        expect.objectContaining({ errorText: "Social metrics sync failed." }),
+      );
+    }
+  });
 });

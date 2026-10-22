@@ -4,6 +4,7 @@ import { runSyncTick, type SyncTickResult } from "@/lib/social/sync";
 import { recordCronTick } from "@/lib/cron/history";
 import { mutatingApiHeaders } from "@/lib/security/headers";
 import { serverEnv } from "@/lib/validation/env";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * GET /api/cron/social-metrics
@@ -90,7 +91,7 @@ async function persistTick(outcome: TickOutcome): Promise<void> {
       skipped: 0,
       kekStatus: null,
       retention: {},
-      errorText: outcome.error instanceof Error ? outcome.error.message : "sync failed",
+      errorText: "Social metrics sync failed.",
       triggeredBy: "cron",
     });
     return;
@@ -141,10 +142,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ...result, durationMs });
   } catch (err) {
     const durationMs = Date.now() - start;
+    logError("cron.social_metrics_failed", { err });
     await persistTick({ kind: "exception", error: err, startedAt, durationMs });
     return NextResponse.json(
       {
-        error: err instanceof Error ? err.message : "sync failed",
+        error: "Social metrics sync failed.",
         durationMs,
       },
       { status: 500, headers: mutatingApiHeaders() },

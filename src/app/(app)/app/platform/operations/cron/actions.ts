@@ -75,7 +75,7 @@ export async function runSocialMetricsNowAction(): Promise<RunSocialMetricsResul
   } catch (err) {
     const finishedAt = new Date();
     const durationMs = finishedAt.getTime() - startedAt.getTime();
-    const errorText = err instanceof Error ? err.message : "sync failed";
+    const errorText = "Social metrics sync failed.";
     await recordCronTick({
       cronName: "social-metrics",
       startedAt,

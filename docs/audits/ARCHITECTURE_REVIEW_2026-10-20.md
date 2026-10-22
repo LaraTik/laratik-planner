@@ -2729,3 +2729,16 @@ On clean commit `b10bfd6380826287c814e9a3d694783de58b3e42`, `pnpm verify`
 passed formatting, lint, TypeScript, 590 unit files / 5,137 tests, and
 production build. No MCP tool names, arguments, scopes, or success-result
 shape changed.
+
+## A50 — Cron failures exposed raw exception text to callers and history
+
+**Priority: P2 — operational privacy.** Email-dispatch and outbox routes
+returned arbitrary exception messages in cron responses. Social-metrics errors
+were also returned to the scheduler, persisted in `cron_tick_history`, shown
+in the platform console, and returned by the manual Run Now action. Those
+messages can contain database/provider details. The handlers now record errors
+through the sanitized logger/Sentry path and return or persist stable failure
+copy. Focused route and Run Now regression tests cover response/history
+redaction and diagnostics (pending execution). Grouped repository verification
+is pending. Success payloads, cron authorization, job behavior, and status codes
+are unchanged.

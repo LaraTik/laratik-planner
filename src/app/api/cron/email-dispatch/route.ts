@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { authorizeCronRequest } from "@/lib/cron/route-auth";
 import { dispatchEmailOnce } from "@/lib/notifications/service";
 import { mutatingApiHeaders } from "@/lib/security/headers";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * GET/POST /api/cron/email-dispatch (FEAT-10).
@@ -39,10 +40,11 @@ async function handle(req: NextRequest): Promise<NextResponse> {
   try {
     result = await dispatchEmailOnce({ maxEvents: 50 });
   } catch (err) {
+    logError("cron.email_dispatch_failed", { err });
     return NextResponse.json(
       {
         ok: false,
-        error: err instanceof Error ? err.message : "dispatch failed",
+        error: "Email dispatch failed.",
         durationMs: Date.now() - start,
       },
       { status: 500, headers: mutatingApiHeaders() },
