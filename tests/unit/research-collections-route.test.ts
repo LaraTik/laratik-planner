@@ -4,6 +4,8 @@ import { NextRequest } from "next/server";
 const mocks = vi.hoisted(() => ({
   actor: { id: "11111111-1111-4111-8111-111111111111" },
   insert: vi.fn(),
+  select: vi.fn(),
+  update: vi.fn(),
   hasWorkspaceRole: vi.fn(async () => true),
 }));
 
@@ -15,9 +17,12 @@ vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: mocks.hasWorkspaceRole }
 vi.mock("@/lib/workspaces/context", () => ({
   getAccessibleWorkspace: vi.fn(async () => ({ id: "workspace-1", slug: "acme" })),
 }));
-vi.mock("@/lib/db", () => ({ db: { insert: mocks.insert } }));
+vi.mock("@/lib/db", () => ({
+  db: { insert: mocks.insert, select: mocks.select, update: mocks.update },
+}));
 
 import { POST } from "@/app/api/research/collections/route";
+import { DELETE as detachCollectionItem } from "@/app/api/research/collections/items/route";
 
 describe("POST /api/research/collections", () => {
   beforeEach(() => {
@@ -74,5 +79,35 @@ describe("POST /api/research/collections", () => {
         shareScope: "workspace",
       }),
     );
+  });
+});
+
+describe("DELETE /api/research/collections/items", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not detach an item from another user's private collection", async () => {
+    const limit = vi.fn().mockResolvedValue([]);
+    mocks.select.mockReturnValue({
+      from: vi.fn().mockReturnValue({ where: vi.fn().mockReturnValue({ limit }) }),
+    });
+
+    const response = await detachCollectionItem(
+      new NextRequest("http://localhost/api/research/collections/items", {
+        method: "DELETE",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          workspaceSlug: "acme",
+          collectionId: "22222222-2222-4222-8222-222222222222",
+          itemKind: "bookmark",
+          itemId: "33333333-3333-4333-8333-333333333333",
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toEqual({ error: "collection_not_accessible" });
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

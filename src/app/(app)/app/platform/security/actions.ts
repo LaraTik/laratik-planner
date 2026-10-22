@@ -19,7 +19,7 @@ import {
   type SupportAccessRequestRow,
 } from "@/lib/support";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { getPlatformPrincipal } from "@/lib/auth/platform-access";
+import { getPlatformPrincipal, requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PermissionDeniedError } from "@/lib/auth/policy";
 
 /**
@@ -163,9 +163,9 @@ export async function revokeSupportAccessGrantAction(input: z.input<typeof Revok
 
 export async function expireStaleSupportAccessGrantsAction() {
   const { actor } = await requirePlatformActor();
+  await requirePlatformPermission(actor, "platform.access.manage");
   const result = await expireStaleSupportAccessGrants();
   revalidatePath("/app/platform/security");
-  void actor; // rate-limited implicitly by the platform gate
   return { ok: true as const, ...result };
 }
 

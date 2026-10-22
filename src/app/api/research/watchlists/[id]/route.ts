@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import { z } from "zod";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -26,6 +26,24 @@ async function manageContext(workspaceSlug: string) {
   return ctx;
 }
 
+async function canManageWatchlist(workspaceId: string, actorId: string, watchlistId: string) {
+  const [watchlist] = await db
+    .select({ id: researchWatchlists.id })
+    .from(researchWatchlists)
+    .where(
+      and(
+        eq(researchWatchlists.id, watchlistId),
+        eq(researchWatchlists.workspaceId, workspaceId),
+        or(
+          eq(researchWatchlists.shareScope, "workspace"),
+          eq(researchWatchlists.createdBy, actorId),
+        ),
+      ),
+    )
+    .limit(1);
+  return watchlist;
+}
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function DELETE(request: NextRequest, { params }: RouteContext) {
@@ -34,6 +52,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const ctx = await manageContext(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+    return errorResponse("watchlist_not_found", 404);
+  }
 
   const [archived] = await db
     .update(researchWatchlists)
@@ -56,6 +77,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const ctx = await manageContext(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+    return errorResponse("watchlist_not_found", 404);
+  }
 
   const [restored] = await db
     .update(researchWatchlists)

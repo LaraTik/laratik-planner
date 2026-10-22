@@ -123,6 +123,11 @@ export async function DELETE(request: NextRequest) {
     );
   const ctx = await context(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canUseCollection(ctx.workspace.id, ctx.actor.id, parsed.data.collectionId)))
+    return NextResponse.json(
+      { error: "collection_not_accessible" },
+      { status: 403, headers: mutatingApiHeaders() },
+    );
   if (parsed.data.itemKind === "bookmark") {
     await db
       .update(researchBookmarks)

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, or, sql } from "drizzle-orm";
 import { z } from "zod";
 import { hasWorkspaceRole } from "@/lib/auth/policy";
 import { db } from "@/lib/db";
@@ -65,6 +65,25 @@ async function assertScope(watchlistId: string, accountId: string, workspaceId: 
   return scope;
 }
 
+async function canManageWatchlist(
+  workspaceId: string,
+  actorId: string,
+  watchlistId: string,
+  activeOnly = false,
+) {
+  const conditions = [
+    eq(researchWatchlists.id, watchlistId),
+    eq(researchWatchlists.workspaceId, workspaceId),
+    or(eq(researchWatchlists.shareScope, "workspace"), eq(researchWatchlists.createdBy, actorId)),
+  ];
+  const [watchlist] = await db
+    .select({ id: researchWatchlists.id })
+    .from(researchWatchlists)
+    .where(and(...conditions, ...(activeOnly ? [isNull(researchWatchlists.archivedAt)] : [])))
+    .limit(1);
+  return watchlist;
+}
+
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
@@ -73,6 +92,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const ctx = await manageContext(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+    return errorResponse("account_or_watchlist_not_found", 404);
+  }
   if (!(await assertScope(id, parsed.data.accountId, ctx.workspace.id))) {
     return errorResponse("account_or_watchlist_not_found", 404);
   }
@@ -90,6 +112,9 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   const ctx = await manageContext(parsed.data.workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+    return errorResponse("account_or_watchlist_not_found", 404);
+  }
   if (!(await assertScope(id, parsed.data.accountId, ctx.workspace.id))) {
     return errorResponse("account_or_watchlist_not_found", 404);
   }
@@ -118,6 +143,9 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (!workspaceSlug) return errorResponse("invalid_body", 400);
   const ctx = await manageContext(workspaceSlug);
   if ("response" in ctx) return ctx.response;
+  if (!(await canManageWatchlist(ctx.workspace.id, ctx.actor.id, id))) {
+    return errorResponse("account_or_watchlist_not_found", 404);
+  }
 
   if (parsedReorder.success) {
     const members = await db
@@ -163,18 +191,13 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     return errorResponse("same_watchlist", 400);
   }
   const source = await assertScope(id, parsedTransfer.data.accountId, ctx.workspace.id);
-  const target = await db
-    .select({ id: researchWatchlists.id })
-    .from(researchWatchlists)
-    .where(
-      and(
-        eq(researchWatchlists.id, parsedTransfer.data.targetWatchlistId),
-        eq(researchWatchlists.workspaceId, ctx.workspace.id),
-        isNull(researchWatchlists.archivedAt),
-      ),
-    )
-    .limit(1);
-  if (!source || !target[0]) return errorResponse("account_or_watchlist_not_found", 404);
+  const target = await canManageWatchlist(
+    ctx.workspace.id,
+    ctx.actor.id,
+    parsedTransfer.data.targetWatchlistId,
+    true,
+  );
+  if (!source || !target) return errorResponse("account_or_watchlist_not_found", 404);
 
   await db.transaction(async (tx) => {
     if (parsedTransfer.data.mode === "move") {

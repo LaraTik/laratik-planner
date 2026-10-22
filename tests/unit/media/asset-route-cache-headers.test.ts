@@ -4,28 +4,9 @@ import { NextRequest } from "next/server";
 /**
  * PR 1 / Tier 1 (perf/media): `/api/media/assets/[id]` cache headers.
  *
- * Pre-PR 1:
- *   - `Cache-Control: private, max-age=300` meant every navigation
- *     past 5 minutes re-validated (and re-streamed through Next) the
- *     same R2 object. For a planner scrolling back through their
- *     library this was 48 R2 round-trips per nav.
- *   - No `Vary` header, so caches across role/cookie changes were
- *     stale.
- *
- * Post-PR 1:
- *   - `Cache-Control: private, max-age=86400` for previews so a
- *     repeat visit within 24h is a free browser cache hit.
- *   - `Vary: Cookie` so role/visibility changes invalidate the
- *     browser cache.
- *   - `Cache-Control: private, no-store` for `?download=1` so a
- *     download click never reuses a cached body — the bytes
- *     are now streaming with `Content-Disposition: attachment`.
- *
- * PR 2 (preview-variant pipeline) will let us go further: a
- * `/api/media/assets/[id]/preview` route that points at a
- * separate thumbnail object stored on R2, with `immutable`
- * cache headers. PR 3 (bypass the proxy) removes the per-row
- * Node-stream hop.
+ * Every authorized object read is no-store because a browser's cached
+ * cookie value does not change when workspace membership or visibility is
+ * revoked. Immutable preview variants can use a separate cache policy.
  */
 
 const authMock = vi.fn();
@@ -91,17 +72,17 @@ afterEach(() => {
 });
 
 describe("/api/media/assets/[id] — cache policy", () => {
-  it("returns max-age=86400 for previews and Vary: Cookie", async () => {
+  it("does not cache previews after authorization", async () => {
     const { GET } = await loadRoute();
     const req = new NextRequest("http://localhost/api/media/assets/asset-1");
     const res = await GET(req, { params: Promise.resolve({ id: "asset-1" }) });
 
-    expect(res.headers.get("Cache-Control")).toBe("private, max-age=86400");
-    expect(res.headers.get("Vary")).toBe("Cookie");
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(res.headers.get("Vary")).toBeNull();
     expect(res.headers.get("X-Content-Type-Options")).toBe("nosniff");
   });
 
-  it("returns no-store for download=1 so downloads never serve stale bytes", async () => {
+  it("keeps downloads uncached and sets an attachment filename", async () => {
     const { GET } = await loadRoute();
     const req = new NextRequest("http://localhost/api/media/assets/asset-1?download=1");
     const res = await GET(req, { params: Promise.resolve({ id: "asset-1" }) });

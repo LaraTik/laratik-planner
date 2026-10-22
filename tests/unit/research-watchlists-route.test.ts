@@ -109,18 +109,19 @@ describe("research watchlist routes", () => {
   });
 
   it("adds and removes a membership only after both records pass workspace scope", async () => {
-    const scopeChain = {
-      limit: vi.fn().mockResolvedValue([
-        {
-          watchlistId: "33333333-3333-4333-8333-333333333333",
-          accountId: "44444444-4444-4444-8444-444444444444",
-        },
-      ]),
+    const limit = vi.fn().mockResolvedValue([
+      {
+        watchlistId: "33333333-3333-4333-8333-333333333333",
+        accountId: "44444444-4444-4444-8444-444444444444",
+      },
+    ]);
+    const query = {
+      where: vi.fn().mockReturnThis(),
+      innerJoin: vi.fn().mockReturnThis(),
+      limit,
     };
-    const whereChain = { limit: scopeChain.limit };
-    const joinChain = { where: vi.fn().mockReturnValue(whereChain) };
     mocks.select.mockReturnValue({
-      from: vi.fn().mockReturnValue({ innerJoin: vi.fn().mockReturnValue(joinChain) }),
+      from: vi.fn().mockReturnValue(query),
     });
     mocks.insert.mockReturnValue({
       values: vi
@@ -152,6 +153,11 @@ describe("research watchlist routes", () => {
         where: vi.fn().mockReturnValue({ returning }),
       }),
     });
+    const query = {
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([{ id: "33333333-3333-4333-8333-333333333333" }]),
+    };
+    mocks.select.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
     const routeContext = {
       params: Promise.resolve({ id: "33333333-3333-4333-8333-333333333333" }),
     };
@@ -168,5 +174,25 @@ describe("research watchlist routes", () => {
     expect(archiveResponse.status).toBe(200);
     expect(restoreResponse.status).toBe(200);
     expect(mocks.update).toHaveBeenCalledTimes(2);
+  });
+
+  it("hides private watchlists from other managers during archive", async () => {
+    const query = {
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue([]),
+    };
+    mocks.select.mockReturnValue({ from: vi.fn().mockReturnValue(query) });
+    const context = {
+      params: Promise.resolve({ id: "33333333-3333-4333-8333-333333333333" }),
+    };
+
+    const response = await archiveWatchlist(
+      routeRequest({ workspaceSlug: "acme" }, "DELETE"),
+      context,
+    );
+
+    expect(response.status).toBe(404);
+    await expect(response.json()).resolves.toEqual({ error: "watchlist_not_found" });
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });
