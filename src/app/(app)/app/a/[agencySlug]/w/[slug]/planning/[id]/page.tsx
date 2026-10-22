@@ -791,6 +791,29 @@ export default async function ContentDetailPage({
     };
   })();
 
+  // The mobile sheet and desktop rail display the same workflow state.
+  // Build the serializable client model once so both responsive surfaces
+  // stay in sync as the workflow contract evolves.
+  const workflowProps = {
+    workspaceSlug: slug,
+    contentItemId: item.id,
+    status: item.status,
+    blockedReason: item.blockedReason,
+    cancellationReason: item.cancellationReason,
+    roles: actorRoles,
+    approvals: approvals.map((approval) => ({
+      id: approval.id,
+      gate: approval.gate,
+      status: approval.status,
+      requestedAt: approval.requestedAt.toISOString(),
+      deliveryVersionId: approval.deliveryVersionId,
+    })),
+    designers,
+    ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
+    planningPresentation,
+    scenario: activeScenario,
+  };
+
   return (
     <div data-testid="workspace-content-detail">
       {justCreated ? (
@@ -819,26 +842,7 @@ export default async function ContentDetailPage({
                 a client boundary for the trigger itself. The
                 sheet only appears on <lg viewports. */}
             <div className="lg:hidden">
-              <WorkflowSheet
-                workspaceSlug={slug}
-                contentItemId={item.id}
-                status={item.status}
-                blockedReason={item.blockedReason}
-                cancellationReason={item.cancellationReason}
-                roles={actorRoles}
-                approvals={approvals.map((a) => ({
-                  id: a.id,
-                  gate: a.gate,
-                  status: a.status,
-                  requestedAt: a.requestedAt.toISOString(),
-                  deliveryVersionId: a.deliveryVersionId,
-                }))}
-                designers={designers}
-                {...(designer
-                  ? { designer: { id: designer.id, label: designer.displayName } }
-                  : {})}
-                planningPresentation={planningPresentation}
-              />
+              <WorkflowSheet {...workflowProps} />
             </div>
             {/* Compact header — answers the four questions at a
                 glance (back link, title, status, action). The
@@ -881,25 +885,7 @@ export default async function ContentDetailPage({
             />
           </>
         }
-        workflow={{
-          workspaceSlug: slug,
-          contentItemId: item.id,
-          status: item.status,
-          blockedReason: item.blockedReason,
-          cancellationReason: item.cancellationReason,
-          roles: actorRoles,
-          approvals: approvals.map((a) => ({
-            id: a.id,
-            gate: a.gate,
-            status: a.status,
-            requestedAt: a.requestedAt.toISOString(),
-            deliveryVersionId: a.deliveryVersionId,
-          })),
-          designers,
-          ...(designer ? { designer: { id: designer.id, label: designer.displayName } } : {}),
-          planningPresentation,
-          scenario: activeScenario,
-        }}
+        workflow={workflowProps}
         workspace={{
           agencySlug,
           workspaceSlug: slug,
