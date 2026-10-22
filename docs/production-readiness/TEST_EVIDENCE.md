@@ -2905,3 +2905,16 @@ SHA. `pnpm verify` is recorded as not fully green because of the suite timeout,
 not as a passing gate. No schema or persisted-data behavior changed. This
 evidence does not clear browser/visual release checks, full route review,
 Firefox, or independent verification.
+
+## Notification email worker ownership — `be867104f611965e34c9ec6f9a1d0431aba3dc9e`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 591
+unit files / 5,141 tests, and the production build. The disposable-Postgres
+`tests/integration/notifications/email-dlq.test.ts` passed 2/2, covering
+dead-letter handling and overlapping dispatcher ticks. The email dispatcher
+now lives in a dedicated server-only module, shared fallback copy lives in a
+pure module, and the cron route and focused tests use the dedicated worker
+entry point. The notification service temporarily re-exports the worker for
+compatibility. No schema, route response, notification payload, or delivery
+state contract changed. Full browser/visual checks, route review, Firefox,
+and independent verification remain open.

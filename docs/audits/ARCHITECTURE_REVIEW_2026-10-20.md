@@ -2746,3 +2746,20 @@ passed when rerun alone (782 ms). `pnpm build` passed separately on the same
 clean SHA. Because `pnpm verify` exited nonzero on that timeout, the full gate
 is recorded as not fully green. Success payloads, cron authorization, job
 behavior, and status codes are unchanged.
+
+## A51 — Notification delivery shared one large service with in-app workflows
+
+**Priority: P2 — responsibility boundaries and change isolation.** The
+1,175-line notification service combined in-app outbox fan-out, preference-
+aware SMTP dispatch, and notification fallback copy. Email dispatch has its
+own cron lifecycle, row locks, recipient delivery state, retry/DLQ policy,
+and transport failures, so it now lives in `notifications/email-dispatch.ts`;
+the shared fallback strings live in the pure `notifications/copy.ts` module.
+The email cron, worker unit tests, and Postgres integration tests now target
+the dedicated worker. `service.ts` keeps a compatibility re-export while
+existing callers migrate. On clean SHA
+`be867104f611965e34c9ec6f9a1d0431aba3dc9e`, `pnpm verify` passed formatting,
+ESLint, TypeScript, 591 unit files / 5,141 tests, and the production build.
+The disposable-Postgres email retry/concurrency integration suite passed 2/2.
+No notification payload, delivery state, route response, or persisted-data
+contract changed.

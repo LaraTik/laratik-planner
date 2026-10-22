@@ -3698,3 +3698,19 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No schema, route, cron authorization, success response, or persisted-data
   contract changed. Browser/visual release checks, full route review, Firefox,
   and independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Separate notification email delivery ownership
+
+- Moved the preference-aware SMTP dispatcher and its recipient mapping / retry
+  policy into `src/lib/notifications/email-dispatch.ts`; extracted shared
+  fallback copy to `src/lib/notifications/copy.ts`. The email cron route and
+  worker-specific tests use the dedicated module. The old service keeps a
+  temporary compatibility export.
+- On clean SHA `be867104f611965e34c9ec6f9a1d0431aba3dc9e`, `pnpm verify` passed
+  formatting, ESLint, TypeScript, 591 unit files / 5,141 tests, and production
+  build. The disposable-Postgres email retry/concurrency suite passed 2/2.
+- A full-suite timeout previously occurred in the report retention filesystem
+  test; its unchanged assertions now have a scoped 15-second budget and pass
+  under the full suite. No schema, notification payload, response, or delivery
+  state contract changed. Browser/visual review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.
