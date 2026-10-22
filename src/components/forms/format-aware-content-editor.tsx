@@ -7,8 +7,8 @@ import { cn } from "@/lib/utils";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { updateFormatPayloadAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
+import type { ActionState } from "@/lib/validation/action-state";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
 import { useNavigationDirtyGuard } from "@/lib/forms/use-navigation-dirty-guard";
 import { fieldsFor, ratioOptionsFor, type FieldDef } from "./format-payload-field-set";
@@ -57,7 +57,7 @@ import { useLocaleT } from "@/components/i18n/locale-provider";
  * sectioned view by default.
  */
 
-const initial: { error?: string; ok?: boolean } = {};
+const initial: ActionState = {};
 
 // These workbook columns duplicate the canonical planning metadata or the
 // delivery surface. Keep legacy values in the payload, but remove their
@@ -82,7 +82,7 @@ export interface FormatAwareContentEditorProps {
    *  `labelKey` and the section's `titleKey` / `descriptionKey`
    *  through the active message catalog. */
   t?: (key: string, params?: Record<string, string | number>) => string;
-  workspaceSlug: string;
+  saveAction: (previous: ActionState, formData: FormData) => Promise<ActionState>;
   contentItemId: string;
   format: ContentFormat;
   initial: Record<string, unknown>;
@@ -267,7 +267,7 @@ const SECTIONS_BY_FORMAT: Record<ContentFormat, ReadonlyArray<SectionDef>> = {
 
 export function FormatAwareContentEditor({
   t: tProp,
-  workspaceSlug,
+  saveAction,
   contentItemId,
   format,
   initial: initialPayload,
@@ -290,8 +290,7 @@ export function FormatAwareContentEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJson]);
 
-  const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
-  const [state, formAction, pending] = useActionState(boundAction, initial);
+  const [state, formAction, pending] = useActionState(saveAction, initial);
   // Ref used by the navigation dirty guard. The Messages
   // panel has its own form ref; the format-aware editor
   // mirrors the same pattern so the beforeunload and

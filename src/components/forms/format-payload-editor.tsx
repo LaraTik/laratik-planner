@@ -6,8 +6,8 @@ import { CheckCircle2, ChevronDown, Save, Loader2, ListChecks } from "lucide-rea
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
-import { updateFormatPayloadAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
+import type { ActionState } from "@/lib/validation/action-state";
 import {
   fieldsFor,
   ratioOptionsFor,
@@ -65,7 +65,7 @@ export interface FormatPayloadEditorProps {
    *  `labelKey` and the editor's chrome strings through the
    *  active message catalog. */
   t: (key: string, params?: Record<string, string | number>) => string;
-  workspaceSlug: string;
+  saveAction: (previous: ActionState, formData: FormData) => Promise<ActionState>;
   contentItemId: string;
   format: ContentFormat;
   initial: Record<string, unknown>;
@@ -74,11 +74,11 @@ export interface FormatPayloadEditorProps {
   aiEnabled: boolean;
 }
 
-const initial: { error?: string; ok?: boolean } = {};
+const initial: ActionState = {};
 
 export function FormatPayloadEditor({
   t,
-  workspaceSlug,
+  saveAction,
   contentItemId,
   format,
   initial: initialPayload,
@@ -99,8 +99,7 @@ export function FormatPayloadEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJson]);
 
-  const boundAction = updateFormatPayloadAction.bind(null, workspaceSlug);
-  const [state, formAction, pending] = useActionState(boundAction, initial);
+  const [state, formAction, pending] = useActionState(saveAction, initial);
 
   // Resolve the manifest. `fieldsFor` returns the same array
   // every render for a given format, so the downstream split is

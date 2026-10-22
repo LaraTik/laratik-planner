@@ -1,18 +1,17 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions", () => ({
-  updateAudienceCopyAction: vi.fn(),
-}));
+import { describe, expect, it } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { AudienceCopyPanel } from "@/components/planning/messages-panel";
+
+const saveAction = async () => ({});
 
 describe("AudienceCopyPanel localization", () => {
   it("localizes channel platform labels in Arabic", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
@@ -57,6 +56,7 @@ describe("AudienceCopyPanel localization", () => {
     render(
       <LocaleProvider locale="en">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"
@@ -80,6 +80,7 @@ describe("AudienceCopyPanel localization", () => {
     render(
       <LocaleProvider locale="ar">
         <AudienceCopyPanel
+          saveAction={saveAction}
           agencySlug="acme"
           workspaceSlug="acme"
           contentItemId="11111111-1111-4111-8111-111111111111"

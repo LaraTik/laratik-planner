@@ -49,7 +49,11 @@ import { ActivityWithFilters } from "@/components/planning/activity-with-filters
 import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
-import { applyResearchTeardownAction } from "../actions";
+import {
+  applyResearchTeardownAction,
+  updateAudienceCopyAction,
+  updateFormatPayloadAction,
+} from "../actions";
 import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
@@ -1102,7 +1106,7 @@ export default async function ContentDetailPage({
                         />
                       ) : null}
                       <FormatAwareContentEditor
-                        workspaceSlug={slug}
+                        saveAction={updateFormatPayloadAction.bind(null, slug)}
                         contentItemId={item.id}
                         format={item.format}
                         initial={(() => {
@@ -1161,7 +1165,7 @@ export default async function ContentDetailPage({
                       />
                     ) : null}
                     <FormatAwareContentEditor
-                      workspaceSlug={slug}
+                      saveAction={updateFormatPayloadAction.bind(null, slug)}
                       contentItemId={item.id}
                       format={item.format}
                       initial={(() => {
@@ -1358,6 +1362,7 @@ export default async function ContentDetailPage({
                 data-testid="workspace-tab-panel-copy"
               >
                 <MessagesPanel
+                  saveAction={updateAudienceCopyAction.bind(null, slug)}
                   agencySlug={agencySlug}
                   workspaceSlug={slug}
                   contentItemId={item.id}
