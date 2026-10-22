@@ -134,7 +134,7 @@ export async function resetAllIdeasAction(
   // so the gate is the same.
   try {
     await requirePlatformPermission(actor, "platform.destructive.execute");
-  } catch (error) {
+  } catch {
     recordAudit({
       actorId: actor.id,
       workspaceId: "",
@@ -145,7 +145,7 @@ export async function resetAllIdeasAction(
       outcome: "denied",
       reason: parsed.data.reason,
       typedPhraseMatch: false,
-      errorMessage: error instanceof Error ? error.message : "Permission denied",
+      errorMessage: "permission_denied",
     });
     return {
       ok: false,
@@ -303,7 +303,7 @@ export async function resetAllIdeasAction(
       outcome: "failed",
       reason: parsed.data.reason,
       typedPhraseMatch: true,
-      errorMessage: error instanceof Error ? error.message : "Unknown DB error",
+      errorMessage: "persistence_failure",
     });
     return {
       ok: false,

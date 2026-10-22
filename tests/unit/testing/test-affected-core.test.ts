@@ -170,12 +170,19 @@ describe("test affected core", () => {
   });
 
   it("keeps the destructive idea action on its focused content test area", () => {
-    const result = classifyChangedFiles(["src/lib/content/reset-idea-action.ts"], TEST_OWNERSHIP);
+    const cases = [
+      ["src/lib/content/reset-idea-action.ts", "tests/unit/reset-idea-action.test.ts"],
+      ["src/lib/content/reset-all-ideas-action.ts", "tests/unit/reset-all-ideas-action.test.ts"],
+    ] as const;
 
-    expect(result.kind).toBe("targeted");
-    expect(result.areaIds).toContain("content");
-    expect(result.unitFiles).toContain("tests/unit/reset-idea-action.test.ts");
-    expect(result.runAllUnit).toBe(false);
+    for (const [sourcePath, testPath] of cases) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toContain("content");
+      expect(result.unitFiles, sourcePath).toContain(testPath);
+      expect(result.runAllUnit, sourcePath).toBe(false);
+    }
   });
 
   it("selects bilingual browser coverage for agency support review changes", () => {
