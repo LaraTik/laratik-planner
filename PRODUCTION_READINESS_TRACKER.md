@@ -3535,3 +3535,21 @@ default framebuffer`, then consumes a CPU core without returning control;
 - This is exact-SHA evidence for the grouped code checks, not release approval:
   48 visual reference differences, Firefox, the full browser matrix, manual
   route review, and independent **Verified** review remain open.
+
+## 2026-10-22 — Isolate platform visual fixtures
+
+- The visual suite seeded platform and ordinary routes with the same default
+  account. Concurrent ordinary seeds revoke that account's platform role, so
+  `/app/platform/errors` could render a forbidden state during a platform
+  capture. Platform visual cases now use dedicated per-case fixture accounts.
+- Added an explicit authorized-page heading assertion for the platform-errors
+  responsive cases. With the isolated account, the page consistently renders
+  its empty state; the old reference contained 13 `ChunkLoadError` rows that
+  the visual fixture does not seed.
+- Refreshed only the platform-errors responsive references at mobile, tablet,
+  and wide widths. The focused strict comparison passes 3/3. The full visual
+  matrix has not been rerun, and other reference differences remain open.
+- A representative Brand Kit root comparison still differs from its active
+  Stitch design; it remains a product-parity item and its snapshot was not
+  refreshed. Status remains **Tested**, not **Verified**; Firefox, full visual
+  reconciliation, route review, independent review, and push remain open.

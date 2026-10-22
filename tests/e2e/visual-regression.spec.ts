@@ -101,6 +101,7 @@ const A11Y_TAGS = ["wcag2a", "wcag2aa", "wcag22aa"] as const;
 const PUBLIC_VISUAL_SEED: SeedResultLike = { contentItemId: "public-route" };
 
 function sessionOptionsFor(entry: StitchCase): {
+  email?: string;
   agencyAdmin?: boolean;
   workspaceRoles?: ["client_reviewer"];
   platformRole?: PlatformRole;
@@ -122,7 +123,13 @@ function sessionOptionsFor(entry: StitchCase): {
           authRole: "user" as const,
         }
       : {}),
-    ...(entry.platformRole ? { platformRole: entry.platformRole, authRole: "user" } : {}),
+    ...(entry.platformRole
+      ? {
+          email: `visual-platform-${entry.screenId}@laratik.local`,
+          platformRole: entry.platformRole,
+          authRole: "user" as const,
+        }
+      : {}),
     ...(entry.route === "/app/w/acme/trends" ? { enableTrendRadar: true } : {}),
     ...(entry.route === "/app/agency-settings/ai" ? { agencyAiFixture: true } : {}),
   };
@@ -573,10 +580,18 @@ test.describe("visual regression (responsive matrix)", () => {
               }
               seedLike = sharedSeed;
             } else {
+              const platformEmailScope = `${surface}-${viewport.name}`
+                .replace(/[^a-z0-9-]/gi, "-")
+                .toLowerCase();
               seedLike = await bootstrapTestSession(
                 page,
                 platformSurface
-                  ? { platformRole: "platform_owner", authRole: "user", visualFixture: true }
+                  ? {
+                      email: `visual-platform-${platformEmailScope}@laratik.local`,
+                      platformRole: "platform_owner",
+                      authRole: "user",
+                      visualFixture: true,
+                    }
                   : surface === "/app/w/acme/client" || surface === "/app/w/acme/client/calendar"
                     ? {
                         agencyAdmin: false,
@@ -602,6 +617,11 @@ test.describe("visual regression (responsive matrix)", () => {
             await page.waitForLoadState("domcontentloaded");
             await waitForStableDom(page, surface, CAPTURE_MODE_TIMEOUT_MS);
             await assertNoNextRuntimeError(page);
+            if (surface === "/app/platform/errors") {
+              await expect(
+                page.getByRole("heading", { name: "App errors", level: 1 }),
+              ).toBeVisible();
+            }
             await applyMask(page);
           } catch (error) {
             if (!isCaptureMode) throw error;

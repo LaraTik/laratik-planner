@@ -2764,3 +2764,21 @@ commit `cd4ce270a53a7381b2debd69da059028769fd821`; the intervening commit only
 changed visual test setup and evidence documentation. Firefox and route review
 remain open, so this does not clear the full release gates or assign
 **Verified** status.
+
+## Platform visual fixture isolation — 2026-10-22
+
+Platform-route visual tests now use dedicated fixture accounts. This prevents
+concurrent ordinary visual seeds from revoking the platform role on a shared
+default account. The responsive platform-errors test also asserts the
+authorized page heading before taking its screenshot. The previous references
+contained 13 `ChunkLoadError` rows that are not part of the current fixture;
+the route's verified current state is the empty state.
+
+| Check                               | Result                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| Platform-errors reference refresh   | Updated only mobile, tablet, and wide captures after reviewing the current empty state. |
+| Strict platform-errors visual rerun | Pass — 3/3 at mobile, tablet, and wide.                                                 |
+
+This is focused working-tree evidence, not a full visual release pass or
+exact-clean-SHA evidence. Brand Kit root parity and the remaining visual
+differences are still open.

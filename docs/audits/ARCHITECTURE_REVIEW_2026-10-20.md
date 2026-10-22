@@ -2538,3 +2538,21 @@ The architecture charter and implementation batch are **Tested**, not
 available, visual references are reconciled, manual review is recorded,
 independent review is performed, and clean exact-commit evidence is gathered.
 AD-002 remains **In Progress**; commit and push remain pending those gates.
+
+## Visual fixture isolation and current-state review — 2026-10-22
+
+Parallel visual cases shared the default test account. A normal seed revokes
+platform access, while the platform-errors case seeded a platform owner. Under
+concurrency, `/app/platform/errors` could therefore render **Forbidden**.
+Platform route captures now use per-case accounts, and the responsive errors
+case asserts the authorized **App errors** heading. The focused mobile,
+tablet, and wide checks pass 3/3.
+
+The platform-errors baseline had 13 `ChunkLoadError` entries that the current
+visual fixture does not seed. Reviewing the current capture showed the
+authorized page's intentional empty state, so only its three responsive
+references were refreshed. This does not approve unrelated snapshots. In
+particular, the current Brand Kit root differs materially from its active
+Stitch screen (`b8b3b5767...`); that remains a P2 product-parity follow-up
+instead of a snapshot refresh. The complete visual matrix, Firefox, manual
+route review, and independent verification remain open.
