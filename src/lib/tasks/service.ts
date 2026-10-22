@@ -16,6 +16,7 @@ import {
   type Actor,
   PermissionDeniedError,
 } from "@/lib/auth/policy";
+import { getTaskAccess } from "@/lib/tasks/access";
 import { canTransitionTaskStatus, type TaskStatus } from "@/lib/tasks/workflow";
 
 type TaskTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -162,23 +163,15 @@ async function getRawTask(taskId: string, agencyId?: string) {
   return task ?? null;
 }
 
-async function canManageTask(
-  actor: Actor,
-  task: { agencyId: string; createdBy: string; assigneeId: string | null },
-) {
-  if (await isAgencyAdmin(actor, task.agencyId)) return true;
-  return actor.id === task.createdBy || actor.id === task.assigneeId;
-}
-
 export async function updateTask(actor: Actor, taskId: string, input: TaskUpdateInput) {
   const current = await getRawTask(taskId);
-  if (!current || !(await isAgencyMember(actor, current.agencyId))) {
-    throw new PermissionDeniedError("task.update");
-  }
-  const admin = await isAgencyAdmin(actor, current.agencyId);
-  if (!(await canManageTask(actor, current))) throw new PermissionDeniedError("task.update");
-  if (input.assigneeId !== undefined && !admin) throw new PermissionDeniedError("task.assign");
-  if (input.workspaceId !== undefined && !admin) throw new PermissionDeniedError("task.workspace");
+  if (!current) throw new PermissionDeniedError("task.update");
+  const access = await getTaskAccess(actor, current);
+  if (!access.canManage) throw new PermissionDeniedError("task.update");
+  if (input.assigneeId !== undefined && !access.isAgencyAdmin)
+    throw new PermissionDeniedError("task.assign");
+  if (input.workspaceId !== undefined && !access.isAgencyAdmin)
+    throw new PermissionDeniedError("task.workspace");
   await assertWorkspaceInAgency(current.agencyId, input.workspaceId);
   await assertUserInAgency(current.agencyId, input.assigneeId);
   if (input.title !== undefined) input.title = assertTitle(input.title);
@@ -354,8 +347,9 @@ export async function getTaskDetail(actor: Actor, taskId: string) {
     .leftJoin(workspaces, eq(workspaces.id, agencyTasks.workspaceId))
     .where(eq(agencyTasks.id, taskId))
     .limit(1);
-  if (!row || !(await isAgencyMember(actor, row.task.agencyId)))
-    throw new PermissionDeniedError("task.view");
+  if (!row) throw new PermissionDeniedError("task.view");
+  const access = await getTaskAccess(actor, row.task);
+  if (!access.canView) throw new PermissionDeniedError("task.view");
   const [events, attachments] = await Promise.all([
     db
       .select({ event: taskActivityEvents, actorName: users.displayName })
@@ -375,9 +369,9 @@ export async function getTaskDetail(actor: Actor, taskId: string) {
     assigneeName: row.assigneeName,
     workspaceName: row.workspaceName,
     workspaceSlug: row.workspaceSlug,
-    canManage: await canManageTask(actor, row.task),
-    canArchive: await isAgencyAdmin(actor, row.task.agencyId),
-    canRestore: (await isAgencyAdmin(actor, row.task.agencyId)) && row.task.archivedAt !== null,
+    canManage: access.canManage,
+    canArchive: access.isAgencyAdmin,
+    canRestore: access.isAgencyAdmin && row.task.archivedAt !== null,
     events: events.map(({ event, actorName }) => ({ ...event, actorName })),
     attachments,
   };
