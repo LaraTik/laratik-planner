@@ -3609,3 +3609,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   full browser matrix including Firefox, manual route review, and independent
   verification remain open. AD-002 remains **In Progress**; no
   **Verified** status is assigned.
+
+## 2026-10-23 — Add sanitized folder-import diagnostics
+
+- Unexpected per-item and route-level media folder import failures now emit
+  structured errors through the existing sanitized logger. User-facing
+  responses remain generic; late permission denials remain 403 and are not
+  logged as unexpected failures.
+- Focused regression tests passed 8/8. Grouped `pnpm verify` passed on the
+  application tree committed at
+  `e41d18784543791c077363a7ba3c29913e183a15`: formatting, ESLint, TypeScript,
+  all 588 unit files / 5,127 tests, and the production build. The commit hook
+  also passed TypeScript and 259 affected tests.
+- No schema, permission, route, or persisted-data contract changed. Full
+  browser/visual release coverage, manual route review, Firefox, and
+  independent verification remain open. AD-002 remains **In Progress**.

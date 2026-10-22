@@ -2653,10 +2653,14 @@ returned an unexpected exception's message in its 500 response. Storage or
 database errors can contain internal implementation and connection details.
 Both paths now return fixed safe copy for unexpected failures; known
 `MediaSourceError` details remain the deliberately sanitized provider guidance.
+Unexpected failures are also recorded through the existing sanitized
+structured logger, while expected permission denials are not logged as errors.
 The route maps a late `MediaPermissionError` to the established forbidden
 response. Focused service and route regression coverage passes 8/8. Grouped
-`pnpm verify` passes on the clean code tree committed at
-`aabd19ea0478791be9d6a564bad051936c6c0466`: formatting, lint, TypeScript,
-588 unit files / 5,127 tests, and production build. No schema, route, or
-persisted-data contract changed. Unexpected error details are intentionally
-sanitized, and late permission failures now consistently return forbidden.
+`pnpm verify` passes on the application tree committed at
+`e41d18784543791c077363a7ba3c29913e183a15`:
+formatting, lint, TypeScript, 588 unit files / 5,127 tests, and production
+build. The commit hook also passed type-checking and 259 affected tests. No
+schema, route, or persisted-data contract changed. Unexpected error details
+are intentionally sanitized in client responses and server logs, and late
+permission failures now consistently return forbidden.

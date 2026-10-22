@@ -2837,3 +2837,15 @@ On the clean commit, `pnpm verify` passed formatting, ESLint, TypeScript, all
 comparison for platform-errors passed 3/3 at mobile, tablet, and wide widths.
 This does not clear the complete visual matrix, Firefox, manual route review,
 or independent verification.
+
+## Media folder import diagnostics — `e41d18784543791c077363a7ba3c29913e183a15`
+
+The grouped `pnpm verify` passed on the application tree committed at this SHA:
+formatting, ESLint, TypeScript, all 588 unit files / 5,127 tests, and the
+production build. The focused folder-import service and route tests passed
+8/8; the commit hook passed TypeScript and 259 affected unit tests. Unexpected
+server errors are logged through the existing sanitized structured logger,
+while responses remain generic and known permission denials remain unlogged
+as errors. No schema or persisted-data contract changed. Full browser/visual
+release coverage, manual route review, Firefox, and independent verification
+remain open; this is not final production-readiness sign-off.
