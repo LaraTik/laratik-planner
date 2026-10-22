@@ -2610,9 +2610,15 @@ targets. Workspace-manager/planner authorization is now owned by one
 planning-library policy helper. Focused unit tests pass 25/25 and grouped
 `pnpm verify` passes on exact clean implementation SHA
 `f85506fc1aa18d47717eac15d7fba990416919bc`. The mocked transaction assertions
-do not prove database rollback; disposable-Postgres integration evidence
-remains pending. No schema, route, permission, or persisted-data contract
-changed.
+are complemented by the disposable-Postgres regression in
+`tests/integration/planning-library-atomicity.test.ts`: it forces audit insert
+failures after each of the three creates and verifies rollback, then races
+archive/restore calls and verifies one event per transition. That focused
+integration suite passes 2/2 on clean test commit
+`e888315b591bd1acf3aa250f852ac9d88928d088`. The complete integration suite
+passes on `d6f3d620e453418d41b0a0435d951c6ebd9a47c7`, which contains the same
+application implementation; the only subsequent change is the focused test.
+No schema, route, permission, or persisted-data contract changed.
 
 ## A44 — Concurrent email dispatcher ticks could send duplicate mail
 
@@ -2629,9 +2635,12 @@ asserts that only one send occurs. The unit suite also verifies an unconfigured
 SMTP transport is retried instead of being recorded as a successful send. That
 database-backed regression remains
 unrun because `TEST_DATABASE_URL` is unset and the local Docker API returned
-HTTP 500. Grouped `pnpm verify` passes on exact clean implementation SHA
-`f85506fc1aa18d47717eac15d7fba990416919bc`; disposable-Postgres integration
-evidence remains pending. SMTP delivery remains at-least-once across a process
+HTTP 500. This was subsequently run against the project's local disposable
+`planner_test`: the complete integration suite passes on clean test commit
+`d6f3d620e453418d41b0a0435d951c6ebd9a47c7`, including the held-open SMTP race
+test. The test double now returns the same result shape as `sendEmail`; no
+application code changed after the grouped `pnpm verify` pass on
+`f85506fc1aa18d47717eac15d7fba990416919bc`. SMTP delivery remains at-least-once across a process
 failure after provider acceptance and before database commit; the row lock
 prevents concurrent duplicate attempts without claiming provider-level
 exactly-once semantics.

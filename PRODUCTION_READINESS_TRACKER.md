@@ -3591,3 +3591,21 @@ default framebuffer`, then consumes a CPU core without returning control;
   required for this milestone. Earlier transactional database integration
   evidence remains open; full route, browser, visual, Firefox, and independent
   review gates remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Verify transactional planning and notification workflows
+
+- The local PostgreSQL 17 service and its `planner_test` database were verified
+  through the documented test credentials. The full integration suite passed;
+  this includes the email dispatcher race case after aligning its mock with the
+  real `{ id } | null` result contract.
+- The five-scenario migration drill passed against the disposable database.
+  Planning-library Postgres coverage now proves rollback for failed activity
+  writes across campaigns, pillars, and templates, and proves concurrent
+  archive/restore idempotency (2/2).
+- The full unit suite and typecheck passed in the commit hook at clean SHA
+  `e888315b591bd1acf3aa250f852ac9d88928d088`; grouped `pnpm verify` passed on
+  the unchanged application code at `aabd19ea0478791be9d6a564bad051936c6c0466`.
+- This closes the database evidence for A43/A44. Visual reconciliation, the
+  full browser matrix including Firefox, manual route review, and independent
+  verification remain open. AD-002 remains **In Progress**; no
+  **Verified** status is assigned.

@@ -213,6 +213,29 @@ observations now live in `meta-insights.ts`. Snapshot composition remains in
 `meta.ts`; its existing public exports and provider contracts are preserved.
 This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
 
+## Architecture refinement — planning-library transactions — 2026-10-23
+
+Code and focused regression evidence: clean SHA
+`e888315b591bd1acf3aa250f852ac9d88928d088`.
+
+| Command / check                          | Result                                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass on application-code SHA `aabd19ea0478791be9d6a564bad051936c6c0466`: 588 unit files / 5,127 tests, build. |
+| `pnpm test:integration`                  | Pass on clean test SHA `d6f3d620e453418d41b0a0435d951c6ebd9a47c7`; complete integration suite.                |
+| Planning-library transaction integration | Pass — 2/2 on `e888315b591bd1acf3aa250f852ac9d88928d088`.                                                     |
+| `NODE_ENV=test pnpm migration-drill`     | Pass — all five scenarios against local disposable PostgreSQL 17 `planner_test`.                              |
+| Current commit hook                      | Pass — typecheck and full unit suite, 588 files / 5,127 tests.                                                |
+| Browser / visual / independent review    | Open — covered by the wider AD-002 route and release gates.                                                   |
+
+The new integration test forces activity-event inserts to fail after campaign,
+pillar, and template writes, then proves the business rows roll back. It also
+overlaps archive and restore calls and asserts one audit event per actual
+transition. The full integration suite passed before this test-only commit;
+the newly added integration cases passed separately on the current code tree.
+No schema migration or application behavior change was introduced by this
+test-coverage milestone. AD-002 remains **In Progress**; this is **Tested**,
+not **Verified**.
+
 ## Architecture refinement — Meta publication reads — 2026-10-22
 
 Implementation SHA: `79f8761d0278bb74939b883bb27df74a83a133a5` (clean at run).
