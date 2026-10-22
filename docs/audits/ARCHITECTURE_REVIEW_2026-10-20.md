@@ -179,6 +179,20 @@ escalated to the full matrix and stopped before browser tests because
 contract changed. Bilingual browser/visual review and independent verification
 remain open; this is **Tested**, not **Verified**.
 
+**Theme preference action boundary (2026-10-22).** `ThemeToggle` previously
+imported its account server action directly. The authenticated app layout now
+passes the action through the shell into both theme controls. Shared shell UI
+no longer imports account route code; the migration queue is down from 14 to
+13 imports. Focused theme-toggle and ownership tests passed 5/5, covering
+successful persistence and rollback after failure. `pnpm verify` passed at
+exact clean implementation SHA
+`28c008641845964ffa7ebe38cd5a4dd0789543fe` (568 unit files / 5,037 tests,
+formatting, lint, TypeScript, and production build). The affected browser run
+escalated to the full matrix and stopped before browser tests because
+`TEST_DATABASE_URL` is unset. Theme preference semantics are unchanged;
+bilingual browser/visual review and independent verification remain open. This
+is **Tested**, not **Verified**.
+
 **Notification action boundary (2026-10-22).** The notification bell in
 `src/components/app-shell` imported mark-read server actions from the app
 route. The authenticated layout now supplies those actions to the app shell,

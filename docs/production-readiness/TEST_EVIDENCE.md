@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Architecture refinement — theme preference action boundary — 2026-10-22
+
+Implementation SHA: `28c008641845964ffa7ebe38cd5a4dd0789543fe` (clean at run).
+
+| Command / check                                              | Result                                                                                                          |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| Focused theme-toggle and ownership tests                     | Pass — 5/5; includes action success and preference rollback.                                                    |
+| `pnpm verify`                                                | Pass — formatting, lint, TypeScript, 568 unit files / 5,037 tests, and production build.                        |
+| `pnpm test:affected -- --layer browser`                      | Stopped before browser tests; changed branch scope escalated to the full matrix. `TEST_DATABASE_URL` was unset. |
+| Postgres integration and migration drill                     | Open; this change does not touch persistence or schema.                                                         |
+| Bilingual browser/visual review and independent verification | Open.                                                                                                           |
+
+The authenticated layout supplies the existing account theme action to both
+shell theme controls. Preference persistence and optimistic rollback are
+unchanged. This checkpoint is **Tested**, not **Verified**.
+
 ## Architecture refinement — notification action boundary — 2026-10-22
 
 Implementation SHA: `73e612e0806667385445b707e3fb687c72f0bcdf` (clean at run).
