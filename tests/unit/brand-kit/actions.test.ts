@@ -83,10 +83,19 @@ const serviceMock = vi.hoisted(() => ({
   archiveBrandLinkedResource: vi.fn(),
 }));
 
+const pillarMock = vi.hoisted(() => ({
+  createPillar: vi.fn(),
+}));
+
 vi.mock("@/lib/db", () => ({ db: dbMock }));
 vi.mock("@/lib/auth/config", () => ({ auth: authMock.auth }));
 vi.mock("@/lib/workspaces/context", () => workspaceMock);
 vi.mock("@/lib/auth/policy", () => ({ hasWorkspaceRole: policyMock.hasWorkspaceRole }));
+vi.mock("@/lib/planning/pillars", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/planning/pillars")>("@/lib/planning/pillars");
+  return { ...actual, createPillar: pillarMock.createPillar };
+});
 vi.mock("@/lib/brand/service", async () => {
   // Re-export the real service module so the existing actions
   // (logo/font/voice) keep their real `createLogoAsset` /
@@ -114,6 +123,8 @@ const {
   createPublishingRuleAction,
   archivePublishingRuleAction,
   addPublishingTemplateAction,
+  createPillarAction,
+  addPillarTemplateAction,
   createLinkedResourceAction,
   archiveLinkedResourceAction,
 } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions");
@@ -145,6 +156,8 @@ beforeEach(() => {
   serviceMock.createBrandLinkedResource.mockResolvedValue(undefined);
   serviceMock.archiveBrandLinkedResource.mockReset();
   serviceMock.archiveBrandLinkedResource.mockResolvedValue(undefined);
+  pillarMock.createPillar.mockReset();
+  pillarMock.createPillar.mockResolvedValue(undefined);
 });
 
 describe("createColorAssetAction", () => {
@@ -580,6 +593,46 @@ describe("addPublishingTemplateAction", () => {
 
     expect(result).toEqual({ ok: false, error: "Failed to add publishing rule." });
     expect(JSON.stringify(result)).not.toContain("secret");
+  });
+});
+
+describe("Brand Kit pillar action failures", () => {
+  beforeEach(() => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+  });
+
+  it("sanitizes unexpected create errors while preserving known duplicate copy", async () => {
+    pillarMock.createPillar.mockRejectedValueOnce(
+      new Error("postgres://planner:secret@example.test/planner_test: connection refused"),
+    );
+    await expect(createPillarAction(slug, {}, formData({ name: "Education" }))).resolves.toEqual({
+      error: "Failed to add pillar.",
+    });
+
+    pillarMock.createPillar.mockRejectedValueOnce(
+      new Error("A pillar with that name already exists in this workspace"),
+    );
+    await expect(createPillarAction(slug, {}, formData({ name: "Education" }))).resolves.toEqual({
+      error: "A pillar with that name already exists in this workspace",
+    });
+  });
+
+  it("sanitizes unexpected template errors and preserves duplicate idempotency", async () => {
+    pillarMock.createPillar.mockRejectedValueOnce(
+      new Error("postgres://planner:secret@example.test/planner_test: connection refused"),
+    );
+    await expect(addPillarTemplateAction(slug, "pillar-template-education")).resolves.toEqual({
+      ok: false,
+      error: "Failed to add pillar.",
+    });
+
+    pillarMock.createPillar.mockRejectedValueOnce(new Error("A pillar already exists"));
+    await expect(addPillarTemplateAction(slug, "pillar-template-education")).resolves.toEqual({
+      ok: true,
+      added: 0,
+    });
   });
 });
 

@@ -4,6 +4,7 @@ import {} from "next/cache";
 import { auth } from "@/lib/auth/config";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
 import { BrandProfileSchema, saveBrandProfile } from "@/lib/brand/profile";
+import { logBrandKitActionFailure } from "@/features/brand-kit/server";
 
 type ProfileActionState = { error?: string; success?: boolean; revision?: number };
 
@@ -47,6 +48,7 @@ export async function saveBrandProfileAction(
     const result = await saveBrandProfile({ id: session.user.id }, workspace.id, parsed.data);
     return { success: true, revision: result.revision };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "The profile could not be saved." };
+    logBrandKitActionFailure("brand_kit.profile_save_failed", error);
+    return { error: "The profile could not be saved." };
   }
 }

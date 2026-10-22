@@ -36,13 +36,13 @@ import {
 import { suggestVoiceRules } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
-import { logError } from "@/lib/observability/logger";
 import {
   colorTemplates,
   pillarTemplates,
   publishingTemplates,
   typographyTemplates,
   voiceTemplates,
+  logBrandKitActionFailure,
 } from "@/features/brand-kit/server";
 
 /**
@@ -469,7 +469,13 @@ export async function createPillarAction(
   try {
     await createPillar({ id: session.user.id }, workspace.id, parsed.data);
   } catch (err) {
-    if (err instanceof Error) return { error: err.message };
+    if (
+      err instanceof Error &&
+      err.message === "A pillar with that name already exists in this workspace"
+    ) {
+      return { error: err.message };
+    }
+    logBrandKitActionFailure("brand_kit.pillar_create_failed", err);
     return { error: "Failed to add pillar." };
   }
   revalidateBrandKit(workspace, "pillars");
@@ -686,8 +692,8 @@ export async function addPillarTemplateAction(
       if (err.message.toLowerCase().includes("already exists")) {
         return { ok: true, added: 0 };
       }
-      return { ok: false, error: err.message };
     }
+    logBrandKitActionFailure("brand_kit.pillar_template_add_failed", err);
     return { ok: false, error: "Failed to add pillar." };
   }
 }
@@ -809,7 +815,7 @@ export async function addPublishingTemplateAction(
     revalidateBrandKit(workspace, "publishing");
     return { ok: true, added: 1 };
   } catch (err) {
-    logError("brand_kit.publishing_template_add_failed", { err });
+    logBrandKitActionFailure("brand_kit.publishing_template_add_failed", err);
     return { ok: false, error: "Failed to add publishing rule." };
   }
 }
