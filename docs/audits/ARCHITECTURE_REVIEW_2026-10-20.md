@@ -2607,10 +2607,12 @@ were also not serialized, allowing overlapping requests to record duplicate
 archive events. The refinement uses a single database transaction for each
 create/archive/restore and activity event, and `FOR UPDATE` on archive/restore
 targets. Workspace-manager/planner authorization is now owned by one
-planning-library policy helper. The updated focused unit suite and exact
-clean-commit `pnpm verify` remain pending. The mocked transaction assertions do
-not prove database rollback; disposable-Postgres integration evidence remains
-pending. No schema, route, permission, or persisted-data contract changed.
+planning-library policy helper. Focused unit tests pass 25/25 and grouped
+`pnpm verify` passes on exact clean implementation SHA
+`f85506fc1aa18d47717eac15d7fba990416919bc`. The mocked transaction assertions
+do not prove database rollback; disposable-Postgres integration evidence
+remains pending. No schema, route, permission, or persisted-data contract
+changed.
 
 ## A44 — Concurrent email dispatcher ticks could send duplicate mail
 
@@ -2627,8 +2629,23 @@ asserts that only one send occurs. The unit suite also verifies an unconfigured
 SMTP transport is retried instead of being recorded as a successful send. That
 database-backed regression remains
 unrun because `TEST_DATABASE_URL` is unset and the local Docker API returned
-HTTP 500. Exact clean-commit `pnpm verify` and disposable-Postgres integration
-evidence remain pending. SMTP delivery remains at-least-once across a process
+HTTP 500. Grouped `pnpm verify` passes on exact clean implementation SHA
+`f85506fc1aa18d47717eac15d7fba990416919bc`; disposable-Postgres integration
+evidence remains pending. SMTP delivery remains at-least-once across a process
 failure after provider acceptance and before database commit; the row lock
 prevents concurrent duplicate attempts without claiming provider-level
 exactly-once semantics.
+
+## A45 — Folder imports exposed unexpected persistence error details
+
+**Priority: P2 — privacy and failure handling.** `importOne` returned an
+unknown thrown `Error.message` in each item report, and the folder-import route
+returned an unexpected exception's message in its 500 response. Storage or
+database errors can contain internal implementation and connection details.
+Both paths now return fixed safe copy for unexpected failures; known
+`MediaSourceError` details remain the deliberately sanitized provider guidance.
+The route maps a late `MediaPermissionError` to the established forbidden
+response. Focused service and route regression coverage passes 8/8; grouped
+verification and exact clean-SHA evidence remain pending. No schema, route,
+or persisted-data contract changed. Unexpected error details are intentionally
+sanitized, and late permission failures now consistently return forbidden.

@@ -8,6 +8,7 @@ import { workspaces } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { inspectMediaFolder } from "@/lib/media/folder-sources";
+import { MediaPermissionError } from "@/lib/media/errors";
 import {
   MAX_FOLDER_BATCH_IMPORT,
   type MediaFolderErrorCode,
@@ -135,7 +136,15 @@ async function handleImport(
     });
     return NextResponse.json({ report }, { status: 200 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Folder import could not complete.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    if (error instanceof MediaPermissionError) {
+      return NextResponse.json(
+        { error: "You do not have permission to import media into this workspace." },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json(
+      { error: "Folder import could not complete. Please try again." },
+      { status: 500 },
+    );
   }
 }

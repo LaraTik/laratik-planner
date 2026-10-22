@@ -32,7 +32,7 @@ export type FolderImportItemReport = {
     | "invalid_url"
     | "permission_denied"
     | "canceled";
-  /** On failure, the raw message for the "Copy error code" affordance. */
+  /** Safe, user-displayable failure detail for the "Copy error code" affordance. */
   message?: string;
 };
 
@@ -54,6 +54,8 @@ export type FolderImportInput = {
   visibility?: "workspace" | "agency";
   signal?: AbortSignal;
 };
+
+const UNKNOWN_IMPORT_ERROR_MESSAGE = "Import failed unexpectedly. Please try again.";
 
 /**
  * Fan out `importPublicMediaAsset` across `FOLDER_IMPORT_CONCURRENCY`
@@ -156,7 +158,7 @@ async function importOne(
       title,
       status: "failed",
       code: "fetch_failed",
-      message: error instanceof Error ? error.message : "Import failed.",
+      message: UNKNOWN_IMPORT_ERROR_MESSAGE,
     };
   }
 }

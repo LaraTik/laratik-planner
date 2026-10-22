@@ -140,6 +140,26 @@ describe("runMediaFolderBatch", () => {
     expect(report.items[1]!.status).toBe("imported");
   });
 
+  it("does not expose unexpected storage or database errors in item reports", async () => {
+    mockedImport.mockReset();
+    mockedImport.mockRejectedValueOnce(new Error("database connection string leaked"));
+
+    const report = await runMediaFolderBatch({
+      actor: ACTOR,
+      agencyId: AGENCY,
+      workspaceId: WORKSPACE,
+      folderId: "1ABCDEFGHIJKLMNOPQR0",
+      items: [{ id: "failed", name: "failed.png" }],
+    });
+
+    expect(report.items[0]).toMatchObject({
+      status: "failed",
+      code: "fetch_failed",
+      message: "Import failed unexpectedly. Please try again.",
+    });
+    expect(JSON.stringify(report)).not.toContain("database connection string leaked");
+  });
+
   it("rejects a batch that exceeds MAX_FOLDER_BATCH_IMPORT", async () => {
     mockedImport.mockReset();
     const items = Array.from({ length: 30 }, (_, i) => ({
