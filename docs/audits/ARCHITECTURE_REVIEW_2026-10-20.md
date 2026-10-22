@@ -111,7 +111,7 @@ the all-page ownership assertion and representative canonical-route checks.
 | Public/authenticated routes | `src/app`                                                               | 91 pages and 105 route handlers. App Router files mix public/auth screens, agency settings, platform administration, workspace routes, APIs, and cron adapters. Workspace routes use the agency-qualified route shape; the legacy workspace path remains a compatibility adapter. |
 | Shared UI                   | `src/components`                                                        | `ui/` owns primitives; `forms/` owns shared controls; `feedback/` and `app-shell/` own cross-feature presentation. Feature decisions remain close to their current route/domain until a bounded migration moves them.                                                             |
 | Domain behavior             | `src/lib/<domain>`                                                      | Domains include auth, AI, advertising, brand, community, content, deliveries, notifications, planning, publishing, research, social, storage, tasks, Trends, and workspace access. This is the existing migration source for gradual feature modules.                             |
-| Feature modules             | `src/features/<feature>`                                                | Trends, media, content, calendar, and MCP now have feature-owned modules. Content read and write paths use the content server entry point; remaining commands in the legacy content service are staged for later migration.                                                       |
+| Feature modules             | `src/features/<feature>`                                                | Trends, media, content, calendar, MCP, Brand Kit, and social analytics now have feature-owned modules. Content read and write paths use the content server entry point; remaining commands in the legacy content service are staged for later migration.                          |
 | Persistence                 | `src/lib/db`                                                            | Drizzle schema and ordered SQL migrations own persistence. The current migration journal has 90 entries; schema or identifier changes require the migration evidence protocol.                                                                                                    |
 | Trends sidecar              | `services/trends`                                                       | Python FastAPI/extractor service owns scheduler and source policy. The Next.js catalog is a UI projection; parity tests cover shared policy fields.                                                                                                                               |
 | External integrations       | `src/lib/{social,advertising,ai,email,mcp}` and route adapters          | Provider-specific boundaries remain isolated from UI; cron and callbacks are transport adapters. Secrets stay server-side.                                                                                                                                                        |
@@ -1432,16 +1432,29 @@ mobile capture expected 1,835px and rendered 1,557px. Review current UI state
 against the current approved design source before changing either the page or
 its baseline.
 
-**Visual failure triage (2026-10-22).** Inspection of two retained failure
-artifacts found capture-contract mismatches, not confirmed page defects. The
-platform agency-detail test runs with `platform_owner` (the route's intended
-privileged view), while its 900px expected image shows the forbidden state.
+**Visual failure triage (2026-10-22).** Retained artifacts show capture-contract
+mismatches as well as visual drift. The platform agency-detail case is seeded
+with `platform_owner`, and the route checks its exact platform permission, but
+the 900px expected image shows the forbidden state. The platform overview has
+the same mismatch: its canonical case seeds `platform_owner`, the guarded route
+renders the authorized dashboard, and the expected image shows a forbidden
+notice. These are stale role-state references, not authorization bypasses.
 The responsive `/app/agency-settings/trend-sources` expected image displays
-Agency AI settings, while the actual capture displays Trend Sources. The
+Agency AI settings, while the actual capture displays Trend Sources; the
 approved Stitch manifest does not contain a Trend Sources screen. Keep these
-as fixture/reference reconciliation items; do not alter page behavior or
-approved captures to make the comparisons pass. The complete visual matrix and
-current-source review remain open.
+as fixture/reference reconciliation items. The authorized platform dashboard
+also differs materially from the current Stitch capture, so do not bless the
+current page by refreshing only its test snapshot; track that as a design-parity
+follow-up requiring a separate UI change and its own review.
+
+The six workspace-settings section routes are aliases for one unified page.
+Their obsolete standalone references have now been replaced with captures at
+the routes' actual 360px / 768px / 1440px viewports, and strict compare passes
+18/18. The root settings route's canonical 390px reference still differs by
+40px of page height and remains unreconciled against current Stitch. The last
+completed full visual matrix remains 207/264 passing with 57 differences; no
+claim is made that all remaining differences are stale references. The complete
+matrix and source/design review remain open.
 
 ## Media lifecycle responsibility split — 2026-10-21
 
@@ -1726,3 +1739,229 @@ attachment creation, but it could not be run because `TEST_DATABASE_URL` is
 unset and Docker did not respond. Full route/browser/visual review and
 independent verification remain open; this is **Tested**, not **Verified**.
 AD-002 remains **In Progress**.
+
+## Presentation and platform dependency ownership — 2026-10-22
+
+The import graph exposed three `src/lib` modules depending on UI prop types:
+content and task status-to-badge mappings, plus the Brand Kit typography
+catalog's Combobox option type. A follow-up review also found the Brand Kit
+success-reset hook and static template catalog were feature-owned behavior in
+`src/lib`; they now live in `src/features/brand-kit/`, with client-safe UI and
+server-only template entry points. Status badge mappings now live in the shared
+workspace presentation module, where content and task calendar surfaces use
+the same semantic Badge variants. The typography catalog now belongs to the
+Brand Kit feature and is imported through its client-safe `index.ts`. The
+`src/lib` presentation imports are gone, and the module-ownership regression
+now rejects any `src/lib` → `src/app` or `src/lib` → `src/components` import.
+The existing status, calendar, board, planning-header, Brand Kit, and ownership
+tests pass 95/95; formatting, ESLint, TypeScript, the full 569-file / 5,042-test
+unit suite, and the production build also pass in the current worktree. No
+visual, route, permission, workflow, API, schema, or stored-data behavior was
+changed. Exact clean-commit evidence is pending the final implementation
+candidate; release browser/visual review, the remaining route inventory, and
+independent verification remain open. AD-002 remains **In Progress**.
+
+## Social analytics selection ownership — 2026-10-22
+
+The social analytics screen was the only caller of the dashboard selection
+and comparison model in `src/lib/social/analytics-dashboard.ts`; provider
+diagnostic reads and writes were also directly owned by `src/lib/social/`.
+The view model now lives under `src/features/social-analytics/` and is
+imported through the client-safe `index.ts`. The provider diagnostic query
+and command live behind the feature's `server.ts` entry, which is marked
+`server-only` and is used by the settings page and diagnostic API route. Tests
+and the affected-test map use the public feature entry points. Focused
+dashboard, probe-card, architecture-boundary, and test-ownership checks pass
+29/29. Grouped `pnpm verify` passes on the current worktree: formatting, lint,
+strict TypeScript, 569 unit files / 5,042 tests, and production build. Route,
+provider, API, permission, workflow, schema, and stored-data behavior are
+unchanged. Exact clean-SHA, browser/visual review, and independent verification
+remain open. AD-002 remains **In Progress**.
+
+## Confirmed defect — social analytics probe response caching — 2026-10-22
+
+The admin-only `POST /api/social/providers/analytics-test` writes provider
+diagnostics and returns provider status details, but its success and error
+responses lacked the project's required `Cache-Control: no-store, max-age=0`
+header. The route now applies the shared mutating-API header on every response
+path. Five route tests cover success, missing channel, invalid input, forbidden,
+and unauthenticated responses. The affected-test manifest now maps
+`src/app/api/social/**` to social tests, and its regression checks the new
+route mapping. The focused route, ownership, and import-boundary suites pass
+27/27; strict TypeScript and targeted ESLint pass. Grouped `pnpm verify` also
+passes on the current worktree: formatting, lint, strict TypeScript, 570 unit
+files / 5,047 tests, and production build. The API payload, authorization,
+provider call, and stored diagnostic behavior are unchanged. Postgres and
+browser/visual route evidence, exact clean-SHA evidence, and independent
+verification remain open. AD-002 remains **In Progress**.
+
+## Publish form action ownership — 2026-10-22
+
+The publishing form was importing `recordPublicationAction` from the parent
+planning route. The planning detail page now supplies that route-owned action
+through a typed prop, limited to the form's pending-channel exclusion input.
+The form no longer reaches into a sibling route module; server-side auth,
+workspace scoping, result handling, and refresh behavior remain unchanged.
+Focused publishing and preview suites pass 212/212, and strict TypeScript,
+ESLint, and formatting pass. No route, API, permission, workflow, persistence,
+or UI behavior changed. Full repository verification will run with the next
+grouped code milestone; browser/visual route evidence and independent review
+remain open. AD-002 remains **In Progress**.
+
+## Planning list feature ownership — 2026-10-22
+
+The planning list row, week grouping, and filter bar were used only by the
+content planning surface but lived in `src/components/workspace/`. They now
+live under `src/features/content/components/` and are exported through the
+client-safe content entry point for the route. Their unit tests moved into the
+content test area. Shared people, channel, readiness, and low-level UI pieces
+remain shared. The 35 focused list, affected-test ownership, and import-guard
+checks pass; strict TypeScript, targeted ESLint, Prettier, and diff checks pass.
+No route behavior or visual presentation changed. The full `pnpm verify` now
+passes in the current worktree (569 unit files / 5,042 tests, formatting,
+lint, TypeScript, and production build); exact clean-SHA evidence is pending.
+Browser/visual route review and independent verification remain open. AD-002
+remains **In Progress**.
+
+## Static route review — workspace social analytics — 2026-10-22
+
+The social analytics page resolves the workspace from both URL slugs, requires
+an internal workspace role, and scopes metric reads to the resolved workspace
+ID. Agency-admin controls are separately gated. Interface copy is resolved on
+the server and passed as serializable labels; the no-channel state has a clear
+route to Channels, and the surrounding App Router loading/error boundaries
+apply. Static review found no additional confirmed route defect. Browser
+checks, keyboard/axe review, responsive visual review, and bilingual runtime
+verification could not be run because the test database is unset and Docker
+does not respond. This is a source review only, not route completion; the
+remaining route inventory and independent verification stay open. AD-002
+remains **In Progress**.
+
+## Agency social provider settings — localized action contract — 2026-10-22
+
+The provider settings route and server actions both resolve the active agency
+and check agency-admin permission; form writes also compare the submitted
+agency ID to the authorized context. The page only sends a sanitized provider
+summary to the client. Review found that provider labels and action results
+could render in English on Arabic pages, and server action failures returned
+raw exception messages. Actions now return stable error/test codes, and the
+client resolves them through the EN/AR catalog. A successful format check no
+longer displays the save-success message. TikTok's Login Kit config id is
+optional as the UI contract already states; the format check no longer blocks
+TikTok setup when it is absent. Failures use generic safe messages.
+
+Eight action tests, two client localization/state tests, and fourteen catalog
+tests pass (24 total); strict TypeScript, targeted ESLint, Prettier, and diff
+checks pass. Grouped `pnpm verify` passes on the current worktree: formatting,
+lint, strict TypeScript, 572 unit files / 5,057 tests, and production build.
+Arabic copy is implemented but still needs native editorial review;
+Postgres/browser/keyboard/visual verification, exact clean-SHA evidence, and
+independent verification remain open. No authorization, route, API, schema, or
+stored-data contract changed. AD-002 remains **In Progress**.
+
+## Review row feature ownership — 2026-10-22
+
+The Reviews queue row had one production caller but lived in the shared
+workspace folder based on anticipated reuse. It now lives with the content
+feature's approval presentation, the Reviews route imports it through the
+feature entry point, and its focused test lives under `tests/unit/content/`.
+The 13 review-row cases pass alongside the planning-list and architecture
+checks (48/48 total); strict TypeScript, targeted ESLint, Prettier, and diff
+checks pass. No route or workflow behavior changed. Full `pnpm verify` passes
+in the current worktree (569 unit files / 5,042 tests and production build);
+exact clean-SHA evidence is pending. Route/visual review and independent
+verification remain open. AD-002 remains **In Progress**.
+
+## Content overview and board ownership — 2026-10-22
+
+The Recently Updated panel, Needs Attention panel, content StatusBadge, and
+workflow board were content-specific UI inside shared workspace or board
+folders. These modules now live under `src/features/content/components/` and
+route callers use the content feature entry point; feature-local components
+use relative imports. Their tests now live in the content test area. The
+DashboardPanel and semantic Badge variant mapping remain shared. Focused
+overview, board, planning-list, Reviews, affected-test ownership, and import
+guard checks pass 84/84; strict TypeScript, ESLint, Prettier, and diff checks
+pass. No route behavior or visual output changed. Full `pnpm verify` passes
+in the current worktree (569 unit files / 5,042 tests, formatting, lint,
+TypeScript, and production build); exact clean-SHA evidence is pending.
+Route/visual review and independent verification remain open. AD-002 remains
+**In Progress**.
+
+## Brand Kit feature entry points — 2026-10-22
+
+The reusable success-reset hook and static Brand Kit templates were owned by
+`src/lib/brand/` despite being specific to Brand Kit. They now live under
+`src/features/brand-kit/`; UI consumers use the client-safe feature entry and
+the template catalog is exposed through a `server-only` entry point. Test
+ownership now includes the feature directory. Focused Brand Kit, architecture
+boundary, and affected-test ownership checks pass 33/33. Grouped `pnpm verify`
+passes on the current worktree: formatting, lint, strict TypeScript, 569 unit
+files / 5,042 tests, and production build. No routes, visual output,
+permissions, workflow, API, schema, or stored data changed. Exact clean-SHA
+evidence, browser/visual route review, remaining route inventory, and
+independent verification remain open. AD-002 remains **In Progress**.
+
+## Grouped release-validation results — 2026-10-22
+
+The grouped `pnpm verify`, full disposable-Postgres integration suite, and all
+five migration-drill scenarios passed on the current worktree before this
+documentation-only update. The Chromium release run reached 278 cases before
+the Next.js dev server restarted after its memory threshold. Three affected
+timeouts passed in a fresh focused Chromium rerun (13/13). Firefox Nightly
+then failed to progress under the local macOS sandbox with
+`sandbox_extension_issue_file_to_process` / operation-not-permitted errors;
+the five-browser matrix is incomplete, and the other projects have no new
+evidence from that stopped run.
+
+`pnpm test:visual` completed 264 captures with 207 passes and 57 failures.
+Failures span unchanged routes as well as touched feature routes. The
+workspace-settings actual screenshot includes setup-health and Meta-readiness
+content absent from its tracked reference and a deadline date one day later.
+This shows visual differences beyond date variance; it does not yet establish
+whether the reference is stale or the product layout has drifted from the
+approved design. No snapshots were refreshed. Reconcile the failures against
+the current approved Stitch source, then fix confirmed product mismatches or
+refresh proven-stale references with reasons. Keep AD-002 **In Progress**;
+exact-clean-SHA evidence, full browser coverage, route-level
+bilingual/accessibility review, and independent verification remain
+outstanding. A current attempt to resume isolated browser validation could
+not start because `TEST_DATABASE_URL` was unset and Docker returned HTTP 500
+from its local API socket. No database reset or browser run occurred during
+that attempt; the earlier passing integration and migration results remain
+recorded but are not exact-clean-SHA evidence. Validation resumed with a new
+temporary PostgreSQL cluster and verified `planner_test` database. The first
+WebKit run appeared to report a missing title and low dark-theme contrast;
+source review confirmed the planning-detail metadata exists, and both were
+transient scans while streamed metadata and theme-color transitions settled.
+The shared axe helper now waits for a non-empty title and finite active
+animations. Focused reproductions passed 6/6, and the complete accessibility
+route suite passed 120/120 across WebKit, mobile Chrome, and mobile Safari.
+No product UI or workflow changed. Desktop Chromium, Firefox, full behavioral
+browser coverage, and visual reconciliation remain open.
+
+## Confirmed defect — workspace-settings deadline hydration date — 2026-10-22
+
+The workspace-settings page and interactive lead-time form independently
+constructed `Date` values for the same deadline forecast. If the calendar day
+changed between server render and client hydration, the labels could disagree
+and React emitted a hydration mismatch. The server now sends one render-time
+date to both the static forecast and client form; the form reuses that value
+for its live preview. The visual harness normalizes the live date to the value
+already stored in the reference image. An E2E regression sets the browser
+clock to 2020 while the server remains current, checks both labels match, and
+fails on a hydration warning. It passed 4/4 in Chromium, WebKit, mobile Chrome,
+and mobile Safari. No route, workflow, API, permission, or data contract
+changed.
+
+The earlier focused workspace-settings visual group ran 25 cases: 5 passed and
+20 failed. The root settings responsive captures passed; its canonical
+reference remained different, and the legacy section references expected
+standalone views (the tablet Trends-settings reference was 1,888px high versus
+4,818px for the current unified page). The six section routes have since been
+captured separately at their own 360px, 768px, and 1440px viewports; strict
+comparison passes 18/18. The canonical 390px reference still differs by 40px
+of page height and awaits review against current Stitch and the one-page
+settings rule. Full verification after the date fix, remaining visual
+reconciliation, browser coverage, exact-clean-SHA evidence, and independent
+review remain open; AD-002 stays **In Progress**.

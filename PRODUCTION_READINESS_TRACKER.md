@@ -2707,6 +2707,24 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   verification remain open. `AD-002` remains **In Progress**; this work is
   **Tested**, not **Verified**.
 
+## 2026-10-22 — Enforce platform and presentation ownership
+
+- Removed three `src/lib` → UI type dependencies. Shared content/task badge
+  variant mapping now lives with workspace presentation, and the typography
+  option catalog now belongs to `src/features/brand-kit` behind its
+  client-safe public entry point.
+- Extended the architecture import guard to reject `src/lib` imports from
+  routes or shared presentation. Added a regression proving the supplied
+  audience-copy save action is invoked on submit.
+- Focused ownership, content/task status, calendar, board, planning header,
+  Brand Kit, and copy-editor suites pass 95/95. `pnpm verify` passes in the
+  current worktree: formatting, repository lint, strict TypeScript, 569 unit
+  files / 5,042 tests, and production build. Exact clean-SHA evidence will be
+  recorded on the final implementation candidate.
+- `AD-002` remains **In Progress**. Repository-wide integration and migration
+  drill, full route/browser/visual review, and independent verification remain
+  open; this milestone is **Tested**, not **Verified**.
+
 ## 2026-10-22 — Reconcile additional historical architecture findings
 
 - Current source and tests show historical OTHER-02, OTHER-04, and OTHER-05
@@ -2772,3 +2790,239 @@ unchanged. The existing runner and journal-order regression suites pass 29/29;
 no database migration was executed. The exact current code was previously
 verified at implementation SHA `2d6aa2a081063360cc9eeba2e69045519f86673c`;
 full route review and release evidence remain open.
+
+## 2026-10-22 — Inject the planning publication action
+
+- The publish form no longer imports the planning route's publication action.
+  The route supplies a typed callback that only permits the pending-channel
+  exclusion input; authorization, workspace scope, and publication records
+  remain in the server action.
+- Publishing and preview suites pass 212/212; strict TypeScript, targeted
+  ESLint, and Prettier pass. The grouped full `pnpm verify` passes in the
+  current worktree: 569 unit files / 5,042 tests and production build. Exact
+  clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual review, the remaining route
+  inventory, and independent verification remain open.
+
+## 2026-10-22 — Batched database evidence for architecture refinement
+
+- The disposable `planner_test` database was identified and verified before
+  use. `NODE_ENV=test pnpm migration-drill` passed all five scenarios, and the
+  full `pnpm test:integration` run completed successfully across the repository
+  integration suite (46 integration files present).
+- This closes the database evidence that earlier entries marked unavailable.
+  No schema or migration changes were made in this architecture pass. Browser,
+  visual, native Arabic editorial, exact clean-SHA, and independent review
+  evidence remain open; `AD-002` remains **In Progress** and work is
+  **Tested**, not **Verified**.
+- The combined `pnpm test:e2e:release` attempt did not reach browser specs:
+  Playwright timed out after 120 seconds waiting for `/api/health/ready` from
+  its isolated Next.js server. A separate local dev-server check also accepted
+  no HTTP response, and was stopped. Treat browser/visual verification as
+  blocked pending diagnosis of local Next.js request handling; no browser test
+  pass is claimed.
+- The final grouped `pnpm verify` passed formatting, ESLint, strict TypeScript,
+  all 572 unit files / 5,057 tests, and the production build with the full
+  App Router manifest. The source tree remains uncommitted and therefore has
+  no exact clean-SHA evidence yet.
+
+## 2026-10-22 — Isolated browser failure classification
+
+- With `DEBUG=pw:webserver`, the full 1,654-case browser run reached Chromium;
+  278 Chromium cases completed before Firefox Nightly launched and spun at
+  99% CPU for three minutes. Playwright recorded the known macOS Firefox
+  sandbox error (`sandbox_extension_issue_file_to_process`, operation not
+  permitted). The run was stopped; the five-browser gate remains incomplete.
+- Next.js dev-server memory restart preceded three Chromium failures (workspace
+  navigation load timeout, research response timeout, and Trends onboarding
+  dialog state). All 13 cases from those three specs passed in a fresh isolated
+  Chromium rerun, classifying them as restart-related flakes in this run.
+- The visual matrix has not yet run. No `Verified` status is assigned.
+
+## 2026-10-22 — Move social analytics selection into its feature
+
+- Moved the dashboard selection/comparison model into the feature's
+  client-safe entry point and the database/provider diagnostic query and
+  command behind its `server-only` entry. The settings page and diagnostic API
+  route use that server entry; affected-test ownership includes the feature.
+- Focused dashboard, probe-card, architecture-boundary, and test-ownership
+  checks pass 29/29. Grouped `pnpm verify` passes: formatting, lint, strict
+  TypeScript, 569 unit files / 5,042 tests, and production build. Exact
+  clean-SHA evidence, browser/visual review, and independent verification
+  remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Prevent caching social analytics probe responses
+
+- Added the shared `no-store` policy to every response path for the admin-only
+  analytics probe POST route. Added regression coverage for success, missing
+  channel, invalid input, forbidden, and unauthenticated responses.
+- Added `/api/social/**` to affected-test ownership and a mapping assertion for
+  the route. Focused route, ownership, and import-boundary suites pass 27/27;
+  strict TypeScript and targeted ESLint pass. Grouped `pnpm verify` passes on
+  the current worktree: formatting, lint, strict TypeScript, 570 unit files /
+  5,047 tests, and production build. Postgres/browser evidence and exact
+  clean-SHA evidence remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Review workspace social analytics route
+
+- Static source review confirms URL workspace resolution, internal-role
+  gating, workspace-scoped analytics reads, separate agency-admin controls,
+  server-resolved interface labels, and an explicit no-channel state. No
+  additional defect was confirmed.
+- Browser, keyboard/accessibility, responsive visual, and bilingual runtime
+  evidence remain open because `TEST_DATABASE_URL` is unset and Docker is
+  unresponsive. This source review does not complete the route; `AD-002`
+  remains **In Progress**.
+
+## 2026-10-22 — Localize and correct provider settings outcomes
+
+- Replaced English server-action strings with stable error/test codes and
+  bilingual catalog copy. Save/test/remove failures no longer expose raw
+  exception messages. Successful provider checks no longer display the save
+  success state, and TikTok checks correctly allow its optional Login Kit
+  config id to be empty.
+- Eight action tests, two provider-card localization/state tests, and fourteen
+  catalog tests pass (24 total); strict TypeScript, targeted ESLint, Prettier,
+  and diff checks pass. Grouped `pnpm verify` passes on the current worktree:
+  formatting, lint, strict TypeScript, 572 unit files / 5,057 tests, and
+  production build. Native Arabic editorial review, Postgres and
+  browser/accessibility/visual checks, and exact clean-SHA evidence remain
+  open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Group Brand Kit helpers under the feature
+
+- Moved the success-reset hook and template catalog into
+  `src/features/brand-kit/`, with a client-safe UI entry and a server-only
+  template entry. Added the feature path to affected-test ownership.
+- Focused Brand Kit, architecture-boundary, and affected-test ownership checks
+  pass 33/33. Grouped `pnpm verify` passes on the current worktree: formatting,
+  lint, strict TypeScript, 569 unit files / 5,042 tests, and production build.
+  Exact clean-SHA evidence, browser/visual route review, and independent
+  verification remain open; `AD-002` remains **In Progress**.
+
+## 2026-10-22 — Group content overview and board UI by feature
+
+- Moved Recently Updated, Needs Attention, the content status badge, and the
+  workflow board into `src/features/content/components/`. Workspace, home,
+  design-queue, client-calendar, and board routes use the feature entry point.
+  Shared DashboardPanel and semantic Badge variant mapping remain shared.
+- Overview, board, planning-list, Reviews, affected-test ownership, and import
+  guard suites pass 84/84; strict TypeScript, targeted ESLint, Prettier, and
+  diff checks pass. Full `pnpm verify` passes in the current worktree: 569
+  unit files / 5,042 tests and production build. Exact clean-SHA evidence
+  remains pending.
+- `AD-002` remains **In Progress**; route/visual review and independent
+  verification remain open.
+
+## 2026-10-22 — Move content planning list UI into its feature
+
+- Moved the planning list row, week grouping, and filter bar from the shared
+  workspace folder into `src/features/content/components/`. The route now
+  uses the content feature entry point; focused tests moved into the content
+  test area. Shared lower-level people, channel, readiness, and UI modules
+  remain shared.
+- Planning list, affected-test ownership, and import-guard checks pass 35/35;
+  strict TypeScript, targeted ESLint, Prettier, and diff checks pass. Full
+  `pnpm verify` now passes in the current worktree: 569 unit files / 5,042
+  tests and production build. Exact clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual route review and independent
+  verification remain open.
+
+## 2026-10-22 — Move the Reviews row into the content feature
+
+- The Reviews queue row had one production caller and was moved from shared
+  workspace presentation into the content feature's approval UI. The route
+  now imports through the feature entry point, and the focused test moved into
+  the content test area.
+- Review-row, planning-list, affected-test ownership, and import-guard suites
+  pass 48/48; strict TypeScript, targeted ESLint, Prettier, and diff checks
+  pass. Full `pnpm verify` now passes in the current worktree: 569 unit files /
+  5,042 tests and production build. Exact clean-SHA evidence remains pending.
+- `AD-002` remains **In Progress**; browser/visual review, the remaining route
+  inventory, and independent verification remain open.
+
+## 2026-10-22 — Grouped release-validation results
+
+- The full `pnpm verify`, disposable-Postgres integration suite, and five
+  migration-drill scenarios passed on the current worktree before this
+  documentation-only update. These results are not exact-clean-SHA evidence.
+- The Chromium release run completed 278 cases before the Next.js dev server
+  restarted after its memory threshold. Three resulting timeouts passed in a
+  fresh focused rerun (13/13 across the affected specs). Firefox Nightly then
+  failed to make progress under the local macOS sandbox
+  (`sandbox_extension_issue_file_to_process`, operation not permitted); the full five-browser gate
+  remains incomplete. The earlier Chromium run and focused rerun do not
+  replace the remaining browser projects.
+- `pnpm test:visual` completed 264 captures: 207 passed and 57 failed. The
+  failures span multiple routes and viewports, including unchanged settings and
+  platform routes. On `/app/w/acme/settings`, the current rendering includes
+  setup-health and Meta-readiness content absent from the tracked reference,
+  and its deadline date differs by one day. This shows visual differences
+  beyond date variance; it does not yet establish whether the reference is
+  stale or the product layout has drifted from the approved design. No
+  snapshots were updated.
+- `AD-002` remains **In Progress**. Compare the 57 failures against the
+  current approved design and fix confirmed product mismatches or refresh
+  proven-stale references with reasons. Finish the remaining browser
+  projects, route-level bilingual/accessibility checks, and exact-clean-SHA
+  evidence. No independent `Verified` status is assigned.
+- A current attempt to resume isolated browser validation could not start:
+  `TEST_DATABASE_URL` is unset and Docker returned HTTP 500 for its local API
+  socket. No test database was reset or browser command run in this attempt;
+  the earlier passing integration and migration results remain recorded but
+  do not supply exact-clean-SHA evidence.
+- Local validation resumed with a newly initialized temporary PostgreSQL
+  cluster and a verified `planner_test` database. The first WebKit pass exposed
+  apparent title and dark-theme contrast violations. Source review confirmed
+  the planning detail already exports a non-empty metadata title; both
+  warnings occurred while App Router metadata and theme-color transitions were
+  still settling. `expectClean` now waits for a non-empty document title and
+  finite active animations before running axe. The focused reproductions pass
+  6/6 across WebKit, mobile Chrome, and mobile Safari; the complete
+  `a11y-routes.spec.ts` suite passes 120/120 across those projects. No product
+  UI or workflow behavior changed. Desktop Chromium, Firefox, the full
+  five-browser behavioral suite, and visual reconciliation remain open.
+
+## 2026-10-22 — Stabilize workspace-settings deadline hydration
+
+- The settings server page and interactive lead-time form independently
+  constructed `Date` values for the same deadline forecast. A day boundary
+  between server render and browser hydration could produce different labels
+  and a React hydration warning. The server now passes one render-time `Date`
+  to the static forecast and client form; the form reuses it for live previews.
+- Added a browser regression that fixes the client clock to 2020 while the
+  server remains current, checks both deadline labels match, and rejects a
+  hydration warning. It passes 4/4 across Chromium, WebKit, mobile Chrome, and
+  mobile Safari. The visual harness normalizes the date to the value already
+  captured in its reference image.
+- The focused workspace-settings visual group ran 25 cases: 5 passed and 20
+  failed. All five responsive captures for `/app/w/acme/settings` passed. The
+  canonical reference differs by 3% and 16px of page height; several legacy
+  section references expect a standalone surface (for example, the tablet
+  Trends-settings reference expects 1,888px while the current unified page is
+  4,818px). Compare these against current Stitch and the one-page settings
+  contract before product or baseline changes; no snapshots were refreshed.
+- `AD-002` remains **In Progress**. Run grouped `pnpm verify` after this code
+  change, reconcile visual references, finish the remaining browser and
+  exact-clean-SHA gates, and keep independent verification separate.
+
+## 2026-10-22 — Reconcile unified workspace-settings visual aliases
+
+- Replaced the six legacy standalone settings-section references with current
+  route captures at the correct 360px mobile, 768px tablet, and 1440px wide
+  viewports. The strict focused visual comparison passes 18/18. The root
+  settings canonical 390px reference still differs by 40px of page height and
+  is left for Stitch comparison; the one-page settings contract is preserved.
+- Reviewed the platform-overview visual mismatch against the route guard and
+  fixture. The current Stitch case seeds `platform_owner`, and the route
+  enforces `platform.agency.read`; the captured overview is authorized while
+  the expected image shows a forbidden state. This is a stale role-state
+  reference, not an authorization defect. The current dashboard also differs
+  from the approved Stitch design, so snapshot refresh alone would conceal
+  design drift; record a separate UI parity follow-up.
+- The prior completed full visual run remains 207/264 passing with 57
+  differences; this milestone does not claim the full visual matrix is green.
+  No schema or product behavior changed. Grouped full verification, remaining
+  visual/browser evidence, exact-clean-SHA evidence, and independent review
+  remain open; `AD-002` remains **In Progress** and work is **Tested**, not
+  **Verified**.
