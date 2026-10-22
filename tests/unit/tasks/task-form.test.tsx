@@ -1,9 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-
-vi.mock("@/app/(app)/app/tasks/actions", () => ({
-  createTaskAction: vi.fn(),
-}));
 
 import { TaskCreateForm } from "@/components/tasks/task-form";
 
@@ -29,9 +25,20 @@ const labels = {
 
 describe("TaskCreateForm", () => {
   it("uses content-aware direction for Arabic task fields", () => {
-    render(<TaskCreateForm workspaces={[]} members={[]} labels={labels} />);
+    render(<TaskCreateForm action={vi.fn()} workspaces={[]} members={[]} labels={labels} />);
 
     expect(screen.getByRole("textbox", { name: "العنوان" })).toHaveAttribute("dir", "auto");
     expect(screen.getByRole("textbox", { name: "الوصف" })).toHaveAttribute("dir", "auto");
+  });
+
+  it("submits through the action supplied by the route owner", async () => {
+    const action = vi.fn();
+    const { container } = render(
+      <TaskCreateForm action={action} workspaces={[]} members={[]} labels={labels} />,
+    );
+
+    fireEvent.submit(container.querySelector("form")!);
+
+    await waitFor(() => expect(action).toHaveBeenCalledTimes(1));
   });
 });

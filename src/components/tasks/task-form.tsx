@@ -1,4 +1,3 @@
-import { createTaskAction } from "@/app/(app)/app/tasks/actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,17 +6,19 @@ import { FormField } from "@/components/forms/form-field";
 import { TASK_PRIORITIES } from "@/lib/tasks/service";
 
 export function TaskCreateForm({
+  action,
   workspaces,
   members,
   labels,
 }: {
+  action: (formData: FormData) => void | Promise<void>;
   workspaces: { id: string; name: string }[];
   members: { id: string; name: string; email: string }[];
   labels: Record<string, string>;
 }) {
   const label = (key: string) => labels[key] ?? "";
   return (
-    <form action={createTaskAction} className="max-w-3xl space-y-5">
+    <form action={action} className="max-w-3xl space-y-5">
       <Card padding="lg">
         <CardTitle>{label("titleLabel")}</CardTitle>
         <CardDescription>{label("newDescription")}</CardDescription>

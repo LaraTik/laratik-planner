@@ -7,6 +7,7 @@ import { listAgencyMembers, listAgencyWorkspaces } from "@/lib/tasks/service";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { TaskCreateForm } from "@/components/tasks/task-form";
+import { createTaskAction } from "../actions";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();
@@ -47,7 +48,12 @@ export default async function NewTaskPage() {
   return (
     <div className="space-y-6">
       <PageHeader title={t("tasks.newTitle")} description={t("tasks.newDescription")} />
-      <TaskCreateForm workspaces={workspaces} members={members} labels={labels} />
+      <TaskCreateForm
+        action={createTaskAction}
+        workspaces={workspaces}
+        members={members}
+        labels={labels}
+      />
     </div>
   );
 }
