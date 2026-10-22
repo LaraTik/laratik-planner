@@ -151,7 +151,12 @@ imported a route-local workspace shell. It now lives beside its owning page.
 The static ownership guard now rejects new `src/components` → `src/app`
 imports and pins the 22 existing legacy imports as an explicit migration
 queue. This bounded change removes one route coupling without moving domain
-actions or changing page behavior.
+actions or changing page behavior. The ownership regression passed 3/3, and
+`pnpm verify` passed at exact clean implementation SHA
+`cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (567 unit files / 5,035 tests,
+formatting, lint, TypeScript, and production build). Route browser/visual
+review and independent verification remain open; this is **Tested**, not
+**Verified**.
 
 **Media route feature boundary (2026-10-21).** The media route tree now has a
 bounded facade at `src/features/media/server.ts`; app pages and API handlers

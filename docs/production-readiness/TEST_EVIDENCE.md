@@ -1,5 +1,23 @@
 # Test and coverage evidence
 
+## Architecture refinement — planning detail shell ownership — 2026-10-22
+
+Implementation SHA: `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `tests/unit/architecture/module-ownership.test.ts`   | Pass — 3/3.                                                                              |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Postgres integration and migration drill             | Not applicable — no persistence or migration behavior changed.                           |
+| Route browser / visual review and independent review | Open.                                                                                    |
+
+The content-detail shell now lives beside its owning App Router page instead
+of shared presentation. The static import guard prevents new
+`src/components` → `src/app` dependencies and records the 22 current legacy
+edges for incremental migration. No page behavior, route, action, or contract
+changed. This checkpoint is **Tested**, not **Verified**; AD-002 remains **In
+Progress**.
+
 ## Architecture refinement — Meta insights module — 2026-10-22
 
 Implementation SHA: `926b833cc1a1a0f49e7836749a8202d1ae2e599f` (clean at run).
