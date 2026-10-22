@@ -2675,6 +2675,8 @@ access contract easy to apply inconsistently. The media feature now owns one
 server-only response adapter used by both route handlers; each route retains
 its token lookup, rate limit, and unavailable response. A focused contract test
 checks range forwarding, safe response headers, attachment naming, and missing
-storage behavior (2/2). Grouped repository verification is pending on the
-committed code tree. No token format, route, permission, or persisted-data
-contract changed.
+storage behavior (2/2). On clean commit
+`f93d3d51947732099fc51603bd47ee96b670f2f1`, `pnpm verify` passes formatting,
+lint, TypeScript, 589 unit files / 5,129 tests, and production build; the
+commit hook passed 255 affected tests. No token format, route, permission, or
+persisted-data contract changed.

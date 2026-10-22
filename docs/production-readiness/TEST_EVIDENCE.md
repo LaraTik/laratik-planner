@@ -2849,3 +2849,14 @@ while responses remain generic and known permission denials remain unlogged
 as errors. No schema or persisted-data contract changed. Full browser/visual
 release coverage, manual route review, Firefox, and independent verification
 remain open; this is not final production-readiness sign-off.
+
+## Public media response contract — `f93d3d51947732099fc51603bd47ee96b670f2f1`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 589
+unit files / 5,129 tests, and the production build. The focused shared response
+contract passed 2/2, and the commit hook passed 255 affected unit tests. The
+single-asset and collection-asset routes now use one server-only feature
+adapter for storage streaming, range forwarding, download naming, and security
+headers. Route-specific token and rate-limit behavior is unchanged. Full
+browser/visual release coverage, manual route review, Firefox, and independent
+verification remain open.

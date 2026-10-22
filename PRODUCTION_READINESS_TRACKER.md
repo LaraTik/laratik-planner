@@ -3624,3 +3624,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No schema, permission, route, or persisted-data contract changed. Full
   browser/visual release coverage, manual route review, Firefox, and
   independent verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Centralize public media download response behavior
+
+- The single-asset and collection-asset routes now share a server-only media
+  feature adapter for storage proxying, byte-range forwarding, download
+  filenames, and security/cache headers. Route-specific token validation,
+  lookup, rate limiting, and unavailable responses remain at their original
+  boundaries.
+- The focused response contract tests passed 2/2; the commit hook passed
+  TypeScript and 255 affected tests. On clean SHA
+  `f93d3d51947732099fc51603bd47ee96b670f2f1`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 589 unit files / 5,129 tests, and the production build.
+- No route, permission, token, or persisted-data contract changed. The
+  remaining route review, full browser/visual evidence, Firefox, and
+  independent verification remain open. AD-002 remains **In Progress**.
