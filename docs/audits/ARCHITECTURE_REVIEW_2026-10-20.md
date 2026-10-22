@@ -1565,3 +1565,23 @@ formatting, lint, TypeScript, and production build). Postgres integration,
 browser/visual review, the remaining route inventory, and independent
 verification remain open. This is **Tested**, not **Verified**; AD-002 remains
 **In Progress**.
+
+## Task access policy ownership — 2026-10-22
+
+The task service and attachment service separately encoded the same
+creator/assignee/agency-admin management rule. That duplicated authorization
+invariant now lives in `src/lib/tasks/access.ts`, which also resolves whether
+the actor is an active agency member. Task updates, task detail affordances,
+and attachment writes use that shared decision. The view-only attachment
+path keeps its membership-only check and does not issue an unnecessary admin
+lookup. The policy matches ADR 0016: active agency members may view; creators
+and assignees may manage; agency admins may manage any task.
+
+Focused task unit tests passed 13/13. `pnpm verify` passed at exact clean
+implementation SHA `292da39ed09f6b0f464c630b62c3283d69c6ab29` (567 unit files /
+5,035 tests, formatting, lint, TypeScript, and production build). A Postgres
+integration regression now checks member view versus denied update and
+attachment creation, but it could not be run because `TEST_DATABASE_URL` is
+unset and Docker did not respond. Full route/browser/visual review and
+independent verification remain open; this is **Tested**, not **Verified**.
+AD-002 remains **In Progress**.

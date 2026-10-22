@@ -2064,3 +2064,19 @@ Implementation SHA: `769a531a46fe2f4ef1f108fc01393655ea6ac984` (clean at run).
 The planning detail route now sends one serializable workflow model to both
 the mobile sheet and desktop rail. No user contract changed. This checkpoint
 is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Architecture refinement — centralized task access — 2026-10-22
+
+Implementation SHA: `292da39ed09f6b0f464c630b62c3283d69c6ab29` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Focused task access, workflow, and time tests        | Pass — 13/13.                                                                            |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Task authorization integration regression            | Added; not run because `TEST_DATABASE_URL` is unset and Docker did not respond.          |
+| Browser / visual review and independent verification | Open.                                                                                    |
+
+Creator, assignee, agency-admin, and active-member task access is now resolved
+through `src/lib/tasks/access.ts` and reused by task updates, detail flags,
+and attachment writes. The ADR 0016 behavior is unchanged. This checkpoint
+is **Tested**, not **Verified**; AD-002 remains **In Progress**.
