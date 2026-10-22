@@ -45,6 +45,7 @@ function renderForm() {
       values={baseValues}
       approvalMode="simple"
       timezone="Europe/Vienna"
+      today={new Date("2026-01-01T12:00:00.000Z")}
       t={tFor("en")}
     />,
   );

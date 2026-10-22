@@ -68,6 +68,7 @@ export default async function WorkspaceSettingsPage({
   const workspace = await getAccessibleWorkspaceAtPath({ id: session.user.id }, agencySlug, slug);
   if (!workspace) notFound();
   const { t, code: locale } = await tForActive();
+  const renderedAt = new Date();
   const actor = await currentActor();
   const [canBulkReset, bulkCounts] = await Promise.all([
     actor ? hasPlatformPermission(actor, "platform.destructive.execute") : Promise.resolve(false),
@@ -383,7 +384,7 @@ export default async function WorkspaceSettingsPage({
             </p>
             <LeadTimeDeadline
               totalDays={leadTotal}
-              today={new Date()}
+              today={renderedAt}
               timezone={workspace.timezone}
             />
           </div>
@@ -394,6 +395,7 @@ export default async function WorkspaceSettingsPage({
               values={leadTimeValues(values)}
               approvalMode={values.approvalMode as "simple" | "internal_then_client"}
               timezone={workspace.timezone}
+              today={renderedAt}
             />
           ) : (
             <ReadOnlySettings message={t("settings.leadTimes.readOnly")} />

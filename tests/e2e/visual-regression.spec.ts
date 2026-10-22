@@ -327,6 +327,9 @@ async function logA11yIfBroken(page: Page, context: string): Promise<void> {
 
 async function applyMask(page: Page): Promise<void> {
   await page.addStyleTag({ content: DYNAMIC_DATA_MASK_CSS });
+  await page.getByTestId("lead-times-deadline-date").evaluateAll((nodes) => {
+    for (const node of nodes) node.textContent = "Mon 16 Nov";
+  });
   await page.getByTestId("media-storage-key-prefix").evaluateAll((nodes) => {
     for (const node of nodes) node.textContent = "agencies/00000000-0000-0000-0000-000000000000";
   });
