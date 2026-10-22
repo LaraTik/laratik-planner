@@ -10,6 +10,7 @@ import {
 import { SignInOptions, type SignInCopy } from "./signin-options";
 import { serverEnv } from "@/lib/validation/env";
 import { tForActive } from "@/lib/i18n/t-for-active";
+import { safeCallbackUrl } from "@/lib/auth/safe-callback-url";
 
 export async function generateMetadata() {
   const { t } = await tForActive();
@@ -30,10 +31,7 @@ export default async function SignInPage({
 }) {
   const { t } = await tForActive();
   const params = await searchParams;
-  const callbackUrl =
-    params.callbackUrl?.startsWith("/") && !params.callbackUrl.startsWith("//")
-      ? params.callbackUrl
-      : "/app";
+  const callbackUrl = safeCallbackUrl(params.callbackUrl);
   const setupMode = callbackUrl === "/setup";
   const googleEnabled = !!(serverEnv.GOOGLE_CLIENT_ID && serverEnv.GOOGLE_CLIENT_SECRET);
   const magicLinkEnabled = !!(

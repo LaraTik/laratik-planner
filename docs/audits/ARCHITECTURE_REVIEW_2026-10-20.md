@@ -2695,3 +2695,19 @@ incremental. The focused share-collection and module-ownership suites pass
 `f0a5c0dab05480f613b4e6c9f39b1a3d20b9a113`, `pnpm verify` passed formatting,
 lint, TypeScript, 589 unit files / 5,129 tests, and production build. No
 routes, permissions, or data contracts changed.
+
+## A48 — Sign-in callback validation was split across boundaries
+
+**Priority: P2 — authentication redirect invariant.** The sign-in page used a
+leading-slash check that did not canonicalize backslash forms, while the three
+server actions accepted their bound callback argument without validation.
+Review of the installed Auth.js 5.0.0-beta.32 implementation confirmed its
+default redirect callback currently falls back to the application origin for
+cross-origin targets, so this review did not confirm an exploitable external
+redirect. The page and actions now share `safeCallbackUrl`, which canonicalizes
+same-origin relative URLs and falls back to `/app` for external, malformed, or
+non-path input before it reaches Auth.js. Regression coverage includes the
+backslash form and a direct server-action call (18 focused auth
+page/action/helper checks pass). Grouped repository verification is pending.
+No auth provider, permission, or successful same-origin callback contract
+changed.
