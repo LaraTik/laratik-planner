@@ -2351,6 +2351,24 @@ concurrent-dispatch regression test was added but could not run without the
 disposable database. AD-002 remains **In Progress**; this is **Tested**, not
 **Verified**.
 
+## Architecture refinement — media folder import error handling — 2026-10-22
+
+Implementation SHA: `aabd19ea0478791be9d6a564bad051936c6c0466` (clean).
+
+| Command / check                          | Result                                                                                               |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                            | Pass — formatting, lint, TypeScript, 588 unit files / 5,127 tests, and production build.             |
+| Focused folder-import unit tests         | Pass — 8/8 across service and route regression suites.                                               |
+| Commit-hook typecheck and affected tests | Pass — 33 files / 259 tests, plus the 8 directly changed tests.                                      |
+| Postgres integration / migration drill   | Not applicable to this error-response-only change; prior transactional DB checks remain outstanding. |
+| Browser, visual, and independent review  | Open — part of the broader AD-002 release and route-review gates.                                    |
+
+Unknown persistence and provider implementation errors now return safe fixed
+copy in item reports and route-level failures. Known sanitized
+`MediaSourceError` guidance remains visible, and a late workspace permission
+denial returns 403. No schema or successful-import behavior changed. This
+checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
 ## Account MCP scope issuance — focused regression evidence
 
 Working-tree evidence (not exact clean-SHA evidence):

@@ -3576,3 +3576,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - Full browser/visual release gates, complete route review, and independent
   verification remain open. AD-002 remains **In Progress**; no
   **Verified** status is assigned.
+
+## 2026-10-22 — Sanitize media folder import failures
+
+- Corrected A45 in the architecture review: item-level and route-level folder
+  import failures no longer expose unexpected storage/database error text;
+  late permission denials consistently return 403. Known sanitized provider
+  guidance and successful imports are unchanged.
+- Focused regression tests passed 8/8. `pnpm verify` passed on the code tree
+  committed as clean SHA `aabd19ea0478791be9d6a564bad051936c6c0466`:
+  formatting, lint, TypeScript, 588 unit files / 5,127 tests, and production
+  build. The commit hook also passed type-checking and 259 related tests.
+- This change adds no schema or persistence behavior, so no migration drill is
+  required for this milestone. Earlier transactional database integration
+  evidence remains open; full route, browser, visual, Firefox, and independent
+  review gates remain open. AD-002 remains **In Progress**.

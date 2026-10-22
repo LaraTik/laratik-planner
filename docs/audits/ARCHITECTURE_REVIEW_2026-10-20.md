@@ -2645,7 +2645,9 @@ database errors can contain internal implementation and connection details.
 Both paths now return fixed safe copy for unexpected failures; known
 `MediaSourceError` details remain the deliberately sanitized provider guidance.
 The route maps a late `MediaPermissionError` to the established forbidden
-response. Focused service and route regression coverage passes 8/8; grouped
-verification and exact clean-SHA evidence remain pending. No schema, route,
-or persisted-data contract changed. Unexpected error details are intentionally
+response. Focused service and route regression coverage passes 8/8. Grouped
+`pnpm verify` passes on the clean code tree committed at
+`aabd19ea0478791be9d6a564bad051936c6c0466`: formatting, lint, TypeScript,
+588 unit files / 5,127 tests, and production build. No schema, route, or
+persisted-data contract changed. Unexpected error details are intentionally
 sanitized, and late permission failures now consistently return forbidden.
