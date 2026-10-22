@@ -2932,3 +2932,15 @@ remain unchanged. The commit hook passed 75 affected unit tests. No schema,
 route, permission, or successful workflow contract changed. Full
 browser/visual checks, route review, Firefox, and independent verification
 remain open.
+
+## Social settings failure privacy — `69ee4706ef366f1a5b3e6d5034c39f071d7e29b3`
+
+The focused social service error and agency administration tests passed 19/19.
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, the
+complete unit suite, and production build. Expected `SocialServiceError`
+responses retain their established code, message, and HTTP status; unexpected
+errors are recorded through the sanitized logger and returned as stable safe
+copy. Key-management fallback errors follow the same policy. No success
+response, route, permission, or persisted-data contract changed. Full
+browser/visual checks, route review, Firefox, and independent verification
+remain open.

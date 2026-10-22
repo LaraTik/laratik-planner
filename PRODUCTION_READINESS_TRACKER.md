@@ -3728,3 +3728,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No schema, permission, route, or successful workflow behavior changed.
   Browser/visual release checks, manual route review, Firefox, and independent
   verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize social administration failures
+
+- Centralized social API and server-action error mapping. Established typed
+  service errors retain their response code, message, and status; unexpected
+  failures are sanitized in client responses and recorded through the existing
+  structured logger. Unknown key-management fallback errors follow the same
+  policy.
+- Focused social service and admin tests passed 19/19. On clean SHA
+  `69ee4706ef366f1a5b3e6d5034c39f071d7e29b3`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, the full unit suite, and the production build.
+- No success response, route, permission, or persisted-data behavior changed.
+  Browser/visual release checks, full route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.

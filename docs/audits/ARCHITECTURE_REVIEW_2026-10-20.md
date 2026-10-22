@@ -2779,3 +2779,19 @@ ESLint, TypeScript, 591 unit files / 5,141 tests, and the production build.
 The disposable-Postgres email retry/concurrency integration suite passed 2/2.
 No notification payload, delivery state, route response, or persisted-data
 contract changed.
+
+## A53 — Social administration returned raw unexpected failures
+
+**Priority: P2 — operational privacy and consistent error ownership.** Social
+agency settings APIs and server actions had separate catch blocks that could
+serialize arbitrary exception messages. The key-management fallback also
+wrapped unexpected errors using their original message. A shared social
+failure mapper now preserves established `SocialServiceError` codes, messages,
+and status values, while unexpected failures go through the sanitized logger
+and return stable generic copy. The unknown key-management fallback follows
+the same rule. Focused social service and admin tests passed 19/19. On clean
+SHA `69ee4706ef366f1a5b3e6d5034c39f071d7e29b3`, `pnpm verify` passed,
+including formatting, lint, TypeScript, unit tests, and production build. No
+success result, route, permission, or persisted-data contract changed. Full
+browser/visual release coverage, manual route review, Firefox, and independent
+verification remain open; AD-002 remains **In Progress**.
