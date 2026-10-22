@@ -13,7 +13,7 @@ import { agencies, agencySocialProviderConfig } from "@/lib/db/schema";
 import { and, eq } from "drizzle-orm";
 import { ProviderConfigCard } from "./provider-config-card";
 import { AnalyticsProbeCard } from "./analytics-probe-card";
-import { listAnalyticsProbeProfiles } from "@/lib/social/analytics-probe";
+import { listAnalyticsProbeProfiles } from "@/features/social-analytics/server";
 import { Card } from "@/components/ui/card";
 
 export async function generateMetadata() {
@@ -112,6 +112,7 @@ export default async function AgencySocialProvidersPage() {
   const credentialsPassed = metaRow?.lastTestedOk === true;
   const credentialsFailed = metaRow?.lastTestedOk === false;
   const probeReady = metaConfigured && metaProfiles.length > 0;
+  const renderedAt = new Date();
 
   return (
     <div className="space-y-6" data-testid="agency-providers-page">
@@ -152,6 +153,7 @@ export default async function AgencySocialProvidersPage() {
             agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={metaRow ? toExistingSummary(metaRow) : null}
+            now={renderedAt}
           />
           <ProviderConfigCard
             provider="tiktok"
@@ -159,6 +161,7 @@ export default async function AgencySocialProvidersPage() {
             agencySlug={agency?.slug ?? ""}
             actorId={actor.id}
             existing={tiktokRow ? toExistingSummary(tiktokRow) : null}
+            now={renderedAt}
           />
         </div>
       </section>

@@ -24,7 +24,9 @@ import {
   setProviderConfigAction,
   removeProviderConfigAction,
   testProviderConfigAction,
+  type ProviderConfigErrorCode,
   type ProviderConfigFormState,
+  type ProviderTestMessageCode,
 } from "./actions";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 
@@ -69,6 +71,22 @@ const EN_FALLBACK: Translator = (key, params) => {
     "agencyProviders.openDeveloperConsole": "Open developer console",
     "agencyProviders.appSecretKeepCurrent": "(leave blank to keep current)",
     "agencyProviders.appSecretRequiredError": "App id and app secret are required.",
+    "agencyProviders.errorSignInRequired": "Sign in is required.",
+    "agencyProviders.errorAgencyAdminRequired": "Agency admin access is required.",
+    "agencyProviders.errorAgencyMismatch": "The selected agency does not match your active agency.",
+    "agencyProviders.errorInvalidInput": "Check the provider fields and try again.",
+    "agencyProviders.errorAppSecretRequired": "App secret is required.",
+    "agencyProviders.errorSaveFailed": "Could not save provider settings. Try again.",
+    "agencyProviders.errorRemoveFailed": "Could not remove provider settings. Try again.",
+    "agencyProviders.errorTestFailed": "Could not test provider settings. Try again.",
+    "agencyProviders.testProviderNotConfigured": "Provider is not configured yet.",
+    "agencyProviders.testFormatPassed":
+      "Format check passed. The Re-test button on a connected channel runs the live provider check.",
+    "agencyProviders.testAppIdTooShort": "App id looks too short.",
+    "agencyProviders.testMetaLoginConfigRequired":
+      "Login for Business config id is required for Meta.",
+    "agencyProviders.testInvalidGraphApiVersion":
+      "Graph API version must look like 'v<num>.<num>'.",
     "agencyProviders.enabledLabel": "Enabled",
     "agencyProviders.enabledHelp": "Disable to stop new OAuth flows without losing the secret.",
     "agencyProviders.saved": "Saved.",
@@ -116,30 +134,48 @@ const EN_FALLBACK: Translator = (key, params) => {
 
 const PROVIDER_META = {
   meta: {
-    label: "Meta (Facebook + Instagram)",
-    description:
-      "Used by the Facebook Login for Business OAuth flow. Requires an app id, an app secret, and a Login for Business config id.",
-    appIdLabel: "Meta app id",
+    label: "agencyProviders.metaLabel",
+    description: "agencyProviders.metaDescription",
+    appIdLabel: "agencyProviders.metaAppIdLabel",
     appIdPlaceholder: "1234567890",
-    loginConfigIdLabel: "Login for Business config id",
+    loginConfigIdLabel: "agencyProviders.metaLoginConfigIdLabel",
     loginConfigIdPlaceholder: "1234567890",
-    graphApiVersionLabel: "Graph API version (optional)",
+    graphApiVersionLabel: "agencyProviders.metaGraphApiVersionLabel",
     graphApiVersionPlaceholder: META_DEFAULT_GRAPH_VERSION,
     developerConsoleUrl: "https://developers.facebook.com/apps/",
   },
   tiktok: {
-    label: "TikTok (Display API)",
-    description:
-      "Used by the TikTok Display API OAuth flow. Requires a client key and client secret. Login Kit config id is not used.",
-    appIdLabel: "TikTok client key",
+    label: "agencyProviders.tiktokLabel",
+    description: "agencyProviders.tiktokDescription",
+    appIdLabel: "agencyProviders.tiktokAppIdLabel",
     appIdPlaceholder: "aw1234567890",
-    loginConfigIdLabel: "Login Kit config id (optional)",
+    loginConfigIdLabel: "agencyProviders.tiktokLoginConfigIdLabel",
     loginConfigIdPlaceholder: "",
-    graphApiVersionLabel: "Display API version (optional)",
+    graphApiVersionLabel: "agencyProviders.tiktokGraphApiVersionLabel",
     graphApiVersionPlaceholder: "",
     developerConsoleUrl: "https://developers.tiktok.com/apps/",
   },
 } as const;
+
+const ERROR_MESSAGE_KEYS: Record<ProviderConfigErrorCode, string> = {
+  sign_in_required: "agencyProviders.errorSignInRequired",
+  agency_admin_required: "agencyProviders.errorAgencyAdminRequired",
+  agency_mismatch: "agencyProviders.errorAgencyMismatch",
+  invalid_input: "agencyProviders.errorInvalidInput",
+  app_secret_required: "agencyProviders.errorAppSecretRequired",
+  save_failed: "agencyProviders.errorSaveFailed",
+  remove_failed: "agencyProviders.errorRemoveFailed",
+  test_failed: "agencyProviders.errorTestFailed",
+  app_credentials_required: "agencyProviders.appSecretRequiredError",
+};
+
+const TEST_MESSAGE_KEYS: Record<ProviderTestMessageCode, string> = {
+  provider_not_configured: "agencyProviders.testProviderNotConfigured",
+  format_check_passed: "agencyProviders.testFormatPassed",
+  app_id_too_short: "agencyProviders.testAppIdTooShort",
+  meta_login_config_required: "agencyProviders.testMetaLoginConfigRequired",
+  invalid_graph_api_version: "agencyProviders.testInvalidGraphApiVersion",
+};
 
 export function ProviderConfigCard({
   provider,
@@ -147,16 +183,20 @@ export function ProviderConfigCard({
   agencySlug,
   actorId,
   existing,
+  now,
 }: {
   provider: "meta" | "tiktok";
   agencyId: string;
   agencySlug: string;
   actorId: string;
   existing: ExistingSummary | null;
+  /** Shared page-render clock keeps relative labels stable through hydration. */
+  now: Date;
 }) {
   const tr: Translator = useLocaleT() ?? EN_FALLBACK;
   const locale = useLocaleCode();
   const meta = PROVIDER_META[provider];
+  const providerLabel = tr(meta.label);
   const [appId, setAppId] = useState(existing?.appId ?? "");
   const [appSecret, setAppSecret] = useState("");
   const [showSecret, setShowSecret] = useState(false);
@@ -197,7 +237,7 @@ export function ProviderConfigCard({
 
   function save() {
     if (!appId || (!appSecret && !existing)) {
-      setState({ error: tr("agencyProviders.appSecretRequiredError") });
+      setState({ errorCode: "app_credentials_required" });
       return;
     }
     setState({});
@@ -210,7 +250,7 @@ export function ProviderConfigCard({
         enabled,
       });
       setState(result);
-      if ("success" in result) setAppSecret("");
+      if ("saved" in result) setAppSecret("");
     });
   }
 
@@ -226,7 +266,7 @@ export function ProviderConfigCard({
     if (!existing) return;
     if (
       !confirm(
-        `${tr("agencyProviders.removeConfirmPrefix")} ${meta.label} ${tr("agencyProviders.removeConfirmSuffix")}`,
+        `${tr("agencyProviders.removeConfirmPrefix")} ${providerLabel} ${tr("agencyProviders.removeConfirmSuffix")}`,
       )
     ) {
       return;
@@ -234,7 +274,7 @@ export function ProviderConfigCard({
     setState({});
     startRemove(async () => {
       const result = await removeProviderConfigAction(agencyId, provider);
-      if ("success" in result) {
+      if ("saved" in result) {
         setAppId("");
         setAppSecret("");
         setLoginConfigId("");
@@ -248,7 +288,7 @@ export function ProviderConfigCard({
   return (
     <Card padding="md" data-testid={`provider-config-card-${provider}`}>
       <header className="mb-3 flex items-center justify-between gap-2">
-        <h3 className="text-body text-fg-primary font-semibold">{meta.label}</h3>
+        <h3 className="text-body text-fg-primary font-semibold">{providerLabel}</h3>
         {existing ? (
           <span
             className="text-label text-fg-muted inline-flex items-center gap-1"
@@ -272,7 +312,7 @@ export function ProviderConfigCard({
           </span>
         )}
       </header>
-      <p className="text-label text-fg-muted mb-4">{meta.description}</p>
+      <p className="text-label text-fg-muted mb-4">{tr(meta.description)}</p>
 
       {provider === "meta" ? (
         <section
@@ -418,7 +458,7 @@ export function ProviderConfigCard({
         }}
       >
         <div className="space-y-1.5">
-          <Label htmlFor={`${provider}-app-id`}>{meta.appIdLabel}</Label>
+          <Label htmlFor={`${provider}-app-id`}>{tr(meta.appIdLabel)}</Label>
           <Input
             id={`${provider}-app-id`}
             value={appId}
@@ -430,7 +470,8 @@ export function ProviderConfigCard({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${provider}-app-secret`}>
-            App secret {existing ? tr("agencyProviders.appSecretKeepCurrent") : ""}
+            {tr("agencyProviders.appSecretLabel")}{" "}
+            {existing ? tr("agencyProviders.appSecretKeepCurrent") : ""}
           </Label>
           <div className="relative">
             <Input
@@ -458,7 +499,7 @@ export function ProviderConfigCard({
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor={`${provider}-login-config`}>{meta.loginConfigIdLabel}</Label>
+          <Label htmlFor={`${provider}-login-config`}>{tr(meta.loginConfigIdLabel)}</Label>
           <Input
             id={`${provider}-login-config`}
             value={loginConfigId}
@@ -468,7 +509,7 @@ export function ProviderConfigCard({
           />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor={`${provider}-graph-version`}>{meta.graphApiVersionLabel}</Label>
+          <Label htmlFor={`${provider}-graph-version`}>{tr(meta.graphApiVersionLabel)}</Label>
           <Input
             id={`${provider}-graph-version`}
             value={graphApiVersion}
@@ -493,16 +534,16 @@ export function ProviderConfigCard({
           <span className="text-label text-fg-muted">{tr("agencyProviders.enabledHelp")}</span>
         </div>
 
-        {state.error ? (
+        {state.errorCode ? (
           <p
             role="alert"
             className="text-label text-danger"
             data-testid={`provider-config-error-${provider}`}
           >
-            {state.error}
+            {tr(ERROR_MESSAGE_KEYS[state.errorCode])}
           </p>
         ) : null}
-        {"success" in state && state.success ? (
+        {"saved" in state && state.saved ? (
           <p
             role="status"
             className="text-label text-fg-muted inline-flex items-center gap-1"
@@ -525,7 +566,7 @@ export function ProviderConfigCard({
             ) : (
               <PlugZap className="h-3 w-3" aria-hidden={true} />
             )}
-            {state.testResult.message}
+            {state.testResult.messageCodes.map((code) => tr(TEST_MESSAGE_KEYS[code])).join(" ")}
           </p>
         ) : null}
 
@@ -577,9 +618,9 @@ export function ProviderConfigCard({
           >
             {existing.lastTestedOk
               ? tr("agencyProviders.verifiedAt", {
-                  date: formatRelativeDate(existing.lastTestedAt, new Date(), locale),
+                  date: formatRelativeDate(existing.lastTestedAt, now, locale),
                 })
-              : `${tr("agencyProviders.lastFailedWithCode", { code: existing.lastTestErrorCode ?? "—" })} ${formatRelativeDate(existing.lastTestedAt, new Date(), locale)}.`}
+              : `${tr("agencyProviders.lastFailedWithCode", { code: existing.lastTestErrorCode ?? "—" })} ${formatRelativeDate(existing.lastTestedAt, now, locale)}.`}
           </p>
         ) : null}
       </form>

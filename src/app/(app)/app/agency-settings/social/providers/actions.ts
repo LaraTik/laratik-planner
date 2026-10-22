@@ -49,13 +49,31 @@ const ProviderConfigSchema = z.object({
     .nullable(),
   enabled: z.boolean(),
 });
+const SocialProviderSchema = z.enum(["meta", "tiktok"]);
 
-export type TestResult = { ok: true; message: string } | { ok: false; message: string };
+export type ProviderConfigErrorCode =
+  | "sign_in_required"
+  | "agency_admin_required"
+  | "agency_mismatch"
+  | "invalid_input"
+  | "app_credentials_required"
+  | "app_secret_required"
+  | "save_failed"
+  | "remove_failed"
+  | "test_failed";
+
+export type ProviderTestMessageCode =
+  | "provider_not_configured"
+  | "format_check_passed"
+  | "app_id_too_short"
+  | "meta_login_config_required"
+  | "invalid_graph_api_version";
+
+export type TestResult = { ok: boolean; messageCodes: ProviderTestMessageCode[] };
 
 export type ProviderConfigFormState = {
-  error?: string;
-  errorCode?: string;
-  success?: true;
+  errorCode?: ProviderConfigErrorCode;
+  saved?: true;
   testResult?: TestResult;
 };
 
@@ -75,22 +93,22 @@ export async function setProviderConfigAction(
   input: ProviderConfigInput,
 ): Promise<ProviderConfigFormState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in is required." };
+  if (!session?.user?.id) return { errorCode: "sign_in_required" };
   const ctx = await requireAgencyAdmin(session.user.id);
-  if (!ctx) return { error: "Agency admin access is required." };
-  if (ctx !== agencyIdFromUrl) return { error: "Agency mismatch." };
+  if (!ctx) return { errorCode: "agency_admin_required" };
+  if (ctx !== agencyIdFromUrl) return { errorCode: "agency_mismatch" };
+  const parsedProvider = SocialProviderSchema.safeParse(provider);
+  if (!parsedProvider.success) return { errorCode: "invalid_input" };
   const parsed = ProviderConfigSchema.safeParse(input);
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? "Invalid form input." };
-  }
+  if (!parsed.success) return { errorCode: "invalid_input" };
   try {
-    const existing = await getAgencyProviderConfig(db, ctx, provider);
+    const existing = await getAgencyProviderConfig(db, ctx, parsedProvider.data);
     const appSecret =
       parsed.data.appSecret.trim() || ("appId" in existing ? existing.appSecret : "");
-    if (!appSecret) return { error: "App secret is required." };
+    if (!appSecret) return { errorCode: "app_secret_required" };
     await setAgencyProviderConfig(db, {
       agencyId: ctx,
-      provider,
+      provider: parsedProvider.data,
       appId: parsed.data.appId,
       appSecret,
       loginConfigId: parsed.data.loginConfigId ?? null,
@@ -99,11 +117,9 @@ export async function setProviderConfigAction(
       actorId: session.user.id,
     });
     revalidatePath("/app/agency-settings/social/providers");
-    return { success: true };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to save provider config.",
-    };
+    return { saved: true };
+  } catch {
+    return { errorCode: "save_failed" };
   }
 }
 
@@ -112,18 +128,18 @@ export async function removeProviderConfigAction(
   provider: SocialProvider,
 ): Promise<ProviderConfigFormState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in is required." };
+  if (!session?.user?.id) return { errorCode: "sign_in_required" };
   const ctx = await requireAgencyAdmin(session.user.id);
-  if (!ctx) return { error: "Agency admin access is required." };
-  if (ctx !== agencyIdFromUrl) return { error: "Agency mismatch." };
+  if (!ctx) return { errorCode: "agency_admin_required" };
+  if (ctx !== agencyIdFromUrl) return { errorCode: "agency_mismatch" };
+  const parsedProvider = SocialProviderSchema.safeParse(provider);
+  if (!parsedProvider.success) return { errorCode: "invalid_input" };
   try {
-    await removeAgencyProviderConfig(db, ctx, provider);
+    await removeAgencyProviderConfig(db, ctx, parsedProvider.data);
     revalidatePath("/app/agency-settings/social/providers");
-    return { success: true };
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : "Failed to remove provider config.",
-    };
+    return { saved: true };
+  } catch {
+    return { errorCode: "remove_failed" };
   }
 }
 
@@ -132,49 +148,38 @@ export async function testProviderConfigAction(
   provider: SocialProvider,
 ): Promise<ProviderConfigFormState> {
   const session = await auth();
-  if (!session?.user?.id) return { error: "Sign in is required." };
+  if (!session?.user?.id) return { errorCode: "sign_in_required" };
   const ctx = await requireAgencyAdmin(session.user.id);
-  if (!ctx) return { error: "Agency admin access is required." };
-  if (ctx !== agencyIdFromUrl) return { error: "Agency mismatch." };
-  const config = await getAgencyProviderConfig(db, ctx, provider);
-  if (!("appId" in config)) {
-    return {
-      success: true,
-      testResult: { ok: false, message: "Provider is not configured yet." },
-    };
-  }
-  // Format validation only — the live end-to-end test is the
-  // Re-test button on the channels page, which round-trips a real
-  // snapshot call. The agency-settings "Test" button is the
-  // "did I paste something coherent?" check.
-  const messages: string[] = [];
-  if (!config.appId || config.appId.length < 4) {
-    messages.push("App id looks too short.");
-  }
-  if (provider === "meta" && !config.loginConfigId) {
-    messages.push("Login for Business config id is required for Meta.");
-  }
-  if (provider === "tiktok" && !config.loginConfigId) {
-    messages.push("TikTok client key looks too short.");
-  }
-  if (config.graphApiVersion && !/^v\d+\.\d+$/.test(config.graphApiVersion)) {
-    messages.push("Graph API version must look like 'v<num>.<num>'.");
-  }
-  const ok = messages.length === 0;
-  await recordProviderTestResult(db, ctx, provider, {
-    ok,
-    errorCode: ok ? null : "format_check_failed",
-  });
-  revalidatePath("/app/agency-settings/social/providers");
-  return {
-    success: true,
-    testResult: {
+  if (!ctx) return { errorCode: "agency_admin_required" };
+  if (ctx !== agencyIdFromUrl) return { errorCode: "agency_mismatch" };
+  const parsedProvider = SocialProviderSchema.safeParse(provider);
+  if (!parsedProvider.success) return { errorCode: "invalid_input" };
+  try {
+    const config = await getAgencyProviderConfig(db, ctx, parsedProvider.data);
+    if (!("appId" in config)) {
+      return { testResult: { ok: false, messageCodes: ["provider_not_configured"] } };
+    }
+    // This is a format check only. A live provider check happens on the
+    // channels page; TikTok's Login Kit config id is intentionally optional.
+    const messageCodes: ProviderTestMessageCode[] = [];
+    if (!config.appId || config.appId.length < 4) messageCodes.push("app_id_too_short");
+    if (parsedProvider.data === "meta" && !config.loginConfigId) {
+      messageCodes.push("meta_login_config_required");
+    }
+    if (config.graphApiVersion && !/^v\d+\.\d+$/.test(config.graphApiVersion)) {
+      messageCodes.push("invalid_graph_api_version");
+    }
+    const ok = messageCodes.length === 0;
+    if (ok) messageCodes.push("format_check_passed");
+    await recordProviderTestResult(db, ctx, parsedProvider.data, {
       ok,
-      message: ok
-        ? "Format check passed. The Re-test button on a connected channel runs the live provider check."
-        : messages.join(" "),
-    },
-  };
+      errorCode: ok ? null : "format_check_failed",
+    });
+    revalidatePath("/app/agency-settings/social/providers");
+    return { testResult: { ok, messageCodes } };
+  } catch {
+    return { errorCode: "test_failed" };
+  }
 }
 
 // Re-export the existence check for the page.
