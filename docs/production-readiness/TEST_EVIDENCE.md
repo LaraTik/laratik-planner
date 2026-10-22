@@ -2328,22 +2328,28 @@ is **Tested**, not **Verified**; AD-002 remains **In Progress**.
 
 ## Architecture refinement — publishing, notification, and AI workflows
 
-Implementation SHA: pending the final clean implementation commit.
+Implementation SHA: `f85506fc1aa18d47717eac15d7fba990416919bc` (clean at run).
 
-| Command / check                  | Result                                                                                  |
-| -------------------------------- | --------------------------------------------------------------------------------------- |
-| `pnpm verify`                    | Pass — formatting, lint, typecheck, 574 unit files / 5,066 tests, and production build. |
-| Postgres integration suite       | Pass — full suite against a fresh disposable `planner_test` database.                   |
-| Migration drill                  | Pass — all five scenarios against the disposable database.                              |
-| Monthly proposal apply           | Pass — commit, forced finalization rollback, concurrent claim, workspace-scope cases.   |
-| Browser and visual release gates | Open — full matrix and 57 known visual differences remain under review.                 |
-| Independent verification         | Open — no independent `Verified` status assigned.                                       |
+| Command / check                     | Result                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------- |
+| `pnpm verify`                       | Pass — formatting, lint, typecheck, 587 unit files / 5,124 tests, and production build. |
+| Focused planning library tests      | Pass — 25 tests.                                                                        |
+| Focused notification dispatch tests | Pass — 46 tests.                                                                        |
+| Postgres integration and drill      | Not run — `TEST_DATABASE_URL` is unset and the local Docker API returned HTTP 500.      |
+| Browser and visual release gates    | Open — full browser matrix, route review, and visual reconciliation remain outstanding. |
+| Independent verification            | Open — no independent `Verified` status assigned.                                       |
 
 The monthly planning route now uses a feature-owned transaction to claim the
 proposal, create content, and persist both final states atomically. The AI
 generation route rejects unauthorized actors before loading workspace
-research or brand context. Exact clean-SHA evidence remains pending. AD-002
-remains **In Progress**; this is **Tested**, not **Verified**.
+research or brand context. Planning library writes now serialize archive and
+restore operations and record their audit events in the same transaction.
+Email dispatch claims each outbox event under a row lock to avoid competing
+workers sending the same event; delivery remains at-least-once if a process
+crashes after SMTP acceptance and before its database commit. A database-backed
+concurrent-dispatch regression test was added but could not run without the
+disposable database. AD-002 remains **In Progress**; this is **Tested**, not
+**Verified**.
 
 ## Account MCP scope issuance — focused regression evidence
 

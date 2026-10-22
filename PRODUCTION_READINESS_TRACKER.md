@@ -3560,3 +3560,19 @@ default framebuffer`, then consumes a CPU core without returning control;
   tests, and production build.
 - The focused platform-errors visual comparison passed 3/3 on the same clean
   SHA. No schema or runtime behavior changed in this test/evidence batch.
+
+## 2026-10-22 — Transactional workflow refinement evidence
+
+- `pnpm verify` passed on clean implementation SHA
+  `f85506fc1aa18d47717eac15d7fba990416919bc`: formatting, ESLint, TypeScript,
+  587 unit files / 5,124 tests, and production build.
+- Planning library transaction and authorization tests passed 25/25;
+  notification dispatch tests passed 46/46. The full disposable-Postgres
+  integration suite and migration drill were not run because
+  `TEST_DATABASE_URL` is unset and the local Docker API returned HTTP 500.
+- A database-backed competing email-dispatch regression test was added but
+  still needs to run against `planner_test`. Do not treat the unit mock as
+  concurrency evidence.
+- Full browser/visual release gates, complete route review, and independent
+  verification remain open. AD-002 remains **In Progress**; no
+  **Verified** status is assigned.
