@@ -32,6 +32,7 @@ vi.mock("@/lib/media/collection-service", () => ({
 }));
 vi.mock("@/features/media/server", () => ({
   MediaPermissionError: class MediaPermissionError extends Error {},
+  createMediaShareCollection: createMediaShareCollectionMock,
 }));
 vi.mock("@/lib/validation/env", () => ({
   get serverEnv() {

@@ -2680,3 +2680,16 @@ storage behavior (2/2). On clean commit
 lint, TypeScript, 589 unit files / 5,129 tests, and production build; the
 commit hook passed 255 affected tests. No token format, route, permission, or
 persisted-data contract changed.
+
+## A47 — Media routes bypassed the feature server entry point
+
+**Priority: P3 — ownership clarity and migration safety.** Several media pages
+and handlers imported share-collection commands and queries directly from the
+legacy `lib/media/collection-service` module, even though the application
+already has a public server entry point for media. The relevant service
+functions are now exposed through `features/media/server.ts`, and the route
+callers use that entry point. The underlying service remains in place behind
+the feature adapter, preserving compatibility while making future migration
+incremental. The focused share-collection and module-ownership suites pass
+9/9; the commit hook and grouped repository verification are pending. No
+routes, permissions, or data contracts changed.

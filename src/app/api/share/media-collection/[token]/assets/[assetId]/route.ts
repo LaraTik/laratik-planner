@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { enforceRateLimit } from "@/lib/security/rate-limit";
-import { publicShareAssetResponse } from "@/features/media/server";
-import { publicMediaCollectionAssetForToken } from "@/lib/media/collection-service";
+import {
+  publicMediaCollectionAssetForToken,
+  publicShareAssetResponse,
+} from "@/features/media/server";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
