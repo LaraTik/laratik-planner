@@ -239,6 +239,19 @@ a line-count defect. Bounded registration modules have since been introduced
 for diagnostics, Brand Kit, and task/attachment tools; see the dated MCP
 milestones below. Tool contracts remain stable.
 
+**Meta provider responsibility split (2026-10-22).** The 2,213-line
+`src/lib/social/providers/meta.ts` combined OAuth scope selection and token
+exchange, Page/Instagram discovery, publication reads, snapshot and insights
+collection, and the provider adapter. OAuth, token exchange, and managed Page
+discovery now live in `meta-connection.ts`; the provider module re-exports
+that public surface while retaining publication and analytics ownership.
+Focused Meta provider tests passed 56/56, and `pnpm verify` passed at exact
+clean implementation SHA `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e` (567 unit
+files / 5,035 tests, formatting, lint, TypeScript, and production build).
+Postgres, browser/visual, remaining route inventory, and independent review
+remain open. This is **Tested**, not **Verified**; AD-002 remains **In
+Progress**.
+
 **Media responsibility review (2026-10-21).** `src/lib/media/service.ts` was
 2,674 lines and owned list/filter/duplicate queries, upload registration,
 pending-upload promotion, folder management and tree projection, public

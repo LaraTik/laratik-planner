@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Architecture refinement — Meta connection module — 2026-10-22
+
+Implementation SHA: `8739e9d7d977ec13d423afdaf0c8d9dee3748e8e` (clean at run).
+
+| Command / check                                      | Result                                                                                                                     |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Focused Meta provider and insights tests             | Pass — 56/56.                                                                                                              |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build.                                   |
+| Postgres integration and migration drill             | Not run — this provider-only refactor does not change persistence; environment lacks a reachable disposable test database. |
+| Browser / visual review and independent verification | Open.                                                                                                                      |
+
+Meta OAuth scope selection, token exchange, and account discovery now live in
+`src/lib/social/providers/meta-connection.ts`. `meta.ts` re-exports the
+existing public symbols; call sites and provider behavior are unchanged. This
+checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
 ## Research access ownership refinement — 2026-10-22
 
 Implementation SHA: `40a6682b5d322c5e842547b0582c6480b9cb55bd` (clean).
