@@ -36,6 +36,7 @@ import {
 import { suggestVoiceRules } from "@/lib/ai";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getActiveApiKey } from "@/lib/ai";
+import { logError } from "@/lib/observability/logger";
 import {
   colorTemplates,
   pillarTemplates,
@@ -808,7 +809,7 @@ export async function addPublishingTemplateAction(
     revalidateBrandKit(workspace, "publishing");
     return { ok: true, added: 1 };
   } catch (err) {
-    if (err instanceof Error) return { ok: false, error: err.message };
+    logError("brand_kit.publishing_template_add_failed", { err });
     return { ok: false, error: "Failed to add publishing rule." };
   }
 }

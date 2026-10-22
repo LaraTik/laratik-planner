@@ -113,6 +113,7 @@ const {
   archiveVoiceRuleAction,
   createPublishingRuleAction,
   archivePublishingRuleAction,
+  addPublishingTemplateAction,
   createLinkedResourceAction,
   archiveLinkedResourceAction,
 } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/actions");
@@ -563,6 +564,22 @@ describe("createPublishingRuleAction", () => {
         content: "Describe the image.",
       }),
     );
+  });
+});
+
+describe("addPublishingTemplateAction", () => {
+  it("returns stable safe copy for unexpected persistence failures", async () => {
+    authMock.auth.mockResolvedValue(session);
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue(workspace);
+    policyMock.hasWorkspaceRole.mockResolvedValue(true);
+    serviceMock.createBrandPublishingRule.mockRejectedValue(
+      new Error("postgres://planner:secret@example.test/planner_test: connection refused"),
+    );
+
+    const result = await addPublishingTemplateAction(slug, "publishing-alt-text");
+
+    expect(result).toEqual({ ok: false, error: "Failed to add publishing rule." });
+    expect(JSON.stringify(result)).not.toContain("secret");
   });
 });
 
