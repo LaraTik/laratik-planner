@@ -1485,3 +1485,30 @@ unit files / 5,020 tests, and production build. The E2E/Postgres gates could
 not start because `TEST_DATABASE_URL` is unset and the Docker CLI did not
 respond during a bounded availability check. The route/browser/visual review
 and independent verification remain open; this is **Tested**, not **Verified**.
+
+## Route review pass — private access and readiness — 2026-10-22
+
+Five further route findings were confirmed and corrected:
+
+- Media asset and storage object responses now use `private, no-store`.
+  `Vary: Cookie` did not protect cached bytes after workspace membership or
+  asset visibility changed, because the user's cookie can remain unchanged.
+- Watchlist archive, restore, member, reorder, and transfer mutations now
+  enforce the same owner-or-workspace-share visibility rule as reads.
+- Collection item removal now checks access to the target collection before
+  detaching an item, matching the existing collection-add authorization.
+- Stale support-access cleanup now requires the explicit
+  `platform.access.manage` permission at the server-action boundary.
+- Content detail no longer displays publishing readiness as ready when the
+  readiness service fails. It shows a bilingual unavailable message and a
+  neutral state instead.
+
+Focused regressions cover media caching, private collection/watchlist access,
+platform cleanup authorization, and readiness fallback. `pnpm verify` passed
+at exact clean implementation SHA `2d6aa2a081063360cc9eeba2e69045519f86673c`
+(566 unit files / 5,028 tests, plus formatting, lint, TypeScript, and production
+build). `TEST_DATABASE_URL` is unset and the Docker engine did not respond, so
+Postgres integration and migration checks were not run. Browser and visual
+checks for touched pages, the remaining complete route inventory, and
+independent verification remain open. This pass is **Tested**, not **Verified**;
+AD-002 remains **In Progress**.

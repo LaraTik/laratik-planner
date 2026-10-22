@@ -1,5 +1,19 @@
 # Test and coverage evidence
 
+## Architecture review — route access and readiness — 2026-10-22
+
+Implementation SHA: `2d6aa2a081063360cc9eeba2e69045519f86673c` (clean).
+
+| Command / check                                                 | Result                                                                                   |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                   | **Pass** — formatting, lint, TypeScript, 566 unit files / 5,028 tests, production build. |
+| Focused new route and readiness regressions                     | **Pass** — 16/16 across the route/cache/readiness suites.                                |
+| Disposable Postgres integration / migration drill               | **Not run** — `TEST_DATABASE_URL` unset; Docker engine probe did not respond.            |
+| Touched-route browser, bilingual visual, and independent review | **Open**.                                                                                |
+
+Status: **Tested**, not **Verified**. The full route inventory is still in
+progress under AD-002.
+
 ## Remove the legacy content service — 2026-10-22, implementation SHA `6b33f42f582ecac15814966a6c2fd5c070c5adf3`
 
 Moved the pure brief-draft merge and content-cursor helpers into
