@@ -3,6 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { planPlaywrightInvocations } from "./run-e2e-tests-core";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -92,11 +93,14 @@ async function main() {
   let exitCode = 0;
 
   try {
-    for (const [command, args] of [
+    const commands: [string, string[]][] = [
       ["pnpm", ["db:migrate"]],
       ["pnpm", ["exec", "tsx", "scripts/reset-test-database.ts"]],
-      ["pnpm", ["exec", "playwright", "test", ...testArgs]],
-    ] as const) {
+      ...planPlaywrightInvocations(testArgs).map(
+        (args) => ["pnpm", ["exec", "playwright", "test", ...args]] as [string, string[]],
+      ),
+    ];
+    for (const [command, args] of commands) {
       const result = spawnSync(command, args, { env, stdio: "inherit" });
       if (result.status !== 0) {
         exitCode = result.status ?? 1;

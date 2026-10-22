@@ -65,10 +65,11 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     },
     {
       id: "architecture",
-      sourceGlobs: ["scripts/test-ownership.ts"],
+      sourceGlobs: ["scripts/test-ownership.ts", "scripts/run-e2e-tests-core.ts"],
       unitFiles: [
         "tests/unit/architecture/module-ownership.test.ts",
         "tests/unit/testing/test-affected-core.test.ts",
+        "tests/unit/testing/run-e2e-tests-core.test.ts",
       ],
       integrationFiles: [],
       browser: [],
