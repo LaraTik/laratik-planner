@@ -2871,3 +2871,14 @@ server entry point for share-collection operations, with the legacy service
 retained behind the adapter. No route or persisted-data contract changed.
 Manual route review, release browser/visual evidence, Firefox, and independent
 verification remain open.
+
+## Sign-in callback boundary — `04c8bea93023bb7b75eafe914464dae2b91272d6`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 590
+unit files / 5,137 tests, and the production build. The focused callback,
+sign-in action, and auth page tests passed 18/18. The commit hook also passed
+the full unit suite and TypeScript. The shared callback validator runs both at
+page construction and inside each server action. Review of the installed
+Auth.js redirect callback found no confirmed external redirect exploit; this
+change is boundary hardening. No provider, permission, or valid same-origin
+callback contract changed.

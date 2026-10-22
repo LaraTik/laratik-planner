@@ -3653,3 +3653,19 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No route or data contract changed. Manual route review, release
   browser/visual evidence, Firefox, and independent verification remain open.
   AD-002 remains **In Progress**.
+
+## 2026-10-23 — Validate sign-in callback targets at server boundaries
+
+- A shared `safeCallbackUrl` now canonicalizes and validates the callback on
+  the sign-in page and again inside all three sign-in server actions. Review
+  of the installed Auth.js redirect callback did not confirm an exploitable
+  external redirect; this is recorded as boundary hardening.
+- The focused auth page, action, and callback tests passed 18/18. The commit
+  hook passed TypeScript and the full unit suite (590 files / 5,137 tests).
+  On clean SHA `04c8bea93023bb7b75eafe914464dae2b91272d6`, `pnpm verify`
+  passed formatting, ESLint, TypeScript, 590 unit files / 5,137 tests, and the
+  production build.
+- No auth provider, permission, or valid same-origin callback contract
+  changed. Full browser/visual evidence, remaining manual route review,
+  Firefox, and independent verification remain open. AD-002 remains
+  **In Progress**.

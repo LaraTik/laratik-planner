@@ -2709,5 +2709,7 @@ same-origin relative URLs and falls back to `/app` for external, malformed, or
 non-path input before it reaches Auth.js. Regression coverage includes the
 backslash form and a direct server-action call (18 focused auth
 page/action/helper checks pass). Grouped repository verification is pending.
-No auth provider, permission, or successful same-origin callback contract
-changed.
+On clean commit `04c8bea93023bb7b75eafe914464dae2b91272d6`, `pnpm verify`
+passed formatting, lint, TypeScript, 590 unit files / 5,137 tests, and the
+production build. No auth provider, permission, or successful same-origin
+callback contract changed.
