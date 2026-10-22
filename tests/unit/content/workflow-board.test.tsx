@@ -5,7 +5,7 @@ import {
   type BoardMemberEntry,
   type WorkflowBoardColumn,
   type WorkflowBoardItem,
-} from "@/components/board/workflow-board";
+} from "@/features/content/components/workflow-board";
 import type { ContentStatus } from "@/lib/content/status";
 import { tFor } from "@/messages";
 

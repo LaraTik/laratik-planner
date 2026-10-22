@@ -22,7 +22,7 @@ import { EmptyState } from "@/components/feedback/empty-state";
 import { KpiCard } from "@/components/workspace/kpi-card";
 import { ListCard, ListItem } from "@/components/workspace/list-item";
 import { PageHeader } from "@/components/workspace/page-header";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "@/features/content";
 import { KpiContentStatus, calculateOverviewMetrics } from "@/lib/dashboard/kpis";
 import { formatDate } from "@/lib/i18n/format-locale";
 import { tForActive } from "@/lib/i18n/t-for-active";

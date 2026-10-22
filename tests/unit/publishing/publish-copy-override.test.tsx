@@ -102,6 +102,7 @@ function renderCopySource({
   return render(
     <LocaleProvider locale="en">
       <PublishPackageForm
+        recordPublicationAction={async () => ({})}
         workspaceId="33333333-3333-4333-8333-333333333333"
         workspaceSlug="acme"
         agencySlug="acme"
@@ -196,6 +197,7 @@ describe("publish copy source / override state", () => {
     render(
       <LocaleProvider locale="en">
         <PublishPackageForm
+          recordPublicationAction={async () => ({})}
           workspaceId="33333333-3333-4333-8333-333333333333"
           workspaceSlug="acme"
           agencySlug="acme"

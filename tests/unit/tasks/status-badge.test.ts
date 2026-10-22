@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { priorityBadgeVariant, taskBadgeVariant } from "@/lib/tasks/status-badge";
+import {
+  priorityBadgeVariant,
+  taskStatusBadgeVariant,
+} from "@/components/workspace/status-badge-variants";
 
 /**
- * taskBadgeVariant / priorityBadgeVariant — single source of truth
+ * taskStatusBadgeVariant / priorityBadgeVariant — single source of truth
  * for the colour swatches the unified `CalendarEventCard` consumes
  * when rendering a task-kind event on the agency-overview calendar.
  *
@@ -13,30 +16,30 @@ import { priorityBadgeVariant, taskBadgeVariant } from "@/lib/tasks/status-badge
  * future refactor can't silently desync the global calendar.
  */
 
-describe("taskBadgeVariant", () => {
+describe("taskStatusBadgeVariant", () => {
   it("maps `done` to the success swatch", () => {
-    expect(taskBadgeVariant("done")).toBe("success");
+    expect(taskStatusBadgeVariant("done")).toBe("success");
   });
 
   it("maps `blocked` and `cancelled` to the danger swatch", () => {
-    expect(taskBadgeVariant("blocked")).toBe("danger");
-    expect(taskBadgeVariant("cancelled")).toBe("danger");
+    expect(taskStatusBadgeVariant("blocked")).toBe("danger");
+    expect(taskStatusBadgeVariant("cancelled")).toBe("danger");
   });
 
   it("maps `in_review` to the warning swatch", () => {
-    expect(taskBadgeVariant("in_review")).toBe("warning");
+    expect(taskStatusBadgeVariant("in_review")).toBe("warning");
   });
 
   it("maps `in_progress` to the info swatch", () => {
-    expect(taskBadgeVariant("in_progress")).toBe("info");
+    expect(taskStatusBadgeVariant("in_progress")).toBe("info");
   });
 
   it("maps `backlog` to the neutral default swatch", () => {
-    expect(taskBadgeVariant("backlog")).toBe("default");
+    expect(taskStatusBadgeVariant("backlog")).toBe("default");
   });
 
   it("falls back to the neutral default for unknown statuses (defensive)", () => {
-    expect(taskBadgeVariant("future_status_we_dont_know_about")).toBe("default");
+    expect(taskStatusBadgeVariant("future_status_we_dont_know_about")).toBe("default");
   });
 });
 

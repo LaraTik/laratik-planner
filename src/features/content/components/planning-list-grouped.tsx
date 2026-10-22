@@ -1,5 +1,5 @@
 import * as React from "react";
-import { PlanningListItem, PlanningListItemList } from "@/components/workspace/planning-list-item";
+import { PlanningListItem, PlanningListItemList } from "./planning-list-item";
 import type { EnrichedContentItem } from "@/lib/content/enriched-list";
 import { formatDate } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";

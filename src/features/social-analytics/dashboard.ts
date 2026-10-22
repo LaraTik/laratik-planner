@@ -6,9 +6,9 @@ import {
   type MetricSeriesPoint,
   type SocialMetric,
   type SocialWindow,
-} from "./analytics";
-import { getSupportedSocialMetrics } from "./metrics";
-import type { SocialPlatform } from "./types";
+} from "@/lib/social/analytics";
+import { getSupportedSocialMetrics } from "@/lib/social/metrics";
+import type { SocialPlatform } from "@/lib/social/types";
 
 export type AnalyticsDashboardChannel = {
   id: string;

@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { PlanningListItem, PlanningListItemList } from "@/components/workspace/planning-list-item";
+import {
+  PlanningListItem,
+  PlanningListItemList,
+} from "@/features/content/components/planning-list-item";
 import type { EnrichedContentItem } from "@/lib/content/enriched-list";
 import { deriveNextAction } from "@/lib/content/next-action";
 import { classifyHealth } from "@/lib/dashboard/health";

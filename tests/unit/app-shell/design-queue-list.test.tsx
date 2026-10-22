@@ -24,6 +24,13 @@ vi.mock("@/app/(app)/app/a/[agencySlug]/w/[slug]/design-queue/bulk-toolbar", () 
   DesignQueueBulkToolbar: () => null,
 }));
 
+// This route list test treats the content status badge as a child
+// presentation contract; the badge itself is exercised by content tests.
+// Stub the feature entry so unrelated feature exports do not load here.
+vi.mock("@/features/content", () => ({
+  StatusBadge: ({ status }: { status: string }) => status,
+}));
+
 /**
  * /ui-ux-pro-max P3.2 — the design queue must answer
  * "what creative work can / should a designer pick up?",

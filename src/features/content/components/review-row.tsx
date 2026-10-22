@@ -50,9 +50,8 @@ export interface ReviewRowProps {
  * the left, gate badge on the right. The whole row is a link to the
  * content item.
  *
- * Extracted from `w/[slug]/reviews/page.tsx` so the same row shape
- * is available to the future client review surface and the design
- * queue's "stuck approvals" view.
+ * The content feature owns this presentation because it represents
+ * the approval queue's content and workflow state.
  */
 export function ReviewRow({
   item,

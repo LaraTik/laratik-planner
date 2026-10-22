@@ -90,6 +90,7 @@ import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/sch
 import { PlatformPreviewSwitcher } from "@/components/planning/platform-preview-switcher";
 import { type WorkspaceTab } from "@/components/planning/workspace-tabs";
 import { PublishPackageForm } from "./publish/publish-package-form";
+import { recordPublicationAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import { getMetaPublishingReadinessForWorkspace } from "@/lib/social/publishing-readiness-service";
 import { metaPublishingReadinessCopy } from "@/lib/social/publishing-readiness-copy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
@@ -1598,6 +1599,7 @@ export default async function ContentDetailPage({
                   >
                     <div data-testid="publish-package-form-mount">
                       <PublishPackageForm
+                        recordPublicationAction={recordPublicationAction}
                         workspaceId={ws.id}
                         workspaceSlug={slug}
                         agencySlug={agencySlug}

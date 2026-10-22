@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import * as React from "react";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 
 function makeRef(current: HTMLFormElement | null): React.RefObject<HTMLFormElement> {
   return { current } as React.RefObject<HTMLFormElement>;

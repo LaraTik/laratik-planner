@@ -79,11 +79,12 @@ canonical implementation; compatibility exports may forward to it temporarily.
 
 These rules guide new code and incremental migrations. The unit suite includes
 a static import-ownership guard for feature entry points and dependencies into
-features from shared presentation or platform modules. The shared
+features from shared presentation or platform modules. It also rejects
+`src/lib` dependencies on route or presentation modules. The shared
 component-to-route import allowlist is currently empty; the guard rejects any
-new `src/components` → `src/app` dependency. Keep it empty as the target and
-use bounded migrations with focused regression coverage when legacy ownership
-is discovered elsewhere.
+new `src/components` → `src/app` dependency. Keep these dependency directions
+enforced and use bounded migrations with focused regression coverage when
+legacy ownership is discovered elsewhere.
 
 ## Extraction and split rules
 

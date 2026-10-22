@@ -21,7 +21,6 @@ import {
   savePublishPackageBatchAction,
   setFinalCopyApprovalAction,
 } from "./actions";
-import { recordPublicationAction } from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions";
 import type { PlatformPayload, ReadinessReport } from "@/lib/publishing";
 /*
  * Value imports come from the concrete modules, never the
@@ -301,6 +300,7 @@ export function PublishPackageForm({
   canSavePackage,
   workflowAtPublishingSetup = true,
   canExcludeChannel = false,
+  recordPublicationAction,
   publishingSetupReady = false,
   metaPublishingReadiness,
   metaPublishingCopy,
@@ -360,6 +360,14 @@ export function PublishPackageForm({
   workflowAtPublishingSetup?: boolean | undefined;
   /** Publishers and managers may exclude an unrecorded channel from publication. */
   canExcludeChannel?: boolean;
+  /** Route-owned action for excluding a pending channel from the package. */
+  recordPublicationAction: (input: {
+    workspaceSlug: string;
+    agencySlug: string;
+    contentItemChannelId: string;
+    status: "skipped";
+    note: string;
+  }) => Promise<{ error?: string }>;
   /** Package-level lifecycle gate, independent from platform capability. */
   publishingSetupReady?: boolean;
   metaPublishingReadiness?: MetaPublishingReadiness;

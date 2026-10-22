@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
 import { AudienceCopyPanel } from "@/components/planning/messages-panel";
@@ -7,6 +7,30 @@ import { AudienceCopyPanel } from "@/components/planning/messages-panel";
 const saveAction = async () => ({});
 
 describe("AudienceCopyPanel localization", () => {
+  it("submits copy through the route-supplied save action", async () => {
+    const routeSaveAction = vi.fn(async () => ({}));
+
+    render(
+      <LocaleProvider locale="en">
+        <AudienceCopyPanel
+          saveAction={routeSaveAction}
+          agencySlug="acme"
+          workspaceSlug="acme"
+          contentItemId="11111111-1111-4111-8111-111111111111"
+          format="static_post"
+          initialPayload={{ schemaVersion: 1, caption: "Caption" }}
+          contentLocale="en"
+          channels={[]}
+          canEdit
+        />
+      </LocaleProvider>,
+    );
+
+    fireEvent.submit(screen.getByTestId("messages-form"));
+
+    await waitFor(() => expect(routeSaveAction).toHaveBeenCalledOnce());
+  });
+
   it("localizes channel platform labels in Arabic", () => {
     render(
       <LocaleProvider locale="ar">

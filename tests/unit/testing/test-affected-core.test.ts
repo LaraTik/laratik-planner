@@ -117,6 +117,7 @@ describe("test affected core", () => {
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx", "brand-kit"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/page.tsx", "channels-social"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx", "channels-social"],
+      ["src/app/api/social/providers/analytics-test/route.ts", "channels-social"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/ai-settings/page.tsx", "ai"],
       [
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/workspace-shell.tsx",

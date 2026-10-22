@@ -1,9 +1,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { CalendarPlus, FileText } from "lucide-react";
-import { DashboardPanel } from "./dashboard-panel";
+import { DashboardPanel } from "@/components/workspace/dashboard-panel";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "./status-badge";
 import type { KpiContentFormat, KpiContentStatus } from "@/lib/dashboard/kpis";
 import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
 import { formatRelativeDate } from "@/lib/utils/format-relative-date";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
+import { PlanningListGrouped } from "@/features/content/components/planning-list-grouped";
 import type { EnrichedContentItem } from "@/lib/content/enriched-list";
 import { classifyHealth } from "@/lib/dashboard/health";
 import { deriveNextAction } from "@/lib/content/next-action";

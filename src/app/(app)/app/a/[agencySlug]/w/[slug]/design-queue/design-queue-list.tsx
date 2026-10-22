@@ -7,7 +7,7 @@ import { CheckSquare, FileText, Paintbrush, Square, User } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { EmptyState } from "@/components/feedback/empty-state";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "@/features/content";
 import { humanFormat } from "@/lib/content/status";
 import { DesignQueueBulkToolbar } from "./bulk-toolbar";
 import { cn } from "@/lib/utils";

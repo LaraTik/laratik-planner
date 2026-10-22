@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import {
   NeedsAttentionList,
   type NeedsAttentionItem,
-} from "@/components/workspace/needs-attention-list";
+} from "@/features/content/components/needs-attention-list";
 
 /**
  * The pre-refactor `AtRiskMilestonesCard` only showed date +

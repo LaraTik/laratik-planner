@@ -19,7 +19,6 @@
  * always rendered.
  */
 
-import type { BadgeProps } from "@/components/ui/badge";
 import { ALL_FORMATS } from "./formats";
 
 export type { ContentFormat } from "./formats";
@@ -68,16 +67,6 @@ export function humanStatus(s: string): string {
 /** "short_form_video" → "Short Form Video" (alias of humanize for format). */
 export function humanFormat(s: string): string {
   return humanize(s);
-}
-
-/** Map a content status → shadcn Badge variant. */
-export function statusBadgeVariant(s: string): NonNullable<BadgeProps["variant"]> {
-  if (s === "published" || s === "ready_to_publish") return "success";
-  if (s === "blocked" || s === "cancelled") return "danger";
-  if (s === "changes_requested") return "warning";
-  if (s === "in_design" || s === "creative_review" || s === "content_review") return "info";
-  if (s === "partially_published" || s === "approved_for_design") return "primary";
-  return "default";
 }
 
 /**

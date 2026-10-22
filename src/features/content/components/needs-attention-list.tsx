@@ -3,10 +3,10 @@ import Link from "next/link";
 import { differenceInDays, format } from "date-fns";
 import { AlertOctagon, AlertTriangle, Clock, ShieldAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { DashboardPanel } from "./dashboard-panel";
+import { DashboardPanel } from "@/components/workspace/dashboard-panel";
 import type { KpiContentFormat, KpiContentStatus } from "@/lib/dashboard/kpis";
 import { CONTENT_FORMAT_LABELS } from "@/lib/dashboard/kpis";
-import { StatusBadge } from "@/components/content/status-badge";
+import { StatusBadge } from "./status-badge";
 import { workspaceBasePath } from "@/lib/urls";
 
 /**

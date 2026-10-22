@@ -11,10 +11,10 @@ import {
   isBlocked,
   isDone,
   isOpen,
-  statusBadgeVariant,
   type ContentFormat,
   type ContentStatus,
 } from "@/lib/content/status";
+import { contentStatusBadgeVariant } from "@/components/workspace/status-badge-variants";
 
 describe("content/status — humanize family", () => {
   it("humanize converts underscores to spaces and title-cases", () => {
@@ -42,29 +42,29 @@ describe("content/status — humanize family", () => {
   });
 });
 
-describe("content/status — statusBadgeVariant", () => {
+describe("contentStatusBadgeVariant", () => {
   it("maps success-path states to the success variant", () => {
-    expect(statusBadgeVariant("ready_to_publish")).toBe("success");
-    expect(statusBadgeVariant("published")).toBe("success");
+    expect(contentStatusBadgeVariant("ready_to_publish")).toBe("success");
+    expect(contentStatusBadgeVariant("published")).toBe("success");
   });
 
   it("maps danger-path states to the danger variant", () => {
-    expect(statusBadgeVariant("blocked")).toBe("danger");
-    expect(statusBadgeVariant("cancelled")).toBe("danger");
+    expect(contentStatusBadgeVariant("blocked")).toBe("danger");
+    expect(contentStatusBadgeVariant("cancelled")).toBe("danger");
   });
 
   it("maps warning and review states to the right variants", () => {
-    expect(statusBadgeVariant("changes_requested")).toBe("warning");
-    expect(statusBadgeVariant("in_design")).toBe("info");
-    expect(statusBadgeVariant("creative_review")).toBe("info");
-    expect(statusBadgeVariant("content_review")).toBe("info");
-    expect(statusBadgeVariant("partially_published")).toBe("primary");
-    expect(statusBadgeVariant("approved_for_design")).toBe("primary");
+    expect(contentStatusBadgeVariant("changes_requested")).toBe("warning");
+    expect(contentStatusBadgeVariant("in_design")).toBe("info");
+    expect(contentStatusBadgeVariant("creative_review")).toBe("info");
+    expect(contentStatusBadgeVariant("content_review")).toBe("info");
+    expect(contentStatusBadgeVariant("partially_published")).toBe("primary");
+    expect(contentStatusBadgeVariant("approved_for_design")).toBe("primary");
   });
 
   it("falls back to default for unknown values", () => {
-    expect(statusBadgeVariant("draft")).toBe("default");
-    expect(statusBadgeVariant("mystery_state")).toBe("default");
+    expect(contentStatusBadgeVariant("draft")).toBe("default");
+    expect(contentStatusBadgeVariant("mystery_state")).toBe("default");
   });
 });
 

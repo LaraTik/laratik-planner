@@ -191,6 +191,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "brand-kit",
       sourceGlobs: [
+        "src/features/brand-kit/**",
         "src/lib/brand/**",
         "src/components/brand-kit/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/**",
@@ -210,9 +211,11 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "channels-social",
       sourceGlobs: [
+        "src/features/social-analytics/**",
         "src/lib/channels/**",
         "src/lib/social/**",
         "src/components/channels/**",
+        "src/app/api/social/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/**",
         "src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/**",
       ],

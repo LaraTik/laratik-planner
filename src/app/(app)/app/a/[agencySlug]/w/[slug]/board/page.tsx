@@ -9,11 +9,7 @@ import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
 import { listWorkspaceContent } from "@/features/content/server";
 import { ALL_FORMATS, ALL_STATUSES } from "@/lib/content/status";
 import { PageHeader } from "@/components/workspace/page-header";
-import {
-  WorkflowBoard,
-  type WorkflowBoardColumn,
-  type BoardMemberEntry,
-} from "@/components/board/workflow-board";
+import { WorkflowBoard, type WorkflowBoardColumn, type BoardMemberEntry } from "@/features/content";
 import { PlanningFilters } from "@/components/workspace/planning-filters";
 import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";
 import { EmptyState } from "@/components/feedback/empty-state";

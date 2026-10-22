@@ -3,7 +3,7 @@ import { render, screen } from "@testing-library/react";
 import {
   RecentlyUpdatedList,
   type RecentlyUpdatedItem,
-} from "@/components/workspace/recently-updated-list";
+} from "@/features/content/components/recently-updated-list";
 
 /**
  * The pre-refactor RecentItemsCard only showed a date + status

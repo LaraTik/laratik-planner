@@ -42,7 +42,7 @@ import {
   publishingTemplates,
   typographyTemplates,
   voiceTemplates,
-} from "@/lib/brand/templates";
+} from "@/features/brand-kit/server";
 
 /**
  * Brand Kit server actions (STUDIOFLOW_MASTER_PROMPT.md §11.x).
@@ -594,7 +594,7 @@ export async function suggestVoiceRulesAction(
 // ─── Template library (Phase 8) ───────────────────────────────────────────
 //
 // One-click "Add to brand kit" actions for the curated template
-// library (lib/brand/templates.ts). Each action takes a template
+// library (features/brand-kit/templates.ts). Each action takes a template
 // id, looks it up in the static catalog, and writes the
 // underlying entity via the same service / action surface that
 // the inline forms use. Idempotency is enforced at the service

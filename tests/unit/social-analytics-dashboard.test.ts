@@ -6,7 +6,7 @@ import {
   filterAnalyticsChannels,
   parseAnalyticsSelection,
   type AnalyticsDashboardChannel,
-} from "@/lib/social/analytics-dashboard";
+} from "@/features/social-analytics";
 
 function channel(
   id: string,

@@ -14,8 +14,8 @@ import {
   publishingTemplates,
   typographyTemplates,
   voiceTemplates,
-} from "@/lib/brand/templates";
-import { fontClassFor } from "@/lib/brand/typography-families";
+} from "@/features/brand-kit/server";
+import { fontClassFor } from "@/features/brand-kit";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await tForActive();

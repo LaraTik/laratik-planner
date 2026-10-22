@@ -6,24 +6,24 @@ import {
   socialConnections,
   workspaces,
 } from "@/lib/db/schema";
-import { isSocialProviderError } from "./http";
-import { getAgencyProviderConfig } from "./provider-config";
-import { openConnectionCredentials } from "./repository";
-import { createDekCache, getDekForWorkspace } from "./key-management";
+import { isSocialProviderError } from "@/lib/social/http";
+import { getAgencyProviderConfig } from "@/lib/social/provider-config";
+import { openConnectionCredentials } from "@/lib/social/repository";
+import { createDekCache, getDekForWorkspace } from "@/lib/social/key-management";
 import {
   metaAdapter,
   probeMetaPermissions,
   probeMetaRecentFacebookPagePostInsights,
   probeMetaRecentInstagramMediaInsights,
   type MetaMediaInsightProbe,
-} from "./providers/meta";
+} from "@/lib/social/providers/meta";
 import {
   resolveMetricStatus,
   getSupportedSocialMetrics,
   type MetricStatus,
   type SocialMetric,
-} from "./metrics";
-import type { SocialPlatform } from "./types";
+} from "@/lib/social/metrics";
+import type { SocialPlatform } from "@/lib/social/types";
 import { META_DEFAULT_GRAPH_VERSION } from "@/lib/meta/version";
 
 export type AnalyticsProbeProfile = {

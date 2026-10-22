@@ -3,7 +3,8 @@ import { Calendar, FileText, Users } from "lucide-react";
 import { Card, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DirAwareArrowLeft } from "@/components/ui/dir-aware-icon";
-import { humanFormat, humanStatus, statusBadgeVariant } from "@/lib/content/status";
+import { humanFormat, humanStatus } from "@/lib/content/status";
+import { contentStatusBadgeVariant } from "@/components/workspace/status-badge-variants";
 import { PlanningHeaderActions } from "./planning-header-actions";
 import { workspaceBasePath } from "@/lib/urls";
 
@@ -110,7 +111,10 @@ export function PlanningHeader({
                 <CardTitle className="text-title-page text-fg-primary max-w-4xl break-words">
                   {title}
                 </CardTitle>
-                <Badge variant={statusBadgeVariant(status)} data-testid="planning-header-status">
+                <Badge
+                  variant={contentStatusBadgeVariant(status)}
+                  data-testid="planning-header-status"
+                >
                   {statusLabel ?? humanStatus(status)}
                 </Badge>
               </div>

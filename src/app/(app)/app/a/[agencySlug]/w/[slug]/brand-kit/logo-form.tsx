@@ -4,7 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Trash2, Upload, Link as LinkIcon } from "lucide-react";
 import { createLogoAssetAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { Input } from "@/components/ui/input";

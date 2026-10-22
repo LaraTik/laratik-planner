@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { CalendarDays, Palette, User } from "lucide-react";
-import { StatusBadge } from "@/components/content/status-badge";
-import { humanFormat, statusBadgeVariant, type ContentStatus } from "@/lib/content/status";
+import { StatusBadge } from "./status-badge";
+import { humanFormat, type ContentStatus } from "@/lib/content/status";
+import { contentStatusBadgeVariant } from "@/components/workspace/status-badge-variants";
 import { formatDate } from "@/lib/i18n/format-locale";
 import type { LocaleCode } from "@/lib/i18n/locales";
 import { cn } from "@/lib/utils";
@@ -350,7 +351,7 @@ function BoardCard({
   const ownerName = displayNameFor(memberDirectory, item.contentOwnerId);
   const designerName = displayNameFor(memberDirectory, item.designerId);
   const statusBorder =
-    STATUS_BORDER_CLASSES[statusBadgeVariant(item.status)] ?? STATUS_BORDER_CLASSES.default;
+    STATUS_BORDER_CLASSES[contentStatusBadgeVariant(item.status)] ?? STATUS_BORDER_CLASSES.default;
   const stage = planningStageForStatus(item.status);
   const stageLabel = stage
     ? t

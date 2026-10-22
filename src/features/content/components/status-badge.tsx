@@ -10,7 +10,8 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { humanStatus, statusBadgeVariant } from "@/lib/content/status";
+import { humanStatus } from "@/lib/content/status";
+import { contentStatusBadgeVariant } from "@/components/workspace/status-badge-variants";
 
 const ICONS = {
   draft: FileEdit,
@@ -35,7 +36,7 @@ export function StatusBadge({
 }) {
   const Icon = ICONS[status as keyof typeof ICONS] ?? CircleDashed;
   return (
-    <Badge variant={statusBadgeVariant(status)}>
+    <Badge variant={contentStatusBadgeVariant(status)}>
       <Icon className="h-3 w-3" aria-hidden="true" />
       {t ? t(`planningFilters.statusLabels.${status}`) : humanStatus(status)}
     </Badge>

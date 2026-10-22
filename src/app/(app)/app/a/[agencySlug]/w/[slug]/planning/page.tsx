@@ -11,8 +11,7 @@ import { Clock, Files, Plus, FileText, Download, AlertTriangle, CheckCircle2 } f
 import { PageHeader } from "@/components/workspace/page-header";
 import { PlanningListActions } from "./planning-list-actions";
 import type { PlanningOwnerOption } from "./change-owner-dialog";
-import { PlanningListGrouped } from "@/components/workspace/planning-list-grouped";
-import { PlanningFiltersBar } from "@/components/workspace/planning-filters-bar";
+import { PlanningFiltersBar, PlanningListGrouped } from "@/features/content";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";

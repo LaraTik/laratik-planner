@@ -162,6 +162,7 @@ function renderForm(overrides: Partial<FormOverrides> = {}) {
   return render(
     <LocaleProvider locale="en">
       <PublishPackageForm
+        recordPublicationAction={async () => ({})}
         workspaceId={workspaceId}
         workspaceSlug="demo"
         agencySlug="acme"
@@ -402,6 +403,7 @@ describe("the lifecycle gate on the sticky bar (ca0e1db3 D-gate)", () => {
           t={t}
         />
         <PublishPackageForm
+          recordPublicationAction={async () => ({})}
           workspaceId={workspaceId}
           workspaceSlug="demo"
           agencySlug="acme"

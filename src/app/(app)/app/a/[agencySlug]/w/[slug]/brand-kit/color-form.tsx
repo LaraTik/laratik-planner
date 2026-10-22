@@ -2,7 +2,7 @@
 import * as React from "react";
 import { useActionState } from "react";
 import { createColorAssetAction } from "./actions";
-import { useSuccessReset } from "@/lib/brand/use-success-reset";
+import { useSuccessReset } from "@/features/brand-kit";
 import { Card } from "@/components/ui/card";
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render, screen, within } from "@testing-library/react";
-import { ReviewRow, type ReviewRowItem } from "@/components/workspace/review-row";
+import { ReviewRow, type ReviewRowItem } from "@/features/content/components/review-row";
 import { tFor } from "@/messages";
 
 const t = tFor("en");

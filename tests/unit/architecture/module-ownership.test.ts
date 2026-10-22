@@ -117,6 +117,8 @@ function ownershipViolations(edges: ModuleEdge[]): string[] {
       reason = "features must not import route modules";
     } else if (fromLayer === "components" && toLayer === "app") {
       reason = "shared presentation modules must not depend on route modules";
+    } else if (fromLayer === "lib" && (toLayer === "app" || toLayer === "components")) {
+      reason = "platform modules must not depend on routes or presentation modules";
     } else if (
       sourceFeature &&
       targetFeature &&
@@ -149,6 +151,13 @@ describe("module ownership imports", () => {
       violations.filter((violation) => !KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS.has(violation)),
     ).toEqual([]);
     expect(violations.sort()).toEqual([...KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS].sort());
+  });
+
+  it("keeps platform modules independent from routes and presentation", () => {
+    const violations = ownershipViolations(moduleEdges(walk(SRC))).filter((violation) =>
+      violation.includes("platform modules must not depend"),
+    );
+    expect(violations).toEqual([]);
   });
 
   it("keeps feature index entries client-safe and marks server entries explicitly", () => {

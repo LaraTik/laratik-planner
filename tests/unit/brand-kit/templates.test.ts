@@ -1,26 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
-
-// next/font/google is a build-time loader; mock it so the unit
-// suite doesn't try to fetch real font CSS at import time.
-vi.mock("next/font/google", () => {
-  const stub = () => ({ className: "font-stub", variable: "--font-stub" });
-  return {
-    Inter: stub,
-    Roboto: stub,
-    Open_Sans: stub,
-    Lato: stub,
-    Montserrat: stub,
-    Poppins: stub,
-    Playfair_Display: stub,
-    Merriweather: stub,
-    Source_Sans_3: stub,
-    Raleway: stub,
-    Nunito: stub,
-    Work_Sans: stub,
-    Fira_Sans: stub,
-    IBM_Plex_Sans: stub,
-  };
-});
+import { describe, expect, it } from "vitest";
 
 import {
   colorTemplates,
@@ -29,8 +7,8 @@ import {
   templateSections,
   typographyTemplates,
   voiceTemplates,
-} from "@/lib/brand/templates";
-import { TYPOGRAPHY_OPTIONS, KNOWN_FAMILY_NAMES } from "@/lib/brand/typography-families";
+} from "@/features/brand-kit/templates";
+import { TYPOGRAPHY_OPTIONS, KNOWN_FAMILY_NAMES } from "@/features/brand-kit";
 
 /**
  * Templates catalog — sanity test. The data is consumed by the
