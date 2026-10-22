@@ -3714,3 +3714,17 @@ default framebuffer`, then consumes a CPU core without returning control;
   under the full suite. No schema, notification payload, response, or delivery
   state contract changed. Browser/visual review, Firefox, and independent
   verification remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize inline-edit persistence failures
+
+- Brief, title, date, and production-note actions now log unexpected write
+  failures and return stable safe copy. Failures after a content row has saved
+  clearly retain the saved-state and unchanged-approval-history information.
+  Validation errors remain field-specific.
+- Focused inline-edit and materiality tests pass 33/33. On clean SHA
+  `91ef925fe6327efad376e48a6a6a25ab07c0cf4d`, `pnpm verify` passed formatting,
+  ESLint, TypeScript, 591 unit files / 5,142 tests, and the production build.
+  The commit hook passed 75 affected tests.
+- No schema, permission, route, or successful workflow behavior changed.
+  Browser/visual release checks, manual route review, Firefox, and independent
+  verification remain open. AD-002 remains **In Progress**.

@@ -366,6 +366,22 @@ non-member denial; route tests preserve authentication, permission mapping,
 cache headers, origin selection, and response shapes. No schema or public API
 contract changed.
 
+## A52 — Inline content edits returned raw persistence failures
+
+**Priority: P2 — privacy and workflow clarity.** Brief, title, date, and
+production-note writes returned arbitrary thrown messages to the client; the
+post-save materiality failures did the same even though the content row had
+already committed. The actions now log unexpected failures through the
+sanitized structured logger and return field-specific safe copy. The
+post-save messages continue to state that the content saved while approval
+history did not change. Zod/format-payload validation messages remain intact.
+Regression tests use credential-shaped fake database URLs and check both the
+safe response and diagnostic event. On clean SHA
+`91ef925fe6327efad376e48a6a6a25ab07c0cf4d`, `pnpm verify` passed formatting,
+ESLint, TypeScript, 591 unit files / 5,142 tests, and the production build;
+the commit hook passed the focused 75-test affected selection. No database,
+workflow, permission, route, or success-response behavior changed.
+
 **Media folder ownership split (2026-10-21).** Folder listing, tree projection,
 creation, rename, and cascade archive now live in the server-only
 `src/features/media/folders.server.ts` module and are exported through the

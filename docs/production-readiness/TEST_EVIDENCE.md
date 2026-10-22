@@ -2918,3 +2918,17 @@ entry point. The notification service temporarily re-exports the worker for
 compatibility. No schema, route response, notification payload, or delivery
 state contract changed. Full browser/visual checks, route review, Firefox,
 and independent verification remain open.
+
+## Inline-edit failure privacy — `91ef925fe6327efad376e48a6a6a25ab07c0cf4d`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 591
+unit files / 5,142 tests, and the production build. Inline brief/title/date
+and production-note persistence failures now return stable safe copy and emit
+sanitized diagnostics. Post-save materiality failures explicitly retain the
+fact that the content was saved and approval history stayed unchanged. The
+regression tests use credential-shaped fake database URLs and verify they are
+absent from returned action state. Zod and format-payload validation details
+remain unchanged. The commit hook passed 75 affected unit tests. No schema,
+route, permission, or successful workflow contract changed. Full
+browser/visual checks, route review, Firefox, and independent verification
+remain open.
