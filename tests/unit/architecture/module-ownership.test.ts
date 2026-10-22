@@ -5,12 +5,9 @@ import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
 const SRC = join(ROOT, "src");
-// Exact legacy component-to-route imports retained for bounded migration.
-// New shared presentation code must not add dependencies on route modules.
-const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set([
-  "src/components/planning/overview-command-center.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
-  "src/components/planning/planning-header-actions.tsx -> src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx: shared presentation modules must not depend on route modules",
-]);
+// No shared component-to-route imports remain. Keep this explicit allowlist
+// so a future regression must be justified during the bounded migration.
+const KNOWN_LEGACY_COMPONENT_ROUTE_IMPORTS = new Set<string>();
 
 type ModuleEdge = { importer: string; target: string };
 

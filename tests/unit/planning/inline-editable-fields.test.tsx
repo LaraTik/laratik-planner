@@ -30,7 +30,7 @@
  * What this test pins down
  * ------------------------
  * 1. The wrapper file exists and exports the three wrappers
- *    used by `page.tsx`.
+ *    used by the content detail feature.
  * 2. The wrapper file declares `"use client"` at the top.
  *    A future refactor that drops the directive (and re-
  *    introduces the same bug) fails this test.
@@ -56,11 +56,7 @@ vi.mock("@/lib/content/inline-update", () => ({
   inlineUpdateDateAction: vi.fn(async () => ({ ok: true as const })),
 }));
 
-import {
-  InlineBriefEditor,
-  InlineDateEditor,
-  InlineTitleEditor,
-} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields";
+import { InlineBriefEditor, InlineDateEditor, InlineTitleEditor } from "@/features/content";
 import {
   inlineUpdateBriefAction,
   inlineUpdateDateAction,
@@ -69,7 +65,7 @@ import {
 
 const WRAPPER_PATH = resolve(
   process.cwd(),
-  "src/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields.tsx",
+  "src/features/content/components/inline-editable-fields.tsx",
 );
 
 describe("inline-editable-fields wrappers (planning detail)", () => {

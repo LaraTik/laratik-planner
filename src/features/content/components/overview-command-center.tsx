@@ -7,14 +7,14 @@ import { DirAwareArrowRight } from "@/components/ui/dir-aware-icon";
 import { Card } from "@/components/ui/card";
 import { humanStatus } from "@/lib/content/status";
 import { explainStatus } from "@/lib/content/workflow-explanations";
-import { ActivityTimeline, type ActivityEventView } from "./activity-timeline";
-import { TabSwitchLink } from "./tab-switch-link";
+import { ActivityTimeline, type ActivityEventView } from "@/components/planning/activity-timeline";
+import { TabSwitchLink } from "@/components/planning/tab-switch-link";
 import {
   InlineBriefEditor,
   InlineDateEditor,
   InlineProductionNotesEditor,
   InlineTitleEditor,
-} from "@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/inline-editable-fields";
+} from "./inline-editable-fields";
 import { useLocaleT } from "@/components/i18n/locale-provider";
 import type { PlanningAttentionItem } from "@/lib/planning/presentation";
 

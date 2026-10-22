@@ -41,12 +41,11 @@ import { getPublishingReadinessStatus } from "@/lib/publishing/readiness-display
 import { currentActor } from "@/lib/auth/current-actor";
 import { hasPlatformPermission } from "@/lib/auth/platform-access";
 import { Button } from "@/components/ui/button";
-import { PlanningHeader } from "@/components/planning/planning-header";
+import { OverviewNavigator, PlanningHeader } from "@/features/content";
 import { PlanningSection } from "@/components/planning/planning-section";
 import { ChannelPublishingCard } from "./channel-publishing-card";
 import { PublishingCommandCenter } from "@/components/planning/publishing-command-center";
 import { ActivityWithFilters } from "@/components/planning/activity-with-filters";
-import { OverviewNavigator } from "@/components/planning/overview-navigator";
 import { FormatAwareContentEditor } from "@/components/forms/format-aware-content-editor";
 import { ResearchTeardownApply } from "@/components/planning/research-teardown-apply";
 import {
@@ -62,7 +61,7 @@ import { MessagesPanel } from "@/components/planning/messages-panel";
 // Phase 6 of the planning-detail refactor (2026-08-30): the
 // inline title/date/brief editors used to live here. They
 // moved into the Overview's `DetailsSection` (see
-// `@/components/planning/overview-command-center`). The
+// `@/features/content`). The
 // source component (`./inline-editable-fields`) is unchanged.
 import { WorkflowSheet } from "@/components/planning/workflow-rail";
 import { PlanningDetailShell } from "./planning-detail-shell";

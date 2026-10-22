@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
-import { OverviewNavigator } from "@/components/planning/overview-navigator";
-import type { OverviewReadinessLine } from "@/components/planning/overview-command-center";
+import { OverviewNavigator, type OverviewReadinessLine } from "@/features/content";
 import { tFor } from "@/messages";
 
 vi.mock("@/lib/content/inline-update", () => ({
