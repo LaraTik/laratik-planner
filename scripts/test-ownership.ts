@@ -321,6 +321,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/features/ai/**",
         "src/lib/ai/**",
         "src/app/api/ai/**",
+        "src/app/(app)/app/agency-settings/planning-packs/**",
         "src/app/api/community/test-lab/**",
         "src/components/ai/**",
         "src/app/(app)/app/agency-settings/ai/**",

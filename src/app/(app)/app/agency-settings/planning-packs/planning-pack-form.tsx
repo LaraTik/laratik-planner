@@ -29,9 +29,9 @@ export function PlanningPackForm({ initial }: { initial?: Pack }) {
   return (
     <form action={action} className="space-y-4" data-testid="planning-pack-form">
       {initial ? <input type="hidden" name="id" value={initial.id} /> : null}
-      {state.error ? (
+      {state.errorCode ? (
         <p className="bg-danger-subtle text-body text-danger rounded p-3" role="alert">
-          {state.error}
+          {t(`planningPacks.errors.${state.errorCode}`)}
         </p>
       ) : null}
       {state.saved ? (
