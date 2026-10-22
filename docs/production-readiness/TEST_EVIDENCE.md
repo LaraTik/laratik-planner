@@ -2083,6 +2083,20 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Bulk reset audit failure privacy — `d056a8ccbdd0f2b46710a1648a77fc924455735a`
+
+The reset-all ideas action now stores stable `permission_denied` and
+`persistence_failure` codes in audit metadata rather than raw permission or
+database exception text. Focused reset-all and ownership-selection tests passed
+34/34; the affected commit-hook set passed 15/15. On this clean SHA,
+`pnpm verify` passed formatting, ESLint, TypeScript, all 595 unit files / 5,155
+tests, and the production build. Disposable-Postgres integration and migration
+checks could not run because `TEST_DATABASE_URL` is unset and Docker is
+unavailable. Full browser/visual checks, route-by-route review, Firefox, and
+independent verification remain open. No schema, permission, destructive
+workflow, or successful result changed. This work is **Tested**, not
+**Verified**.
+
 ## Brand Kit and social-action failure privacy — implementation commits `fa4859e`–`1ffec617`
 
 Brand Kit profile, pillar, publishing-template, and AI suggestion actions now

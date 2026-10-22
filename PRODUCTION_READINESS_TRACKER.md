@@ -3789,3 +3789,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No schema, permission, destructive workflow, or audit outcome changed.
   Final exact-SHA `pnpm verify`, Postgres/browser gates, and independent review
   remain open. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize bulk reset audit failures
+
+- Reset-all ideas audit records now use stable `permission_denied` and
+  `persistence_failure` codes instead of arbitrary exception text. Focused
+  reset-all and ownership-selection tests passed 34/34; the affected hook set
+  passed 15/15.
+- On clean SHA `d056a8ccbdd0f2b46710a1648a77fc924455735a`, grouped
+  `pnpm verify` passed formatting, lint, TypeScript, 595 unit files / 5,155
+  tests, and the production build.
+- Postgres integration/migration checks remain unavailable (`TEST_DATABASE_URL`
+  unset; Docker unavailable). Browser/visual release coverage, manual route
+  review, Firefox, and independent verification remain open. No schema,
+  permission, destructive workflow, or success contract changed. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.

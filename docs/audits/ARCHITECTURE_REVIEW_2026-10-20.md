@@ -2853,3 +2853,20 @@ ownership mapping, and that suite passed on clean code SHA
 permission, audit outcome, or schema changed. The reset-idea test is now
 explicitly owned by the content area, with selector coverage in
 `d6b4a82424f8ac41ef8cd06ff27bc41d6f8349d0`.
+
+## A58 — Bulk reset audit failures stored raw error messages
+
+**Priority: P2 — audit privacy and safe operational history.** The reset-all
+ideas action recorded arbitrary permission and persistence exception messages
+in `security_audit_event.metadata.error_message`. It now records stable
+`permission_denied` and `persistence_failure` codes, matching the other
+destructive actions. Regression coverage confirms credential-shaped database
+details do not enter the audit payload. Focused reset-all and ownership
+selection tests passed 34/34; the affected commit-hook tests passed 15/15.
+On clean SHA `d056a8ccbdd0f2b46710a1648a77fc924455735a`, `pnpm verify` passed
+formatting, lint, TypeScript, all 595 unit files / 5,155 tests, and the
+production build. No schema, permission, destructive workflow, or successful
+result changed. Disposable-Postgres integration/migration checks remain
+unavailable because `TEST_DATABASE_URL` is unset and Docker is unavailable;
+browser/visual release coverage, manual route review, Firefox, and independent
+verification remain open. AD-002 remains **In Progress**.
