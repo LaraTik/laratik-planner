@@ -1546,3 +1546,22 @@ SHA `40a6682b5d322c5e842547b0582c6480b9cb55bd` (566 unit files / 5,030 tests,
 formatting, lint, TypeScript, and production build). Postgres, browser/visual,
 remaining route, and independent verification gates remain open; this work is
 **Tested**, not **Verified**.
+
+## Planning detail responsive workflow model — 2026-10-22
+
+The planning detail route rendered the same workflow state twice: once for
+the mobile workflow sheet and once for the desktop workflow rail. Both now
+consume one route-built, serializable model, so adding or changing workflow
+fields cannot leave the responsive surfaces with different inputs. This is
+a local composition seam; the large Server Component remains the route-level
+data loader and panel composer, so it was not split solely because of its
+line count. No route, API, permission, persistence, or visible behavior
+changed.
+
+The focused workflow component tests passed 12/12, and `pnpm verify` passed at
+exact clean implementation SHA
+`769a531a46fe2f4ef1f108fc01393655ea6ac984` (566 unit files / 5,030 tests,
+formatting, lint, TypeScript, and production build). Postgres integration,
+browser/visual review, the remaining route inventory, and independent
+verification remain open. This is **Tested**, not **Verified**; AD-002 remains
+**In Progress**.

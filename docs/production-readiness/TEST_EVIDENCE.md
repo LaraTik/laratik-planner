@@ -2049,3 +2049,18 @@ This is candidate evidence for the route review pass. Re-run the required
 checks on the exact clean commit before assigning `Tested`; database, browser,
 visual, route-inventory, and independent review gates remain open. AD-002
 remains **In Progress**; do not mark this pass **Verified**.
+
+## Architecture refinement — shared planning workflow model — 2026-10-22
+
+Implementation SHA: `769a531a46fe2f4ef1f108fc01393655ea6ac984` (clean at run).
+
+| Command / check                                      | Result                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Focused workflow rail and stepper tests              | Pass — 12/12.                                                                                    |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 566 unit files / 5,030 tests, and production build.         |
+| Postgres integration and migration drill             | Not run — `TEST_DATABASE_URL` is unset and the Docker engine is unavailable in this environment. |
+| Browser / visual review and independent verification | Open.                                                                                            |
+
+The planning detail route now sends one serializable workflow model to both
+the mobile sheet and desktop rail. No user contract changed. This checkpoint
+is **Tested**, not **Verified**; AD-002 remains **In Progress**.
