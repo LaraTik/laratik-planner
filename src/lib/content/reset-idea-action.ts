@@ -129,14 +129,14 @@ export async function resetIdeaAction(
   // "DB blew up."
   try {
     await requirePlatformPermission(actor, "platform.destructive.execute");
-  } catch (error) {
+  } catch {
     recordAudit({
       actorId: actor.id,
       contentItemId: parsed.data.contentItemId,
       outcome: "denied",
       reason: parsed.data.reason,
       typedPhraseMatch: false,
-      errorMessage: error instanceof Error ? error.message : "Permission denied",
+      errorMessage: "permission_denied",
     });
     return {
       ok: false,
@@ -291,7 +291,7 @@ export async function resetIdeaAction(
       outcome: "failed",
       reason: parsed.data.reason,
       typedPhraseMatch: true,
-      errorMessage: error instanceof Error ? error.message : "Unknown DB error",
+      errorMessage: "persistence_failure",
     });
     return {
       ok: false,
