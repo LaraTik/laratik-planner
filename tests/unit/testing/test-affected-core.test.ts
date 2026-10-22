@@ -114,6 +114,7 @@ describe("test affected core", () => {
         "publishing",
       ],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/page.tsx", "workspace"],
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx", "workspace-pages"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/brand-kit/page.tsx", "brand-kit"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/channels/page.tsx", "channels-social"],
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/analytics/social/page.tsx", "channels-social"],
@@ -130,6 +131,25 @@ describe("test affected core", () => {
       expect(result.kind, sourcePath).toBe("targeted");
       expect(result.areaIds, sourcePath).toContain(expectedArea);
     }
+  });
+
+  it("selects the workspace settings deadline regression for settings-route changes", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.unitFiles).toContain("tests/unit/workspace-settings/**");
+    expect(result.runAllUnit).toBe(false);
+
+    const directTestFile = classifyChangedFiles(
+      ["tests/unit/workspace-settings/lead-times-form.test.tsx"],
+      TEST_OWNERSHIP,
+    );
+    expect(directTestFile.kind).toBe("targeted");
+    expect(directTestFile.areaIds).toContain("workspace-pages");
+    expect(directTestFile.runAllUnit).toBe(false);
   });
 
   it("matches recursive and single-segment globs without matching partial paths", () => {

@@ -414,6 +414,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "tests/unit/workspace/**",
         "tests/unit/workspaces/**",
         "tests/unit/workspace-*.test.ts",
+        "tests/unit/workspace-settings/**",
         "tests/unit/planning/**",
       ],
       integrationFiles: [
