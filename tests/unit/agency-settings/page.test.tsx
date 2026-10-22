@@ -40,8 +40,8 @@ describe("agency-settings page structure", () => {
     expect(source).toMatch(/data-testid="agency-settings"/);
     expect(source).toMatch(/data-testid="agency-settings-footprint"/);
     expect(source).toMatch(/data-testid="agency-settings-services"/);
-    // M3.4 — the identity card is now an EditAgencyForm component.
-    expect(source).toMatch(/EditAgencyForm/);
+    // The identity form action is owned by the agency-settings route wrapper.
+    expect(source).toMatch(/AgencySettingsEditForm/);
     // The footprint row is a link to /app/users (M3.4 polish).
     expect(source).toMatch(/agency-settings-members-link/);
     // The plan card links to /app/agency-settings/plan.
