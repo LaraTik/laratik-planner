@@ -418,6 +418,7 @@
     "rowAssetsUnapprovedOne": "{count} إصدار، لم يُعتمد أي منها",
     "rowAssetsUnapprovedMany": "{count} إصدارات، لم يُعتمد أي منها",
     "rowPublishing": "إعدادات النشر",
+    "rowPublishingUnavailable": "تعذر التحقق من الجاهزية. أعد المحاولة قبل النشر.",
     "rowPublishingUpcoming": "متاح بعد اعتماد المحتوى والأصول",
     "rowPublishingReady": "تم إعداد القنوات",
     "rowPublishingNoChannels": "لا توجد قنوات",

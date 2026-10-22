@@ -31,6 +31,7 @@ import { buildAudienceCopyViewModel } from "@/lib/format-payload/mapper";
 import { listCommentsForItem } from "@/lib/discussions/service";
 import { getSignedPreviewUrl } from "@/lib/media/thumbnails";
 import { getWorkspaceRoles, hasWorkspaceRole, isAgencyAdmin } from "@/lib/auth/policy";
+import { getPublishingReadinessStatus } from "@/lib/publishing/readiness-display";
 // resolveActiveAgencyContext is intentionally NOT imported here. The
 // page derives its agency scope from `ws.agencyId` (the workspace
 // row's actual agency) rather than the user's active agency, so
@@ -247,7 +248,7 @@ export default async function ContentDetailPage({
     canResetIdea,
     resetCounts,
     activityEvents,
-    readiness,
+    readinessResult,
     channelPayloads,
     channelPayloadStates,
     canConfirmReadiness,
@@ -264,17 +265,22 @@ export default async function ContentDetailPage({
     hasPlatformPermission(actor, "platform.destructive.execute"),
     getResetIdeaCounts(id).catch(() => EMPTY_RESET_IDEA_COUNTS),
     listActivityEvents(actor, ws.id, id).catch(() => []),
-    evaluateReadiness({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({
-      contentItemId: id,
-      revision: 0,
-      blockers: 0,
-      recommendations: 0,
-      requiredTotal: 0,
-      requiredCompleted: 0,
-      canPublish: false,
-      issues: [],
-      channels: [],
-    })),
+    evaluateReadiness({ actor, workspaceId: ws.id, contentItemId: id })
+      .then((value) => ({ value, unavailable: false }))
+      .catch(() => ({
+        value: {
+          contentItemId: id,
+          revision: 0,
+          blockers: 0,
+          recommendations: 0,
+          requiredTotal: 0,
+          requiredCompleted: 0,
+          canPublish: false,
+          issues: [],
+          channels: [],
+        },
+        unavailable: true,
+      })),
     readAllChannelPayloads({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     readAllChannelPayloadStates({ actor, workspaceId: ws.id, contentItemId: id }).catch(() => ({})),
     // Phase 7 of the planning-detail refactor (2026-08-30):
@@ -290,6 +296,8 @@ export default async function ContentDetailPage({
     }).catch(() => []),
     listMediaFolders(actor, { agencyId: ws.agencyId, workspaceId: ws.id }).catch(() => []),
   ]);
+  const readiness = readinessResult.value;
+  const readinessUnavailable = readinessResult.unavailable;
 
   // PR 3 / Tier 3 (perf/media): sign a per-page R2 URL for the first
   // image asset's preview variant. The signed URL lets the planning
@@ -578,14 +586,12 @@ export default async function ContentDetailPage({
         i.path.toLowerCase().startsWith("channel") ||
         i.path.toLowerCase().startsWith("disclosure")),
   ).length;
-  const publishingReadinessStatus: "ready" | "warning" | "danger" | "neutral" =
-    publishingBlockers > 0
-      ? "danger"
-      : item.channels.length === 0
-        ? "neutral"
-        : configuredChannelCount < item.channels.length
-          ? "warning"
-          : "ready";
+  const publishingReadinessStatus = getPublishingReadinessStatus({
+    unavailable: readinessUnavailable,
+    blockerCount: publishingBlockers,
+    channelCount: item.channels.length,
+    configuredChannelCount,
+  });
 
   // Schedule readiness — past-dated or shipped. `nowMs` is the
   // server's request time, not a render-time impurity (this is a
@@ -650,23 +656,29 @@ export default async function ContentDetailPage({
       id: "publishing",
       label: t("contentDetail.readiness.rowPublishing"),
       status: publishingIsFuture ? "neutral" : publishingReadinessStatus,
-      detail: publishingIsFuture
-        ? t("contentDetail.readiness.rowPublishingUpcoming")
-        : publishingReadinessStatus === "ready"
-          ? item.channels.length === 0
-            ? t("contentDetail.readiness.rowPublishingNoChannels")
-            : t("contentDetail.readiness.rowPublishingReady")
-          : publishingReadinessStatus === "danger"
-            ? publishingBlockers === 1
-              ? t("contentDetail.readiness.rowPublishingBlockerOne", { count: publishingBlockers })
-              : t("contentDetail.readiness.rowPublishingBlockerMany", { count: publishingBlockers })
-            : channelsNotConfigured === 1
-              ? t("contentDetail.readiness.rowPublishingNeedSetupOne", {
-                  count: channelsNotConfigured,
-                })
-              : t("contentDetail.readiness.rowPublishingNeedSetupMany", {
-                  count: channelsNotConfigured,
-                }),
+      detail: readinessUnavailable
+        ? t("contentDetail.readiness.rowPublishingUnavailable")
+        : publishingIsFuture
+          ? t("contentDetail.readiness.rowPublishingUpcoming")
+          : publishingReadinessStatus === "ready"
+            ? item.channels.length === 0
+              ? t("contentDetail.readiness.rowPublishingNoChannels")
+              : t("contentDetail.readiness.rowPublishingReady")
+            : publishingReadinessStatus === "danger"
+              ? publishingBlockers === 1
+                ? t("contentDetail.readiness.rowPublishingBlockerOne", {
+                    count: publishingBlockers,
+                  })
+                : t("contentDetail.readiness.rowPublishingBlockerMany", {
+                    count: publishingBlockers,
+                  })
+              : channelsNotConfigured === 1
+                ? t("contentDetail.readiness.rowPublishingNeedSetupOne", {
+                    count: channelsNotConfigured,
+                  })
+                : t("contentDetail.readiness.rowPublishingNeedSetupMany", {
+                    count: channelsNotConfigured,
+                  }),
       href: "#publishing",
     },
     {

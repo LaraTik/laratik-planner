@@ -418,6 +418,7 @@
     "rowAssetsUnapprovedOne": "{count} version, none approved",
     "rowAssetsUnapprovedMany": "{count} versions, none approved",
     "rowPublishing": "Publishing setup",
+    "rowPublishingUnavailable": "Readiness could not be checked. Retry before publishing.",
     "rowPublishingUpcoming": "Available after content and assets are approved",
     "rowPublishingReady": "Channels configured",
     "rowPublishingNoChannels": "No channels",
