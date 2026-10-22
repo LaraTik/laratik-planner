@@ -1,5 +1,22 @@
 # Test and coverage evidence
 
+## Architecture refinement — planning publishing UI ownership — 2026-10-22
+
+Implementation SHA: `95bba579bca646db6dd9459e0767033fade8c409` (clean at run).
+
+| Command / check                                      | Result                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Planning card, publication-link, and ownership tests | Pass — 23/23.                                                                            |
+| `pnpm verify`                                        | Pass — formatting, lint, TypeScript, 567 unit files / 5,035 tests, and production build. |
+| Postgres integration and migration drill             | Not applicable — no persistence or migration behavior changed.                           |
+| Route browser / visual review and independent review | Open.                                                                                    |
+
+The content-detail publishing card and its Meta publication-link dialog now
+live beside their only production caller. The shared-component-to-route
+allowlist is down to 20 existing edges. No page behavior, route, action, or
+contract changed. This checkpoint is **Tested**, not **Verified**; AD-002
+remains **In Progress**.
+
 ## Architecture refinement — planning detail shell ownership — 2026-10-22
 
 Implementation SHA: `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (clean at run).

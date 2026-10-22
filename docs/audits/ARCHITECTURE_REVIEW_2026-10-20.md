@@ -148,12 +148,15 @@ area. The affected Trends unit area selects its five owned files and passes
 **Shared presentation to route ownership (2026-10-22).** The content-detail
 `PlanningDetailShell` had only one caller, but lived in shared presentation and
 imported a route-local workspace shell. It now lives beside its owning page.
-The static ownership guard now rejects new `src/components` → `src/app`
-imports and pins the 22 existing legacy imports as an explicit migration
-queue. This bounded change removes one route coupling without moving domain
-actions or changing page behavior. The ownership regression passed 3/3, and
+The publishing card and its Meta publication-link dialog also had one
+production caller each in that page, so they moved beside it as a single
+route-owned group. Their existing unit tests now import the route-owned modules
+directly. The static ownership guard rejects new `src/components` → `src/app`
+imports and pins the 20 remaining legacy imports as an explicit migration
+queue. These bounded changes remove three route couplings without changing
+page behavior. Focused planning and ownership tests passed 23/23, and
 `pnpm verify` passed at exact clean implementation SHA
-`cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (567 unit files / 5,035 tests,
+`95bba579bca646db6dd9459e0767033fade8c409` (567 unit files / 5,035 tests,
 formatting, lint, TypeScript, and production build). Route browser/visual
 review and independent verification remain open; this is **Tested**, not
 **Verified**.
