@@ -3155,3 +3155,13 @@ localization suites, 19/19. Expected domain errors return stable EN/AR codes;
 unexpected failures are logged and withheld from client state. Database,
 migration, browser, visual, and manual route evidence remain open. No route,
 permission, successful-write, or persisted-data contract changed.
+
+## AI draft route-workspace isolation — `bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`
+
+Focused action and localization tests passed 22/22; focused ESLint and
+`pnpm typecheck` passed. The commit hook passed TypeScript and the affected
+selection, 12 unit files / 84 tests, then reran the changed action suite, 19/19.
+A content item outside the route workspace now returns safe not-found state
+without calling the update service. Unexpected read/update errors are logged
+and withheld from client state. Database, browser, visual, and independent
+verification remain open. Same-workspace success behavior is unchanged.

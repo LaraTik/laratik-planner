@@ -3942,3 +3942,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 - Database, migration, browser, visual, and manual route evidence were not
   produced. This change is **Tested**, not **Verified**; those release gates
   remain open and AD-002 remains **In Progress**.
+
+## 2026-10-23 — Enforce route workspace scope for AI draft updates
+
+- `applyAiDraftAction` now checks the loaded content item's `workspaceId`
+  against the route workspace before applying a draft. Cross-workspace IDs
+  return the same safe not-found code and never reach the update service.
+  Unexpected read/update errors are logged and localized. A regression covers
+  the cross-workspace attempt.
+- Focused action and localization tests passed 22/22; focused ESLint and
+  `pnpm typecheck` passed. On clean SHA
+  `bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`, the hook passed TypeScript and 12
+  affected unit files / 84 tests, then reran the direct action suite, 19/19.
+- Database, browser, visual, route, and independent verification remain open.
+  This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.

@@ -3096,3 +3096,20 @@ checks passed 133/133; the hook passed TypeScript and 33 affected unit files /
 SHA `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`. Database, browser, visual,
 manual route review, and independent verification remain open; AD-002 remains
 **In Progress**.
+
+## A72 — AI draft action did not enforce the route workspace on its target
+
+**Priority: P1 — tenant isolation.** `applyAiDraftAction` resolved the current
+workspace but loaded the target content item by ID alone, then updated it using
+the actor's membership in the item's actual workspace. An actor with access to
+multiple workspaces could therefore submit an item ID from a different
+workspace than the current route. The action now selects the item's
+`workspaceId` and returns the same not-found code when it differs from the
+route workspace, before invoking the update service. The full read-and-update
+path now logs unexpected persistence failures and returns safe localized
+errors. Regression coverage proves the cross-workspace item is neither updated
+nor exposed. The hook passed TypeScript and 12 affected unit files / 84 tests,
+then the direct action suite, 19/19, on clean SHA
+`bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`. No successful same-workspace
+behavior changed. Browser, database, visual, and independent verification
+remain open; AD-002 remains **In Progress**.
