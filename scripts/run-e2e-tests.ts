@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
-import { tmpdir } from "node:os";
+import { tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
-import { planPlaywrightInvocations } from "./run-e2e-tests-core";
+import { isolatedE2eNodeOptions, planPlaywrightInvocations } from "./run-e2e-tests-core";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -24,6 +24,14 @@ const testArgs = requestedTests.some((arg) => arg.startsWith("--workers"))
 const testOnlyAuthSecret = "laratik-e2e-auth-secret-not-for-production-2026";
 const testOnlyAgencyCookieSecret = "laratik-e2e-agency-cookie-secret-not-for-production-2026";
 const testOnlySocialKek = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+const e2eNodeOptions = isolatedE2eNodeOptions({
+  ...(process.env.NODE_OPTIONS ? { current: process.env.NODE_OPTIONS } : {}),
+  ci: Boolean(process.env.CI),
+  hostMemoryBytes: totalmem(),
+  ...(process.env.LARATIK_E2E_MAX_OLD_SPACE_SIZE
+    ? { requestedHeapMb: process.env.LARATIK_E2E_MAX_OLD_SPACE_SIZE }
+    : {}),
+});
 
 async function findFreePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -88,6 +96,7 @@ async function main() {
     // Give isolated browser runs a disposable writable volume so the probe
     // exercises the real contract without touching /data/uploads.
     UPLOADS_DIR: process.env.UPLOADS_DIR ?? e2eUploadsDir,
+    ...(e2eNodeOptions ? { NODE_OPTIONS: e2eNodeOptions } : {}),
   };
 
   let exitCode = 0;

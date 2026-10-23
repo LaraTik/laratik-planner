@@ -102,6 +102,11 @@ see at the same time never share a hue while a palette slot sits unused.
   use the isolated runner, which applies migrations and supplies deterministic
   test-only Auth.js secrets. A missing `TEST_DATABASE_URL` is an actionable
   setup failure, not a valid passing/skip state.
+- On non-CI hosts with at least 32 GiB of memory, the isolated runner gives
+  Node an 8 GiB heap so long Next.js dev-server runs do not restart at the
+  default heap threshold. CI and lower-memory hosts keep their existing limit.
+  `LARATIK_E2E_MAX_OLD_SPACE_SIZE` can set an explicit heap size in MiB; an
+  existing `NODE_OPTIONS` heap setting takes precedence.
 - Required tests may not use conditional assertions or configuration-based skips.
 - E2E support routes return 404 in production.
 - Dynamic visual values must be masked before baseline comparison.
