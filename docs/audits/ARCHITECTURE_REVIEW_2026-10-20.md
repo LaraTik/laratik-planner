@@ -3022,3 +3022,20 @@ failures. Focused ESLint and TypeScript checks passed; the commit hook passed
 SHA `ced7c0bce2ab5e8ee953642d13677e28d3a9a79c`. Full `pnpm verify` and release
 browser/database evidence remain open. Approval transaction and authorization
 behavior are unchanged. AD-002 remains **In Progress**.
+
+## A68 — Publication outcome action exposed service and database failures
+
+**Priority: P2 — safe server-action failures and bilingual feedback.**
+Publication outcome writes now distinguish validation, missing-record,
+invalid-state, and concurrent-change failures with typed service errors. The
+action returns stable codes for those outcomes and permission denial; unknown
+errors are logged through the sanitized logger and return generic safe copy.
+The channel card translates the codes in English and Arabic. Existing service
+error messages were preserved after the commit hook caught four assertions
+that rely on those messages. Direct service/action/component tests passed
+48/48, including bilingual conflict rendering; the commit hook passed 220 test
+files / 1,780 tests, then reran 23 changed-file tests on clean SHA
+`ecd2220faddce5d78da5025b0fa8afae30c22f0a`. Focused lint and TypeScript passed.
+Full `pnpm verify`, database, browser, and visual release evidence remain open.
+Publication transaction and authorization behavior are unchanged. AD-002
+remains **In Progress**.

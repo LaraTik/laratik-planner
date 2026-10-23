@@ -3114,3 +3114,14 @@ from returned action state. Focused ESLint and `pnpm typecheck` passed before
 commit. The commit hook passed TypeScript and 15 affected test files / 152
 tests, then reran the direct suite, 7/7. Database, migration, browser, visual,
 and manual route evidence remain open.
+
+## Publication outcome error boundary — `ecd2220faddce5d78da5025b0fa8afae30c22f0a`
+
+Direct publication service, action, and channel-card checks passed 48/48.
+English and Arabic unit cases confirm a concurrent publication update is shown
+in the active locale. Focused ESLint and `pnpm typecheck` passed before commit.
+The commit hook passed 220 affected test files / 1,780 tests, then reran the
+direct action and localization suites, 23/23. The first hook attempt found
+four service-error message assertions; their established text was restored
+and the full affected selection passed. Database, migration, browser, visual,
+and manual route evidence remain open.
