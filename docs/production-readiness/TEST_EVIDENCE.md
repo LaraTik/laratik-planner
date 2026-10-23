@@ -179,6 +179,18 @@ allowlist is down to 20 existing edges. No page behavior, route, action, or
 contract changed. This checkpoint is **Tested**, not **Verified**; AD-002
 remains **In Progress**.
 
+## Legacy workspace tenant-isolation startup allowance — `9b1a6ddc`
+
+On clean SHA `9b1a6ddc`, the tenant-isolation E2E retained its agency and
+cross-tenant content assertions and allowed up to 15 seconds for the first
+overview marker after the legacy redirect on a cold Next development server.
+Chromium passed both journeys (2/2); WebKit passed both journeys (2/2). The
+runner emitted a destination-stream warning in Chromium and used its documented
+RSC browser-navigation fallback in WebKit; both runs completed successfully.
+The commit hook passed TypeScript and the focused ownership selector, 37/37
+tests. The other browser projects, full visual matrix, full `pnpm verify`, and
+independent review remain open. Status: **Tested**, not **Verified**.
+
 ## Architecture refinement — planning detail shell ownership — 2026-10-22
 
 Implementation SHA: `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (clean at run).

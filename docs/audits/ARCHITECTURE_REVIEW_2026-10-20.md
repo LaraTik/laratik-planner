@@ -3351,3 +3351,25 @@ password-state mapping, and hash non-disclosure; the account test area passes
 contracts are unchanged. Full release-browser/visual evidence and independent
 review remain open; this is **Tested**, not **Verified**. AD-002 remains
 **In Progress**.
+
+## A87 — Cold legacy-workspace navigation exceeded the E2E assertion window
+
+**Priority: P2 — reliable tenant-isolation evidence.** On a fresh isolated Next
+dev server, the legacy `/app/w/<slug>` route and its canonical destination can
+both compile on the first navigation. The route selected the member's reachable
+workspace, and the canonical page did not expose the duplicate slug in the
+other agency, but the first `workspace-overview` marker appeared beyond the
+default five-second Playwright expectation. Increasing the test's total timeout
+or removing the tenant assertions would hide the wrong problem. The first
+marker now has a 15-second cold-start allowance; agency identity and
+cross-tenant absence assertions retain their normal checks. The ownership
+manifest now selects this browser journey for legacy workspace-route changes,
+with a selector regression.
+
+On clean SHA `9b1a6ddc`, the ownership selector passed 37/37 unit tests; the
+focused tenant-isolation journey passed 2/2 in Chromium and 2/2 in WebKit. Next
+reported a destination-stream warning in Chromium and an RSC fallback in
+WebKit, but both runs completed with the correct workspace and tenant
+assertions. This is a **Tested** test-reliability correction, not a product
+authorization defect. Full browser/visual release evidence and independent
+review remain open; AD-002 remains **In Progress**.

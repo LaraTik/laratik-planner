@@ -4169,3 +4169,16 @@ but all tests completed successfully. This is Chromium-only evidence; the
 remaining browser projects and complete visual matrix have not passed. Work
 remains **Tested**, not **Verified**; AD-002 stays **In Progress** and the push
 gate stays closed until the required release evidence is complete.
+
+### Architecture review — cold legacy workspace route assertion (2026-10-23)
+
+On clean SHA `9b1a6ddc`, the legacy tenant-isolation E2E keeps its workspace
+identity and cross-tenant absence checks while allowing 15 seconds for the
+first marker on a cold dev server. The workspace test-ownership area now
+selects this browser case for legacy route changes, and its selector
+regression passed. Chromium passed 2/2 and WebKit passed 2/2. The run emitted
+Next development-server stream/RSC warnings, but both browsers reached the
+canonical workspace and completed the isolation assertions. No product route,
+permission, or data behavior changed. Full `pnpm verify`, the complete
+five-browser matrix, the visual matrix, and independent review remain open;
+this is **Tested**, not **Verified**, and AD-002 remains **In Progress**.
