@@ -1,5 +1,7 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-23 platform landing redirect — deployed, SHA `f8fa15d12ad78922fe4d6aa621837db38c60cd37`** — Fixed the missing-tenant fallback from `/app/platform` (no index route) to `/app/platform/overview` in My Work and Workspaces. `pnpm verify` passed (606 unit files / 5,228 tests and production build); affected core pre-push checks and the focused authenticated Chromium platform overview tests passed. Manual CI run `39962463524` passed all deploy gates and published the images. Manual deployment run `39966255430` succeeded; production `/api/health` reports `f8fa15d`, DB and schema ready. No schema or persistence changes. Full browser matrix, visual review, and independent review remain open. Evidence: `docs/production-readiness/TEST_EVIDENCE.md`.
+
 > **2026-10-23 dependency security gate remediation — in progress** — GitHub
 > CI for the Planning XLSX export SHA passed formatting, lint, typecheck, unit
 > tests, migration drill, integration tests, and the workflow, sidecar, and

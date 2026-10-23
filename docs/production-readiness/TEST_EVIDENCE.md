@@ -1,5 +1,27 @@
 # Test and coverage evidence
 
+## Platform landing redirect — 2026-10-23
+
+Implementation SHA: `f8fa15d12ad78922fe4d6aa621837db38c60cd37` (clean at run; deployed).
+
+| Command / check                                                                                                | Result                                                                                                                                          |
+| -------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                                                  | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,228 tests, and production build. Exit code 0.                                    |
+| Pre-push affected core checks                                                                                  | Pass — full unit suite and selected disposable-Postgres integration tests.                                                                      |
+| `pnpm test:e2e:isolated tests/e2e/platform-overview.spec.ts --project=chromium`                                | Pass — both authenticated platform overview gate journeys. Uses the disposable `planner_test` database.                                         |
+| `pnpm test:affected -- --layer browser`                                                                        | Browser suite could not start because `TEST_DATABASE_URL` was not exported; the focused Chromium suite above passed with the explicit test URL. |
+| Manual GitHub CI — [run 39962463524](https://github.com/LaraTik/laratik-planner/actions/runs/39962463524)      | Pass — format, lint, typecheck, unit, migration drill, integration, audit, workflow checks, Docker build, health smoke, and GHCR push.          |
+| Manual VPS deployment — [run 39966255430](https://github.com/LaraTik/laratik-planner/actions/runs/39966255430) | Pass — deployed this exact SHA; `/api/health` reports `f8fa15d`, DB and schema ready.                                                           |
+| Migration / persistence review                                                                                 | Not applicable — route fallback only; no schema or persistence changes.                                                                         |
+| Full browser matrix, visual review, independent review                                                         | Open.                                                                                                                                           |
+
+The architecture refactor `cd4ce270a5` changed the no-active-agency fallback in
+My Work and Workspaces from returning no content to redirecting to
+`/app/platform`. That path is a route prefix with no index page. The app shell
+allows platform administrators without tenant context, so they reached this
+invalid path. Both pages now redirect to the existing, permission-gated
+`/app/platform/overview` route. A regression guard covers both fallbacks.
+
 ## Dependency security remediation — 2026-10-23
 
 Implementation SHA: `9fc2319a020de25d0de03fed7bbfed49778e7c26` (clean at run).
