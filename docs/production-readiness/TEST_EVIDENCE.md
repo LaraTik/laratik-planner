@@ -2,14 +2,14 @@
 
 ## Dependency security remediation — 2026-10-23
 
-Implementation SHA: pending final commit.
+Implementation SHA: `9fc2319a020de25d0de03fed7bbfed49778e7c26` (clean at run).
 
-| Command / check                        | Result                                                                                                         |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `pnpm audit --prod --audit-level high` | Pass — no high or critical production advisories; two moderate findings remain.                                |
-| `pnpm verify`                          | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and Next.js 16.4.2 production build. |
-| Exact-commit GitHub CI                 | Required after push; the prior XLSX SHA failed only the dependency audit, so its image job was skipped.        |
-| Manual deployment                      | Pending a successful exact-commit CI run and published SHA image.                                              |
+| Command / check                        | Result                                                                                                                                        |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit --prod --audit-level high` | Pass — no high or critical production advisories; two moderate findings remain. Exit code 0.                                                  |
+| `pnpm verify`                          | Pass on this clean SHA — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and Next.js 16.4.2 production build. Exit code 0. |
+| Exact-commit GitHub CI                 | Pending after push. The prior XLSX SHA failed only the dependency audit, so its image job was skipped.                                        |
+| Manual deployment                      | Pending a successful exact-commit CI run and published SHA image.                                                                             |
 
 The release audit found six production findings in Next.js 16.3.8 and Sentry
 10.70.0 (three critical, one high, two moderate). Next.js 16.4.2 and Sentry
