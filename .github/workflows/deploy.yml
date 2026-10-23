@@ -70,7 +70,7 @@ jobs:
           DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
         run: |
           set -euo pipefail
-          runs="$(gh run list --workflow ci.yml --commit "${DEPLOY_SHA}" --json conclusion,headSha --limit 100)"
+          runs="$(gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${DEPLOY_SHA}" --json conclusion,headSha --limit 100)"
           if ! jq -e --arg sha "${DEPLOY_SHA}" '.[0] | .headSha == $sha and .conclusion == "success"' <<<"${runs}" >/dev/null; then
             echo "Refusing deployment: CI has not succeeded for ${DEPLOY_SHA}."
             exit 1

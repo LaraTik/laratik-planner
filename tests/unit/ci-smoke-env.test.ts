@@ -156,7 +156,9 @@ describe("CI production-image smoke environment", () => {
     // accept the workflow's run blocks.
     expect(ciWorkflow).toMatch(/--build-arg APP_VERSION="?\$GITHUB_SHA"?/);
     expect(deployWorkflow).toContain("Require successful CI for the selected commit");
-    expect(deployWorkflow).toContain('gh run list --workflow ci.yml --commit "${DEPLOY_SHA}"');
+    expect(deployWorkflow).toContain(
+      'gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${DEPLOY_SHA}"',
+    );
     expect(deployWorkflow).toContain("DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}");
     expect(deployWorkflow).not.toContain("APP_VERSION=");
     expect(dockerfile).toContain("ENV APP_VERSION=$APP_VERSION");
