@@ -3986,3 +3986,19 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No persistence, route, permission, or successful-workflow behavior changed.
   Database, browser, visual, full `pnpm verify`, and independent review remain
   open. This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize invitation action failures and restore focused selection
+
+- Resend/revoke actions now capture unexpected failures and return stable codes
+  translated in English and Arabic; stale resend outcomes have explicit copy.
+  A credential-shaped failure regression proves internal details do not reach
+  the client. Routes, permissions, invitation writes, and success behavior are
+  unchanged.
+- Focused action tests passed 6/6; ESLint, Prettier, and TypeScript passed. On
+  code SHA `2d0616cbc89bf1e76834dd7a5acd1d5a0e033a0d`, the ownership miss
+  escalated the hook to 601 unit files / 5,201 tests, all passing. The mapping
+  was added in `b412ad5655c5be48a7ebaa4bcf9a7f2270b060f3`; its selector suite
+  passed 29/29 and the hook selected only the architecture area.
+- No database or migration behavior changed. Browser, responsive, axe, visual,
+  full `pnpm verify`, and independent review remain open. Both changes are
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.

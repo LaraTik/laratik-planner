@@ -3186,3 +3186,17 @@ public messages remain supported. No route, permission, persistence, or
 successful-workflow behavior changed. Database, browser, visual, full
 `pnpm verify`, and independent review remain open. This checkpoint is
 **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Invitation action error boundary — `2d0616cbc89bf1e76834dd7a5acd1d5a0e033a0d`
+
+Focused user-action tests passed 6/6; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook conservatively ran all 601 unit files /
+5,201 tests because the changed test file lacked an ownership mapping; all
+passed. Unexpected resend/revoke errors now return stable codes and the
+credential-shaped secret is withheld; EN/AR invitation-list messages were
+added. No database, authorization, or successful invitation behavior changed.
+The mapping correction is on SHA
+`b412ad5655c5be48a7ebaa4bcf9a7f2270b060f3`; its selector regression passed
+29/29 and its hook selected only the architecture area. Browser, visual, full
+`pnpm verify`, and independent review remain open. This evidence is **Tested**,
+not **Verified**; AD-002 remains **In Progress**.

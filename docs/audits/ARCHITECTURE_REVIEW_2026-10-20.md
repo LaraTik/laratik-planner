@@ -3131,3 +3131,30 @@ classified public copy still works. No successful workflow or route contract
 changed. The code is **Tested**, not **Verified**; repository-wide release,
 database/browser, and independent review gates remain open. AD-002 remains
 **In Progress**.
+
+## A75 — Invitation actions returned infrastructure exception messages
+
+**Priority: P1 — privacy and safe action boundaries.** The resend and revoke
+invitation actions returned arbitrary caught exception text to the client;
+database and SMTP errors could therefore appear in row feedback. They now
+capture unexpected failures and return stable error codes localized by the
+invitation list in English and Arabic. Resend's two known stale-invitation
+outcomes map to a stable code. Regression coverage uses a credential-shaped
+failure and confirms neither action returns it. No invitation transaction,
+authorization, or success behavior changed. Focused checks passed; because the
+test path initially lacked an owner mapping, the commit hook conservatively
+ran all 601 unit files / 5,201 tests successfully. The mapping was then added
+and selector-tested. Database/browser release checks and independent review
+remain open; AD-002 remains **In Progress**.
+
+## A76 — Users action test was missing from affected-test ownership
+
+**Priority: P2 — validation throughput and ownership accuracy.** The users
+feature had an area mapping, but `tests/unit/users-membership-actions.test.ts`
+was absent from its unit ownership list. Its addition therefore escalated a
+routine focused change to the full unit suite. The test file is now owned by
+the users area, with a selector regression proving the invitation route and
+test select that area and test file without global escalation. The focused
+architecture selector suite passed 29/29. This does not remove any release
+gate; a full suite still runs for final verification. AD-002 remains **In
+Progress**.
