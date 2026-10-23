@@ -43,7 +43,13 @@
     "archiving": "Archiving…",
     "archiveSelected": "Archive selected",
     "archiveCount": "Archive ({count})",
-    "archiveFailed": "Archive failed"
+    "archiveFailed": "Archive failed",
+    "archiveErrors": {
+      "unauthenticated": "Sign in again to archive these items.",
+      "invalidSelection": "The selected items are invalid. Refresh the page and try again.",
+      "forbidden": "You do not have permission to archive these items.",
+      "failed": "The selected items could not be archived. Try again."
+    }
   },
   "library": "Library",
   "media": "Media",
