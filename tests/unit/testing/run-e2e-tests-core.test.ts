@@ -1,35 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  ISOLATED_E2E_DISABLE_DEV_MEMORY_RESTART,
   ISOLATED_PLAYWRIGHT_PROJECTS,
   isolatedE2eNodeOptions,
   planPlaywrightInvocations,
-  shouldDisableIsolatedE2eMemoryRestart,
 } from "../../../scripts/run-e2e-tests-core";
 
 describe("isolated Playwright project plan", () => {
-  it("provides a runner-only switch for Next dev memory restarts on large local hosts", () => {
-    expect(ISOLATED_E2E_DISABLE_DEV_MEMORY_RESTART).toBe("LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART");
-    expect(
-      shouldDisableIsolatedE2eMemoryRestart({
-        ci: false,
-        hostMemoryBytes: 48 * 1024 ** 3,
-      }),
-    ).toBe(true);
-    expect(
-      shouldDisableIsolatedE2eMemoryRestart({
-        ci: true,
-        hostMemoryBytes: 48 * 1024 ** 3,
-      }),
-    ).toBe(false);
-    expect(
-      shouldDisableIsolatedE2eMemoryRestart({
-        ci: false,
-        hostMemoryBytes: 16 * 1024 ** 3,
-      }),
-    ).toBe(false);
-  });
-
   it("runs each project in its own invocation for the full suite", () => {
     expect(planPlaywrightInvocations(["--workers=1"])).toEqual(
       ISOLATED_PLAYWRIGHT_PROJECTS.map((project) => ["--workers=1", `--project=${project}`]),

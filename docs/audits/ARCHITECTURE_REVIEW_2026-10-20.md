@@ -3291,15 +3291,13 @@ before changing the release gate. Keep the release state **Tested**, not
 AD-002 remains **In Progress**.
 
 **Runner follow-up (2026-10-23).** Raising the local Node heap to 8 GiB did not
-prevent Next's dev-server memory-threshold restart: the subsequent Chromium run
-was stopped at test 189/290 after two navigation/a11y timeouts coincided with
-restarts. The two affected cases passed together (2/2) on a fresh isolated
-server. The runner now disables that restart only for its disposable E2E server
-on large non-CI hosts; normal development, CI, and lower-memory hosts retain
-the Next default. Runner unit coverage passes 8/8,
-type-check passes, and the two previously interrupted cases pass 2/2 with the
-new setting. The full Chromium project has not yet been rerun, so this is not
-release evidence.
+prevent Next's dev-server memory-threshold restart: a Chromium attempt stopped
+at test 189/290 after two navigation/a11y timeouts coincided with restarts. A
+runner-only experiment that disabled the restart made the dev server exit
+around test 53; subsequent unrelated specs failed with connection refused. The
+experiment was rolled back. The 8 GiB heap setting remains, but no full-suite
+mitigation is currently proven. Focused cases passed on fresh servers; the
+full Chromium project has not passed, so this is not release evidence.
 
 ## A84 — Current visual route inventory includes unresolved parity differences
 

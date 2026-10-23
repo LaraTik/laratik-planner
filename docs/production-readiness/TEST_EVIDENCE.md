@@ -3294,14 +3294,15 @@ platform, Brand Kit, and Client screens. This visual result is incomplete; no
 references were updated. The release matrix is not green, and this evidence is
 **Tested**, not **Verified**.
 
-## E2E memory-restart mitigation — follow-up candidate
+## E2E memory-restart mitigation — rejected experiment
 
-The subsequent full Chromium attempt still hit Next's memory-threshold restart
-after the 8 GiB heap increase and was stopped at test 189/290. Two checks failed
-at restart boundaries: Command Center dark-theme accessibility and mobile
-calendar overflow. Both passed together (2/2) after the isolated runner began
-disabling Next's memory-threshold restart for its disposable server on large
-non-CI hosts. The
-runner-specific unit suite passes 8/8 and TypeScript passes. Full Chromium and
-the remaining release projects have not yet been rerun; this is focused
-regression evidence only, not a release pass.
+The Chromium attempt on the 8 GiB heap candidate still hit Next's
+memory-threshold restart and was stopped at test 189/290. Command Center
+dark-theme accessibility and mobile calendar overflow timed out at restart
+boundaries; both passed together (2/2) on a fresh server. A follow-up
+experiment disabled Next's restart for the disposable server, but the server
+exited around test 53 and unrelated later requests failed with connection
+refused. The suppression was rolled back. The experiment's focused unit tests,
+type-check, and `pnpm verify` passed, but full Chromium did not. The current
+runner keeps the 8 GiB heap setting without restart suppression. No browser
+release pass is claimed.

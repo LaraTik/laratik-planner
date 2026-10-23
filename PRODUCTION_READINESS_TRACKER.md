@@ -4120,12 +4120,13 @@ default framebuffer`, then consumes a CPU core without returning control;
 
 ### Architecture review — E2E dev-server restart follow-up (2026-10-23)
 
-The 8 GiB heap increase alone did not stop Next's memory-threshold restart. The
-next Chromium run was stopped at 189/290 after two a11y/mobile checks timed out
-at restart boundaries. On large non-CI hosts, the runner now disables threshold
-restarts only for its disposable E2E server; ordinary development, CI, and
-lower-memory hosts retain the default. Runner unit checks pass 8/8, type-check
-passes, and the two affected cases pass 2/2 on the new setting. The full browser
-matrix has not been rerun, so this is **Tested**, not **Verified**. Visual
-parity remains incomplete under A84. AD-002 remains **In Progress** and the
-push gate remains closed.
+The 8 GiB heap increase alone did not stop Next's memory-threshold restart. A
+Chromium attempt stopped at 189/290 with two a11y/mobile timeouts at restart
+boundaries. A subsequent experiment disabled threshold restarts for the local
+E2E server; the server exited around test 53 and later requests across unrelated
+specs were refused. That experiment was rolled back. The runner-specific unit
+suite and `pnpm verify` had passed on the experimental commit, but the full
+browser run did not. The current runner retains the 8 GiB heap setting without
+restart suppression. The full browser matrix has not passed, so this is
+**Tested**, not **Verified**. Visual parity remains incomplete under A84.
+AD-002 remains **In Progress** and the push gate remains closed.

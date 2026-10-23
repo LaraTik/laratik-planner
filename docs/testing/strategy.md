@@ -103,11 +103,8 @@ see at the same time never share a hue while a palette slot sits unused.
   test-only Auth.js secrets. A missing `TEST_DATABASE_URL` is an actionable
   setup failure, not a valid passing/skip state.
 - On non-CI hosts with at least 32 GiB of memory, the isolated runner gives
-  Node an 8 GiB heap. It also disables Next's dev-server memory-threshold
-  restart for that disposable process so a mid-suite restart cannot interrupt
-  browser navigation. Normal development, CI, and lower-memory hosts keep
-  Next's default restart behavior. CI and lower-memory hosts also keep their
-  existing heap limit.
+  Node an 8 GiB heap so long Next.js dev-server runs do not restart at the
+  default heap threshold. CI and lower-memory hosts keep their existing limit.
   `LARATIK_E2E_MAX_OLD_SPACE_SIZE` can set an explicit heap size in MiB; an
   existing `NODE_OPTIONS` heap setting takes precedence.
 - Required tests may not use conditional assertions or configuration-based skips.

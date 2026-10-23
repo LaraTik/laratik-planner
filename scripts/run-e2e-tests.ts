@@ -3,12 +3,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { createServer } from "node:net";
 import { tmpdir, totalmem } from "node:os";
 import { join } from "node:path";
-import {
-  ISOLATED_E2E_DISABLE_DEV_MEMORY_RESTART,
-  isolatedE2eNodeOptions,
-  planPlaywrightInvocations,
-  shouldDisableIsolatedE2eMemoryRestart,
-} from "./run-e2e-tests-core";
+import { isolatedE2eNodeOptions, planPlaywrightInvocations } from "./run-e2e-tests-core";
 
 const databaseUrl = process.env.TEST_DATABASE_URL;
 if (!databaseUrl) {
@@ -36,10 +31,6 @@ const e2eNodeOptions = isolatedE2eNodeOptions({
   ...(process.env.LARATIK_E2E_MAX_OLD_SPACE_SIZE
     ? { requestedHeapMb: process.env.LARATIK_E2E_MAX_OLD_SPACE_SIZE }
     : {}),
-});
-const disableDevMemoryRestart = shouldDisableIsolatedE2eMemoryRestart({
-  ci: Boolean(process.env.CI),
-  hostMemoryBytes: totalmem(),
 });
 
 async function findFreePort(): Promise<number> {
@@ -84,10 +75,6 @@ async function main() {
     AUTH_URL: baseUrl,
     NEXTAUTH_URL: baseUrl,
     AUTH_TRUST_HOST: "true",
-    // Keep the disposable dev server alive for the whole isolated batch.
-    // Its Node heap is enlarged above on capable local hosts; restarting the
-    // server mid-run can interrupt a browser navigation and create false fails.
-    ...(disableDevMemoryRestart ? { [ISOLATED_E2E_DISABLE_DEV_MEMORY_RESTART]: "true" } : {}),
     // The runner has already refused any database URL that does not
     // contain test/ci. Supplying deterministic test-only secrets here
     // makes the isolated command reproducible without relying on a
