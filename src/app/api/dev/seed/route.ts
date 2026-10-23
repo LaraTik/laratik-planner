@@ -323,12 +323,27 @@ async function seedInternal(f: {
   // Production agency creation always assigns a plan. The dev fixture
   // mirrors that invariant so platform-admin detail routes exercise the
   // real entitlement surface instead of failing on an impossible row shape.
-  const defaultPlanSlug = f.communityInboxFixture ? "enterprise" : "growth";
-  const [defaultPlan] = await db
+  const defaultPlanSlug = f.communityInboxFixture ? "e2e-community-inbox" : "growth";
+  let [defaultPlan] = await db
     .select({ id: platformPlanTemplates.id })
     .from(platformPlanTemplates)
     .where(eq(platformPlanTemplates.slug, defaultPlanSlug))
     .limit(1);
+  if (f.communityInboxFixture && !defaultPlan) {
+    await db
+      .insert(platformPlanTemplates)
+      .values({
+        slug: defaultPlanSlug,
+        name: "E2E Community Inbox",
+        defaultLimits: { enabled_modules: ["community_inbox"] },
+      })
+      .onConflictDoNothing();
+    [defaultPlan] = await db
+      .select({ id: platformPlanTemplates.id })
+      .from(platformPlanTemplates)
+      .where(eq(platformPlanTemplates.slug, defaultPlanSlug))
+      .limit(1);
+  }
   const [fallbackPlan] = defaultPlan
     ? [defaultPlan]
     : await db.select({ id: platformPlanTemplates.id }).from(platformPlanTemplates).limit(1);
@@ -343,6 +358,7 @@ async function seedInternal(f: {
       });
   }
   if (f.communityInboxFixture) {
+    if (!plan) throw new Error("Community E2E plan fixture could not be created");
     await db
       .update(platformPlanTemplates)
       .set({
@@ -354,7 +370,7 @@ async function seedInternal(f: {
         )`,
         updatedAt: new Date(),
       })
-      .where(eq(platformPlanTemplates.slug, "enterprise"));
+      .where(eq(platformPlanTemplates.id, plan.id));
     await db
       .update(agencyEntitlements)
       .set({ overrides: { enabled_modules: ["community_inbox"] } })
