@@ -374,7 +374,11 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/app/(app)/app/platform/**",
         "src/components/platform/**",
       ],
-      unitFiles: ["tests/unit/platform/**", "tests/unit/platform-*.test.ts"],
+      unitFiles: [
+        "tests/unit/platform/**",
+        "tests/unit/platform-*.test.ts",
+        "tests/unit/platform/edit-agency-action.test.ts",
+      ],
       integrationFiles: [
         "tests/integration/platform-access.test.ts",
         "tests/integration/platform-agencies.test.ts",

@@ -8,6 +8,7 @@ import {
   AgencyUpdateError,
 } from "@/lib/agencies/command";
 import { z } from "zod";
+import { logError } from "@/lib/observability/logger";
 
 /**
  * Platform admin: edit-agency server action.
@@ -67,9 +68,7 @@ export async function platformEditAgencyAction(
     if (e instanceof AgencyUpdateError) {
       return { error: e.message, code: e.code };
     }
-    if (e instanceof Error) {
-      return { error: e.message };
-    }
+    logError("platform.agency_update_failed", { err: e });
     return { error: "Could not save the agency settings." };
   }
 }

@@ -371,6 +371,20 @@ describe("test affected core", () => {
     expect(result.unitFiles).toContain("tests/unit/planning-library-actions.test.ts");
   });
 
+  it("keeps platform agency edits in the focused platform area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/platform/agencies/[agencyId]/actions.ts",
+        "tests/unit/platform/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/platform/edit-agency-action.test.ts");
+  });
+
   it("escalates an unmapped changed test even when another changed file has an owner", () => {
     const result = classifyChangedFiles(
       ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],
