@@ -3205,3 +3205,22 @@ behavior changed. On clean SHA
 the two action regressions and the ownership suite, 34/34. Full `pnpm verify`,
 browser/database release evidence, and independent review remain open; AD-002
 remains **In Progress**.
+
+## A80 — Platform access actions mislabeled unexpected failures as permission denials
+
+**Priority: P1 — safe and truthful action outcomes.** The platform access
+service throws a typed `PermissionDeniedError` for actual authorization
+failure, but the action mapped every other exception to the same
+permission-denied copy. That hid database and infrastructure failures and
+misled operators and users. The action now preserves typed service outcomes,
+uses the permission copy only for typed permission errors, and logs unknown
+failures while returning a stable `unexpected_failure` code localized in
+English and Arabic. The grant, role-change, and revoke surfaces render that
+code consistently. Regression coverage verifies that credential-shaped
+persistence details are withheld and that the UI renders the localized copy.
+Authorization, successful changes, routes, and stored data are unchanged. On
+clean SHA `d7dee524f351aaa6d08223da7a416a793cff3baf`, the commit hook passed
+TypeScript, 224 related unit files / 1,778 tests, and the focused action,
+forms, and selector suites, 42/42. Full release gates and independent review
+remain open; this is **Tested**, not **Verified**. AD-002 remains **In
+Progress**.

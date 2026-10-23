@@ -3238,3 +3238,15 @@ forms. Authorization, successful updates, routes, and data contracts are
 unchanged. No migration was introduced. Full `pnpm verify`, browser/database
 release checks, and independent review remain open. This checkpoint is
 **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Platform access action outcomes — `d7dee524f351aaa6d08223da7a416a793cff3baf`
+
+Platform access actions now map only the typed `PermissionDeniedError` to
+permission-denied feedback. Unexpected persistence failures are logged and
+return a stable `unexpected_failure` code with English/Arabic UI copy. The
+credential-shaped exception regression and localized forms passed. The commit
+hook passed TypeScript, 224 related unit files / 1,778 tests, then the direct
+action, form, and ownership-selector suites, 42/42. Authorization and
+successful access changes are unchanged; no migration or data-contract change
+was made. Full `pnpm verify`, release browser/a11y/visual evidence, and
+independent verification remain open. This is **Tested**, not **Verified**.

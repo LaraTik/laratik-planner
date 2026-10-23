@@ -4049,3 +4049,17 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No database, migration, route, permission, or stored-data behavior changed.
   Full `pnpm verify`, browser, and independent review remain open. This work is
   **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+### Architecture review — platform access action outcomes (2026-10-23)
+
+- **Tested on:** `d7dee524f351aaa6d08223da7a416a793cff3baf`
+- **Change:** Platform access actions now distinguish typed permission denial
+  from unexpected failures. Unexpected errors are logged and returned as a
+  stable localized code; English and Arabic grant/change-role/revoke feedback
+  use the same safe outcome.
+- **Evidence:** Commit hook passed TypeScript, 224 related unit files / 1,778
+  tests, and 42 focused action, form, and affected-test-selector tests.
+- **Compatibility:** No permission, route, successful workflow, persistence,
+  or migration behavior changed.
+- **Status:** Tested. Full release verification and independent review remain
+  open; do not mark Verified.
