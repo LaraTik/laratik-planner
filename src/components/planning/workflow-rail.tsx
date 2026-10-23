@@ -746,7 +746,7 @@ function WorkflowRailBody({
                               designerId,
                             });
                             if (result?.error) {
-                              setActionError(result.error);
+                              setActionError(workflowErrorMessage(result.error));
                             } else {
                               router.refresh();
                             }

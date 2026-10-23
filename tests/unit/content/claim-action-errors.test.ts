@@ -6,8 +6,13 @@ const workspaceMock = vi.hoisted(() => ({
   getAccessibleWorkspace: vi.fn(),
   getAccessibleWorkspaceAtPath: vi.fn(),
 }));
-const contentMock = vi.hoisted(() => ({ claimAsDesigner: vi.fn(), transitionContent: vi.fn() }));
+const contentMock = vi.hoisted(() => ({
+  claimAsDesigner: vi.fn(),
+  transitionContent: vi.fn(),
+  assignDesigner: vi.fn(),
+}));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
+const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 
 vi.mock("@/lib/auth/config", () => authMock);
 vi.mock("@/lib/auth/agency-context", () => agencyContextMock);
@@ -18,11 +23,13 @@ vi.mock("@/features/content/server", async (importOriginal) => {
     ...actual,
     claimAsDesigner: contentMock.claimAsDesigner,
     transitionContent: contentMock.transitionContent,
+    assignDesigner: contentMock.assignDesigner,
   };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
+vi.mock("@/lib/db", () => ({ db: dbMock }));
 
-const { claimAction, transitionAction } =
+const { assignDesignerAction, claimAction, transitionAction } =
   await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
 const { DomainError } = await import("@/lib/content/workflow");
@@ -38,7 +45,9 @@ beforeEach(() => {
   workspaceMock.getAccessibleWorkspaceAtPath.mockReset();
   contentMock.claimAsDesigner.mockReset();
   contentMock.transitionContent.mockReset();
+  contentMock.assignDesigner.mockReset();
   loggerMock.logError.mockReset();
+  dbMock.select.mockReset();
 });
 
 describe("claimAction error boundary", () => {
@@ -94,6 +103,27 @@ describe("claimAction error boundary", () => {
     expect(result).toEqual({ error: "workflowError.failed" });
     expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
     expect(loggerMock.logError).toHaveBeenCalledWith("planning.workflow_transition_failed", {
+      err: error,
+    });
+  });
+
+  it("does not return unexpected designer assignment details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    const limit = vi.fn().mockResolvedValue([{ status: "in_design" }]);
+    const where = vi.fn().mockReturnValue({ limit });
+    const from = vi.fn().mockReturnValue({ where });
+    dbMock.select.mockReturnValue({ from });
+    contentMock.assignDesigner.mockRejectedValue(error);
+
+    const result = await assignDesignerAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000001",
+      designerId: "00000000-0000-4000-8000-000000000002",
+    });
+
+    expect(result).toEqual({ error: "workflowError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.designer_assignment_failed", {
       err: error,
     });
   });

@@ -107,6 +107,26 @@ type UpdateFormatPayloadFields = "contentItemId" | "format" | "formatPayload";
 type UpdateAudienceCopyFields = "contentItemId" | "format" | "formatPayload";
 type ResolveCommentFields = "commentId" | "resolved";
 
+function workflowActionFailure<Field extends string>(
+  error: unknown,
+  event: string,
+): ActionState<Field> {
+  if (error instanceof DomainError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: `workflowError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: "workflowError.unauthorized",
+    });
+  }
+  logError(event, { err: error });
+  return actionFailure<Field>(error, "workflowError.failed", {
+    exposeErrorMessage: false,
+  });
+}
+
 /**
  * Resolve the workspace for a mutation.
  *
@@ -431,15 +451,7 @@ export async function transitionAction(input: {
     });
     return { ok: true, from: result?.from, to: result?.to };
   } catch (error) {
-    if (error instanceof DomainError) {
-      return actionFailure<TransitionFields>(error, "workflowError.failed", {
-        publicMessage: `workflowError.${error.code}`,
-      });
-    }
-    logError("planning.workflow_transition_failed", { err: error });
-    return actionFailure<TransitionFields>(error, "workflowError.failed", {
-      exposeErrorMessage: false,
-    });
+    return workflowActionFailure<TransitionFields>(error, "planning.workflow_transition_failed");
   }
 }
 
@@ -498,35 +510,32 @@ export async function assignDesignerAction(input: {
     return fieldErrorsFromZod<AssignDesignerFields>(parsed.error);
   }
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  const [item] = await db
-    .select({ status: contentItems.status })
-    .from(contentItems)
-    .where(eq(contentItems.id, parsed.data.contentItemId))
-    .limit(1);
-  if (!item || !["approved_for_design", "in_design"].includes(item.status)) {
-    return actionFailure<AssignDesignerFields>(
-      new Error("The item is no longer ready for designer assignment."),
-      "The assign action failed.",
-    );
-  }
   try {
+    const [item] = await db
+      .select({ status: contentItems.status })
+      .from(contentItems)
+      .where(eq(contentItems.id, parsed.data.contentItemId))
+      .limit(1);
+    if (!item) throw new DomainError("not_found", "Content item not found");
+    if (!["approved_for_design", "in_design"].includes(item.status)) {
+      throw new DomainError("invalid_transition", "Item is not ready for designer assignment");
+    }
     await assignDesigner(actor, parsed.data);
-  } catch (error) {
-    return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
-  }
-  // A manager can assign before design starts or reassign while the
-  // item is already in design. Only the former needs the workflow
-  // transition; attempting it for an in-design item would reject a
-  // valid reassignment because the state machine has already moved.
-  if (item.status === "approved_for_design") {
-    try {
+    // A manager can assign before design starts or reassign while the
+    // item is already in design. Only the former needs the workflow
+    // transition; attempting it for an in-design item would reject a
+    // valid reassignment because the state machine has already moved.
+    if (item.status === "approved_for_design") {
       await transitionContent(actor, {
         contentItemId: parsed.data.contentItemId,
         action: "assign_designer",
       });
-    } catch (error) {
-      return actionFailure<AssignDesignerFields>(error, "The assign action failed.");
     }
+  } catch (error) {
+    return workflowActionFailure<AssignDesignerFields>(
+      error,
+      "planning.designer_assignment_failed",
+    );
   }
   return { ok: true };
 }

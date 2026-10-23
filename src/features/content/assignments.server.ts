@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentAssignments, contentItems } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { DomainError } from "@/lib/content/workflow";
 import {
   enqueueAssignmentNotification,
   enqueueClaimNotification,
@@ -123,7 +124,7 @@ export async function assignDesigner(actor: Actor, input: AssignDesignerInput) {
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager"]),
     "assign_designer",
