@@ -5,7 +5,8 @@ import { auth } from "@/lib/auth/config";
 import { isAgencyAdmin } from "@/lib/auth/policy";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { currentActor } from "@/lib/auth/current-actor";
-import { updateAgency, UpdateAgencySchema, AgencyUpdateError } from "@/lib/agencies/command";
+import { updateAgency, UpdateAgencySchema } from "@/lib/agencies/command";
+import { agencyUpdateActionFailure } from "@/lib/agencies/action-errors";
 
 /**
  * Server action for editing the agency identity.
@@ -63,12 +64,6 @@ export async function editAgencyAction(
     revalidatePath(`/app/platform/agencies/${agencyId}`);
     return { ok: true, changedFields: result.changedFields };
   } catch (e) {
-    if (e instanceof AgencyUpdateError) {
-      return { error: e.message, code: e.code };
-    }
-    if (e instanceof Error) {
-      return { error: e.message };
-    }
-    return { error: "Could not save the agency settings." };
+    return agencyUpdateActionFailure(e, "agency.settings_update_failed");
   }
 }

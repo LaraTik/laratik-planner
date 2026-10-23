@@ -385,6 +385,37 @@ describe("test affected core", () => {
     expect(result.unitFiles).toContain("tests/unit/platform/edit-agency-action.test.ts");
   });
 
+  it("keeps agency settings edits in the focused agency-settings area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/agency-settings/actions.ts",
+        "tests/unit/agency-settings/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("agency-settings");
+    expect(result.unitFiles).toContain("tests/unit/agency-settings/**");
+  });
+
+  it("selects both agency action areas for their shared error mapper", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/lib/agencies/action-errors.ts",
+        "tests/unit/agency-settings/edit-agency-action.test.ts",
+        "tests/unit/platform/edit-agency-action.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("agency-settings");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/agency-settings/**");
+    expect(result.unitFiles).toContain("tests/unit/platform/**");
+  });
+
   it("escalates an unmapped changed test even when another changed file has an owner", () => {
     const result = classifyChangedFiles(
       ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],

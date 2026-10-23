@@ -371,6 +371,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       id: "platform",
       sourceGlobs: [
         "src/lib/platform/**",
+        "src/lib/agencies/**",
         "src/app/(app)/app/platform/**",
         "src/components/platform/**",
       ],
@@ -581,7 +582,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     },
     {
       id: "agency-settings",
-      sourceGlobs: ["src/app/(app)/app/agency-settings/**"],
+      sourceGlobs: ["src/app/(app)/app/agency-settings/**", "src/lib/agencies/**"],
       unitFiles: [
         "tests/unit/agency-settings/**",
         "tests/unit/agency-actions.test.ts",

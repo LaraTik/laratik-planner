@@ -2,13 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { currentActor } from "@/lib/auth/current-actor";
-import {
-  updateAgencyAsPlatform,
-  UpdateAgencySchema,
-  AgencyUpdateError,
-} from "@/lib/agencies/command";
+import { updateAgencyAsPlatform, UpdateAgencySchema } from "@/lib/agencies/command";
 import { z } from "zod";
-import { logError } from "@/lib/observability/logger";
+import { agencyUpdateActionFailure } from "@/lib/agencies/action-errors";
 
 /**
  * Platform admin: edit-agency server action.
@@ -65,10 +61,6 @@ export async function platformEditAgencyAction(
     revalidatePath("/app/agency-settings");
     return { ok: true, changedFields: result.changedFields };
   } catch (e) {
-    if (e instanceof AgencyUpdateError) {
-      return { error: e.message, code: e.code };
-    }
-    logError("platform.agency_update_failed", { err: e });
-    return { error: "Could not save the agency settings." };
+    return agencyUpdateActionFailure(e, "platform.agency_update_failed");
   }
 }
