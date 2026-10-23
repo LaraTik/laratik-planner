@@ -4139,6 +4139,9 @@ aggregate and recent-agency reads moved behind the server-only
 permission gate, translation, and UI. The recent-agency query no longer selects
 an unused timestamp. Empty and populated query results have focused coverage;
 the platform test area passed 86/86, and the hook passed type-check plus the
-focused ownership/query tests (37/37). No public contract or stored-data
-behavior changed. Full release-browser/visual evidence and independent review
-remain open; this is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+focused ownership/query tests (37/37). On clean SHA
+`0e2e74b9289503dfd52df739b902b9eb64323620`, the focused platform browser area
+passed 9/9, including responsive Platform Access, non-admin denial, and the
+authorized overview KPI surface. No public contract or stored-data behavior
+changed. Full release-browser/visual evidence and independent review remain
+open; this is **Tested**, not **Verified**. AD-002 remains **In Progress**.

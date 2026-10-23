@@ -3328,7 +3328,9 @@ point. The route retains its platform permission gate, translation, and UI
 composition. The agency projection now selects only fields used by the list;
 the previous unused `createdAt` field was removed. Empty and populated result
 tests pass, and test ownership maps the feature into the platform area. The
-focused platform area passes 86/86; type-check passes. No route, permission,
-workflow, or persistence contract changed. Full browser/visual release evidence
-and independent review remain open; this change is **Tested**, not **Verified**.
-AD-002 remains **In Progress**.
+focused platform area passes 86/86; type-check passes. On clean SHA
+`0e2e74b9289503dfd52df739b902b9eb64323620`, the focused platform browser area
+passes 9/9, including the authorized overview and non-admin denial states. No
+route, permission, workflow, or persistence contract changed. Full
+browser/visual release evidence and independent review remain open; this change
+is **Tested**, not **Verified**. AD-002 remains **In Progress**.

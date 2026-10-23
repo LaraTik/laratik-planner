@@ -3315,5 +3315,8 @@ page renders. Focused query tests cover empty and populated results, and the
 test-ownership regression keeps future changes in the platform area. The
 focused unit checks passed 37/37; the complete platform unit area passed 86/86;
 type-check passed in both the focused run and commit hook. No route, role, or
-stored-data contract changed. The full browser/visual release gate is still
+stored-data contract changed. On clean SHA
+`0e2e74b9289503dfd52df739b902b9eb64323620`, the focused platform browser area
+passed 9/9, including responsive Platform Access, non-admin denial, and the
+authorized overview KPI surface. The full browser/visual release gate is still
 incomplete, so this is **Tested**, not **Verified**.
