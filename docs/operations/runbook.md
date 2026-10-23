@@ -11,7 +11,7 @@ The runbook uses `M1`–`M4.5` tags inline to anchor a procedure to a release. A
 | `M1`   | Auth + security: Google OAuth sign-in, agency cookie + HMAC, CSRF for server actions, base rate limiting, audit row for auth events.                    | pre-2026-08-19               | `progress.md` "auth/security"                                                                                          |
 | `M2`   | Workflow + publishing + AI foundations: content lifecycle, channels, brand kit, invitations, MiniMax default, per-agency `provider_secret` placeholder. | 2026-08-19                   | `progress.md` round-2 review plan; `MIGRATION_DRILL_RESULTS.md` § "2026-08-23 M2 ledger-safe rerun"                    |
 | `M3`   | AI governance + support access: per-agency `ai_provider_secret`, `support_access_grant` lifecycle, platform-only `support_session` banner.              | 2026-08-24 (merge `4a999fe`) | `progress.md` "M3 (AI governance + support access) merged"                                                             |
-| `M3a`  | Infra + deploy chain: VPS, Docker, GHCR, M3a migrator image, `deploy.yml` workflow_run gate, schema-readiness probe.                                    | 2026-08-20                   | `progress.md` "deploy chain live on `laratik-vps`"; this runbook § "Deploying a new version"                           |
+| `M3a`  | Infra + deploy chain: VPS, Docker, GHCR, M3a migrator image, manually dispatched `deploy.yml`, schema-readiness probe.                                  | 2026-08-20                   | `progress.md` "deploy chain live on `laratik-vps`"; this runbook § "Deploying a new version"                           |
 | `M3b`  | Product + docs: authenticated surfaces (workspace, content, channels, brand, design, library), E2E coverage, axe-core a11y, role-by-route matrix.       | 2026-08-22                   | This runbook § "End-to-end tests" (E2E spec table)                                                                     |
 | `M4`   | Social profile analytics: read-only Meta + TikTok per-profile metrics, AES-256-GCM envelope, 5-state staged rollout, daily cron, 25-month retention.    | 2026-08-24 (merge `0f6d552`) | `progress.md` "Social profile analytics (M4) merged"; this runbook § "Social analytics (M4)"                           |
 | `M4.5` | Per-agency social DEK + lazy platform KEK: agency-scoped DEKs wrapped by the platform KEK, `rotate-social-kek.ts` script, optional-at-boot env var.     | 2026-08-24                   | `progress.md` "Per-agency social DEK + lazy platform KEK (M4.5) merged"; this runbook § "Platform KEK rotation (M4.5)" |
@@ -107,11 +107,12 @@ When a section header in this runbook carries an M-tag, that tag is the contract
 
 ## Deploying a new version
 
-Deployment is fully automated by the M3a pipeline. CI builds the
+Deployment is operator-controlled. Manually dispatch CI to build the
 `laratik-planner` (app) and `laratik-planner-migrator` (migrator)
-images, tags each by the exact commit SHA, and pushes them to GHCR. A
-separate `deploy` workflow triggers on `workflow_run` CI success, checks
-out the same `head_sha`, and SSHes to the VPS to run `scripts/deploy.sh`,
+images, tags each by the exact commit SHA, and pushes them to GHCR. Then
+manually dispatch the `deploy` workflow with the exact same ref. It verifies
+CI succeeded for that commit and checks the published image before SSHing to
+the VPS to run `scripts/deploy.sh`,
 which performs `backup → migrate → recreate app → health check →
 rollback on failure` without any manual Docker commands.
 
@@ -119,23 +120,16 @@ From your **local** machine:
 
 ```bash
 git push origin main
-# CI: lint, typecheck, unit, integration, audit, build,
+# No GitHub Actions workflow starts from this push.
+# Manually dispatch CI for: lint, typecheck, unit, integration, audit, build,
 #      Docker image + health smoke + GHCR push, SMTP cert probe,
 #      workflow/Dockerfile/shell linters. Required release-gate contract —
-# Advisory workflow: changed-line coverage + targeted Chromium on an explicit
-#      critical dispatch; strict coverage + full browser/visual matrix nightly
-#      and via release-candidate dispatch. Routine pushes run CI only.
-#      see docs/testing/strategy.md (Release gates).
-# On green CI: deploy workflow verifies the GHCR tag, SSHes to the
-#              VPS, and runs scripts/deploy.sh.
+# Manually dispatch Advisory quality for targeted or release-candidate checks.
+# Manually dispatch Deploy after reviewing the exact ref and successful gates.
 # On red health check: the deploy script rolls back to the previous
 #                      image automatically.
 #
-# Expected wall-clock (measured 2026-08-28, post single-build change):
-#   CI green:           required gates only; advisory checks run in parallel
-#   workflow_run → deploy: ~2 s
-#   deploy (verify + ssh + deploy.sh): ~60 s
-#   Push → live:        ~10 min  (down from ~14-16 min pre-change)
+# CI, advisory, deployment, and release workflows each require explicit dispatch.
 ```
 
 ```bash
@@ -327,22 +321,15 @@ It runs the complete unit/integration and release contract:
 Format, lint, and typecheck run in the local hooks. Local E2E is explicit:
 `pnpm test:affected -- --layer browser` selects affected Chromium contracts,
 while `pnpm test:e2e:release` runs the complete local browser and visual
-release-candidate matrix. `.github/workflows/advisory-quality.yml` runs the
-targeted Chromium check only on an explicit critical dispatch, against the
-exact selected SHA.
+release-candidate matrix. `.github/workflows/advisory-quality.yml` runs
+targeted Chromium only on a critical dispatch. The full 5-browser E2E
+matrix and visual matrix run only on a release-candidate dispatch. Artifacts
+and structured result reports are retained for diagnosis.
 
-The full 5-browser E2E matrix and visual matrix run nightly and through
-the release-candidate dispatch. Their artifacts and structured result
-reports are retained for diagnosis, but they never block the normal
-`main` deployment.
-
-The 2026-08-28 single-build change also removed the duplicate
-`next build` + `docker build` from `.github/workflows/deploy.yml`:
-CI's `build-smoke` job is now the single source of the GHCR push,
-and the deploy job just verifies the tag exists in the registry
-before SSHing to the VPS to pull + run migrations + restart. This
-shaves ~270s off every deploy (deploy.yml's `Build + push image`
-job ran for 4.5 min on the previous 8 successful deploys).
+CI's `build-smoke` job builds and publishes the production image when CI is
+manually dispatched. The separately dispatched Deploy workflow requires the
+latest CI run for the selected SHA to have succeeded, verifies both GHCR
+images, then rolls them out. It does not rebuild the images.
 
 #### Local E2E recipes
 
@@ -514,8 +501,10 @@ touchable.
 
 ### Running on CI
 
-`ci.yml` is the only workflow that runs on every push and PR to
-`main`. The 5-browser matrix and the visual run are local-only:
+`ci.yml` runs only through manual workflow dispatch. All repository Actions
+workflows are manual-only; pushes, pull requests, schedules, and completion of
+other workflows do not start a run. The 5-browser matrix and the visual run
+are local or explicit release-candidate checks:
 
 ```yaml
 # .github/workflows/ci.yml  (deploy-gate, post 2026-08-26 plan)
@@ -539,9 +528,9 @@ pnpm test:affected -- --layer browser
 pnpm test:e2e:release
 ```
 
-The deploy workflow (`deploy.yml`) fires on `workflow_run: CI success`
-and SSHes to the VPS for the production rollout. The deploy
-workflow does not re-run any test against the VPS. See the **CI vs.
+After reviewing a successful CI run and the target ref, manually dispatch
+the deploy workflow (`deploy.yml`) to SSH to the VPS for production rollout.
+The deploy workflow does not re-run any test against the VPS. See the **CI vs.
 local E2E** section above and
 [`../testing/strategy.md`](../testing/strategy.md) (Release gates)
 for the full contract.
@@ -549,20 +538,17 @@ for the full contract.
 ## Patching a dependency advisory
 
 A published advisory blocks the deploy gate (`pnpm audit --prod --audit-level
-high` in `ci.yml`) as soon as the next commit is pushed, even if that commit
-touched none of the affected code. This is expected: the advisory database
-changes on someone else's schedule.
+high` in `ci.yml`) when CI is next manually dispatched, even if that run
+targets code that did not change.
 
 **"Fixed the audit" is a snapshot, not a state.** Advisories keep arriving —
 patching one batch only buys time until the next lands. Never record an audit
-as clean and stop; re-run the exact CI command immediately before pushing, and
-treat the nightly issue as the standing source of truth.
+as clean and stop; re-run the exact CI command before deployment and review
+the advisory issue before dispatching a release.
 
-**Who sees it first.** The nightly `Advisory quality` workflow runs the audit at
-`06:00 UTC` and opens an issue instead of failing the deploy, so an advisory
-normally surfaces _before_ it can block a push. If you are reading this because a
-push was blocked, the nightly issue should be open too — check it, because it
-lists the advisory links and the patched ranges.
+**Who sees it first.** Dispatch the `Advisory quality` workflow to run the
+audit and open/update an issue. Since workflows do not run automatically,
+check current advisories before a production release.
 
 **Check whether the package is direct or transitive first.** The fix differs:
 
@@ -640,7 +626,7 @@ We hit this on **2026-08-22** when the Let's Encrypt E7 cert for `mail.laratik.c
 
 ### Health check (gating)
 
-The CI job [`check-smtp-cert`](../../.github/workflows/ci.yml) runs `scripts/vps/check-smtp-cert.sh` against `mail.laratik.com:465` on every push to `main`, every PR, and once per day via `cron: "0 6 * * *"`. Exit codes:
+The CI job [`check-smtp-cert`](../../.github/workflows/ci.yml) runs `scripts/vps/check-smtp-cert.sh` against `mail.laratik.com:465` only when CI is manually dispatched. Exit codes:
 
 | Exit | Days remaining | Behavior                                                                                 |
 | ---- | -------------- | ---------------------------------------------------------------------------------------- |
@@ -980,22 +966,22 @@ The bell counter is the user's primary signal that something needs their attenti
 
 The deploy chain is gated in two places: the `ci.yml` workflow (which is code) and the GitHub repository's protection rules (which are configured in the GH UI, not in code). This section is the canonical reference so a new maintainer can reproduce the production posture from a fresh checkout + the runbook.
 
-| Surface                  | Setting                                                               | Where                                      |
-| ------------------------ | --------------------------------------------------------------------- | ------------------------------------------ |
-| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge            | Branch protection rules                    |
-| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`          | Branch protection rules                    |
-| `main` branch            | Require linear history (no merge commits)                             | Branch protection rules                    |
-| `main` branch            | No force-push                                                         | Branch protection rules                    |
-| `main` branch            | No branch deletion                                                    | Branch protection rules                    |
-| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`) | Branch protection rules                    |
-| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`        | Environments → production                  |
-| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)     | Environments → production                  |
-| `production` environment | Restrict to `main` branch only                                        | Environments → production                  |
-| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`        | Settings → Secrets and variables → Actions |
-| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)         | Calendar reminder                          |
-| Workflow file            | Top-level `permissions: contents: read` (default deny)                | All 3 workflows                            |
-| `deploy.yml` job         | `permissions: contents: read, packages: read`                         | `deploy.yml` deploy job                    |
-| `lint-meta` job          | Required for deploy (errors fail the gate)                            | `ci.yml` lint-meta job                     |
+| Surface                  | Setting                                                                                         | Where                                      |
+| ------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
+| `main` branch            | Require CI green (`.github/workflows/ci.yml`) before merge; dispatch CI manually for the commit | Branch protection rules                    |
+| `main` branch            | Require 1 review from `@LaraTik/laratik-planner-maintainers`                                    | Branch protection rules                    |
+| `main` branch            | Require linear history (no merge commits)                                                       | Branch protection rules                    |
+| `main` branch            | No force-push                                                                                   | Branch protection rules                    |
+| `main` branch            | No branch deletion                                                                              | Branch protection rules                    |
+| `main` branch            | Require CODEOWNERS review on touched paths (via `.github/CODEOWNERS`)                           | Branch protection rules                    |
+| `production` environment | Require 1 approval from `@LaraTik/laratik-planner-maintainers`                                  | Environments → production                  |
+| `production` environment | No wait timer (deploys are time-bounded; the CI gate is the wait)                               | Environments → production                  |
+| `production` environment | Restrict to `main` branch only                                                                  | Environments → production                  |
+| Repository secrets       | `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, `GHCR_PAT`, `GHCR_USER`                                  | Settings → Secrets and variables → Actions |
+| Secret rotation          | GHCR PAT, VPS SSH key: every 90 days (see `OPS-001` evidence)                                   | Calendar reminder                          |
+| Workflow file            | Top-level `permissions: contents: read` (default deny)                                          | All 3 workflows                            |
+| `deploy.yml` job         | `permissions: contents: read, packages: read`                                                   | `deploy.yml` deploy job                    |
+| `lint-meta` job          | Required for deploy (errors fail the gate)                                                      | `ci.yml` lint-meta job                     |
 
 These rules are set in the GH web UI; the in-repo artifacts (`CODEOWNERS`, `dependabot.yml`, `zizmor.yml`, top-level `permissions:` blocks) only enforce what they can. The branch-protection + environment-protection + secret-rotation rules must be configured manually on a fresh repo.
 

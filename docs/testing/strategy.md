@@ -2,15 +2,13 @@
 
 ## Release gates
 
-A merge to `main` is production-eligible only when every required gate in
-the authoritative `CI` workflow passes. The deploy workflow triggers on
-successful `CI` (`workflow_run`) and never on a partial run, so missing or
-skipped required gates remain deploy-blockers. Coverage and browser checks
-run independently in `advisory-quality.yml`: targeted Chromium E2E runs
-against the selected SHA on an explicit critical dispatch; strict coverage
-plus the full browser and visual matrix run nightly and through the
-release-candidate dispatch. Routine pushes run only the authoritative CI
-workflow. See ADR 0013 for the split-gate rationale.
+All GitHub Actions workflows are manual-only: push, pull request, schedule,
+and workflow-completion events do not start runs. Dispatch `CI` for the
+authoritative release gates, then dispatch `Deploy` separately when the
+operator is ready to deploy. Dispatch `Advisory quality` with `critical`
+for targeted checks or `release-candidate` for the full coverage and browser
+matrix. No successful workflow automatically starts another workflow.
+See ADR 0013 for the gate split and ADR 0019 for the manual-trigger decision.
 
 | Gate                                                        | Where                                                                                          | Required for deploy     | Release-candidate |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------- | ----------------- |
@@ -23,10 +21,10 @@ workflow. See ADR 0013 for the split-gate rationale.
 | Integration + migration drill (`pnpm test:integration`)     | `ci.yml` `unit-quality` `Integration tests` (authoritative full run)                           | ✅ (CI)                 | ✅                |
 | Migration drill (`pnpm migration-drill`)                    | `ci.yml` `unit-quality` `Migration drill` + release checklist                                  | ✅                      | ✅                |
 | Targeted E2E (Chromium functional)                          | `advisory-quality.yml` on explicit critical dispatch + `pnpm test:affected -- --layer browser` | ❌ (advisory)           | ✅                |
-| Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                              | ❌ (advisory)           | ✅                |
-| Visual matrix (`pnpm test:visual`)                          | `advisory-quality.yml` nightly/dispatch + `pnpm test:e2e:release`                              | ❌ (advisory)           | ✅                |
+| Full 5-browser matrix (`pnpm test:e2e:isolated`)            | `advisory-quality.yml` release-candidate dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
+| Visual matrix (`pnpm test:visual`)                          | `advisory-quality.yml` release-candidate dispatch + `pnpm test:e2e:release`                    | ❌ (advisory)           | ✅                |
 | Changed-line coverage (`pnpm test:coverage:advisory`)       | `advisory-quality.yml` explicit critical dispatch                                              | ❌ (advisory)           | ❌                |
-| Absolute coverage (`pnpm test:coverage`)                    | `advisory-quality.yml` nightly/dispatch                                                        | ❌ (advisory)           | ✅                |
+| Absolute coverage (`pnpm test:coverage`)                    | `advisory-quality.yml` release-candidate dispatch                                              | ❌ (advisory)           | ✅                |
 | Production audit (`pnpm audit --prod`)                      | `ci.yml` → `unit-quality` → `Dependency audit`                                                 | ✅ (zero critical/high) | ✅                |
 | Production build (`pnpm build`)                             | `ci.yml` → `build-smoke` → `Build`                                                             | ✅                      | ✅                |
 | Docker image build + `/api/health` smoke                    | `ci.yml` → `build-smoke` → `Smoke e2e (health)`                                                | ✅                      | ✅                |
@@ -47,7 +45,7 @@ feedback; CI repeats the complete unit and integration gates authoritatively.
 Local E2E is explicit: `pnpm test:affected -- --layer browser` is the normal
 development loop and `pnpm test:e2e:release` is the release-candidate check.
 An explicit critical advisory dispatch runs targeted Chromium against the
-exact selected SHA; the full browser and visual matrices run nightly or by
+selected ref; the full browser and visual matrices run only by
 release-candidate dispatch.
 
 `advisory-quality.yml` uploads coverage, Playwright, visual-diff, and
@@ -85,7 +83,7 @@ see at the same time never share a hue while a palette slot sits unused.
 | Unit/domain   | `pnpm test:unit`                                     | Pure schemas, workflow rules, KPI calculations, security helpers, and UI behavior. Never connects to PostgreSQL.                                                                               |
 | Affected loop | `pnpm test:affected` / `pnpm test:area <domain>`     | Hard-gated developer feedback from Git changes: Vitest related unit tests, manifest-selected integration/browser tests, and conservative escalation for shared or unknown paths.               |
 | Integration   | `TEST_DATABASE_URL=...test... pnpm test:integration` | Applies migrations to a disposable PostgreSQL database and runs real constraints, authorization, transaction, and concurrency cases. Missing or unsafe configuration fails; tests never skip.  |
-| Coverage      | `pnpm test:coverage` / `pnpm test:coverage:advisory` | Strict thresholds run in nightly/release audits; advisory runs produce HTML, LCOV, and changed-line evidence without blocking deployment.                                                      |
+| Coverage      | `pnpm test:coverage` / `pnpm test:coverage:advisory` | Strict thresholds run on a release-candidate dispatch; advisory runs produce HTML, LCOV, and changed-line evidence without blocking deployment.                                                |
 | Browser       | `pnpm test:e2e`                                      | Chromium, Firefox, WebKit, and mobile Chrome journeys with separated role identities. Mobile Safari and per-viewport visual baselines remain under UI-010 (Partial) in the production tracker. |
 | Accessibility | `pnpm test:a11y` plus UAT                            | WCAG 2.2 AA automation and keyboard-only task completion.                                                                                                                                      |
 | Operations    | CI and UAT runbook                                   | Frozen install, audit, build, images, migrations, backup/restore, health/readiness, OAuth, SMTP, AI, and Sentry.                                                                               |

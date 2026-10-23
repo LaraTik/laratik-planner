@@ -1,12 +1,9 @@
 name: Advisory quality
 
-# Advisory checks intentionally live in a separate workflow. The deploy
-# workflow runs on its nightly schedule or by explicit dispatch, so coverage
-# and browser failures remain visible without adding a second run to every
-# routine push or preventing the required CI workflow from shipping its SHA.
+# Advisory checks intentionally live in a separate workflow and run only
+# after an operator explicitly dispatches them. Select `critical` for targeted
+# checks or `release-candidate` for the full coverage and browser matrix.
 on:
-  schedule:
-    - cron: "0 6 * * *"
   workflow_dispatch:
     inputs:
       suite:
@@ -29,16 +26,11 @@ env:
   ADVISORY_SUITE: ${{ inputs.suite || 'critical' }}
 
 jobs:
-  # A dependency advisory is published on someone else's schedule, so the
-  # deploy gate only discovers it when somebody pushes — which is the worst
-  # possible moment, because a routine commit gets blocked by unrelated
-  # news. The authoritative CI audit runs once on every code push; this job
-  # runs the advisory scan on the daily schedule or by manual dispatch and
-  # opens/updates an issue instead of failing the deploy. See
-  # docs/operations/runbook.md § "Patching a dependency advisory".
+  # The authoritative CI audit is a required manual check. This advisory scan
+  # is separately dispatched and opens/updates an issue instead of failing CI.
+  # See docs/operations/runbook.md § "Patching a dependency advisory".
   dependency-advisory:
     name: Dependency advisory
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -176,7 +168,7 @@ jobs:
         run: |
           echo "ADVISORY_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
           set +e
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+          if [[ "${ADVISORY_SUITE}" == "release-candidate" ]]; then
             pnpm test:coverage -- --retry=1 > coverage-attempt-1.log 2>&1
           else
             pnpm test:coverage:advisory -- --retry=1 > coverage-attempt-1.log 2>&1
@@ -347,7 +339,7 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Install full browser matrix
-        if: github.event_name == 'schedule' || env.ADVISORY_SUITE == 'release-candidate'
+        if: env.ADVISORY_SUITE == 'release-candidate'
         run: pnpm exec playwright install --with-deps chromium firefox webkit
 
       - name: Run E2E attempt 1
@@ -355,7 +347,7 @@ jobs:
         run: |
           echo "ADVISORY_STARTED_AT=$(date +%s)" >> "$GITHUB_ENV"
           set +e
-          if [[ "${GITHUB_EVENT_NAME}" == "schedule" || "${ADVISORY_SUITE}" == "release-candidate" ]]; then
+          if [[ "${ADVISORY_SUITE}" == "release-candidate" ]]; then
             pnpm test:e2e:release > e2e-attempt-1.log 2>&1
           else
             pnpm test:e2e:critical > e2e-attempt-1.log 2>&1

@@ -1,42 +1,22 @@
 name: Deploy
 
-# Deploy fires when the authoritative `CI` workflow completes
-# successfully on `main`. As of the 2026-08-26 CI-minimization
+# Deploy runs only after an operator explicitly dispatches this workflow.
+# CI success does not automatically deploy production. As of the 2026-08-26 CI-minimization
 # plan, CI runs the irreducible deploy-gate (integration,
 # audit, build, Docker smoke, SMTP-cert probe, workflow linters).
 # Coverage and browser validation run independently in
 # `.github/workflows/advisory-quality.yml`; they never control this
-# workflow. The deploy therefore fires on required CI green alone.
+# workflow. The operator manually chooses when to deploy.
 #
-# As of the 2026-08-28 single-build change, CI's `build-smoke`
-# job is the single source of the GHCR push — it builds the
-# production image (linux/amd64), smoke-tests it, then publishes
-# the same bytes to `ghcr.io/laratik/laratik-planner{<sha>,latest}`
-# and the matching `-migrator` image. This workflow no longer
-# rebuilds; the `build` job only runs on `workflow_dispatch`
-# (the hotfix escape hatch) so an operator can still ship a
-# ref without waiting for CI to turn green. On the normal
-# `workflow_run` path, the deploy job verifies the GHCR tag
-# exists and SSHes to the VPS to pull + run migrations + restart.
-# The duplication is gone: previously deploy.yml's `build` job
-# did a second full `next build` + `docker build` (~270s wall
-# per deploy); now the deploy job runs in ~60s.
-#
-# The `workflow_dispatch` escape hatch is preserved: a hotfix can
-# still dispatch this workflow manually without waiting for CI.
-# Use sparingly — it rebuilds the image locally on a GHA runner,
-# not on a Linux/amd64 build host, so the produced image is still
-# the correct platform.
+# CI builds, smoke-tests, and publishes the immutable SHA-tagged app and
+# migrator images. This workflow verifies CI succeeded for the exact selected
+# SHA, verifies those images exist, then deploys them. It does not rebuild.
 #
 # See `docs/testing/strategy.md` (Release gates) and
 # `docs/operations/runbook.md` (CI vs. local E2E) for the full
 # contract.
 
 on:
-  workflow_run:
-    workflows: [CI]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       ref:
@@ -51,29 +31,8 @@ concurrency:
 permissions: {}
 
 jobs:
-  gate:
-    name: Verify upstream CI conclusion
-    # A superseded push cancels the older CI run and still emits a
-    # workflow_run event. Treat that event as a no-op instead of creating a
-    # red Deploy run; the newer CI run owns deployment for the latest SHA.
-    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
-    runs-on: ubuntu-latest
-    permissions: {}
-    steps:
-      - name: Require successful CI
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          UPSTREAM_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
-        run: |
-          set -euo pipefail
-          if [[ "${EVENT_NAME}" == "workflow_run" && "${UPSTREAM_CONCLUSION}" != "success" ]]; then
-            echo "Refusing deployment: upstream CI concluded ${UPSTREAM_CONCLUSION}."
-            exit 1
-          fi
-
   resolve:
     name: Resolve deployment commit
-    needs: gate
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -83,9 +42,8 @@ jobs:
       - name: Checkout requested ref
         uses: actions/checkout@v4
         with:
-          # CI workflow runs already provide an immutable head SHA. Manual
-          # dispatches may provide a branch, tag, or SHA through inputs.ref.
-          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || inputs.ref || github.sha }}
+          # Manual dispatch can select a branch, tag, or SHA through inputs.ref.
+          ref: ${{ inputs.ref || github.sha }}
           persist-credentials: false
 
       - name: Resolve checked-out commit
@@ -94,108 +52,34 @@ jobs:
           set -euo pipefail
           printf 'sha=%s\n' "$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
-  build:
-    name: Build + push image (dispatch only)
-    # Per the 2026-08-28 single-build change, this job ONLY runs when
-    # an operator dispatches the workflow manually. On the normal
-    # `workflow_run` path from CI, the production image is already
-    # in GHCR (pushed by CI's `build-smoke` job), so there is nothing
-    # to rebuild here. The dispatch path exists so a hotfix to a
-    # release-blocker can ship without waiting for CI to turn green
-    # (e.g. §23 step 19/20 integration flakes, or a zizmor rule
-    # upgrade). Use sparingly — it bypasses the CI gate.
-    needs: resolve
-    if: github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.resolve.outputs.sha }}
-          persist-credentials: false
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/laratik/laratik-planner
-          tags: |
-            type=raw,value=${{ needs.resolve.outputs.sha }}
-            type=raw,value=latest
-
-      - name: Build + push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          build-args: |
-            APP_VERSION=${{ needs.resolve.outputs.sha }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build + push migrator
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          target: migrator
-          push: true
-          build-args: |
-            APP_VERSION=${{ needs.resolve.outputs.sha }}
-          tags: |
-            ghcr.io/laratik/laratik-planner-migrator:${{ needs.resolve.outputs.sha }}
-            ghcr.io/laratik/laratik-planner-migrator:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
   deploy:
     name: Deploy to laratik-vps
     runs-on: ubuntu-latest
-    needs: [gate, resolve, build]
-    # `build` is intentionally optional on the normal workflow_run path,
-    # because CI's build-smoke job publishes the image there. The upstream
-    # CI conclusion is not optional, however: a failed CI run must never
-    # trigger a deployment attempt against a tag that was not published.
-    if: >-
-      always() &&
-      needs.resolve.result == 'success' &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success')
+    needs: resolve
     environment: production
-    # Least privilege: deploy only needs to read the image that CI's
-    # build-smoke (or the dispatch build job above) just pushed.
-    # `packages: read` is the GITHUB_TOKEN scope that lets the
-    # `docker/login-action` below authenticate to ghcr.io, and
-    # that lets the verify-image step call `docker buildx
-    # imagetools inspect` against the GHCR tag.
+    # Least privilege: actions: read queries successful CI runs and
+    # packages: read lets the image verification inspect private GHCR tags.
     permissions:
+      actions: read
       contents: read
       packages: read
     steps:
+      - name: Require successful CI for the selected commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          set -euo pipefail
+          runs="$(gh run list --workflow ci.yml --commit "${DEPLOY_SHA}" --json conclusion,headSha --limit 100)"
+          if ! jq -e --arg sha "${DEPLOY_SHA}" '.[0] | .headSha == $sha and .conclusion == "success"' <<<"${runs}" >/dev/null; then
+            echo "Refusing deployment: CI has not succeeded for ${DEPLOY_SHA}."
+            exit 1
+          fi
+          echo "CI succeeded for ${DEPLOY_SHA}."
+
       - name: Log in to GHCR
-        # 2026-08-28 fix: the verify step below calls `docker
-        # buildx imagetools inspect` against a private
-        # `ghcr.io/laratik/...` image, which requires the runner
-        # to be authenticated to GHCR. The earlier shape of this
-        # job (pre-single-build) inherited the login from the
-        # build job's docker config; the post-single-build shape
-        # made the build job conditional on `workflow_dispatch`,
-        # so the deploy job has no inherited creds. Without this
+        # This workflow has its own runner and must authenticate
+        # before inspecting private GHCR images. Without this
         # step the GHA runner falls back to anonymous auth, which
         # GHCR rejects with `401 Unauthorized` on
         # `https://ghcr.io/token?scope=…`. GITHUB_TOKEN with
@@ -211,9 +95,8 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify image exists in GHCR
-        # Fast-fail in the Actions UI if the image is missing. On
-        # the normal path CI pushed it; on the dispatch path the
-        # build job above pushed it. If the tag isn't reachable
+        # Fast-fail in the Actions UI if the image is missing. CI
+        # must have pushed it for this exact SHA. If the tag isn't reachable
         # from the GHA runner, `docker buildx imagetools inspect`
         # exits non-zero and we never SSH to the VPS. Cheap
         # (~2-3s) head request, no Docker daemon dependency.
@@ -232,12 +115,9 @@ jobs:
       - name: SSH + deploy
         uses: appleboy/ssh-action@v1
         env:
-          # The deploy SHA is taken from the workflow_run event when the
-          # CI workflow triggers us, or from the current workflow_run's
-          # github.sha on a manual dispatch. It is forwarded to the
-          # remote shell as the env var `DEPLOY_SHA` (via appleboy's
-          # `envs:`) instead of being expanded inline into the script,
-          # so a hostile head_sha value cannot be evaluated as code.
+          # The deploy SHA comes from the ref selected at dispatch. It is
+          # forwarded to the remote shell as `DEPLOY_SHA` (via appleboy's
+          # `envs:`) instead of being expanded inline into the script.
           DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}
           GHCR_PAT: ${{ secrets.GHCR_PAT }}
           GHCR_USER: ${{ secrets.GHCR_USER }}

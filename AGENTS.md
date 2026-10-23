@@ -138,7 +138,7 @@ laratik-planner/
 ├── .github/workflows/
 │   ├── ci.yml                      # deploy-gate: integration/audit/build/smoke/smtp-cert/lint-meta
 │   ├── advisory-quality.yml        # non-blocking coverage + browser quality checks
-│   └── deploy.yml                  # workflow_run: CI success → build+push GHCR → ssh deploy
+│   └── deploy.yml                  # manual dispatch → verify CI + GHCR → ssh deploy
 #                                    # Release-gate contract: docs/testing/strategy.md (Release gates)
 #                                    # Local E2E recipes: docs/operations/runbook.md (Local E2E)
 ├── src/
@@ -215,8 +215,8 @@ in one pass or extract code only to reduce file length.
 - ✅ Every migration must be registered in `src/lib/db/migrations/meta/_journal.json`, target the exact table names in the Drizzle schema, and include forward, compatibility, backup, rollback, from-zero, and upgrade evidence. A successful build does not prove that a migration runs.
 - ✅ Record verification against the exact clean commit SHA. If the branch advances or becomes dirty after verification, rerun the affected gates before calling the work complete.
 - ✅ Pre-commit hook catches lint/format/typecheck/unit-test issues early — keep it fast by keeping its scope tight (lint-staged on staged files, `vitest related` on staged sources, sentinel-driven `tsc --noEmit`). Skip with `git commit --no-verify` or `SKIP_TYPECHECK=1` for WIP / hotfixes.
-- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. CI runs targeted Chromium against the exact pushed SHA and the full matrix nightly/dispatch. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
-- ✅ Always merge finished work to `main` — review, commit, push as soon as `pnpm verify` is green and the local pre-merge E2E checklist (full 5-browser matrix + visual) is complete on the release-candidate branch. No half-finished work sitting in the local working tree or on a stale local branch. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes.
+- ✅ Pre-push hook runs affected unit/integration checks for the pushed range; it does not run E2E. Use `pnpm test:affected -- --layer browser` for local affected E2E and `pnpm test:e2e:release` for the strict full browser + visual release-candidate check. All GitHub Actions workflows are manual-only; dispatch the required checks against the reviewed ref. Skip with `git push --no-verify`, `SKIP_PREPUSH=1`, or `SKIP_INTEGRATION=1` for trivial pushes.
+- ✅ Always merge finished work to `main` — review, commit, push after `pnpm verify`, the local pre-merge E2E checklist, and any required manually dispatched GitHub checks are complete. No half-finished work sits in the local working tree or on a stale local branch. Production deployment requires a separate manual dispatch of the deploy workflow.
 - ✅ CI is authoritative — local git hooks are optional and never replace CI
 - ✅ Keep the remote Planner MCP current on every change: update the implementation, `docs/api/mcp.md`, `docs/api/README.md`, `docs/api/mcp-evaluation.xml`, affected bilingual Account UI copy, tests, and production-readiness evidence together. Follow [`docs/operations/mcp-maintenance.md`](docs/operations/mcp-maintenance.md); never ship a new tool, scope, error, or transport behavior with stale client documentation.
 - ✅ Staging before production: not yet (single-environment for v1, see Goal 14)
@@ -513,7 +513,7 @@ The independent reviewer (Task 13) flips the verdict to `READY` after the
 30-step §23 journey and the owner checks in
 `docs/production-readiness/EXTERNAL_SERVICES_UAT.md` are signed.
 
-> Workflow contract — see `docs/testing/strategy.md` (Release gates). `ci.yml` is the **deploy-gate** (full unit/integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs changed-line coverage and targeted Chromium against the exact pushed SHA on non-documentation `main` pushes, then strict coverage and the full browser/visual matrix nightly and for release candidates. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit/integration only. `deploy.yml` fires on `workflow_run: CI success` and only deploys the exact `head_sha` (no `:latest`-only deploys).
+> Workflow contract — see `docs/testing/strategy.md` (Release gates) and ADR 0019. All four GitHub Actions workflows are manual-only. `ci.yml` is the authoritative check (full unit/integration, audit, build, Docker smoke, SMTP-cert probe, workflow linters). `advisory-quality.yml` runs targeted or release-candidate checks only by dispatch. Local E2E is explicit via `pnpm test:affected -- --layer browser` or `pnpm test:e2e:release`; pre-push runs affected unit/integration only. `deploy.yml` deploys only after a separate operator dispatch.
 
 ## Activity log rendering
 
@@ -568,7 +568,7 @@ diff shapes, and extension recipe.
 - **Branches:** `main` is production. `feat/*` for features, `fix/*` for hotfixes, `chore/*` for chores. Squash-merge.
 - **PRs:** must pass CI (`pnpm verify` + build + smoke e2e). Reference the goal number in the PR title.
 - **ADRs:** material deviations from the master prompt go in `docs/decisions/`. The first one (`docs/decisions/0001-vps-port.md`) records the choice to self-host on the LaraTik VPS instead of Supabase + Vercel.
-- **Merge on completion:** when a change is finished and `pnpm verify` is green AND the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual` on the release-candidate branch) is complete, commit it with a `<type>(<scope>): <description>` message and push to `main`. The deploy workflow fires on `workflow_run: CI success`, so the change is live on production the moment the deploy job finishes. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
+- **Merge on completion:** when a change is finished and `pnpm verify` is green, the local pre-merge E2E checklist (`pnpm test:e2e:isolated` + `pnpm test:visual`) is complete, and required GitHub checks have been manually dispatched and reviewed, commit it with a `<type>(<scope>): <description>` message and push to `main`. Production deploy is a separate manual dispatch. No finished work sits in the local working tree or on a stale local branch; feature branches (`feat/*`, `fix/*`, `chore/*`) are temporary scratch space.
 
 ## Product UI/UX Engineering Rules
 
