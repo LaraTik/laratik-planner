@@ -13,6 +13,10 @@ const contentMock = vi.hoisted(() => ({
   assignContentOwner: vi.fn(),
   quickCreateContentItem: vi.fn(),
   updateContentItem: vi.fn(),
+  updateFormatPayload: vi.fn(),
+  applyResearchTeardownToFormatPayload: vi.fn(),
+  updateAudienceCopy: vi.fn(),
+  patchAudienceCopy: vi.fn(),
 }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
@@ -32,6 +36,10 @@ vi.mock("@/features/content/server", async (importOriginal) => {
     assignContentOwner: contentMock.assignContentOwner,
     quickCreateContentItem: contentMock.quickCreateContentItem,
     updateContentItem: contentMock.updateContentItem,
+    updateFormatPayload: contentMock.updateFormatPayload,
+    applyResearchTeardownToFormatPayload: contentMock.applyResearchTeardownToFormatPayload,
+    updateAudienceCopy: contentMock.updateAudienceCopy,
+    patchAudienceCopy: contentMock.patchAudienceCopy,
   };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
@@ -48,12 +56,16 @@ vi.mock("@/lib/publishing/service", async (importOriginal) => {
 const {
   changeContentOwnerAction,
   assignDesignerAction,
+  applyResearchTeardownAction,
   claimAction,
   decideApprovalAction,
   recordPublicationAction,
   quickCreateAction,
+  patchAudienceCopyAction,
   transitionAction,
   updateContentItemAction,
+  updateAudienceCopyAction,
+  updateFormatPayloadAction,
 } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
 const { DomainError } = await import("@/lib/content/workflow");
@@ -75,6 +87,10 @@ beforeEach(() => {
   contentMock.assignContentOwner.mockReset();
   contentMock.quickCreateContentItem.mockReset();
   contentMock.updateContentItem.mockReset();
+  contentMock.updateFormatPayload.mockReset();
+  contentMock.applyResearchTeardownToFormatPayload.mockReset();
+  contentMock.updateAudienceCopy.mockReset();
+  contentMock.patchAudienceCopy.mockReset();
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
   approvalMock.decideApproval.mockReset();
@@ -125,6 +141,72 @@ describe("claimAction error boundary", () => {
     );
 
     expect(result).toEqual({ error: "contentMutationError.invalid_transition" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not return unexpected creative-payload persistence details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    contentMock.updateFormatPayload.mockRejectedValue(error);
+    const formData = new FormData();
+    formData.set("contentItemId", "00000000-0000-4000-8000-000000000009");
+    formData.set("format", "static_post");
+    formData.set("formatPayload", "{}");
+
+    const result = await updateFormatPayloadAction("studio", {}, formData);
+
+    expect(result).toEqual({ error: "contentMutationError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.format_payload_update_failed", {
+      err: error,
+    });
+  });
+
+  it("does not return unexpected research-teardown persistence details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue({
+      id: "00000000-0000-4000-8000-000000000008",
+      agencySlug: "agency",
+    });
+    contentMock.applyResearchTeardownToFormatPayload.mockRejectedValue(error);
+
+    const result = await applyResearchTeardownAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000009",
+      researchTeardownId: "00000000-0000-4000-8000-000000000010",
+    });
+
+    expect(result).toEqual({ error: "contentMutationError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.research_teardown_apply_failed", {
+      err: error,
+    });
+  });
+
+  it("returns a stable code for expected audience-copy update failures", async () => {
+    contentMock.updateAudienceCopy.mockRejectedValue(
+      new DomainError("invalid_transition", "This item can no longer be edited"),
+    );
+    const formData = new FormData();
+    formData.set("contentItemId", "00000000-0000-4000-8000-000000000009");
+    formData.set("format", "static_post");
+    formData.set("formatPayload", "{}");
+
+    const result = await updateAudienceCopyAction("studio", {}, formData);
+
+    expect(result).toEqual({ error: "contentMutationError.invalid_transition" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("returns a stable validation code for an empty legacy audience-copy patch", async () => {
+    contentMock.patchAudienceCopy.mockRejectedValue(
+      new DomainError("validation_failed", "At least one audience-copy field must be provided."),
+    );
+    const formData = new FormData();
+    formData.set("contentItemId", "00000000-0000-4000-8000-000000000009");
+
+    const result = await patchAudienceCopyAction("studio", {}, formData);
+
+    expect(result).toEqual({ error: "contentMutationError.validation_failed" });
     expect(loggerMock.logError).not.toHaveBeenCalled();
   });
 

@@ -998,10 +998,7 @@ export async function updateFormatPayloadAction(
   try {
     formatPayload = JSON.parse(rawPayload);
   } catch {
-    return {
-      error: "Invalid formatPayload JSON",
-      fieldErrors: { formatPayload: "The format payload is not valid JSON." },
-    };
+    return { error: "contentMutationError.validation_failed" };
   }
   const parsed = UpdateFormatPayloadFormSchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -1018,7 +1015,10 @@ export async function updateFormatPayloadAction(
       formatPayload: formatPayload as Record<string, unknown>,
     });
   } catch (e) {
-    return actionFailure<UpdateFormatPayloadFields>(e, "The format payload could not be saved.");
+    return contentMutationActionFailure<UpdateFormatPayloadFields>(
+      e,
+      "planning.format_payload_update_failed",
+    );
   }
   return { ok: true };
 }
@@ -1043,9 +1043,9 @@ export async function applyResearchTeardownAction(input: {
     });
     return { ok: true, appliedFields };
   } catch (error) {
-    return actionFailure<ApplyResearchTeardownFields>(
+    return contentMutationActionFailure<ApplyResearchTeardownFields>(
       error,
-      "The research fields could not be applied.",
+      "planning.research_teardown_apply_failed",
     );
   }
 }
@@ -1061,10 +1061,7 @@ export async function updateAudienceCopyAction(
   try {
     formatPayload = JSON.parse(String(formData.get("formatPayload") ?? "{}"));
   } catch {
-    return actionFailure<UpdateAudienceCopyFields>(
-      new Error("Invalid copy payload."),
-      "The copy could not be saved.",
-    );
+    return { error: "contentMutationError.validation_failed" };
   }
   const parsed = UpdateAudienceCopySchema.safeParse({
     contentItemId: formData.get("contentItemId"),
@@ -1075,7 +1072,10 @@ export async function updateAudienceCopyAction(
   try {
     await updateAudienceCopy(actor, parsed.data);
   } catch (e) {
-    return actionFailure<UpdateAudienceCopyFields>(e, "The copy could not be saved.");
+    return contentMutationActionFailure<UpdateAudienceCopyFields>(
+      e,
+      "planning.audience_copy_update_failed",
+    );
   }
   return { ok: true };
 }
@@ -1136,7 +1136,10 @@ export async function patchAudienceCopyAction(
   try {
     await patchAudienceCopy(actor, patch);
   } catch (e) {
-    return actionFailure<PatchAudienceCopyFields>(e, "The copy could not be saved.");
+    return contentMutationActionFailure<PatchAudienceCopyFields>(
+      e,
+      "planning.audience_copy_patch_failed",
+    );
   }
   return { ok: true };
 }

@@ -1,6 +1,6 @@
 type Translator = (key: string) => string;
 
-/** Localize a stable action error code without exposing arbitrary server text. */
+/** Localize known action error codes while preserving legacy message strings. */
 export function localizeActionError(
   error: string,
   translate: Translator,
@@ -13,5 +13,5 @@ export function localizeActionError(
   if (!/^[a-z][a-z0-9_]*$/i.test(code)) return fallback;
   const key = `${catalogPrefix}.${code}`;
   const translated = translate(key);
-  return translated === key ? fallback : translated;
+  return translated === key || translated === `[${key}]` ? fallback : translated;
 }

@@ -10,6 +10,7 @@ import {
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
 import { designerEditableFieldsFor } from "@/lib/content/production-fields";
+import { DomainError } from "@/lib/content/workflow";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { applyResearchTeardownToPayload, ResearchTeardownSchema } from "@/lib/research/teardown";
 
@@ -33,7 +34,7 @@ export type UpdateFormatPayloadInput = z.infer<typeof UpdateFormatPayloadSchema>
 export async function updateFormatPayload(actor: Actor, input: UpdateFormatPayloadInput) {
   const parsed = UpdateFormatPayloadSchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    throw new DomainError("validation_failed", "The creative details are invalid.");
   }
   const [item] = await db
     .select({
@@ -47,7 +48,7 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
 
   const isManagerOrPlanner = await hasWorkspaceRole(actor, item.workspaceId, [
     "workspace_manager",
@@ -58,17 +59,25 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
   await requirePolicy(Promise.resolve(isManagerOrPlanner || isAssignedDesigner), "update_content");
 
   if (item.status === "cancelled") {
-    throw new Error(
+    throw new DomainError(
+      "invalid_transition",
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
   }
 
   // The persisted format is authoritative, even when the form posts a stale format.
-  const submitted = parseFormatPayload(item.format, parsed.data.formatPayload) as Record<
-    string,
-    unknown
-  >;
-  const current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
+  let submitted: Record<string, unknown>;
+  let current: Record<string, unknown>;
+  try {
+    submitted = parseFormatPayload(item.format, parsed.data.formatPayload) as Record<
+      string,
+      unknown
+    >;
+    current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The creative details do not match this format.");
+  }
   const next = isAssignedDesigner ? { ...current } : submitted;
   if (isAssignedDesigner) {
     for (const key of designerEditableFieldsFor(item.format)) {
@@ -76,7 +85,13 @@ export async function updateFormatPayload(actor: Actor, input: UpdateFormatPaylo
       else delete next[key];
     }
   }
-  const stored = parseFormatPayload(item.format, next);
+  let stored: Record<string, unknown>;
+  try {
+    stored = parseFormatPayload(item.format, next) as Record<string, unknown>;
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The creative details do not match this format.");
+  }
   const beforeKeys = Object.keys(current).sort();
 
   await db.transaction(async (tx) => {
@@ -131,15 +146,25 @@ export async function applyResearchTeardownToFormatPayload(
       ),
     )
     .limit(1);
-  if (!source) throw new Error("Research teardown is not linked to this content item");
+  if (!source) {
+    throw new DomainError("not_found", "Research teardown is not linked to this content item");
+  }
 
   const teardown = ResearchTeardownSchema.safeParse(source.result);
-  if (!teardown.success) throw new Error("Saved research teardown is invalid");
-  const applied = applyResearchTeardownToPayload({
-    format: source.format as ContentFormat,
-    current: source.formatPayload,
-    teardown: teardown.data,
-  });
+  if (!teardown.success) {
+    throw new DomainError("validation_failed", "The saved research teardown is invalid.");
+  }
+  let applied: ReturnType<typeof applyResearchTeardownToPayload>;
+  try {
+    applied = applyResearchTeardownToPayload({
+      format: source.format as ContentFormat,
+      current: source.formatPayload,
+      teardown: teardown.data,
+    });
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The research fields do not match this format.");
+  }
   if (applied.fields.length === 0) return applied.fields;
 
   await updateFormatPayload(actor, {

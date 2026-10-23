@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { NavigableArrayField } from "@/components/forms/navigable-array-field";
 import type { ActionState } from "@/lib/validation/action-state";
 import { useBeforeunloadDirtyGuard } from "@/lib/forms/use-beforeunload-dirty-guard";
@@ -725,7 +726,13 @@ export function FormatAwareContentEditor({
               className="text-label text-danger basis-full"
               data-testid="format-aware-save-error"
             >
-              {state.error}
+              {localizeActionError(
+                state.error,
+                t,
+                "contentMutationError.",
+                "contentDetail.contentMutationErrors",
+                t("contentDetail.contentMutationErrors.failed"),
+              )}
             </p>
           ) : null}
         </form>

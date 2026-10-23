@@ -6,6 +6,7 @@ import { CheckCircle2, ChevronDown, Save, Loader2, ListChecks } from "lucide-rea
 
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
 import type { ActionState } from "@/lib/validation/action-state";
 import {
@@ -362,7 +363,13 @@ export function FormatPayloadEditor({
                   data-testid="format-payload-save-error"
                   className="text-label text-danger font-semibold"
                 >
-                  {state.error}
+                  {localizeActionError(
+                    state.error,
+                    t,
+                    "contentMutationError.",
+                    "contentDetail.contentMutationErrors",
+                    t("contentDetail.contentMutationErrors.failed"),
+                  )}
                 </p>
               ) : state?.ok ? (
                 <p

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { contentItems } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { DomainError } from "@/lib/content/workflow";
 import {
   AUDIENCE_COPY_KEYS,
   audienceCopyFromPayload,
@@ -30,7 +31,10 @@ export const UpdateAudienceCopySchema = z.object({
 export type UpdateAudienceCopyInput = z.infer<typeof UpdateAudienceCopySchema>;
 
 export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopyInput) {
-  const parsed = UpdateAudienceCopySchema.parse(input);
+  const parsed = UpdateAudienceCopySchema.safeParse(input);
+  if (!parsed.success) {
+    throw new DomainError("validation_failed", "The audience copy is invalid.");
+  }
   const [item] = await db
     .select({
       id: contentItems.id,
@@ -41,21 +45,32 @@ export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopy
       revision: contentItems.revision,
     })
     .from(contentItems)
-    .where(eq(contentItems.id, parsed.contentItemId))
+    .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
     "update_audience_copy",
   );
-  if (item.status === "cancelled")
-    throw new Error("This idea is cancelled and can no longer be edited.");
+  if (item.status === "cancelled") {
+    throw new DomainError(
+      "invalid_transition",
+      "This idea is cancelled and can no longer be edited.",
+    );
+  }
 
-  const current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
-  const submitted = parseFormatPayload(item.format, parsed.formatPayload) as Record<
-    string,
-    unknown
-  >;
+  let current: Record<string, unknown>;
+  let submitted: Record<string, unknown>;
+  try {
+    current = parseFormatPayload(item.format, item.formatPayload) as Record<string, unknown>;
+    submitted = parseFormatPayload(item.format, parsed.data.formatPayload) as Record<
+      string,
+      unknown
+    >;
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The audience copy does not match this format.");
+  }
   const currentCreative = { ...current };
   const submittedCreative = { ...submitted };
   for (const key of AUDIENCE_COPY_KEYS) {
@@ -65,9 +80,18 @@ export async function updateAudienceCopy(actor: Actor, input: UpdateAudienceCopy
   delete currentCreative.translations;
   delete submittedCreative.translations;
   if (JSON.stringify(currentCreative) !== JSON.stringify(submittedCreative)) {
-    throw new Error("Only audience-facing copy can be changed from the Copy tab.");
+    throw new DomainError(
+      "validation_failed",
+      "Only audience-facing copy can be changed from the Copy tab.",
+    );
   }
-  const next = mergeAudienceCopy(item.format, current, audienceCopyFromPayload(submitted));
+  let next: Record<string, unknown>;
+  try {
+    next = mergeAudienceCopy(item.format, current, audienceCopyFromPayload(submitted));
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The audience copy does not match this format.");
+  }
   const changedKeys: string[] = AUDIENCE_COPY_KEYS.filter(
     (key) => JSON.stringify(current[key] ?? null) !== JSON.stringify(next[key] ?? null),
   );
@@ -106,14 +130,17 @@ export type PatchAudienceCopyInput = z.infer<typeof PatchAudienceCopySchema>;
 export async function patchAudienceCopy(actor: Actor, input: PatchAudienceCopyInput) {
   const parsed = PatchAudienceCopySchema.safeParse(input);
   if (!parsed.success) {
-    throw new Error(parsed.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; "));
+    throw new DomainError("validation_failed", "The audience-copy patch is invalid.");
   }
   if (
     parsed.data.caption === undefined &&
     parsed.data.hashtags === undefined &&
     parsed.data.firstComment === undefined
   ) {
-    throw new Error("At least one of caption, hashtags, or firstComment must be provided.");
+    throw new DomainError(
+      "validation_failed",
+      "At least one audience-copy field must be provided.",
+    );
   }
 
   const [item] = await db
@@ -127,11 +154,17 @@ export async function patchAudienceCopy(actor: Actor, input: PatchAudienceCopyIn
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
 
   const format = item.format as ContentFormat | undefined;
-  if (!format) throw new Error("Content format is missing");
-  const current = parseFormatPayload(format, item.formatPayload) as Record<string, unknown>;
+  if (!format) throw new DomainError("validation_failed", "Content format is missing");
+  let current: Record<string, unknown>;
+  try {
+    current = parseFormatPayload(format, item.formatPayload) as Record<string, unknown>;
+  } catch (error) {
+    if (!(error instanceof z.ZodError)) throw error;
+    throw new DomainError("validation_failed", "The current audience copy is invalid.");
+  }
   const patch: Record<string, unknown> = {};
   if (parsed.data.caption !== undefined) patch.caption = parsed.data.caption;
   if (parsed.data.hashtags !== undefined) patch.hashtags = parsed.data.hashtags;

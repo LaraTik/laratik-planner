@@ -10,6 +10,7 @@ import { AUTOSAVE_DEBOUNCE_MS } from "@/lib/forms/autosave";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { FormSummary } from "@/components/forms/form-summary";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { rendererFor } from "@/components/forms/format-payload-field-renderers";
 import { fieldsFor } from "@/components/forms/format-payload-field-set";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
@@ -481,7 +482,17 @@ export function AudienceCopyPanel({
         <input type="hidden" name="format" value={format} />
         <input type="hidden" name="formatPayload" value={JSON.stringify(payload)} />
         <FormSummary
-          {...(state.error ? { error: state.error } : {})}
+          {...(state.error
+            ? {
+                error: localizeActionError(
+                  state.error,
+                  t,
+                  "contentMutationError.",
+                  "contentDetail.contentMutationErrors",
+                  t("contentDetail.contentMutationErrors.failed"),
+                ),
+              }
+            : {})}
           {...(state.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
           fieldLabels={fieldLabels}
         />
