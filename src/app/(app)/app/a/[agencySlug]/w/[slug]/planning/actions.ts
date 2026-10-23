@@ -207,7 +207,20 @@ export async function changeContentOwnerAction(input: {
   try {
     await assignContentOwner(actor, parsed.data);
   } catch (error) {
-    return actionFailure<AssignContentOwnerFields>(error, "The owner could not be changed.");
+    if (error instanceof DomainError) {
+      return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
+        publicMessage: `ownerError.${error.code}`,
+      });
+    }
+    if (error instanceof PermissionDeniedError) {
+      return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
+        publicMessage: "ownerError.forbidden",
+      });
+    }
+    logError("planning.content_owner_assignment_failed", { err: error });
+    return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
+      exposeErrorMessage: false,
+    });
   }
   return { ok: true };
 }

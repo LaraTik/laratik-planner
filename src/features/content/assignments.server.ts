@@ -223,7 +223,7 @@ export async function assignContentOwner(actor: Actor, input: AssignContentOwner
     .from(contentItems)
     .where(eq(contentItems.id, parsed.data.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
 
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),

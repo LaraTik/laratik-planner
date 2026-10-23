@@ -57,6 +57,14 @@
   "changeOwnerSaving": "Changing…",
   "changeOwnerSuccess": "Owner changed for {title}",
   "changeOwnerFailed": "Could not change the owner",
+  "changeOwnerErrors": {
+    "not_found": "This content item is no longer available. Refresh and try again.",
+    "invalid_transition": "This content item can no longer be changed in its current state.",
+    "validation_failed": "Check the owner selection and try again.",
+    "conflict": "The content item changed while you were working. Refresh and try again.",
+    "forbidden": "You do not have permission to change this owner.",
+    "failed": "Could not change the owner. Please try again."
+  },
   "changeOwnerNoOptions": "No eligible workspace members are available.",
   "rowActionSubmit": "Submit for review",
   "rowActionResubmit": "Resubmit for review",

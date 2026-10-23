@@ -57,6 +57,14 @@
   "changeOwnerSaving": "جارٍ التغيير…",
   "changeOwnerSuccess": "تم تغيير مالك {title}",
   "changeOwnerFailed": "تعذّر تغيير المالك",
+  "changeOwnerErrors": {
+    "not_found": "لم يعد عنصر المحتوى هذا متاحًا. حدّث الصفحة وحاول مرة أخرى.",
+    "invalid_transition": "لم يعد بالإمكان تغيير عنصر المحتوى في حالته الحالية.",
+    "validation_failed": "تحقق من اختيار المالك وحاول مرة أخرى.",
+    "conflict": "تغيّر عنصر المحتوى أثناء عملك. حدّث الصفحة وحاول مرة أخرى.",
+    "forbidden": "ليست لديك صلاحية تغيير هذا المالك.",
+    "failed": "تعذّر تغيير المالك. حاول مرة أخرى."
+  },
   "changeOwnerNoOptions": "لا يوجد أعضاء مؤهلون في مساحة العمل.",
   "rowActionSubmit": "إرسال للمراجعة",
   "rowActionResubmit": "إعادة إرسال للمراجعة",

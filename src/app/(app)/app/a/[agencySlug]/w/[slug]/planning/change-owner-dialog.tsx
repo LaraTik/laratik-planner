@@ -47,6 +47,17 @@ export function ChangeOwnerDialog({
   const selectedOwnerId = draftOwnerId ?? currentOwnerId ?? "";
   const tr = (key: string, fallback: string, params?: Record<string, string | number>) =>
     t(key, params) === key ? fallback : t(key, params);
+  const ownerErrorMessage = (error: string) => {
+    const code = error.startsWith("ownerError.") ? error.slice("ownerError.".length) : null;
+    if (!code) return error;
+    const fallback =
+      code === "forbidden"
+        ? "You do not have permission to change this owner."
+        : code === "not_found"
+          ? "This content item is no longer available. Refresh and try again."
+          : "Could not change the owner. Please try again.";
+    return tr(`common.changeOwnerErrors.${code}`, fallback);
+  };
 
   function handleOpenChange(next: boolean) {
     if (!next) setDraftOwnerId(null);
@@ -65,7 +76,7 @@ export function ChangeOwnerDialog({
         });
         if (!result.ok) {
           toast.error(tr("common.changeOwnerFailed", "Could not change the owner"), {
-            description: result.error,
+            description: result.error ? ownerErrorMessage(result.error) : undefined,
           });
           return;
         }

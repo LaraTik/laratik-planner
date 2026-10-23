@@ -10,6 +10,7 @@ const contentMock = vi.hoisted(() => ({
   claimAsDesigner: vi.fn(),
   transitionContent: vi.fn(),
   assignDesigner: vi.fn(),
+  assignContentOwner: vi.fn(),
 }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
@@ -26,6 +27,7 @@ vi.mock("@/features/content/server", async (importOriginal) => {
     claimAsDesigner: contentMock.claimAsDesigner,
     transitionContent: contentMock.transitionContent,
     assignDesigner: contentMock.assignDesigner,
+    assignContentOwner: contentMock.assignContentOwner,
   };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
@@ -40,6 +42,7 @@ vi.mock("@/lib/publishing/service", async (importOriginal) => {
 });
 
 const {
+  changeContentOwnerAction,
   assignDesignerAction,
   claimAction,
   decideApprovalAction,
@@ -63,6 +66,7 @@ beforeEach(() => {
   contentMock.claimAsDesigner.mockReset();
   contentMock.transitionContent.mockReset();
   contentMock.assignDesigner.mockReset();
+  contentMock.assignContentOwner.mockReset();
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
   approvalMock.decideApproval.mockReset();
@@ -143,6 +147,36 @@ describe("claimAction error boundary", () => {
     expect(result).toEqual({ error: "workflowError.failed" });
     expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
     expect(loggerMock.logError).toHaveBeenCalledWith("planning.designer_assignment_failed", {
+      err: error,
+    });
+  });
+
+  it("returns a stable code for expected owner assignment failures", async () => {
+    contentMock.assignContentOwner.mockRejectedValue(new DomainError("not_found", "missing item"));
+
+    const result = await changeContentOwnerAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000005",
+      ownerId: "00000000-0000-4000-8000-000000000006",
+    });
+
+    expect(result).toEqual({ error: "ownerError.not_found" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not return unexpected owner assignment details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    contentMock.assignContentOwner.mockRejectedValue(error);
+
+    const result = await changeContentOwnerAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000005",
+      ownerId: "00000000-0000-4000-8000-000000000006",
+    });
+
+    expect(result).toEqual({ error: "ownerError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.content_owner_assignment_failed", {
       err: error,
     });
   });
