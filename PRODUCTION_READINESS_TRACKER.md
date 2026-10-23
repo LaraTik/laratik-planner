@@ -4130,3 +4130,15 @@ browser run did not. The current runner retains the 8 GiB heap setting without
 restart suppression. The full browser matrix has not passed, so this is
 **Tested**, not **Verified**. Visual parity remains incomplete under A84.
 AD-002 remains **In Progress** and the push gate remains closed.
+
+### Architecture review — Platform overview query ownership (2026-10-23)
+
+On clean SHA `70bcf3695be7e9b18bd73e6940abeb6778cc37d1`, the platform overview's
+aggregate and recent-agency reads moved behind the server-only
+`src/features/platform/overview/server.ts` entry point. The route retains its
+permission gate, translation, and UI. The recent-agency query no longer selects
+an unused timestamp. Empty and populated query results have focused coverage;
+the platform test area passed 86/86, and the hook passed type-check plus the
+focused ownership/query tests (37/37). No public contract or stored-data
+behavior changed. Full release-browser/visual evidence and independent review
+remain open; this is **Tested**, not **Verified**. AD-002 remains **In Progress**.

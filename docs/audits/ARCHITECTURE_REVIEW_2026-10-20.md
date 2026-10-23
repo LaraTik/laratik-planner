@@ -3315,3 +3315,20 @@ behavioral or design change was inferred from the mismatch. Reconcile each route
 against its current Stitch source, record intended exceptions, and update the
 visual evidence only after confirming the approved design. Full visual coverage
 remains incomplete; AD-002 remains **In Progress**.
+
+## A85 — Platform overview route owned database reads and rendering together
+
+**Priority: P2 — feature ownership and query efficiency.** The platform
+overview route directly owned four aggregate queries and a recent-agency query
+alongside authorization and rendering. That made the App Router file the
+owner of persistence as well as route composition, contrary to the repository's
+incremental feature-module rule. The aggregate and recent-agency read model now
+lives behind the server-only `src/features/platform/overview/server.ts` entry
+point. The route retains its platform permission gate, translation, and UI
+composition. The agency projection now selects only fields used by the list;
+the previous unused `createdAt` field was removed. Empty and populated result
+tests pass, and test ownership maps the feature into the platform area. The
+focused platform area passes 86/86; type-check passes. No route, permission,
+workflow, or persistence contract changed. Full browser/visual release evidence
+and independent review remain open; this change is **Tested**, not **Verified**.
+AD-002 remains **In Progress**.

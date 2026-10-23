@@ -3306,3 +3306,14 @@ refused. The suppression was rolled back. The experiment's focused unit tests,
 type-check, and `pnpm verify` passed, but full Chromium did not. The current
 runner keeps the 8 GiB heap setting without restart suppression. No browser
 release pass is claimed.
+
+## Platform overview feature query — `70bcf3695be7e9b18bd73e6940abeb6778cc37d1`
+
+The platform overview page now calls a server-only feature query for the KPI
+aggregates and recent agency list. The query selects only the agency fields the
+page renders. Focused query tests cover empty and populated results, and the
+test-ownership regression keeps future changes in the platform area. The
+focused unit checks passed 37/37; the complete platform unit area passed 86/86;
+type-check passed in both the focused run and commit hook. No route, role, or
+stored-data contract changed. The full browser/visual release gate is still
+incomplete, so this is **Tested**, not **Verified**.
