@@ -2207,6 +2207,21 @@ architecture --layer unit`; the Trends area mapping selected five unit files
   clean-SHA evidence, and independent review remain open. `AD-002` remains
   **In Progress**.
 
+## 2026-10-23 — Bound design-queue bulk archive failures
+
+- Bulk archive server actions now return stable error codes for unauthenticated,
+  invalid-selection, forbidden, and unexpected failures. Unexpected details
+  are logged through the credential-scrubbing logger; the client renders safe
+  localized English/Arabic messages.
+- Five action tests passed; the publishing area passed 214/214. On clean SHA
+  `479437bc2f863041359f249c884c120477960221`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 598 unit files / 5,169 tests, and production
+  build.
+- Route browser/accessibility/responsive/visual checks, full browser matrix,
+  and independent verification remain open. Successful archive results,
+  authorization policy, and persistence behavior are unchanged. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
 ## 2026-10-21 — Media retry worker ownership
 
 - Reviewed the 2,674-line media service and confirmed it spans several

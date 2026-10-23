@@ -2923,3 +2923,20 @@ unset and Docker is unavailable. No schema, retry threshold, delivery state,
 route, or user-facing response changed. Browser/visual release checks, manual
 route review, Firefox, and independent verification remain open; AD-002
 remains **In Progress**.
+
+## A62 — Design-queue archive action exposed raw failures
+
+**Priority: P2 — safe server-action errors and localized feedback.** The
+design-queue bulk archive action returned raw schema and service exception
+messages, and its client catch displayed thrown errors directly. It now
+returns stable unauthenticated, invalid-selection, forbidden, or failed codes;
+unexpected failures are logged through the credential-scrubbing logger. The
+toolbar translates all codes in English and Arabic and uses generic copy for
+unexpected thrown errors. Five action regressions passed, and the publishing
+unit area passed 214/214. On clean SHA
+`479437bc2f863041359f249c884c120477960221`, `pnpm verify` passed formatting,
+lint, TypeScript, all 598 unit files / 5,169 tests, and production build.
+Successful archive results, authorization policy, and persistence behavior
+remain unchanged. Route browser/accessibility/responsive/visual checks, full
+browser matrix, and independent verification remain open; AD-002 remains
+**In Progress**.

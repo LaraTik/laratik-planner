@@ -2083,6 +2083,19 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Design-queue bulk archive error boundary — `479437bc2f863041359f249c884c120477960221`
+
+The bulk archive action now returns stable codes for unauthenticated,
+invalid-selection, forbidden, and unexpected failures; diagnostics use the
+credential-scrubbing logger. The client translates failures in English and
+Arabic and never displays thrown error text. The action regressions passed
+5/5; the publishing area passed 214/214. On this clean SHA, `pnpm verify`
+passed formatting, ESLint, TypeScript, all 598 unit files / 5,169 tests, and
+the production build. Successful archive results, authorization policy, and
+persisted-data behavior are unchanged. Route browser/accessibility/responsive/
+visual checks, full browser matrix, and independent verification remain open.
+This work is **Tested**, not **Verified**.
+
 ## Workspace Settings AI suggestion error boundary — `273dc281e84b70b21f4a06693e5831d0369cd39e`
 
 The lead-time and monthly-target suggestion actions now return stable error
