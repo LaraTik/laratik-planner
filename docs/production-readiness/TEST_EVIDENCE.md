@@ -3275,3 +3275,21 @@ passed 281, failed 2, skipped 1, and left 6 unrun; one failure was this fixture
 and the other timed out during Next's dev-server memory-threshold restart. The
 visual phase did not start. Full release rerun and exact-HEAD visual evidence
 remain open; this is **Tested**, not **Verified**.
+
+## Architecture review validation batch — `b08c073681d12c006ab014141803b1b442f18c72`
+
+`pnpm verify` passed formatting, lint, typecheck, all 604 unit files / 5,215
+tests, and the production build. The full integration suite passed against the
+disposable `planner_test` database. The migration drill passed all five
+scenarios (from-zero, skipped-migration repair, in-place upgrade, backup and
+restore, and failed-migration abort) in 37.4 seconds.
+
+The isolated Chromium release project ran 290 tests in 25 minutes: 284 passed,
+five failed, and one was skipped. The Next dev server logged a memory-threshold
+restart during Trends coverage. The five failed cases passed together in a
+fresh focused run (9/9). The other browser projects did not run. The visual
+project started its 265-check matrix and was interrupted after 42 checks
+because exact-reference mismatches appeared across existing account, settings,
+platform, Brand Kit, and Client screens. This visual result is incomplete; no
+references were updated. The release matrix is not green, and this evidence is
+**Tested**, not **Verified**.

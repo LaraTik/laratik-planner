@@ -3261,3 +3261,31 @@ unrelated journeys: this Community fixture issue and a Trends timeout during a
 Next dev-server memory-threshold restart. The visual phase did not start. Full
 release-browser/visual and independent verification remain open; this is
 **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+## A83 — Long local browser runs can fail after the Next dev server reaches its memory threshold
+
+**Priority: P2 — release-evidence reliability and validation throughput.** On
+clean SHA `b08c073681d12c006ab014141803b1b442f18c72`, the batched code and
+persistence gates passed: `pnpm verify`, the full integration suite, and all
+five migration-drill scenarios. The full isolated Chromium release project ran
+for 25 minutes and finished with 284 passed, five failed, and one skipped. Next
+logged its memory-threshold restart during the Trends cases. All five failed
+cases then passed in a fresh, focused run (9/9 tests across their specs), which
+points to accumulated local-run pressure rather than a reproducible defect.
+Other browser projects did not start because the release command stops after
+the Chromium project fails.
+
+The separate visual suite began its 265-check matrix and was stopped after 42
+checks once exact-reference mismatches appeared on settings, platform overview,
+agency detail, Brand Kit, Client, and account routes. This is **incomplete**
+visual evidence, not a pass. The reference mismatches need route-by-route
+triage; no reference was refreshed because repo guidance requires an approved
+design change before doing so. No production behavior, schema, or data changed
+as a result of this finding.
+
+Adoption item: investigate a safe browser-test batching strategy that starts a
+fresh dev server between deterministic fixture groups, while preserving the
+serial database contract. Validate that strategy on the exact full matrix
+before changing the release gate. Keep the release state **Tested**, not
+**Verified**, until all five browser projects and the full visual suite pass;
+AD-002 remains **In Progress**.

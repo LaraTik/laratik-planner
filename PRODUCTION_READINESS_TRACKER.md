@@ -4092,3 +4092,28 @@ default framebuffer`, then consumes a CPU core without returning control;
   persistence schema, or route contract changed.
 - **Status:** Tested. Full release browser/visual evidence and independent
   review remain open; do not mark Verified.
+
+### Architecture review — batched validation reliability (2026-10-23)
+
+- **Tested on:** `b08c073681d12c006ab014141803b1b442f18c72`.
+- **Batched gates:** `pnpm verify` passed (format, lint, typecheck, 604 unit
+  files / 5,215 tests, and production build). The full integration suite
+  passed against the disposable `planner_test` database.
+- **Migration drill:** `NODE_ENV=test pnpm migration-drill` passed all five
+  scenarios in 37.4 seconds.
+- **Browser evidence:** the full isolated Chromium project ran 290 tests in
+  25 minutes: 284 passed, five failed, one skipped. Next restarted after its
+  memory threshold was reached during Trends coverage. The five failed tests
+  passed together on a fresh server (9/9). Firefox, WebKit, mobile Chromium,
+  and mobile Safari did not run because the release command stopped after
+  Chromium failures.
+- **Visual evidence:** `pnpm test:visual` started 265 checks and was stopped
+  after 42 checks when exact-reference mismatches appeared across account,
+  settings, platform overview/agency, Brand Kit, and Client screens. This is
+  incomplete and failed evidence; no snapshots were refreshed. The visual
+  route inventory needs triage, and no design-system change was made.
+- **Next step:** assess safe fresh-server test batching between deterministic
+  fixture groups, then rerun the complete browser and visual gates on the
+  resulting clean SHA.
+- **Status:** **Tested**, not **Verified**. Release evidence is incomplete and
+  the push gate remains closed; AD-002 remains **In Progress**.
