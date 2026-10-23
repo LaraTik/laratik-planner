@@ -2975,3 +2975,19 @@ matrix, then stops safely at the missing `TEST_DATABASE_URL` guard before
 launching browsers. The affected unit selector passed on the claim change. No
 product behavior, release gate, or test assertion was removed. AD-002 remains
 **In Progress** pending database/browser evidence and independent review.
+
+## A65 — Workflow transition action exposed raw exceptions
+
+**Priority: P2 — safe server-action errors and localized feedback.** The
+planning transition action returned arbitrary service exception messages,
+including database diagnostics, to the workflow rail. Expected domain failures
+now use stable workflow codes; missing content and approval requests and the
+missing-designer precondition are typed domain failures. Unexpected exceptions
+are logged through the sanitized logger and return generic safe copy. The rail
+localizes public codes in English and Arabic. Four direct action tests passed;
+the commit hook's affected selection passed 219 files / 1,748 tests, plus the
+four changed-file tests. Focused ESLint and repository TypeScript checks passed
+on clean SHA `6e027c36484e86b5c174da13d3de8d79d50757cc`. A full `pnpm verify`,
+browser review, and full release evidence are still pending for the final
+candidate. No permission, successful workflow, route, or persistence contract
+changed. AD-002 remains **In Progress**.

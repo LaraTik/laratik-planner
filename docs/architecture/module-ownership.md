@@ -57,6 +57,12 @@ canonical implementation; compatibility exports may forward to it temporarily.
   clients, secrets, privileged actors, and server-only modules never cross into
   a Client Component. Keep the interactive client surface as small as the
   behavior allows.
+- **Actions return stable public failures.** Server actions and route handlers
+  translate known domain failures to stable codes and localized copy. They log
+  unexpected exceptions through the sanitized logger and return generic safe
+  feedback; exception messages, SQL/provider details, and stack traces never
+  become client state. Keep domain errors typed so expected validation and
+  permission outcomes remain distinguishable from operational failures.
 
 ## Import boundaries
 

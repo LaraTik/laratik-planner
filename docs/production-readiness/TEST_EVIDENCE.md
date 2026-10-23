@@ -3084,3 +3084,14 @@ browser selector chose the three Chromium content specs and stopped at the
 runner's `TEST_DATABASE_URL` guard before launching a browser. No browser or
 product behavior was skipped. This manifest-only change does not replace the
 open release browser matrix or visual checks.
+
+## Workflow transition error boundary — `6e027c36484e86b5c174da13d3de8d79d50757cc`
+
+Focused ESLint passed for the changed action, feature service, workflow rail,
+and action-error tests. `pnpm typecheck` passed. The direct action suite passed
+4/4. The commit hook's affected-unit selection passed 219 test files / 1,748
+tests and reran the directly changed workflow action suite, 4/4. No database,
+migration, browser, visual, or manual route evidence was produced by this
+change; those remain open for the final candidate. The error-boundary change
+does not alter a successful transition, authorization rule, route, or
+persisted-data contract.
