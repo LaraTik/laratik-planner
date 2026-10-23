@@ -319,7 +319,7 @@ jobs:
         # does not push a half-broken image to the registry. If the
         # smoke step exits non-zero, this step is skipped via `if:` and
         # the job fails before the push.
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
@@ -333,7 +333,7 @@ jobs:
         # previous push (in deploy.yml's build job) is gone as of the
         # 2026-08-28 single-build change; this is the only place the
         # production image is published.
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
         run: |
           docker push "ghcr.io/laratik/laratik-planner:${GITHUB_SHA}"
           docker push ghcr.io/laratik/laratik-planner:latest

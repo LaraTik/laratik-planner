@@ -61,6 +61,20 @@ describe("CI production-image smoke environment", () => {
     expect(buildSmoke).not.toContain("    services:");
   });
 
+  it("publishes release images only after a manual CI run on main passes smoke", () => {
+    const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
+    const buildSmokeStart = workflow.indexOf("  build-smoke:");
+    const trendsStart = workflow.indexOf("  trends-quality:", buildSmokeStart);
+    const buildSmoke = workflow.slice(buildSmokeStart, trendsStart);
+    const publishCondition =
+      "if: success() && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'";
+
+    expect(buildSmokeStart).toBeGreaterThan(-1);
+    expect(trendsStart).toBeGreaterThan(buildSmokeStart);
+    expect(buildSmoke.split(publishCondition)).toHaveLength(3);
+    expect(buildSmoke).not.toContain("github.event_name == 'push'");
+  });
+
   it("lets the integration runner own the normal migration before tests", () => {
     const workflow = readFileSync(resolve(process.cwd(), ".github/workflows/ci.yml"), "utf8");
 
