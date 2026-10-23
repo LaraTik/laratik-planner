@@ -3175,3 +3175,14 @@ changed action/localization suites, 23/23. Batch validation errors now have
 English/Arabic codes; unexpected persistence details are logged and withheld.
 Batch write atomicity and successful behavior are unchanged. Database,
 browser, visual, and independent verification remain open.
+
+## Safe-by-default action failure helper — `43b59841a61c52495a7177492e56ad8d07508a45`
+
+Focused helper tests passed 8/8; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook passed TypeScript and 13 affected unit
+files / 94 tests, then reran the helper suite, 8/8. Unclassified exception
+messages are no longer returned by the shared helper; explicitly classified
+public messages remain supported. No route, permission, persistence, or
+successful-workflow behavior changed. Database, browser, visual, full
+`pnpm verify`, and independent review remain open. This checkpoint is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.

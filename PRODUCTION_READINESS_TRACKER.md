@@ -3971,3 +3971,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   suites, 23/23.
 - Database, browser, visual, and independent verification remain open. This
   work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Make shared action failures safe by default
+
+- `actionFailure` now returns the safe fallback unless the caller explicitly
+  supplies classified public copy. It never returns an exception message;
+  the planning action call sites no longer need repeated opt-out flags. The
+  regression test covers credential-shaped diagnostic text and an explicitly
+  classified message.
+- Focused helper tests passed 8/8; focused ESLint, Prettier, and TypeScript
+  passed. On clean code SHA `43b59841a61c52495a7177492e56ad8d07508a45`, the
+  commit hook passed TypeScript and 13 affected unit files / 94 tests, then
+  reran the helper suite, 8/8.
+- No persistence, route, permission, or successful-workflow behavior changed.
+  Database, browser, visual, full `pnpm verify`, and independent review remain
+  open. This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.

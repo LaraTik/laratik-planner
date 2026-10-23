@@ -3115,3 +3115,19 @@ reran the changed action/localization suites, 23/23 on clean SHA
 `7e825366514d28d8b6fcfd65eef555f6de0c7d39`. Database/browser/visual release
 checks and independent verification remain open; AD-002 remains **In
 Progress**.
+
+## A74 — Shared action failure helper exposed exception text by default
+
+**Priority: P1 — server-action data minimization and safe defaults.** The
+`actionFailure` helper's documentation described exception text as diagnostic,
+but its default returned `Error.message` to the client unless each caller
+explicitly opted out. That inverted default made a future or missed caller a
+leak path. The helper now returns its safe fallback unless the caller supplies
+an explicitly classified `publicMessage`; the exception argument is never
+serialized. Existing call sites were checked: classified domain/permission
+messages remain explicit, and redundant opt-out flags were removed. Regression
+coverage verifies a credential-shaped exception is hidden by default and that
+classified public copy still works. No successful workflow or route contract
+changed. The code is **Tested**, not **Verified**; repository-wide release,
+database/browser, and independent review gates remain open. AD-002 remains
+**In Progress**.
