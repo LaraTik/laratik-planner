@@ -3236,8 +3236,28 @@ stable `reactivate_failed` outcome, and the member list displays localized
 English/Arabic inline feedback. A regression verifies that a credential-shaped
 failure stays out of the response and is logged; UI coverage verifies the
 inline localized state. Successful activation and membership behavior are
-unchanged. On clean SHA `cb74cbfa` (full SHA to follow in evidence), the commit
+unchanged. On clean SHA `cb74cbfaaf65101c0c8c01af07c944b2b05e82ca` (full SHA to follow in evidence), the commit
 hook passed TypeScript, 224 related unit files / 1,780 tests, and the focused
 action and member-list suites, 13/13. Full release checks and independent
 review remain open; this is **Tested**, not **Verified**. AD-002 remains **In
 Progress**.
+
+## A82 — Community E2E seed fell back to a plan without its required module
+
+**Priority: P2 — deterministic test fixtures and trustworthy release results.**
+The Community browser fixture requested the `enterprise` plan but, when that
+row was absent, the dev seed attached whichever plan happened to be first.
+In the local disposable database that was a custom plan whose module ceiling
+excluded `community_inbox`, so the route correctly showed the plan-denied
+state and the test then failed while waiting for fixture content. The test-only
+seed now creates/reuses a dedicated `e2e-community-inbox` plan with the module
+in its ceiling and assigns that plan to its fixture agency. It no longer
+mutates a generic or arbitrary fallback plan. The previously failing Community
+journey and the Trends workspace opt-out journey passed together, 2/2, on the
+same source as clean SHA `b5a34a94`. The hook passed TypeScript and all 604 unit
+files / 5,215 tests. No production plan, route, permission, or schema changed.
+The earlier full browser attempt on `5c68b343` passed 281 checks and failed two
+unrelated journeys: this Community fixture issue and a Trends timeout during a
+Next dev-server memory-threshold restart. The visual phase did not start. Full
+release-browser/visual and independent verification remain open; this is
+**Tested**, not **Verified**. AD-002 remains **In Progress**.

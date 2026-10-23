@@ -3251,7 +3251,7 @@ successful access changes are unchanged; no migration or data-contract change
 was made. Full `pnpm verify`, release browser/a11y/visual evidence, and
 independent verification remain open. This is **Tested**, not **Verified**.
 
-## Member reactivation failure state — `cb74cbfa`
+## Member reactivation failure state — `cb74cbfaaf65101c0c8c01af07c944b2b05e82ca`
 
 The users action now catches reactivation failures, logs the internal error,
 and returns a stable code for localized inline feedback. A credential-shaped
@@ -3262,3 +3262,16 @@ then reran the focused suites, 13/13. Successful membership changes and
 authorization are unchanged; no migration or data-contract change was made.
 Full `pnpm verify`, release browser/a11y/visual checks, and independent
 verification remain open. This is **Tested**, not **Verified**.
+
+## Community E2E plan fixture — `b5a34a94`
+
+The dev seed now creates/reuses the dedicated `e2e-community-inbox` plan with
+`community_inbox` enabled, instead of falling back to an arbitrary plan when
+`enterprise` is unavailable. The Community inbox identity journey and Trends
+workspace opt-out journey passed together, 2/2, against the disposable local
+`planner_test` database. On the same source, the commit hook passed TypeScript
+and 604 unit files / 5,215 tests. The earlier full browser run on `5c68b343`
+passed 281, failed 2, skipped 1, and left 6 unrun; one failure was this fixture
+and the other timed out during Next's dev-server memory-threshold restart. The
+visual phase did not start. Full release rerun and exact-HEAD visual evidence
+remain open; this is **Tested**, not **Verified**.

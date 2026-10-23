@@ -4066,7 +4066,7 @@ default framebuffer`, then consumes a CPU core without returning control;
 
 ### Architecture review — member reactivation failure state (2026-10-23)
 
-- **Tested on:** `cb74cbfa` (full SHA recorded in the evidence bundle).
+- **Tested on:** `cb74cbfaaf65101c0c8c01af07c944b2b05e82ca` (full SHA recorded in the evidence bundle).
 - **Change:** Reactivation failures now stay in the users page's inline
   feedback, are logged for diagnosis, and use localized English/Arabic copy.
 - **Evidence:** Commit hook passed TypeScript, 224 related unit files / 1,780
@@ -4075,3 +4075,20 @@ default framebuffer`, then consumes a CPU core without returning control;
   persisted data, and migrations are unchanged.
 - **Status:** Tested. Full release verification and independent review remain
   open; do not mark Verified.
+
+### Architecture review — deterministic Community E2E entitlement (2026-10-23)
+
+- **Code tested on:** `b5a34a94` (full SHA recorded in the evidence bundle).
+- **Finding:** Community fixture selected an arbitrary fallback plan if
+  `enterprise` was missing; in this disposable database that plan did not
+  include `community_inbox`, so the route correctly denied access.
+- **Change:** Dev seed now creates/reuses a dedicated E2E plan with the module
+  ceiling and assigns only the Community fixture agency to it.
+- **Evidence:** The Community inbox and Trends opt-out regressions passed
+  together, 2/2. The commit hook passed TypeScript and 604 unit files / 5,215
+  tests. An earlier full browser run passed 281, failed 2, skipped 1, and did
+  not run 6; its visual phase did not start. Full release rerun is pending.
+- **Compatibility:** Test fixture only; no production plan, permission,
+  persistence schema, or route contract changed.
+- **Status:** Tested. Full release browser/visual evidence and independent
+  review remain open; do not mark Verified.
