@@ -288,6 +288,11 @@
     "revoke": "Revoke",
     "revoking": "Revoking…",
     "revoked": "Invitation revoked.",
+    "errors": {
+      "stale": "This invitation is no longer pending. Refresh the list and try again.",
+      "resend_failed": "We couldn't resend this invitation. Please try again.",
+      "revoke_failed": "We couldn't revoke this invitation. Please try again."
+    },
     "revokeAria": "Revoke invitation for {email}",
     "agencyAdmin": "Agency admin",
     "role": "Role",
