@@ -76,8 +76,13 @@ vi.mock("@/lib/security/rate-limit", () => ({
   rateLimitRuleFor: vi.fn(() => ({ windowSeconds: 60 })),
 }));
 
-const { toggleAgencyAdminAction, updateMemberRolesAction, resendInviteAction, revokeInviteAction } =
-  await import("@/app/(app)/app/users/actions");
+const {
+  toggleAgencyAdminAction,
+  toggleDeactivationAction,
+  updateMemberRolesAction,
+  resendInviteAction,
+  revokeInviteAction,
+} = await import("@/app/(app)/app/users/actions");
 const invitationService = await import("@/lib/auth/invitations");
 
 function formData(entries: Record<string, string>): FormData {
@@ -103,6 +108,18 @@ beforeEach(() => {
 });
 
 describe("workspace team membership actions", () => {
+  it("keeps reactivation persistence failures inline and logs them", async () => {
+    policyMock.isAgencyAdmin.mockResolvedValue(true);
+    const failure = new Error("postgres://planner:secret@db.test/planner");
+    vi.mocked(invitationService.reactivateUser).mockRejectedValueOnce(failure);
+
+    const result = await toggleDeactivationAction("member-1", false);
+
+    expect(result).toEqual({ errorCode: "reactivate_failed" });
+    expect(JSON.stringify(result)).not.toContain("secret");
+    expect(errorMock.captureError).toHaveBeenCalledWith("users.reactivateUser", failure);
+  });
+
   it("does not return infrastructure details from invitation actions", async () => {
     policyMock.isAgencyAdmin.mockResolvedValue(true);
     const failure = new Error("postgres://planner:secret@db.test/planner");

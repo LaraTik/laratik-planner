@@ -332,6 +332,7 @@
     "deactivateAria": "Deactivate {name}",
     "reactivate": "Reactivate",
     "reactivateAria": "Reactivate {name}",
+    "reactivateFailed": "The member could not be reactivated. Please try again.",
     "role": "Role",
     "member": "Member",
     "empty": "No members match the current filters."

@@ -332,6 +332,7 @@
     "deactivateAria": "تعطيل {name}",
     "reactivate": "إعادة تفعيل",
     "reactivateAria": "إعادة تفعيل {name}",
+    "reactivateFailed": "تعذرت إعادة تفعيل العضو. يُرجى المحاولة مرة أخرى.",
     "role": "الدور",
     "member": "العضو",
     "empty": "لا يطابق أي عضو عوامل التصفية الحالية."

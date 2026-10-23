@@ -246,7 +246,12 @@ export async function toggleDeactivationAction(userId: string, currentlyActive: 
       return { error: message };
     }
   } else {
-    await reactivateUser({ userId, agencyId, actorUserId: session.user.id });
+    try {
+      await reactivateUser({ userId, agencyId, actorUserId: session.user.id });
+    } catch (error) {
+      captureError("users.reactivateUser", error);
+      return { errorCode: "reactivate_failed" as const };
+    }
   }
   revalidatePath("/app/users");
   return { success: true };

@@ -249,6 +249,12 @@ export function MemberList({
                           setError(null);
                           const result = await toggleDeactivationAction(m.id, active);
                           if ("error" in result && result.error) setError(result.error);
+                          else if (
+                            "errorCode" in result &&
+                            result.errorCode === "reactivate_failed"
+                          ) {
+                            setError(t("users.memberList.reactivateFailed"));
+                          }
                         });
                       }}
                       aria-label={
