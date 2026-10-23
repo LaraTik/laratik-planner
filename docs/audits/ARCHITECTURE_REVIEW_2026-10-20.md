@@ -3007,3 +3007,18 @@ TypeScript and those checks on clean SHA
 `4ee09b73da096416f155d6715c2b0778bd831135`. Full `pnpm verify` and the release
 browser/database evidence remain open. Successful assignment behavior and
 permission checks are unchanged. AD-002 remains **In Progress**.
+
+## A67 — Approval decision action exposed raw service and database failures
+
+**Priority: P2 — safe server-action errors and localized workflow feedback.**
+Approval decisions now distinguish expected validation, missing-request,
+concurrent-decision, and wrong-workflow failures with a typed service error.
+The action maps those to the existing localized workflow error catalog,
+translates permission failures, and logs unexpected persistence details while
+returning generic safe copy. The rail now localizes both approval callback
+results. Regressions cover stable conflict codes and credential-shaped unknown
+failures. Focused ESLint and TypeScript checks passed; the commit hook passed
+15 affected test files / 152 tests and reran the direct 7-test suite on clean
+SHA `ced7c0bce2ab5e8ee953642d13677e28d3a9a79c`. Full `pnpm verify` and release
+browser/database evidence remain open. Approval transaction and authorization
+behavior are unchanged. AD-002 remains **In Progress**.

@@ -3105,3 +3105,12 @@ returned state contains only `workflowError.failed`. Focused ESLint and
 the affected selection, 27 test files / 248 tests, then reran the directly
 changed action suite, 5/5. No database, migration, browser, visual, or manual
 route evidence was produced; those gates remain open.
+
+## Approval decision error boundary — `ced7c0bce2ab5e8ee953642d13677e28d3a9a79c`
+
+The focused claim/workflow action suite passed 7/7, including stable expected
+conflict mapping and a credential-shaped persistence failure that is absent
+from returned action state. Focused ESLint and `pnpm typecheck` passed before
+commit. The commit hook passed TypeScript and 15 affected test files / 152
+tests, then reran the direct suite, 7/7. Database, migration, browser, visual,
+and manual route evidence remain open.
