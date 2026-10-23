@@ -154,6 +154,26 @@ function publicationActionFailure<Field extends string>(error: unknown): ActionS
   });
 }
 
+function contentMutationActionFailure<Field extends string>(
+  error: unknown,
+  event: string,
+): ActionState<Field> {
+  if (error instanceof DomainError) {
+    return actionFailure<Field>(error, "contentMutationError.failed", {
+      publicMessage: `contentMutationError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, "contentMutationError.failed", {
+      publicMessage: "contentMutationError.unauthorized",
+    });
+  }
+  logError(event, { err: error });
+  return actionFailure<Field>(error, "contentMutationError.failed", {
+    exposeErrorMessage: false,
+  });
+}
+
 /**
  * Resolve the workspace for a mutation.
  *
@@ -251,7 +271,7 @@ export async function quickCreateAction(
   try {
     id = await quickCreateContentItem(actor, parsed.data);
   } catch (error) {
-    return actionFailure<QuickCreateFields>(error, "The idea could not be created.");
+    return contentMutationActionFailure<QuickCreateFields>(error, "planning.content_create_failed");
   }
   redirect(
     `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${id}?created=1#overview`,
@@ -287,7 +307,10 @@ export async function updateContentItemAction(
       channelIds: parsed.data.channelIds,
     });
   } catch (error) {
-    return actionFailure<UpdateContentFields>(error, "The idea could not be saved.");
+    return contentMutationActionFailure<UpdateContentFields>(
+      error,
+      "planning.content_update_failed",
+    );
   }
   redirect(`${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning/${contentItemId}`);
 }

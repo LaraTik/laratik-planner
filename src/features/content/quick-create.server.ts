@@ -13,6 +13,7 @@ import {
   workspaceSettings,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { DomainError } from "@/lib/content/workflow";
 import { queryResearchPostObservation } from "@/lib/social/analytics-query";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import {
@@ -79,14 +80,16 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
           .limit(1)
       )[0]
     : null;
-  if (input.trendSignalId && !trendSignal)
-    throw new Error("Trend signal not found in this workspace");
+  if (input.trendSignalId && !trendSignal) {
+    throw new DomainError("not_found", "Trend signal not found in this workspace");
+  }
 
   const researchObservation = input.researchPostObservationId
     ? await queryResearchPostObservation(db, input.workspaceId, input.researchPostObservationId)
     : null;
-  if (input.researchPostObservationId && !researchObservation)
-    throw new Error("Research post not found in this workspace");
+  if (input.researchPostObservationId && !researchObservation) {
+    throw new DomainError("not_found", "Research post not found in this workspace");
+  }
 
   const researchTeardown = input.researchTeardownId
     ? (
@@ -102,8 +105,9 @@ export async function quickCreateContentItem(actor: Actor, input: QuickCreateInp
           .limit(1)
       )[0]
     : null;
-  if (input.researchTeardownId && !researchTeardown)
-    throw new Error("Research teardown not found in this workspace");
+  if (input.researchTeardownId && !researchTeardown) {
+    throw new DomainError("not_found", "Research teardown not found in this workspace");
+  }
 
   const storedFormatPayload =
     input.formatPayload === undefined

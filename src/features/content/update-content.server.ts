@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { activityEvents, contentItemChannels, contentItems, workspaces } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { DomainError } from "@/lib/content/workflow";
 import { parseFormatPayload, type ContentFormat } from "@/lib/format-payload/schemas";
 import { recordMaterialityEvent } from "@/lib/publishing/materiality";
 import { reconcileContentItemMediaFolders } from "@/lib/media/planning-folder-lifecycle";
@@ -62,7 +63,7 @@ export async function updateContentItem(
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
 
   await requirePolicy(
     hasWorkspaceRole(actor, item.workspaceId, ["workspace_manager", "content_planner"]),
@@ -70,7 +71,8 @@ export async function updateContentItem(
   );
 
   if (item.status === "cancelled") {
-    throw new Error(
+    throw new DomainError(
+      "invalid_transition",
       `This idea is in ${item.status.replaceAll("_", " ")} and can no longer be edited.`,
     );
   }

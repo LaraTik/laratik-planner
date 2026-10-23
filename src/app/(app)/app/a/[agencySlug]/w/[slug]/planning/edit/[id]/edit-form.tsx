@@ -8,6 +8,7 @@ import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-te
 import { FormField } from "@/components/forms/form-field";
 import { FormSubmitButton } from "@/components/forms/form-submit-button";
 import { FormSummary } from "@/components/forms/form-summary";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useLocaleCode, useLocaleT } from "@/components/i18n/locale-provider";
 import { focusFirstInvalid } from "@/lib/forms/focus-first-invalid";
@@ -104,7 +105,17 @@ export function EditIdeaForm({
       data-testid="edit-idea-form"
     >
       <FormSummary
-        {...(state?.error ? { error: state.error } : {})}
+        {...(state?.error
+          ? {
+              error: localizeActionError(
+                state.error,
+                t,
+                "contentMutationError.",
+                "contentDetail.contentMutationErrors",
+                t("contentDetail.contentMutationErrors.failed"),
+              ),
+            }
+          : {})}
         {...(state?.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
         fieldLabels={{
           title: t("planning.editForm.title"),

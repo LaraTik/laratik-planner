@@ -1,4 +1,5 @@
 import "server-only";
+import { DomainError } from "@/lib/content/workflow";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { socialChannels } from "@/lib/db/schema";
@@ -24,6 +25,6 @@ export function assertWorkspaceChannelSelection(
 ): void {
   const activeIdSet = new Set(activeIds);
   if (requestedIds.some((channelId) => !activeIdSet.has(channelId))) {
-    throw new Error(errorMessage);
+    throw new DomainError("validation_failed", errorMessage);
   }
 }

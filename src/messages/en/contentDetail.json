@@ -199,6 +199,14 @@
     "saveStateUnsaved": "Unsaved changes",
     "saveStateError": "Save failed — your edits are still here"
   },
+  "contentMutationErrors": {
+    "unauthorized": "You do not have permission to change this content item.",
+    "invalid_transition": "This content item can no longer be changed in its current state.",
+    "validation_failed": "Check the content details and selected channels, then try again.",
+    "conflict": "The content item changed while you were working. Refresh and try again.",
+    "not_found": "The selected content or research source is no longer available.",
+    "failed": "The content item could not be saved. Please try again."
+  },
   "readinessPanel": {
     "readyTitle": "Ready for publishing",
     "readyDescription": "No blockers, no recommendations. This item can go live.",

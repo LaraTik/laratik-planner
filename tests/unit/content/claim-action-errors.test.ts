@@ -11,6 +11,8 @@ const contentMock = vi.hoisted(() => ({
   transitionContent: vi.fn(),
   assignDesigner: vi.fn(),
   assignContentOwner: vi.fn(),
+  quickCreateContentItem: vi.fn(),
+  updateContentItem: vi.fn(),
 }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
@@ -28,6 +30,8 @@ vi.mock("@/features/content/server", async (importOriginal) => {
     transitionContent: contentMock.transitionContent,
     assignDesigner: contentMock.assignDesigner,
     assignContentOwner: contentMock.assignContentOwner,
+    quickCreateContentItem: contentMock.quickCreateContentItem,
+    updateContentItem: contentMock.updateContentItem,
   };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
@@ -47,7 +51,9 @@ const {
   claimAction,
   decideApprovalAction,
   recordPublicationAction,
+  quickCreateAction,
   transitionAction,
+  updateContentItemAction,
 } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
 const { DomainError } = await import("@/lib/content/workflow");
@@ -67,6 +73,8 @@ beforeEach(() => {
   contentMock.transitionContent.mockReset();
   contentMock.assignDesigner.mockReset();
   contentMock.assignContentOwner.mockReset();
+  contentMock.quickCreateContentItem.mockReset();
+  contentMock.updateContentItem.mockReset();
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
   approvalMock.decideApproval.mockReset();
@@ -74,6 +82,52 @@ beforeEach(() => {
 });
 
 describe("claimAction error boundary", () => {
+  it("does not return unexpected quick-create persistence details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue({
+      id: "00000000-0000-4000-8000-000000000008",
+      agencySlug: "agency",
+    });
+    contentMock.quickCreateContentItem.mockRejectedValue(error);
+    const formData = new FormData();
+    formData.set("title", "New post");
+    formData.set("format", "static_post");
+    formData.set("plannedPublishAt", "2026-11-01T10:00:00.000Z");
+
+    const result = await quickCreateAction("studio", {}, formData);
+
+    expect(result).toEqual({ error: "contentMutationError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.content_create_failed", {
+      err: error,
+    });
+  });
+
+  it("returns a stable code for expected content edit failures", async () => {
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue({
+      id: "00000000-0000-4000-8000-000000000008",
+      agencySlug: "agency",
+    });
+    contentMock.updateContentItem.mockRejectedValue(
+      new DomainError("invalid_transition", "This item can no longer be edited"),
+    );
+    const formData = new FormData();
+    formData.set("title", "Updated post");
+    formData.set("format", "static_post");
+    formData.set("brief", "An updated short brief");
+    formData.set("plannedPublishAt", "2026-11-01T10:00:00.000Z");
+
+    const result = await updateContentItemAction(
+      "studio",
+      "00000000-0000-4000-8000-000000000009",
+      {},
+      formData,
+    );
+
+    expect(result).toEqual({ error: "contentMutationError.invalid_transition" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
   it("returns stable safe copy and logs unexpected persistence details", async () => {
     const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
     contentMock.claimAsDesigner.mockRejectedValue(error);
