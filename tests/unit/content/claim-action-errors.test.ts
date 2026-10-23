@@ -57,6 +57,7 @@ const {
   changeContentOwnerAction,
   assignDesignerAction,
   applyResearchTeardownAction,
+  applyAiDraftAction,
   claimAction,
   decideApprovalAction,
   recordPublicationAction,
@@ -208,6 +209,53 @@ describe("claimAction error boundary", () => {
 
     expect(result).toEqual({ error: "contentMutationError.validation_failed" });
     expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not apply an AI draft to a content item outside the route workspace", async () => {
+    const limit = vi.fn().mockResolvedValue([
+      {
+        id: "00000000-0000-4000-8000-000000000009",
+        workspaceId: "workspace-other",
+        title: "Other workspace item",
+        format: "static_post",
+        brief: "Existing brief",
+        plannedPublishAt: new Date("2026-11-01T10:00:00.000Z"),
+      },
+    ]);
+    const where = vi.fn().mockReturnValue({ limit });
+    const from = vi.fn().mockReturnValue({ where });
+    dbMock.select.mockReturnValue({ from });
+
+    const result = await applyAiDraftAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000009",
+      draftText: "Suggested brief",
+      mode: "replace",
+    });
+
+    expect(result).toEqual({ error: "contentMutationError.not_found" });
+    expect(contentMock.updateContentItem).not.toHaveBeenCalled();
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("sanitizes AI draft read and persistence failures", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    dbMock.select.mockImplementation(() => {
+      throw error;
+    });
+
+    const result = await applyAiDraftAction({
+      workspaceSlug: "studio",
+      contentItemId: "00000000-0000-4000-8000-000000000009",
+      draftText: "Suggested brief",
+      mode: "replace",
+    });
+
+    expect(result).toEqual({ error: "contentMutationError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.ai_draft_apply_failed", {
+      err: error,
+    });
   });
 
   it("returns stable safe copy and logs unexpected persistence details", async () => {

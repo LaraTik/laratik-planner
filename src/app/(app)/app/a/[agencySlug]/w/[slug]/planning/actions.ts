@@ -344,21 +344,31 @@ export async function applyAiDraftAction(input: {
   if (!parsed.success) {
     return fieldErrorsFromZod<ApplyAiDraftFields>(parsed.error);
   }
-  const { actor } = await requireWorkspaceContext(input.workspaceSlug);
-  const [item] = await db
-    .select({
-      id: contentItems.id,
-      title: contentItems.title,
-      format: contentItems.format,
-      brief: contentItems.brief,
-      plannedPublishAt: contentItems.plannedPublishAt,
-    })
-    .from(contentItems)
-    .where(eq(contentItems.id, parsed.data.contentItemId))
-    .limit(1);
-  if (!item) return { error: "Content item not found" };
-  const newBrief = mergeAiDraftIntoBrief(item.brief ?? "", parsed.data.draftText, parsed.data.mode);
+  const { actor, workspace } = await requireWorkspaceContext(input.workspaceSlug);
   try {
+    const [item] = await db
+      .select({
+        id: contentItems.id,
+        workspaceId: contentItems.workspaceId,
+        title: contentItems.title,
+        format: contentItems.format,
+        brief: contentItems.brief,
+        plannedPublishAt: contentItems.plannedPublishAt,
+      })
+      .from(contentItems)
+      .where(eq(contentItems.id, parsed.data.contentItemId))
+      .limit(1);
+    if (!item || item.workspaceId !== workspace.id) {
+      return contentMutationActionFailure(
+        new DomainError("not_found", "Content item not found"),
+        "planning.ai_draft_apply_failed",
+      );
+    }
+    const newBrief = mergeAiDraftIntoBrief(
+      item.brief ?? "",
+      parsed.data.draftText,
+      parsed.data.mode,
+    );
     await updateContentItem(actor, {
       contentItemId: item.id,
       title: item.title,
@@ -367,10 +377,13 @@ export async function applyAiDraftAction(input: {
       plannedPublishAt: item.plannedPublishAt,
       channelIds: undefined,
     });
+    return { ok: true, brief: newBrief };
   } catch (error) {
-    return actionFailure<ApplyAiDraftFields>(error, "The AI draft could not be applied.");
+    return contentMutationActionFailure<ApplyAiDraftFields>(
+      error,
+      "planning.ai_draft_apply_failed",
+    );
   }
-  return { ok: true, brief: newBrief };
 }
 
 // ─── Batch create ─────────────────────────────────────────────────────
