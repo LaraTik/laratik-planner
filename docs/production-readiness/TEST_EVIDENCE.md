@@ -3250,3 +3250,15 @@ action, form, and ownership-selector suites, 42/42. Authorization and
 successful access changes are unchanged; no migration or data-contract change
 was made. Full `pnpm verify`, release browser/a11y/visual evidence, and
 independent verification remain open. This is **Tested**, not **Verified**.
+
+## Member reactivation failure state — `cb74cbfa`
+
+The users action now catches reactivation failures, logs the internal error,
+and returns a stable code for localized inline feedback. A credential-shaped
+persistence failure is absent from the action response; the component displays
+the translated alert. Focused action/member-list checks passed 13/13. On this
+change the commit hook passed TypeScript, 224 related unit files / 1,780 tests,
+then reran the focused suites, 13/13. Successful membership changes and
+authorization are unchanged; no migration or data-contract change was made.
+Full `pnpm verify`, release browser/a11y/visual checks, and independent
+verification remain open. This is **Tested**, not **Verified**.

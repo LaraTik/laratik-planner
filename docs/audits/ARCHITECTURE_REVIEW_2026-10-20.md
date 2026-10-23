@@ -3224,3 +3224,20 @@ TypeScript, 224 related unit files / 1,778 tests, and the focused action,
 forms, and selector suites, 42/42. Full release gates and independent review
 remain open; this is **Tested**, not **Verified**. AD-002 remains **In
 Progress**.
+
+## A81 — Member reactivation failures escaped the server action
+
+**Priority: P1 — preserve member-management interaction on persistence failure.**
+`toggleDeactivationAction` handled deactivation errors as inline form state but
+called `reactivateUser` without a catch. A database or capacity failure
+therefore rejected the server action and could replace the users page with an
+error boundary. Reactivation now captures the diagnostic error, returns a
+stable `reactivate_failed` outcome, and the member list displays localized
+English/Arabic inline feedback. A regression verifies that a credential-shaped
+failure stays out of the response and is logged; UI coverage verifies the
+inline localized state. Successful activation and membership behavior are
+unchanged. On clean SHA `cb74cbfa` (full SHA to follow in evidence), the commit
+hook passed TypeScript, 224 related unit files / 1,780 tests, and the focused
+action and member-list suites, 13/13. Full release checks and independent
+review remain open; this is **Tested**, not **Verified**. AD-002 remains **In
+Progress**.

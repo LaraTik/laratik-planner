@@ -4063,3 +4063,15 @@ default framebuffer`, then consumes a CPU core without returning control;
   or migration behavior changed.
 - **Status:** Tested. Full release verification and independent review remain
   open; do not mark Verified.
+
+### Architecture review — member reactivation failure state (2026-10-23)
+
+- **Tested on:** `cb74cbfa` (full SHA recorded in the evidence bundle).
+- **Change:** Reactivation failures now stay in the users page's inline
+  feedback, are logged for diagnosis, and use localized English/Arabic copy.
+- **Evidence:** Commit hook passed TypeScript, 224 related unit files / 1,780
+  tests, and 13 focused action and member-list tests.
+- **Compatibility:** Successful membership changes, permissions, routes,
+  persisted data, and migrations are unchanged.
+- **Status:** Tested. Full release verification and independent review remain
+  open; do not mark Verified.
