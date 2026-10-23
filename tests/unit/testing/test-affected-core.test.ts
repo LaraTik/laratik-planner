@@ -150,6 +150,42 @@ describe("test affected core", () => {
     }
   });
 
+  it("selects focused action-state tests instead of escalating to the full repository", () => {
+    const result = classifyChangedFiles(["src/lib/validation/action-state.ts"], TEST_OWNERSHIP);
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["action-state"]);
+    expect(result.unitFiles).toContain("tests/unit/validation/field-errors-from-zod.test.ts");
+    expect(result.unitFiles).toContain("tests/unit/content/claim-action-errors.test.ts");
+    expect(result.integrationFiles).toEqual([]);
+    expect(result.runAllIntegration).toBe(false);
+    expect(result.runAllBrowser).toBe(false);
+  });
+
+  it("keeps environment and provider validation with the security test area", () => {
+    const result = classifyChangedFiles(
+      ["src/lib/validation/provider-configuration.ts"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toEqual(["security-observability"]);
+    expect(result.unitFiles).toContain("src/lib/validation/provider-configuration.test.ts");
+  });
+
+  it("selects the content area for its English and Arabic message catalogs", () => {
+    for (const sourcePath of [
+      "src/messages/en/contentDetail.json",
+      "src/messages/ar/contentDetail.json",
+    ]) {
+      const result = classifyChangedFiles([sourcePath], TEST_OWNERSHIP);
+
+      expect(result.kind, sourcePath).toBe("targeted");
+      expect(result.areaIds, sourcePath).toEqual(["content"]);
+      expect(result.runAllBrowser, sourcePath).toBe(false);
+    }
+  });
+
   it("selects the workspace settings deadline regression for settings-route changes", () => {
     const result = classifyChangedFiles(
       ["src/app/(app)/app/a/[agencySlug]/w/[slug]/settings/page.tsx"],
