@@ -3054,20 +3054,6 @@ Full `pnpm verify`, database, browser, and visual release evidence remain open.
 Publication transaction and authorization behavior are unchanged. AD-002
 remains **In Progress**.
 
-## A69 — Content-owner assignment exposed raw action failures
-
-**Priority: P2 — safe server-action errors and localized feedback.** The
-content-owner assignment action returned service and persistence messages
-directly to client state. Expected domain and authorization outcomes now map
-to stable codes, and unexpected failures use the sanitized logger. The owner
-dialog resolves those codes in English and Arabic. Regression coverage checks
-expected not-found behavior and suppresses a credential-shaped persistence
-failure. The affected hook passed 220 unit files / 1,759 tests and the direct
-action/localization suites passed 13/13 on clean SHA
-`c33aa014e58ef4baf949e85af51674eb5a0d3e54`. No role gate, assignment
-behavior, route, or persisted contract changed. Browser/visual and independent
-verification remain open; AD-002 remains **In Progress**.
-
 ## A70 — Quick-create and content-edit actions exposed raw failures
 
 **Priority: P2 — safe server-action errors and consistent localization.**
