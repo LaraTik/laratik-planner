@@ -121,21 +121,63 @@ From your **local** machine:
 ```bash
 git push origin main
 # No GitHub Actions workflow starts from this push.
-# Manually dispatch CI for: lint, typecheck, unit, integration, audit, build,
-#      Docker image + health smoke + GHCR push, SMTP cert probe,
-#      workflow/Dockerfile/shell linters. Required release-gate contract —
-# Manually dispatch Advisory quality for targeted or release-candidate checks.
-# Manually dispatch Deploy after reviewing the exact ref and successful gates.
-# On red health check: the deploy script rolls back to the previous
-#                      image automatically.
-#
+gh workflow run ci.yml --ref main
+# Wait until this exact commit's CI run succeeds and publishes both images.
+# Copy its full 40-character SHA, then manually deploy that same SHA:
+gh workflow run deploy.yml --ref main -f ref="<full-40-character-sha>"
 # CI, advisory, deployment, and release workflows each require explicit dispatch.
 ```
 
+### Direct deployment from the VPS
+
+Use the GitHub `Deploy` workflow as the standard path. Direct VPS deployment is
+the operator-run fallback when you specifically need to invoke the release
+script yourself. It does **not** check GitHub CI status or image provenance, so
+first confirm in Actions that the manually dispatched CI run succeeded for the
+exact full commit SHA and published both `laratik-planner` and
+`laratik-planner-migrator` tags. Never deploy `latest` or a short SHA.
+
+Connect to the VPS and select that exact commit. The repository checkout must
+be clean before switching commits:
+
 ```bash
-# Manual deploy — only when CI is unavailable:
-ssh laratik-vps 'cd /opt/laratik-planner && sudo ./scripts/deploy.sh'
+ssh laratik-vps
+cd /opt/laratik-planner
+git status --short
+# Stop if the command above prints tracked changes that need to be preserved.
+DEPLOY_SHA="<full-40-character-sha-from-the-successful-ci-run>"
+git fetch origin "$DEPLOY_SHA"
+git checkout --detach "$DEPLOY_SHA"
 ```
+
+The images are private. Run as the VPS deploy account that owns the Docker
+login (the same account used by the GitHub deploy workflow). If the account is
+not already authenticated, enter a GitHub token with `read:packages` into the
+hidden prompt below. The script logs Docker out on exit when it logs in with
+these temporary credentials; it does not write the token to `.env` or shell
+history.
+
+```bash
+read -rp 'GHCR username: ' GHCR_USER
+read -rsp 'GHCR read:packages token: ' GHCR_PAT; printf '\n'
+export GHCR_USER GHCR_PAT
+./scripts/deploy.sh "$DEPLOY_SHA"
+unset GHCR_USER GHCR_PAT DEPLOY_SHA
+```
+
+The script refuses a missing, short, or non-SHA tag. It runs the provider
+preflight, pulls both SHA-tagged images, creates a verified pre-migration
+backup, runs migrations, recreates the app, and checks readiness. If readiness
+fails, it restores the previous application image; database migrations are
+forward-only, so investigate the migration result and deploy a forward fix if
+needed. Confirm the release from outside the VPS:
+
+```bash
+curl -fsS https://planner.laratik.com/api/health
+```
+
+The returned `version` should match the first seven characters of `DEPLOY_SHA`,
+with `db: "up"` and `schema: "ready"`.
 
 If `pnpm` is missing on the VPS (fresh install), one-shot:
 `corepack enable && corepack prepare pnpm@10.10.0 --activate`.
@@ -167,12 +209,13 @@ image — no manual operator action is required for a health-check
 rollback. The migrator runs in a separate container and aborts the
 deploy on any non-zero exit; it never suppresses migration errors.
 
-For a manual rollback of a bad release that passed health but is
-otherwise broken, push a revert (or the last known-good commit) to
-`main` and let the automated pipeline re-apply the previous image.
-The Postgres schema is forward-only — Drizzle migrations are
-append-only, so reverting application code is safe as long as the
-revert's migration set has already been applied to the DB.
+For a manual rollback of a bad release that passed health but is otherwise
+broken, select the last known-good full SHA and manually dispatch CI for it,
+then manually dispatch Deploy for that same SHA. A direct VPS rollback can
+also invoke `./scripts/deploy.sh <last-known-good-full-sha>` after confirming
+that both images exist. The Postgres schema is forward-only — Drizzle
+migrations are append-only, so reverting application code is safe only when
+the older binary is compatible with the migrations already applied.
 
 ## Backup
 
@@ -612,7 +655,7 @@ pnpm test:unit
 | `db: down` in `/api/health`                                         | `docker compose logs postgres`                     | Check `pgdata` volume, `POSTGRES_PASSWORD` in `.env`                                                                           |
 | `ok: false` in `/api/health`                                        | Same as above                                      |                                                                                                                                |
 | Health check passes but UI is broken                                | `docker compose logs --tail=200 app`               | Likely a code issue — pull logs and diagnose                                                                                   |
-| Stuck deploy                                                        | `docker compose ps` + `docker image ls`            | `docker image prune -f`, then `./scripts/deploy.sh` again                                                                      |
+| Stuck deploy                                                        | `docker compose ps` + `docker image ls`            | Diagnose the failed step first; retry only with the same verified full SHA using `./scripts/deploy.sh <full-sha>`              |
 | Out of disk                                                         | `df -h /`                                          | `disk-cleanup.sh apply` (see above)                                                                                            |
 | Magic link not arriving                                             | Mailcow queue: `https://mail.laratik.com/` → Queue | Check `SMTP_USER` + `SMTP_PASSWORD`, then `docker compose logs app                                                             | grep email` |
 | Google OAuth fails                                                  | Google Cloud Console → OAuth client                | Check `GOOGLE_CLIENT_ID` + `GOOGLE_CLIENT_SECRET`, redirect URI must be `https://planner.laratik.com/api/auth/callback/google` |

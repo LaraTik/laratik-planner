@@ -147,6 +147,7 @@ describe("CI production-image smoke environment", () => {
     const dockerfile = readFileSync(resolve(process.cwd(), "Dockerfile"), "utf8");
     const compose = readFileSync(resolve(process.cwd(), "docker-compose.yml"), "utf8");
     const healthCheck = readFileSync(resolve(process.cwd(), "scripts/vps/health-check.sh"), "utf8");
+    const deployScript = readFileSync(resolve(process.cwd(), "scripts/deploy.sh"), "utf8");
 
     // The contract is "APP_VERSION must be set to the immutable SHA,
     // never to the mutable image tag". CI uses the shell's GITHUB_SHA;
@@ -160,6 +161,8 @@ describe("CI production-image smoke environment", () => {
       'gh run list --repo "${GITHUB_REPOSITORY}" --workflow ci.yml --commit "${DEPLOY_SHA}"',
     );
     expect(deployWorkflow).toContain("DEPLOY_SHA: ${{ needs.resolve.outputs.sha }}");
+    expect(deployScript).toContain('[[ "$#" -ne 1 || ! "${1:-}" =~ ^[0-9a-fA-F]{40}$ ]]');
+    expect(deployScript).not.toContain('IMAGE_TAG="${1:-latest}"');
     expect(deployWorkflow).not.toContain("APP_VERSION=");
     expect(dockerfile).toContain("ENV APP_VERSION=$APP_VERSION");
     expect(compose).not.toContain("APP_VERSION: ${IMAGE_TAG:-latest}");

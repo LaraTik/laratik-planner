@@ -32,8 +32,8 @@
 ./scripts/project.sh backup       # pg_dump → ./tmp/backups
 
 # Deploy to VPS
-./scripts/deploy.sh               # pulls :latest
-./scripts/deploy.sh <sha>         # pulls specific commit
+./scripts/deploy.sh <full-sha>    # on the VPS, deploys the exact 40-char SHA after CI publishes it
+# See docs/operations/runbook.md#direct-deployment-from-the-vps for the safe manual procedure.
 
 # Daily ops report (read-only; see docs/operations/daily-report.md)
 PLANNER_TOKEN=<read-only token> python3 scripts/daily-report.py
@@ -168,7 +168,7 @@ laratik-planner/
 │   └── testing/strategy.md
 └── scripts/
     ├── dev.sh                      # one-shot local dev
-    ├── deploy.sh                   # local → VPS deploy
+    ├── deploy.sh                   # VPS transactional deploy for an immutable SHA
     ├── project.sh                  # daily ops wrapper
     └── vps/                        # rsynced to /opt/laratik-planner/scripts/
         ├── logs.sh

@@ -10,6 +10,7 @@
 - Playwright 5-project suite — run locally with `pnpm test:e2e:isolated`; the critical subset runs in the pre-push hook and the full matrix is a manual release-candidate check.
 - `.github/workflows/deploy.yml` — manual dispatch with an explicit ref; requires successful CI for that commit, verifies its GHCR images, pulls the previous image, and runs `scripts/deploy.sh` via `appleboy/ssh-action` on the VPS.
 - `scripts/deploy.sh` — backups the local Postgres (`scripts/vps/backup.sh`), runs the migrator (aborts on failure), recreates the app container pinned to the new SHA, hits `/api/health`, rolls back on any failure.
+- For a direct VPS deployment after CI has published the exact SHA images, follow [`Direct deployment from the VPS`](./runbook.md#direct-deployment-from-the-vps). The script now refuses `latest` and short SHAs.
 - `src/app/api/health/route.ts` — reports the real release SHA at container runtime.
 - `docs/production-readiness/MIGRATION_DRILL_RESULTS.md` — 5 / 5 migration checks PASS through migration 0025 (forward-only, destructive rollback drill deferred); the disposable `planner_test` recovery recipe is documented in `docs/operations/runbook.md`.
 - `src/lib/validation/env.ts` + `src/lib/validation/provider-configuration.ts` — fail-fast on missing or non-production provider config at container start.

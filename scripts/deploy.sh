@@ -4,15 +4,15 @@
 #
 # Usage:
 #   cd /opt/laratik-planner
-#   ./scripts/deploy.sh <immutable-sha>
+#   ./scripts/deploy.sh <full-40-character-commit-sha>
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-IMAGE_TAG="${1:-latest}"
-if [[ ! "$IMAGE_TAG" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-  echo "Invalid image tag" >&2
+if [[ "$#" -ne 1 || ! "${1:-}" =~ ^[0-9a-fA-F]{40}$ ]]; then
+  echo "Usage: ./scripts/deploy.sh <full-40-character-commit-sha>" >&2
   exit 2
 fi
+IMAGE_TAG="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
 export IMAGE_TAG
 APP_IMAGE="ghcr.io/laratik/laratik-planner:${IMAGE_TAG}"
 MIGRATOR_IMAGE="ghcr.io/laratik/laratik-planner-migrator:${IMAGE_TAG}"
