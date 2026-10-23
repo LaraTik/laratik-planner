@@ -3053,3 +3053,46 @@ files / 1,780 tests, then reran 23 changed-file tests on clean SHA
 Full `pnpm verify`, database, browser, and visual release evidence remain open.
 Publication transaction and authorization behavior are unchanged. AD-002
 remains **In Progress**.
+
+## A69 — Content-owner assignment exposed raw action failures
+
+**Priority: P2 — safe server-action errors and localized feedback.** The
+content-owner assignment action returned service and persistence messages
+directly to client state. Expected domain and authorization outcomes now map
+to stable codes, and unexpected failures use the sanitized logger. The owner
+dialog resolves those codes in English and Arabic. Regression coverage checks
+expected not-found behavior and suppresses a credential-shaped persistence
+failure. The affected hook passed 220 unit files / 1,759 tests and the direct
+action/localization suites passed 13/13 on clean SHA
+`c33aa014e58ef4baf949e85af51674eb5a0d3e54`. No role gate, assignment
+behavior, route, or persisted contract changed. Browser/visual and independent
+verification remain open; AD-002 remains **In Progress**.
+
+## A70 — Quick-create and content-edit actions exposed raw failures
+
+**Priority: P2 — safe server-action errors and consistent localization.**
+Quick-create and edit actions used the generic exception helper, allowing
+unexpected persistence details into their form state and exposing several
+expected service errors in English only. They now classify domain and
+permission errors, log unexpected failures through the sanitized logger, and
+return active-locale copy from shared EN/AR catalogs. The focused action and
+catalog tests passed 27/27; the hook passed TypeScript and 220 affected unit
+files / 1,761 tests, followed by the direct 13-test suite on clean SHA
+`5a7213ba609fa3abe9e863235573a071baec7e6f`. Routes, permissions, successful
+writes, and stored data remain unchanged. Browser/visual release evidence
+remains open; AD-002 remains **In Progress**.
+
+## A71 — Creative and audience-copy actions exposed raw service failures
+
+**Priority: P2 — safe action boundaries and bilingual error states.**
+Creative-payload, research-teardown, and audience-copy actions returned raw
+service errors, including persistence diagnostics. Their expected validation,
+missing-record, and invalid-transition outcomes now use typed domain errors;
+unexpected failures are logged and suppressed. The creative editor and copy
+panel localize shared error codes in the active locale, and unknown catalog
+codes fall back safely. Focused action, editor, localization, and catalog
+checks passed 133/133; the hook passed TypeScript and 33 affected unit files /
+299 tests, followed by the changed action/localization suites, 19/19 on clean
+SHA `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`. Database, browser, visual,
+manual route review, and independent verification remain open; AD-002 remains
+**In Progress**.
