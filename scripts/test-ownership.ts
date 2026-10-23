@@ -619,6 +619,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       sourceGlobs: ["src/app/(app)/app/users/**"],
       unitFiles: [
         "tests/unit/users/**",
+        "tests/unit/users-membership-actions.test.ts",
         "tests/unit/auth-invitations.test.ts",
         "tests/unit/workspace-role-matrix.test.tsx",
       ],

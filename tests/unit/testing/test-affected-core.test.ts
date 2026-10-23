@@ -343,6 +343,20 @@ describe("test affected core", () => {
     expect(result.areaIds).toEqual(["auth"]);
   });
 
+  it("keeps user invitation action changes in the focused users area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/users/invitation-list.tsx",
+        "tests/unit/users-membership-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("users");
+    expect(result.unitFiles).toContain("tests/unit/users-membership-actions.test.ts");
+  });
+
   it("escalates an unmapped changed test even when another changed file has an owner", () => {
     const result = classifyChangedFiles(
       ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],
