@@ -25,6 +25,7 @@ import {
   assignContentOwner,
   AssignContentOwnerSchema,
   claimAsDesigner,
+  ClaimAsDesignerError,
   archiveContentItem,
   restoreContentItem,
   QuickCreateSchema,
@@ -450,7 +451,16 @@ export async function claimAction(input: {
   try {
     await claimAsDesigner(actor, input.contentItemId);
   } catch (error) {
-    return actionFailure(error, "The claim action failed.");
+    if (error instanceof ClaimAsDesignerError) {
+      return actionFailure(error, "claimError.failed", {
+        publicMessage: `claimError.${error.code}`,
+      });
+    }
+    if (error instanceof PermissionDeniedError) {
+      return actionFailure(error, "claimError.failed", { publicMessage: "claimError.forbidden" });
+    }
+    logError("planning.designer_claim_failed", { err: error });
+    return actionFailure(error, "claimError.failed", { exposeErrorMessage: false });
   }
   return { ok: true };
 }

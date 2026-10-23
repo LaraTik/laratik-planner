@@ -175,6 +175,7 @@ const {
   transitionContent,
   updateFormatPayload,
   claimAsDesigner,
+  ClaimAsDesignerError,
   assignDesigner,
   assignContentOwner,
   releaseDesignTask,
@@ -1098,19 +1099,26 @@ describe("transitionContent", () => {
 describe("claimAsDesigner", () => {
   it("throws when the content item is missing", async () => {
     dbMock.state.selectResults.push([]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/not found/i);
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "not_found",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("throws when already assigned to a designer", async () => {
     dbMock.state.selectResults.push([{ workspaceId, designerId: "other", status: "in_design" }]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/already assigned/i);
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "already_assigned",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("throws when the status is not approvable for claim", async () => {
     dbMock.state.selectResults.push([{ workspaceId, designerId: null, status: "draft" }]);
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(
-      /cannot claim when status/i,
-    );
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "invalid_status",
+      name: ClaimAsDesignerError.name,
+    });
   });
 
   it("claims the item and writes the assignment", async () => {
@@ -1130,7 +1138,10 @@ describe("claimAsDesigner", () => {
     ]);
     dbMock.state.updateReturnEmpty = true;
 
-    await expect(claimAsDesigner(actor, contentItemId)).rejects.toThrow(/already assigned/i);
+    await expect(claimAsDesigner(actor, contentItemId)).rejects.toMatchObject({
+      code: "claim_conflict",
+      name: ClaimAsDesignerError.name,
+    });
     expect(dbMock.state.insertCalls).toHaveLength(0);
   });
 });

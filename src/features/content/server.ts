@@ -59,6 +59,7 @@ export {
   assignContentOwner,
   assignDesigner,
   claimAsDesigner,
+  ClaimAsDesignerError,
   releaseDesignTask,
   type AssignContentOwnerInput,
   type AssignDesignerInput,

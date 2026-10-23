@@ -419,6 +419,20 @@ function WorkflowRailBody({
     const value = t(key, params);
     return isMissingTranslation(value, key) ? fallback : value;
   };
+  const claimErrorFallbacks: Record<string, string> = {
+    not_found: "This item is no longer available. Refresh and try again.",
+    already_assigned: "This item has already been claimed by a designer.",
+    invalid_status: "This item is not ready to be claimed.",
+    claim_conflict: "Someone else claimed this item first. Refresh and try again.",
+    forbidden: "You do not have permission to claim this item.",
+    failed: "The claim could not be completed. Please try again.",
+  };
+  const claimErrorMessage = (error: string) => {
+    const code = error.startsWith("claimError.") ? error.slice("claimError.".length) : null;
+    if (!code) return error;
+    const fallback = claimErrorFallbacks[code] ?? claimErrorFallbacks.failed!;
+    return tr(`contentDetail.workflow.claimErrors.${code}`, fallback);
+  };
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -702,7 +716,7 @@ function WorkflowRailBody({
                             setActionError(null);
                             const result = await actions.claim({ workspaceSlug, contentItemId });
                             if (result?.error) {
-                              setActionError(result.error);
+                              setActionError(claimErrorMessage(result.error));
                             } else {
                               router.refresh();
                             }

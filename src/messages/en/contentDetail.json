@@ -660,6 +660,14 @@
     "description": "Internal notes are administrative and do not reset approvals or revisions."
   },
   "workflow": {
+    "claimErrors": {
+      "not_found": "This item is no longer available. Refresh and try again.",
+      "already_assigned": "This item has already been claimed by a designer.",
+      "invalid_status": "This item is not ready to be claimed.",
+      "claim_conflict": "Someone else claimed this item first. Refresh and try again.",
+      "forbidden": "You do not have permission to claim this item.",
+      "failed": "The claim could not be completed. Please try again."
+    },
     "requestChangesTitle": "Request content changes",
     "requestChangesDescription": "Describe the revision needed before this content can move forward.",
     "requestChangesConfirm": "Request changes",

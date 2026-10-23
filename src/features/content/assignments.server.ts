@@ -12,6 +12,20 @@ import {
 import { z } from "zod";
 
 // ─── Designer assignment (claim/release) ───────────────────────────────
+export type ClaimAsDesignerErrorCode =
+  "not_found" | "already_assigned" | "invalid_status" | "claim_conflict";
+
+/** Expected claim outcomes that are safe to present to the user. */
+export class ClaimAsDesignerError extends Error {
+  constructor(
+    public readonly code: ClaimAsDesignerErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ClaimAsDesignerError";
+  }
+}
+
 export async function claimAsDesigner(actor: Actor, contentItemId: string) {
   const [item] = await db
     .select({
@@ -24,13 +38,15 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
     .from(contentItems)
     .where(eq(contentItems.id, contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
-  if (item.designerId) throw new Error("Already assigned to a designer");
+  if (!item) throw new ClaimAsDesignerError("not_found", "Content item not found");
+  if (item.designerId) {
+    throw new ClaimAsDesignerError("already_assigned", "Already assigned to a designer");
+  }
 
   // Verify user is a designer in the workspace
   await requirePolicy(hasWorkspaceRole(actor, item.workspaceId, ["designer"]), "claim_designer");
   if (item.status !== "approved_for_design" && item.status !== "in_design") {
-    throw new Error(`Cannot claim when status is ${item.status}`);
+    throw new ClaimAsDesignerError("invalid_status", `Cannot claim when status is ${item.status}`);
   }
 
   await db.transaction(async (tx) => {
@@ -46,7 +62,10 @@ export async function claimAsDesigner(actor: Actor, contentItemId: string) {
       )
       .returning({ id: contentItems.id });
     if (claimed.length === 0) {
-      throw new Error("Already assigned to a designer or status changed; refresh and try again");
+      throw new ClaimAsDesignerError(
+        "claim_conflict",
+        "Already assigned to a designer or status changed; refresh and try again",
+      );
     }
     await tx.insert(contentAssignments).values({
       contentItemId,
