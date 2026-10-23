@@ -374,6 +374,8 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "src/lib/agencies/**",
         "src/app/(app)/app/platform/**",
         "src/components/platform/**",
+        "src/messages/en/platform.json",
+        "src/messages/ar/platform.json",
       ],
       unitFiles: [
         "tests/unit/platform/**",

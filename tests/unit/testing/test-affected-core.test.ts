@@ -385,6 +385,21 @@ describe("test affected core", () => {
     expect(result.unitFiles).toContain("tests/unit/platform/edit-agency-action.test.ts");
   });
 
+  it("keeps platform-access localization in its owning area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/messages/en/platform.json",
+        "src/messages/ar/platform.json",
+        "tests/unit/platform/platform-access-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("platform");
+    expect(result.unitFiles).toContain("tests/unit/platform/**");
+  });
+
   it("keeps agency settings edits in the focused agency-settings area", () => {
     const result = classifyChangedFiles(
       [

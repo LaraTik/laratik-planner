@@ -222,6 +222,7 @@
   "grantReasonPlaceholder": "On-call rotation or responsibility",
   "grantUnchanged": "That assignment was already active.",
   "grantSuccess": "Platform access added.",
+  "accessUnexpectedFailure": "The platform access change failed. Please try again.",
   "grantSubmitPending": "Adding…",
   "changeRoleAria": "Change role for {email}",
   "changeRoleTitle": "Change role for {email}",

@@ -222,6 +222,7 @@
   "grantReasonPlaceholder": "دور المناوبة أو المسؤولية",
   "grantUnchanged": "هذا التعيين نشط بالفعل.",
   "grantSuccess": "تمت إضافة صلاحية المنصة.",
+  "accessUnexpectedFailure": "تعذّر تغيير صلاحية المنصة. حاول مرة أخرى.",
   "grantSubmitPending": "جارٍ الإضافة…",
   "changeRoleAria": "تغيير دور {email}",
   "changeRoleTitle": "تغيير دور {email}",
