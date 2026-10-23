@@ -191,6 +191,16 @@ The commit hook passed TypeScript and the focused ownership selector, 37/37
 tests. The other browser projects, full visual matrix, full `pnpm verify`, and
 independent review remain open. Status: **Tested**, not **Verified**.
 
+## Batched architecture baseline — `057677e8`
+
+On clean SHA `057677e83a9b235235562bda316164f8e8ae34e7`, `pnpm verify` passed:
+Prettier, ESLint, TypeScript, all 606 unit test files (5,226 tests), and the
+Next.js production build. The test run emitted existing expected diagnostic
+logs and React test-environment warnings; no check failed. This records the
+local baseline only. The complete five-browser and visual release matrices,
+route-by-route review, and independent verification remain open. Status:
+**Tested**, not **Verified**.
+
 ## Architecture refinement — planning detail shell ownership — 2026-10-22
 
 Implementation SHA: `cb8f7cf7f2068c9ccd1812860ac4ed057faa30e5` (clean at run).

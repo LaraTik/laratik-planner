@@ -4182,3 +4182,11 @@ canonical workspace and completed the isolation assertions. No product route,
 permission, or data behavior changed. Full `pnpm verify`, the complete
 five-browser matrix, the visual matrix, and independent review remain open;
 this is **Tested**, not **Verified**, and AD-002 remains **In Progress**.
+
+### Architecture review — batched baseline verification (2026-10-23)
+
+`pnpm verify` passed on clean SHA `057677e83a9b235235562bda316164f8e8ae34e7`:
+format check, lint, typecheck, 606 unit test files / 5,226 tests, and the
+production build. This closes the local baseline gate for that exact SHA. It
+does not close the full five-browser release matrix, the visual matrix, or
+independent verification; AD-002 remains **In Progress**.
