@@ -50,7 +50,7 @@ export function LifecycleForm({
     const res = await suggestMonthlyTargetAction(agencySlug, slug);
     if (!res.ok || res.suggestion === undefined) {
       setTargetStatus("error");
-      setTargetError(res.error ?? "AI suggestion failed.");
+      setTargetError(t(`settings.suggestionErrors.${res.errorCode ?? "failed"}`));
       return;
     }
     setTargetPreview(res.suggestion);

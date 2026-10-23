@@ -82,7 +82,7 @@ export function LeadTimesForm({
     const res = await suggestLeadTimesAction(agencySlug, slug, { approvalMode });
     if (!res.ok) {
       setSuggestStatus("error");
-      setSuggestError(res.error ?? t("settings.leadTimes.suggestError"));
+      setSuggestError(t(`settings.suggestionErrors.${res.errorCode ?? "failed"}`));
       return;
     }
     if (res.suggestion) {

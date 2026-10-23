@@ -36,7 +36,7 @@ const baseValues = {
   readyToPublishLeadDays: 1,
 };
 
-function renderForm() {
+function renderForm(locale: "en" | "ar" = "en") {
   mockedUseFormStatus.mockReturnValue({ pending: false } as ReturnType<typeof useFormStatus>);
   return render(
     <LeadTimesForm
@@ -46,7 +46,7 @@ function renderForm() {
       approvalMode="simple"
       timezone="Europe/Vienna"
       today={new Date("2026-01-01T12:00:00.000Z")}
-      t={tFor("en")}
+      t={tFor(locale)}
     />,
   );
 }
@@ -59,6 +59,16 @@ describe("LeadTimesForm (Phase D — AI preview)", () => {
     expect(screen.getByLabelText(/design complete/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/creative approval/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/ready to publish/i)).toBeInTheDocument();
+  });
+
+  it("shows the localized safe error when the suggestion provider fails", async () => {
+    const user = userEvent.setup();
+    mockedSuggest.mockResolvedValue({ ok: false, errorCode: "failed" });
+    renderForm("ar");
+    await user.click(screen.getByTestId("lead-times-ai-suggest"));
+    expect(
+      await screen.findByText("تعذر إنشاء اقتراح بالذكاء الاصطناعي. حاول مرة أخرى."),
+    ).toBeInTheDocument();
   });
 
   it("shows a preview region with before/after deltas when the suggestion is returned", async () => {

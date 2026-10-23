@@ -362,6 +362,17 @@
     "relative": "{date}",
     "savedAtBy": "Saved {date} by {name}"
   },
+  "suggestionErrors": {
+    "invalidInput": "The suggestion request is invalid. Refresh the page and try again.",
+    "unauthenticated": "Sign in again to use AI suggestions.",
+    "workspaceNotFound": "Workspace not found.",
+    "forbidden": "Workspace manager access is required.",
+    "agencyMissing": "Agency context is unavailable. Select an agency and try again.",
+    "disabled": "AI suggestions are disabled in agency settings. Enable Caption drafts to use this.",
+    "providerKeyMissing": "The AI provider key is not configured.",
+    "noResult": "AI returned no suggestion.",
+    "failed": "AI suggestion failed. Try again."
+  },
   "deadline": {
     "today": "Today",
     "tomorrow": "Tomorrow",
