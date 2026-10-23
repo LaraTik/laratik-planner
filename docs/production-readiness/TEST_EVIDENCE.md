@@ -3320,3 +3320,15 @@ stored-data contract changed. On clean SHA
 passed 9/9, including responsive Platform Access, non-admin denial, and the
 authorized overview KPI surface. The full browser/visual release gate is still
 incomplete, so this is **Tested**, not **Verified**.
+
+## Account overview feature query — `865512f8cca64fa21c7aeba9bf97fb9e8721fb83`
+
+The account page now uses a server-only feature query to load its profile,
+active agency membership context, and password-present state in one profile
+read. Password hash data is removed before the profile is returned. Focused
+query and selector tests passed 38/38; the account unit area passed 3/3; the
+focused account browser batch passed 5/5 on this commit, including light/dark
+accessibility and theme-preference journeys. Type-check passed in the focused
+run and commit hook. No route, role, or stored-data contract changed. This is
+**Tested**, not **Verified**; the full release browser and visual matrices
+remain open.

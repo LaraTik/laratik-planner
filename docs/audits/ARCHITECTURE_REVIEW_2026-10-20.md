@@ -3334,3 +3334,20 @@ passes 9/9, including the authorized overview and non-admin denial states. No
 route, permission, workflow, or persistence contract changed. Full
 browser/visual release evidence and independent review remain open; this change
 is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+## A86 — Account overview queried the same user twice
+
+**Priority: P2 — account feature ownership and redundant database work.** The
+account page loaded profile fields directly, then called `getPasswordState` to
+query the same user again only to derive a password-present boolean. It also
+owned the active-agency membership projection in the route. A server-only
+account feature query now loads profile, password state, and agency memberships
+together; it strips `passwordHash` before returning the profile and the account
+page no longer performs the redundant user lookup. Password actions keep using
+the existing shared password-state helper. Query tests cover missing profiles,
+password-state mapping, and hash non-disclosure; the account test area passes
+3/3 and its browser checks pass 5/5 on clean SHA
+`865512f8cca64fa21c7aeba9bf97fb9e8721fb83`. Routes, role checks, and data
+contracts are unchanged. Full release-browser/visual evidence and independent
+review remain open; this is **Tested**, not **Verified**. AD-002 remains
+**In Progress**.

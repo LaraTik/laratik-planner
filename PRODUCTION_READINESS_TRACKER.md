@@ -4145,3 +4145,15 @@ passed 9/9, including responsive Platform Access, non-admin denial, and the
 authorized overview KPI surface. No public contract or stored-data behavior
 changed. Full release-browser/visual evidence and independent review remain
 open; this is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+### Architecture review — Account overview query ownership (2026-10-23)
+
+On clean SHA `865512f8cca64fa21c7aeba9bf97fb9e8721fb83`, the account feature now
+loads profile, password state, and agency membership rows together. This removes the duplicate user lookup
+that existed only to determine whether a password was set, and the feature
+returns only the boolean rather than password material. The account unit area
+passed 3/3; type-check passed; the focused account browser batch passed 5/5,
+including light/dark accessibility and account preference journeys. No route,
+role, or stored-data behavior changed. Full browser/visual release evidence and
+independent review remain open; this is **Tested**, not **Verified**. AD-002
+remains **In Progress**.
