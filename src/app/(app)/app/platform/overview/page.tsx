@@ -22,7 +22,7 @@ import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PermissionNotice } from "@/components/platform/permission-notice";
 
 /**
- * Platform overview (Milestone 1.8) — Stitch screen `46cf5746bbd14e67aac6565fc53530f8`.
+ * Platform overview — current Stitch screen `ab5ee0411c54483191c4ad5403afa35f`.
  *
  * Four aggregate KPIs across the entire platform:
  *   1. Total agencies        — count of all agency rows (no filter on
