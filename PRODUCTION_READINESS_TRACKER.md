@@ -3909,3 +3909,19 @@ default framebuffer`, then consumes a CPU core without returning control;
 - Docker returned HTTP 500, so the disposable Postgres/browser gate remains
   open. This tooling change does not promote **Tested** to **Verified**; AD-002
   remains **In Progress** pending release evidence and independent review.
+
+## 2026-10-23 — Bound quick-create and content-edit action errors
+
+- Quick-create and content-edit actions now return stable error codes and
+  localize them in English and Arabic. Expected domain and permission errors
+  remain actionable; unexpected persistence failures are logged and hidden
+  from client state. Shared action-code localization is centralized for both
+  forms. Successful writes, routes, permissions, and stored data are unchanged.
+- Focused action and catalog tests passed 27/27; focused ESLint and
+  `pnpm typecheck` passed. On clean SHA
+  `5a7213ba609fa3abe9e863235573a071baec7e6f`, the commit hook passed
+  TypeScript and 220 affected unit files / 1,761 tests, then reran the direct
+  action suite, 13/13.
+- No database, migration, browser, visual, or manual route evidence was
+  produced. The disposable Postgres and bilingual browser gates remain open;
+  this change is **Tested**, not **Verified**. AD-002 remains **In Progress**.

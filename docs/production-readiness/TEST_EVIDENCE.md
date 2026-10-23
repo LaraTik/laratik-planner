@@ -3134,3 +3134,14 @@ direct action and localization suites, 23/23. The first hook attempt found
 four service-error message assertions; their established text was restored
 and the full affected selection passed. Database, migration, browser, visual,
 and manual route evidence remain open.
+
+## Quick-create and content-edit action error boundaries — `5a7213ba609fa3abe9e863235573a071baec7e6f`
+
+Focused action and catalog checks passed 27/27. Focused ESLint and
+`pnpm typecheck` passed. The commit hook passed TypeScript and the affected
+selection, 220 unit files / 1,761 tests, then reran the directly changed action
+suite, 13/13. Expected domain failures now map to English/Arabic stable codes;
+unexpected persistence details are logged and withheld from client state. No
+database, migration, browser, visual, or manual route evidence was produced;
+those gates remain open. No permission, route, successful-write, or stored-data
+contract changed.
