@@ -6,6 +6,22 @@ Release-blocking. `pnpm audit --prod` reported 23 advisories: 3 critical, 5 high
 
 Known critical/high areas include vulnerable Auth.js/NextAuth, `@auth/core`, Drizzle and Nodemailer versions. Re-run the audit after compatible upgrades; the lockfile result is authoritative.
 
+## 2026-10-23 — Next.js and Sentry production advisory remediation
+
+The manually dispatched CI run for the Planning XLSX export commit failed its
+production dependency audit. The lockfile resolved Next.js `16.3.8` and
+`@sentry/nextjs` `10.70.0`; the audit reported six findings, including three
+critical and one high. The CI image build was correctly skipped because the
+quality job (including this audit) is a prerequisite for publishing a release
+image.
+
+Direct dependencies were raised to Next.js `16.4.2` and
+`@sentry/nextjs` `10.76.2`, both within their existing major lines and above
+the advisory's patched floors. The production audit now passes at the release
+threshold (`pnpm audit --prod --audit-level high`); two moderate advisories
+remain and are below the documented deployment threshold. Full verification
+and a new exact-commit CI run are required before deployment.
+
 ## Confirmed application findings
 
 1. Invitation acceptance does not bind the token to the signed-in verified email.

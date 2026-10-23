@@ -110,7 +110,7 @@ it before re-capturing. Key reminders:
 
 | Layer     | Choice                                          | Why                                                                                       |
 | --------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Framework | Next.js 16.3 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                                                           |
+| Framework | Next.js 16.4 (App Router) + TypeScript strict   | Per STUDIOFLOW_MASTER_PROMPT §4                                                           |
 | UI        | Tailwind 4 + shadcn/ui + Radix                  | Per master prompt §4, §17                                                                 |
 | DB        | Postgres 16 (sidecar container)                 | Dedicated, isolated, Drizzle-first-class                                                  |
 | ORM       | Drizzle                                         | Type-safe, no codegen daemon, SQL-flavored migrations                                     |

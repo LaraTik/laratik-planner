@@ -1,5 +1,21 @@
 # Test and coverage evidence
 
+## Dependency security remediation — 2026-10-23
+
+Implementation SHA: pending final commit.
+
+| Command / check                        | Result                                                                                                         |
+| -------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `pnpm audit --prod --audit-level high` | Pass — no high or critical production advisories; two moderate findings remain.                                |
+| `pnpm verify`                          | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and Next.js 16.4.2 production build. |
+| Exact-commit GitHub CI                 | Required after push; the prior XLSX SHA failed only the dependency audit, so its image job was skipped.        |
+| Manual deployment                      | Pending a successful exact-commit CI run and published SHA image.                                              |
+
+The release audit found six production findings in Next.js 16.3.8 and Sentry
+10.70.0 (three critical, one high, two moderate). Next.js 16.4.2 and Sentry
+10.76.2 now satisfy the reported patched floors. No application data or
+database schema changes were made.
+
 ## Planning XLSX export — 2026-10-23
 
 Implementation SHA: `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee` (clean at run).

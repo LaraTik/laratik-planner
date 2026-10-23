@@ -1,5 +1,15 @@
 # StudioFlow Production-Readiness Tracker
 
+> **2026-10-23 dependency security gate remediation — in progress** — GitHub
+> CI for the Planning XLSX export SHA passed formatting, lint, typecheck, unit
+> tests, migration drill, integration tests, and the workflow, sidecar, and
+> SMTP checks, but the production audit found three critical and one high
+> advisory. That correctly skipped the image build. Direct dependencies have
+> been updated to Next.js 16.4.2 and Sentry 10.76.2. Local `pnpm verify`
+> passed (606 unit files / 5,226 tests and production build); the production
+> audit now has no high or critical findings (two moderate remain). A fresh
+> exact-clean commit CI run and manual deployment are still required.
+
 > **2026-10-23 Planning XLSX export — implementation checkpoint, SHA `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee`** — Planning now offers a localized XLSX export with displayed/current/next/custom date ranges, current-filter or all-item scope, and Summary + Schedule sheets. `pnpm verify` passed (606 unit files / 5,226 tests and production build). The affected browser gate escalated to the full matrix and stopped before launch because `TEST_DATABASE_URL` is unset; the Docker Desktop endpoint did not respond. EN/AR browser, accessibility, responsive/visual checks and independent review remain open. This checkpoint is **Implemented**, not **Tested/Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
 
 > **2026-10-23 architecture refinement checkpoint — implementation SHA `c33aa014e58ef4baf949e85af51674eb5a0d3e54`** — Content-owner assignment now returns typed not-found and permission codes, logs unexpected failures safely, and localizes feedback in EN/AR. ESLint and TypeScript passed; the commit hook passed 220 affected files / 1,759 tests and reran 13 direct action/dialog tests. Full `pnpm verify`, database/browser/visual checks, route review, and independent verification remain open. This checkpoint is **Tested**, not **Verified**; see `docs/production-readiness/TEST_EVIDENCE.md`.
