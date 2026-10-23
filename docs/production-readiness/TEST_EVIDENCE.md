@@ -3424,3 +3424,23 @@ remaining checks completed and the runner reported success. This covers
 Chromium only: Firefox, WebKit, mobile Chromium, mobile Safari, and the full
 visual matrix remain outstanding. This is **Tested**, not **Verified**; AD-002
 remains **In Progress**.
+
+## Workspace AI Assistant — Phase 1 implementation checkpoint (working tree)
+
+The read-only Workspace AI Assistant now has a workspace page under Produce,
+English/Arabic copy, client-memory conversation, active-agency workspace and
+role checks, bounded plan/calendar/content-mix context, deterministic schedule
+gap findings, evidence-ID validation, and reuse of the agency-configured model,
+managed key, entitlement, rate limit, and token budget. No transcript or
+workspace mutation path was added. The remote Planner MCP contract was not
+changed.
+
+`pnpm verify` passed on the implementation working tree: formatting, lint,
+TypeScript, 608 unit files / 5,236 tests, and production build. Focused
+assistant, ownership, catalog, navigation, and route suites passed. The
+affected-browser command could not start Playwright: `TEST_DATABASE_URL` is
+required and unset in this environment. No provider smoke, model/tool
+compatibility check, MiniMax subscription/data-processing review, EN/AR browser
+or visual result, or independent review was performed. This is a working-tree
+checkpoint, not exact-clean-SHA release evidence; M3.8 remains **In Progress**
+and this change is **not Verified**.

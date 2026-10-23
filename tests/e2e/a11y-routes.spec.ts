@@ -171,6 +171,30 @@ test.describe("a11y: authenticated routes (WCAG 2.2 AA)", () => {
     await expectClean(route, page);
   });
 
+  test("@a11y workspace AI assistant has no critical violations", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page);
+    const route = workspaceRoute(seeded, "ai-assistant");
+    await page.goto(route);
+    await expect(page.getByRole("heading", { name: "Workspace AI assistant" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Summarize plan" })).toBeVisible();
+    await expectClean(route, page);
+  });
+
+  test("@a11y workspace AI assistant renders Arabic RTL", async ({ page }) => {
+    const seeded = await bootstrapTestSession(page, { locale: "ar" });
+    const route = workspaceRoute(seeded, "ai-assistant");
+    await page.goto(route);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(
+      page.getByRole("heading", { name: "مساعد الذكاء الاصطناعي لمساحة العمل" }),
+    ).toBeVisible();
+    await expectClean(`${route} [ar]`, page);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+    );
+    expect(overflow).toBe(false);
+  });
+
   test("@a11y /app/w/[slug]/media has no critical violations", async ({ page }) => {
     const invalidNestingWarnings: string[] = [];
     page.on("console", (message) => {

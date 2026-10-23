@@ -271,6 +271,8 @@ export type ChatMessage = { role: "system" | "user" | "assistant"; content: stri
 
 export interface ChatOptions {
   messages: ChatMessage[];
+  /** An agency-configured model from the server-side allowlist. */
+  model?: string | undefined;
   maxTokens?: number;
   temperature?: number;
   /**
@@ -326,7 +328,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
       "anthropic-version": "2023-06-01",
     },
     body: JSON.stringify({
-      model: MODEL,
+      model: opts.model ?? MODEL,
       max_tokens: opts.maxTokens ?? 1024,
       temperature: opts.temperature ?? 0.7,
       messages: opts.messages.filter((m) => m.role !== "system"),
@@ -354,7 +356,7 @@ export async function chat(opts: ChatOptions): Promise<ChatResult | null> {
     content: text,
     inputTokens: data.usage?.input_tokens ?? null,
     outputTokens: data.usage?.output_tokens ?? null,
-    model: MODEL,
+    model: opts.model ?? MODEL,
   };
 }
 

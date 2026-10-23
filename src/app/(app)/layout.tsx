@@ -362,6 +362,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       "planning-board": t("sidebar.planningBoard"),
       "planning-calendar": t("sidebar.planningCalendar"),
       "planning-monthly": t("sidebar.planningMonthly"),
+      "ai-assistant": t("sidebar.aiAssistant"),
       trends: t("sidebar.trends"),
       approvals: t("sidebar.approvals"),
       "design-queue": t("sidebar.designQueue"),
