@@ -3293,3 +3293,15 @@ because exact-reference mismatches appeared across existing account, settings,
 platform, Brand Kit, and Client screens. This visual result is incomplete; no
 references were updated. The release matrix is not green, and this evidence is
 **Tested**, not **Verified**.
+
+## E2E memory-restart mitigation — follow-up candidate
+
+The subsequent full Chromium attempt still hit Next's memory-threshold restart
+after the 8 GiB heap increase and was stopped at test 189/290. Two checks failed
+at restart boundaries: Command Center dark-theme accessibility and mobile
+calendar overflow. Both passed together (2/2) after the isolated runner began
+disabling Next's memory-threshold restart for its disposable server on large
+non-CI hosts. The
+runner-specific unit suite passes 8/8 and TypeScript passes. Full Chromium and
+the remaining release projects have not yet been rerun; this is focused
+regression evidence only, not a release pass.

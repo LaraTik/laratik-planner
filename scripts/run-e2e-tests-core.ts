@@ -6,10 +6,19 @@ export const ISOLATED_PLAYWRIGHT_PROJECTS = [
   "mobile-safari",
   "visual-chromium",
 ] as const;
+export const ISOLATED_E2E_DISABLE_DEV_MEMORY_RESTART =
+  "LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART" as const;
 
 const GIB = 1024 * 1024 * 1024;
 const LARGE_HOST_MEMORY = 32 * GIB;
 const LARGE_HOST_NODE_HEAP_MB = 8192;
+
+export function shouldDisableIsolatedE2eMemoryRestart(input: {
+  ci: boolean;
+  hostMemoryBytes: number;
+}): boolean {
+  return !input.ci && input.hostMemoryBytes >= LARGE_HOST_MEMORY;
+}
 
 export function isolatedE2eNodeOptions(input: {
   current?: string;

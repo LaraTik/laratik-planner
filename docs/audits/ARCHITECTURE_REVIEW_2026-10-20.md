@@ -3289,3 +3289,31 @@ serial database contract. Validate that strategy on the exact full matrix
 before changing the release gate. Keep the release state **Tested**, not
 **Verified**, until all five browser projects and the full visual suite pass;
 AD-002 remains **In Progress**.
+
+**Runner follow-up (2026-10-23).** Raising the local Node heap to 8 GiB did not
+prevent Next's dev-server memory-threshold restart: the subsequent Chromium run
+was stopped at test 189/290 after two navigation/a11y timeouts coincided with
+restarts. The two affected cases passed together (2/2) on a fresh isolated
+server. The runner now disables that restart only for its disposable E2E server
+on large non-CI hosts; normal development, CI, and lower-memory hosts retain
+the Next default. Runner unit coverage passes 8/8,
+type-check passes, and the two previously interrupted cases pass 2/2 with the
+new setting. The full Chromium project has not yet been rerun, so this is not
+release evidence.
+
+## A84 — Current visual route inventory includes unresolved parity differences
+
+**Priority: P2 — visual consistency and trustworthy release evidence.** The
+current visual inventory points to the approved LaraTik Stitch project, but
+focused exact-reference checks found material differences on the account,
+workspace settings, and platform overview routes. In particular, the platform
+app screenshot showed the actual overview while its existing expected image was
+a forbidden state; the current Stitch screen describes a detailed operations
+dashboard that also differs from the shipped KPI-card presentation. The
+account route likewise differs in structure from its current Stitch capture.
+These are distinct questions: whether the local app snapshot is stale, and
+whether the app matches the approved design. No reference was refreshed and no
+behavioral or design change was inferred from the mismatch. Reconcile each route
+against its current Stitch source, record intended exceptions, and update the
+visual evidence only after confirming the approved design. Full visual coverage
+remains incomplete; AD-002 remains **In Progress**.

@@ -308,6 +308,11 @@ pnpm test:affected -- --since origin/main --layer browser
 PLAYWRIGHT_BASE_URL=http://localhost:3100 pnpm test:e2e:smoke
 ```
 
+On large non-CI hosts, the isolated runner keeps one disposable Next dev server
+alive for the whole Playwright project batch. This avoids test-only
+interruptions from Next's development memory-threshold restart; ordinary local
+development and CI retain that safeguard.
+
 ### CI vs. local E2E
 
 The authoritative deploy-gate workflow is `.github/workflows/ci.yml`.

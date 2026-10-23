@@ -34,6 +34,12 @@ const nextConfig: NextConfig = {
   // Strict React in dev, no surprises in prod.
   reactStrictMode: true,
 
+  // Keep isolated browser batches on one dev server. The runner sets this only
+  // for its disposable E2E process; regular development retains Next's restart.
+  experimental: {
+    devMemoryThresholdRestart: process.env.LARATIK_E2E_DISABLE_DEV_MEMORY_RESTART !== "true",
+  },
+
   // Keep the floating Next.js dev-tools badge out of the mobile bottom-nav
   // touch area during browser checks. Compile and runtime errors still surface.
   devIndicators: false,
