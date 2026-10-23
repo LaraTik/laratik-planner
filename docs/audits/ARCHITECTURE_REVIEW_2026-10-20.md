@@ -2959,3 +2959,19 @@ editorial review, full browser matrix, and independent verification remain
 open. The shared action-failure helper retains legacy behavior for untouched
 callers; migrate those boundaries incrementally with typed public errors. AD-002
 remains **In Progress**.
+
+## A64 — Feature-owned files triggered unnecessarily broad validation
+
+**Priority: P2 — developer feedback time without dropping coverage.** The
+affected-test manifest treated every locale catalog and the entire validation
+directory as global. A content-detail copy change and the shared action-state
+helper therefore escalated unit or browser feedback beyond their ownership.
+The manifest now assigns English/Arabic content-detail catalogs to content,
+keeps locale infrastructure global, and selects the action-state tests through
+a dedicated area. Unknown catalogs still escalate. Selector coverage passed
+28/28; the staged ownership change passed 30/30 focused tests. The affected
+browser selector now chooses three Chromium content specs instead of the full
+matrix, then stops safely at the missing `TEST_DATABASE_URL` guard before
+launching browsers. The affected unit selector passed on the claim change. No
+product behavior, release gate, or test assertion was removed. AD-002 remains
+**In Progress** pending database/browser evidence and independent review.

@@ -3884,3 +3884,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   required disposable Postgres 16 service and was not used for integration or
   migration evidence. This work is **Tested**, not **Verified**; AD-002 remains
   **In Progress**.
+
+## 2026-10-23 — Narrow affected validation ownership
+
+- Feature-specific content-detail locale catalogs now select the content area;
+  the action-state contract has a focused ownership area. Locale infrastructure
+  stays global, and unmapped catalogs still escalate conservatively.
+- Selector regression tests passed 28/28; the ownership commit hook passed its
+  focused architecture and claim tests, 30/30. For the claim change, the
+  affected browser selector chose three Chromium content specs instead of the
+  full matrix, then stopped at the missing `TEST_DATABASE_URL` guard before
+  launching browsers. The affected unit selection passed. No tests or release
+  gates were removed.
+- Docker returned HTTP 500, so the disposable Postgres/browser gate remains
+  open. This tooling change does not promote **Tested** to **Verified**; AD-002
+  remains **In Progress** pending release evidence and independent review.

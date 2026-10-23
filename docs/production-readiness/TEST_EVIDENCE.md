@@ -3072,3 +3072,15 @@ successful commit. The ownership gap was then closed in
 25/25. No schema or destructive-workflow behavior changed. Full `pnpm verify`
 at the final clean SHA, Postgres/browser gates, and independent verification
 remain open.
+
+## Affected test ownership refinement — `502ff1119bc092b60bc77a7d02d102c2f4db94e0`
+
+The ownership manifest now maps content-detail locale catalogs and the shared
+action-state helper to their feature-specific unit and browser contracts.
+Unknown catalogs continue to escalate. Selector regression coverage passed
+28/28; the staged commit hook passed the architecture selector and claim action
+tests, 30/30. The affected unit selection for the claim change completed. The
+browser selector chose the three Chromium content specs and stopped at the
+runner's `TEST_DATABASE_URL` guard before launching a browser. No browser or
+product behavior was skipped. This manifest-only change does not replace the
+open release browser matrix or visual checks.
