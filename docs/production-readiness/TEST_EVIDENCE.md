@@ -3200,3 +3200,16 @@ The mapping correction is on SHA
 29/29 and its hook selected only the architecture area. Browser, visual, full
 `pnpm verify`, and independent review remain open. This evidence is **Tested**,
 not **Verified**; AD-002 remains **In Progress**.
+
+## Planning-library action error boundaries — `b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`
+
+Focused server-action regressions passed 2/2, covering an unexpected
+credential-shaped persistence error and the preserved duplicate-pillar outcome.
+The bilingual library-form checks passed 2/2; focused ESLint, Prettier, and
+`pnpm typecheck` passed. The commit hook passed 222 related unit files / 1,774
+tests and reran the direct action and ownership-selector suites, 32/32.
+Unexpected service details are logged and not returned; known permission,
+missing-record, and duplicate outcomes use localized codes. Successful writes,
+role gates, and stored data are unchanged. No migration or database change was
+made. Browser, visual, full `pnpm verify`, and independent review remain open.
+This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.

@@ -4002,3 +4002,20 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No database or migration behavior changed. Browser, responsive, axe, visual,
   full `pnpm verify`, and independent review remain open. Both changes are
   **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize planning-library action failures
+
+- Campaign, pillar, template, archive, and content-duplicate action failures
+  now return stable codes for permission, missing-record, duplicate-name, and
+  unexpected cases. Unexpected details are logged and withheld. The library
+  forms and duplicate flows render localized EN/AR copy. Successful writes,
+  role gates, and data contracts are unchanged.
+- Credential-shaped failure and known duplicate-pillar regressions passed;
+  focused form-locale tests and selector tests passed. Focused ESLint,
+  Prettier, and TypeScript passed. On clean SHA
+  `b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`, the hook passed TypeScript,
+  222 related unit files / 1,774 tests, then reran 32 direct action/selector
+  tests.
+- No database or migration behavior changed. Browser/a11y/responsive/visual,
+  full `pnpm verify`, and independent review remain open. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.

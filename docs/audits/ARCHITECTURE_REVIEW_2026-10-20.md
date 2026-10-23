@@ -3158,3 +3158,19 @@ test select that area and test file without global escalation. The focused
 architecture selector suite passed 29/29. This does not remove any release
 gate; a full suite still runs for final verification. AD-002 remains **In
 Progress**.
+
+## A77 — Planning-library actions returned raw service failures
+
+**Priority: P1 — safe action boundaries and consistent bilingual feedback.**
+Campaign, pillar, template, archive, and content-duplicate actions returned
+arbitrary service exception messages despite the module comment promising a
+generic failure for non-business errors. The actions now map typed permission
+failures, known missing-record outcomes, and duplicate-name outcomes to stable
+codes; unexpected exceptions are logged and withheld. The library forms and
+duplicate flows localize those codes in English and Arabic. Regression tests
+cover credential-shaped persistence text and the known duplicate-pillar case.
+Successful writes, role gates, and stored data are unchanged. Focused
+localization checks passed; the hook passed TypeScript, 222 related test files /
+1,774 tests, and 32 direct action/selector tests on clean SHA
+`b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`. Database/browser release checks
+and independent review remain open; AD-002 remains **In Progress**.
