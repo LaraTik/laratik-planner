@@ -43,6 +43,8 @@
   "exportActiveFilters": "المرشّحات النشطة",
   "exportNoActiveFilters": "لا توجد مرشّحات نشطة. ستُضمّن كل العناصر ضمن التواريخ المحددة.",
   "exportDownloadXlsx": "تنزيل مصنف XLSX",
+  "exportDownloading": "جارٍ تجهيز المصنف…",
+  "exportDownloadFailed": "تعذّر تنزيل المصنف. يُرجى المحاولة مرة أخرى.",
   "exportTooManyItems": "يتضمن هذا النطاق أكثر من 25,000 عنصر. قلّص نطاق التواريخ أو طبّق مرشّحات ثم حاول مرة أخرى.",
   "exportSummarySheet": "الملخص",
   "exportScheduleSheet": "الجدول",

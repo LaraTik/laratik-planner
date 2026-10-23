@@ -43,6 +43,8 @@
   "exportActiveFilters": "Active filters",
   "exportNoActiveFilters": "No filters are active. All items in the selected dates will be included.",
   "exportDownloadXlsx": "Download XLSX workbook",
+  "exportDownloading": "Preparing workbook…",
+  "exportDownloadFailed": "The workbook could not be downloaded. Please try again.",
   "exportTooManyItems": "This range includes more than 25,000 items. Narrow the dates or apply filters, then try again.",
   "exportSummarySheet": "Summary",
   "exportScheduleSheet": "Schedule",
