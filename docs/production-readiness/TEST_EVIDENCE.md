@@ -3115,6 +3115,15 @@ commit. The commit hook passed TypeScript and 15 affected test files / 152
 tests, then reran the direct suite, 7/7. Database, migration, browser, visual,
 and manual route evidence remain open.
 
+## Content-owner assignment error boundary — `c33aa014e58ef4baf949e85af51674eb5a0d3e54`
+
+The focused action and dialog localization suites passed 13/13, including
+English and Arabic not-found copy and a credential-shaped persistence failure
+that is withheld from client state. Focused ESLint and `pnpm typecheck` passed
+before commit. The commit hook passed 220 affected test files / 1,759 tests
+and reran the 13 changed-file tests. Database, migration, browser, visual, and
+manual route evidence remain open.
+
 ## Publication outcome error boundary — `ecd2220faddce5d78da5025b0fa8afae30c22f0a`
 
 Direct publication service, action, and channel-card checks passed 48/48.

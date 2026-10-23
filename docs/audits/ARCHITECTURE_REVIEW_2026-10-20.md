@@ -1779,6 +1779,20 @@ targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
 visual, route-by-route, and independent review gates remain open; AD-002
 remains **In Progress**.
 
+## A69 — Content-owner assignment returned raw service failures
+
+**Priority: P2 — safe action failures and bilingual feedback.** Content-owner
+assignment now types the missing-item outcome, maps permission denial to a
+stable code, and hides/logs unexpected persistence errors. The owner dialog
+localizes stable codes in English and Arabic rather than rendering server
+error text. Two locale-rendering regressions and the focused action suite
+passed 13/13; the commit hook passed 220 affected files / 1,759 tests and
+reran those 13 tests on clean SHA
+`c33aa014e58ef4baf949e85af51674eb5a0d3e54`. ESLint and TypeScript passed.
+Full `pnpm verify` and database/browser/visual release evidence remain open.
+Successful assignment and tenant-role checks are unchanged. AD-002 remains
+**In Progress**.
+
 ## A61 — Workspace settings AI actions returned raw provider failures
 
 **Priority: P2 — server-action privacy, runtime validation, and bilingual
