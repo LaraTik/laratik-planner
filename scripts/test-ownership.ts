@@ -614,8 +614,8 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     },
     {
       id: "account",
-      sourceGlobs: ["src/app/(app)/app/account/**"],
-      unitFiles: ["tests/unit/theme-preferences.test.ts"],
+      sourceGlobs: ["src/app/(app)/app/account/**", "src/features/account/**"],
+      unitFiles: ["tests/unit/account/**", "tests/unit/theme-preferences.test.ts"],
       integrationFiles: [],
       browser: [
         { spec: "tests/e2e/account-theme.spec.ts", projects: chromium },

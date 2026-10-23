@@ -399,6 +399,20 @@ describe("test affected core", () => {
     expect(result.unitFiles).toContain("tests/unit/platform/**");
   });
 
+  it("keeps account overview feature queries in the focused account area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/features/account/overview-query.server.ts",
+        "tests/unit/account/account-overview-query.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("account");
+    expect(result.unitFiles).toContain("tests/unit/account/**");
+  });
+
   it("keeps platform-access localization in its owning area", () => {
     const result = classifyChangedFiles(
       [

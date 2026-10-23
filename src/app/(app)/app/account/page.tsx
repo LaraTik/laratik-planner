@@ -1,17 +1,7 @@
 import { redirect } from "next/navigation";
-import { and, asc, eq, sql } from "drizzle-orm";
 import { Building2, Mail, ShieldCheck, User as UserIcon, Bell } from "lucide-react";
 import { auth } from "@/lib/auth/config";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
-import { db } from "@/lib/db";
-import {
-  agencyMemberships,
-  agencies,
-  users,
-  workspaceMemberships,
-  workspaces,
-} from "@/lib/db/schema";
-import { getPasswordState } from "@/lib/auth/profile";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -28,6 +18,7 @@ import { listMcpAccessTokens } from "@/lib/mcp/tokens";
 import { McpAccessTokensCard } from "./mcp-access-tokens-card";
 import { ThemePreferenceForm } from "./theme-preference-form";
 import type { ThemePreference } from "@/lib/theme/preferences";
+import { loadAccountOverviewIdentity } from "@/features/account/server";
 
 /**
  * Account page — own profile, password, agency membership, sign out.
@@ -50,48 +41,15 @@ export default async function AccountPage() {
   if (!session?.user) redirect("/signin?error=AccessDenied");
   const userId = session.user.id;
 
-  // Read the user row + agency memberships + password state
-  // in parallel. `getPasswordState` is a small helper that returns
-  // { hasPassword } so the Password card can pick the right copy.
-  const [[profile], agencyRows, hasPassword, notificationPrefs, mcpTokens, agencyContext] =
-    await Promise.all([
-      db
-        .select({
-          id: users.id,
-          email: users.email,
-          name: users.name,
-          displayName: users.displayName,
-          image: users.image,
-          locale: users.locale,
-          themePreference: users.themePreference,
-        })
-        .from(users)
-        .where(eq(users.id, userId))
-        .limit(1),
-      db
-        .select({
-          agencyId: agencies.id,
-          agencyName: agencies.name,
-          isAgencyAdmin: agencyMemberships.isAgencyAdmin,
-          workspaceCount: sql<number>`(
-          SELECT COUNT(*)::int
-          FROM ${workspaceMemberships} wm
-          INNER JOIN ${workspaces} w ON w.id = wm.workspace_id
-          WHERE wm.user_id = ${agencyMemberships.userId}
-            AND wm.status = 'active'
-            AND w.agency_id = ${agencyMemberships.agencyId}
-        )`,
-        })
-        .from(agencyMemberships)
-        .innerJoin(agencies, eq(agencies.id, agencyMemberships.agencyId))
-        .where(and(eq(agencyMemberships.userId, userId), eq(agencyMemberships.status, "active")))
-        .orderBy(asc(agencyMemberships.createdAt))
-        .limit(50),
-      getPasswordState(userId),
-      getNotificationPreferencesForUser(userId),
-      listMcpAccessTokens(userId),
-      resolveActiveAgencyContext({ actor: { id: userId } }),
-    ]);
+  // Load identity/profile data once while unrelated preferences and account
+  // integrations resolve in parallel.
+  const [identity, notificationPrefs, mcpTokens, agencyContext] = await Promise.all([
+    loadAccountOverviewIdentity(userId),
+    getNotificationPreferencesForUser(userId),
+    listMcpAccessTokens(userId),
+    resolveActiveAgencyContext({ actor: { id: userId } }),
+  ]);
+  const { profile, agencyRows, hasPassword } = identity;
 
   // `getPasswordState` returns null when the user row has vanished
   // (session is valid but the user was deleted between the JWT
@@ -170,9 +128,9 @@ export default async function AccountPage() {
           {t("account.password")}
         </CardTitle>
         <p className="text-body text-fg-muted mb-5">
-          {hasPassword.hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
+          {hasPassword ? t("account.passwordChange") : t("account.passwordSet")}
         </p>
-        <PasswordForm hasPassword={hasPassword.hasPassword} />
+        <PasswordForm hasPassword={hasPassword} />
       </Card>
 
       <Card
