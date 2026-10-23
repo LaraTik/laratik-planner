@@ -370,6 +370,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
     {
       id: "platform",
       sourceGlobs: [
+        "src/features/platform/**",
         "src/lib/platform/**",
         "src/lib/agencies/**",
         "src/app/(app)/app/platform/**",

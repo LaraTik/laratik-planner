@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { count, desc, eq, isNull, sql } from "drizzle-orm";
 import {
   AlertCircle,
   Building,
@@ -11,8 +10,6 @@ import {
   Users2,
   Workflow,
 } from "lucide-react";
-import { db } from "@/lib/db";
-import { agencyMemberships, agencies, aiUsageEvents, workspaces } from "@/lib/db/schema";
 import { tForActive } from "@/lib/i18n/t-for-active";
 import { PageHeader } from "@/components/workspace/page-header";
 import { KpiTile } from "@/components/workspace/kpi-tile";
@@ -20,6 +17,7 @@ import { Card, CardDescription, CardTitle } from "@/components/ui/card";
 import { currentActor } from "@/lib/auth/current-actor";
 import { requirePlatformPermission } from "@/lib/auth/platform-access";
 import { PermissionNotice } from "@/components/platform/permission-notice";
+import { loadPlatformOverviewData } from "@/features/platform/overview/server";
 
 /**
  * Platform overview — current Stitch screen `ab5ee0411c54483191c4ad5403afa35f`.
@@ -55,51 +53,6 @@ export async function generateMetadata() {
 // database. This matches the `account` page pattern.
 export const dynamic = "force-dynamic";
 
-type OverviewKpis = {
-  totalAgencies: number;
-  totalActiveUsers: number;
-  totalWorkspaces: number;
-  totalAiCalls: number;
-};
-
-async function loadOverviewKpis(): Promise<OverviewKpis> {
-  const [agencyRow, userRow, workspaceRow, aiRow] = await Promise.all([
-    db.select({ value: count() }).from(agencies),
-    db
-      // Distinct active members across the platform.
-      .select({ value: sql<number>`count(distinct ${agencyMemberships.userId})` })
-      .from(agencyMemberships)
-      .where(eq(agencyMemberships.status, "active")),
-    db.select({ value: count() }).from(workspaces).where(isNull(workspaces.archivedAt)),
-    db
-      // Count of successful AI invocations. Per-capability token
-      // breakdowns land in M2 (StudioFlow §15 "30-day usage" panel).
-      .select({ value: count() })
-      .from(aiUsageEvents)
-      .where(eq(aiUsageEvents.succeeded, true)),
-  ]);
-
-  return {
-    totalAgencies: agencyRow[0]?.value ?? 0,
-    totalActiveUsers: userRow[0]?.value ?? 0,
-    totalWorkspaces: workspaceRow[0]?.value ?? 0,
-    totalAiCalls: aiRow[0]?.value ?? 0,
-  };
-}
-
-async function loadRecentAgencies(limit = 5) {
-  return db
-    .select({
-      id: agencies.id,
-      name: agencies.name,
-      slug: agencies.slug,
-      createdAt: agencies.createdAt,
-    })
-    .from(agencies)
-    .orderBy(desc(agencies.createdAt))
-    .limit(limit);
-}
-
 export default async function PlatformOverviewPage() {
   const actor = await currentActor();
   const { t } = await tForActive();
@@ -121,7 +74,7 @@ export default async function PlatformOverviewPage() {
       />
     );
   }
-  const [kpis, recent] = await Promise.all([loadOverviewKpis(), loadRecentAgencies(5)]);
+  const { kpis, recentAgencies } = await loadPlatformOverviewData();
 
   return (
     <>
@@ -226,7 +179,7 @@ export default async function PlatformOverviewPage() {
             {t("platform.seeAll")}
           </Link>
         </div>
-        {recent.length === 0 ? (
+        {recentAgencies.length === 0 ? (
           <p className="text-body text-fg-muted" data-testid="platform-overview-recent-empty">
             {t("platform.recentEmpty")}
           </p>
@@ -235,7 +188,7 @@ export default async function PlatformOverviewPage() {
             className="border-border divide-border divide-y rounded-[var(--radius-control)] border"
             data-testid="platform-overview-recent-list"
           >
-            {recent.map((a) => (
+            {recentAgencies.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 px-4 py-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <span
