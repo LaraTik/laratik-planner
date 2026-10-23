@@ -433,6 +433,23 @@ function WorkflowRailBody({
     const fallback = claimErrorFallbacks[code] ?? claimErrorFallbacks.failed!;
     return tr(`contentDetail.workflow.claimErrors.${code}`, fallback);
   };
+  const workflowErrorMessage = (error: string) => {
+    const code = error.startsWith("workflowError.") ? error.slice("workflowError.".length) : null;
+    if (!code) return error;
+    const fallback =
+      code === "unauthorized"
+        ? "You do not have permission to make this workflow change."
+        : code === "invalid_transition"
+          ? "This item can no longer make that workflow change. Refresh and try again."
+          : code === "validation_failed"
+            ? "Check the item details and try again."
+            : code === "not_found"
+              ? "This item is no longer available. Refresh and try again."
+              : code === "conflict"
+                ? "The item changed while you were working. Refresh and try again."
+                : "The workflow action failed. Please try again.";
+    return tr(`contentDetail.workflow.errors.${code}`, fallback);
+  };
   const [pending, start] = useTransition();
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -445,7 +462,7 @@ function WorkflowRailBody({
       ...(reason ? { reason } : {}),
     });
     if (result?.error) {
-      setActionError(result.error);
+      setActionError(workflowErrorMessage(result.error));
     } else {
       router.refresh();
     }

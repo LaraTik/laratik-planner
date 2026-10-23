@@ -6,7 +6,7 @@ const workspaceMock = vi.hoisted(() => ({
   getAccessibleWorkspace: vi.fn(),
   getAccessibleWorkspaceAtPath: vi.fn(),
 }));
-const contentMock = vi.hoisted(() => ({ claimAsDesigner: vi.fn() }));
+const contentMock = vi.hoisted(() => ({ claimAsDesigner: vi.fn(), transitionContent: vi.fn() }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 
 vi.mock("@/lib/auth/config", () => authMock);
@@ -14,12 +14,18 @@ vi.mock("@/lib/auth/agency-context", () => agencyContextMock);
 vi.mock("@/lib/workspaces/context", () => workspaceMock);
 vi.mock("@/features/content/server", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/features/content/server")>();
-  return { ...actual, claimAsDesigner: contentMock.claimAsDesigner };
+  return {
+    ...actual,
+    claimAsDesigner: contentMock.claimAsDesigner,
+    transitionContent: contentMock.transitionContent,
+  };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
 
-const { claimAction } = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
+const { claimAction, transitionAction } =
+  await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
+const { DomainError } = await import("@/lib/content/workflow");
 
 beforeEach(() => {
   authMock.auth.mockReset().mockResolvedValue({ user: { id: "actor-1" } });
@@ -31,6 +37,7 @@ beforeEach(() => {
     .mockResolvedValue({ id: "workspace-1", agencySlug: "agency" });
   workspaceMock.getAccessibleWorkspaceAtPath.mockReset();
   contentMock.claimAsDesigner.mockReset();
+  contentMock.transitionContent.mockReset();
   loggerMock.logError.mockReset();
 });
 
@@ -57,5 +64,37 @@ describe("claimAction error boundary", () => {
 
     expect(result).toEqual({ error: "claimError.already_assigned" });
     expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("returns a stable code for expected workflow failures", async () => {
+    contentMock.transitionContent.mockRejectedValue(
+      new DomainError("invalid_transition", "Cannot approve from draft"),
+    );
+
+    const result = await transitionAction({
+      workspaceSlug: "studio",
+      contentItemId: "item-1",
+      action: "approve_content",
+    });
+
+    expect(result).toEqual({ error: "workflowError.invalid_transition" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not return unexpected workflow exception details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    contentMock.transitionContent.mockRejectedValue(error);
+
+    const result = await transitionAction({
+      workspaceSlug: "studio",
+      contentItemId: "item-1",
+      action: "approve_content",
+    });
+
+    expect(result).toEqual({ error: "workflowError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.workflow_transition_failed", {
+      err: error,
+    });
   });
 });

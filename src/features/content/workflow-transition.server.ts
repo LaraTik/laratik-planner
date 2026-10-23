@@ -12,6 +12,7 @@ import { hasWorkspaceRole, isAgencyAdminForWorkspace, type Actor } from "@/lib/a
 import { humanStatus as humanizeForSummary } from "@/lib/content/status";
 import {
   WORKFLOW_RULES,
+  DomainError,
   getActiveScenario,
   resolveWorkflowTransition,
   type WorkflowAction,
@@ -37,12 +38,19 @@ export async function transitionContent(
     returnTarget?: string;
   },
 ) {
+  if (
+    input.action !== "unblock" &&
+    !Object.prototype.hasOwnProperty.call(WORKFLOW_RULES, input.action)
+  ) {
+    throw new DomainError("invalid_transition", "Unknown workflow action");
+  }
+
   const [item] = await db
     .select()
     .from(contentItems)
     .where(eq(contentItems.id, input.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new DomainError("not_found", "Content item not found");
 
   const allowedRoles =
     input.action === "unblock"
@@ -98,7 +106,10 @@ export async function transitionContent(
   });
 
   if (input.action === "assign_designer" && !item.designerId) {
-    throw new Error("Assign a designer before moving the item into design");
+    throw new DomainError(
+      "validation_failed",
+      "Assign a designer before moving the item into design",
+    );
   }
 
   return await db.transaction(async (tx) => {
@@ -144,7 +155,9 @@ export async function transitionContent(
           ),
         )
         .limit(1);
-      if (!pendingRequest) throw new Error("Pending content approval request not found");
+      if (!pendingRequest) {
+        throw new DomainError("not_found", "Pending content approval request not found");
+      }
       const decision = input.action === "approve_content" ? "approved" : "changes_requested";
       await tx.insert(approvalDecisions).values({
         approvalRequestId: pendingRequest.id,

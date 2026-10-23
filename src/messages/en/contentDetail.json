@@ -660,6 +660,14 @@
     "description": "Internal notes are administrative and do not reset approvals or revisions."
   },
   "workflow": {
+    "errors": {
+      "unauthorized": "You do not have permission to make this workflow change.",
+      "invalid_transition": "This item can no longer make that workflow change. Refresh and try again.",
+      "validation_failed": "Check the item details and try again.",
+      "conflict": "The item changed while you were working. Refresh and try again.",
+      "not_found": "This item is no longer available. Refresh and try again.",
+      "failed": "The workflow action failed. Please try again."
+    },
     "claimErrors": {
       "not_found": "This item is no longer available. Refresh and try again.",
       "already_assigned": "This item has already been claimed by a designer.",

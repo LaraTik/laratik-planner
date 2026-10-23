@@ -68,6 +68,7 @@ import {
 } from "@/lib/discussions/service";
 import { actionFailure, fieldErrorsFromZod, type ActionState } from "@/lib/validation/action-state";
 import { logError } from "@/lib/observability/logger";
+import { DomainError } from "@/lib/content/workflow";
 
 /**
  * Per-action field maps (plan §4 — "Per-action field map").
@@ -417,8 +418,8 @@ export async function transitionAction(input: {
   const { actor } = await requireWorkspaceContext(input.workspaceSlug);
   if (!input.action) {
     return {
-      error: "Missing action",
-      fieldErrors: { action: "Choose an action" },
+      error: "workflowError.validation_failed",
+      fieldErrors: { action: "workflowError.validation_failed" },
     };
   }
   try {
@@ -430,15 +431,15 @@ export async function transitionAction(input: {
     });
     return { ok: true, from: result?.from, to: result?.to };
   } catch (error) {
-    // Return the error as a value rather than re-throwing. Next.js 16
-    // encodes thrown server-action errors as a hashed digest in the RSC
-    // response (content-type: text/x-component, `1:E{"digest":"…"}`),
-    // dropping the original message — the client then surfaces a generic
-    // minified React error instead of the action's real text. Returning
-    // a value keeps the message in the RSC payload. Matches the
-    // pattern already used by `applyAiDraftAction`, `submitDeliveryAction`,
-    // and `decideApprovalAction` in this file.
-    return actionFailure<TransitionFields>(error, "The workflow action failed.");
+    if (error instanceof DomainError) {
+      return actionFailure<TransitionFields>(error, "workflowError.failed", {
+        publicMessage: `workflowError.${error.code}`,
+      });
+    }
+    logError("planning.workflow_transition_failed", { err: error });
+    return actionFailure<TransitionFields>(error, "workflowError.failed", {
+      exposeErrorMessage: false,
+    });
   }
 }
 
