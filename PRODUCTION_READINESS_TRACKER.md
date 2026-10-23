@@ -3822,6 +3822,22 @@ default framebuffer`, then consumes a CPU core without returning control;
   changed. This work is **Tested**, not **Verified**; AD-002 remains
   **In Progress**.
 
+## 2026-10-23 — Sanitize workspace Settings AI suggestion failures
+
+- Lead-time and monthly-target suggestions now return stable error codes and
+  log unexpected provider errors through the credential-scrubbing logger.
+  Approval mode is validated at runtime; errors render in English and Arabic.
+- Three action tests and the Arabic lead-time form test passed; the
+  workspace-pages unit area passed 584/584. On clean SHA
+  `273dc281e84b70b21f4a06693e5831d0369cd39e`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 597 unit files / 5,164 tests, and production
+  build.
+- Browser/accessibility/responsive/visual route checks and independent
+  verification remain open, as does native Arabic editorial review. No
+  permissions, routes, successful suggestions, or persistence behavior
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.
+
 ## 2026-10-23 — Bound planning-pack action errors
 
 - Planning-pack server actions now return stable localized error codes for

@@ -2083,6 +2083,20 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Workspace Settings AI suggestion error boundary — `273dc281e84b70b21f4a06693e5831d0369cd39e`
+
+The lead-time and monthly-target suggestion actions now return stable error
+codes instead of provider exception text, with credential-scrubbed diagnostics
+in structured logs. The lead-time action validates approval mode at runtime.
+Errors render in English and Arabic. Three action regressions and the Arabic
+lead-time form regression passed; the workspace-pages unit area passed 584/584.
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 597
+unit files / 5,164 tests, and the production build. No permission, route,
+suggestion success, or persistence behavior changed. Browser, accessibility,
+responsive and visual checks for the route, full browser matrix, and independent
+verification remain open, as does native Arabic editorial review. This work is
+**Tested**, not **Verified**.
+
 ## Bulk reset audit failure privacy — `d056a8ccbdd0f2b46710a1648a77fc924455735a`
 
 The reset-all ideas action now stores stable `permission_denied` and

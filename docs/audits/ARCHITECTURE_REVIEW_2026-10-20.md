@@ -1779,6 +1779,24 @@ targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
 visual, route-by-route, and independent review gates remain open; AD-002
 remains **In Progress**.
 
+## A61 — Workspace settings AI actions returned raw provider failures
+
+**Priority: P2 — server-action privacy, runtime validation, and bilingual
+feedback.** The lead-time and monthly-target suggestion actions returned
+provider exception messages directly to the browser; the lead-time action also
+trusted its compile-time-only approval-mode type. Both actions now return
+stable error codes, log unexpected failures through the structured logger,
+and render localized English/Arabic messages. The approval mode is runtime
+validated before authentication or provider access. Three server-action
+regressions and the Arabic lead-time error rendering test passed; the
+workspace-pages unit area passed 584/584. On clean SHA
+`273dc281e84b70b21f4a06693e5831d0369cd39e`, `pnpm verify` passed formatting,
+lint, TypeScript, all 597 unit files / 5,164 tests, and production build.
+Suggestion success behavior, permissions, routes, and persistence are
+unchanged. Browser/accessibility/responsive/visual route checks and independent
+verification remain open; native Arabic editorial review is also pending.
+AD-002 remains **In Progress**.
+
 ## A60 — Planning-pack action returned raw validation and persistence errors
 
 **Priority: P2 — safe server-action boundaries and bilingual feedback.** The
@@ -1793,7 +1811,7 @@ lint, TypeScript, all 596 unit files / 5,160 tests, and the production build.
 No authorization, route, data, or save-success behavior changed. The route's
 English/Arabic browser, accessibility, responsive, and visual checks remain
 pending, as do the full browser matrix and independent verification; AD-002
-remains **In Progress**.
+remains **In Progress**. Native Arabic editorial review also remains pending.
 
 ## Route review pass — tenant and page behavior — 2026-10-22
 
