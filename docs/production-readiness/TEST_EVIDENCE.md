@@ -3213,3 +3213,15 @@ missing-record, and duplicate outcomes use localized codes. Successful writes,
 role gates, and stored data are unchanged. No migration or database change was
 made. Browser, visual, full `pnpm verify`, and independent review remain open.
 This checkpoint is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## Platform agency-edit error boundary — `5ba9ef6309093f8cea00765a88c06830e09dd30c`
+
+The focused action regression passed 1/1 and the ownership-selector suite
+passed 31/31. Focused ESLint, Prettier, and `pnpm typecheck` passed. The commit
+hook selected the platform and architecture areas, reran the changed action,
+and passed both changed test files, 32/32. Unexpected persistence messages are
+logged and withheld; typed agency-domain errors retain their public codes and
+messages. No authorization, successful update, route, or data contract changed.
+No migration was introduced. Full `pnpm verify`, browser/visual, and
+independent review remain open. This checkpoint is **Tested**, not **Verified**;
+AD-002 remains **In Progress**.

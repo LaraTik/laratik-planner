@@ -4019,3 +4019,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No database or migration behavior changed. Browser/a11y/responsive/visual,
   full `pnpm verify`, and independent review remain open. This work is
   **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Sanitize platform agency-edit failures
+
+- Platform agency edits continue to return typed domain failures, but
+  unexpected exceptions now go to structured logs and the existing generic
+  fallback. A credential-shaped DB URL regression proves no internal detail
+  reaches the edit form. Permission checks, validation, successful updates,
+  routes, and data remain unchanged.
+- Focused action and selector suites passed 32/32; focused ESLint, Prettier,
+  and TypeScript passed. On clean SHA
+  `5ba9ef6309093f8cea00765a88c06830e09dd30c`, the hook reran the changed action
+  suite and ownership regression successfully.
+- No database or migration behavior changed. Full `pnpm verify`, browser,
+  visual, and independent review remain open. This work is **Tested**, not
+  **Verified**; AD-002 remains **In Progress**.

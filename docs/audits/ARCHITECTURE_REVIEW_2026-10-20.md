@@ -3174,3 +3174,17 @@ localization checks passed; the hook passed TypeScript, 222 related test files /
 1,774 tests, and 32 direct action/selector tests on clean SHA
 `b566c43d6d768dbe0cc66fd05532f8a55ad92c7d`. Database/browser release checks
 and independent review remain open; AD-002 remains **In Progress**.
+
+## A78 — Platform agency edit action exposed unexpected error messages
+
+**Priority: P1 — platform privacy and safe server-action failures.** The
+platform agency edit action correctly preserved typed `AgencyUpdateError`
+outcomes but returned arbitrary `Error.message` values for all other
+exceptions, exposing database diagnostics in the shared edit form. It now
+preserves typed domain errors, logs unexpected failures through the structured
+logger, and returns the existing generic fallback. A regression supplies a
+credential-shaped database URL and verifies the response is safe. Authorization,
+validation, successful updates, routes, and data contracts are unchanged. The
+hook passed TypeScript and the focused platform/architecture suites, 32/32, on
+clean SHA `5ba9ef6309093f8cea00765a88c06830e09dd30c`. Database/browser release
+checks and independent review remain open; AD-002 remains **In Progress**.
