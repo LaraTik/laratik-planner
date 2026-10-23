@@ -3188,3 +3188,20 @@ validation, successful updates, routes, and data contracts are unchanged. The
 hook passed TypeScript and the focused platform/architecture suites, 32/32, on
 clean SHA `5ba9ef6309093f8cea00765a88c06830e09dd30c`. Database/browser release
 checks and independent review remain open; AD-002 remains **In Progress**.
+
+## A79 — Agency update actions duplicated failure mapping
+
+**Priority: P2 — shared domain error contract.** The agency-admin and
+platform-admin edit actions update the same agency identity through separate
+authorization paths, but each repeated the mapping for `AgencyUpdateError`
+versus unexpected persistence failures. That allowed the privacy fix to drift
+between the two call sites. Both now use the platform-safe
+`src/lib/agencies/action-errors.ts` mapper: typed domain messages and codes
+remain actionable, while unexpected errors are logged and return a generic
+message. Focused action and ownership tests cover both call paths and shared
+test-area selection. No role, permission, success, route, or stored-data
+behavior changed. On clean SHA
+`4ef3ff8a6a01fcd782b4280b9cb197517e7e3486`, typecheck passed; the hook passed
+the two action regressions and the ownership suite, 34/34. Full `pnpm verify`,
+browser/database release evidence, and independent review remain open; AD-002
+remains **In Progress**.

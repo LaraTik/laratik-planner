@@ -3225,3 +3225,16 @@ messages. No authorization, successful update, route, or data contract changed.
 No migration was introduced. Full `pnpm verify`, browser/visual, and
 independent review remain open. This checkpoint is **Tested**, not **Verified**;
 AD-002 remains **In Progress**.
+
+## Shared agency-update action failure mapper — `4ef3ff8a6a01fcd782b4280b9cb197517e7e3486`
+
+Focused agency-admin and platform-admin action regressions passed 2/2; the
+ownership selector passed 33/33. Focused ESLint, Prettier, and `pnpm typecheck`
+passed. The commit hook selected the platform, agency-settings, and
+architecture areas, passed both action tests, then reran the changed action
+and ownership suites, 34/34. Typed agency update errors preserve their public
+codes and messages; unexpected exceptions are logged and withheld from both
+forms. Authorization, successful updates, routes, and data contracts are
+unchanged. No migration was introduced. Full `pnpm verify`, browser/database
+release checks, and independent review remain open. This checkpoint is
+**Tested**, not **Verified**; AD-002 remains **In Progress**.

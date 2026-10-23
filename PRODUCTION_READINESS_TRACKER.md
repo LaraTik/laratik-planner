@@ -4034,3 +4034,18 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No database or migration behavior changed. Full `pnpm verify`, browser,
   visual, and independent review remain open. This work is **Tested**, not
   **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Centralize agency update action failures
+
+- Agency-admin and platform-admin edit actions now share one domain error
+  mapper. Typed `AgencyUpdateError` outcomes keep their public codes; unknown
+  failures are logged and return the same generic message. Both use separate
+  authorization checks and retain their existing success behavior.
+- The two action regressions and selector suite passed 34/34. Focused ESLint,
+  Prettier, and TypeScript passed. On clean SHA
+  `4ef3ff8a6a01fcd782b4280b9cb197517e7e3486`, the hook selected platform,
+  agency-settings, and architecture areas, passed both action tests, then
+  reran 34 direct tests.
+- No database, migration, route, permission, or stored-data behavior changed.
+  Full `pnpm verify`, browser, and independent review remain open. This work is
+  **Tested**, not **Verified**; AD-002 remains **In Progress**.
