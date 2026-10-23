@@ -3925,3 +3925,20 @@ default framebuffer`, then consumes a CPU core without returning control;
 - No database, migration, browser, visual, or manual route evidence was
   produced. The disposable Postgres and bilingual browser gates remain open;
   this change is **Tested**, not **Verified**. AD-002 remains **In Progress**.
+
+## 2026-10-23 — Bound creative and audience-copy action errors
+
+- Creative-payload, research-teardown, and audience-copy actions now return
+  stable localized error codes. Domain validation, missing records, and invalid
+  workflow states have typed errors; unexpected failures are logged and
+  withheld from client state. The creative editor and copy panel localize the
+  shared codes in the active interface locale. Successful edits, permissions,
+  routes, and persisted formats are unchanged.
+- Focused UI, content, action, and catalog checks passed 133/133; focused ESLint
+  and `pnpm typecheck` passed. On clean SHA
+  `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`, the commit hook passed TypeScript
+  and 33 affected unit files / 299 tests, then reran the changed action and
+  localization suites, 19/19.
+- Database, migration, browser, visual, and manual route evidence were not
+  produced. This change is **Tested**, not **Verified**; those release gates
+  remain open and AD-002 remains **In Progress**.

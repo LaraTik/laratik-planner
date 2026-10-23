@@ -3145,3 +3145,13 @@ unexpected persistence details are logged and withheld from client state. No
 database, migration, browser, visual, or manual route evidence was produced;
 those gates remain open. No permission, route, successful-write, or stored-data
 contract changed.
+
+## Creative and audience-copy action error boundaries — `3b23ac8e2ecc9dc6ead1a4d2d65e918d8cde0423`
+
+Focused content, editor, localization, and catalog checks passed 133/133.
+Focused ESLint and `pnpm typecheck` passed. The commit hook passed TypeScript
+and 33 affected unit files / 299 tests, then reran the changed action and
+localization suites, 19/19. Expected domain errors return stable EN/AR codes;
+unexpected failures are logged and withheld from client state. Database,
+migration, browser, visual, and manual route evidence remain open. No route,
+permission, successful-write, or persisted-data contract changed.
