@@ -47,6 +47,7 @@ import {
   SubmitDeliverySchema,
   submitDelivery,
   DecideApprovalSchema,
+  ApprovalDecisionError,
   decideApproval,
   SetMediaRequiredSchema,
   setMediaRequired,
@@ -112,6 +113,11 @@ function workflowActionFailure<Field extends string>(
   event: string,
 ): ActionState<Field> {
   if (error instanceof DomainError) {
+    return actionFailure<Field>(error, "workflowError.failed", {
+      publicMessage: `workflowError.${error.code}`,
+    });
+  }
+  if (error instanceof ApprovalDecisionError) {
     return actionFailure<Field>(error, "workflowError.failed", {
       publicMessage: `workflowError.${error.code}`,
     });
@@ -671,7 +677,7 @@ export async function decideApprovalAction(input: {
   try {
     await decideApproval(actor, parsed.data);
   } catch (error) {
-    return actionFailure<DecideApprovalFields>(error, "The approval action failed.");
+    return workflowActionFailure<DecideApprovalFields>(error, "planning.approval_decision_failed");
   }
   // Publication outcomes change the workflow status rendered by the
   // planning detail page as well as the list. Revalidate the dynamic

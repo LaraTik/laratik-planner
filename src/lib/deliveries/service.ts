@@ -319,9 +319,23 @@ export const DecideApprovalSchema = z.object({
 
 export type DecideApprovalInput = z.infer<typeof DecideApprovalSchema>;
 
+export type ApprovalDecisionErrorCode =
+  "validation_failed" | "not_found" | "conflict" | "invalid_transition";
+
+/** Expected approval failures that callers can safely translate for users. */
+export class ApprovalDecisionError extends Error {
+  constructor(
+    public readonly code: ApprovalDecisionErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "ApprovalDecisionError";
+  }
+}
+
 export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
   if (input.decision === "changes_requested" && !input.feedback) {
-    throw new Error("changes_requested requires non-empty feedback");
+    throw new ApprovalDecisionError("validation_failed", "Changes require feedback");
   }
 
   const [req] = await db
@@ -329,8 +343,10 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     .from(approvalRequests)
     .where(eq(approvalRequests.id, input.approvalRequestId))
     .limit(1);
-  if (!req) throw new Error("Approval request not found");
-  if (req.status !== "pending") throw new Error(`Request is ${req.status}`);
+  if (!req) throw new ApprovalDecisionError("not_found", "Approval request not found");
+  if (req.status !== "pending") {
+    throw new ApprovalDecisionError("conflict", "Approval request is no longer pending");
+  }
 
   // Resolve workspace for policy check
   const [item] = await db
@@ -339,7 +355,7 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     .innerJoin(workspaces, eq(workspaces.id, contentItems.workspaceId))
     .where(eq(contentItems.id, req.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new ApprovalDecisionError("not_found", "Content item not found");
 
   const role =
     req.gate === "content"
@@ -366,7 +382,7 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       .where(eq(approvalRequests.id, req.id))
       .limit(1);
     if (!lockedRequest || lockedRequest.status !== "pending") {
-      throw new Error("Approval request is no longer pending");
+      throw new ApprovalDecisionError("conflict", "Approval request is no longer pending");
     }
 
     const [settings] = await tx
@@ -393,7 +409,10 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
       .where(eq(approvalRequests.id, req!.id));
 
     if (lockedRequest.gate === "content") {
-      throw new Error("Content approvals must use the content workflow command");
+      throw new ApprovalDecisionError(
+        "invalid_transition",
+        "Content approvals must use the content workflow command",
+      );
     }
 
     const outcome = deriveCreativeApprovalOutcome({
@@ -403,7 +422,9 @@ export async function decideApproval(actor: Actor, input: DecideApprovalInput) {
     });
 
     if (outcome.createClientRequest) {
-      if (!lockedRequest.deliveryVersionId) throw new Error("Delivery version is required");
+      if (!lockedRequest.deliveryVersionId) {
+        throw new ApprovalDecisionError("validation_failed", "Delivery version is required");
+      }
       await tx.insert(approvalRequests).values({
         contentItemId: lockedRequest.contentItemId,
         gate: "creative_client",

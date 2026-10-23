@@ -13,6 +13,7 @@ const contentMock = vi.hoisted(() => ({
 }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
+const approvalMock = vi.hoisted(() => ({ decideApproval: vi.fn() }));
 
 vi.mock("@/lib/auth/config", () => authMock);
 vi.mock("@/lib/auth/agency-context", () => agencyContextMock);
@@ -28,11 +29,16 @@ vi.mock("@/features/content/server", async (importOriginal) => {
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
 vi.mock("@/lib/db", () => ({ db: dbMock }));
+vi.mock("@/lib/deliveries/service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/deliveries/service")>();
+  return { ...actual, decideApproval: approvalMock.decideApproval };
+});
 
-const { assignDesignerAction, claimAction, transitionAction } =
+const { assignDesignerAction, claimAction, decideApprovalAction, transitionAction } =
   await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
 const { DomainError } = await import("@/lib/content/workflow");
+const { ApprovalDecisionError } = await import("@/lib/deliveries/service");
 
 beforeEach(() => {
   authMock.auth.mockReset().mockResolvedValue({ user: { id: "actor-1" } });
@@ -48,6 +54,7 @@ beforeEach(() => {
   contentMock.assignDesigner.mockReset();
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
+  approvalMock.decideApproval.mockReset();
 });
 
 describe("claimAction error boundary", () => {
@@ -124,6 +131,38 @@ describe("claimAction error boundary", () => {
     expect(result).toEqual({ error: "workflowError.failed" });
     expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
     expect(loggerMock.logError).toHaveBeenCalledWith("planning.designer_assignment_failed", {
+      err: error,
+    });
+  });
+
+  it("returns a stable code for expected approval decision failures", async () => {
+    approvalMock.decideApproval.mockRejectedValue(
+      new ApprovalDecisionError("conflict", "Approval request is no longer pending"),
+    );
+
+    const result = await decideApprovalAction({
+      workspaceSlug: "studio",
+      approvalRequestId: "00000000-0000-4000-8000-000000000003",
+      decision: "approved",
+    });
+
+    expect(result).toEqual({ error: "workflowError.conflict" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not return unexpected approval decision details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    approvalMock.decideApproval.mockRejectedValue(error);
+
+    const result = await decideApprovalAction({
+      workspaceSlug: "studio",
+      approvalRequestId: "00000000-0000-4000-8000-000000000003",
+      decision: "approved",
+    });
+
+    expect(result).toEqual({ error: "workflowError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.approval_decision_failed", {
       err: error,
     });
   });

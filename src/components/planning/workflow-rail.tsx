@@ -819,7 +819,7 @@ function WorkflowRailBody({
                     decision: "approved",
                   });
                   if (result?.error) {
-                    setActionError(result.error);
+                    setActionError(workflowErrorMessage(result.error));
                   } else {
                     router.refresh();
                   }
@@ -840,7 +840,7 @@ function WorkflowRailBody({
                   feedback,
                 });
                 if (result?.error) {
-                  setActionError(result.error);
+                  setActionError(workflowErrorMessage(result.error));
                 } else {
                   router.refresh();
                 }
