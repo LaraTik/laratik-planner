@@ -4157,3 +4157,15 @@ including light/dark accessibility and account preference journeys. No route,
 role, or stored-data behavior changed. Full browser/visual release evidence and
 independent review remain open; this is **Tested**, not **Verified**. AD-002
 remains **In Progress**.
+
+### Architecture review — batched verification and Chromium shards (2026-10-23)
+
+On clean SHA `36aa336872859bffff560944cf9d3756b696ad9f`, `pnpm verify` passed:
+formatting, lint, type-check, all 606 unit files / 5,225 tests, and production
+build. The isolated Chromium project ran in two sequential shards against the
+disposable database: 145/145 and 144 passed / one skipped. The total is 289
+passed and one skipped. The second shard logged a destination-stream warning,
+but all tests completed successfully. This is Chromium-only evidence; the
+remaining browser projects and complete visual matrix have not passed. Work
+remains **Tested**, not **Verified**; AD-002 stays **In Progress** and the push
+gate stays closed until the required release evidence is complete.

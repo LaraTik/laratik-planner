@@ -3332,3 +3332,16 @@ accessibility and theme-preference journeys. Type-check passed in the focused
 run and commit hook. No route, role, or stored-data contract changed. This is
 **Tested**, not **Verified**; the full release browser and visual matrices
 remain open.
+
+## Architecture review validation batch — `36aa336872859bffff560944cf9d3756b696ad9f`
+
+On this clean SHA, `pnpm verify` passed formatting, ESLint, TypeScript, all 606
+unit files / 5,225 tests, and the production build. The isolated Chromium suite
+was split into two sequential shards against the disposable `planner_test`
+database: shard 1 passed 145/145, and shard 2 passed 144 with one skipped.
+Together, 289 tests passed and one was skipped. Both shards exited successfully;
+the run emitted a Next destination-stream warning during shard 2, but the
+remaining checks completed and the runner reported success. This covers
+Chromium only: Firefox, WebKit, mobile Chromium, mobile Safari, and the full
+visual matrix remain outstanding. This is **Tested**, not **Verified**; AD-002
+remains **In Progress**.
