@@ -15,6 +15,7 @@ import { PlanningFiltersBar, PlanningListGrouped } from "@/features/content";
 import { MonthNav } from "@/components/workspace/month-nav";
 import { PlanningKpiBar } from "@/components/workspace/planning-kpi-bar";
 import { PlanningViewSwitcher } from "@/components/workspace/planning-view-switcher";
+import { PlanningXlsxExportDialog } from "./planning-xlsx-export-dialog";
 import { Pagination } from "@/components/workspace/pagination";
 import { describeActiveFilter } from "./filter-describe";
 import { getAccessibleWorkspaceAtPath } from "@/lib/workspaces/context";
@@ -301,6 +302,54 @@ export default async function PlanningPage({
     healthFilter.length > 0 ||
     parsedFilters.risk,
   );
+  const currentExportFilters = [
+    ...(selectedStatus ? [{ name: "status", value: selectedStatus }] : []),
+    ...(selectedStage ? [{ name: "stage", value: selectedStage }] : []),
+    ...(selectedFormat ? [{ name: "format", value: selectedFormat }] : []),
+    ...(channelFilter ? [{ name: "channel", value: channelFilter }] : []),
+    ...(ownerFilter ? [{ name: "owner", value: ownerFilter }] : []),
+    ...(healthFilter.length ? [{ name: "health", value: healthFilter.join(",") }] : []),
+    ...(parsedFilters.risk ? [{ name: "risk", value: parsedFilters.risk }] : []),
+    ...(searchTerm ? [{ name: "search", value: searchTerm }] : []),
+  ];
+  const activeExportFilters = [
+    ...(selectedStatus
+      ? [
+          `${t("planning.exportFilterStatus")}: ${t(`planningFilters.statusLabels.${selectedStatus}`, {})}`,
+        ]
+      : []),
+    ...(selectedStage
+      ? [
+          `${t("planning.exportFilterStage")}: ${t(`planningFilters.stageLabels.${selectedStage}`, {})}`,
+        ]
+      : []),
+    ...(selectedFormat
+      ? [
+          `${t("planning.exportFilterFormat")}: ${t(`planningFilters.formatLabels.${selectedFormat}`, {})}`,
+        ]
+      : []),
+    ...(channelFilter
+      ? [
+          `${t("planning.exportFilterChannel")}: ${channelRows.find((channel) => channel.id === channelFilter)?.accountName ?? t("planning.exportSelected")}`,
+        ]
+      : []),
+    ...(ownerFilter
+      ? [
+          `${t("planning.exportFilterOwner")}: ${ownerOptions.find((owner) => owner.id === ownerFilter)?.label ?? t("planning.exportSelected")}`,
+        ]
+      : []),
+    ...(healthFilter.length
+      ? [
+          `${t("planning.exportFilterReadiness")}: ${healthFilter
+            .map((health) => t(`planningFilters.healthLabels.${health}`, {}))
+            .join(", ")}`,
+        ]
+      : []),
+    ...(parsedFilters.risk
+      ? [`${t("planning.exportFilterRisk")}: ${t("planning.exportAtRisk")}`]
+      : []),
+    ...(searchTerm ? [`${t("planning.exportFilterSearch")}: ${searchTerm}`] : []),
+  ];
 
   // Page href builder. Preserves every filter / density param so a
   // paginated link never silently drops the user's selection. The
@@ -410,6 +459,15 @@ export default async function PlanningPage({
               </>
             ) : null}
             <PlanningViewSwitcher active="list" links={planningViewLinks} t={t} />
+            <PlanningXlsxExportDialog
+              key={monthParam(0)}
+              agencySlug={agencySlug}
+              workspaceSlug={slug}
+              month={monthParam(0)}
+              timezone={ws.timezone}
+              activeFilters={activeExportFilters}
+              currentFilters={currentExportFilters}
+            />
             {/* FEAT-15 (GAP-FULL-REVIEW-2026-08-25) — CSV export
                 of the current month's content. The link carries
                 the active month so the download matches what's

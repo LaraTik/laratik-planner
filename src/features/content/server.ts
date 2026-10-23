@@ -29,6 +29,11 @@ export {
 } from "./queries.server";
 export { exportContentItemsCsv, type ContentCsvExportOptions } from "./csv-export.server";
 export {
+  exportPlanningWorkbook,
+  type PlanningXlsxExportOptions,
+  type PlanningXlsxLabels,
+} from "./planning-xlsx-export.server";
+export {
   dispatchDeadlineReminders,
   type DispatchDeadlineRemindersOptions,
   type DispatchDeadlineRemindersResult,
