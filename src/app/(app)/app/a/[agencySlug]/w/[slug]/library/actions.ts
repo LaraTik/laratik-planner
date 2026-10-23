@@ -2,7 +2,7 @@
 import {} from "next/cache";
 import { z } from "zod";
 import { auth } from "@/lib/auth/config";
-import { hasWorkspaceRole } from "@/lib/auth/policy";
+import { hasWorkspaceRole, PermissionDeniedError } from "@/lib/auth/policy";
 import { currentActor } from "@/lib/auth/current-actor";
 import { resolveActiveAgencyContext } from "@/lib/auth/agency-context";
 import { getAccessibleWorkspace } from "@/lib/workspaces/context";
@@ -11,6 +11,7 @@ import { archivePillar, createPillar } from "@/lib/planning/pillars";
 import { archiveTemplate, createTemplate } from "@/lib/planning/templates";
 import { duplicateContentItem } from "@/lib/planning/content-clone";
 import type { ContentFormat } from "@/lib/format-payload/schemas";
+import { logError } from "@/lib/observability/logger";
 
 const ContentFormatSchema = z.enum([
   "static_post",
@@ -32,12 +33,42 @@ const ContentFormatSchema = z.enum([
  * gives the form a typed envelope and revalidates the right path.
  *
  * The shape is `{ error?, success? }` so the client can render
- * inline. Errors from the service are surfaced verbatim when they
- * look like business validation; anything else becomes a generic
- * "could not save" so we never leak a stack trace.
+ * inline. Service errors are mapped to stable outcomes; unexpected
+ * infrastructure details are logged and never returned to the client.
  */
 
-export type LibraryActionState = { error?: string; success?: boolean };
+export type LibraryActionErrorCode =
+  "forbidden" | "not_found" | "duplicate_pillar" | "duplicate_template" | "save_failed";
+
+export type LibraryActionState = {
+  error?: string;
+  errorCode?: LibraryActionErrorCode;
+  success?: boolean;
+};
+
+function libraryActionFailure(error: unknown, event: string): LibraryActionState {
+  if (error instanceof PermissionDeniedError) return { errorCode: "forbidden" };
+  if (!(error instanceof Error)) {
+    logError(event, { err: error });
+    return { errorCode: "save_failed" };
+  }
+  if (
+    error.message === "Campaign not found" ||
+    error.message === "Pillar not found" ||
+    error.message === "Template not found" ||
+    error.message === "Content item not found"
+  ) {
+    return { errorCode: "not_found" };
+  }
+  if (error.message === "A pillar with that name already exists in this workspace") {
+    return { errorCode: "duplicate_pillar" };
+  }
+  if (error.message === "A template with that name already exists in this workspace") {
+    return { errorCode: "duplicate_template" };
+  }
+  logError(event, { err: error });
+  return { errorCode: "save_failed" };
+}
 
 async function authedContext(slug: string) {
   const session = await auth();
@@ -121,7 +152,7 @@ export async function createCampaignAction(
       status: "draft",
     });
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not create campaign" };
+    return libraryActionFailure(e, "planning_library.campaign_create_failed");
   }
   return { success: true };
 }
@@ -135,7 +166,7 @@ export async function archiveCampaignAction(
   try {
     await archiveCampaign(authed.actor, authed.workspace.id, campaignId);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not archive campaign" };
+    return libraryActionFailure(e, "planning_library.campaign_archive_failed");
   }
   return { success: true };
 }
@@ -176,7 +207,7 @@ export async function createPillarAction(
   try {
     await createPillar(authed.actor, authed.workspace.id, parsed.data);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not create pillar" };
+    return libraryActionFailure(e, "planning_library.pillar_create_failed");
   }
   return { success: true };
 }
@@ -190,7 +221,7 @@ export async function archivePillarAction(
   try {
     await archivePillar(authed.actor, authed.workspace.id, pillarId);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not archive pillar" };
+    return libraryActionFailure(e, "planning_library.pillar_archive_failed");
   }
   return { success: true };
 }
@@ -237,7 +268,7 @@ export async function createTemplateAction(
       defaultChannelIds: [],
     });
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not create template" };
+    return libraryActionFailure(e, "planning_library.template_create_failed");
   }
   return { success: true };
 }
@@ -251,7 +282,7 @@ export async function archiveTemplateAction(
   try {
     await archiveTemplate(authed.actor, authed.workspace.id, templateId);
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not archive template" };
+    return libraryActionFailure(e, "planning_library.template_archive_failed");
   }
   return { success: true };
 }
@@ -278,6 +309,6 @@ export async function duplicateContentItemAction(
     );
     return { success: true, newId: out.id };
   } catch (e) {
-    return { error: e instanceof Error ? e.message : "Could not duplicate content item" };
+    return libraryActionFailure(e, "planning_library.content_duplicate_failed");
   }
 }

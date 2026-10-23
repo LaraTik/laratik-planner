@@ -92,6 +92,13 @@
   "library": {
     "title": "Planning library",
     "description": "Reusable campaigns, content pillars, and templates for this workspace.",
+    "errors": {
+      "forbidden": "You don't have permission to change the planning library.",
+      "not_found": "The planning item could not be found. Refresh and try again.",
+      "duplicate_pillar": "A pillar with that name already exists in this workspace.",
+      "duplicate_template": "A template with that name already exists in this workspace.",
+      "save_failed": "We couldn't save that change. Please try again."
+    },
     "campaigns": "Campaigns",
     "campaignsEmpty": "No campaigns yet",
     "campaignsEmptyDescription": "Create a campaign below to bundle related ideas and keep the planning list focused.",

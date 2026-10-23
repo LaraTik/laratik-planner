@@ -125,6 +125,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
         "tests/unit/reset-idea-action.test.ts",
         "tests/unit/reset-all-ideas-action.test.ts",
         "tests/unit/planning/**",
+        "tests/unit/planning-library-actions.test.ts",
         "tests/unit/cron-routes-auth.test.ts",
       ],
       integrationFiles: [

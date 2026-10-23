@@ -138,7 +138,9 @@ export function PlanningListActions({
         return;
       }
       toast.error(tr("common.rowActionDuplicateFailed", "Could not duplicate this item"), {
-        description: result.error,
+        description: result.errorCode
+          ? tr(`users.library.errors.${result.errorCode}`, "Could not duplicate this item")
+          : result.error,
       });
     });
   }

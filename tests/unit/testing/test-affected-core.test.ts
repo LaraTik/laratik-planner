@@ -357,6 +357,20 @@ describe("test affected core", () => {
     expect(result.unitFiles).toContain("tests/unit/users-membership-actions.test.ts");
   });
 
+  it("keeps planning-library action changes in the focused content area", () => {
+    const result = classifyChangedFiles(
+      [
+        "src/app/(app)/app/a/[agencySlug]/w/[slug]/library/actions.ts",
+        "tests/unit/planning-library-actions.test.ts",
+      ],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("content");
+    expect(result.unitFiles).toContain("tests/unit/planning-library-actions.test.ts");
+  });
+
   it("escalates an unmapped changed test even when another changed file has an owner", () => {
     const result = classifyChangedFiles(
       ["src/lib/content/service.ts", "tests/e2e/unmapped.spec.ts"],

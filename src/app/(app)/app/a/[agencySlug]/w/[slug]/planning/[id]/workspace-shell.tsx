@@ -373,7 +373,11 @@ export function WorkspaceShell({
       );
       return;
     }
-    setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));
+    setActionError(
+      result.errorCode
+        ? t(`users.library.errors.${result.errorCode}`)
+        : (result.error ?? t("contentDetail.navigation.actionFailed")),
+    );
     setActionPending(false);
   }
 
@@ -427,7 +431,11 @@ export function WorkspaceShell({
       );
       return;
     }
-    setActionError(result.error ?? t("contentDetail.navigation.actionFailed"));
+    setActionError(
+      result.errorCode
+        ? t(`users.library.errors.${result.errorCode}`)
+        : (result.error ?? t("contentDetail.navigation.actionFailed")),
+    );
     setActionPending(false);
   }
 }
