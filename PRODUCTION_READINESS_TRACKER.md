@@ -3821,3 +3821,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   schema, retry threshold, delivery state, route, or user-facing response
   changed. This work is **Tested**, not **Verified**; AD-002 remains
   **In Progress**.
+
+## 2026-10-23 — Bound planning-pack action errors
+
+- Planning-pack server actions now return stable localized error codes for
+  authentication, agency-admin denial, invalid manifests, not-found packs,
+  and unexpected failures. Unexpected diagnostics use the structured logger;
+  arbitrary validation and persistence text no longer reaches client state.
+- Three action regressions passed; the AI area passed 248/248. On clean SHA
+  `c9d4906684d61d0fa56b8a8f049eadb6f43e55e`, grouped `pnpm verify` passed
+  formatting, lint, TypeScript, 596 unit files / 5,160 tests, and production
+  build.
+- English/Arabic route browser, axe, responsive and visual checks remain
+  pending. No authorization, route, persistence, or successful save behavior
+  changed. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.

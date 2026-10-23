@@ -2547,6 +2547,19 @@ No schema, retry, delivery-state, route, or user-facing response contract
 changed. Browser/visual checks, route review, Firefox, and independent
 verification remain open. This work is **Tested**, not **Verified**.
 
+## Planning-pack action error boundary — `c9d4906684d61d0fa56b8a8f049eadb6f43e55e3`
+
+The agency planning-pack action now returns stable error codes instead of raw
+Zod or persistence exception text. Unexpected failures are logged; the form
+renders the error codes in English and Arabic. Authentication, admin denial,
+validation, and not-found states remain distinct. The focused action regressions
+passed 3/3; the AI unit area passed 248/248. On this clean SHA, `pnpm verify`
+passed formatting, ESLint, TypeScript, all 596 unit files / 5,160 tests, and
+the production build. English/Arabic route browser, axe, responsive and visual
+checks remain pending, along with the full browser matrix and independent
+verification. No authorization, route, persistence, or successful save
+contract changed. This work is **Tested**, not **Verified**.
+
 ## Batched isolated Chromium run — 2026-10-22
 
 Working-tree evidence (not exact clean-SHA release evidence):

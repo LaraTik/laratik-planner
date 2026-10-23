@@ -1779,6 +1779,22 @@ targeted ESLint, Prettier, and `git diff --check`. Full repository, browser,
 visual, route-by-route, and independent review gates remain open; AD-002
 remains **In Progress**.
 
+## A60 — Planning-pack action returned raw validation and persistence errors
+
+**Priority: P2 — safe server-action boundaries and bilingual feedback.** The
+agency planning-pack action serialized arbitrary exception text, including Zod
+validation details and database failures, into client state. It now returns
+stable error codes, logs unexpected failures through the structured logger,
+and renders localized English/Arabic messages. Sign-in, admin-denial,
+validation, and not-found states remain distinct. Three focused regressions
+passed, and the 22-file AI unit area passed 248/248. On clean SHA
+`c9d4906684d61d0fa56b8a8f049eadb6f43e55e3`, `pnpm verify` passed formatting,
+lint, TypeScript, all 596 unit files / 5,160 tests, and the production build.
+No authorization, route, data, or save-success behavior changed. The route's
+English/Arabic browser, accessibility, responsive, and visual checks remain
+pending, as do the full browser matrix and independent verification; AD-002
+remains **In Progress**.
+
 ## Route review pass — tenant and page behavior — 2026-10-22
 
 The next route review confirmed and corrected six issues:
