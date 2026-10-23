@@ -3095,3 +3095,13 @@ migration, browser, visual, or manual route evidence was produced by this
 change; those remain open for the final candidate. The error-boundary change
 does not alter a successful transition, authorization rule, route, or
 persisted-data contract.
+
+## Designer assignment error boundary — `4ee09b73da096416f155d6715c2b0778bd831135`
+
+The focused claim/workflow action suite passed 5/5, including a regression that
+injects a credential-shaped DB URL from designer assignment and confirms the
+returned state contains only `workflowError.failed`. Focused ESLint and
+`pnpm typecheck` passed before commit. The commit hook passed TypeScript and
+the affected selection, 27 test files / 248 tests, then reran the directly
+changed action suite, 5/5. No database, migration, browser, visual, or manual
+route evidence was produced; those gates remain open.

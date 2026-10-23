@@ -2991,3 +2991,19 @@ on clean SHA `6e027c36484e86b5c174da13d3de8d79d50757cc`. A full `pnpm verify`,
 browser review, and full release evidence are still pending for the final
 candidate. No permission, successful workflow, route, or persistence contract
 changed. AD-002 remains **In Progress**.
+
+## A66 — Designer assignment returned raw persistence and policy failures
+
+**Priority: P2 — safe server-action errors and consistent localized feedback.**
+The designer assignment action returned raw errors from its preliminary read,
+assignment service, and subsequent workflow transition. These paths now share
+the typed workflow error mapper: known domain and permission outcomes return
+localized stable codes, while unexpected exceptions are logged and hidden.
+The service reports a missing content item as a typed `not_found` failure.
+The workflow rail translates the result instead of showing the raw code. A
+credential-shaped DB failure regression passed; the focused suite passed 5/5,
+the affected selection passed 27 files / 248 tests, and the commit hook passed
+TypeScript and those checks on clean SHA
+`4ee09b73da096416f155d6715c2b0778bd831135`. Full `pnpm verify` and the release
+browser/database evidence remain open. Successful assignment behavior and
+permission checks are unchanged. AD-002 remains **In Progress**.
