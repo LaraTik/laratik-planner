@@ -200,6 +200,7 @@ export const TEST_OWNERSHIP: TestOwnershipManifest = {
       browser: [
         { spec: "tests/e2e/workspace.spec.ts", projects: chromium },
         { spec: "tests/e2e/workspace-tenant-isolation.spec.ts", projects: chromium },
+        { spec: "tests/e2e/tenant-isolation.spec.ts", projects: chromium },
         { spec: "tests/e2e/agency-switcher.spec.ts", projects: chromium },
         { spec: "tests/e2e/mobile.spec.ts", projects: chromium },
         {

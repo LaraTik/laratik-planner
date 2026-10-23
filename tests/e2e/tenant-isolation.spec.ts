@@ -34,7 +34,9 @@ test.describe("tenant isolation (cross-agency)", () => {
 
     await page.goto(`/app/w/${workspaceSlug}`);
 
-    await expect(page.getByTestId("workspace-overview")).toBeVisible();
+    // A cold dev server compiles the legacy redirect and target route on this
+    // first navigation; keep the tenant assertion while allowing that startup.
+    await expect(page.getByTestId("workspace-overview")).toBeVisible({ timeout: 15_000 });
     await expect(
       page.getByTestId("workspace-overview").getByText("Alpha Tenant Workspace", { exact: true }),
     ).toBeVisible();

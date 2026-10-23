@@ -150,6 +150,19 @@ describe("test affected core", () => {
     }
   });
 
+  it("selects the cross-tenant browser regression for the legacy workspace redirect", () => {
+    const result = classifyChangedFiles(
+      ["src/app/(app)/app/w/[...legacy]/page.tsx"],
+      TEST_OWNERSHIP,
+    );
+
+    expect(result.kind).toBe("targeted");
+    expect(result.areaIds).toContain("workspace");
+    expect(result.browser).toContainEqual(
+      expect.objectContaining({ spec: "tests/e2e/tenant-isolation.spec.ts" }),
+    );
+  });
+
   it("selects focused action-state tests instead of escalating to the full repository", () => {
     const result = classifyChangedFiles(["src/lib/validation/action-state.ts"], TEST_OWNERSHIP);
 
