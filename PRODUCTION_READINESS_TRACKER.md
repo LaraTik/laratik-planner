@@ -3867,3 +3867,20 @@ default framebuffer`, then consumes a CPU core without returning control;
   pending. No authorization, route, persistence, or successful save behavior
   changed. This work is **Tested**, not **Verified**; AD-002 remains
   **In Progress**.
+
+## 2026-10-23 — Bound designer claim action errors
+
+- Claim outcomes now use typed service errors and stable codes. The action logs
+  unexpected persistence failures through the sanitized logger and returns
+  safe localized copy in English and Arabic. Claim authorization and transaction
+  behavior are unchanged.
+- Focused claim/action-state regressions passed 76/76. On clean SHA
+  `baa77c1144bf317335e3b879a48e3fcef9f15c44`, `pnpm verify` passed formatting,
+  lint, TypeScript, 599 unit files / 5,173 tests, and production build. The
+  pre-commit hook also passed TypeScript and the full 599-file unit suite.
+- Browser/a11y/responsive/visual checks, the full browser matrix, native Arabic
+  editorial review, and independent verification remain open. Docker returned
+  HTTP 500; the available loopback Postgres is Homebrew 17 rather than the
+  required disposable Postgres 16 service and was not used for integration or
+  migration evidence. This work is **Tested**, not **Verified**; AD-002 remains
+  **In Progress**.

@@ -2940,3 +2940,22 @@ Successful archive results, authorization policy, and persistence behavior
 remain unchanged. Route browser/accessibility/responsive/visual checks, full
 browser matrix, and independent verification remain open; AD-002 remains
 **In Progress**.
+
+## A63 — Designer claim action exposed unexpected persistence failures
+
+**Priority: P2 — safe server-action errors and localized feedback.** The
+planning claim action returned arbitrary service exception messages to the
+workflow rail. Expected claim outcomes now use a typed service error and stable
+codes; permission denial also maps to a stable code. Unexpected failures are
+logged through the credential-scrubbing logger and return localized safe copy
+in English and Arabic. Regression coverage proves the action does not return a
+credential-shaped database URL and retains the expected already-claimed code.
+On clean SHA `baa77c1144bf317335e3b879a48e3fcef9f15c44`, `pnpm verify` passed
+formatting, lint, TypeScript, all 599 unit files / 5,173 tests, and the
+production build. Focused claim/action-state tests passed 76/76 before the
+clean-SHA run. No claim authorization, transaction, route, or success behavior
+changed. Route browser, accessibility, responsive/visual checks, native Arabic
+editorial review, full browser matrix, and independent verification remain
+open. The shared action-failure helper retains legacy behavior for untouched
+callers; migrate those boundaries incrementally with typed public errors. AD-002
+remains **In Progress**.

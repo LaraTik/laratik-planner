@@ -2083,6 +2083,22 @@ configured and Docker is unavailable. No schema migration was introduced.
 Manual route review, release browser matrix, and independent verification
 remain open.
 
+## Designer claim action error boundary — `baa77c1144bf317335e3b879a48e3fcef9f15c44`
+
+The claim action now returns stable claim-error codes and localized English and
+Arabic copy for expected failures. Unexpected persistence failures are logged
+through the sanitized logger and return generic safe copy. Focused claim and
+action-state tests passed 76/76. On this clean SHA, `pnpm verify` passed
+formatting, ESLint, TypeScript, all 599 unit files / 5,173 tests, and the
+production build. The pre-commit hook also passed TypeScript and all 599 unit
+files / 5,173 tests. No database schema or claim transaction logic changed.
+Browser/accessibility/responsive/visual route checks, full browser matrix, and
+native Arabic editorial review remain open. The PostgreSQL 16 disposable
+container could not be verified: Docker returned HTTP 500, and `127.0.0.1:5432`
+resolves to a separate Homebrew PostgreSQL 17 instance, which was not used for
+integration or migration evidence. This change is **Tested**, not **Verified**;
+AD-002 remains **In Progress**.
+
 ## Design-queue bulk archive error boundary — `479437bc2f863041359f249c884c120477960221`
 
 The bulk archive action now returns stable codes for unauthenticated,
