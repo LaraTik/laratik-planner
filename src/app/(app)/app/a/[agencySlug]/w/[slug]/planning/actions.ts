@@ -52,7 +52,11 @@ import {
   SetMediaRequiredSchema,
   setMediaRequired,
 } from "@/lib/deliveries/service";
-import { RecordPublicationSchema, recordPublication } from "@/lib/publishing/service";
+import {
+  RecordPublicationSchema,
+  PublicationRecordError,
+  recordPublication,
+} from "@/lib/publishing/service";
 import {
   listMetaPublicationCandidates,
   linkMetaPublication,
@@ -129,6 +133,23 @@ function workflowActionFailure<Field extends string>(
   }
   logError(event, { err: error });
   return actionFailure<Field>(error, "workflowError.failed", {
+    exposeErrorMessage: false,
+  });
+}
+
+function publicationActionFailure<Field extends string>(error: unknown): ActionState<Field> {
+  if (error instanceof PublicationRecordError) {
+    return actionFailure<Field>(error, "publicationError.failed", {
+      publicMessage: `publicationError.${error.code}`,
+    });
+  }
+  if (error instanceof PermissionDeniedError) {
+    return actionFailure<Field>(error, "publicationError.failed", {
+      publicMessage: "publicationError.unauthorized",
+    });
+  }
+  logError("planning.publication_record_failed", { err: error });
+  return actionFailure<Field>(error, "publicationError.failed", {
     exposeErrorMessage: false,
   });
 }
@@ -715,7 +736,7 @@ export async function recordPublicationAction(input: {
   try {
     await recordPublication(actor, parsed.data);
   } catch (error) {
-    return actionFailure<RecordPublicationFields>(error, "The publication action failed.");
+    return publicationActionFailure<RecordPublicationFields>(error);
   }
   return { ok: true };
 }

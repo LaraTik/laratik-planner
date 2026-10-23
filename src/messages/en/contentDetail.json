@@ -1253,7 +1253,15 @@
     "readinessForbidden": "You do not have permission to confirm readiness.",
     "readinessNotFound": "The content item was not found.",
     "readinessInvalid": "The content item is not ready for this action.",
-    "readinessFailed": "Could not confirm publishing readiness."
+    "readinessFailed": "Could not confirm publishing readiness.",
+    "recordOutcome": {
+      "validation_failed": "Check the publication outcome details and try again.",
+      "not_found": "The channel or content item is no longer available. Refresh and try again.",
+      "invalid_transition": "This item is no longer ready for publication updates. Refresh and try again.",
+      "conflict": "The item changed while you were working. Refresh and try again.",
+      "unauthorized": "You do not have permission to record this publication outcome.",
+      "failed": "Could not record the publication outcome. Please try again."
+    }
   },
   "messages": {
     "captionLabel": "Caption",

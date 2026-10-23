@@ -47,20 +47,37 @@ export const RecordPublicationSchema = z.object({
 
 export type RecordPublicationInput = z.infer<typeof RecordPublicationSchema>;
 
+export type PublicationRecordErrorCode =
+  "validation_failed" | "not_found" | "invalid_transition" | "conflict";
+
+/** Expected publication-record failures that callers can safely translate. */
+export class PublicationRecordError extends Error {
+  constructor(
+    public readonly code: PublicationRecordErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = "PublicationRecordError";
+  }
+}
+
 export async function recordPublication(actor: Actor, input: RecordPublicationInput) {
   // An ephemeral publication legitimately has no durable link, so a URL is
   // required only when the operator has not declared an expiry.
   if (input.status === "published" && !input.publishedUrl && !input.expiresAt) {
-    throw new Error("published requires a publishedUrl or expiresAt");
+    throw new PublicationRecordError(
+      "validation_failed",
+      "published requires a publishedUrl or expiresAt",
+    );
   }
   if (input.status === "skipped" && !input.note) {
-    throw new Error("skipped requires a note");
+    throw new PublicationRecordError("validation_failed", "skipped requires a note");
   }
   if (input.status === "failed" && !input.failureReason) {
-    throw new Error("failed requires a failureReason");
+    throw new PublicationRecordError("validation_failed", "failed requires a failureReason");
   }
   if (input.publishedUrl && !input.publishedUrl.startsWith("https://")) {
-    throw new Error("publishedUrl must be https");
+    throw new PublicationRecordError("validation_failed", "publishedUrl must be https");
   }
 
   // Resolve workspace for policy check
@@ -74,18 +91,21 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
     .innerJoin(socialChannels, eq(socialChannels.id, contentItemChannels.socialChannelId))
     .where(eq(contentItemChannels.id, input.contentItemChannelId))
     .limit(1);
-  if (!chan) throw new Error("Channel link not found");
+  if (!chan) throw new PublicationRecordError("not_found", "Channel link not found");
 
   const [item] = await db
     .select({ workspaceId: contentItems.workspaceId, status: contentItems.status })
     .from(contentItems)
     .where(eq(contentItems.id, chan.contentItemId))
     .limit(1);
-  if (!item) throw new Error("Content item not found");
+  if (!item) throw new PublicationRecordError("not_found", "Content item not found");
   if (
     !(["ready_to_publish", "partially_published", "published"] as string[]).includes(item.status)
   ) {
-    throw new Error(`Cannot record publication while content is ${item.status}`);
+    throw new PublicationRecordError(
+      "invalid_transition",
+      `Cannot record publication while content is ${item.status}`,
+    );
   }
 
   await requirePolicy(
@@ -118,7 +138,10 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
         lockedItem.status,
       )
     ) {
-      throw new Error("Content is no longer ready for publication updates");
+      throw new PublicationRecordError(
+        "conflict",
+        "Content is no longer ready for publication updates",
+      );
     }
     // Defensive: confirm the locked channel row still belongs to the
     // same content item. A `content_item_channel` reparenting race
@@ -129,7 +152,10 @@ export async function recordPublication(actor: Actor, input: RecordPublicationIn
       .where(eq(contentItemChannels.id, input.contentItemChannelId))
       .limit(1);
     if (!lockedChannel || lockedChannel.contentItemId !== chan.contentItemId) {
-      throw new Error("Channel link moved to a different content item mid-write");
+      throw new PublicationRecordError(
+        "conflict",
+        "Channel link moved to a different content item mid-write",
+      );
     }
 
     // Upsert publication record for this channel

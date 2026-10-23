@@ -120,6 +120,16 @@ function localizedPlatformLabel(t: ReturnType<typeof useLocaleT>, platform: stri
   return value === key ? platformLabel(platform) : value;
 }
 
+function publicationRecordErrorMessage(t: ReturnType<typeof useLocaleT>, error: string): string {
+  const code = error.startsWith("publicationError.")
+    ? error.slice("publicationError.".length)
+    : null;
+  if (!code) return error;
+  const key = `contentDetail.publishErrors.recordOutcome.${code}`;
+  const value = t(key);
+  return value === key ? "Could not record the publication outcome. Please try again." : value;
+}
+
 function localizedDate(value: string | null | undefined, locale: "en" | "ar", timeZone: string) {
   if (!value) return null;
   const date = new Date(value);
@@ -424,7 +434,7 @@ export function ChannelPublishingCard({
                   ...(failureReason ? { failureReason } : {}),
                 });
                 if (result?.error) {
-                  setError(result.error);
+                  setError(publicationRecordErrorMessage(t, result.error));
                 } else {
                   setOpen(false);
                   router.refresh();

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { LocaleProvider } from "@/components/i18n/locale-provider";
@@ -18,6 +18,8 @@ vi.mock("next/navigation", () => ({
 
 const { ChannelPublishingCard } =
   await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/[id]/channel-publishing-card");
+const { recordPublicationAction } =
+  await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 
 const channel = {
   id: "ch-test-1",
@@ -34,6 +36,32 @@ const publishedPublication = {
 };
 
 describe("ChannelPublishingCard localization", () => {
+  it.each([
+    ["en", "The item changed while you were working. Refresh and try again."],
+    ["ar", "تغيّر العنصر أثناء عملك. حدّث الصفحة وحاول مرة أخرى."],
+  ] as const)("localizes safe publication errors in %s", async (locale, expected) => {
+    vi.mocked(recordPublicationAction).mockResolvedValue({ error: "publicationError.conflict" });
+    render(
+      <LocaleProvider locale={locale}>
+        <ChannelPublishingCard
+          workspaceSlug="acme"
+          agencySlug="acme"
+          channel={{ ...channel, configured: true }}
+          publication={null}
+          isPublisher={true}
+          defaultOpen
+        />
+      </LocaleProvider>,
+    );
+
+    const submit = screen.getByRole("button", {
+      name: locale === "ar" ? "حفظ النتيجة" : "Save outcome",
+    });
+    fireEvent.submit(submit.closest("form")!);
+
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(expected));
+  });
+
   it("renders English chrome from the active client locale", () => {
     render(
       <LocaleProvider locale="en">

@@ -14,6 +14,7 @@ const contentMock = vi.hoisted(() => ({
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
 const approvalMock = vi.hoisted(() => ({ decideApproval: vi.fn() }));
+const publicationMock = vi.hoisted(() => ({ recordPublication: vi.fn() }));
 
 vi.mock("@/lib/auth/config", () => authMock);
 vi.mock("@/lib/auth/agency-context", () => agencyContextMock);
@@ -33,12 +34,22 @@ vi.mock("@/lib/deliveries/service", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/deliveries/service")>();
   return { ...actual, decideApproval: approvalMock.decideApproval };
 });
+vi.mock("@/lib/publishing/service", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/publishing/service")>();
+  return { ...actual, recordPublication: publicationMock.recordPublication };
+});
 
-const { assignDesignerAction, claimAction, decideApprovalAction, transitionAction } =
-  await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
+const {
+  assignDesignerAction,
+  claimAction,
+  decideApprovalAction,
+  recordPublicationAction,
+  transitionAction,
+} = await import("@/app/(app)/app/a/[agencySlug]/w/[slug]/planning/actions");
 const { ClaimAsDesignerError } = await import("@/features/content/server");
 const { DomainError } = await import("@/lib/content/workflow");
 const { ApprovalDecisionError } = await import("@/lib/deliveries/service");
+const { PublicationRecordError } = await import("@/lib/publishing/service");
 
 beforeEach(() => {
   authMock.auth.mockReset().mockResolvedValue({ user: { id: "actor-1" } });
@@ -55,6 +66,7 @@ beforeEach(() => {
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
   approvalMock.decideApproval.mockReset();
+  publicationMock.recordPublication.mockReset();
 });
 
 describe("claimAction error boundary", () => {
@@ -163,6 +175,50 @@ describe("claimAction error boundary", () => {
     expect(result).toEqual({ error: "workflowError.failed" });
     expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
     expect(loggerMock.logError).toHaveBeenCalledWith("planning.approval_decision_failed", {
+      err: error,
+    });
+  });
+
+  it("returns a stable code for expected publication record failures", async () => {
+    workspaceMock.getAccessibleWorkspaceAtPath.mockResolvedValue({
+      id: "workspace-1",
+      agencySlug: "agency",
+    });
+    publicationMock.recordPublication.mockRejectedValue(
+      new PublicationRecordError("conflict", "Content changed before the update completed"),
+    );
+
+    const result = await recordPublicationAction({
+      workspaceSlug: "studio",
+      agencySlug: "agency",
+      contentItemChannelId: "00000000-0000-4000-8000-000000000004",
+      status: "published",
+      publishedUrl: "https://example.test/post",
+    });
+
+    expect(result).toEqual({ error: "publicationError.conflict" });
+    expect(loggerMock.logError).not.toHaveBeenCalled();
+  });
+
+  it("does not return unexpected publication persistence details", async () => {
+    workspaceMock.getAccessibleWorkspaceAtPath.mockResolvedValue({
+      id: "workspace-1",
+      agencySlug: "agency",
+    });
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    publicationMock.recordPublication.mockRejectedValue(error);
+
+    const result = await recordPublicationAction({
+      workspaceSlug: "studio",
+      agencySlug: "agency",
+      contentItemChannelId: "00000000-0000-4000-8000-000000000004",
+      status: "published",
+      publishedUrl: "https://example.test/post",
+    });
+
+    expect(result).toEqual({ error: "publicationError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.publication_record_failed", {
       err: error,
     });
   });
