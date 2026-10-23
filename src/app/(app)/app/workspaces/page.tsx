@@ -51,7 +51,9 @@ export default async function WorkspacesPage() {
   if (!actor) return null;
   const ctx = await resolveActiveAgencyContext({ actor });
   const agencyId = ctx?.agencyId ?? null;
-  if (!agencyId) redirect("/app/platform");
+  // Platform administrators can reach the shell without an agency, but
+  // `/app/platform` itself has no page. Use the real platform landing route.
+  if (!agencyId) redirect("/app/platform/overview");
   const isAdmin = await isAgencyAdmin(actor, agencyId);
   const { t, code } = await tForActive();
   const now = new Date();

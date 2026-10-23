@@ -21,6 +21,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 const MY_WORK_PAGE = path.join(process.cwd(), "src/app/(app)/app/page.tsx");
+const WORKSPACES_PAGE = path.join(process.cwd(), "src/app/(app)/app/workspaces/page.tsx");
 
 describe("My Work page (src/app/(app)/app/page.tsx) — agency scope", () => {
   it("imports the agency resolver and filters contentItems by active agency", async () => {
@@ -39,5 +40,19 @@ describe("My Work page (src/app/(app)/app/page.tsx) — agency scope", () => {
     // `workspaces.agencyId = activeAgencyId`. This is the load-bearing
     // assertion — a refactor that drops the agency filter fails here.
     expect(source).toMatch(/eq\(\s*workspaces\.agencyId\s*,\s*activeAgencyId\s*\)/);
+  });
+
+  it("sends platform administrators without an active agency to the real overview route", async () => {
+    const myWorkSource = await fs.readFile(MY_WORK_PAGE, "utf8");
+    const workspacesSource = await fs.readFile(WORKSPACES_PAGE, "utf8");
+
+    expect(myWorkSource).toMatch(
+      /if\s*\(!activeAgencyId\)\s*redirect\("\/app\/platform\/overview"\)/,
+    );
+    expect(workspacesSource).toMatch(
+      /if\s*\(!agencyId\)\s*redirect\("\/app\/platform\/overview"\)/,
+    );
+    expect(myWorkSource).not.toContain('redirect("/app/platform")');
+    expect(workspacesSource).not.toContain('redirect("/app/platform")');
   });
 });

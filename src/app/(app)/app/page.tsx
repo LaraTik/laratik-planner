@@ -73,7 +73,10 @@ export default async function MyWorkPage() {
   // error page. Scoping at the data layer is the correct fix.
   const ctx = await resolveActiveAgencyContext({ actor: { id: userId } });
   const activeAgencyId = ctx?.agencyId ?? null;
-  if (!activeAgencyId) redirect("/app/platform");
+  // The app shell lets platform administrators through without a tenant
+  // context. Send them to the actual platform landing page; `/app/platform`
+  // is only a route prefix and has no page of its own.
+  if (!activeAgencyId) redirect("/app/platform/overview");
   const canCreateWorkspace = await isAgencyAdmin({ id: userId }, activeAgencyId);
 
   // Pull every item I have any stake in (owner / designer / reviewer)
