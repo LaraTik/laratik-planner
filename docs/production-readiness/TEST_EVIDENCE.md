@@ -1,5 +1,24 @@
 # Test and coverage evidence
 
+## Planning XLSX export — 2026-10-23
+
+Implementation SHA: `dd91e0ef46677ceba75e4f89e4de8fb39ad995ee` (clean at run).
+
+| Command / check                                                               | Result                                                                                                                                |
+| ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm verify`                                                                 | Pass — formatting, lint, strict TypeScript, 606 unit files / 5,226 tests, and production build. Exit code 0.                          |
+| `pnpm test:affected -- --layer browser`                                       | Blocked before browser launch — the changed branch escalated to the full browser matrix; `TEST_DATABASE_URL` is unset. Exit code 1.   |
+| Disposable Postgres startup                                                   | Blocked — Docker Desktop endpoint did not respond to the local compose/availability checks. No browser or integration tests were run. |
+| Migration drill                                                               | Not applicable — no schema or persistence changes.                                                                                    |
+| EN/AR browser, accessibility, responsive/visual review and independent review | Open.                                                                                                                                 |
+
+The workspace Planning page now offers a server-generated XLSX with Summary
+and Schedule sheets. The export supports the displayed, current, next, and
+custom workspace-timezone date ranges, and either the active Planning filters
+or all items in range. The existing CSV path remains available. This feature
+is **Implemented**, not **Tested/Verified**, until the localized browser,
+accessibility, and visual checks run against the disposable database.
+
 ## E2E runner isolation and fixture targeting — 2026-10-22
 
 Implementation SHA: `49161a5105af78c1791caf23a76a37af9948041e` (clean at run).
