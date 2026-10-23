@@ -3165,3 +3165,13 @@ A content item outside the route workspace now returns safe not-found state
 without calling the update service. Unexpected read/update errors are logged
 and withheld from client state. Database, browser, visual, and independent
 verification remain open. Same-workspace success behavior is unchanged.
+
+## Batch-creation error boundary — `7e825366514d28d8b6fcfd65eef555f6de0c7d39`
+
+Focused action, service, UI, localization, and catalog checks passed 104/104;
+focused ESLint and `pnpm typecheck` passed. The commit hook passed TypeScript
+and the affected selection, 221 unit files / 1,771 tests, then reran the
+changed action/localization suites, 23/23. Batch validation errors now have
+English/Arabic codes; unexpected persistence details are logged and withheld.
+Batch write atomicity and successful behavior are unchanged. Database,
+browser, visual, and independent verification remain open.

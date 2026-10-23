@@ -3113,3 +3113,19 @@ then the direct action suite, 19/19, on clean SHA
 `bcd4053e0d7dc5ce86b2c6c19d691bbcf6af465f`. No successful same-workspace
 behavior changed. Browser, database, visual, and independent verification
 remain open; AD-002 remains **In Progress**.
+
+## A73 — Batch creation returned raw validation and persistence errors
+
+**Priority: P2 — safe server-action errors and bilingual feedback.** The batch
+action returned raw row, schema, and service errors; malformed JSON and
+highlighted validation failures used English-only strings. It now returns
+stable batch error codes, localizes action and field summaries in English and
+Arabic, and sanitizes unexpected service failures through the structured
+logger. Expected invalid campaign, pillar, and format-payload cases use typed
+domain errors. The batch still validates all rows and persists atomically.
+Focused action, service, UI, localization, and catalog tests passed 104/104;
+the hook passed TypeScript and 221 affected unit files / 1,771 tests, then
+reran the changed action/localization suites, 23/23 on clean SHA
+`7e825366514d28d8b6fcfd65eef555f6de0c7d39`. Database/browser/visual release
+checks and independent verification remain open; AD-002 remains **In
+Progress**.

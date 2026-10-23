@@ -3956,3 +3956,18 @@ default framebuffer`, then consumes a CPU core without returning control;
   affected unit files / 84 tests, then reran the direct action suite, 19/19.
 - Database, browser, visual, route, and independent verification remain open.
   This work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
+
+## 2026-10-23 — Bound batch-creation validation and persistence errors
+
+- Batch actions now return stable validation/failure codes and the form
+  localizes the summary and row field in English and Arabic. Batch service
+  validation no longer includes row content or schema details in thrown
+  messages. Unexpected persistence failures use the sanitized logger. Batch
+  validation and transaction atomicity are unchanged.
+- Focused action, service, UI, localization, and catalog checks passed
+  104/104; focused ESLint and `pnpm typecheck` passed. On clean SHA
+  `7e825366514d28d8b6fcfd65eef555f6de0c7d39`, the hook passed TypeScript and
+  221 affected unit files / 1,771 tests, then reran changed action/localization
+  suites, 23/23.
+- Database, browser, visual, and independent verification remain open. This
+  work is **Tested**, not **Verified**; AD-002 remains **In Progress**.
