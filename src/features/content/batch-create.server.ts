@@ -10,8 +10,10 @@ import {
   workspaceSettings,
 } from "@/lib/db/schema";
 import { hasWorkspaceRole, requirePolicy, type Actor } from "@/lib/auth/policy";
+import { DomainError } from "@/lib/content/workflow";
 import { BatchCreateSchema, type BatchCreateInput } from "@/lib/content/batch";
 import { parseFormatPayload } from "@/lib/format-payload/schemas";
+import { z } from "zod";
 import {
   assertWorkspaceChannelSelection,
   getActiveWorkspaceChannelIds,
@@ -85,10 +87,10 @@ export async function batchCreateContentItems(
       );
     }
     if (item.campaignId && !campaignIds.has(item.campaignId)) {
-      throw new Error(`Row "${item.title}" has an invalid campaign selection.`);
+      throw new DomainError("validation_failed", "A batch row has an invalid campaign selection.");
     }
     if (item.contentPillarId && !pillarIds.has(item.contentPillarId)) {
-      throw new Error(`Row "${item.title}" has an invalid content pillar selection.`);
+      throw new DomainError("validation_failed", "A batch row has an invalid content pillar.");
     }
   }
 
@@ -102,10 +104,9 @@ export async function batchCreateContentItems(
             string,
             unknown
           >;
-        } catch (err) {
-          throw new Error(
-            `Row "${item.title}" (${item.format}) has invalid format payload: ${(err as Error).message}`,
-          );
+        } catch (error) {
+          if (!(error instanceof z.ZodError)) throw error;
+          throw new DomainError("validation_failed", "A batch row has invalid creative details.");
         }
       }
       if (item.extensions) {
@@ -114,10 +115,9 @@ export async function batchCreateContentItems(
             ...formatPayload,
             ...item.extensions,
           }) as Record<string, unknown>;
-        } catch (err) {
-          throw new Error(
-            `Row "${item.title}" (${item.format}) has invalid extensions: ${(err as Error).message}`,
-          );
+        } catch (error) {
+          if (!(error instanceof z.ZodError)) throw error;
+          throw new DomainError("validation_failed", "A batch row has invalid creative details.");
         }
       }
       const [created] = await tx

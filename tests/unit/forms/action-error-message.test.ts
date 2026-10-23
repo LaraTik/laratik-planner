@@ -13,6 +13,16 @@ describe("localizeActionError", () => {
         "fallback",
       ),
     ).toBe(tFor("ar")("contentDetail.contentMutationErrors.invalid_transition"));
+
+    expect(
+      localizeActionError(
+        "batchAddError.failed",
+        tFor("ar"),
+        "batchAddError.",
+        "batchAdd.actionErrors",
+        "fallback",
+      ),
+    ).toBe(tFor("ar")("batchAdd.actionErrors.failed"));
   });
 
   it("uses a safe fallback for unknown codes and preserves legacy messages", () => {

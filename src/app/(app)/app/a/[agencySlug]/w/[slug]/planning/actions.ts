@@ -157,19 +157,20 @@ function publicationActionFailure<Field extends string>(error: unknown): ActionS
 function contentMutationActionFailure<Field extends string>(
   error: unknown,
   event: string,
+  fallbackCode = "contentMutationError.failed",
 ): ActionState<Field> {
   if (error instanceof DomainError) {
-    return actionFailure<Field>(error, "contentMutationError.failed", {
+    return actionFailure<Field>(error, fallbackCode, {
       publicMessage: `contentMutationError.${error.code}`,
     });
   }
   if (error instanceof PermissionDeniedError) {
-    return actionFailure<Field>(error, "contentMutationError.failed", {
+    return actionFailure<Field>(error, fallbackCode, {
       publicMessage: "contentMutationError.unauthorized",
     });
   }
   logError(event, { err: error });
-  return actionFailure<Field>(error, "contentMutationError.failed", {
+  return actionFailure<Field>(error, fallbackCode, {
     exposeErrorMessage: false,
   });
 }
@@ -413,15 +414,15 @@ export async function batchCreateAction(
       decoded = JSON.parse(rawRows);
     } catch {
       return {
-        error: "The imported rows are not valid JSON.",
-        fieldErrors: { rows: "Invalid rows" },
+        error: "batchAddError.invalidJson",
+        fieldErrors: { rows: "batchAddError.invalidJson" },
       };
     }
     const clientRows = z.array(BatchClientRowSchema).safeParse(decoded);
     if (!clientRows.success) {
       return {
-        error: "The imported rows are incomplete. Review the highlighted rows and try again.",
-        fieldErrors: { rows: "Invalid rows" },
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
       };
     }
     const invalidRows: number[] = [];
@@ -455,8 +456,10 @@ export async function batchCreateAction(
       };
     });
     if (invalidRows.length > 0) {
-      const message = `Rows ${invalidRows.join(", ")}: fix the highlighted errors before saving.`;
-      return { error: message, fieldErrors: { rows: message } };
+      return {
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
+      };
     }
   } else {
     const rows = parseBatchRows(rawRows);
@@ -466,8 +469,10 @@ export async function batchCreateAction(
       ),
     );
     if (invalidRows.length > 0) {
-      const message = `Rows ${invalidRows.map((row) => row.lineNumber).join(", ")}: fix the highlighted errors before saving.`;
-      return { error: message, fieldErrors: { rows: message } };
+      return {
+        error: "batchAddError.invalidRows",
+        fieldErrors: { rows: "batchAddError.invalidRows" },
+      };
     }
     items = rows.map((row) => ({
       title: row.title,
@@ -486,8 +491,8 @@ export async function batchCreateAction(
   const parsed = BatchCreateSchema.safeParse({ workspaceId: workspace.id, items });
   if (!parsed.success) {
     return {
-      error: "Review the batch rows and fix the highlighted errors.",
-      fieldErrors: { rows: parsed.error.issues[0]?.message ?? "Invalid rows" },
+      error: "batchAddError.invalidRows",
+      fieldErrors: { rows: "batchAddError.invalidRows" },
     };
   }
   try {
@@ -496,7 +501,11 @@ export async function batchCreateAction(
       items: parsed.data.items,
     });
   } catch (error) {
-    return actionFailure<BatchCreateFields>(error, "The batch could not be saved.");
+    return contentMutationActionFailure<BatchCreateFields>(
+      error,
+      "planning.batch_create_failed",
+      "batchAddError.failed",
+    );
   }
   redirect(
     `${workspaceBasePath(workspace.agencySlug, workspaceSlug)}/planning?batchCreated=${parsed.data.items.length}`,

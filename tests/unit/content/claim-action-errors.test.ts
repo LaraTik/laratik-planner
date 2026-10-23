@@ -17,6 +17,7 @@ const contentMock = vi.hoisted(() => ({
   applyResearchTeardownToFormatPayload: vi.fn(),
   updateAudienceCopy: vi.fn(),
   patchAudienceCopy: vi.fn(),
+  batchCreateContentItems: vi.fn(),
 }));
 const loggerMock = vi.hoisted(() => ({ logError: vi.fn() }));
 const dbMock = vi.hoisted(() => ({ select: vi.fn() }));
@@ -40,6 +41,7 @@ vi.mock("@/features/content/server", async (importOriginal) => {
     applyResearchTeardownToFormatPayload: contentMock.applyResearchTeardownToFormatPayload,
     updateAudienceCopy: contentMock.updateAudienceCopy,
     patchAudienceCopy: contentMock.patchAudienceCopy,
+    batchCreateContentItems: contentMock.batchCreateContentItems,
   };
 });
 vi.mock("@/lib/observability/logger", () => loggerMock);
@@ -59,6 +61,7 @@ const {
   applyResearchTeardownAction,
   applyAiDraftAction,
   claimAction,
+  batchCreateAction,
   decideApprovalAction,
   recordPublicationAction,
   quickCreateAction,
@@ -92,6 +95,7 @@ beforeEach(() => {
   contentMock.applyResearchTeardownToFormatPayload.mockReset();
   contentMock.updateAudienceCopy.mockReset();
   contentMock.patchAudienceCopy.mockReset();
+  contentMock.batchCreateContentItems.mockReset();
   loggerMock.logError.mockReset();
   dbMock.select.mockReset();
   approvalMock.decideApproval.mockReset();
@@ -254,6 +258,49 @@ describe("claimAction error boundary", () => {
     expect(result).toEqual({ error: "contentMutationError.failed" });
     expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
     expect(loggerMock.logError).toHaveBeenCalledWith("planning.ai_draft_apply_failed", {
+      err: error,
+    });
+  });
+
+  it("localizes malformed batch input and withholds arbitrary validation text", async () => {
+    const formData = new FormData();
+    formData.set("rows", "[");
+
+    const result = await batchCreateAction("studio", {}, formData);
+
+    expect(result).toEqual({
+      error: "batchAddError.invalidJson",
+      fieldErrors: { rows: "batchAddError.invalidJson" },
+    });
+  });
+
+  it("does not return unexpected batch persistence details", async () => {
+    const error = new Error("postgres://planner:credential-shaped-secret@db.test/planner");
+    workspaceMock.getAccessibleWorkspace.mockResolvedValue({
+      id: "00000000-0000-4000-8000-000000000008",
+      agencySlug: "agency",
+      timezone: "Europe/Berlin",
+    });
+    contentMock.batchCreateContentItems.mockRejectedValue(error);
+    const formData = new FormData();
+    formData.set(
+      "rows",
+      JSON.stringify([
+        {
+          title: "New idea",
+          format: "static_post",
+          plannedPublishAt: "2026-11-01T10:00:00.000Z",
+          brief: "A short test brief",
+          channelIds: [],
+        },
+      ]),
+    );
+
+    const result = await batchCreateAction("studio", {}, formData);
+
+    expect(result).toEqual({ error: "batchAddError.failed" });
+    expect(JSON.stringify(result)).not.toContain("credential-shaped-secret");
+    expect(loggerMock.logError).toHaveBeenCalledWith("planning.batch_create_failed", {
       err: error,
     });
   });

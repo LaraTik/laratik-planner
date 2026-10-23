@@ -22,6 +22,7 @@ import Link from "next/link";
 import { batchCreateAction } from "../actions";
 import { DirAwareInput, DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { FormSummary } from "@/components/forms/form-summary";
+import { localizeActionError } from "@/components/forms/action-error-message";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -307,6 +308,22 @@ export function BatchForm({
   const formId = React.useId().replace(/:/g, "");
   const formRef = React.useRef<HTMLFormElement>(null);
   const [state, action] = useActionState(batchCreateAction.bind(null, slug), EMPTY_STATE);
+  const localizeBatchError = (error: string) =>
+    error.startsWith("contentMutationError.")
+      ? localizeActionError(
+          error,
+          t,
+          "contentMutationError.",
+          "contentDetail.contentMutationErrors",
+          t("batchAdd.actionErrors.failed"),
+        )
+      : localizeActionError(
+          error,
+          t,
+          "batchAddError.",
+          "batchAdd.actionErrors",
+          t("batchAdd.actionErrors.failed"),
+        );
   const [globalDefaults, setGlobalDefaults] = useState<BatchDefaults>(defaults);
   const seedForNewRow = React.useCallback(
     (seed: BatchDefaults = globalDefaults): BatchDefaults & Partial<BatchRowDraft> => {
@@ -501,8 +518,17 @@ export function BatchForm({
   return (
     <form ref={formRef} action={action} className="space-y-5" onSubmit={() => setSaved(false)}>
       <FormSummary
-        {...(state?.error ? { error: state.error } : {})}
-        {...(state?.fieldErrors ? { fieldErrors: state.fieldErrors } : {})}
+        {...(state?.error ? { error: localizeBatchError(state.error) } : {})}
+        {...(state?.fieldErrors
+          ? {
+              fieldErrors: Object.fromEntries(
+                Object.entries(state.fieldErrors).map(([field, error]) => [
+                  field,
+                  localizeBatchError(error),
+                ]),
+              ),
+            }
+          : {})}
         fieldLabels={{ rows: t("batchAdd.form.gridCaption") }}
         fieldIdPrefix="batch"
       />
