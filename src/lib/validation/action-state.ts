@@ -95,21 +95,13 @@ export function fieldErrorsFromZod<Field extends string>(
  * left empty and the safe message goes to the form-level summary.
  */
 export function actionFailure<Field extends string = string>(
-  error: unknown,
+  _error: unknown,
   fallback: string,
-  options: { publicMessage?: string; exposeErrorMessage?: boolean } = {},
+  options: { publicMessage?: string } = {},
 ): ActionState<Field> {
   return {
-    // A caller may pass an explicit message after classifying a known
-    // user-facing error. The default preserves existing action contracts;
-    // new boundaries should hide exception text and return stable public copy
-    // or codes.
-    error:
-      options.publicMessage ??
-      (options.exposeErrorMessage === false
-        ? fallback
-        : error instanceof Error
-          ? error.message
-          : fallback),
+    // Exception text is diagnostic. Only a caller that classified a known
+    // public outcome may replace the safe fallback.
+    error: options.publicMessage ?? fallback,
   };
 }

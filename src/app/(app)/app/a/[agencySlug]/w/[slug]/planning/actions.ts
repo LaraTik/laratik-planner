@@ -132,9 +132,7 @@ function workflowActionFailure<Field extends string>(
     });
   }
   logError(event, { err: error });
-  return actionFailure<Field>(error, "workflowError.failed", {
-    exposeErrorMessage: false,
-  });
+  return actionFailure<Field>(error, "workflowError.failed");
 }
 
 function publicationActionFailure<Field extends string>(error: unknown): ActionState<Field> {
@@ -149,9 +147,7 @@ function publicationActionFailure<Field extends string>(error: unknown): ActionS
     });
   }
   logError("planning.publication_record_failed", { err: error });
-  return actionFailure<Field>(error, "publicationError.failed", {
-    exposeErrorMessage: false,
-  });
+  return actionFailure<Field>(error, "publicationError.failed");
 }
 
 function contentMutationActionFailure<Field extends string>(
@@ -170,9 +166,7 @@ function contentMutationActionFailure<Field extends string>(
     });
   }
   logError(event, { err: error });
-  return actionFailure<Field>(error, fallbackCode, {
-    exposeErrorMessage: false,
-  });
+  return actionFailure<Field>(error, fallbackCode);
 }
 
 /**
@@ -239,9 +233,7 @@ export async function changeContentOwnerAction(input: {
       });
     }
     logError("planning.content_owner_assignment_failed", { err: error });
-    return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed", {
-      exposeErrorMessage: false,
-    });
+    return actionFailure<AssignContentOwnerFields>(error, "ownerError.failed");
   }
   return { ok: true };
 }
@@ -558,7 +550,7 @@ export async function claimAction(input: {
       return actionFailure(error, "claimError.failed", { publicMessage: "claimError.forbidden" });
     }
     logError("planning.designer_claim_failed", { err: error });
-    return actionFailure(error, "claimError.failed", { exposeErrorMessage: false });
+    return actionFailure(error, "claimError.failed");
   }
   return { ok: true };
 }

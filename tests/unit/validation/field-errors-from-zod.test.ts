@@ -73,11 +73,10 @@ describe("fieldErrorsFromZod", () => {
 });
 
 describe("actionFailure", () => {
-  it("uses the safe fallback instead of exposing an unclassified exception message", () => {
+  it("uses the safe fallback for an unclassified exception by default", () => {
     const out = actionFailure(
       new Error("postgres://planner:credential-shaped-secret@db.test/planner"),
       "fallback",
-      { exposeErrorMessage: false },
     );
     expect(out.error).toBe("fallback");
     expect(out.error).not.toContain("credential-shaped-secret");
@@ -88,12 +87,6 @@ describe("actionFailure", () => {
       publicMessage: "Not allowed",
     });
     expect(out.error).toBe("Not allowed");
-  });
-
-  it("preserves legacy message behavior unless a caller opts into the safe boundary", () => {
-    expect(actionFailure(new Error("expected business message"), "fallback").error).toBe(
-      "expected business message",
-    );
   });
 
   it("returns the fallback for a non-Error value", () => {
