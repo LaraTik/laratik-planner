@@ -722,6 +722,13 @@
       "when": 1792808877970,
       "tag": "0102_worthless_mulholland_black",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1792881000000,
+      "tag": "0103_workspace_assistant_language_pinning",
+      "breakpoints": true
     }
   ]
 }

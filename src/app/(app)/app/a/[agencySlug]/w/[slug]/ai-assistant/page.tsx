@@ -42,12 +42,6 @@ export default async function WorkspaceAiAssistantPage({
         title={t("workspaceAssistant.title")}
         description={t("workspaceAssistant.description")}
       />
-      <KnowledgeLibrary
-        workspaceSlug={workspace.slug}
-        locale={code}
-        canManageWorkspace={canManageWorkspace}
-        canManageAgency={canManageAgency}
-      />
       <WorkspaceAssistant
         workspaceSlug={workspace.slug}
         workspaceTimezone={workspace.timezone}
@@ -187,7 +181,35 @@ export default async function WorkspaceAiAssistantPage({
           modeAskDescription: t("workspaceAssistant.modeAskDescription"),
           modePlanDescription: t("workspaceAssistant.modePlanDescription"),
           modeApplyDescription: t("workspaceAssistant.modeApplyDescription"),
+          searchPrompts: t("workspaceAssistant.searchPrompts"),
+          assistantHistory: t("workspaceAssistant.assistantHistory"),
+          toolsAndContext: t("workspaceAssistant.toolsAndContext"),
+          responseLanguage: t("workspaceAssistant.responseLanguage"),
+          languageArabic: t("workspaceAssistant.languageArabic"),
+          languageEnglish: t("workspaceAssistant.languageEnglish"),
+          pinConversation: t("workspaceAssistant.pinConversation"),
+          unpinConversation: t("workspaceAssistant.unpinConversation"),
+          pinnedConversation: t("workspaceAssistant.pinnedConversation"),
+          noConversations: t("workspaceAssistant.noConversations"),
+          noSearchResults: t("workspaceAssistant.noSearchResults"),
+          copyResponse: t("workspaceAssistant.copyResponse"),
+          responseCopied: t("workspaceAssistant.responseCopied"),
+          regenerateResponse: t("workspaceAssistant.regenerateResponse"),
+          activityTimeline: t("workspaceAssistant.activityTimeline"),
+          conversationRestored: t("workspaceAssistant.conversationRestored"),
+          findings: t("workspaceAssistant.findings"),
+          recommendations: t("workspaceAssistant.recommendations"),
+          hideHistory: t("workspaceAssistant.hideHistory"),
+          showHistory: t("workspaceAssistant.showHistory"),
         }}
+        knowledgeLibrary={
+          <KnowledgeLibrary
+            workspaceSlug={workspace.slug}
+            locale={code}
+            canManageWorkspace={canManageWorkspace}
+            canManageAgency={canManageAgency}
+          />
+        }
       />
     </div>
   );

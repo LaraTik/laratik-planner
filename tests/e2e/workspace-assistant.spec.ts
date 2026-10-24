@@ -75,6 +75,7 @@ test.describe("Workspace AI Assistant", () => {
       locale: "en",
     });
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
+    await page.getByRole("button", { name: "Tools and context" }).click();
     const library = page.getByTestId("assistant-knowledge-library");
     await expect(library.getByRole("heading", { name: "Workspace knowledge" })).toBeVisible();
     await library.getByRole("button", { name: "Add knowledge" }).click();
@@ -112,10 +113,12 @@ test.describe("Workspace AI Assistant", () => {
       locale: "en",
     });
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
-    await expect(page.getByRole("heading", { name: "Prompt library" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Summarize plan" })).toBeVisible();
+    await expect(page.getByRole("combobox", { name: "Response language" })).toHaveValue("ar");
     await expect(page.getByTestId("assistant-mode")).toHaveValue("ask");
     await expect(page.getByTestId("assistant-mode").getByRole("option")).toHaveCount(3);
+    await page.getByRole("button", { name: "Tools and context" }).click();
+    await expect(page.getByRole("heading", { name: "Prompt library" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Monthly plan summary" })).toBeVisible();
     await expectNoSeriousViolations(page);
 
     await page.getByRole("button", { name: "Create a prompt" }).click();
@@ -140,11 +143,14 @@ test.describe("Workspace AI Assistant", () => {
     expect((await promptResponse).status()).toBe(201);
     await expect(page.getByRole("heading", { name: "Monthly team review" })).toBeVisible();
 
-    await page.getByRole("button", { name: "Use prompt" }).first().click();
+    const createdPrompt = page
+      .locator("li")
+      .filter({ has: page.getByRole("heading", { name: "Monthly team review" }) });
+    await createdPrompt.getByRole("button", { name: "Use prompt" }).click();
     await expect(page.getByPlaceholder("Ask a question about this month's plan…")).toHaveValue(
       "Review {{plan_month}} and identify practical follow-up.",
     );
-    const monthInput = page.getByLabel("Plan month").first();
+    const monthInput = page.getByTestId("assistant-prompt-parameters").getByLabel("Plan month");
     await expect(monthInput).toHaveAttribute("aria-invalid", "true");
     await expect(page.getByRole("button", { name: "Ask assistant" })).toBeDisabled();
     await monthInput.fill("2026-11");
@@ -170,11 +176,12 @@ test.describe("Workspace AI Assistant", () => {
     expect(submittedRequest).toMatchObject({
       promptParameters: { plan_month: "2026-11" },
       message: "Review {{plan_month}} and identify practical follow-up.",
+      responseLocale: "ar",
     });
 
     for (const width of [375, 768, 1024, 1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      await expect(page.getByRole("heading", { name: "Prompt library" })).toBeVisible();
+      await expect(page.getByRole("combobox", { name: "Response language" })).toBeVisible();
       const overflows = await page.evaluate(
         () => document.documentElement.scrollWidth > window.innerWidth + 1,
       );
@@ -281,7 +288,7 @@ test.describe("Workspace AI Assistant", () => {
           afterValue: "Introduce the November offer to returning customers.",
           evidenceIds: [],
           status: "proposed",
-          expiresAt: "2026-10-24T12:00:00.000Z",
+          expiresAt: "2026-11-24T12:00:00.000Z",
         },
         {
           id: "98391364-6f93-45bc-ae71-5bf6dc32f906",
@@ -292,7 +299,7 @@ test.describe("Workspace AI Assistant", () => {
           afterValue: "November offer for returning customers",
           evidenceIds: [],
           status: "proposed",
-          expiresAt: "2026-10-24T12:00:00.000Z",
+          expiresAt: "2026-11-24T12:00:00.000Z",
         },
       ],
     };
@@ -350,8 +357,10 @@ test.describe("Workspace AI Assistant", () => {
     });
     await page.getByTestId("assistant-mode").selectOption("plan");
     await page.getByPlaceholder("Ask a question about this month's plan…").fill("Review my plan.");
+    await expect(page.getByRole("combobox", { name: "Response language" })).toHaveValue("ar");
     await page.getByRole("button", { name: "Ask assistant" }).click();
     await expect(page.getByText("The plan is ready for review.")).toBeVisible();
+    await page.getByText("Assistant activity", { exact: true }).click();
     await expect(page.getByText("Workspace context verified")).toBeVisible();
     await expect(page.getByText("Receiving response text")).toBeVisible();
     await expectNoSeriousViolations(page);
@@ -382,6 +391,7 @@ test.describe("Workspace AI Assistant", () => {
     await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await page.getByRole("button", { name: "الأدوات والسياق" }).click();
     await expect(page.getByRole("heading", { name: "مكتبة المطالبات" })).toBeVisible();
     await expectNoSeriousViolations(page);
 
@@ -394,5 +404,141 @@ test.describe("Workspace AI Assistant", () => {
       () => document.documentElement.scrollWidth > window.innerWidth + 1,
     );
     expect(overflows, "Arabic assistant page overflows at 375px").toBe(false);
+  });
+
+  test("Arabic interface stays RTL when a conversation explicitly requests English", async ({
+    page,
+  }) => {
+    const workspace = await bootstrapRoleSession(page, "workspace_manager", "assistant-ar-en", {
+      locale: "ar",
+    });
+    const conversationId = "e9cc0b66-93c4-4262-aa5f-e3d8b01b43b8";
+    let assistantRequest: Record<string, unknown> | null = null;
+    await page.route("**/api/ai/workspace-assistant", async (route) => {
+      if (route.request().method() !== "POST") {
+        await route.continue();
+        return;
+      }
+      assistantRequest = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          conversationId,
+          answer: {
+            answer: "Instagram reach is ready for review.",
+            findings: [],
+            recommendations: [],
+            limitations: [],
+          },
+          evidence: [],
+          deterministicFindings: [],
+          proposals: [],
+        }),
+      });
+    });
+
+    await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    const responseLanguage = page.getByRole("combobox", { name: "لغة الرد" });
+    await expect(responseLanguage).toHaveValue("ar");
+    await responseLanguage.selectOption("en");
+    await page.getByPlaceholder("اكتب سؤالاً عن خطة هذا الشهر…").fill("Review Instagram reach.");
+    await page.getByRole("button", { name: "اسأل المساعد" }).click();
+    await expect(page.getByText("Instagram reach is ready for review.")).toBeVisible();
+    expect(assistantRequest).toMatchObject({ responseLocale: "en" });
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  });
+
+  test("response language is saved per conversation and stays independent of interface locale", async ({
+    page,
+  }) => {
+    const workspace = await bootstrapRoleSession(page, "workspace_manager", "assistant-language", {
+      locale: "en",
+    });
+    const conversationId = "71b9f5b1-f38a-4aa0-94e3-8643be998001";
+    let languageUpdate: Record<string, unknown> | null = null;
+    let assistantRequest: Record<string, unknown> | null = null;
+    await page.route("**/api/ai/workspace-assistant**", async (route) => {
+      const request = route.request();
+      const url = new URL(request.url());
+      if (request.method() === "GET" && url.pathname === "/api/ai/workspace-assistant") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            conversations: [
+              {
+                id: conversationId,
+                title: "Arabic default",
+                mode: "ask",
+                responseLocale: "ar",
+                pinnedAt: null,
+                updatedAt: "2026-10-25T10:00:00.000Z",
+              },
+            ],
+          }),
+        });
+        return;
+      }
+      if (request.method() === "GET" && url.pathname.endsWith(`/${conversationId}`)) {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            conversation: {
+              id: conversationId,
+              mode: "ask",
+              responseLocale: "ar",
+              messages: [],
+              proposals: [],
+            },
+          }),
+        });
+        return;
+      }
+      if (request.method() === "PATCH" && url.pathname.endsWith(`/${conversationId}`)) {
+        languageUpdate = request.postDataJSON() as Record<string, unknown>;
+        await route.fulfill({ status: 200, contentType: "application/json", body: '{"ok":true}' });
+        return;
+      }
+      if (request.method() === "POST" && url.pathname === "/api/ai/workspace-assistant") {
+        assistantRequest = request.postDataJSON() as Record<string, unknown>;
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            conversationId,
+            answer: {
+              answer: "This response remains in English.",
+              findings: [],
+              recommendations: [],
+              limitations: [],
+            },
+            evidence: [],
+            deterministicFindings: [],
+            proposals: [],
+          }),
+        });
+        return;
+      }
+      await route.continue();
+    });
+
+    await page.goto(`/app/a/test-agency/w/${workspace.workspaceSlug}/ai-assistant`);
+    const language = page.getByRole("combobox", { name: "Response language" });
+    await expect(language).toHaveValue("ar");
+    await page.getByRole("button", { name: "Arabic default" }).click();
+    await expect(language).toHaveValue("ar");
+    await language.selectOption("en");
+    await expect.poll(() => languageUpdate).toEqual({ responseLocale: "en" });
+    await page
+      .getByPlaceholder("Ask a question about this month's plan…")
+      .fill("Review this plan.");
+    await page.getByRole("button", { name: "Ask assistant" }).click();
+    await expect(page.getByText("This response remains in English.")).toBeVisible();
+    expect(assistantRequest).toMatchObject({ conversationId, responseLocale: "en" });
   });
 });

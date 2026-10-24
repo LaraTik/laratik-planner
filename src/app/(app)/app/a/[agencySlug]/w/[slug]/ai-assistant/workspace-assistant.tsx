@@ -9,12 +9,14 @@ import {
   useState,
   useSyncExternalStore,
   type FormEvent,
+  type ReactNode,
 } from "react";
 import {
-  Archive,
   Bot,
-  MessageSquarePlus,
-  Pencil,
+  Copy,
+  History,
+  Library,
+  RefreshCw,
   Search,
   Send,
   Sparkles,
@@ -25,10 +27,24 @@ import { DirAwareInput } from "@/components/forms/dir-aware-textarea";
 import { DirAwareTextarea } from "@/components/forms/dir-aware-textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  DEFAULT_ASSISTANT_RESPONSE_LOCALE,
   getBuiltInAssistantPrompts,
   type AssistantPromptParameter,
+  type AssistantResponseLocale,
 } from "@/features/workspace-assistant";
 import { getAiModelDefinition } from "@/lib/ai/model-registry";
+import {
+  AssistantHistoryPanel,
+  type AssistantConversationSummary,
+} from "./assistant-history-panel";
+import { AssistantMarkdown } from "./assistant-markdown";
 
 type Labels = {
   emptyTitle: string;
@@ -100,6 +116,7 @@ type Labels = {
   dismiss: string;
   showAllPrompts: string;
   showFewerPrompts: string;
+  searchPrompts: string;
   archivePrompt: string;
   archivedConversations: string;
   activeConversations: string;
@@ -156,6 +173,25 @@ type Labels = {
   modeAskDescription: string;
   modePlanDescription: string;
   modeApplyDescription: string;
+  assistantHistory: string;
+  toolsAndContext: string;
+  responseLanguage: string;
+  languageArabic: string;
+  languageEnglish: string;
+  pinConversation: string;
+  unpinConversation: string;
+  pinnedConversation: string;
+  noConversations: string;
+  noSearchResults: string;
+  copyResponse: string;
+  responseCopied: string;
+  regenerateResponse: string;
+  activityTimeline: string;
+  conversationRestored: string;
+  findings: string;
+  recommendations: string;
+  hideHistory: string;
+  showHistory: string;
 };
 
 const assistantModelPreferenceEvent = "planner-assistant-model-preference";
@@ -192,12 +228,7 @@ function saveAssistantModelPreference(key: string, model: string) {
 }
 
 type Message = { role: "user" | "assistant"; content: string };
-type Conversation = {
-  id: string;
-  title: string;
-  mode: "ask" | "plan" | "apply";
-  updatedAt: string;
-};
+type Conversation = AssistantConversationSummary;
 type Prompt = {
   id: string;
   scope: "private" | "workspace" | "agency" | "builtin";
@@ -405,6 +436,7 @@ export function WorkspaceAssistant({
   currentMonth,
   canManageWorkspace,
   labels,
+  knowledgeLibrary,
 }: {
   workspaceSlug: string;
   workspaceTimezone: string;
@@ -415,6 +447,7 @@ export function WorkspaceAssistant({
   currentMonth: string;
   canManageWorkspace: boolean;
   labels: Labels;
+  knowledgeLibrary?: ReactNode;
 }) {
   const allowedModels = useMemo(
     () => (permittedModels.includes(model) ? permittedModels : [model]),
@@ -435,8 +468,12 @@ export function WorkspaceAssistant({
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [archivedView, setArchivedView] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(true);
+  const [mobileHistoryOpen, setMobileHistoryOpen] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [showAllPrompts, setShowAllPrompts] = useState(false);
+  const [promptSearch, setPromptSearch] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedPromptId, setSelectedPromptId] = useState<string | null>(null);
   const [promptFormOpen, setPromptFormOpen] = useState(false);
@@ -459,6 +496,9 @@ export function WorkspaceAssistant({
     "low" | "medium" | "high" | "xhigh" | "max"
   >("medium");
   const [mode, setMode] = useState<"ask" | "plan" | "apply">("ask");
+  const [responseLocale, setResponseLocale] = useState<AssistantResponseLocale>(
+    DEFAULT_ASSISTANT_RESPONSE_LOCALE,
+  );
   const [draft, setDraft] = useState("");
   const [contentItemReference, setContentItemReference] = useState("");
   const [selectedContentItemId, setSelectedContentItemId] = useState<string | null>(null);
@@ -471,13 +511,13 @@ export function WorkspaceAssistant({
   const [reply, setReply] = useState<AssistantReply | null>(null);
   const [selectedProposalIds, setSelectedProposalIds] = useState<string[]>([]);
   const [proposalError, setProposalError] = useState(false);
+  const [copiedResponseIndex, setCopiedResponseIndex] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
   const activeRequest = useRef<AbortController | null>(null);
   const activeRunIdRef = useRef<string | null>(null);
   const activeRunStorageKey = `planner-assistant-run:${workspaceSlug}`;
   const inputId = useId();
-  const searchId = useId();
 
   function formatProposalDate(value: string) {
     const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T12:00:00.000Z` : value;
@@ -533,6 +573,36 @@ export function WorkspaceAssistant({
       setMode(previousMode);
       setError(true);
     }
+  }
+
+  async function changeResponseLocale(nextLocale: AssistantResponseLocale) {
+    if (nextLocale === responseLocale) return;
+    if (!conversationId) {
+      setResponseLocale(nextLocale);
+      return;
+    }
+    const response = await fetch(
+      `/api/ai/workspace-assistant/${conversationId}?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ responseLocale: nextLocale }),
+      },
+    );
+    if (response.ok) setResponseLocale(nextLocale);
+    else setError(true);
+  }
+
+  async function toggleConversationPin(id: string, pinned: boolean) {
+    const response = await fetch(
+      `/api/ai/workspace-assistant/${id}?workspaceSlug=${encodeURIComponent(workspaceSlug)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pinned }),
+      },
+    );
+    if (response.ok) void refreshVisibleConversations();
   }
 
   useEffect(() => {
@@ -626,10 +696,20 @@ export function WorkspaceAssistant({
     }).catch(() => null);
     if (!response?.ok) setError(true);
   }
+
+  async function copyResponse(content: string, index: number) {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedResponseIndex(index);
+      window.setTimeout(() => setCopiedResponseIndex(null), 1800);
+    } catch {
+      setError(true);
+    }
+  }
   const quickPrompts = [
-    [labels.summarize, "Summarize this month's plan and highlight its main strengths.", "ask"],
-    [labels.findGaps, "Find scheduling gaps and explain the evidence.", "ask"],
-    [labels.improve, "Suggest practical improvements to this month's plan.", "plan"],
+    [labels.summarize, "لخّص خطة هذا الشهر وأبرز نقاط قوتها بالأدلة.", "ask"],
+    [labels.findGaps, "حلّل فجوات الجدولة واشرح الأدلة التي تدعم النتيجة.", "ask"],
+    [labels.improve, "اقترح تحسينات عملية لخطة هذا الشهر دون تنفيذ أي تعديل.", "plan"],
   ] as const;
 
   async function submit(
@@ -637,6 +717,7 @@ export function WorkspaceAssistant({
     selected?: string,
     promptId?: string,
     selectedMode: "ask" | "plan" | "apply" = mode,
+    regenerate = false,
   ) {
     event?.preventDefault();
     const message = (selected ?? draft).trim();
@@ -653,7 +734,8 @@ export function WorkspaceAssistant({
     ) {
       return;
     }
-    const nextMessages = [...messages, { role: "user" as const, content: message }];
+    const historyMessages = regenerate ? messages.slice(0, -2) : messages;
+    const nextMessages = [...historyMessages, { role: "user" as const, content: message }];
     setMessages(nextMessages);
     setDraft("");
     setBusy(true);
@@ -689,7 +771,8 @@ export function WorkspaceAssistant({
           month,
           mode: selectedMode,
           model: selectedModel,
-          history: messages.slice(-8),
+          responseLocale,
+          history: historyMessages.slice(-8),
           ...(selectedContentItemId || contentItemReference.trim()
             ? { contentItemReference: selectedContentItemId ?? contentItemReference.trim() }
             : {}),
@@ -787,12 +870,14 @@ export function WorkspaceAssistant({
         conversation: {
           id: string;
           mode: "ask" | "plan" | "apply";
+          responseLocale: AssistantResponseLocale;
           messages: { role: string; content: string; metadata: Record<string, unknown> | null }[];
           proposals: AssistantProposal[];
         };
       };
       setConversationId(data.conversation.id);
       setMode(data.conversation.mode);
+      setResponseLocale(data.conversation.responseLocale);
       setContentItemReference("");
       setSelectedContentItemId(null);
       setStreamingText("");
@@ -821,6 +906,7 @@ export function WorkspaceAssistant({
           : null,
       );
       setError(false);
+      setMobileHistoryOpen(false);
     } catch {
       setError(true);
     } finally {
@@ -1097,6 +1183,8 @@ export function WorkspaceAssistant({
     setContentCandidates([]);
     setContentReferenceNotFound(false);
     setMode("ask");
+    setResponseLocale(DEFAULT_ASSISTANT_RESPONSE_LOCALE);
+    setMobileHistoryOpen(false);
     setError(false);
   }
 
@@ -1109,9 +1197,6 @@ export function WorkspaceAssistant({
         (parameter.type !== "month" || !value || /^\d{4}-(0[1-9]|1[0-2])$/.test(value))
       );
     });
-  const visibleConversations = conversations.filter((conversation) =>
-    conversation.title.toLocaleLowerCase(locale).includes(search.trim().toLocaleLowerCase(locale)),
-  );
   const builtInPrompts: Prompt[] = getBuiltInAssistantPrompts(locale).map((prompt) => ({
     ...prompt,
     scope: "builtin",
@@ -1122,7 +1207,18 @@ export function WorkspaceAssistant({
     canPublish: false,
   }));
   const displayedPrompts = [...prompts, ...builtInPrompts];
-  const promptsToDisplay = showAllPrompts ? displayedPrompts : displayedPrompts.slice(0, 6);
+  const filteredPrompts = displayedPrompts.filter((prompt) => {
+    const query = promptSearch.trim().toLocaleLowerCase(locale);
+    return (
+      !query ||
+      [prompt.name, prompt.purpose, prompt.goal, ...prompt.tags]
+        .join(" ")
+        .toLocaleLowerCase(locale)
+        .includes(query)
+    );
+  });
+  const promptsToDisplay =
+    showAllPrompts || promptSearch.trim() ? filteredPrompts : filteredPrompts.slice(0, 6);
   const selectedProposals =
     reply?.proposals.filter((proposal) => selectedProposalIds.includes(proposal.id)) ?? [];
   const canApplySelectedProposals =
@@ -1144,985 +1240,1162 @@ export function WorkspaceAssistant({
 
   return (
     <section className="space-y-4" aria-label={labels.assistant}>
-      <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-title-card text-fg-primary font-semibold">
-              {labels.promptLibrary}
-            </h2>
-            <p className="text-label text-fg-secondary mt-1">{labels.emptyDescription}</p>
-          </div>
-          <Button type="button" variant="outline" onClick={() => beginPrompt()}>
-            {labels.createPrompt}
-          </Button>
-        </div>
-        {promptFormOpen ? (
-          <form
-            className="border-border mt-4 grid gap-3 border-t pt-4"
-            onSubmit={(event) => void savePrompt(event)}
-          >
-            <div className="grid gap-3 sm:grid-cols-2">
-              <PromptField
-                label={labels.promptName}
-                value={promptName}
-                onChange={setPromptName}
+      <Dialog open={toolsOpen} onOpenChange={setToolsOpen}>
+        <DialogContent className="max-h-[85vh] w-[min(64rem,calc(100vw-2rem))] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{labels.toolsAndContext}</DialogTitle>
+            <DialogDescription>{labels.emptyDescription}</DialogDescription>
+          </DialogHeader>
+          <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-title-card text-fg-primary font-semibold">
+                  {labels.promptLibrary}
+                </h2>
+                <p className="text-label text-fg-secondary mt-1">{labels.emptyDescription}</p>
+              </div>
+              <Button type="button" variant="outline" onClick={() => beginPrompt()}>
+                {labels.createPrompt}
+              </Button>
+            </div>
+            <div className="border-border mt-3 flex min-h-11 items-center gap-2 rounded-[var(--radius-control)] border px-3">
+              <Search className="text-fg-muted h-4 w-4 shrink-0" aria-hidden="true" />
+              <DirAwareInput
                 locale={locale}
-              />
-              <PromptField
-                label={labels.promptPurpose}
-                value={promptPurpose}
-                onChange={setPromptPurpose}
-                locale={locale}
+                value={promptSearch}
+                onChange={(event) => setPromptSearch(event.target.value)}
+                placeholder={labels.searchPrompts}
+                aria-label={labels.searchPrompts}
+                className="text-body min-h-10 min-w-0 flex-1 bg-transparent outline-none"
               />
             </div>
-            <PromptField
-              label={labels.promptGoal}
-              value={promptGoal}
-              onChange={setPromptGoal}
-              locale={locale}
-            />
-            <label className="text-label text-fg-secondary grid gap-1">
-              {labels.promptInstructions}
-              <DirAwareTextarea
-                locale={locale}
-                value={promptInstructions}
-                onChange={(event) => setPromptInstructions(event.target.value)}
-                rows={4}
-                maxLength={12_000}
-                required
-                className="border-border bg-surface text-body min-h-24 rounded-[var(--radius-control)] border px-3 py-2"
-              />
-            </label>
-            <PromptField
-              label={labels.promptTags}
-              value={promptTags}
-              onChange={setPromptTags}
-              locale={locale}
-            />
-            <fieldset className="border-border grid gap-3 rounded-[var(--radius-control)] border p-3">
-              <legend className="text-body text-fg-primary px-1 font-semibold">
-                {labels.promptParameters}
-              </legend>
-              <p className="text-label text-fg-muted">{labels.promptParametersHelp}</p>
-              {promptParameterDefinitions.map((parameter, index) => (
-                <div
-                  key={`${parameter.key}-${index}`}
-                  className="border-border grid gap-2 rounded-[var(--radius-control)] border p-3 sm:grid-cols-2"
-                >
+            {promptFormOpen ? (
+              <form
+                className="border-border mt-4 grid gap-3 border-t pt-4"
+                onSubmit={(event) => void savePrompt(event)}
+              >
+                <div className="grid gap-3 sm:grid-cols-2">
                   <PromptField
-                    label={labels.promptParameterKey}
-                    value={parameter.key}
-                    onChange={(key) =>
-                      setPromptParameterDefinitions((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, key: key.toLowerCase().replace(/[^a-z0-9_]/g, "_") }
-                            : item,
-                        ),
-                      )
-                    }
+                    label={labels.promptName}
+                    value={promptName}
+                    onChange={setPromptName}
                     locale={locale}
                   />
                   <PromptField
-                    label={labels.promptParameterLabel}
-                    value={parameter.label}
-                    onChange={(label) =>
-                      setPromptParameterDefinitions((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index ? { ...item, label } : item,
-                        ),
-                      )
-                    }
+                    label={labels.promptPurpose}
+                    value={promptPurpose}
+                    onChange={setPromptPurpose}
                     locale={locale}
                   />
-                  <label className="text-label text-fg-secondary grid gap-1">
-                    {labels.promptParameterType}
-                    <select
-                      value={parameter.type}
-                      onChange={(event) =>
-                        setPromptParameterDefinitions((current) =>
-                          current.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? {
-                                  ...item,
-                                  type: event.target.value as AssistantPromptParameter["type"],
-                                }
-                              : item,
-                          ),
-                        )
-                      }
-                      className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-3"
+                </div>
+                <PromptField
+                  label={labels.promptGoal}
+                  value={promptGoal}
+                  onChange={setPromptGoal}
+                  locale={locale}
+                />
+                <label className="text-label text-fg-secondary grid gap-1">
+                  {labels.promptInstructions}
+                  <DirAwareTextarea
+                    locale={locale}
+                    value={promptInstructions}
+                    onChange={(event) => setPromptInstructions(event.target.value)}
+                    rows={4}
+                    maxLength={12_000}
+                    required
+                    className="border-border bg-surface text-body min-h-24 rounded-[var(--radius-control)] border px-3 py-2"
+                  />
+                </label>
+                <PromptField
+                  label={labels.promptTags}
+                  value={promptTags}
+                  onChange={setPromptTags}
+                  locale={locale}
+                />
+                <fieldset className="border-border grid gap-3 rounded-[var(--radius-control)] border p-3">
+                  <legend className="text-body text-fg-primary px-1 font-semibold">
+                    {labels.promptParameters}
+                  </legend>
+                  <p className="text-label text-fg-muted">{labels.promptParametersHelp}</p>
+                  {promptParameterDefinitions.map((parameter, index) => (
+                    <div
+                      key={`${parameter.key}-${index}`}
+                      className="border-border grid gap-2 rounded-[var(--radius-control)] border p-3 sm:grid-cols-2"
                     >
-                      <option value="text">{labels.promptParameterText}</option>
-                      <option value="month">{labels.promptParameterMonth}</option>
-                      <option value="content_reference">{labels.promptParameterReference}</option>
-                    </select>
-                  </label>
-                  <PromptField
-                    label={labels.promptParameterDefault}
-                    value={parameter.defaultValue ?? ""}
-                    required={false}
-                    maxLength={500}
-                    onChange={(defaultValue) =>
-                      setPromptParameterDefinitions((current) =>
-                        current.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? {
-                                ...item,
-                                ...(defaultValue ? { defaultValue } : { defaultValue: undefined }),
-                              }
-                            : item,
-                        ),
-                      )
-                    }
-                    locale={locale}
-                  />
-                  <div className="flex min-h-11 items-center justify-between gap-3 sm:col-span-2">
-                    <label
-                      htmlFor={`prompt-parameter-required-${index}`}
-                      className="text-label text-fg-secondary flex min-h-11 items-center gap-2"
-                    >
-                      <Checkbox
-                        id={`prompt-parameter-required-${index}`}
-                        checked={parameter.required}
-                        onCheckedChange={(checked) =>
+                      <PromptField
+                        label={labels.promptParameterKey}
+                        value={parameter.key}
+                        onChange={(key) =>
                           setPromptParameterDefinitions((current) =>
                             current.map((item, itemIndex) =>
-                              itemIndex === index ? { ...item, required: checked === true } : item,
+                              itemIndex === index
+                                ? { ...item, key: key.toLowerCase().replace(/[^a-z0-9_]/g, "_") }
+                                : item,
                             ),
                           )
                         }
+                        locale={locale}
                       />
-                      {labels.promptParameterRequired}
-                    </label>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      aria-label={`${labels.promptParameterRemove} ${index + 1}`}
-                      onClick={() =>
-                        setPromptParameterDefinitions((current) =>
-                          current.filter((_, itemIndex) => itemIndex !== index),
-                        )
-                      }
+                      <PromptField
+                        label={labels.promptParameterLabel}
+                        value={parameter.label}
+                        onChange={(label) =>
+                          setPromptParameterDefinitions((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index ? { ...item, label } : item,
+                            ),
+                          )
+                        }
+                        locale={locale}
+                      />
+                      <label className="text-label text-fg-secondary grid gap-1">
+                        {labels.promptParameterType}
+                        <select
+                          value={parameter.type}
+                          onChange={(event) =>
+                            setPromptParameterDefinitions((current) =>
+                              current.map((item, itemIndex) =>
+                                itemIndex === index
+                                  ? {
+                                      ...item,
+                                      type: event.target.value as AssistantPromptParameter["type"],
+                                    }
+                                  : item,
+                              ),
+                            )
+                          }
+                          className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-3"
+                        >
+                          <option value="text">{labels.promptParameterText}</option>
+                          <option value="month">{labels.promptParameterMonth}</option>
+                          <option value="content_reference">
+                            {labels.promptParameterReference}
+                          </option>
+                        </select>
+                      </label>
+                      <PromptField
+                        label={labels.promptParameterDefault}
+                        value={parameter.defaultValue ?? ""}
+                        required={false}
+                        maxLength={500}
+                        onChange={(defaultValue) =>
+                          setPromptParameterDefinitions((current) =>
+                            current.map((item, itemIndex) =>
+                              itemIndex === index
+                                ? {
+                                    ...item,
+                                    ...(defaultValue
+                                      ? { defaultValue }
+                                      : { defaultValue: undefined }),
+                                  }
+                                : item,
+                            ),
+                          )
+                        }
+                        locale={locale}
+                      />
+                      <div className="flex min-h-11 items-center justify-between gap-3 sm:col-span-2">
+                        <label
+                          htmlFor={`prompt-parameter-required-${index}`}
+                          className="text-label text-fg-secondary flex min-h-11 items-center gap-2"
+                        >
+                          <Checkbox
+                            id={`prompt-parameter-required-${index}`}
+                            checked={parameter.required}
+                            onCheckedChange={(checked) =>
+                              setPromptParameterDefinitions((current) =>
+                                current.map((item, itemIndex) =>
+                                  itemIndex === index
+                                    ? { ...item, required: checked === true }
+                                    : item,
+                                ),
+                              )
+                            }
+                          />
+                          {labels.promptParameterRequired}
+                        </label>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          aria-label={`${labels.promptParameterRemove} ${index + 1}`}
+                          onClick={() =>
+                            setPromptParameterDefinitions((current) =>
+                              current.filter((_, itemIndex) => itemIndex !== index),
+                            )
+                          }
+                        >
+                          <Trash2 className="h-4 w-4" aria-hidden="true" />
+                          {labels.promptParameterRemove}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={promptParameterDefinitions.length >= 8}
+                    onClick={() =>
+                      setPromptParameterDefinitions((current) => [
+                        ...current,
+                        { key: "", type: "text", label: "", required: false },
+                      ])
+                    }
+                  >
+                    {labels.promptParameterAdd}
+                  </Button>
+                </fieldset>
+                {!editingPromptId ? (
+                  <label className="text-label text-fg-secondary grid gap-1">
+                    {labels.promptScope}
+                    <select
+                      value={promptScope}
+                      onChange={(event) => setPromptScope(event.target.value as Prompt["scope"])}
+                      className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-3"
                     >
-                      <Trash2 className="h-4 w-4" aria-hidden="true" />
-                      {labels.promptParameterRemove}
-                    </Button>
-                  </div>
+                      <option value="private">{labels.promptPrivate}</option>
+                      {canManageWorkspace ? (
+                        <option value="workspace">{labels.promptWorkspace}</option>
+                      ) : null}
+                      <option value="agency">{labels.promptAgency}</option>
+                    </select>
+                  </label>
+                ) : null}
+                {promptSaveError ? (
+                  <p role="alert" className="text-body text-danger">
+                    {labels.promptError}
+                  </p>
+                ) : null}
+                <div className="flex flex-wrap gap-2">
+                  <Button type="submit">{labels.savePrompt}</Button>
+                  <Button type="button" variant="outline" onClick={() => setPromptFormOpen(false)}>
+                    {labels.dismiss}
+                  </Button>
                 </div>
-              ))}
+              </form>
+            ) : null}
+            {filteredPrompts.length ? (
+              <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {promptsToDisplay.map((prompt) => (
+                  <li
+                    key={prompt.id}
+                    className="border-border flex flex-col rounded-[var(--radius-control)] border p-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="text-body text-fg-primary font-semibold">{prompt.name}</h3>
+                        <p className="text-label text-fg-secondary mt-1">{prompt.purpose}</p>
+                      </div>
+                      {prompt.status === "pending_approval" ? (
+                        <span className="text-label text-fg-muted">{labels.promptPending}</span>
+                      ) : null}
+                    </div>
+                    <p className="text-label text-fg-secondary mt-2">{prompt.goal}</p>
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {prompt.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="bg-surface-subtle text-label rounded-full px-2 py-1"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-auto flex flex-wrap gap-2 pt-3">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          setSelectedPromptId(prompt.id);
+                          setActivePrompt(prompt);
+                          setPromptParameterValues(
+                            Object.fromEntries(
+                              prompt.parameters
+                                .filter((parameter) => parameter.defaultValue)
+                                .map((parameter) => [parameter.key, parameter.defaultValue ?? ""]),
+                            ),
+                          );
+                          setDraft(prompt.goal);
+                          setToolsOpen(false);
+                        }}
+                      >
+                        {labels.runPrompt}
+                      </Button>
+                      {prompt.canEdit ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => beginPrompt(prompt)}
+                          >
+                            {labels.editPrompt}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void archivePrompt(prompt.id)}
+                          >
+                            {labels.archivePrompt}
+                          </Button>
+                        </>
+                      ) : null}
+                      {prompt.canPublish && prompt.status !== "published" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void publishPrompt(prompt.id)}
+                        >
+                          {labels.publishPrompt}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {filteredPrompts.length === 0 ? (
+              <p className="text-body text-fg-muted bg-surface-subtle mt-4 rounded-[var(--radius-control)] p-4">
+                {labels.noSearchResults}
+              </p>
+            ) : null}
+            {!promptSearch.trim() && filteredPrompts.length > 6 ? (
               <Button
                 type="button"
                 variant="outline"
-                disabled={promptParameterDefinitions.length >= 8}
-                onClick={() =>
-                  setPromptParameterDefinitions((current) => [
-                    ...current,
-                    { key: "", type: "text", label: "", required: false },
-                  ])
-                }
+                className="mt-3"
+                onClick={() => setShowAllPrompts((current) => !current)}
               >
-                {labels.promptParameterAdd}
+                {showAllPrompts ? labels.showFewerPrompts : labels.showAllPrompts}
               </Button>
-            </fieldset>
-            {!editingPromptId ? (
-              <label className="text-label text-fg-secondary grid gap-1">
-                {labels.promptScope}
+            ) : null}
+          </div>
+          {knowledgeLibrary}
+        </DialogContent>
+      </Dialog>
+      <div
+        className={`grid min-h-[70vh] gap-4 ${historyVisible ? "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,18rem)]" : "lg:grid-cols-1"}`}
+      >
+        <main className="flex min-w-0 flex-col gap-4" dir={locale === "ar" ? "rtl" : "ltr"}>
+          <header className="border-border bg-surface flex flex-wrap items-center justify-between gap-3 rounded-[var(--radius-card)] border p-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="lg:hidden"
+                aria-label={labels.assistantHistory}
+                title={labels.assistantHistory}
+                onClick={() => setMobileHistoryOpen(true)}
+              >
+                <History className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="hidden lg:inline-flex"
+                aria-label={historyVisible ? labels.hideHistory : labels.showHistory}
+                title={historyVisible ? labels.hideHistory : labels.showHistory}
+                onClick={() => setHistoryVisible((current) => !current)}
+              >
+                <History className="h-4 w-4" aria-hidden="true" />
+              </Button>
+              <div className="min-w-0">
+                <h2 className="text-title-card text-fg-primary truncate font-semibold">
+                  {conversationId
+                    ? (conversations.find((item) => item.id === conversationId)?.title ??
+                      labels.assistant)
+                    : labels.newConversation}
+                </h2>
+                {conversationId && messages.length === 0 ? (
+                  <p className="text-label text-fg-muted">{labels.conversationRestored}</p>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="text-label text-fg-secondary flex items-center gap-2">
+                <span>{labels.responseLanguage}</span>
                 <select
-                  value={promptScope}
-                  onChange={(event) => setPromptScope(event.target.value as Prompt["scope"])}
-                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-3"
+                  value={responseLocale}
+                  onChange={(event) =>
+                    void changeResponseLocale(event.target.value as AssistantResponseLocale)
+                  }
+                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                  aria-label={labels.responseLanguage}
                 >
-                  <option value="private">{labels.promptPrivate}</option>
-                  {canManageWorkspace ? (
-                    <option value="workspace">{labels.promptWorkspace}</option>
-                  ) : null}
-                  <option value="agency">{labels.promptAgency}</option>
+                  <option value="ar">{labels.languageArabic}</option>
+                  <option value="en">{labels.languageEnglish}</option>
                 </select>
               </label>
-            ) : null}
-            {promptSaveError ? (
-              <p role="alert" className="text-body text-danger">
-                {labels.promptError}
-              </p>
-            ) : null}
-            <div className="flex flex-wrap gap-2">
-              <Button type="submit">{labels.savePrompt}</Button>
-              <Button type="button" variant="outline" onClick={() => setPromptFormOpen(false)}>
-                {labels.dismiss}
+              <Button type="button" variant="outline" onClick={() => setToolsOpen(true)}>
+                <Library className="h-4 w-4" aria-hidden="true" />
+                {labels.toolsAndContext}
               </Button>
             </div>
-          </form>
-        ) : null}
-        {displayedPrompts.length ? (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {promptsToDisplay.map((prompt) => (
-              <li
-                key={prompt.id}
-                className="border-border flex flex-col rounded-[var(--radius-control)] border p-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <h3 className="text-body text-fg-primary font-semibold">{prompt.name}</h3>
-                    <p className="text-label text-fg-secondary mt-1">{prompt.purpose}</p>
-                  </div>
-                  {prompt.status === "pending_approval" ? (
-                    <span className="text-label text-fg-muted">{labels.promptPending}</span>
-                  ) : null}
-                </div>
-                <p className="text-label text-fg-secondary mt-2">{prompt.goal}</p>
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {prompt.tags.map((tag) => (
-                    <span key={tag} className="bg-surface-subtle text-label rounded-full px-2 py-1">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                {activePrompt?.id === prompt.id && activePrompt.parameters.length ? (
-                  <fieldset className="border-border mt-3 grid gap-3 rounded-[var(--radius-control)] border p-3">
-                    <legend className="text-body text-fg-primary px-1 font-semibold">
-                      {labels.promptParameters}
-                    </legend>
-                    {activePrompt.parameters.map((parameter) => {
-                      const value =
-                        promptParameterValues[parameter.key] ?? parameter.defaultValue ?? "";
-                      const invalidMonth =
-                        parameter.type === "month" &&
-                        Boolean(value) &&
-                        !/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
-                      const missing = parameter.required && !value.trim();
-                      const state = invalidMonth
-                        ? "invalid"
-                        : missing
-                          ? "missing"
-                          : value
-                            ? "ready"
-                            : "optional";
-                      const stateLabel = invalidMonth
-                        ? labels.promptParameterInvalid
-                        : missing
-                          ? labels.promptParameterMissing
-                          : value
-                            ? labels.promptParameterResolved
-                            : labels.promptParameterOptional;
-                      return (
-                        <label
-                          key={parameter.key}
-                          className="text-label text-fg-secondary grid gap-1"
-                          data-parameter-state={state}
-                        >
-                          <span className="flex items-center justify-between gap-2">
-                            <span>{parameter.label}</span>
-                            <span
-                              className={
-                                state === "invalid"
-                                  ? "text-danger"
-                                  : state === "missing"
-                                    ? "text-warning"
-                                    : state === "ready"
-                                      ? "text-success"
-                                      : "text-fg-muted"
-                              }
-                            >
-                              {stateLabel}
-                            </span>
-                          </span>
-                          <DirAwareInput
-                            locale={locale}
-                            type={parameter.type === "month" ? "month" : "text"}
-                            value={value}
-                            required={parameter.required}
-                            aria-invalid={invalidMonth || missing}
-                            aria-describedby={`assistant-prompt-param-${parameter.key}-state`}
-                            onChange={(event) =>
-                              setPromptParameterValues((current) => ({
-                                ...current,
-                                [parameter.key]: event.target.value,
-                              }))
-                            }
-                            className={`text-body bg-surface min-h-11 rounded-[var(--radius-control)] border px-3 ${state === "invalid" ? "border-danger" : state === "missing" ? "border-warning" : state === "ready" ? "border-success" : "border-border"}`}
-                          />
-                          <span
-                            id={`assistant-prompt-param-${parameter.key}-state`}
-                            className="text-label text-fg-muted"
-                            role={invalidMonth || missing ? "alert" : "status"}
-                          >
-                            {stateLabel}
-                          </span>
-                        </label>
-                      );
-                    })}
-                  </fieldset>
-                ) : null}
-                <div className="mt-auto flex flex-wrap gap-2 pt-3">
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedPromptId(prompt.id);
-                      setActivePrompt(prompt);
-                      setPromptParameterValues(
-                        Object.fromEntries(
-                          prompt.parameters
-                            .filter((parameter) => parameter.defaultValue)
-                            .map((parameter) => [parameter.key, parameter.defaultValue ?? ""]),
-                        ),
-                      );
-                      setDraft(prompt.goal);
-                    }}
-                  >
-                    {labels.runPrompt}
-                  </Button>
-                  {prompt.canEdit ? (
-                    <>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => beginPrompt(prompt)}
-                      >
-                        {labels.editPrompt}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => void archivePrompt(prompt.id)}
-                      >
-                        {labels.archivePrompt}
-                      </Button>
-                    </>
-                  ) : null}
-                  {prompt.canPublish && prompt.status !== "published" ? (
+          </header>
+          <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
+            {messages.length === 0 ? (
+              <div className="mx-auto max-w-2xl py-5 text-center">
+                <span className="bg-primary-subtle text-primary mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full">
+                  <Sparkles className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h2 className="text-title-section text-fg-primary font-semibold">
+                  {labels.emptyTitle}
+                </h2>
+                <p className="text-body text-fg-secondary mx-auto mt-2 max-w-xl">
+                  {labels.emptyDescription}
+                </p>
+                <div className="mt-5 flex flex-wrap justify-center gap-2">
+                  {quickPrompts.map(([label, prompt, promptMode]) => (
                     <Button
+                      key={label}
                       type="button"
                       variant="outline"
-                      size="sm"
-                      onClick={() => void publishPrompt(prompt.id)}
+                      onClick={() => {
+                        setMode(promptMode);
+                        void submit(undefined, prompt, undefined, promptMode);
+                      }}
+                      disabled={busy || archivedView}
                     >
-                      {labels.publishPrompt}
+                      {label}
                     </Button>
-                  ) : null}
+                  ))}
                 </div>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        {displayedPrompts.length > 6 ? (
-          <Button
-            type="button"
-            variant="outline"
-            className="mt-3"
-            onClick={() => setShowAllPrompts((current) => !current)}
-          >
-            {showAllPrompts ? labels.showFewerPrompts : labels.showAllPrompts}
-          </Button>
-        ) : null}
-      </div>
-      <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap gap-2">
-            <Button
-              type="button"
-              variant={archivedView ? "outline" : "default"}
-              onClick={() => setArchivedView(false)}
-            >
-              {labels.activeConversations}
-            </Button>
-            <Button
-              type="button"
-              variant={archivedView ? "default" : "outline"}
-              onClick={() => setArchivedView(true)}
-            >
-              {labels.archivedConversations}
-            </Button>
-            {!archivedView ? (
-              <Button type="button" variant="outline" onClick={startNewConversation}>
-                <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
-                {labels.newConversation}
-              </Button>
-            ) : null}
-          </div>
-          <h2 className="text-title-card text-fg-primary font-semibold">{labels.conversations}</h2>
-        </div>
-        {conversations.length ? (
-          <>
-            <label htmlFor={searchId} className="sr-only">
-              {labels.searchConversations}
-            </label>
-            <div className="border-border mt-3 flex items-center gap-2 rounded-[var(--radius-control)] border px-3">
-              <Search className="text-fg-muted h-4 w-4" aria-hidden="true" />
-              <DirAwareInput
-                id={searchId}
-                locale={locale}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder={labels.searchConversations}
-                className="text-body min-h-11 min-w-0 flex-1 bg-transparent outline-none"
-              />
-            </div>
-            <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {visibleConversations.map((conversation) => (
-                <li
-                  key={conversation.id}
-                  className="border-border flex min-w-0 items-center gap-1 rounded-[var(--radius-control)] border p-1"
-                >
-                  <button
-                    type="button"
-                    onClick={() => void openConversation(conversation.id)}
-                    aria-current={conversationId === conversation.id ? "page" : undefined}
-                    className="text-body text-fg-primary hover:bg-surface-subtle min-h-11 min-w-0 flex-1 truncate rounded px-2 text-start focus-visible:outline-2 focus-visible:outline-offset-2"
+              </div>
+            ) : (
+              <ol className="mx-auto max-w-3xl space-y-4" aria-live="polite">
+                {messages.map((message, index) => (
+                  <li
+                    key={`${message.role}-${index}`}
+                    className={message.role === "user" ? "ms-auto max-w-[85%]" : "max-w-[95%]"}
                   >
-                    {conversation.title}
-                  </button>
-                  {archivedView ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={labels.restoreConversation}
-                      title={labels.restoreConversation}
-                      onClick={() => void restoreConversation(conversation.id)}
+                    <p className="text-label text-fg-muted mb-1 font-semibold">
+                      {message.role === "user" ? labels.you : labels.assistant}
+                    </p>
+                    <div
+                      className={`text-body rounded-[var(--radius-control)] px-3 py-2 ${message.role === "user" ? "bg-primary-subtle text-fg-primary" : "bg-surface-subtle text-fg-primary"}`}
                     >
-                      <MessageSquarePlus className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={labels.rename}
-                      title={labels.rename}
-                      onClick={() => void renameConversation(conversation.id, conversation.title)}
+                      {message.role === "assistant" ? (
+                        <AssistantMarkdown content={message.content} />
+                      ) : (
+                        <p className="whitespace-pre-wrap" dir="auto">
+                          {message.content}
+                        </p>
+                      )}
+                    </div>
+                    {message.role === "assistant" && index === messages.length - 1 ? (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => void copyResponse(message.content, index)}
+                        >
+                          <Copy className="h-4 w-4" aria-hidden="true" />
+                          {copiedResponseIndex === index
+                            ? labels.responseCopied
+                            : labels.copyResponse}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={busy || archivedView}
+                          onClick={() =>
+                            void submit(undefined, messages.at(-2)?.content, undefined, mode, true)
+                          }
+                        >
+                          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                          {labels.regenerateResponse}
+                        </Button>
+                      </div>
+                    ) : null}
+                  </li>
+                ))}
+                {busy ? (
+                  <li role="status" className="text-body text-fg-muted">
+                    {labels.sending}
+                  </li>
+                ) : null}
+                {busy && streamingText ? (
+                  <li className="max-w-[95%]">
+                    <p className="text-label text-fg-muted mb-1 font-semibold">
+                      {labels.assistant}
+                    </p>
+                    <div
+                      className="bg-surface-subtle text-body text-fg-primary rounded-[var(--radius-control)] px-3 py-2"
+                      aria-label={labels.activityWriting}
                     >
-                      <Pencil className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  )}
-                  {!archivedView ? (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={labels.archive}
-                      title={labels.archive}
-                      onClick={() => void archiveConversation(conversation.id)}
-                    >
-                      <Archive className="h-4 w-4" aria-hidden="true" />
-                    </Button>
-                  ) : null}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label={labels.deleteConversation}
-                    title={labels.deleteConversation}
-                    onClick={() => void deleteConversation(conversation.id)}
-                  >
-                    <Trash2 className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : null}
-      </div>
-      <div className="border-border bg-surface rounded-[var(--radius-card)] border p-4 sm:p-6">
-        {messages.length === 0 ? (
-          <div className="mx-auto max-w-2xl py-5 text-center">
-            <span className="bg-primary-subtle text-primary mx-auto mb-3 inline-flex h-11 w-11 items-center justify-center rounded-full">
-              <Sparkles className="h-5 w-5" aria-hidden="true" />
-            </span>
-            <h2 className="text-title-section text-fg-primary font-semibold">
-              {labels.emptyTitle}
-            </h2>
-            <p className="text-body text-fg-secondary mx-auto mt-2 max-w-xl">
-              {labels.emptyDescription}
-            </p>
-            <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {quickPrompts.map(([label, prompt, promptMode]) => (
-                <Button
-                  key={label}
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setMode(promptMode);
-                    void submit(undefined, prompt, undefined, promptMode);
-                  }}
-                  disabled={busy || archivedView}
-                >
-                  {label}
-                </Button>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <ol className="mx-auto max-w-3xl space-y-4" aria-live="polite">
-            {messages.map((message, index) => (
-              <li
-                key={`${message.role}-${index}`}
-                className={message.role === "user" ? "ms-auto max-w-[85%]" : "max-w-[95%]"}
-              >
-                <p className="text-label text-fg-muted mb-1 font-semibold">
-                  {message.role === "user" ? labels.you : labels.assistant}
-                </p>
-                <div
-                  className={`text-body rounded-[var(--radius-control)] px-3 py-2 ${message.role === "user" ? "bg-primary-subtle text-fg-primary" : "bg-surface-subtle text-fg-primary"}`}
-                >
-                  {message.content}
-                </div>
-              </li>
-            ))}
-            {busy ? (
-              <li role="status" className="text-body text-fg-muted">
-                {labels.sending}
-              </li>
-            ) : null}
-            {busy && streamingText ? (
-              <li className="max-w-[95%]">
-                <p className="text-label text-fg-muted mb-1 font-semibold">{labels.assistant}</p>
-                <div
-                  className="bg-surface-subtle text-body text-fg-primary rounded-[var(--radius-control)] px-3 py-2"
-                  aria-label={labels.activityWriting}
-                >
-                  {streamingText}
-                </div>
-              </li>
-            ) : null}
-          </ol>
-        )}
+                      <AssistantMarkdown content={streamingText} />
+                    </div>
+                  </li>
+                ) : null}
+              </ol>
+            )}
 
-        {error ? (
-          <p role="alert" className="text-body text-danger mt-4">
-            {labels.error}
-          </p>
-        ) : null}
-        {activity.length ? (
-          <ol
-            className="border-border mx-auto mt-4 max-w-3xl space-y-1 border-s-2 ps-3"
-            aria-live="polite"
-            aria-label={labels.activityProvider}
-          >
-            {activity.map((event, index) => (
-              <li
-                key={`${typeof event === "string" ? event : `${event.name}-${event.status}`}-${index}`}
-                className="text-label text-fg-muted"
-              >
-                {typeof event === "object"
-                  ? `${event.status === "started" ? labels.activityToolRunning : event.status === "completed" ? labels.activityToolCompleted : labels.activityToolFailed}: ${event.name === "planner_get_plan_summary" ? labels.activityToolPlanSummary : event.name === "planner_get_calendar_distribution" ? labels.activityToolSchedule : event.name === "planner_get_content_mix" ? labels.activityToolContentMix : event.name === "planner_get_workload_summary" ? labels.activityToolWorkload : event.name === "planner_list_plan_items" ? labels.activityToolItems : event.name === "planner_read_selected_content_item" ? labels.activityToolSelectedItem : event.name === "planner_get_brand_guidance" ? labels.activityToolBrand : "Planner context"}`
-                  : event === "context_resolved"
-                    ? labels.activityContext
-                    : event === "skills_selected"
-                      ? labels.activitySkills
-                      : event === "plan_analyzed"
-                        ? labels.activityAnalysis
-                        : event === "provider_started"
-                          ? labels.activityProvider
-                          : event === "response_delta"
-                            ? labels.activityWriting
-                            : event === "response_validated"
-                              ? labels.activityValidated
-                              : event === "run_failed"
-                                ? labels.activityFailed
-                                : event === "run_cancelled"
-                                  ? labels.activityCancelled
-                                  : labels.activityComplete}
-              </li>
-            ))}
-          </ol>
-        ) : null}
-        {runOutputUnavailable ? (
-          <p role="status" className="text-label text-fg-muted mx-auto mt-2 max-w-3xl">
-            {labels.runResultUnavailable}
-          </p>
-        ) : null}
-
-        {contentReferenceNotFound ? (
-          <p role="alert" className="text-body text-danger mt-4">
-            {labels.contentReferenceNotFound}
-          </p>
-        ) : null}
-        {contentCandidates.length ? (
-          <section
-            className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border p-3"
-            aria-label={labels.chooseContentReference}
-          >
-            <h3 className="text-body text-fg-primary font-semibold">
-              {labels.chooseContentReference}
-            </h3>
-            <ul className="mt-2 grid gap-2 sm:grid-cols-2">
-              {contentCandidates.map((candidate) => (
-                <li
-                  key={candidate.id}
-                  className="bg-surface-subtle rounded-[var(--radius-control)] p-2"
-                >
-                  <p className="text-body text-fg-primary font-medium">{candidate.title}</p>
-                  <p className="text-label text-fg-secondary mt-1">
-                    {candidate.format} · {candidate.status} ·{" "}
-                    {candidate.plannedPublishAt.slice(0, 10)}
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => {
-                      setContentItemReference(candidate.title);
-                      setSelectedContentItemId(candidate.id);
-                      setContentCandidates([]);
-                      setContentReferenceNotFound(false);
-                    }}
-                  >
-                    {labels.useContentReference}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-
-        {reply ? (
-          <div className="border-border mx-auto mt-5 max-w-3xl space-y-4 border-t pt-4">
-            {reply.reviewedPlanMonth ? (
-              <p className="text-label text-fg-muted" role="status">
-                {labels.reviewedPlan}: {formatPlanMonth(reply.reviewedPlanMonth, locale)}
+            {error ? (
+              <p role="alert" className="text-body text-danger mt-4">
+                {labels.error}
               </p>
             ) : null}
-            {reply.referencedItem ? (
-              <p className="text-label text-fg-muted" role="status">
-                {labels.selectedContent}: {reply.referencedItem.title} · revision{" "}
-                {reply.referencedItem.revision}
-              </p>
-            ) : null}
-            {reply.deterministicFindings.length ? (
-              <section aria-label={labels.findGaps}>
-                <h3 className="text-title-card text-fg-primary font-semibold">{labels.findGaps}</h3>
-                <ul className="mt-2 space-y-2">
-                  {reply.deterministicFindings.map((finding, index) => (
+            {activity.length ? (
+              <details
+                className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border px-3 py-2"
+                open={busy}
+              >
+                <summary className="text-label text-fg-secondary cursor-pointer font-semibold">
+                  {labels.activityTimeline}
+                </summary>
+                <ol
+                  className="border-border mt-2 space-y-1 border-s-2 ps-3"
+                  aria-live="polite"
+                  aria-label={labels.activityProvider}
+                >
+                  {activity.map((event, index) => (
                     <li
-                      key={`${finding.title}-${index}`}
-                      className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
+                      key={`${typeof event === "string" ? event : `${event.name}-${event.status}`}-${index}`}
+                      className="text-label text-fg-muted"
                     >
-                      <p className="text-body text-fg-primary font-semibold">{finding.title}</p>
-                      <p className="text-body text-fg-secondary mt-1">{finding.detail}</p>
+                      {typeof event === "object"
+                        ? `${event.status === "started" ? labels.activityToolRunning : event.status === "completed" ? labels.activityToolCompleted : labels.activityToolFailed}: ${event.name === "planner_get_plan_summary" ? labels.activityToolPlanSummary : event.name === "planner_get_calendar_distribution" ? labels.activityToolSchedule : event.name === "planner_get_content_mix" ? labels.activityToolContentMix : event.name === "planner_get_workload_summary" ? labels.activityToolWorkload : event.name === "planner_list_plan_items" ? labels.activityToolItems : event.name === "planner_read_selected_content_item" ? labels.activityToolSelectedItem : event.name === "planner_get_brand_guidance" ? labels.activityToolBrand : "Planner context"}`
+                        : event === "context_resolved"
+                          ? labels.activityContext
+                          : event === "skills_selected"
+                            ? labels.activitySkills
+                            : event === "plan_analyzed"
+                              ? labels.activityAnalysis
+                              : event === "provider_started"
+                                ? labels.activityProvider
+                                : event === "response_delta"
+                                  ? labels.activityWriting
+                                  : event === "response_validated"
+                                    ? labels.activityValidated
+                                    : event === "run_failed"
+                                      ? labels.activityFailed
+                                      : event === "run_cancelled"
+                                        ? labels.activityCancelled
+                                        : labels.activityComplete}
+                    </li>
+                  ))}
+                </ol>
+              </details>
+            ) : null}
+            {runOutputUnavailable ? (
+              <p role="status" className="text-label text-fg-muted mx-auto mt-2 max-w-3xl">
+                {labels.runResultUnavailable}
+              </p>
+            ) : null}
+
+            {contentReferenceNotFound ? (
+              <p role="alert" className="text-body text-danger mt-4">
+                {labels.contentReferenceNotFound}
+              </p>
+            ) : null}
+            {contentCandidates.length ? (
+              <section
+                className="border-border mx-auto mt-4 max-w-3xl rounded-[var(--radius-control)] border p-3"
+                aria-label={labels.chooseContentReference}
+              >
+                <h3 className="text-body text-fg-primary font-semibold">
+                  {labels.chooseContentReference}
+                </h3>
+                <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+                  {contentCandidates.map((candidate) => (
+                    <li
+                      key={candidate.id}
+                      className="bg-surface-subtle rounded-[var(--radius-control)] p-2"
+                    >
+                      <p className="text-body text-fg-primary font-medium">{candidate.title}</p>
+                      <p className="text-label text-fg-secondary mt-1">
+                        {candidate.format} · {candidate.status} ·{" "}
+                        {candidate.plannedPublishAt.slice(0, 10)}
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => {
+                          setContentItemReference(candidate.title);
+                          setSelectedContentItemId(candidate.id);
+                          setContentCandidates([]);
+                          setContentReferenceNotFound(false);
+                        }}
+                      >
+                        {labels.useContentReference}
+                      </Button>
                     </li>
                   ))}
                 </ul>
               </section>
             ) : null}
-            {reply.answer.findings.length || reply.answer.recommendations.length ? (
-              <section>
-                <h3 className="text-title-card text-fg-primary font-semibold">{labels.improve}</h3>
-                <ul className="mt-2 space-y-2">
-                  {[...reply.answer.findings, ...reply.answer.recommendations].map(
-                    (item, index) => (
-                      <li
-                        key={`${item.title}-${index}`}
-                        className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
-                      >
-                        <p className="text-body text-fg-primary font-semibold">{item.title}</p>
-                        <p className="text-body text-fg-secondary mt-1">{item.detail}</p>
-                      </li>
-                    ),
-                  )}
-                </ul>
-              </section>
-            ) : null}
-            {reply.proposals.length ? (
-              <section aria-label={labels.proposedEdits} data-testid="assistant-proposals">
-                <h3 className="text-title-card text-fg-primary font-semibold">
-                  {labels.proposedEdits}
-                </h3>
-                {selectedProposalIds.length >= 2 ? (
-                  <div className="mt-2 flex justify-end">
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={mode !== "apply" || !canApplySelectedProposals}
-                      onClick={() =>
-                        void applySelectedProposals(selectedProposals.map((item) => item.id))
-                      }
-                    >
-                      {selectedProposals.some((proposal) => proposal.status === "applying")
-                        ? labels.applyingSelectedEdits
-                        : `${labels.applySelectedEdits} (${selectedProposals.length})`}
-                    </Button>
-                  </div>
-                ) : null}
-                <ul className="mt-2 space-y-2">
-                  {reply.proposals.map((proposal) => {
-                    const expired =
-                      proposal.status === "proposed" &&
-                      new Date(proposal.expiresAt).getTime() <= Date.now();
-                    const status = expired ? "expired" : proposal.status;
-                    const pending = status === "proposed";
-                    const statusLabel =
-                      status === "applied"
-                        ? labels.editApplied
-                        : status === "rejected"
-                          ? labels.editRejected
-                          : status === "stale"
-                            ? labels.editStale
-                            : status === "expired"
-                              ? labels.editExpired
-                              : status === "applying"
-                                ? labels.applyingEdit
-                                : "";
-                    return (
-                      <li
-                        key={proposal.id}
-                        className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
-                      >
-                        {pending ? (
-                          <div className="mb-2 flex min-h-11 items-center gap-2">
-                            <Checkbox
-                              id={`assistant-proposal-select-${proposal.id}`}
-                              checked={selectedProposalIds.includes(proposal.id)}
-                              onCheckedChange={(checked) =>
-                                setSelectedProposalIds((current) =>
-                                  checked === true
-                                    ? [...new Set([...current, proposal.id])]
-                                    : current.filter((id) => id !== proposal.id),
-                                )
-                              }
-                            />
-                            <label
-                              htmlFor={`assistant-proposal-select-${proposal.id}`}
-                              className="text-label text-fg-secondary cursor-pointer"
-                            >
-                              {labels.selectProposal}
-                            </label>
-                          </div>
-                        ) : null}
-                        <p className="text-body text-fg-primary font-semibold">{proposal.title}</p>
-                        <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                          <div>
-                            <p className="text-label text-fg-muted">{labels.before}</p>
-                            <p
-                              className="text-body text-fg-secondary whitespace-pre-wrap"
-                              dir="auto"
-                            >
-                              {proposal.field === "plannedPublishAt"
-                                ? formatProposalDate(proposal.beforeValue)
-                                : proposal.beforeValue || "—"}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-label text-fg-muted">{labels.after}</p>
-                            <p className="text-body text-fg-primary whitespace-pre-wrap" dir="auto">
-                              {proposal.field === "plannedPublishAt"
-                                ? formatProposalDate(proposal.afterValue)
-                                : proposal.afterValue}
-                            </p>
-                          </div>
-                        </div>
-                        {pending ? (
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              disabled={mode !== "apply"}
-                              onClick={() => void decideProposal(proposal.id, "apply")}
-                            >
-                              {labels.applyEdit}
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => void decideProposal(proposal.id, "reject")}
-                            >
-                              {labels.rejectEdit}
-                            </Button>
-                          </div>
-                        ) : (
-                          <p className="text-label text-fg-muted mt-2" role="status">
-                            {statusLabel}
-                          </p>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
-                {proposalError ? (
-                  <p role="alert" className="text-body text-danger mt-2">
-                    {labels.editStatusError}
-                  </p>
-                ) : null}
-              </section>
-            ) : null}
-            {reply.answer.limitations.length ? (
-              <section>
-                <h3 className="text-label text-fg-primary font-semibold">{labels.limitations}</h3>
-                <ul className="text-label text-fg-secondary mt-1 list-inside list-disc">
-                  {reply.answer.limitations.map((item, index) => (
-                    <li key={index}>{item}</li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-            <section className="text-label text-fg-muted">
-              <p className="font-semibold">{labels.evidence}</p>
-              {reply.evidence.map((item) => (
-                <div key={item.id} className="mt-1">
-                  <p>
-                    {labels.source}: {item.source} · {item.period} · {item.itemCount}{" "}
-                    {labels.itemCount}
-                  </p>
-                  {item.version ? <p>{item.version}</p> : null}
-                  <p>
-                    {labels.capturedAt}:{" "}
-                    {new Intl.DateTimeFormat(locale, {
-                      dateStyle: "medium",
-                      timeStyle: "short",
-                      numberingSystem: "latn",
-                    }).format(new Date(item.retrievedAt))}
-                  </p>
-                  <p>
-                    {item.completeness === "bounded" ? labels.boundedData : labels.completeData}
-                  </p>
-                </div>
-              ))}
-            </section>
-          </div>
-        ) : null}
-      </div>
 
-      <form
-        className="border-border bg-surface flex flex-wrap items-end gap-2 rounded-[var(--radius-card)] border p-3"
-        onSubmit={(event) => void submit(event)}
-      >
-        <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
-          <span>{labels.mode}</span>
-          <select
-            value={mode}
-            onChange={(event) => void changeMode(event.target.value as typeof mode)}
-            className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-            disabled={busy || archivedView}
-            aria-describedby="workspace-assistant-mode-description"
-            data-testid="assistant-mode"
+            {reply ? (
+              <div className="border-border mx-auto mt-5 max-w-3xl space-y-4 border-t pt-4">
+                {reply.reviewedPlanMonth ? (
+                  <p className="text-label text-fg-muted" role="status">
+                    {labels.reviewedPlan}: {formatPlanMonth(reply.reviewedPlanMonth, locale)}
+                  </p>
+                ) : null}
+                {reply.referencedItem ? (
+                  <p className="text-label text-fg-muted" role="status">
+                    {labels.selectedContent}: {reply.referencedItem.title} · revision{" "}
+                    {reply.referencedItem.revision}
+                  </p>
+                ) : null}
+                {reply.deterministicFindings.length ? (
+                  <section aria-label={labels.findGaps}>
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      {labels.findGaps}
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {reply.deterministicFindings.map((finding, index) => (
+                        <li
+                          key={`${finding.title}-${index}`}
+                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
+                        >
+                          <p className="text-body text-fg-primary font-semibold">{finding.title}</p>
+                          <p className="text-body text-fg-secondary mt-1">{finding.detail}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {reply.answer.findings.length ? (
+                  <section aria-label={labels.findings}>
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      {labels.findings}
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {reply.answer.findings.map((item, index) => (
+                        <li
+                          key={`${item.title}-${index}`}
+                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
+                        >
+                          <p className="text-body text-fg-primary font-semibold">{item.title}</p>
+                          <p className="text-body text-fg-secondary mt-1">{item.detail}</p>
+                          <div className="text-label text-fg-muted mt-2 flex flex-wrap items-center gap-2">
+                            <span>{labels.evidence}:</span>
+                            {item.evidenceIds.map((id) => (
+                              <a
+                                key={id}
+                                className="text-primary underline underline-offset-2"
+                                href={`#assistant-evidence-${encodeURIComponent(id)}`}
+                              >
+                                {id}
+                              </a>
+                            ))}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {reply.answer.recommendations.length ? (
+                  <section aria-label={labels.recommendations}>
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      {labels.recommendations}
+                    </h3>
+                    <ul className="mt-2 space-y-2">
+                      {reply.answer.recommendations.map((item, index) => (
+                        <li
+                          key={`${item.title}-${index}`}
+                          className="bg-surface-subtle rounded-[var(--radius-control)] p-3"
+                        >
+                          <p className="text-body text-fg-primary font-semibold">{item.title}</p>
+                          <p className="text-body text-fg-secondary mt-1">{item.detail}</p>
+                          <div className="text-label text-fg-muted mt-2 flex flex-wrap items-center gap-2">
+                            <span>{labels.evidence}:</span>
+                            {item.evidenceIds.map((id) => (
+                              <a
+                                key={id}
+                                className="text-primary underline underline-offset-2"
+                                href={`#assistant-evidence-${encodeURIComponent(id)}`}
+                              >
+                                {id}
+                              </a>
+                            ))}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {reply.proposals.length ? (
+                  <section aria-label={labels.proposedEdits} data-testid="assistant-proposals">
+                    <h3 className="text-title-card text-fg-primary font-semibold">
+                      {labels.proposedEdits}
+                    </h3>
+                    {selectedProposalIds.length >= 2 ? (
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={mode !== "apply" || !canApplySelectedProposals}
+                          onClick={() =>
+                            void applySelectedProposals(selectedProposals.map((item) => item.id))
+                          }
+                        >
+                          {selectedProposals.some((proposal) => proposal.status === "applying")
+                            ? labels.applyingSelectedEdits
+                            : `${labels.applySelectedEdits} (${selectedProposals.length})`}
+                        </Button>
+                      </div>
+                    ) : null}
+                    <ul className="mt-2 space-y-2">
+                      {reply.proposals.map((proposal) => {
+                        const expired =
+                          proposal.status === "proposed" &&
+                          new Date(proposal.expiresAt).getTime() <= Date.now();
+                        const status = expired ? "expired" : proposal.status;
+                        const pending = status === "proposed";
+                        const statusLabel =
+                          status === "applied"
+                            ? labels.editApplied
+                            : status === "rejected"
+                              ? labels.editRejected
+                              : status === "stale"
+                                ? labels.editStale
+                                : status === "expired"
+                                  ? labels.editExpired
+                                  : status === "applying"
+                                    ? labels.applyingEdit
+                                    : "";
+                        return (
+                          <li
+                            key={proposal.id}
+                            className="border-border bg-surface-subtle rounded-[var(--radius-control)] border p-3"
+                          >
+                            {pending ? (
+                              <div className="mb-2 flex min-h-11 items-center gap-2">
+                                <Checkbox
+                                  id={`assistant-proposal-select-${proposal.id}`}
+                                  checked={selectedProposalIds.includes(proposal.id)}
+                                  onCheckedChange={(checked) =>
+                                    setSelectedProposalIds((current) =>
+                                      checked === true
+                                        ? [...new Set([...current, proposal.id])]
+                                        : current.filter((id) => id !== proposal.id),
+                                    )
+                                  }
+                                />
+                                <label
+                                  htmlFor={`assistant-proposal-select-${proposal.id}`}
+                                  className="text-label text-fg-secondary cursor-pointer"
+                                >
+                                  {labels.selectProposal}
+                                </label>
+                              </div>
+                            ) : null}
+                            <p className="text-body text-fg-primary font-semibold">
+                              {proposal.title}
+                            </p>
+                            <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                              <div>
+                                <p className="text-label text-fg-muted">{labels.before}</p>
+                                <p
+                                  className="text-body text-fg-secondary whitespace-pre-wrap"
+                                  dir="auto"
+                                >
+                                  {proposal.field === "plannedPublishAt"
+                                    ? formatProposalDate(proposal.beforeValue)
+                                    : proposal.beforeValue || "—"}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-label text-fg-muted">{labels.after}</p>
+                                <p
+                                  className="text-body text-fg-primary whitespace-pre-wrap"
+                                  dir="auto"
+                                >
+                                  {proposal.field === "plannedPublishAt"
+                                    ? formatProposalDate(proposal.afterValue)
+                                    : proposal.afterValue}
+                                </p>
+                              </div>
+                            </div>
+                            {pending ? (
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={mode !== "apply"}
+                                  onClick={() => void decideProposal(proposal.id, "apply")}
+                                >
+                                  {labels.applyEdit}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => void decideProposal(proposal.id, "reject")}
+                                >
+                                  {labels.rejectEdit}
+                                </Button>
+                              </div>
+                            ) : (
+                              <p className="text-label text-fg-muted mt-2" role="status">
+                                {statusLabel}
+                              </p>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {proposalError ? (
+                      <p role="alert" className="text-body text-danger mt-2">
+                        {labels.editStatusError}
+                      </p>
+                    ) : null}
+                  </section>
+                ) : null}
+                {reply.answer.limitations.length ? (
+                  <section>
+                    <h3 className="text-label text-fg-primary font-semibold">
+                      {labels.limitations}
+                    </h3>
+                    <ul className="text-label text-fg-secondary mt-1 list-inside list-disc">
+                      {reply.answer.limitations.map((item, index) => (
+                        <li key={index}>{item}</li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
+                {reply.evidence.length ? (
+                  <details className="border-border text-label text-fg-muted rounded-[var(--radius-control)] border px-3 py-2">
+                    <summary className="text-fg-secondary cursor-pointer font-semibold">
+                      {labels.evidence} ({reply.evidence.length})
+                    </summary>
+                    {reply.evidence.map((item) => (
+                      <div
+                        id={`assistant-evidence-${encodeURIComponent(item.id)}`}
+                        key={item.id}
+                        className="mt-3 scroll-mt-4"
+                      >
+                        <p>
+                          {labels.source}: {item.source} · {item.period} · {item.itemCount}{" "}
+                          {labels.itemCount}
+                        </p>
+                        {item.version ? <p>{item.version}</p> : null}
+                        <p>
+                          {labels.capturedAt}:{" "}
+                          {new Intl.DateTimeFormat(locale, {
+                            dateStyle: "medium",
+                            timeStyle: "short",
+                            numberingSystem: "latn",
+                          }).format(new Date(item.retrievedAt))}
+                        </p>
+                        <p>
+                          {item.completeness === "bounded"
+                            ? labels.boundedData
+                            : labels.completeData}
+                        </p>
+                      </div>
+                    ))}
+                  </details>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+          <form
+            className="border-border bg-surface flex flex-wrap items-end gap-2 rounded-[var(--radius-card)] border p-3"
+            onSubmit={(event) => void submit(event)}
           >
-            <option value="ask">{labels.modeAsk}</option>
-            <option value="plan">{labels.modePlan}</option>
-            <option value="apply">{labels.modeApply}</option>
-          </select>
-        </label>
-        <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
-          <span>{labels.contentReference}</span>
-          <DirAwareInput
-            locale={locale}
-            value={contentItemReference}
-            onChange={(event) => {
-              setContentItemReference(event.target.value);
-              setSelectedContentItemId(null);
-              setContentCandidates([]);
-              setContentReferenceNotFound(false);
-            }}
-            placeholder={labels.contentReferenceHint}
-            maxLength={500}
-            className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-            disabled={busy || archivedView}
-          />
-        </label>
-        <label className="text-label text-fg-secondary flex shrink-0 flex-col gap-1">
-          <span>{labels.planPeriod}</span>
-          <input
-            type="month"
-            value={month}
-            onChange={(event) => setMonth(event.target.value)}
-            className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-          />
-        </label>
-        <label className="sr-only" htmlFor={inputId}>
-          {labels.placeholder}
-        </label>
-        <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
-          <span>{labels.model}</span>
-          <select
-            value={selectedModel}
-            onChange={(event) => {
-              const next = event.target.value;
-              if (!allowedModels.includes(next)) return;
-              saveAssistantModelPreference(preferenceKey, next);
-              const nextDefinition = getAiModelDefinition(next);
-              if (!nextDefinition?.reasoningEfforts.includes(reasoningEffort)) {
-                setReasoningEffort("medium");
-              }
-            }}
-            className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
-            aria-label={labels.model}
-          >
-            {allowedModels.map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </label>
-        {modelCapabilities?.reasoningEfforts.length ? (
-          <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
-            <span>{labels.reasoning}</span>
-            <select
-              value={reasoningEffort}
-              onChange={(event) => setReasoningEffort(event.target.value as typeof reasoningEffort)}
-              className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+            <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
+              <span>{labels.mode}</span>
+              <select
+                value={mode}
+                onChange={(event) => void changeMode(event.target.value as typeof mode)}
+                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                disabled={busy || archivedView}
+                aria-describedby="workspace-assistant-mode-description"
+                data-testid="assistant-mode"
+              >
+                <option value="ask">{labels.modeAsk}</option>
+                <option value="plan">{labels.modePlan}</option>
+                <option value="apply">{labels.modeApply}</option>
+              </select>
+            </label>
+            <label className="text-label text-fg-secondary flex min-w-36 flex-col gap-1">
+              <span>{labels.contentReference}</span>
+              <DirAwareInput
+                locale={locale}
+                value={contentItemReference}
+                onChange={(event) => {
+                  setContentItemReference(event.target.value);
+                  setSelectedContentItemId(null);
+                  setContentCandidates([]);
+                  setContentReferenceNotFound(false);
+                }}
+                placeholder={labels.contentReferenceHint}
+                maxLength={500}
+                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                disabled={busy || archivedView}
+              />
+            </label>
+            <label className="text-label text-fg-secondary flex shrink-0 flex-col gap-1">
+              <span>{labels.planPeriod}</span>
+              <input
+                type="month"
+                value={month}
+                onChange={(event) => setMonth(event.target.value)}
+                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+              />
+            </label>
+            {activePrompt?.id === selectedPromptId && activePrompt.parameters.length ? (
+              <fieldset
+                className="border-border grid w-full gap-3 rounded-[var(--radius-control)] border p-3"
+                data-testid="assistant-prompt-parameters"
+              >
+                <legend className="text-body text-fg-primary px-1 font-semibold">
+                  {labels.promptParameters}
+                </legend>
+                {activePrompt.parameters.map((parameter) => {
+                  const value =
+                    promptParameterValues[parameter.key] ?? parameter.defaultValue ?? "";
+                  const invalidMonth =
+                    parameter.type === "month" &&
+                    Boolean(value) &&
+                    !/^\d{4}-(0[1-9]|1[0-2])$/.test(value);
+                  const missing = parameter.required && !value.trim();
+                  const state = invalidMonth
+                    ? "invalid"
+                    : missing
+                      ? "missing"
+                      : value
+                        ? "ready"
+                        : "optional";
+                  const stateLabel = invalidMonth
+                    ? labels.promptParameterInvalid
+                    : missing
+                      ? labels.promptParameterMissing
+                      : value
+                        ? labels.promptParameterResolved
+                        : labels.promptParameterOptional;
+                  return (
+                    <label
+                      key={parameter.key}
+                      className="text-label text-fg-secondary grid gap-1"
+                      data-parameter-state={state}
+                    >
+                      <span className="flex items-center justify-between gap-2">
+                        <span>{parameter.label}</span>
+                        <span
+                          className={
+                            state === "invalid"
+                              ? "text-danger"
+                              : state === "missing"
+                                ? "text-warning"
+                                : state === "ready"
+                                  ? "text-success"
+                                  : "text-fg-muted"
+                          }
+                        >
+                          {stateLabel}
+                        </span>
+                      </span>
+                      <DirAwareInput
+                        locale={locale}
+                        type={parameter.type === "month" ? "month" : "text"}
+                        value={value}
+                        required={parameter.required}
+                        aria-invalid={invalidMonth || missing}
+                        aria-describedby={`assistant-prompt-param-${parameter.key}-state`}
+                        onChange={(event) =>
+                          setPromptParameterValues((current) => ({
+                            ...current,
+                            [parameter.key]: event.target.value,
+                          }))
+                        }
+                        className={`text-body bg-surface min-h-11 rounded-[var(--radius-control)] border px-3 ${state === "invalid" ? "border-danger" : state === "missing" ? "border-warning" : state === "ready" ? "border-success" : "border-border"}`}
+                      />
+                      <span
+                        id={`assistant-prompt-param-${parameter.key}-state`}
+                        className="text-label text-fg-muted"
+                        role={invalidMonth || missing ? "alert" : "status"}
+                      >
+                        {stateLabel}
+                      </span>
+                    </label>
+                  );
+                })}
+              </fieldset>
+            ) : null}
+            <label className="sr-only" htmlFor={inputId}>
+              {labels.placeholder}
+            </label>
+            <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
+              <span>{labels.model}</span>
+              <select
+                value={selectedModel}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (!allowedModels.includes(next)) return;
+                  saveAssistantModelPreference(preferenceKey, next);
+                  const nextDefinition = getAiModelDefinition(next);
+                  if (!nextDefinition?.reasoningEfforts.includes(reasoningEffort)) {
+                    setReasoningEffort("medium");
+                  }
+                }}
+                className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                aria-label={labels.model}
+              >
+                {allowedModels.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {modelCapabilities?.reasoningEfforts.length ? (
+              <label className="text-label text-fg-secondary flex shrink-0 items-center gap-2">
+                <span>{labels.reasoning}</span>
+                <select
+                  value={reasoningEffort}
+                  onChange={(event) =>
+                    setReasoningEffort(event.target.value as typeof reasoningEffort)
+                  }
+                  className="border-border bg-surface text-body min-h-11 rounded-[var(--radius-control)] border px-2"
+                >
+                  {modelCapabilities.reasoningEfforts.map((effort) => (
+                    <option key={effort} value={effort}>
+                      {effort === "low"
+                        ? labels.reasoningLow
+                        : effort === "medium"
+                          ? labels.reasoningMedium
+                          : effort === "high"
+                            ? labels.reasoningHigh
+                            : effort === "xhigh"
+                              ? labels.reasoningExtraHigh
+                              : labels.reasoningMax}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+            <DirAwareTextarea
+              id={inputId}
+              locale={locale}
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={labels.placeholder}
+              maxLength={1_000}
+              rows={2}
+              className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 resize-y rounded-[var(--radius-control)] border px-3 py-2"
+              disabled={busy || archivedView}
+            />
+            <Button
+              type="submit"
+              disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
+              aria-label={labels.send}
             >
-              {modelCapabilities.reasoningEfforts.map((effort) => (
-                <option key={effort} value={effort}>
-                  {effort === "low"
-                    ? labels.reasoningLow
-                    : effort === "medium"
-                      ? labels.reasoningMedium
-                      : effort === "high"
-                        ? labels.reasoningHigh
-                        : effort === "xhigh"
-                          ? labels.reasoningExtraHigh
-                          : labels.reasoningMax}
-                </option>
-              ))}
-            </select>
-          </label>
-        ) : null}
-        <DirAwareTextarea
-          id={inputId}
-          locale={locale}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={labels.placeholder}
-          maxLength={1_000}
-          rows={2}
-          className="border-border bg-surface text-body min-h-11 min-w-0 flex-1 resize-y rounded-[var(--radius-control)] border px-3 py-2"
-          disabled={busy || archivedView}
-        />
-        <Button
-          type="submit"
-          disabled={busy || archivedView || !draft.trim() || !promptParametersReady}
-          aria-label={labels.send}
-        >
-          <Send className="h-4 w-4" aria-hidden="true" />
-          <span className="hidden sm:inline">{labels.send}</span>
-        </Button>
-        {busy ? (
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!activeRunId}
-            onClick={() => void stopRun()}
+              <Send className="h-4 w-4" aria-hidden="true" />
+              <span className="hidden sm:inline">{labels.send}</span>
+            </Button>
+            {busy ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!activeRunId}
+                onClick={() => void stopRun()}
+              >
+                {labels.stop}
+              </Button>
+            ) : null}
+          </form>
+          <div className="text-label text-fg-muted flex flex-wrap items-center justify-between gap-2">
+            <p id="workspace-assistant-mode-description" className="inline-flex items-center gap-1">
+              <Bot className="h-3.5 w-3.5" aria-hidden="true" />
+              {mode === "ask"
+                ? labels.modeAskDescription
+                : mode === "plan"
+                  ? labels.modePlanDescription
+                  : labels.modeApplyDescription}
+            </p>
+            <p>{labels.privacy}</p>
+          </div>{" "}
+        </main>
+        {historyVisible ? (
+          <aside
+            className="border-border bg-surface hidden min-h-0 rounded-[var(--radius-card)] border p-3 lg:flex lg:flex-col"
+            dir={locale === "ar" ? "rtl" : "ltr"}
           >
-            {labels.stop}
-          </Button>
+            <AssistantHistoryPanel
+              conversations={conversations}
+              currentConversationId={conversationId}
+              archivedView={archivedView}
+              search={search}
+              locale={locale}
+              labels={{
+                conversations: labels.conversations,
+                newConversation: labels.newConversation,
+                searchConversations: labels.searchConversations,
+                rename: labels.rename,
+                archive: labels.archive,
+                deleteConversation: labels.deleteConversation,
+                archivedConversations: labels.archivedConversations,
+                activeConversations: labels.activeConversations,
+                restoreConversation: labels.restoreConversation,
+                pinConversation: labels.pinConversation,
+                unpinConversation: labels.unpinConversation,
+                pinnedConversation: labels.pinnedConversation,
+                noConversations: labels.noConversations,
+                noSearchResults: labels.noSearchResults,
+              }}
+              onSearchChange={setSearch}
+              onArchivedViewChange={setArchivedView}
+              onNewConversation={startNewConversation}
+              onOpenConversation={(id) => void openConversation(id)}
+              onRenameConversation={(id, title) => void renameConversation(id, title)}
+              onArchiveConversation={(id) => void archiveConversation(id)}
+              onDeleteConversation={(id) => void deleteConversation(id)}
+              onRestoreConversation={(id) => void restoreConversation(id)}
+              onTogglePin={(id, pinned) => void toggleConversationPin(id, pinned)}
+            />
+          </aside>
         ) : null}
-      </form>
-      <div className="text-label text-fg-muted flex flex-wrap items-center justify-between gap-2">
-        <p id="workspace-assistant-mode-description" className="inline-flex items-center gap-1">
-          <Bot className="h-3.5 w-3.5" aria-hidden="true" />
-          {mode === "ask"
-            ? labels.modeAskDescription
-            : mode === "plan"
-              ? labels.modePlanDescription
-              : labels.modeApplyDescription}
-        </p>
-        <p>{labels.privacy}</p>
       </div>
+      <Dialog open={mobileHistoryOpen} onOpenChange={setMobileHistoryOpen}>
+        <DialogContent className="max-h-[85vh] w-[min(26rem,calc(100vw-2rem))] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{labels.assistantHistory}</DialogTitle>
+          </DialogHeader>
+          <AssistantHistoryPanel
+            conversations={conversations}
+            currentConversationId={conversationId}
+            archivedView={archivedView}
+            search={search}
+            locale={locale}
+            labels={{
+              conversations: labels.conversations,
+              newConversation: labels.newConversation,
+              searchConversations: labels.searchConversations,
+              rename: labels.rename,
+              archive: labels.archive,
+              deleteConversation: labels.deleteConversation,
+              archivedConversations: labels.archivedConversations,
+              activeConversations: labels.activeConversations,
+              restoreConversation: labels.restoreConversation,
+              pinConversation: labels.pinConversation,
+              unpinConversation: labels.unpinConversation,
+              pinnedConversation: labels.pinnedConversation,
+              noConversations: labels.noConversations,
+              noSearchResults: labels.noSearchResults,
+            }}
+            onSearchChange={setSearch}
+            onArchivedViewChange={setArchivedView}
+            onNewConversation={startNewConversation}
+            onOpenConversation={(id) => void openConversation(id)}
+            onRenameConversation={(id, title) => void renameConversation(id, title)}
+            onArchiveConversation={(id) => void archiveConversation(id)}
+            onDeleteConversation={(id) => void deleteConversation(id)}
+            onRestoreConversation={(id) => void restoreConversation(id)}
+            onTogglePin={(id, pinned) => void toggleConversationPin(id, pinned)}
+          />
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

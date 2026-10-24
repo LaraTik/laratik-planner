@@ -64,6 +64,23 @@ into a separate Stitch screen only when the route has materially different
 information architecture or permissions. Do not reintroduce superseded variants
 merely to increase the screen count.
 
+### Workspace Assistant redesign — 2026-10-25
+
+The assistant remains an app-only surface because the current Stitch project
+has no dedicated screen for it. The requested target is supplied as product
+requirements rather than a target screenshot. After reviewing the new
+conversation-first layout, the five responsive baselines for
+`/app/w/acme/ai-assistant` were refreshed for mobile-s, tablet, laptop, desktop,
+and wide, then passed the strict assistant-only comparison (5/5). These are
+local regression references for the requested layout, not captures of a new
+Stitch source screen.
+
+The full 272-case visual matrix was stopped after 12 cases when image
+mismatches appeared on unrelated surfaces (`/app/w/acme/planning`,
+`/app/w/acme/settings`, `/app/agency-settings/ai`,
+`/app/platform/overview`, and `/app/w/acme/brand-kit`). No other visual
+baselines were changed. The full visual release matrix remains open.
+
 ## Shared visual contract
 
 - Canvas `#F7F7F5`; white surfaces; `#DDE1E6` borders.

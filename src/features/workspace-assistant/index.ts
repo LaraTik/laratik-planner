@@ -9,3 +9,8 @@ export {
 export type { AssistantPromptParameter } from "./parameters";
 export { createWorkspaceAssistantTools } from "./tools";
 export { estimateWorkspaceAssistantInputTokens } from "./usage";
+export {
+  assistantResponseLanguageInstruction,
+  DEFAULT_ASSISTANT_RESPONSE_LOCALE,
+} from "./language-policy";
+export type { AssistantResponseLocale } from "./language-policy";

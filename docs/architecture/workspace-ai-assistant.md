@@ -38,6 +38,14 @@ descriptions.
 
 ## Current status
 
+The 2026-10-25 Arabic-first workspace redesign is in progress on a feature
+branch and is not yet release-verified. Its target layout, conversation-language
+rule, additive data impact, and remaining acceptance gates are recorded in
+[`workspace-ai-assistant-redesign-2026-10-25.md`](workspace-ai-assistant-redesign-2026-10-25.md).
+The page now separates the conversation, history, and on-demand tools/context
+surfaces. It does not change the capability boundary above or persist
+transcript text.
+
 The code is implemented on PR #44. The latest clean application code evidence
 is SHA `3c43f49b6e15bc131b62032536d28d665a340ac0`; the branch currently ends at
 `6c73c9082d9a895bc5e8bb4bf9dbeb3db6c1f32d` after documentation-only commits.

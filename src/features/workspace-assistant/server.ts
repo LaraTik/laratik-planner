@@ -773,6 +773,8 @@ export async function listAssistantConversations(
       id: workspaceAssistantConversations.id,
       title: workspaceAssistantConversations.title,
       mode: workspaceAssistantConversations.mode,
+      responseLocale: workspaceAssistantConversations.responseLocale,
+      pinnedAt: workspaceAssistantConversations.pinnedAt,
       updatedAt: workspaceAssistantConversations.updatedAt,
     })
     .from(workspaceAssistantConversations)
@@ -785,7 +787,10 @@ export async function listAssistantConversations(
           : isNull(workspaceAssistantConversations.archivedAt),
       ),
     )
-    .orderBy(desc(workspaceAssistantConversations.updatedAt))
+    .orderBy(
+      sql`${workspaceAssistantConversations.pinnedAt} DESC NULLS LAST`,
+      desc(workspaceAssistantConversations.updatedAt),
+    )
     .limit(50);
   return rows;
 }
@@ -795,15 +800,24 @@ export async function createAssistantConversation(
   workspaceId: string,
   title = "New conversation",
   mode: "ask" | "plan" | "apply" = "ask",
+  responseLocale: "ar" | "en" = "ar",
 ) {
   await requireAssistantAccess(actor, workspaceId);
   const [row] = await db
     .insert(workspaceAssistantConversations)
-    .values({ workspaceId, ownerId: actor.id, title: normalizeConversationTitle(title), mode })
+    .values({
+      workspaceId,
+      ownerId: actor.id,
+      title: normalizeConversationTitle(title),
+      mode,
+      responseLocale,
+    })
     .returning({
       id: workspaceAssistantConversations.id,
       title: workspaceAssistantConversations.title,
       mode: workspaceAssistantConversations.mode,
+      responseLocale: workspaceAssistantConversations.responseLocale,
+      pinnedAt: workspaceAssistantConversations.pinnedAt,
     });
   if (!row) throw new Error("workspace_assistant_conversation_create_failed");
   return row;
@@ -821,6 +835,7 @@ export async function getAssistantConversation(
       id: workspaceAssistantConversations.id,
       title: workspaceAssistantConversations.title,
       mode: workspaceAssistantConversations.mode,
+      responseLocale: workspaceAssistantConversations.responseLocale,
     })
     .from(workspaceAssistantConversations)
     .where(
@@ -1305,7 +1320,13 @@ export async function updateAssistantConversation(
   actor: Actor,
   workspaceId: string,
   conversationId: string,
-  input: { title?: string; archived?: boolean; mode?: "ask" | "plan" | "apply" },
+  input: {
+    title?: string;
+    archived?: boolean;
+    mode?: "ask" | "plan" | "apply";
+    responseLocale?: "ar" | "en";
+    pinned?: boolean;
+  },
 ) {
   await requireAssistantAccess(actor, workspaceId);
   const [row] = await db
@@ -1314,6 +1335,8 @@ export async function updateAssistantConversation(
       ...(input.title !== undefined ? { title: normalizeConversationTitle(input.title) } : {}),
       ...(input.archived !== undefined ? { archivedAt: input.archived ? new Date() : null } : {}),
       ...(input.mode !== undefined ? { mode: input.mode } : {}),
+      ...(input.responseLocale !== undefined ? { responseLocale: input.responseLocale } : {}),
+      ...(input.pinned !== undefined ? { pinnedAt: input.pinned ? new Date() : null } : {}),
       updatedAt: new Date(),
     })
     .where(
