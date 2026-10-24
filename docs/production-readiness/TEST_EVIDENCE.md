@@ -4205,3 +4205,20 @@ separated-account human UAT, and production backup/rollback evidence. M3.8 is
 not verified and production deployment is not approved.
 
 Policy reference: [MiniMax API Privacy Policy](https://platform.minimax.io/protocol/privacy-policy).
+
+### 2026-10-24 — final local verification at `f43ce2b5687daf52baf007fc123bd641dee00031`
+
+The pushed feature commit was checked from its clean worktree. `pnpm verify`
+passed formatting, lint, typecheck, all 617 unit files / 5,300 tests, and the
+production build. The full configured PostgreSQL 16 integration suite passed,
+including Workspace Assistant 12/12 for prompt and knowledge isolation,
+confirmed edits, stale/replay protection, schedule proposals, run cancellation,
+workload scoping, and skill governance. `pnpm migration-drill` passed all five
+scenarios with 103/103 migrations from zero, skipped-migration repair,
+in-place upgrade, backup/restore, and failed-migration rollback.
+
+This is local code/test evidence for `f43ce2b`; the follow-up evidence-note
+commit does not change application code. Full browser/device release coverage,
+independent review, live MiniMax model/tool and privacy UAT, separated-account
+human UAT, and production backup/rollback evidence remain open. The PR is not
+eligible for merge or production deployment until those gates are completed.
